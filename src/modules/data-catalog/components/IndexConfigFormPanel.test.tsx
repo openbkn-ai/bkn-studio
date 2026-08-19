@@ -14,6 +14,7 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
+const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -30,7 +31,7 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   getCatalogResource: getCatalogResourceMock,
-  updateCatalogResource: vi.fn(),
+  updateCatalogResource: updateCatalogResourceMock,
 }));
 
 vi.mock("@/modules/data-catalog/utils/analyzer-capabilities", async (importOriginal) => ({
@@ -58,13 +59,14 @@ const resource: CatalogResource = {
   schema: [{ name: "title", type: "string" }],
   sourceIdentifier: "orders",
   updateTime: "2026-08-11T00:00:00Z",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
 };
 
 describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getCatalogResourceMock.mockResolvedValue(resource);
+    getCatalogResourceMock.mockReset().mockResolvedValue(resource);
+    updateCatalogResourceMock.mockReset();
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
     loadEmbeddingModelOptionsMock.mockResolvedValue({
       errorMessage: null,
@@ -100,6 +102,58 @@ describe("IndexConfigFormPanel", () => {
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
+  });
+
+  it("preserves freshly generated semantic metadata when saving index config", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      indexConfig: { buildKeyFields: ["title"] },
+      schema: [{
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    const semanticResource: CatalogResource = {
+      ...configuredResource,
+      description: "Monthly parking pass records",
+      expectedUpdateTime: 200,
+      name: "Monthly passes",
+      schema: [{
+        description: "Unique monthly pass identifier",
+        displayName: "Pass ID",
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock
+      .mockResolvedValueOnce(configuredResource)
+      .mockResolvedValueOnce(semanticResource);
+    updateCatalogResourceMock.mockResolvedValue(semanticResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(1));
+    await screen.findByText("title");
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+
+    await waitFor(() => {
+      expect(updateCatalogResourceMock).toHaveBeenCalledWith("resource-1", expect.objectContaining({
+        description: semanticResource.description,
+        expectedUpdateTime: semanticResource.expectedUpdateTime,
+        name: semanticResource.name,
+        schema: [expect.objectContaining({
+          description: "Unique monthly pass identifier",
+          displayName: "Pass ID",
+          name: "title",
+        })],
+      }));
+    });
   });
 
   it("explains the Chinese-search limitation when no Chinese analyzer is enabled", async () => {

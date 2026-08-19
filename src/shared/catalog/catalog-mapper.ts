@@ -93,6 +93,7 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     internal: item.internal ?? false,
     healthCheckResult: item.health_check_result ?? "",
     lastCheckTime: formatCatalogTimestamp(item.last_check_time),
+    expectedUpdateTime: item.update_time ?? 0,
     updateTime: formatCatalogTimestamp(item.update_time),
     createTime: formatCatalogTimestamp(item.create_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",

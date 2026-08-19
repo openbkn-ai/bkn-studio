@@ -38,6 +38,7 @@ import type {
   DataConnectListResult,
   DataConnectMutationPayload,
   DataConnectRecord,
+  DataConnectUpdatePayload,
 } from "@/modules/data-connect/types/data-connect";
 
 type BackendConnectorFieldConfig = {
@@ -359,7 +360,7 @@ export { createLogicalCatalog };
 
 export async function updateDataConnectRecord(
   id: string,
-  input: DataConnectMutationPayload,
+  input: DataConnectUpdatePayload,
   options: CatalogMutationOptions = {},
 ) {
   return updateCatalog(id, input, options);
@@ -368,8 +369,9 @@ export async function updateDataConnectRecord(
 export async function updateDataConnectHealthCheckSchedule(
   id: string,
   input: CatalogHealthCheckScheduleInput,
+  expectedUpdateTime: number,
 ) {
-  return updateCatalogHealthCheckSchedule(id, input);
+  return updateCatalogHealthCheckSchedule(id, input, expectedUpdateTime);
 }
 
 function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {

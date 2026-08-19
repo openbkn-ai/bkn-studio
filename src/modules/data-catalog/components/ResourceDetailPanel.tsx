@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorMessage,
+  isRequestConflict,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -55,6 +58,9 @@ export function ResourceDetailPanel({
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
   const wasActiveRef = useRef<boolean | null>(null);
+  const resourceIdentityKey = `${resourceProp.id}:${resourceProp.expectedUpdateTime}`;
+  const resourceIdentityRef = useRef(resourceIdentityKey);
+  resourceIdentityRef.current = resourceIdentityKey;
 
   const gate = resourceGateOf(catalog);
   const readOnly = isResourceIndexReadOnly(catalog);
@@ -176,6 +182,8 @@ export function ResourceDetailPanel({
   };
 
   const handleSave = async () => {
+    const submittedResourceId = resource.id;
+    const submittedResourceIdentity = resourceIdentityRef.current;
     setSaving(true);
 
     try {
@@ -183,6 +191,7 @@ export function ResourceDetailPanel({
         catalogId: resource.catalogId,
         category: resource.category,
         description: descriptionDraft.trim(),
+        expectedUpdateTime: resource.expectedUpdateTime,
         name: resource.name,
         schema: schemaDraft.map((field) => ({
           ...field,
@@ -196,8 +205,27 @@ export function ResourceDetailPanel({
       await onUpdated?.();
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
+
+      if (isRequestConflict(error)) {
+        try {
+          const latestResource = await getCatalogResource(submittedResourceId);
+          if (
+            latestResource &&
+            resourceIdentityRef.current === submittedResourceIdentity
+          ) {
+            setResource(latestResource);
+            onResourceRefreshed?.(latestResource);
+          }
+        } catch (refreshError) {
+          if (resourceIdentityRef.current === submittedResourceIdentity) {
+            void message.error(extractRequestErrorMessage(refreshError));
+          }
+        }
+      }
     } finally {
-      setSaving(false);
+      if (resourceIdentityRef.current === submittedResourceIdentity) {
+        setSaving(false);
+      }
     }
   };
 
@@ -345,6 +373,10 @@ export function ResourceDetailPanel({
             ) : (
               <span>{resource.description || "-"}</span>
             )}
+          </p>
+          <p className={styles.basicInfoRow}>
+            <span className={styles.basicInfoLabel}>{t("common.updateTime")}:</span>{" "}
+            <span>{resource.updateTime}</span>
           </p>
         </div>
       </div>

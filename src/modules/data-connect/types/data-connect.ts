@@ -54,3 +54,7 @@ export type DataConnectMutationPayload = {
   name: string;
   tags: string[];
 };
+
+export type DataConnectUpdatePayload = DataConnectMutationPayload & {
+  expectedUpdateTime: number;
+};

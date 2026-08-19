@@ -6,6 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import {
+  throwMockRequestError,
+  validateMockExpectedUpdateTime,
+} from "@/framework/request/mock-error";
 import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
@@ -293,7 +297,7 @@ function mapResource(item: BackendResource): CatalogResource {
     schemaName: item.schema,
     status: normalizeResourceStatus(item.status),
     statusMessage: item.status_message?.trim() || undefined,
-    updatedAt: item.update_time ?? 0,
+    expectedUpdateTime: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };
 }
@@ -437,7 +441,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
             ],
       columnCount: input.schema.length > 0 ? input.schema.length : 3,
       rowCount: 0,
-      updatedAt: Date.now(),
+      expectedUpdateTime: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),
     };
     mockResources.unshift(resource);
@@ -471,7 +475,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       schema: input.schema,
       columnCount: input.schema.length,
       rowCount: 0,
-      updatedAt: Date.now(),
+      expectedUpdateTime: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),
     }
   );
@@ -484,23 +488,46 @@ export async function updateCatalogResource(
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
-      throw new Error("Resource not found");
+      throwMockRequestError(
+        404,
+        "VegaBackend.Resource.NotFound",
+        "Resource not found.",
+      );
     }
 
     const current = mockResources[index];
-    const updatedAt = Date.now();
+    if (current.category !== input.category) {
+      throwMockRequestError(
+        400,
+        "VegaBackend.InvalidParameter.RequestBody",
+        "Resource catalog and category cannot be changed.",
+      );
+    }
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    if (current.catalogId !== input.catalogId) {
+      throwMockRequestError(
+        400,
+        "VegaBackend.InvalidParameter.RequestBody",
+        "Resource catalog and category cannot be changed.",
+      );
+    }
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.Resource.UpdateConflict",
+        "Resource has been updated. Reload it and try again.",
+      );
+    }
+    const expectedUpdateTime = Date.now();
     const nextResource: CatalogResource = {
       ...current,
-      catalogId: input.catalogId,
-      category: input.category,
       description: input.description,
       name: input.name,
       schema: input.schema,
       indexConfig: input.indexConfig ?? current.indexConfig,
-      sourceIdentifier: input.sourceIdentifier,
       columnCount: input.schema.length,
-      updatedAt,
-      updateTime: formatMockTimestamp(updatedAt),
+      expectedUpdateTime,
+      updateTime: formatMockTimestamp(expectedUpdateTime),
     };
 
     mockResources[index] = nextResource;
@@ -515,6 +542,7 @@ export async function updateCatalogResource(
     name: input.name,
     schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
     index_config: mapIndexConfigToBackend(input.indexConfig),
+    expected_update_time: input.expectedUpdateTime,
     source_identifier: input.sourceIdentifier,
   });
 

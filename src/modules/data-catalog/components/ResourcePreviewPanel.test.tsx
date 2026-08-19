@@ -34,7 +34,7 @@ const resource: CatalogResource = {
   schema: [],
   sourceIdentifier: "public.orders",
   updateTime: "-",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
 };
 
 describe("ResourcePreviewPanel", () => {

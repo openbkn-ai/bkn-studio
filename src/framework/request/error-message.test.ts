@@ -8,7 +8,11 @@
 import axios from "axios";
 import { describe, expect, it } from "vitest";
 
-import { extractRequestErrorDetails, extractRequestErrorMessage } from "./error-message";
+import {
+  extractRequestErrorDetails,
+  extractRequestErrorMessage,
+  isRequestConflict,
+} from "./error-message";
 
 function createAxiosLikeError(data: unknown) {
   return {
@@ -80,5 +84,13 @@ describe("extractRequestErrorDetails", () => {
     );
 
     expect(message).toBe("description message");
+  });
+});
+
+describe("isRequestConflict", () => {
+  it("only matches Axios 409 responses", () => {
+    expect(isRequestConflict({ isAxiosError: true, response: { status: 409 } })).toBe(true);
+    expect(isRequestConflict({ isAxiosError: true, response: { status: 400 } })).toBe(false);
+    expect(isRequestConflict(new Error("conflict"))).toBe(false);
   });
 });

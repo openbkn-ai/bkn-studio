@@ -21,7 +21,7 @@ const resource: CatalogResource = {
   rowCount: 0,
   schema: [{ name: "id", type: "integer" }],
   sourceIdentifier: "public.orders",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
   updateTime: "-",
 };
 

@@ -58,7 +58,7 @@ const resource: CatalogResource = {
   ],
   sourceIdentifier: "orders",
   updateTime: "2026-07-27T00:00:00Z",
-  updatedAt: 0,
+  expectedUpdateTime: 0,
 };
 
 describe("BuildTaskLaunchPanel", () => {

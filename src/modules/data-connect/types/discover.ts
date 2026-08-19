@@ -43,6 +43,7 @@ export type DataConnectDiscoverSchedule = {
   startTimeValue?: number;
   strategy: DataConnectDiscoverStrategy;
   updateTime: string;
+  expectedUpdateTime: number;
   updaterName: string;
 };
 
@@ -126,3 +127,8 @@ export type DataConnectDiscoverSchedulePayload = {
   startTime?: number;
   strategy: DataConnectDiscoverStrategy;
 };
+
+export type DataConnectDiscoverScheduleUpdatePayload =
+  DataConnectDiscoverSchedulePayload & {
+    expectedUpdateTime: number;
+  };

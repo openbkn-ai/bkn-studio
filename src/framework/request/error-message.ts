@@ -95,3 +95,7 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
 export function extractRequestErrorMessage(error: unknown) {
   return extractRequestErrorDetails(error).description;
 }
+
+export function isRequestConflict(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 409;
+}

@@ -157,6 +157,8 @@ export const dataConnectEnUS = {
     discoverScheduleConfig: "Schedule",
     discoverStrategy: "Discover Strategy",
     discoverCronExpr: "Cron",
+    discoverCronInvalid: "Enter a valid five-field cron with an interval of at least one hour.",
+    discoverTimeRangeInvalid: "The end time must be later than or equal to the start time.",
     discoverCronExprPlaceholder: "Example: 0 2 * * * (min hour day month weekday)",
     discoverCronPresets: "Presets",
     discoverCronPresetLabels: {
