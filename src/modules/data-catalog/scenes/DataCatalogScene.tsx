@@ -55,9 +55,10 @@ export function DataCatalogScene({
   const navigate = useNavigate();
   const { runtimeConfig } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
-  // A user who cannot create a connection sees an empty list because nothing has
-  // been granted to them, not because the platform is empty (#986). Offering
-  // "new connection" there sends them to a page they cannot use.
+  // A user who cannot create a connection cannot act on an empty list, so the call to action
+  // would send them to a page they have no permission to use (#986). The list can be empty
+  // either because nothing has been granted to them or because the platform holds no
+  // connection yet, and the frontend cannot tell those apart, so the copy names both.
   const canCreateCatalog = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:create",
@@ -285,9 +286,9 @@ export function DataCatalogScene({
       if (!canCreateCatalog) {
         return (
           <EmptyStatePanel
-            description={t("dataCatalog.unauthorizedDescription")}
+            description={t("dataCatalog.noVisibleCatalogsDescription")}
             icon={<DatabaseOutlined />}
-            title={t("dataCatalog.unauthorizedTitle")}
+            title={t("dataCatalog.noVisibleCatalogsTitle")}
           />
         );
       }

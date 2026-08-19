@@ -81,8 +81,9 @@ export const dataCatalogZhCN = {
     },
     semanticWorkspace: { summary: "语义理解结果", applied: "已加载语义理解结果", notApplied: "尚未加载语义理解结果", processing: "语义理解任务进行中", create: "新建任务", createTitle: "新建语义理解任务", start: "开始语义理解", started: "已开始语义理解任务", empty: "暂无语义理解任务", confidenceThreshold: "置信度阈值", includeSamples: "包含样本数据", includeSamplesHint: "样本数据将以未脱敏形式发送给语义理解服务。" },
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。",
-    unauthorizedTitle: "还没有授权给你的数据",
-    unauthorizedDescription: "数据目录与数据表需要显式授权才可见。请联系管理员为你授予相应目录的权限。",
+    noVisibleCatalogsTitle: "暂无可见的数据目录",
+    noVisibleCatalogsDescription:
+      "数据目录与数据表需要显式授权才可见。若平台刚部署，请等待管理员建立数据连接；若数据已存在，请联系管理员为你授予相应目录的权限。",
     backToCatalog: "返回数据目录",
     buildChip: "构建中 · {{count}}",
     format: {

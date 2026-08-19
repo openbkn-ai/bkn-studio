@@ -89,9 +89,9 @@ export const dataCatalogEnUS = {
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data", includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking." },
     emptyDescription:
       "Create and discover a connection first, then browse resources and build indexes here.",
-    unauthorizedTitle: "No data has been granted to you",
-    unauthorizedDescription:
-      "Data catalogs and tables are visible only when granted explicitly. Ask an administrator to grant you access to the catalogs you need.",
+    noVisibleCatalogsTitle: "No data catalogs to show",
+    noVisibleCatalogsDescription:
+      "Data catalogs and tables are visible only when granted explicitly. If the platform was just installed, wait for an administrator to create a connection; otherwise ask an administrator to grant you access to the catalogs you need.",
     backToCatalog: "Back to Data Catalog",
     buildChip: "Building · {{count}}",
     format: {
