@@ -25,7 +25,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import styles from "./SignInScreen.module.css";
 
 export function OAuthCallback() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const loginLocale = i18n.resolvedLanguage ?? i18n.language;
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
@@ -51,7 +52,7 @@ export function OAuthCallback() {
 
     if (isCsrfConflictCallback() && consumeCsrfRetry()) {
       stashCallbackError();
-      beginLogin(getStoredReturnTo()).catch(fail);
+      beginLogin(getStoredReturnTo(), loginLocale).catch(fail);
       return;
     }
 
@@ -60,7 +61,7 @@ export function OAuthCallback() {
         window.location.replace(returnTo);
       })
       .catch(fail);
-  }, []);
+  }, [loginLocale]);
 
   return (
     <div className={styles.page}>

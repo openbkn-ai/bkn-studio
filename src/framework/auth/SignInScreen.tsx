@@ -25,7 +25,8 @@ type SignInScreenProps = {
 };
 
 export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const loginLocale = i18n.resolvedLanguage ?? i18n.language;
   const startedRef = useRef(false);
   const [redirecting, setRedirecting] = useState(true);
   const [redirectError, setRedirectError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
       setRedirecting(true);
       const { hash, pathname, search } = window.location;
 
-      beginLogin(`${pathname}${search}${hash}`).catch((cause: unknown) => {
+      beginLogin(`${pathname}${search}${hash}`, loginLocale).catch((cause: unknown) => {
         setRedirectError(cause instanceof Error ? cause.message : String(cause));
         setRedirecting(false);
         startedRef.current = false;
@@ -80,7 +81,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
       document.removeEventListener("visibilitychange", retry);
       unsubscribe();
     };
-  }, [showDevTokenForm]);
+  }, [loginLocale, showDevTokenForm]);
 
   if (showDevTokenForm) {
     return <DevTokenSetupForm onSaved={onDevTokenSaved} />;
@@ -94,7 +95,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     setRedirectError(null);
     setDeferredToOtherTab(false);
     const { hash, pathname, search } = window.location;
-    void beginLogin(`${pathname}${search}${hash}`).catch((cause: unknown) => {
+    void beginLogin(`${pathname}${search}${hash}`, loginLocale).catch((cause: unknown) => {
       setRedirectError(cause instanceof Error ? cause.message : String(cause));
       setRedirecting(false);
       startedRef.current = false;
