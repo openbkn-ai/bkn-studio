@@ -21,6 +21,8 @@ export const dataCatalogModuleManifest = {
     // 手上还是 resource:*，只问 catalog:* 会让它们按钮全消失而接口其实可用。
     "resource:create",
     "resource:task_manage",
+    "resource:query_data",
+    "catalog:query_data",
   ],
   requiresShell: true,
   supportsEmbedded: false,

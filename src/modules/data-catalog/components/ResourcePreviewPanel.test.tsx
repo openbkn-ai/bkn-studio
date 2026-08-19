@@ -21,6 +21,14 @@ vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   previewCatalogResource: previewCatalogResourceMock,
 }));
 
+// 这些用例验的是「什么时候不该发预览请求」，权限统一放行；缺权限那条单独一个用例。
+const currentPermissionsMock = vi.hoisted(() => ({ value: ["resource:query_data"] }));
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({
+    runtimeConfig: { currentUser: { permissions: currentPermissionsMock.value } },
+  }),
+}));
+
 import { ResourcePreviewPanel } from "./ResourcePreviewPanel";
 
 const resource: CatalogResource = {
@@ -126,4 +134,17 @@ describe("ResourcePreviewPanel", () => {
       });
     });
   });
+});
+
+// 只有 view_detail 的人看得到结构、读不到内容（openbkn-ai/bkn-foundry#571）。
+// 后端已经拦住了，这里拦一次是为了不让用户对着一条 403 猜发生了什么。
+it("不请求数据，并说明缺的是查询权限", () => {
+  // 这条用例在 describe 之外，拿不到里面的 beforeEach，自己清一次。
+  previewCatalogResourceMock.mockClear();
+  currentPermissionsMock.value = ["resource:view_detail"];
+  render(<ResourcePreviewPanel active resource={resource} />);
+
+  expect(previewCatalogResourceMock).not.toHaveBeenCalled();
+  expect(screen.getByText("dataCatalog.preview.noQueryPermission")).not.toBeNull();
+  currentPermissionsMock.value = ["resource:query_data"];
 });

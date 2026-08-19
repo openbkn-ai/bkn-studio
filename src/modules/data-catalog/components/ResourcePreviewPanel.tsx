@@ -14,6 +14,8 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
   CatalogResource,
@@ -80,6 +82,15 @@ export function ResourcePreviewPanel({
   resource,
 }: ResourcePreviewPanelProps) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
+  // 读行数据要 query_data，只有 view_detail 的人看得到结构、读不到内容
+  // （openbkn-ai/bkn-foundry#571）。后端已经拦住了；这里拦一次是为了不让用户
+  // 对着一条 403 猜发生了什么。两个动词都问：后端接受其中任意一个。
+  const canQueryData = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    mode: "any",
+    requiredPermissions: ["resource:query_data", "catalog:query_data"],
+  });
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
@@ -112,13 +123,13 @@ export function ResourcePreviewPanel({
   );
 
   useEffect(() => {
-    if (!active || disabled || previewUnavailable) {
+    if (!active || disabled || previewUnavailable || !canQueryData) {
       return;
     }
     setPage(1);
     setPageSize(DEFAULT_PAGE_SIZE);
     void load(0, DEFAULT_PAGE_SIZE);
-  }, [active, disabled, load, previewUnavailable, resource.id]);
+  }, [active, canQueryData, disabled, load, previewUnavailable, resource.id]);
 
   const offset = (page - 1) * pageSize;
 
@@ -128,6 +139,17 @@ export function ResourcePreviewPanel({
         <ExclamationCircleOutlined />
         <span>{disabledMessage ?? t("dataCatalog.gate.catalogDisabledShort")}</span>
       </div>
+    );
+  }
+
+  if (!canQueryData) {
+    return (
+      <Alert
+        description={t("dataCatalog.preview.noQueryPermissionDescription")}
+        message={t("dataCatalog.preview.noQueryPermission")}
+        showIcon
+        type="info"
+      />
     );
   }
 
