@@ -126,7 +126,6 @@ export function persistLocale(locale: SupportedLocale) {
     return;
   }
 
-  clearLegacyLocaleCookies();
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${LOCALE_COOKIE_NAME}=${encodeURIComponent(locale)}; Path=/; Max-Age=${LOCALE_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
