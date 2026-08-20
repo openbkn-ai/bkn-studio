@@ -16,6 +16,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import { presentLogAction, presentLogActor, presentLogTarget } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
+import { resolveAuditActionFilter } from "@/modules/bkn-trace/utils/audit-action-filter";
 import {
   listLogs,
   type AuditOutcome,
@@ -80,7 +81,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
         ...(nextFilters.actorId.trim() ? { actorId: nextFilters.actorId.trim() } : {}),
-        ...(nextFilters.action.trim() ? { action: nextFilters.action.trim() } : {}),
+        ...(nextFilters.action.trim() ? { action: resolveAuditActionFilter(nextFilters.action, (key, options) => t(key, options)) } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
