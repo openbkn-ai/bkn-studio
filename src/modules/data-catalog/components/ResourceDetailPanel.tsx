@@ -6,7 +6,7 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Input, Spin } from "antd";
+import { Input } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -53,11 +53,9 @@ export function ResourceDetailPanel({
   const [schemaPageSize, setSchemaPageSize] = useState(10);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [resource, setResource] = useState(resourceProp);
   const [descriptionDraft, setDescriptionDraft] = useState(resourceProp.description);
   const [schemaDraft, setSchemaDraft] = useState<ResourceSchemaField[]>(resourceProp.schema);
-  const wasActiveRef = useRef<boolean | null>(null);
   const resourceIdentityKey = `${resourceProp.id}:${resourceProp.expectedUpdateTime}`;
   const resourceIdentityRef = useRef(resourceIdentityKey);
   resourceIdentityRef.current = resourceIdentityKey;
@@ -81,39 +79,6 @@ export function ResourceDetailPanel({
       setSchemaDraft(resource.schema);
     }
   }, [active, resource]);
-
-  useEffect(() => {
-    const wasActive = wasActiveRef.current;
-    wasActiveRef.current = active;
-
-    if (!active || wasActive !== false) {
-      return;
-    }
-
-    let cancelled = false;
-    setRefreshing(true);
-    void getCatalogResource(resourceProp.id)
-      .then((latestResource) => {
-        if (!cancelled && latestResource) {
-          setResource(latestResource);
-          onResourceRefreshed?.(latestResource);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          void message.error(extractRequestErrorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setRefreshing(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [active, message, onResourceRefreshed, resourceProp]);
 
   useEffect(() => {
     setSchemaPage(1);
@@ -297,8 +262,7 @@ export function ResourceDetailPanel({
   ];
 
   return (
-    <Spin spinning={refreshing}>
-      <div className={styles.contentSurface}>
+    <div className={styles.contentSurface}>
       {!gate.ok && catalog ? (
         <div className={styles.calloutWarn}>
           <ExclamationCircleOutlined />
@@ -413,7 +377,6 @@ export function ResourceDetailPanel({
           />
         ) : null}
       </div>
-      </div>
-    </Spin>
+    </div>
   );
 }

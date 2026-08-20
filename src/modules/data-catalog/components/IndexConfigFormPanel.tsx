@@ -265,12 +265,7 @@ export function IndexConfigFormPanel({
       let preferredModel = "";
       setSchemaLoading(true);
       try {
-        const detail = await getCatalogResource(resource.id);
-        if (detail) {
-          preferredModel = hydrateFromResource(detail) || "";
-        } else if (resource.schema.length > 0) {
-          preferredModel = hydrateFromResource(resource) || "";
-        }
+        preferredModel = hydrateFromResource(resource) || "";
       } finally {
         setSchemaLoading(false);
       }

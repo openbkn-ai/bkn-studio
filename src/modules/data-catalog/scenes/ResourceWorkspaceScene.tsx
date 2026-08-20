@@ -7,7 +7,7 @@
 
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin, Tabs } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -61,24 +61,34 @@ export function ResourceWorkspaceScene({
 }: ResourceWorkspaceSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { modal } = useAppServices();
+  const { message, modal } = useAppServices();
   const [resource, setResource] = useState<CatalogResource | null>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailEditing, setDetailEditing] = useState(false);
+  const previousTabRef = useRef(tab);
+  const resourceVersionRef = useRef(0);
+  const loadRequestIdRef = useRef(0);
 
   const loadAll = useCallback(async () => {
+    const resourceVersion = ++resourceVersionRef.current;
+    const loadRequestId = ++loadRequestIdRef.current;
     setLoadError(null);
     setLoading(true);
 
     try {
       const detail = await getCatalogResource(resourceId);
       if (!detail) {
-        setResource(null);
-        setCatalog(null);
-        setTasks([]);
+        if (
+          resourceVersionRef.current === resourceVersion
+          && loadRequestIdRef.current === loadRequestId
+        ) {
+          setResource(null);
+          setCatalog(null);
+          setTasks([]);
+        }
         return;
       }
 
@@ -87,22 +97,55 @@ export function ResourceWorkspaceScene({
         listBuildTasks({ resourceId }),
       ]);
 
-      setResource(detail);
-      setCatalog(catalogRecord);
-      setTasks(taskList);
+      if (resourceVersionRef.current === resourceVersion) {
+        setResource(detail);
+      }
+      if (loadRequestIdRef.current === loadRequestId) {
+        setCatalog(catalogRecord);
+        setTasks(taskList);
+      }
     } catch (error) {
-      setResource(null);
-      setCatalog(null);
-      setTasks([]);
-      setLoadError(extractRequestErrorMessage(error));
+      if (
+        resourceVersionRef.current === resourceVersion
+        && loadRequestIdRef.current === loadRequestId
+      ) {
+        setResource(null);
+        setLoadError(extractRequestErrorMessage(error));
+        setCatalog(null);
+        setTasks([]);
+      }
     } finally {
-      setLoading(false);
+      if (loadRequestIdRef.current === loadRequestId) {
+        setLoading(false);
+      }
     }
   }, [resourceId]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  const refreshResource = useCallback(async () => {
+    const resourceVersion = ++resourceVersionRef.current;
+    try {
+      const detail = await getCatalogResource(resourceId);
+      if (detail && resourceVersionRef.current === resourceVersion) {
+        setResource(detail);
+      }
+    } catch (error) {
+      if (resourceVersionRef.current === resourceVersion) {
+        void message.error(extractRequestErrorMessage(error));
+      }
+    }
+  }, [message, resourceId]);
+
+  useEffect(() => {
+    const previousTab = previousTabRef.current;
+    previousTabRef.current = tab;
+    if (previousTab !== tab && (tab === "detail" || tab === "index" || tab === "preview")) {
+      void refreshResource();
+    }
+  }, [refreshResource, tab]);
 
   useEffect(() => {
     return subscribeMockDb(() => {

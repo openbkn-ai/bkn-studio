@@ -61,14 +61,12 @@ describe("ResourceDetailPanel", () => {
     }));
   });
 
-  it("returns the resource fetched after returning to the detail tab to its parent", async () => {
+  it("renders the refreshed resource supplied by the workspace without another request", async () => {
     const latestResource = { ...resource, name: "Orders" };
-    const onResourceRefreshed = vi.fn();
-    getCatalogResourceMock.mockResolvedValue(latestResource);
 
     const { rerender } = render(
       <MemoryRouter>
-        <ResourceDetailPanel active={false} catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
+        <ResourceDetailPanel active={false} catalog={null} resource={resource} />
       </MemoryRouter>,
     );
 
@@ -76,50 +74,12 @@ describe("ResourceDetailPanel", () => {
 
     rerender(
       <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
+        <ResourceDetailPanel active catalog={null} resource={latestResource} />
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(onResourceRefreshed).toHaveBeenCalledWith(latestResource));
-    expect(getCatalogResourceMock).toHaveBeenCalledWith(resource.id);
-  });
-
-  it("ignores a detail refresh superseded by a parent resource update", async () => {
-    const parentResource = { ...resource, name: "Orders", expectedUpdateTime: 1 };
-    const onResourceRefreshed = vi.fn();
-    let resolveRequest: (value: CatalogResource | null) => void;
-    getCatalogResourceMock.mockImplementation(
-      () => new Promise<CatalogResource | null>((resolve) => {
-        resolveRequest = resolve;
-      }),
-    );
-
-    const { rerender } = render(
-      <MemoryRouter>
-        <ResourceDetailPanel active={false} catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
-      </MemoryRouter>,
-    );
-
-    await act(async () => {});
-
-    rerender(
-      <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} onResourceRefreshed={onResourceRefreshed} resource={resource} />
-      </MemoryRouter>,
-    );
-    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(1));
-
-    rerender(
-      <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} onResourceRefreshed={onResourceRefreshed} resource={parentResource} />
-      </MemoryRouter>,
-    );
-    act(() => {
-      resolveRequest(resource);
-    });
-    await Promise.resolve();
-
-    expect(onResourceRefreshed).not.toHaveBeenCalled();
+    expect(await screen.findByText("Orders")).toBeTruthy();
+    expect(getCatalogResourceMock).not.toHaveBeenCalled();
   });
 
   it("refreshes the resource version after an update conflict", async () => {
