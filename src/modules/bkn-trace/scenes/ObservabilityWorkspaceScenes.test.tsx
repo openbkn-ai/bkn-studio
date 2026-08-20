@@ -138,6 +138,32 @@ describe("observability workspace scenes", () => {
     }
   });
 
+  it("从用户管理审计下钻规范化目标并展示异常来源原因", async () => {
+    window.history.replaceState({}, "", "/system/audit?target_id=user-a&target_type=users&target_name=Administrator");
+    render(<ObservabilityLogsScene mode="audit" />);
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "users" });
+    expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
+    expect(screen.getByText("Administrator")).not.toBeNull();
+    expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.source_query_failed") ?? false)).not.toHaveLength(0);
+  });
+
+  it("将可用来源标为正常并为未知失败原因提供本地化兜底", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "partial", value: 0 }, data: [], partial: true,
+      sourceStatus: [
+        { coveredModules: [], reliability: "best_effort", sourceId: "available-source", status: "available" },
+        { coveredModules: [], reason: "network_timeout", reliability: "best_effort", sourceId: "degraded-source", status: "degraded" },
+      ],
+    });
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findAllByText((_content, element) => element?.textContent === "available-source · bknTrace.logs.sourceStatus.healthy")).not.toHaveLength(0);
+    expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.unavailable") ?? false)).not.toHaveLength(0);
+  });
+
   it("以业务语言展示领域知识网络管理事实", async () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
       count: { accuracy: "exact", value: 1 },
@@ -176,7 +202,7 @@ describe("observability workspace scenes", () => {
     render(<AuditLogPage />);
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
-    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "user" });
+    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "users" });
     expect(dayjs(query?.timeTo).diff(dayjs(query?.timeFrom), "day")).toBe(30);
     expect(await screen.findByText("bknTrace.logs.auditTitle")).not.toBeNull();
   });

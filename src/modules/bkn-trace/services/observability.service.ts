@@ -430,8 +430,8 @@ function logQueryParams(query: LogListQuery) {
   if (query.pageSize !== undefined) params.page_size = query.pageSize;
   if (query.query) params.q = query.query;
   if (query.requestId) params.request_id = query.requestId;
-  if (query.targetId) params.target_id = query.targetId;
-  if (query.targetType) params.target_type = query.targetType;
+  if (query.targetId) params.resource_id = query.targetId;
+  if (query.targetType) params.resource_type = query.targetType;
   if (query.timeFrom) params.time_from = query.timeFrom;
   if (query.timeTo) params.time_to = query.timeTo;
   if (query.traceId) params.trace_id = query.traceId;
