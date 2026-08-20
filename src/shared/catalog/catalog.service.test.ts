@@ -245,11 +245,11 @@ describe("catalog.service · health check schedule", () => {
       catalogId: "catalog-1",
       cronExpr: "0 * * * *",
       expectedUpdateTime: 1_785_398_400_000,
+      lastRun: 1_785_398_400_000,
       mode: "enabled",
+      nextRun: 1_785_402_000_000,
+      updateTime: 1_785_398_400_000,
     });
-    expect(schedule.lastRun).not.toBe("-");
-    expect(schedule.nextRun).not.toBe("-");
-    expect(schedule.updateTime).not.toBe("");
   });
 
   it("updates a schedule without sending cron for inherit mode", async () => {
@@ -282,10 +282,14 @@ describe("catalog.service · health check schedule", () => {
       },
       { skipErrorToast: true },
     );
-    expect(schedule.mode).toBe("inherit");
-    expect(schedule.cronExpr).toBe("");
-    expect(schedule.expectedUpdateTime).toBe(124);
-    expect(schedule.updateTime).not.toBe("");
+    expect(schedule).toMatchObject({
+      cronExpr: "",
+      expectedUpdateTime: 124,
+      lastRun: null,
+      mode: "inherit",
+      nextRun: 1_785_402_000_000,
+      updateTime: 124,
+    });
   });
 });
 

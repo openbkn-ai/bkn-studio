@@ -49,6 +49,10 @@ function normalizeHealthStatus(value?: string): CatalogHealthStatus {
   }
 }
 
+function normalizeCatalogTimestamp(value?: number) {
+  return value || null;
+}
+
 export function inferConnectorCategory(connectorType: string) {
   if (connectorType === "opensearch") {
     return "index";
@@ -74,10 +78,10 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     healthStatus: normalizeHealthStatus(item.health_check_status),
     internal: item.internal ?? false,
     healthCheckResult: item.health_check_result ?? "",
-    lastCheckTime: item.last_check_time ?? null,
+    lastCheckTime: normalizeCatalogTimestamp(item.last_check_time),
     expectedUpdateTime: item.update_time ?? 0,
-    updateTime: item.update_time ?? null,
-    createTime: item.create_time ?? null,
+    updateTime: normalizeCatalogTimestamp(item.update_time),
+    createTime: normalizeCatalogTimestamp(item.create_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     tags: item.tags ?? [],

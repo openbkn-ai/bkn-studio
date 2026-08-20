@@ -10,7 +10,7 @@ import { normalizeSupportedLocale } from "@/framework/i18n/locale";
 import type { CatalogTimestamp } from "@/shared/catalog/types";
 
 export function formatCatalogTime(value: CatalogTimestamp, locale?: string) {
-  return formatDateTime(value, {
+  return formatDateTime(value === 0 ? null : value, {
     locale: normalizeSupportedLocale(locale) ?? undefined,
     year: "numeric",
     month: "2-digit",

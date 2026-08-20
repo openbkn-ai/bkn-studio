@@ -55,4 +55,20 @@ describe("catalog-mapper · health status", () => {
     expect(catalog.lastCheckTime).toBeNull();
     expect(catalog.healthStatus).toBe("unchecked");
   });
+
+  it("treats zero backend timestamps as missing values", () => {
+    const catalog = mapBackendCatalog({
+      connector_type: "postgresql",
+      create_time: 0,
+      enabled: true,
+      id: "catalog-1",
+      last_check_time: 0,
+      name: "orders",
+      update_time: 0,
+    });
+
+    expect(catalog.createTime).toBeNull();
+    expect(catalog.lastCheckTime).toBeNull();
+    expect(catalog.updateTime).toBeNull();
+  });
 });

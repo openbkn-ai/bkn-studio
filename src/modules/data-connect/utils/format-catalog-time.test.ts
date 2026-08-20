@@ -23,5 +23,6 @@ describe("formatCatalogTime", () => {
 
   it("keeps the empty display value stable", () => {
     expect(formatCatalogTime(null, "en-US")).toBe("-");
+    expect(formatCatalogTime(0, "en-US")).toBe("-");
   });
 });

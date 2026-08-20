@@ -24,7 +24,7 @@ function scanFixture(name: string) {
 }
 
 describe("hardcoded i18n scanner", () => {
-  it("finds Chinese HTML and user-facing English TSX text", () => {
+  it("finds Chinese HTML, TSX strings with comment markers, and user-facing English text", () => {
     const result = scanFixture("bad");
 
     expect(result.findings).toEqual(
@@ -32,6 +32,14 @@ describe("hardcoded i18n scanner", () => {
         expect.objectContaining({ language: "en", text: "back" }),
         expect.objectContaining({ language: "en", text: "Copy failed" }),
         expect.objectContaining({ language: "zh", relativePath: "public/review.html" }),
+        expect.objectContaining({
+          language: "zh",
+          text: expect.stringContaining("https://example.com/中文文档"),
+        }),
+        expect.objectContaining({
+          language: "zh",
+          text: expect.stringContaining("块注释符号之后的硬编码"),
+        }),
       ]),
     );
   });

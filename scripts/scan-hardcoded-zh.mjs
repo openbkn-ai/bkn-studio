@@ -82,7 +82,9 @@ function scanFile(filePath) {
 }
 
 function scanChineseText(filePath, source) {
-  const sanitized = stripComments(source);
+  const sanitized = path.extname(filePath) === ".html"
+    ? stripHtmlComments(source)
+    : stripComments(source);
   const sourceLines = source.split(/\r?\n/);
   sanitized.split(/\r?\n/).forEach((line, index) => {
     if (!chinesePattern.test(line)) return;
@@ -239,8 +241,81 @@ function printSummary(summary) {
 }
 
 function stripComments(source) {
-  return source
-    .replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "))
-    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
-    .replace(/\/\/.*$/gm, "");
+  let output = "";
+  let index = 0;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplate = false;
+
+  while (index < source.length) {
+    const current = source[index];
+    const next = source[index + 1];
+
+    if (inLineComment) {
+      if (current === "\n") {
+        inLineComment = false;
+        output += current;
+      } else {
+        output += " ";
+      }
+      index += 1;
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (current === "*" && next === "/") {
+        inBlockComment = false;
+        output += "  ";
+        index += 2;
+        continue;
+      }
+      output += current === "\n" ? "\n" : " ";
+      index += 1;
+      continue;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && !inTemplate && current === "/" && next === "/") {
+      inLineComment = true;
+      output += "  ";
+      index += 2;
+      continue;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && !inTemplate && current === "/" && next === "*") {
+      inBlockComment = true;
+      output += "  ";
+      index += 2;
+      continue;
+    }
+
+    if (!inDoubleQuote && !inTemplate && current === "'" && !isEscaped(source, index)) {
+      inSingleQuote = !inSingleQuote;
+    } else if (!inSingleQuote && !inTemplate && current === '"' && !isEscaped(source, index)) {
+      inDoubleQuote = !inDoubleQuote;
+    } else if (!inSingleQuote && !inDoubleQuote && current === "`" && !isEscaped(source, index)) {
+      inTemplate = !inTemplate;
+    }
+
+    output += current;
+    index += 1;
+  }
+
+  return output;
+}
+
+function stripHtmlComments(source) {
+  return source.replace(
+    /<!--[\s\S]*?-->/g,
+    (comment) => comment.replace(/[^\n]/g, " "),
+  );
+}
+
+function isEscaped(source, index) {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
 }
