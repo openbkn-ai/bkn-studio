@@ -66,7 +66,7 @@ type ListResponse<T> = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
-const mockConnectorTypes: DataConnectConnectorType[] = [
+const mockConnectorTypes: BackendConnectorType[] = [
   {
     type: "mariadb",
     name: "MariaDB",
@@ -74,35 +74,29 @@ const mockConnectorTypes: DataConnectConnectorType[] = [
     mode: "local",
     description: "Connect MariaDB / MySQL-compatible databases.",
     enabled: true,
-    fieldConfig: {
-      host: {
-        name: "Host",
-        type: "string",
-        description: "Database host address",
-        required: true,
-        encrypted: false,
-      },
-      port: {
-        name: "Port",
-        type: "integer",
-        description: "Database port",
-        required: true,
-        encrypted: false,
-      },
-      username: {
-        name: "Username",
-        type: "string",
-        description: "Login username",
-        required: true,
-        encrypted: false,
-      },
-      password: {
-        name: "Password",
-        type: "string",
-        description: "Login password",
-        required: true,
-        encrypted: true,
-      },
+    field_config: {
+      host: mockField("Host", "Database host address", "string", true),
+      port: mockField("Port", "Database port", "integer", true),
+      username: mockField("Username", "Login username", "string", true),
+      password: mockField("Password", "Login password", "string", true, true),
+      databases: mockField("Database list", "Optional database names", "array", false),
+      options: mockField("Connection options", "Driver connection options", "object", false),
+    },
+  },
+  {
+    type: "mysql",
+    name: "MySQL",
+    category: "table",
+    mode: "local",
+    description: "Connect MySQL-compatible databases.",
+    enabled: true,
+    field_config: {
+      host: mockField("Host", "Database host address", "string", true),
+      port: mockField("Port", "Database port", "integer", true),
+      username: mockField("Username", "Login username", "string", true),
+      password: mockField("Password", "Login password", "string", true, true),
+      databases: mockField("Database list", "Optional database names", "array", false),
+      options: mockField("Connection options", "Driver connection options", "object", false),
     },
   },
   {
@@ -112,28 +106,14 @@ const mockConnectorTypes: DataConnectConnectorType[] = [
     mode: "local",
     description: "Connect PostgreSQL databases.",
     enabled: true,
-    fieldConfig: {
-      host: {
-        name: "Host",
-        type: "string",
-        description: "Database host address",
-        required: true,
-        encrypted: false,
-      },
-      port: {
-        name: "Port",
-        type: "integer",
-        description: "Database port",
-        required: true,
-        encrypted: false,
-      },
-      database: {
-        name: "Database",
-        type: "string",
-        description: "Database name",
-        required: true,
-        encrypted: false,
-      },
+    field_config: {
+      host: mockField("Host", "Database host address", "string", true),
+      port: mockField("Port", "Database port", "integer", true),
+      username: mockField("Username", "Database username", "string", true),
+      password: mockField("Password", "Database password", "string", true, true),
+      database: mockField("Database", "Database name", "string", true),
+      schemas: mockField("Schema list", "Optional schema names", "array", false),
+      options: mockField("Connection options", "Driver connection options", "object", false),
     },
   },
   {
@@ -143,57 +123,14 @@ const mockConnectorTypes: DataConnectConnectorType[] = [
     mode: "local",
     description: "Connect Microsoft SQL Server databases.",
     enabled: true,
-    fieldConfig: {
-      host: {
-        name: "Host",
-        type: "string",
-        description: "SQL Server server host address",
-        required: true,
-        encrypted: false,
-      },
-      port: {
-        name: "Port",
-        type: "integer",
-        description: "SQL Server TCP port",
-        required: true,
-        encrypted: false,
-      },
-      username: {
-        name: "Username",
-        type: "string",
-        description: "SQL Server login username",
-        required: true,
-        encrypted: false,
-      },
-      password: {
-        name: "Password",
-        type: "string",
-        description: "SQL Server login password",
-        required: true,
-        encrypted: true,
-      },
-      database: {
-        name: "Database",
-        type: "string",
-        description: "SQL Server target database",
-        required: true,
-        encrypted: false,
-      },
-      schemas: {
-        name: "Schema list",
-        type: "array",
-        description: "Optional. Leave empty to scan all accessible non-system schemas.",
-        required: false,
-        encrypted: false,
-      },
-      options: {
-        name: "Connection options",
-        type: "object",
-        description:
-          "Connection options such as encrypt, trustservercertificate, and connection timeout.",
-        required: false,
-        encrypted: false,
-      },
+    field_config: {
+      host: mockField("Host", "SQL Server server host address", "string", true),
+      port: mockField("Port", "SQL Server TCP port", "integer", true),
+      username: mockField("Username", "SQL Server login username", "string", true),
+      password: mockField("Password", "SQL Server login password", "string", true, true),
+      database: mockField("Database", "SQL Server target database", "string", true),
+      schemas: mockField("Schema list", "Optional. Leave empty to scan all accessible non-system schemas.", "array", false),
+      options: mockField("Connection options", "Connection options such as encrypt, trustservercertificate, and connection timeout.", "object", false),
     },
   },
   {
@@ -203,31 +140,44 @@ const mockConnectorTypes: DataConnectConnectorType[] = [
     mode: "local",
     description: "Connect OpenSearch engines.",
     enabled: true,
-    fieldConfig: {
-      endpoint: {
-        name: "Endpoint",
-        type: "string",
-        description: "Service endpoint",
-        required: true,
-        encrypted: false,
-      },
-      username: {
-        name: "Username",
-        type: "string",
-        description: "Service account",
-        required: false,
-        encrypted: false,
-      },
-      password: {
-        name: "Password",
-        type: "string",
-        description: "Service password",
-        required: false,
-        encrypted: true,
-      },
+    field_config: {
+      host: mockField("Host", "OpenSearch server host address", "string", true),
+      port: mockField("Port", "OpenSearch server port", "integer", true),
+      username: mockField("Username", "Service account", "string", false),
+      password: mockField("Password", "Service password", "string", false, true),
+      index_pattern: mockField("Index pattern", "Optional index matching pattern", "string", false),
+    },
+  },
+  {
+    type: "anyshare",
+    name: "AnyShare",
+    category: "fileset",
+    mode: "local",
+    description: "Connect fileset and document resources.",
+    enabled: true,
+    field_config: {
+      protocol: mockField("Protocol", "http or https", "string", true),
+      host: mockField("Host", "AnyShare service host", "string", true),
+      port: mockField("Port", "AnyShare service port", "integer", true),
+      auth_type: mockField("Authentication type", "Token or application credentials", "integer", true),
+      token: mockField("Access token", "Required for token authentication", "string", false, true),
+      app_id: mockField("Application ID", "Required for application authentication", "string", false),
+      app_secret: mockField("Application secret", "Required for application authentication", "string", false, true),
+      doc_lib_type: mockField("Document library type", "Knowledge or document library", "integer", true),
+      paths: mockField("Path list", "Optional document library paths", "array", false),
     },
   },
 ];
+
+function mockField(
+  name: string,
+  description: string,
+  type: string,
+  required: boolean,
+  encrypted = false,
+): BackendConnectorFieldConfig {
+  return { description, encrypted, name, required, type };
+}
 
 const wait = async <T,>(value: T) =>
   new Promise<T>((resolve) => {
@@ -246,9 +196,7 @@ function mapConnectorType(item: BackendConnectorType): DataConnectConnectorType 
       Object.entries(item.field_config ?? {}).map(([key, value]) => [
         key,
         {
-          name: value.name ?? key,
           type: value.type ?? "string",
-          description: value.description ?? "",
           required: Boolean(value.required),
           encrypted: Boolean(value.encrypted),
         },
@@ -259,7 +207,7 @@ function mapConnectorType(item: BackendConnectorType): DataConnectConnectorType 
 
 export async function listDataConnectConnectorTypes() {
   if (useMock) {
-    return wait(mockConnectorTypes);
+    return wait(mockConnectorTypes.map(mapConnectorType));
   }
 
   const response = await http.get<ListResponse<BackendConnectorType>>(

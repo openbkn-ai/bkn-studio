@@ -18,6 +18,7 @@ import {
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
+import { humanizeConnectorFieldLabel } from "@/modules/data-connect/lib/connector-template";
 import {
   getDataConnectHealthCheckSchedule,
   getDataConnectRecord,
@@ -44,7 +45,7 @@ export function DataConnectDetailDrawer({
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =
@@ -299,7 +300,7 @@ export function DataConnectDetailDrawer({
             <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
             {Object.entries(record.connectorConfig).length > 0 ? (
               <div className={styles.configGrid}>
-                {buildConfigEntries(record, t, selectedConnectorType, i18n.language || undefined).map((item) => (
+                {buildConfigEntries(record, t, selectedConnectorType).map((item) => (
                   <div className={styles.configItem} key={item.key}>
                     <span className={styles.configLabel}>{item.label}</span>
                     {item.description ? (
@@ -396,7 +397,6 @@ function buildConfigEntries(
   record: DataConnectRecord,
   t: TFunction,
   connectorType?: DataConnectConnectorType,
-  locale?: string,
 ) {
   const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
@@ -408,17 +408,17 @@ function buildConfigEntries(
       return leftRank - rightRank;
     }
 
-    const leftName = fieldConfig[left]?.name ?? humanizeConfigKey(left, t);
-    const rightName = fieldConfig[right]?.name ?? humanizeConfigKey(right, t);
-    return leftName.localeCompare(rightName, locale);
+    return humanizeConnectorFieldLabel(left, connectorType?.type).localeCompare(
+      humanizeConnectorFieldLabel(right, connectorType?.type),
+    );
   });
 
   return keys.map((key) => {
     const configItem = fieldConfig[key];
     return {
-      description: configItem?.description?.trim() || "",
+      description: "",
       key,
-      label: configItem?.name?.trim() || humanizeConfigKey(key, t),
+      label: humanizeConnectorFieldLabel(key, connectorType?.type),
       value: configItem?.encrypted ? "******" : formatConfigValue(config[key], t),
     };
   });
@@ -443,16 +443,4 @@ function configFieldOrderRank(key: string) {
   };
 
   return rankMap[normalized] ?? 100;
-}
-
-function humanizeConfigKey(key: string, t: TFunction) {
-  const normalized = key.trim().toLowerCase();
-  const fallback = key
-    .replace(/_/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/^\w/, (char) => char.toUpperCase());
-
-  return t(`dataConnect.connectorFieldLabels.${normalized}`, {
-    defaultValue: fallback,
-  });
 }

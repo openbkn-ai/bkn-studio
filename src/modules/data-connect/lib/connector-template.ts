@@ -205,6 +205,166 @@ export type ConnectorFieldControl =
   | { kind: "tags" }
   | { kind: "text" };
 
+type ConnectorFieldCondition = {
+  field: string;
+  values: readonly (boolean | number | string)[];
+};
+
+type ConnectorFieldTemplate = {
+  control?: ConnectorFieldControl;
+  group?: ConnectorFieldGroupKey;
+  label: string;
+  requiredWhen?: ConnectorFieldCondition;
+  visibleWhen?: ConnectorFieldCondition;
+};
+
+const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTemplate>> = {
+  mariadb: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    databases: { label: "Database list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  mysql: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    databases: { label: "Database list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  postgresql: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    database: { label: "Database" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  sqlserver: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    database: { label: "Database" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  opensearch: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    index_pattern: { label: "Index pattern" },
+  },
+  anyshare: {
+    protocol: {
+      control: {
+        kind: "select",
+        options: [
+          { label: "HTTP", value: "http" },
+          { label: "HTTPS", value: "https" },
+        ],
+      },
+      label: "Protocol",
+    },
+    host: { label: "Host" },
+    port: { label: "Port" },
+    auth_type: {
+      control: {
+        kind: "select",
+        options: [
+          { label: "Access token", value: 1 },
+          { label: "Application credentials", value: 2 },
+        ],
+      },
+      group: "auth",
+      label: "Authentication type",
+    },
+    token: {
+      group: "auth",
+      label: "Access token",
+      requiredWhen: { field: "auth_type", values: [1] },
+      visibleWhen: { field: "auth_type", values: [1] },
+    },
+    app_id: {
+      group: "auth",
+      label: "Application ID",
+      requiredWhen: { field: "auth_type", values: [2] },
+      visibleWhen: { field: "auth_type", values: [2] },
+    },
+    app_secret: {
+      group: "auth",
+      label: "Application secret",
+      requiredWhen: { field: "auth_type", values: [2] },
+      visibleWhen: { field: "auth_type", values: [2] },
+    },
+    doc_lib_type: {
+      control: {
+        kind: "select",
+        options: [
+          { label: "Knowledge base", value: 1 },
+          { label: "Document library", value: 2 },
+        ],
+      },
+      label: "Document library type",
+    },
+    paths: { label: "Paths" },
+  },
+};
+
+const GENERIC_FIELD_LABELS: Record<string, string> = {
+  account: "Account",
+  api_key: "API Key",
+  app_id: "Application ID",
+  app_secret: "Application secret",
+  auth_type: "Authentication type",
+  catalog: "Catalog",
+  character_encoding: "Character encoding",
+  character_set: "Character set",
+  charset: "Character set",
+  connection_mode: "Connection mode",
+  database: "Database",
+  database_list: "Database list",
+  databases: "Database list",
+  db: "Database",
+  doc_lib_type: "Document library type",
+  enable_ssl: "Enable SSL",
+  encoding: "Character encoding",
+  endpoint: "Endpoint",
+  host: "Host",
+  index_pattern: "Index pattern",
+  mode: "Mode",
+  options: "Connection options",
+  password: "Password",
+  path: "Path",
+  paths: "Paths",
+  port: "Port",
+  project: "Project",
+  protocol: "Protocol",
+  schema: "Schema",
+  schema_list: "Schema list",
+  schemas: "Schema list",
+  secret: "Secret",
+  secret_key: "Secret key",
+  server: "Host",
+  ssl: "SSL",
+  ssl_enabled: "Enable SSL",
+  ssl_mode: "SSL mode",
+  sslmode: "SSL mode",
+  table: "Table",
+  token: "Access token",
+  uri: "Connection URI",
+  url: "Connection URL",
+  use_ssl: "Enable SSL",
+  user: "User",
+  username: "Username",
+  warehouse: "Warehouse",
+};
+
 const CONNECTION_KEYS = new Set([
   "catalog",
   "catalog_name",
@@ -355,50 +515,12 @@ function knownConnectorType(
   };
 }
 
-export function humanizeConnectorFieldLabel(name: string) {
-  const labelMap: Record<string, string> = {
-    account: "Account",
-    api_key: "API Key",
-    catalog: "Catalog",
-    character_encoding: "Character encoding",
-    character_set: "Character set",
-    charset: "Character set",
-    connection_mode: "Connection mode",
-    database: "Database",
-    database_list: "Database list",
-    databases: "Database list",
-    db: "Database",
-    enable_ssl: "Enable SSL",
-    encoding: "Character encoding",
-    endpoint: "Endpoint",
-    host: "Host",
-    mode: "Mode",
-    password: "Password",
-    path: "Path",
-    port: "Port",
-    project: "Project",
-    schema: "Schema",
-    schema_list: "Schema list",
-    secret: "Secret",
-    secret_key: "Secret key",
-    server: "Host",
-    ssl: "SSL",
-    ssl_enabled: "Enable SSL",
-    ssl_mode: "SSL mode",
-    sslmode: "SSL mode",
-    table: "Table",
-    token: "Access token",
-    uri: "Connection URI",
-    url: "Connection URL",
-    use_ssl: "Enable SSL",
-    user: "User",
-    username: "Username",
-    warehouse: "Warehouse",
-  };
-
+export function humanizeConnectorFieldLabel(name: string, connectorType?: string) {
   const normalized = name.trim().toLowerCase();
-  if (labelMap[normalized]) {
-    return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, labelMap[normalized]);
+  const template = getConnectorFieldTemplate(connectorType, normalized);
+  const defaultLabel = template?.label ?? GENERIC_FIELD_LABELS[normalized];
+  if (defaultLabel) {
+    return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, defaultLabel);
   }
 
   return name
@@ -501,8 +623,14 @@ export function getConnectorFieldPlaceholder(
 export function resolveConnectorFieldControl(
   fieldName: string,
   fieldType: string,
+  connectorType?: string,
 ): ConnectorFieldControl {
   const normalized = fieldName.trim().toLowerCase();
+  const templateControl = getConnectorFieldTemplate(connectorType, normalized)?.control;
+
+  if (templateControl) {
+    return localizeConnectorFieldControl(connectorType, normalized, templateControl);
+  }
 
   if (fieldType === "boolean" || BOOLEAN_FIELD_NAMES.has(normalized)) {
     return { kind: "switch" };
@@ -586,11 +714,15 @@ export function getConnectorConfigDefaults(
 }
 
 export function groupConnectorFields(
-  connector?: Pick<DataConnectConnectorType, "fieldConfig">,
+  connector?: Pick<DataConnectConnectorType, "fieldConfig" | "type">,
 ): ConnectorFieldGroup[] {
   const fieldEntries = Object.entries(connector?.fieldConfig ?? {}).sort((left, right) => {
-    const leftGroup = connectorFieldGroupRank(resolveFieldGroupKey(left[0], left[1]));
-    const rightGroup = connectorFieldGroupRank(resolveFieldGroupKey(right[0], right[1]));
+    const leftGroup = connectorFieldGroupRank(
+      resolveFieldGroupKey(connector?.type, left[0], left[1]),
+    );
+    const rightGroup = connectorFieldGroupRank(
+      resolveFieldGroupKey(connector?.type, right[0], right[1]),
+    );
     if (leftGroup !== rightGroup) {
       return leftGroup - rightGroup;
     }
@@ -601,8 +733,8 @@ export function groupConnectorFields(
       return leftRank - rightRank;
     }
 
-    return humanizeConnectorFieldLabel(left[0]).localeCompare(
-      humanizeConnectorFieldLabel(right[0]),
+    return humanizeConnectorFieldLabel(left[0], connector?.type).localeCompare(
+      humanizeConnectorFieldLabel(right[0], connector?.type),
       "zh-CN",
     );
   });
@@ -610,7 +742,7 @@ export function groupConnectorFields(
   const grouped = new Map<ConnectorFieldGroupKey, Array<[string, ConnectorFieldConfig]>>();
 
   fieldEntries.forEach(([fieldName, fieldConfig]) => {
-    const groupKey = resolveFieldGroupKey(fieldName, fieldConfig);
+    const groupKey = resolveFieldGroupKey(connector?.type, fieldName, fieldConfig);
     const current = grouped.get(groupKey) ?? [];
     current.push([fieldName, fieldConfig]);
     grouped.set(groupKey, current);
@@ -627,6 +759,69 @@ export function groupConnectorFields(
       fields: grouped.get(key) ?? [],
     }))
     .filter((group) => group.fields.length > 0);
+}
+
+export function isConnectorFieldRequired(
+  connectorType: string | undefined,
+  fieldName: string,
+  backendRequired: boolean,
+  values?: Record<string, unknown>,
+) {
+  const template = getConnectorFieldTemplate(connectorType, fieldName);
+  return backendRequired || conditionMatches(template?.requiredWhen, values);
+}
+
+export function isConnectorFieldVisible(
+  connectorType: string | undefined,
+  fieldName: string,
+  values?: Record<string, unknown>,
+) {
+  const template = getConnectorFieldTemplate(connectorType, fieldName);
+  return !template?.visibleWhen || conditionMatches(template.visibleWhen, values);
+}
+
+function getConnectorFieldTemplate(connectorType: string | undefined, fieldName: string) {
+  if (!connectorType) {
+    return undefined;
+  }
+
+  return CONNECTOR_FIELD_TEMPLATES[connectorType.trim().toLowerCase()]?.[
+    fieldName.trim().toLowerCase()
+  ];
+}
+
+function conditionMatches(
+  condition: ConnectorFieldCondition | undefined,
+  values: Record<string, unknown> | undefined,
+) {
+  if (!condition) {
+    return false;
+  }
+
+  const value = values?.[condition.field];
+  return condition.values.some((candidate) => String(candidate) === String(value));
+}
+
+function localizeConnectorFieldControl(
+  connectorType: string | undefined,
+  fieldName: string,
+  control: ConnectorFieldControl,
+): ConnectorFieldControl {
+  if (control.kind !== "select" || !connectorType) {
+    return control;
+  }
+
+  const typeKey = connectorType.trim().toLowerCase();
+  return {
+    ...control,
+    options: control.options.map((option) => ({
+      ...option,
+      label: dataConnectText(
+        `connectorTemplates.options.${typeKey}.${fieldName}.${option.value}`,
+        option.label,
+      ),
+    })),
+  };
 }
 
 function dataConnectText(key: string, defaultValue: string): string {
@@ -682,7 +877,16 @@ function connectorFieldGroupRank(key: ConnectorFieldGroupKey) {
   }
 }
 
-function resolveFieldGroupKey(fieldName: string, fieldConfig: ConnectorFieldConfig): ConnectorFieldGroupKey {
+function resolveFieldGroupKey(
+  connectorType: string | undefined,
+  fieldName: string,
+  fieldConfig: ConnectorFieldConfig,
+): ConnectorFieldGroupKey {
+  const templateGroup = getConnectorFieldTemplate(connectorType, fieldName)?.group;
+  if (templateGroup) {
+    return templateGroup;
+  }
+
   const normalized = fieldName.trim().toLowerCase();
 
   if (fieldConfig.encrypted || AUTH_KEYS.has(normalized)) {

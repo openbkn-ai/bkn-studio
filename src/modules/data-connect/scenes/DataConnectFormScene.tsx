@@ -23,6 +23,7 @@ import { DataConnectConfigForm } from "@/modules/data-connect/components/DataCon
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import {
   getConnectorConfigDefaults,
+  isConnectorFieldVisible,
   mergeKnownConnectorTypes,
 } from "@/modules/data-connect/lib/connector-template";
 import {
@@ -61,6 +62,7 @@ export function DataConnectFormScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const recordIdentityKey = mode === "edit" ? (recordId ?? "") : "";
   const recordIdentityRef = useRef({ generation: 0, key: recordIdentityKey });
   if (recordIdentityRef.current.key !== recordIdentityKey) {
@@ -121,6 +123,7 @@ export function DataConnectFormScene({
             tags: [],
           });
         }
+        setHasUnsavedChanges(false);
       } catch (error) {
         if (active) {
           setLoadError(extractRequestErrorMessage(error));
@@ -169,6 +172,7 @@ export function DataConnectFormScene({
           name: latestRecord.name,
           tags: latestRecord.tags,
         });
+        setHasUnsavedChanges(false);
       }
     } catch (refreshError) {
       if (recordIdentityRef.current === submittedRecordIdentity) {
@@ -197,13 +201,29 @@ export function DataConnectFormScene({
     { title: t("dataConnect.configStep") },
   ];
 
-  const handleBack = () => {
+  const leavePage = () => {
     if (onBack) {
       onBack();
       return;
     }
 
     void navigate("/data-connect");
+  };
+
+  const handleBack = () => {
+    if (!hasUnsavedChanges) {
+      leavePage();
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t("dataConnect.discardChangesDescription"),
+      okButtonProps: { danger: true },
+      okText: t("dataConnect.discardChangesConfirm"),
+      onOk: leavePage,
+      title: t("dataConnect.discardChangesTitle"),
+    });
   };
 
   const handleNext = () => {
@@ -234,6 +254,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
@@ -265,6 +286,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType:
         selectedConnectorType ?? currentValues.connectorType,
@@ -465,6 +487,9 @@ export function DataConnectFormScene({
                 }
                 colon={false}
                 form={form}
+                onValuesChange={() => {
+                  setHasUnsavedChanges(true);
+                }}
                 labelAlign="right"
                 labelCol={
                   currentStep === 0 && mode === "create"
@@ -484,6 +509,7 @@ export function DataConnectFormScene({
                   <ConnectorTypePicker
                     onChange={(value) => {
                       const connector = connectorTypes.find((item) => item.type === value);
+                      setHasUnsavedChanges(true);
                       setSelectedConnectorType(value);
                       form.setFieldsValue({
                         connectorConfig: getConnectorConfigDefaults(connector),
@@ -577,11 +603,13 @@ function sanitizeConnectorConfig(
 function normalizeConnectorConfig(
   config: Record<string, unknown>,
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
+  connectorType?: string,
 ) {
   return Object.fromEntries(
     Object.entries(config)
       .filter(
         ([key, value]) =>
+          isConnectorFieldVisible(connectorType, key, config) &&
           !shouldOmitConnectorConfigValue(fieldConfig[key], value),
       )
       .map(([key, value]) => {

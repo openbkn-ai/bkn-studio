@@ -18,9 +18,7 @@ export type {
 import type { CatalogHealthCheckScheduleInput } from "@/shared/catalog/types";
 
 export type ConnectorFieldConfig = {
-  description: string;
   encrypted: boolean;
-  name: string;
   required: boolean;
   type: string;
 };

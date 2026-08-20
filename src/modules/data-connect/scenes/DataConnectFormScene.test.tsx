@@ -28,6 +28,7 @@ const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
 const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
@@ -37,7 +38,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
       warning: vi.fn(),
     },
     modal: {
-      confirm: vi.fn(),
+      confirm: modalConfirmMock,
     },
   }),
 }));
@@ -141,6 +142,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     entitlementState.snapshot = null;
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
+    modalConfirmMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
     getDataConnectRecordMock.mockReset();
@@ -191,6 +193,47 @@ describe("DataConnectFormScene · connection preflight", () => {
       updaterName: "-",
     });
   });
+
+  it("confirms before leaving a create form with unsaved changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const onBack = vi.fn();
+
+    render(<DataConnectFormScene mode="create" onBack={onBack} />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "orders" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /common\.back/ }));
+
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cancelText: "common.cancel",
+        content: "dataConnect.discardChangesDescription",
+        okText: "dataConnect.discardChangesConfirm",
+        title: "dataConnect.discardChangesTitle",
+      }),
+    );
+    expect(onBack).not.toHaveBeenCalled();
+
+    const [[{ onOk }]] = modalConfirmMock.mock.calls;
+    onOk();
+    expect(onBack).toHaveBeenCalledOnce();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  it("leaves immediately when the form has no user changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const onBack = vi.fn();
+
+    render(<DataConnectFormScene mode="create" onBack={onBack} />);
+
+    await findConnectorCard("PostgreSQL");
+    fireEvent.click(screen.getByRole("button", { name: /common\.back/ }));
+
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    expect(onBack).toHaveBeenCalledOnce();
+  }, HEAVY_SCENE_TIMEOUT_MS);
 
   afterEach(() => {
     vi.useRealTimers();
@@ -653,15 +696,13 @@ describe("DataConnectFormScene · connection preflight", () => {
 });
 
 function connectorField(
-  name: string,
+  _name: string,
   type: string,
   required: boolean,
   encrypted = false,
 ) {
   return {
-    description: "",
     encrypted,
-    name,
     required,
     type,
   };
