@@ -266,6 +266,9 @@ export function DataConnectFormScene({
       });
       setCurrentStep(1);
     } catch (error) {
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setLoadingConnectorDefinition(false);

@@ -345,6 +345,61 @@ describe("DataConnectFormScene · connection preflight", () => {
     expect(getDataConnectConnectorTypeMock).toHaveBeenLastCalledWith("sqlserver");
   }, HEAVY_SCENE_TIMEOUT_MS);
 
+  it("does not show an error from a stale connector definition request", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const postgresqlDetail = createDeferred<DataConnectConnectorType>();
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
+      type === "postgresql"
+        ? postgresqlDetail.promise
+        : Promise.resolve({
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { database: connectorField("Database", "string", true) },
+            mode: "local",
+            name: "SQL Server",
+            type,
+          })
+    ));
+    listDataConnectConnectorTypesMock.mockResolvedValue([
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "PostgreSQL",
+        type: "postgresql",
+      },
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "SQL Server",
+        type: "sqlserver",
+      },
+    ]);
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    await waitFor(() => {
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("postgresql");
+    });
+    fireEvent.click(await findConnectorCard("SQL Server"));
+    postgresqlDetail.reject(new Error("PostgreSQL definition unavailable"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("common.next").closest("button")?.classList.contains("ant-btn-loading"),
+      ).toBe(false);
+    });
+    expect(messageErrorMock).not.toHaveBeenCalled();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -836,11 +891,17 @@ function connectorField(
 
 function createDeferred<T>() {
   let resolve: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => {
+  let reject: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
 
-  return { promise, resolve: (value: T) => resolve(value) };
+  return {
+    promise,
+    reject: (reason?: unknown) => reject(reason),
+    resolve: (value: T) => resolve(value),
+  };
 }
 
 function mockSQLServerEditCatalog(
