@@ -13,10 +13,11 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const getCatalogMock = vi.hoisted(() => vi.fn());
 const listBuildTasksMock = vi.hoisted(() => vi.fn());
+const subscribeMockDbMock = vi.hoisted(() => vi.fn());
 
 vi.mock("antd", () => ({
   Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
-  Spin: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
   Tabs: ({ activeKey, items }: { activeKey: string; items: Array<{ children: React.ReactNode; key: string }> }) => (
     <>{items.find((item) => item.key === activeKey)?.children}</>
   ),
@@ -70,7 +71,7 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   listBuildTasks: listBuildTasksMock,
 }));
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
-  subscribeMockDb: () => () => {},
+  subscribeMockDb: subscribeMockDbMock,
 }));
 vi.mock("@/shared/catalog", () => ({ getCatalog: getCatalogMock }));
 
@@ -95,6 +96,46 @@ describe("ResourceWorkspaceScene", () => {
     vi.clearAllMocks();
     getCatalogMock.mockResolvedValue({ id: "catalog-1", name: "Catalog" });
     listBuildTasksMock.mockResolvedValue([]);
+    subscribeMockDbMock.mockImplementation(() => () => {});
+  });
+
+  it("finishes an in-flight workspace load after a tab refresh", async () => {
+    let onMockDbChange: (() => void) | undefined;
+    let resolveLoad: (resource: CatalogResource) => void;
+    const semanticResource: CatalogResource = {
+      ...staleResource,
+      expectedUpdateTime: 2,
+      schema: [{ ...staleResource.schema[0], displayName: "订单编号" }],
+    };
+    subscribeMockDbMock.mockImplementation((listener: () => void) => {
+      onMockDbChange = listener;
+      return () => {};
+    });
+    getCatalogResourceMock
+      .mockResolvedValueOnce(staleResource)
+      .mockImplementationOnce(() => new Promise<CatalogResource>((resolve) => {
+        resolveLoad = resolve;
+      }))
+      .mockResolvedValueOnce(semanticResource);
+
+    const props = {
+      indexView: "config" as const,
+      onIndexViewChange: vi.fn(),
+      onTabChange: vi.fn(),
+      resourceId: staleResource.id,
+      tab: "semantic-understanding" as const,
+    };
+    const { rerender } = render(<ResourceWorkspaceScene {...props} />);
+
+    await screen.findByTestId("semantic-panel");
+    onMockDbChange?.();
+    await screen.findByTestId("workspace-spin");
+    rerender(<ResourceWorkspaceScene {...props} tab="detail" />);
+    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(3));
+    resolveLoad!(staleResource);
+
+    expect((await screen.findByTestId("detail-schema-name")).textContent).toBe("订单编号");
+    expect(screen.queryByTestId("workspace-spin")).toBeNull();
   });
 
   it("refreshes the resource once when entering detail after semantic understanding", async () => {

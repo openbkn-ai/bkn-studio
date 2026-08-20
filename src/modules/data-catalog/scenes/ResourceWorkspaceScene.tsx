@@ -69,17 +69,22 @@ export function ResourceWorkspaceScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailEditing, setDetailEditing] = useState(false);
   const previousTabRef = useRef(tab);
-  const resourceRequestIdRef = useRef(0);
+  const resourceVersionRef = useRef(0);
+  const loadRequestIdRef = useRef(0);
 
   const loadAll = useCallback(async () => {
-    const requestId = ++resourceRequestIdRef.current;
+    const resourceVersion = ++resourceVersionRef.current;
+    const loadRequestId = ++loadRequestIdRef.current;
     setLoadError(null);
     setLoading(true);
 
     try {
       const detail = await getCatalogResource(resourceId);
       if (!detail) {
-        if (resourceRequestIdRef.current === requestId) {
+        if (
+          resourceVersionRef.current === resourceVersion
+          && loadRequestIdRef.current === loadRequestId
+        ) {
           setResource(null);
           setCatalog(null);
           setTasks([]);
@@ -92,20 +97,25 @@ export function ResourceWorkspaceScene({
         listBuildTasks({ resourceId }),
       ]);
 
-      if (resourceRequestIdRef.current === requestId) {
+      if (resourceVersionRef.current === resourceVersion) {
         setResource(detail);
+      }
+      if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
         setTasks(taskList);
       }
     } catch (error) {
-      if (resourceRequestIdRef.current === requestId) {
+      if (
+        resourceVersionRef.current === resourceVersion
+        && loadRequestIdRef.current === loadRequestId
+      ) {
         setResource(null);
+        setLoadError(extractRequestErrorMessage(error));
         setCatalog(null);
         setTasks([]);
-        setLoadError(extractRequestErrorMessage(error));
       }
     } finally {
-      if (resourceRequestIdRef.current === requestId) {
+      if (loadRequestIdRef.current === loadRequestId) {
         setLoading(false);
       }
     }
@@ -116,14 +126,14 @@ export function ResourceWorkspaceScene({
   }, [loadAll]);
 
   const refreshResource = useCallback(async () => {
-    const requestId = ++resourceRequestIdRef.current;
+    const resourceVersion = ++resourceVersionRef.current;
     try {
       const detail = await getCatalogResource(resourceId);
-      if (detail && resourceRequestIdRef.current === requestId) {
+      if (detail && resourceVersionRef.current === resourceVersion) {
         setResource(detail);
       }
     } catch (error) {
-      if (resourceRequestIdRef.current === requestId) {
+      if (resourceVersionRef.current === resourceVersion) {
         void message.error(extractRequestErrorMessage(error));
       }
     }
