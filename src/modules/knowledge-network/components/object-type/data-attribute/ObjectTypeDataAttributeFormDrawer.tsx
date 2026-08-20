@@ -16,6 +16,7 @@ import type { ObjectTypeDataProperty } from "@/modules/knowledge-network/types/k
 import {
   canBeDisplayKey,
   canBePrimaryKey,
+  DATA_PROPERTY_COMMENT_MAX_LENGTH,
   DATA_PROPERTY_NAME_PATTERN,
   DATA_PROPERTY_TYPES,
 } from "./constants";
@@ -163,7 +164,7 @@ export function ObjectTypeDataAttributeFormDrawer({
         <Form.Item label={t("common.description")} name="comment">
           <Input.TextArea
             autoSize={{ maxRows: 7, minRows: 3 }}
-            maxLength={1000}
+            maxLength={DATA_PROPERTY_COMMENT_MAX_LENGTH}
             placeholder={t("knowledgeNetwork.pleaseInput")}
             showCount
           />

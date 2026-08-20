@@ -35,6 +35,7 @@ import styles from "./ActionTypeTaskManagementPanel.module.css";
 
 type ActionTypeTaskManagementPanelProps = {
   actionTypeId: string;
+  canManage?: boolean;
   networkId: string;
   refreshToken?: number;
 };
@@ -68,6 +69,7 @@ function RunResultSummary({ failedCount, successCount }: { failedCount: number; 
 
 export function ActionTypeTaskManagementPanel({
   actionTypeId,
+  canManage = true,
   networkId,
   refreshToken = 0,
 }: ActionTypeTaskManagementPanelProps) {
@@ -202,7 +204,7 @@ export function ActionTypeTaskManagementPanel({
       },
     ];
 
-    if (record.status === "pending" || record.status === "running") {
+    if (canManage && (record.status === "pending" || record.status === "running")) {
       items.push({
         key: "cancel",
         label: t("knowledgeNetwork.actionTypeExecutionCancelAction"),

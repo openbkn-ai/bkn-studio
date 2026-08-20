@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Button, Checkbox, Dropdown, Empty, Input, Modal, Pagination, Splitter, Table } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BusinessTree } from "@/framework/ui/common/BusinessTreePanel";
@@ -30,6 +30,8 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ObjectTypeResourceSelectModal.module.css";
+
+const RESOURCE_SEARCH_DEBOUNCE_MS = 300;
 
 type ObjectTypeResourceSelectModalProps = {
   networkId: string;
@@ -70,6 +72,7 @@ export function ObjectTypeResourceSelectModal({
   const [groups, setGroups] = useState<ObjectTypeResourceGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
   const [checkedItem, setCheckedItem] = useState<ObjectTypeDataSource | null>(null);
   const [previewId, setPreviewId] = useState("");
   const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
@@ -77,6 +80,7 @@ export function ObjectTypeResourceSelectModal({
   const [listItems, setListItems] = useState<ObjectTypeDataSource[]>([]);
   const [listTotal, setListTotal] = useState(0);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
+  const listRequestIdRef = useRef(0);
 
   const renderGroupTitle = useCallback(
     (group: ObjectTypeResourceGroup) => {
@@ -173,17 +177,6 @@ export function ObjectTypeResourceSelectModal({
     setGroups(nextGroups);
   }, [networkId]);
 
-  const loadList = useCallback(async (nextPagination = pagination) => {
-    const result = await queryObjectTypeResources(networkId, {
-      dataSourceId: selectedGroupId || undefined,
-      name: searchValue,
-      page: nextPagination.page,
-      pageSize: nextPagination.pageSize,
-    });
-    setListItems(result.items);
-    setListTotal(result.total);
-  }, [networkId, pagination, searchValue, selectedGroupId]);
-
   const loadPreview = useCallback(async (resourceId: string) => {
     if (!resourceId) {
       setPreview(null);
@@ -226,6 +219,7 @@ export function ObjectTypeResourceSelectModal({
     setPreviewId("");
     setPreview(null);
     setSearchValue("");
+    setDebouncedSearchValue("");
     setSelectedGroupId("");
     setPagination({ page: 1, pageSize: 10 });
   }, [open]);
@@ -235,8 +229,51 @@ export function ObjectTypeResourceSelectModal({
       return;
     }
 
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchValue(searchValue.trim());
+      setPagination((current) =>
+        current.page === 1 ? current : { ...current, page: 1 },
+      );
+    }, RESOURCE_SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [open, searchValue]);
+
+  useEffect(() => {
+    if (!open) {
+      listRequestIdRef.current += 1;
+      return;
+    }
+
+    const requestId = ++listRequestIdRef.current;
+    const loadList = async () => {
+      const result = await queryObjectTypeResources(networkId, {
+        dataSourceId: selectedGroupId || undefined,
+        name: debouncedSearchValue,
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+      });
+      if (requestId !== listRequestIdRef.current) {
+        return;
+      }
+
+      setListItems(result.items);
+      setListTotal(result.total);
+    };
+
     void loadList();
-  }, [loadList, open, pagination.page, pagination.pageSize, searchValue, selectedGroupId]);
+
+    return () => {
+      listRequestIdRef.current += 1;
+    };
+  }, [
+    debouncedSearchValue,
+    networkId,
+    open,
+    pagination.page,
+    pagination.pageSize,
+    selectedGroupId,
+  ]);
 
   useEffect(() => {
     if (!open) {

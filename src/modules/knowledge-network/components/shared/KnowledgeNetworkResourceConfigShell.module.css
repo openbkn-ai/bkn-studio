@@ -70,3 +70,10 @@
   overflow: auto;
   padding: 20px 24px 32px;
 }
+
+.contentLoading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

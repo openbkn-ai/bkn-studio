@@ -8,24 +8,34 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .metaRow {
+  background: #f8fafc;
+  border: 1px solid #eef1f5;
+  border-radius: 6px;
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 12px 14px;
 }
 
 .metaRow > div {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  min-height: 24px;
 }
 
 .metaRow span {
   color: rgba(0, 0, 0, 0.45);
   font-size: 13px;
+}
+
+.metaRow span::after {
+  content: "：";
 }
 
 .metaRow strong {
@@ -48,4 +58,20 @@
   align-items: center;
   display: inline-flex;
   gap: 8px;
+}
+
+.root :global(.ant-table-wrapper) {
+  border: 1px solid #eef1f5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.root :global(.ant-table) {
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.root :global(.ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: rgba(0, 0, 0, 0.72);
+  font-weight: 500;
 }

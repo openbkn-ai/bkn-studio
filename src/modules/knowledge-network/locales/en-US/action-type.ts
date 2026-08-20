@@ -27,12 +27,15 @@ export const actiontypePart = {
     actionTypeDetailDescription:
       "Review action type details, bound object type, and execution mapping.",
     actionTypeDetailTitle: "Action type detail",
+    actionTypeUpdater: "Updated by",
+    actionTypeUpdateTime: "Updated at",
     actionTypeEditDescription: "Edit action type basics and execution mapping.",
     actionTypeEditTitle: "Edit action type",
     actionTypeEmptyNoSearchResult: "No matching action types found.",
     actionTypeExecutionAddParameter: "Add parameter",
-    actionTypeExecutionDescription: "Maintain action type execution configuration.",
-    actionTypeExecutionEntry: "Execution config",
+    actionTypeExecutionDescription:
+      "Manage action execution, execution configuration, and run records.",
+    actionTypeExecutionEntry: "Execution management",
     actionTypeExecutionItemLogs: "Execution logs and cancellation",
     actionTypeExecutionItemMapping: "Execution mapping and parameters",
     actionTypeExecutionItemSchedule: "Schedule configuration",
@@ -74,7 +77,16 @@ export const actiontypePart = {
       "Maintain execution mapping, schedules, and execution log entry points.",
     actionTypeExecutionConfigSubtitle:
       "Maintain the action execution source and parameter mappings.",
-    actionTypeExecutionTitle: "Action type execution",
+    actionTypeExecutionTitle: "Action type execution management",
+    actionTypeExecutionRun: "Execute now",
+    actionTypeExecutionRunTitle: "Manual execution",
+    actionTypeExecutionConfig: "Execution config",
+    actionTypeExecutionConfigReadonly:
+      "The current account cannot modify this action type. Execution records remain available.",
+    actionTypeExecutionParameters: "Execution parameters",
+    actionTypeExecutionDynamicParamCount_one: "{{count}} dynamic parameter",
+    actionTypeExecutionDynamicParamCount_other: "{{count}} dynamic parameters",
+    actionTypeExecutionNoDynamicParams: "No dynamic parameters",
     actionTypeKind: "Business action",
     actionTypeKindHelp:
       "Describes the business operation this action performs on the bound object type, such as add, edit, or delete.",

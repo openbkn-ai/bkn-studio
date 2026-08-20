@@ -13,6 +13,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
+  applyResourceFieldDescriptions,
   applyDisplayKeySelection,
   applyPrimaryKeySelection,
   applyMappingFilter,
@@ -21,6 +22,7 @@ import {
   areDataSourcesEqual,
   areStringArraysEqualAsSets,
   buildConnectionId,
+  buildDescriptionFillCandidates,
   buildMappingAlignedLayout,
   countMappedProperties,
   filterPropertyRows,
@@ -192,6 +194,86 @@ describe("countMappedProperties", () => {
         createProperty({ name: "b" }),
       ]),
     ).toBe(1);
+  });
+});
+
+describe("resource field description filling", () => {
+  it("classifies mapped descriptions without including unmapped properties", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "Fill", name: "fill", type: "string" },
+        name: "fill",
+      }),
+      createProperty({
+        comment: "Manual description",
+        mappedField: { displayName: "Updatable", name: "updatable", type: "string" },
+        name: "updatable",
+      }),
+      createProperty({
+        comment: "Same description",
+        mappedField: { displayName: "Same", name: "same", type: "string" },
+        name: "same",
+      }),
+      createProperty({
+        mappedField: { displayName: "Missing", name: "missing", type: "string" },
+        name: "missing",
+      }),
+      createProperty({
+        mappedField: { displayName: "Long", name: "long", type: "string" },
+        name: "long",
+      }),
+      createProperty({ name: "unmapped" }),
+    ];
+    const fields = [
+      createField({ comment: "Source description", name: "fill" }),
+      createField({ comment: "Source description", name: "updatable" }),
+      createField({ comment: "Same description", name: "same" }),
+      createField({ name: "missing" }),
+      createField({ comment: "x".repeat(1001), name: "long" }),
+    ];
+
+    expect(
+      buildDescriptionFillCandidates(properties, fields).map((candidate) => [
+        candidate.propertyName,
+        candidate.status,
+      ]),
+    ).toEqual([
+      ["fill", "fillable"],
+      ["updatable", "updatable"],
+      ["same", "same"],
+      ["missing", "missing"],
+      ["long", "tooLong"],
+    ]);
+  });
+
+  it("fills only selected mapped properties and preserves the original array when unchanged", () => {
+    const properties = [
+      createProperty({
+        mappedField: { displayName: "A", name: "source_a", type: "string" },
+        name: "property_a",
+      }),
+      createProperty({
+        comment: "Keep me",
+        mappedField: { displayName: "B", name: "source_b", type: "string" },
+        name: "property_b",
+      }),
+    ];
+    const fields = [
+      createField({ comment: "Description A", name: "source_a" }),
+      createField({ comment: "Description B", name: "source_b" }),
+    ];
+
+    const result = applyResourceFieldDescriptions(properties, fields, ["property_a"]);
+
+    expect(result.changed).toBe(true);
+    expect(result.nextProperties.map((property) => property.comment)).toEqual([
+      "Description A",
+      "Keep me",
+    ]);
+    expect(applyResourceFieldDescriptions(result.nextProperties, fields, ["property_a"])).toEqual({
+      changed: false,
+      nextProperties: result.nextProperties,
+    });
   });
 });
 

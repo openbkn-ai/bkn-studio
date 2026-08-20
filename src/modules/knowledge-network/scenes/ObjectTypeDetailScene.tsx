@@ -5,29 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ArrowRightOutlined,
-  DeleteOutlined,
-  EditOutlined,
-} from "@ant-design/icons";
+import { ArrowRightOutlined } from "@ant-design/icons";
 import { Alert, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
-import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
   ObjectTypePropertyTable,
@@ -40,14 +33,12 @@ import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-i
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
-  deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypes,
   listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -167,7 +158,6 @@ export function ObjectTypeDetailScene() {
   const navigate = useNavigate();
   const location = useLocation();
   const runtimeConfig = useRuntimeConfig();
-  const { message, modal } = useAppServices();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
     objectTypeId: string;
@@ -232,12 +222,6 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
@@ -832,28 +816,6 @@ export function ObjectTypeDetailScene() {
     [previewColumns],
   );
 
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      title: t("knowledgeNetwork.objectTypeDeleteTitle"),
-      content: t("knowledgeNetwork.objectTypeDeleteDescription", { name: detail.name }),
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkObjectType(networkId, detail.id);
-        void message.success(t("common.success"));
-        void navigate(listPath);
-      },
-      width: 520,
-    });
-  };
-
   const logicColumns: TableProps<ObjectTypeLogicProperty>["columns"] = useMemo(
     () => [
       {
@@ -1015,9 +977,14 @@ export function ObjectTypeDetailScene() {
 
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        loading
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={t("knowledgeNetwork.objectTypeDetailDescription")}
+        title={t("knowledgeNetwork.objectTypeDetailTitle")}
+      />
     );
   }
 
@@ -1993,33 +1960,6 @@ export function ObjectTypeDetailScene() {
 
   return (
     <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete) ? (
-          <>
-            {canModify ? (
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
-                );
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            ) : null}
-            {canDelete ? (
-            <AppButton
-              danger
-              icon={<DeleteOutlined />}
-              onClick={confirmDelete}
-            >
-              {t("common.delete")}
-            </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
       onBack={() => {
         void navigate(returnPath);
       }}

@@ -10,7 +10,7 @@ import type { TableProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
+import { getReadableActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
 import { FieldTypeIcon } from "@/modules/knowledge-network/components/object-type/data-attribute/FieldTypeIcon";
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -257,13 +257,13 @@ export function ActionTypeExecutionConfigTable({
     needsActionTypeActionSourceDisplayResolution(resolvedActionSource);
   const sourceLabel = isResolvingActionSource || sourceUnavailable
     ? ""
-    : getActionSourceDisplayName(resolvedActionSource) || detail.executionConfig.sourceName;
+    : getReadableActionSourceDisplayName(resolvedActionSource);
 
   return (
     <div className={styles.root}>
       <div className={styles.metaRow}>
         <div>
-          <span>{t("knowledgeNetwork.actionTypeExecutionSourceLabel")}</span>
+          <span>{t("knowledgeNetwork.actionTypeOperatorLabel")}</span>
           {isResolvingActionSource ? (
             <strong className={styles.loadingSource}>
               <Spin size="small" />
@@ -272,10 +272,14 @@ export function ActionTypeExecutionConfigTable({
           ) : (
             <strong className={sourceUnavailable ? styles.unavailableSource : undefined}>
               {sourceUnavailable
-                ? t("knowledgeNetwork.actionTypeExecutionSourceUnavailable")
+                ? t("knowledgeNetwork.actionTypeEmptyValue")
                 : sourceLabel || t("knowledgeNetwork.actionTypeEmptyValue")}
             </strong>
           )}
+        </div>
+        <div>
+          <span>{t("knowledgeNetwork.actionTypeExecutionParameters")}</span>
+          <strong>{rows.length}</strong>
         </div>
       </div>
       <Table<ParameterRow>

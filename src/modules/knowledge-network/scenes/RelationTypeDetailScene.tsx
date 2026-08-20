@@ -5,23 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApartmentOutlined, EditOutlined } from "@ant-design/icons";
-import { Alert, Spin, Tag } from "antd";
+import { ApartmentOutlined } from "@ant-design/icons";
+import { Alert, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
-import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
-import {
-  deleteKnowledgeNetworkRelationType,
-  getKnowledgeNetworkRelationTypeDetail,
-} from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
+import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./RelationTypeDetailScene.module.css";
@@ -34,7 +27,6 @@ export function RelationTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { message, modal } = useAppServices();
   const { networkId = "", relationTypeId = "" } = useParams<{
     networkId: string;
     relationTypeId: string;
@@ -42,12 +34,6 @@ export function RelationTypeDetailScene() {
   const [detail, setDetail] = useState<RelationTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -81,33 +67,16 @@ export function RelationTypeDetailScene() {
     void loadData();
   }, [loadData]);
 
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      title: t("knowledgeNetwork.relationTypeDeleteTitle"),
-      content: t("knowledgeNetwork.relationTypeDeleteDescription", { name: detail.name }),
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkRelationType(networkId, detail.id);
-        void message.success(t("common.success"));
-        void navigate(listPath);
-      },
-      width: 520,
-    });
-  };
-
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        loading
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={t("knowledgeNetwork.relationTypeDetailDescription")}
+        title={t("knowledgeNetwork.relationTypeDetailTitle")}
+      />
     );
   }
 
@@ -117,41 +86,6 @@ export function RelationTypeDetailScene() {
 
   return (
     <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete) ? (
-          <>
-            {canModify ? (
-              <>
-                <AppButton
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    void navigate(
-                      `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/edit`,
-                    );
-                  }}
-                >
-                  {t("common.edit")}
-                </AppButton>
-                <AppButton
-                  icon={<ApartmentOutlined />}
-                  onClick={() => {
-                    void navigate(
-                      `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/mapping`,
-                    );
-                  }}
-                >
-                  {t("knowledgeNetwork.relationTypeMappingEntry")}
-                </AppButton>
-              </>
-            ) : null}
-            {canDelete ? (
-            <AppButton danger onClick={confirmDelete}>
-              {t("common.delete")}
-            </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
       onBack={() => {
         void navigate(returnPath);
       }}

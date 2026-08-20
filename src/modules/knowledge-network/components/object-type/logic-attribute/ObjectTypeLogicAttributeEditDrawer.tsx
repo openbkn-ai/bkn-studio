@@ -28,6 +28,7 @@ import {
 import {
   IDENTIFIER_PATTERN,
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
+  LOGIC_RESULT_PATH_PLACEHOLDER,
   PARAMETER_SOURCE_OPTIONS,
   VALUE_FROM_OPTIONS,
   asOptionalString,
@@ -615,7 +616,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                 label={t("knowledgeNetwork.objectTypeLogicResultPath")}
                 name="resultPath"
               >
-                <Input placeholder="$.data.result" />
+                <Input placeholder={LOGIC_RESULT_PATH_PLACEHOLDER} />
               </Form.Item>
             </Col>
           </Row>

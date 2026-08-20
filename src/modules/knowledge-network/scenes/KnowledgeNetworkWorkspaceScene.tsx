@@ -94,6 +94,10 @@ export function KnowledgeNetworkWorkspaceScene({
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
   const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
+  const canManageActionExecution = hasKnowledgeNetworkRecordOperation(
+    detail,
+    "task_manage",
+  );
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -225,9 +229,10 @@ export function KnowledgeNetworkWorkspaceScene({
 
     return (
       <WorkspaceResourceSection
-        data={workspaceData}
-        canModify={canModify}
         canDelete={canDelete}
+        canManageActionExecution={canManageActionExecution}
+        canModify={canModify}
+        data={workspaceData}
         networkId={activeNetworkId}
         section={section}
       />

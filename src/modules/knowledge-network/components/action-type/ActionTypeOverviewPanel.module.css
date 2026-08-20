@@ -6,91 +6,37 @@
  */
 
 .page {
+  margin: 0 auto;
+  max-width: 1240px;
+  padding: 0 4px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
   width: 100%;
 }
 
-.summaryCard,
-.sectionCard {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 4px;
-  padding: 20px;
-}
-
-.summaryHead {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-}
-
-.objectIconSquare {
-  align-items: center;
-  border-radius: 4px;
-  color: #fff;
-  display: inline-flex;
-  flex-shrink: 0;
-  font-size: 18px;
-  height: 32px;
-  justify-content: center;
-  width: 32px;
-}
-
-.summaryTitle {
-  color: #1f2329;
-  font-size: 18px;
-  font-weight: 500;
-  margin: 0 0 8px;
-}
-
-.summaryDescription {
-  color: rgba(0, 0, 0, 0.65);
-  margin: 0;
-}
-
-.tagRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.metaRow {
-  color: rgba(0, 0, 0, 0.65);
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 13px;
-  gap: 24px;
-  margin-top: 16px;
-}
-
-.sectionCard h3 {
-  align-items: center;
-  color: #1f2329;
-  display: flex;
-  font-size: 16px;
-  font-weight: 500;
-  gap: 8px;
-  margin: 0 0 16px;
-}
-
-.infoGrid {
+.overviewGrid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.infoGrid > div,
-.fullWidthItem {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.panel {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 18px 20px;
 }
 
-.fullWidthItem {
-  grid-column: 1 / -1;
+.basicPanel {
+  min-height: 0;
+}
+
+.panel > h2 {
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  margin: 0 0 16px;
 }
 
 .infoGrid span,
@@ -99,10 +45,105 @@
   font-size: 13px;
 }
 
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.basicContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.basicFields {
+  display: grid;
+  gap: 16px 32px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.basicFields > div {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-height: 24px;
+}
+
+.basicFields > div > span:first-child,
+.auditBar span {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+.basicFields > div > span:first-child::after,
+.auditBar span::after {
+  content: "：";
+}
+
+.basicFields strong,
+.auditBar strong {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.basicFields .basicDescription {
+  align-items: start;
+  grid-column: 1 / -1;
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.basicDescription strong {
+  line-height: 1.6;
+}
+
+.auditBar {
+  align-items: center;
+  border-top: 1px solid #eef1f5;
+  display: flex;
+  gap: 32px;
+  justify-content: flex-start;
+  margin-top: 16px;
+  min-height: 32px;
+  padding-top: 12px;
+}
+
+.auditBar > div {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.infoGrid {
+  display: grid;
+  gap: 18px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.infoGrid > div,
+.fullWidthItem {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  min-height: 24px;
+}
+
+.infoGrid > div > span:first-child::after {
+  content: "：";
+}
+
+.fullWidthItem {
+  grid-column: 1 / -1;
+}
+
 .infoGrid strong,
 .fullWidthItem strong {
   color: rgba(0, 0, 0, 0.88);
   font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .emptyValue {
@@ -123,4 +164,96 @@
   height: 24px;
   justify-content: center;
   width: 24px;
+}
+
+.colorValue {
+  align-items: center;
+  color: rgba(0, 0, 0, 0.88);
+  display: inline-flex;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.colorValue i {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+  height: 16px;
+  width: 16px;
+}
+
+.ruleList {
+  display: flex;
+  flex-direction: column;
+}
+
+.rulePanel {
+  grid-column: 1;
+}
+
+.ruleSection {
+  padding: 14px 0;
+}
+
+.ruleSection:first-child {
+  padding-top: 0;
+}
+
+.ruleSection + .ruleSection {
+  border-top: 1px solid #eef1f5;
+}
+
+.ruleHeading {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ruleHeading > span {
+  align-items: center;
+  background: #e8f1ff;
+  border-radius: 50%;
+  color: #1668dc;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.ruleHeading h4 {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 0;
+  }
+
+  .overviewGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .basicFields {
+    grid-template-columns: 1fr;
+  }
+
+  .basicFields .basicDescription {
+    grid-column: 1;
+  }
+
+  .auditBar {
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
 }

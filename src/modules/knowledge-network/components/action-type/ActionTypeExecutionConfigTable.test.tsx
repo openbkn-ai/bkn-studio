@@ -176,7 +176,7 @@ describe("ActionTypeExecutionConfigTable", () => {
     ).toBeTruthy();
   });
 
-  it("shows the source as unavailable without toolbox access", () => {
+  it("does not expose source ids without toolbox access", () => {
     needsActionTypeActionSourceDisplayResolution.mockReturnValue(true);
 
     render(
@@ -190,7 +190,8 @@ describe("ActionTypeExecutionConfigTable", () => {
     expect(resolveActionTypeActionSourceDisplayWithTimeout).not.toHaveBeenCalled();
     expect(resolveActionTypeToolInputSchema).not.toHaveBeenCalled();
     expect(
-      screen.getByText("knowledgeNetwork.actionTypeExecutionSourceUnavailable"),
-    ).toBeTruthy();
+      screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/box-1|tool-1/)).toBeNull();
   });
 });

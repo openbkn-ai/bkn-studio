@@ -16,6 +16,8 @@ export const LOGIC_ATTRIBUTE_TYPE_OPTIONS = [
   { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
 ] as const;
 
+export const LOGIC_RESULT_PATH_PLACEHOLDER = "$.result";
+
 export const VALUE_FROM_OPTIONS: Array<{
   labelKey: string;
   value: ObjectTypeLogicParameterValueFrom;
