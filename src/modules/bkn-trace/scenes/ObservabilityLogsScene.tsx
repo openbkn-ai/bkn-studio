@@ -26,6 +26,7 @@ import {
   type LogRecord,
 } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile, type TraceAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import { readAuditLogDrilldown } from "@/modules/bkn-trace/utils/audit-log-drilldown";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 const BUSINESS_MODULES: BusinessModule[] = [
@@ -189,7 +190,8 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
       {result?.partial ? <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" /> : null}
-      {associated ? <div className={styles.sourceStrip}><Tag color="blue">{associated}</Tag></div> : null}
+      {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
+      {associated ? <div className={styles.sourceStrip}><AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} /></div> : null}
 
       {profile?.globalLogSearch ? (
         <div className={styles.filterPanel}>
@@ -209,7 +211,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
       <div className={styles.resultSummary}>
         <Typography.Text>{t("bknTrace.logs.resultCount", { count: result?.count.value ?? 0 })}</Typography.Text>
-        {result?.sourceStatus.length ? <Typography.Text type="secondary">{result.sourceStatus.map((source) => source.sourceId).join(" / ")}</Typography.Text> : null}
+        {result?.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
       </div>
 
       <Spin spinning={loading}>
@@ -255,11 +257,12 @@ type AssociatedLogScope = { conversationId: string; requestId: string; targetId:
 
 function readAssociatedLogScope(): AssociatedLogScope {
   const parameters = new URLSearchParams(window.location.search);
+  const target = readAuditLogDrilldown(parameters);
   return {
     conversationId: parameters.get("conversation_id") ?? "",
     requestId: parameters.get("request_id") ?? "",
-    targetId: parameters.get("target_id") ?? "",
-    targetType: parameters.get("target_type") ?? "",
+    targetId: target.targetId,
+    targetType: target.apiResourceType,
     traceId: parameters.get("trace_id") ?? "",
   };
 }
@@ -269,7 +272,7 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (scope.conversationId) parameters.set("conversation_id", scope.conversationId);
   if (scope.requestId) parameters.set("request_id", scope.requestId);
   if (scope.targetId) parameters.set("target_id", scope.targetId);
-  if (scope.targetType) parameters.set("target_type", scope.targetType);
+  if (scope.targetType) parameters.set("target_type", scope.targetType === "users" ? "user" : scope.targetType);
   if (scope.traceId) parameters.set("trace_id", scope.traceId);
   if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
@@ -279,6 +282,44 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   parameters.set("time_to", filters.timeRange[1].toISOString());
   const query = parameters.toString();
   window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+}
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function AssociatedScopeTag({ scope, t, userDirectory }: { scope: AssociatedLogScope; t: Translate; userDirectory: Map<string, string> }) {
+  if (scope.targetId) {
+    const displayType = scope.targetType === "users" ? "user" : "resource";
+    return <Tag color="blue"><span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span> <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span></Tag>;
+  }
+  return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
+}
+
+function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
+  const failed = sources.filter((source) => source.reason && !isHealthySource(source.status) && source.status !== "not_integrated");
+  if (!failed.length) return null;
+  return <div className={styles.sourceStrip}>{failed.map((source) => <Tag color="orange" key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)} · {sourceFailureLabel(source.reason!, t)}</Tag>)}</div>;
+}
+
+function isHealthySource(status: string) {
+  return status === "available" || status === "healthy";
+}
+
+function sourceStatusColor(status: string) {
+  if (isHealthySource(status)) return "green";
+  if (status === "unavailable") return "orange";
+  return undefined;
+}
+
+function sourceStatusLabel(status: string, t: Translate) {
+  if (isHealthySource(status)) return t("bknTrace.logs.sourceStatus.healthy");
+  if (status === "unavailable") return t("bknTrace.logs.sourceStatus.unavailable");
+  if (status === "not_integrated") return t("bknTrace.logs.sourceStatus.notIntegrated");
+  return status;
+}
+
+function sourceFailureLabel(reason: string, t: Translate) {
+  const key = reason === "source_query_failed" || reason === "source_timeout" ? reason : undefined;
+  return key ? t(`bknTrace.logs.sourceFailures.${key}`) : reason;
 }
 
 function canSearchLogs(profile: TraceAccessProfile, scope: AssociatedLogScope) {
