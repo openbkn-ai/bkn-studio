@@ -41,7 +41,6 @@ type ObservabilityLogsSceneProps = {
 };
 
 type Filters = {
-  action: string;
   actorId: string;
   businessModule?: BusinessModule;
   outcome?: AuditOutcome;
@@ -79,8 +78,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
         ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
-        ...(nextFilters.actorId.trim() ? { actorId: nextFilters.actorId.trim() } : {}),
-        ...(nextFilters.action.trim() ? { action: nextFilters.action.trim() } : {}),
+        ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
@@ -203,7 +201,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           </div>
           <div className={styles.filterRowSecondary}>
             <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, action: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actionPlaceholder")} value={filters.action} />
             <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
             <Space><Button icon={<SearchOutlined />} onClick={submit} type="primary">{t("bknTrace.actions.query")}</Button><Button onClick={reset}>{t("bknTrace.actions.reset")}</Button></Space>
           </div>
@@ -233,7 +230,7 @@ function ClampedText({ secondary, value }: { secondary?: string; value: string }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
   const end = dayjs();
-  return { action: "", actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
+  return { actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
 }
 
 function readInitialFilters(mode: "audit" | "logs"): Filters {
@@ -246,7 +243,6 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
   return {
     ...defaults,
-    action: parameters.get("action") ?? "",
     actorId: parameters.get("actor_id") ?? "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
@@ -278,7 +274,6 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
   if (filters.actorId.trim()) parameters.set("actor_id", filters.actorId.trim());
-  if (filters.action.trim()) parameters.set("action", filters.action.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
   parameters.set("time_from", filters.timeRange[0].toISOString());
   parameters.set("time_to", filters.timeRange[1].toISOString());
