@@ -15,6 +15,7 @@ import {
 import {
   Alert,
   Button,
+  DatePicker,
   Descriptions,
   Empty,
   Form,
@@ -30,6 +31,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -53,7 +55,7 @@ const defaultPageSize = 20;
 
 export function TraceAnalysisScene() {
   const { t } = useTranslation();
-  const [form] = Form.useForm<TechnicalTraceQuery>();
+  const [form] = Form.useForm<TechnicalTraceFilterValues>();
   const [listState, setListState] = useState<{ query: TechnicalTraceQuery; page: number }>({
     query: { limit: defaultPageSize },
     page: 1,
@@ -211,7 +213,7 @@ export function TraceAnalysisScene() {
         <Button icon={<ReloadOutlined />} onClick={() => void loadList(query, page)}>{t("bknTrace.actions.refresh")}</Button>
       </header>
 
-      <Form<TechnicalTraceQuery>
+      <Form<TechnicalTraceFilterValues>
         className={styles.filters}
         form={form}
         initialValues={{}}
@@ -235,8 +237,8 @@ export function TraceAnalysisScene() {
           <Select allowClear options={["completed", "failed", "running", "unknown"].map((value) => ({ label: value, value }))} placeholder={t("bknTrace.traceWorkspace.filters.status")} />
         </Form.Item>
         <Form.Item name="errorKeyword"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.error")} /></Form.Item>
-        <Form.Item name="from"><Input aria-label={t("bknTrace.traceWorkspace.filters.from")} type="datetime-local" /></Form.Item>
-        <Form.Item name="to"><Input aria-label={t("bknTrace.traceWorkspace.filters.to")} type="datetime-local" /></Form.Item>
+        <Form.Item name="from"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.from")} format="YYYY-MM-DD HH:mm" showTime={{ format: "HH:mm" }} /></Form.Item>
+        <Form.Item name="to"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.to")} format="YYYY-MM-DD HH:mm" showTime={{ format: "HH:mm" }} /></Form.Item>
         <Button htmlType="submit" icon={<SearchOutlined />} type="primary">{t("bknTrace.actions.query")}</Button>
       </Form>
 
@@ -519,10 +521,13 @@ function buildDiagnostics(detail: TechnicalTraceDetail) {
   return [...diagnostics];
 }
 
-function toIsoDateTime(value?: string) {
-  if (!value) return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : value;
+type TechnicalTraceFilterValues = Omit<TechnicalTraceQuery, "from" | "to"> & {
+  from?: Dayjs;
+  to?: Dayjs;
+};
+
+function toIsoDateTime(value?: Dayjs) {
+  return value?.isValid() ? value.toISOString() : undefined;
 }
 
 type ExecutionEvent =

@@ -192,6 +192,15 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("bknTrace.traceWorkspace.detailTitle")).not.toBeNull();
   });
 
+  it("uses Ant Design date pickers for trace time filters", async () => {
+    const { container } = render(<TraceAnalysisScene />);
+
+    await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
+    expect(screen.getByLabelText("bknTrace.traceWorkspace.filters.from")).not.toBeNull();
+    expect(screen.getByLabelText("bknTrace.traceWorkspace.filters.to")).not.toBeNull();
+    expect(container.querySelectorAll('input[type="datetime-local"]')).toHaveLength(0);
+  });
+
   it("keeps the latest list response when an earlier page request finishes late", async () => {
     let resolvePageTwo!: (value: Awaited<ReturnType<typeof listTechnicalTraces>>) => void;
     const pageTwo = new Promise<Awaited<ReturnType<typeof listTechnicalTraces>>>((resolve) => { resolvePageTwo = resolve; });

@@ -5,8 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, Modal, Select, Switch } from "antd";
+import { DatePicker, Form, Input, Modal, Select, Switch } from "antd";
 import type { Rule } from "antd/es/form";
+import dayjs, { type Dayjs } from "dayjs";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,9 +40,9 @@ type DiscoverScheduleFormValues = {
   catalogId: string;
   cronExpr: string;
   enabled: boolean;
-  endTime?: string;
+  endTime?: Dayjs;
   name: string;
-  startTime?: string;
+  startTime?: Dayjs;
   strategy: DataConnectDiscoverStrategy;
 };
 
@@ -95,9 +96,9 @@ export function DiscoverScheduleFormModal({
       catalogId: initialValue?.catalogId ?? defaultCatalogId,
       cronExpr: initialValue?.cronExpr ?? "0 2 * * *",
       enabled: initialValue?.enabled ?? true,
-      endTime: formatDateTimeLocal(initialValue?.endTimeValue),
+      endTime: toDateTimeValue(initialValue?.endTimeValue),
       name: initialValue?.name ?? "",
-      startTime: formatDateTimeLocal(initialValue?.startTimeValue),
+      startTime: toDateTimeValue(initialValue?.startTimeValue),
       strategy: initialValue?.strategy ?? "full_sync",
     });
   }, [defaultCatalogId, form, initialValue, open]);
@@ -276,7 +277,11 @@ export function DiscoverScheduleFormModal({
               rules={[{ validator: validateTimeRange }]}
               span="half"
             >
-              <Input type="datetime-local" />
+              <DatePicker
+                format="YYYY-MM-DD HH:mm"
+                showTime={{ format: "HH:mm" }}
+                style={{ width: "100%" }}
+              />
             </InlineField>
             <InlineField
               label={t("dataConnect.discoverEndTime")}
@@ -284,7 +289,11 @@ export function DiscoverScheduleFormModal({
               rules={[{ validator: validateTimeRange }]}
               span="half"
             >
-              <Input type="datetime-local" />
+              <DatePicker
+                format="YYYY-MM-DD HH:mm"
+                showTime={{ format: "HH:mm" }}
+                style={{ width: "100%" }}
+              />
             </InlineField>
           </div>
         </div>
@@ -337,26 +346,18 @@ function InlineField({
   );
 }
 
-function formatDateTimeLocal(value?: number) {
+function toDateTimeValue(value?: number) {
   if (!value) {
     return undefined;
   }
 
-  const date = new Date(value);
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  const hours = `${date.getHours()}`.padStart(2, "0");
-  const minutes = `${date.getMinutes()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return dayjs(value).startOf("minute");
 }
 
 function parseDateTimeLocal(value: unknown) {
-  if (typeof value !== "string" || !value) {
+  if (!dayjs.isDayjs(value) || !value.isValid()) {
     return undefined;
   }
 
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? undefined : timestamp;
+  return value.valueOf();
 }
