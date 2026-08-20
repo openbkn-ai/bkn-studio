@@ -53,6 +53,8 @@ export const canBeDisplayKey = (type?: string) =>
 
 export const DATA_PROPERTY_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
 
+export const DATA_PROPERTY_COMMENT_MAX_LENGTH = 1000;
+
 export type ObjectTypeDataPropertyValidationResult =
   | {
       messageKey: string;

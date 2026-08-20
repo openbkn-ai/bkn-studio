@@ -46,7 +46,7 @@ export function DataConnectDetailDrawer({
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =

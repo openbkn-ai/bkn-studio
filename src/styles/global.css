@@ -984,9 +984,12 @@ select {
 
 .route-loading {
   display: flex;
+  flex: 1;
   min-height: 40vh;
+  min-width: 0;
   align-items: center;
   justify-content: center;
+  width: 100%;
 }
 
 .route-loading-spinner {

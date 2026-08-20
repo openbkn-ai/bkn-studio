@@ -14,7 +14,7 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
-describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
+describe("object-type-resource.service", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "false");
@@ -54,5 +54,29 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
       },
     );
     expect(result?.rowTotalCount).toBe(1);
+  });
+
+  it("normalizes resource search names for case-insensitive matching", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { queryObjectTypeResources } = await import(
+      "@/modules/knowledge-network/services/object-type-resource.service"
+    );
+
+    await queryObjectTypeResources("kn-1", {
+      dataSourceId: "catalog-1",
+      name: "  Supply_DEMO  ",
+      page: 2,
+      pageSize: 20,
+    });
+
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
+      params: {
+        catalog_id: "catalog-1",
+        limit: 20,
+        name: "supply_demo",
+        offset: 20,
+        sort: "update_time",
+      },
+    });
   });
 });

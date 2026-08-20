@@ -5,45 +5,31 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EditOutlined, FileTextOutlined, PlayCircleOutlined, ThunderboltOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Spin } from "antd";
+import { Alert } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
-import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
-import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel";
-import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
-  deleteKnowledgeNetworkActionType,
-  executeKnowledgeNetworkActionTypeNow,
   getKnowledgeNetworkActionTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   ActionTypeDetail,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
 
 import styles from "./ActionTypeDetailScene.module.css";
-
-type DetailTab = "overview" | "tasks";
-
-const ACTION_TYPE_DETAIL_OPERATIONS = ["modify", "delete", "task_manage"] as const;
 
 export function ActionTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal, runtimeConfig } = useAppServices();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { runtimeConfig } = useAppServices();
   const { actionTypeId = "", networkId = "" } = useParams<{
     actionTypeId: string;
     networkId: string;
@@ -51,17 +37,7 @@ export function ActionTypeDetailScene() {
   const [detail, setDetail] = useState<ActionTypeDetail | null>(null);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [executing, setExecuting] = useState(false);
-  const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [taskRefreshToken, setTaskRefreshToken] = useState(0);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ACTION_TYPE_DETAIL_OPERATIONS,
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
-  const canTaskManage = operationAccess.task_manage;
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:toolbox:view",
@@ -75,8 +51,6 @@ export function ActionTypeDetailScene() {
     !actionSource ||
     actionSource.type === "manual" ||
     (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
-
-  const activeTab: DetailTab = searchParams.get("tab") === "tasks" ? "tasks" : "overview";
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
 
   const loadData = useCallback(async () => {
@@ -105,78 +79,16 @@ export function ActionTypeDetailScene() {
     void loadData();
   }, [loadData]);
 
-  const setActiveTab = (tab: DetailTab) => {
-    if (tab === "overview") {
-      setSearchParams({});
-      return;
-    }
-
-    setSearchParams({ tab: "tasks" });
-  };
-
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      title: t("knowledgeNetwork.actionTypeDeleteTitle"),
-      content: t("knowledgeNetwork.actionTypeDeleteDescription", { name: detail.name }),
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkActionType(networkId, detail.id);
-        void message.success(t("common.success"));
-        void navigate(listPath);
-      },
-      width: 520,
-    });
-  };
-
-  const executeNow = async (dynamicParams?: Record<string, unknown>) => {
-    if (!detail) {
-      return false;
-    }
-
-    setExecuting(true);
-    try {
-      await executeKnowledgeNetworkActionTypeNow(networkId, detail.id, dynamicParams);
-      void message.success(t("knowledgeNetwork.actionTypeExecuteSuccess"));
-      setTaskRefreshToken((value) => value + 1);
-      setActiveTab("tasks");
-      return true;
-    } catch (nextError) {
-      void message.error(extractRequestErrorMessage(nextError));
-      return false;
-    } finally {
-      setExecuting(false);
-    }
-  };
-
-  const handleExecuteNow = () => {
-    if (!detail) {
-      return;
-    }
-
-    const dynamicParameters = getActionTypeDynamicParameters(
-      detail.executionConfig.parameters,
-    );
-    if (dynamicParameters.length > 0) {
-      setExecuteModalOpen(true);
-      return;
-    }
-
-    void executeNow();
-  };
-
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        loading
+        onBack={() => {
+          void navigate(listPath);
+        }}
+        subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
+        title={t("knowledgeNetwork.actionTypeDetailTitle")}
+      />
     );
   }
 
@@ -186,109 +98,20 @@ export function ActionTypeDetailScene() {
 
   return (
     <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete || canTaskManage) ? (
-          <>
-            {canTaskManage ? (
-              <AppButton
-                icon={<PlayCircleOutlined />}
-                loading={executing}
-                onClick={handleExecuteNow}
-                type="primary"
-              >
-                {t("knowledgeNetwork.actionTypeExecuteImmediately")}
-              </AppButton>
-            ) : null}
-            {canModify ? (
-              <>
-                <AppButton
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    void navigate(
-                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
-                    );
-                  }}
-                >
-                  {t("common.edit")}
-                </AppButton>
-                <AppButton
-                  icon={<ThunderboltOutlined />}
-                  onClick={() => {
-                    void navigate(
-                      `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
-                    );
-                  }}
-                >
-                  {t("knowledgeNetwork.actionTypeExecutionEntry")}
-                </AppButton>
-              </>
-            ) : null}
-            {canDelete ? (
-              <AppButton danger onClick={confirmDelete}>
-                {t("common.delete")}
-              </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
       onBack={() => {
         void navigate(listPath);
       }}
       subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
       title={detail.name}
     >
-      <div className={styles.detailLayout}>
-        <aside className={styles.sideNav}>
-          <button
-            className={activeTab === "overview" ? styles.sideNavItemActive : styles.sideNavItem}
-            onClick={() => setActiveTab("overview")}
-            type="button"
-          >
-            <FileTextOutlined />
-            <span>{t("knowledgeNetwork.actionTypeDetailOverview")}</span>
-          </button>
-          <button
-            className={activeTab === "tasks" ? styles.sideNavItemActive : styles.sideNavItem}
-            onClick={() => setActiveTab("tasks")}
-            type="button"
-          >
-            <UnorderedListOutlined />
-            <span>{t("knowledgeNetwork.actionTypeDetailTaskManagement")}</span>
-          </button>
-        </aside>
-
-        <div className={styles.contentPanel}>
-          {activeTab === "overview" ? (
-            <ActionTypeOverviewPanel
-              canResolveActionSource={canResolveActionSource}
-              detail={detail}
-              networkId={networkId}
-              objectTypes={objectTypes}
-            />
-          ) : (
-            <ActionTypeTaskManagementPanel
-              actionTypeId={actionTypeId}
-              networkId={networkId}
-              refreshToken={taskRefreshToken}
-            />
-          )}
-        </div>
+      <div className={styles.contentPanel}>
+        <ActionTypeOverviewPanel
+          canResolveActionSource={canResolveActionSource}
+          detail={detail}
+          networkId={networkId}
+          objectTypes={objectTypes}
+        />
       </div>
-      <ActionTypeExecuteModal
-        actionSource={detail.executionConfig.actionSource}
-        actionTypeName={detail.name}
-        onCancel={() => setExecuteModalOpen(false)}
-        onSubmit={async (dynamicParams) => {
-          const succeeded = await executeNow(dynamicParams);
-          if (succeeded) {
-            setExecuteModalOpen(false);
-          }
-          return succeeded;
-        }}
-        open={executeModalOpen}
-        parameters={getActionTypeDynamicParameters(detail.executionConfig.parameters)}
-        submitting={executing}
-      />
     </KnowledgeNetworkResourceConfigShell>
   );
 }

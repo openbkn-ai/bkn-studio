@@ -11,7 +11,11 @@ import type {
   ObjectTypeResourceField,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { canBeDisplayKey, canBePrimaryKey } from "./constants";
+import {
+  canBeDisplayKey,
+  canBePrimaryKey,
+  DATA_PROPERTY_COMMENT_MAX_LENGTH,
+} from "./constants";
 
 export type MappingFilter = "all" | "mapped" | "unmapped";
 
@@ -34,6 +38,23 @@ export type ConnectionPoint = {
   x2: number;
   y1: number;
   y2: number;
+};
+
+export type ObjectTypeDescriptionFillStatus =
+  | "fillable"
+  | "missing"
+  | "same"
+  | "tooLong"
+  | "updatable";
+
+export type ObjectTypeDescriptionFillCandidate = {
+  currentComment: string;
+  propertyDisplayName: string;
+  propertyName: string;
+  sourceComment: string;
+  sourceFieldDisplayName: string;
+  sourceFieldName: string;
+  status: ObjectTypeDescriptionFillStatus;
 };
 
 export function buildConnectionId(viewFieldName: string, propertyName: string) {
@@ -189,6 +210,84 @@ export function filterPropertyRows(
 
 export function countMappedProperties(properties: ObjectTypeDataProperty[]) {
   return properties.filter((property) => Boolean(property.mappedField)).length;
+}
+
+export function buildDescriptionFillCandidates(
+  properties: ObjectTypeDataProperty[],
+  resourceFields: ObjectTypeResourceField[],
+): ObjectTypeDescriptionFillCandidate[] {
+  const resourceFieldByName = new Map(resourceFields.map((field) => [field.name, field]));
+
+  return properties.flatMap((property) => {
+    if (!property.mappedField) {
+      return [];
+    }
+
+    const resourceField = resourceFieldByName.get(property.mappedField.name);
+    const currentComment = property.comment?.trim() ?? "";
+    const sourceComment = resourceField?.comment?.trim() ?? "";
+    let status: ObjectTypeDescriptionFillStatus;
+
+    if (!sourceComment) {
+      status = "missing";
+    } else if (sourceComment.length > DATA_PROPERTY_COMMENT_MAX_LENGTH) {
+      status = "tooLong";
+    } else if (!currentComment) {
+      status = "fillable";
+    } else if (currentComment === sourceComment) {
+      status = "same";
+    } else {
+      status = "updatable";
+    }
+
+    return [
+      {
+        currentComment,
+        propertyDisplayName: property.displayName,
+        propertyName: property.name,
+        sourceComment,
+        sourceFieldDisplayName:
+          resourceField?.displayName ?? property.mappedField.displayName,
+        sourceFieldName: property.mappedField.name,
+        status,
+      },
+    ];
+  });
+}
+
+export function applyResourceFieldDescriptions(
+  properties: ObjectTypeDataProperty[],
+  resourceFields: ObjectTypeResourceField[],
+  selectedPropertyNames: string[],
+): { changed: boolean; nextProperties: ObjectTypeDataProperty[] } {
+  const selectedNameSet = new Set(selectedPropertyNames);
+  const sourceCommentByFieldName = new Map(
+    resourceFields.flatMap((field) => {
+      const sourceComment = field.comment?.trim() ?? "";
+      return sourceComment && sourceComment.length <= DATA_PROPERTY_COMMENT_MAX_LENGTH
+        ? [[field.name, sourceComment] as const]
+        : [];
+    }),
+  );
+  let changed = false;
+  const nextProperties = properties.map((property) => {
+    if (!selectedNameSet.has(property.name) || !property.mappedField) {
+      return property;
+    }
+
+    const sourceComment = sourceCommentByFieldName.get(property.mappedField.name);
+    if (!sourceComment || property.comment === sourceComment) {
+      return property;
+    }
+
+    changed = true;
+    return { ...property, comment: sourceComment };
+  });
+
+  return {
+    changed,
+    nextProperties: changed ? nextProperties : properties,
+  };
 }
 
 export function isMappedPropertyConnectionVisible(

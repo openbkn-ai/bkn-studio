@@ -230,6 +230,7 @@ export async function queryObjectTypeResources(
 ): Promise<ObjectTypeResourceListResult> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 10;
+  const normalizedName = query.name?.trim().toLowerCase();
 
   if (useMock) {
     let items = (mockObjectTypeResources[networkId] ?? []).map((item) => ({ ...item }));
@@ -238,9 +239,8 @@ export async function queryObjectTypeResources(
       items = items.filter((item) => item.dataSourceId === query.dataSourceId);
     }
 
-    if (query.name?.trim()) {
-      const keyword = query.name.trim().toLowerCase();
-      items = items.filter((item) => item.name.toLowerCase().includes(keyword));
+    if (normalizedName) {
+      items = items.filter((item) => item.name.toLowerCase().includes(normalizedName));
     }
 
     const start = (page - 1) * pageSize;
@@ -254,7 +254,7 @@ export async function queryObjectTypeResources(
     params: {
       catalog_id: query.dataSourceId || undefined,
       limit: pageSize,
-      name: query.name?.trim() || undefined,
+      name: normalizedName || undefined,
       offset: (page - 1) * pageSize,
       sort: "update_time",
     },

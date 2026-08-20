@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   LOGIC_ATTRIBUTE_TYPE_OPTIONS,
+  LOGIC_RESULT_PATH_PLACEHOLDER,
   buildToolLogicParameterSettings,
   isToolLogicBindingComplete,
   removeParameterById,
@@ -20,6 +21,12 @@ describe("LOGIC_ATTRIBUTE_TYPE_OPTIONS", () => {
     expect(LOGIC_ATTRIBUTE_TYPE_OPTIONS).toEqual([
       { labelKey: "objectTypeLogicAttributeTypeTool", value: "tool" },
     ]);
+  });
+});
+
+describe("LOGIC_RESULT_PATH_PLACEHOLDER", () => {
+  it("matches the execution factory function response envelope", () => {
+    expect(LOGIC_RESULT_PATH_PLACEHOLDER).toBe("$.result");
   });
 });
 

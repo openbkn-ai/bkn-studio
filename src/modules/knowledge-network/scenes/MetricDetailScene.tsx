@@ -5,27 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EditOutlined, LineChartOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Spin, Tabs, Tag } from "antd";
+import { LineChartOutlined } from "@ant-design/icons";
+import { Alert, Descriptions, Tabs, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
-import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import {
-  deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   KnowledgeNetworkMetricRecord,
@@ -50,12 +45,9 @@ export function MetricDetailScene({
   metricId: metricIdProp,
   networkId: networkIdProp,
   onBack,
-  onDeleteSuccess,
-  onEdit,
 }: MetricDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
   const params = useParams<{
     metricId: string;
     networkId: string;
@@ -69,12 +61,6 @@ export function MetricDetailScene({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
@@ -114,36 +100,10 @@ export function MetricDetailScene({
     void loadData();
   }, [loadData]);
 
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      content: t("knowledgeNetwork.metricDeleteDescription", { name: detail.name }),
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkMetric(networkId, detail.id);
-        void message.success(t("common.success"));
-        if (onDeleteSuccess) {
-          onDeleteSuccess();
-          return;
-        }
-
-        void navigate(listPath);
-      },
-      title: t("knowledgeNetwork.metricDeleteTitle"),
-      width: 520,
-    });
-  };
-
   if (loading) {
     return (
       <KnowledgeNetworkResourceConfigShell
+        loading
         onBack={() => {
           if (onBack) {
             onBack();
@@ -154,11 +114,7 @@ export function MetricDetailScene({
         }}
         subtitle={t("knowledgeNetwork.metricDetailDescription")}
         title={t("knowledgeNetwork.metricDetailTitle")}
-      >
-        <div className={styles.loadingState}>
-          <Spin />
-        </div>
-      </KnowledgeNetworkResourceConfigShell>
+      />
     );
   }
 
@@ -171,32 +127,6 @@ export function MetricDetailScene({
 
   return (
     <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete) ? (
-          <>
-            {canModify ? (
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                if (onEdit) {
-                  onEdit();
-                  return;
-                }
-
-                void navigate(`/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`);
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            ) : null}
-            {canDelete ? (
-            <AppButton danger onClick={confirmDelete}>
-              {t("common.delete")}
-            </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
       onBack={() => {
         if (onBack) {
           onBack();

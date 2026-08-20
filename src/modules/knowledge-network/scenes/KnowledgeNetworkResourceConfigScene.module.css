@@ -78,3 +78,17 @@
   max-width: 1000px;
   width: 100%;
 }
+
+.executionCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.executionActionBar {
+  border-top: 1px solid #eef2f7;
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+}

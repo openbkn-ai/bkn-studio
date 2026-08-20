@@ -59,6 +59,30 @@ export function getActionSourceDisplayName(actionSource?: ActionTypeActionSource
   return toolName || containerName;
 }
 
+export function getReadableActionSourceDisplayName(
+  actionSource?: ActionTypeActionSource,
+): string {
+  if (!actionSource) {
+    return "";
+  }
+
+  if (actionSource.type === "manual") {
+    return actionSource.toolName?.trim() ?? "";
+  }
+
+  const containerName =
+    actionSource.type === "mcp"
+      ? actionSource.mcpName?.trim()
+      : actionSource.boxName?.trim();
+  const toolName = actionSource.toolName?.trim();
+
+  if (containerName && toolName) {
+    return `${containerName}/${toolName}`;
+  }
+
+  return toolName || containerName || "";
+}
+
 export function isActionConditionEmpty(condition?: ActionTypeCondition | null): boolean {
   if (!condition) {
     return true;

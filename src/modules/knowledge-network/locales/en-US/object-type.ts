@@ -30,6 +30,28 @@ export const objecttypePart = {
     objectTypeClearResourceTitle: "Clear resource",
     objectTypeClickToConnect: "Click an object type property on the right to complete the mapping.",
     objectTypeClearMapping: "Clear mapping",
+    objectTypeDescriptionFillConfirm: "Fill selected descriptions",
+    objectTypeDescriptionFillCurrent: "Current description",
+    objectTypeDescriptionFillEmpty:
+      "No fields are available to fill. Map object properties to resource fields first.",
+    objectTypeDescriptionFillHint:
+      "Properties without descriptions are selected by default. Selecting an updatable property will overwrite its current description.",
+    objectTypeDescriptionFillProperty: "Object property",
+    objectTypeDescriptionFillSource: "Source description",
+    objectTypeDescriptionFillSourceField: "Resource field",
+    objectTypeDescriptionFillStatus: "Status",
+    objectTypeDescriptionFillStatusFillable: "Ready to fill",
+    objectTypeDescriptionFillStatusMissing: "No source description",
+    objectTypeDescriptionFillStatusSame: "Already matched",
+    objectTypeDescriptionFillStatusTooLong: "Over 1,000 characters",
+    objectTypeDescriptionFillStatusUpdatable: "Updatable",
+    objectTypeDescriptionFillSuccess_one: "Filled description for {{count}} property",
+    objectTypeDescriptionFillSuccess_other:
+      "Filled descriptions for {{count}} properties",
+    objectTypeDescriptionFillSummary:
+      "Ready {{fillable}} · Updatable {{updatable}} · Matched {{same}} · Skipped {{skipped}}",
+    objectTypeDescriptionFillTitle: "Fill property descriptions",
+    objectTypeFillDescriptionsFromResource: "Fill descriptions from resource fields",
     objectTypeMappingCleared: "Mapping cleared",
     objectTypeMappingFilterAll: "All",
     objectTypeMappingFilterMapped: "Mapped",

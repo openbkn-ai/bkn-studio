@@ -251,6 +251,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeExecutionDescription",
       titleKey: "knowledgeNetwork.actionTypeExecutionTitle",
     },
-    modifyRoute(<ActionTypeExecutionPage />),
+    <ActionTypeExecutionPage />,
   ),
 ];
