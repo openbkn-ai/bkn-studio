@@ -44,7 +44,9 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   publish_to_be_data_flow_agent: "Publish as data flow agent",
   publish_to_be_skill_agent: "Publish as skill agent",
   publish_to_be_web_sdk_agent: "Publish as Web SDK agent",
+  query_data: "Query data",
   "reset-password": "Reset password",
+  resource_manage: "Manage tables",
   revoke: "Revoke",
   run_statistics: "Run statistics",
   run_with_app: "Run with app",
@@ -83,6 +85,11 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+// A data connection owns its tables: creating, editing and building one is judged on the catalog,
+// not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
+// lists match the operations bkn-safe actually stores on these types.
+const CATALOG_AUTHZ = [...CRUD_AUTHZ, "resource_manage", "query_data"];
+const RESOURCE_AUTHZ = ["view_detail", "query_data"];
 const PUBLISHABLE = [
   "view",
   "create",
@@ -96,8 +103,8 @@ const PUBLISHABLE = [
 ];
 
 export const RESOURCE_TYPES: ResourceTypeDef[] = [
-  resourceType("catalog", CRUD_AUTHZ),
-  resourceType("resource", CRUD_AUTHZ),
+  resourceType("catalog", CATALOG_AUTHZ),
+  resourceType("resource", RESOURCE_AUTHZ),
   resourceType("connector_type", CRUD_AUTHZ),
   resourceType("knowledge_network", [
     "view_detail",
