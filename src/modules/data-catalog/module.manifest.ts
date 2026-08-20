@@ -16,10 +16,11 @@ export const dataCatalogModuleManifest = {
     "catalog:delete",
     "catalog:task_manage",
     "catalog:resource_manage",
+    // The resource type declares only these two verbs now. Managing a table --
+    // creating, editing, deleting it, running its tasks -- is decided on the
+    // catalog it lives in, so the resource-side management verbs are gone from
+    // both the backend vocabulary and the gates here.
     "resource:view_detail",
-    // 改表/删表/任务这几个动词后端仍是「先问这张表、拒了再问目录」，所以两边都要
-    // 声明。建表不在其列：它只判目标目录，因为通配对象答不了「建在哪个目录」。
-    "resource:task_manage",
     "resource:query_data",
     "catalog:query_data",
   ],

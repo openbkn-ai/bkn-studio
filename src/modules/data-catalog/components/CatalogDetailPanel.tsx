@@ -155,7 +155,7 @@ export function CatalogDetailPanel({
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:task_manage", "catalog:task_manage"],
+    requiredPermissions: ["catalog:task_manage"],
   });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||

@@ -291,7 +291,7 @@ export function DataConnectDiscoverScene({
       dataIndex: "enabled",
       title: t("common.status"),
       render: (value: boolean, record) => (
-        <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+        <PermissionGate permissions="catalog:task_manage">
           <Switch
             checked={value}
             onChange={(checked) => {
@@ -350,7 +350,7 @@ export function DataConnectDiscoverScene({
           >
             {t("dataConnect.discoverViewTasks")}
           </AppButton>
-          <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               onClick={() => {
                 setScheduleModalState({ mode: "edit", scheduleId: record.id });
@@ -360,7 +360,7 @@ export function DataConnectDiscoverScene({
               {t("common.edit")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               loading={triggeringScheduleId === record.id}
               onClick={() => {
@@ -389,7 +389,7 @@ export function DataConnectDiscoverScene({
               {t("dataConnect.discoverRunSchedule")}
             </AppButton>
           </PermissionGate>
-          <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               danger
               onClick={() => {
@@ -486,7 +486,7 @@ export function DataConnectDiscoverScene({
           >
             {t("common.detail")}
           </AppButton>
-          <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+          <PermissionGate permissions="catalog:task_manage">
             <AppButton
               danger
               disabled={record.status === "pending" || record.status === "running"}
@@ -621,7 +621,7 @@ export function DataConnectDiscoverScene({
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
-            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+            <PermissionGate permissions="catalog:task_manage">
               <AppButton
                 onClick={() => {
                   setEditingSchedule(null);
@@ -696,7 +696,7 @@ export function DataConnectDiscoverScene({
         ) : !loadingSchedules && schedules.length === 0 ? (
           <EmptyStatePanel
             action={
-              <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+              <PermissionGate permissions="catalog:task_manage">
                 <AppButton
                   onClick={() => {
                     setScheduleModalState({ mode: "create" });
@@ -741,7 +741,7 @@ export function DataConnectDiscoverScene({
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
-            <PermissionGate mode="any" permissions={["resource:task_manage", "catalog:task_manage"]}>
+            <PermissionGate permissions="catalog:task_manage">
               <AppButton
                 disabled={!selectedCatalogId}
                 onClick={() => {
