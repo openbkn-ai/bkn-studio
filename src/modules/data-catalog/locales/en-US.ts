@@ -308,6 +308,9 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
+      noQueryPermission: "No permission to read this data",
+      noQueryPermissionDescription:
+        "You can see this table's structure, but reading its rows is granted separately. Ask an administrator for query permission on this table or the catalog it belongs to.",
       summary: "Showing {{visibleRows}} · {{totalRows}} total",
       empty: "No data",
       metadataDiscoveryFailed: "Resource metadata discovery failed",

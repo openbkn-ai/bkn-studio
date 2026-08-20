@@ -99,3 +99,8 @@ export function extractRequestErrorMessage(error: unknown) {
 export function isRequestConflict(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409;
 }
+
+/** The caller is authenticated but not allowed to do this. */
+export function isRequestForbidden(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 403;
+}

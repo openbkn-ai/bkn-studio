@@ -290,6 +290,8 @@ export const dataCatalogZhCN = {
       goEnable: "去连接页处理",
     },
     preview: {
+      noQueryPermission: "没有查看数据的权限",
+      noQueryPermissionDescription: "你可以查看这张表的结构，但读取数据需要单独授权。请联系管理员为这张表或它所在的目录授予「查询数据」权限。",
       summary: "展示 {{visibleRows}} · 总计 {{totalRows}}",
       empty: "没有数据",
       metadataDiscoveryFailed: "资源元数据探查失败",
