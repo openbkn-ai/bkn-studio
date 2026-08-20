@@ -227,6 +227,22 @@ export async function listDataConnectConnectorTypes() {
   return response.data.entries.map(mapConnectorType);
 }
 
+export async function getDataConnectConnectorType(type: string) {
+  if (useMock) {
+    const connectorType = mockConnectorTypes.find((item) => item.type === type);
+    if (!connectorType) {
+      throw new Error(`Connector type ${type} was not found`);
+    }
+    return wait(mapConnectorType(connectorType));
+  }
+
+  const response = await http.get<BackendConnectorType>(
+    `/vega-backend/v1/connector-types/${encodeURIComponent(type)}`,
+  );
+
+  return mapConnectorType(response.data);
+}
+
 export async function listDataConnectRecords(
   query: DataConnectListQuery,
 ): Promise<DataConnectListResult> {

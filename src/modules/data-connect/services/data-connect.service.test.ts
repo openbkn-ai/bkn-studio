@@ -104,6 +104,31 @@ describe("data-connect.service · test connection", () => {
     ]);
   });
 
+  it("loads field semantics from the selected connector type detail", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        category: "table",
+        description: "后端展示描述",
+        enabled: true,
+        field_config: {
+          host: { encrypted: false, required: true, type: "string" },
+        },
+        mode: "local",
+        name: "后端连接器名称",
+        type: "postgresql",
+      },
+    });
+    const { getDataConnectConnectorType } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(getDataConnectConnectorType("postgresql")).resolves.toMatchObject({
+      fieldConfig: { host: { encrypted: false, required: true, type: "string" } },
+      type: "postgresql",
+    });
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/connector-types/postgresql");
+  });
+
   it("covers every built-in connector field from the Vega initialization data", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");

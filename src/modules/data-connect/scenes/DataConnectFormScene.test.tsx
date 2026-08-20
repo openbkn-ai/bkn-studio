@@ -22,6 +22,7 @@ const entitlementState = vi.hoisted(() => ({
   snapshot: null as { capabilities: string[]; edition: string; extensions: string[] } | null,
 }));
 const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
+const getDataConnectConnectorTypeMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
@@ -84,6 +85,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   createDataConnectRecord: createDataConnectRecordMock,
+  getDataConnectConnectorType: getDataConnectConnectorTypeMock,
   getDataConnectRecord: getDataConnectRecordMock,
   isDataConnectConnectionTestFailure: vi.fn(() => false),
   listDataConnectConnectorTypes: listDataConnectConnectorTypesMock,
@@ -145,6 +147,41 @@ describe("DataConnectFormScene · connection preflight", () => {
     modalConfirmMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
+    getDataConnectConnectorTypeMock.mockReset();
+    getDataConnectConnectorTypeMock.mockImplementation(async (type: string) => {
+      if (type === "sqlserver") {
+        return {
+          category: "table",
+          description: "",
+          enabled: true,
+          fieldConfig: {
+            api_token: connectorField("API Token", "string", false, true),
+            application_name: connectorField("应用名称", "string", false),
+            database: connectorField("数据库名", "string", true),
+            host: connectorField("主机地址", "string", true),
+            options: connectorField("连接参数", "object", false),
+            password: connectorField("密码", "string", true, true),
+            port: connectorField("端口号", "integer", true),
+            schemas: connectorField("Schema 列表", "array", false),
+            session_settings: connectorField("会话设置", "object", false),
+            username: connectorField("用户名", "string", true),
+          },
+          mode: "local",
+          name: "SQL Server",
+          type,
+        };
+      }
+
+      return {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: { host: connectorField("Host", "string", true) },
+        mode: "local",
+        name: "PostgreSQL",
+        type,
+      };
+    });
     getDataConnectRecordMock.mockReset();
     testDataConnectConfigMock.mockReset();
     testDataConnectConfigMock.mockResolvedValue(undefined);
@@ -631,6 +668,21 @@ describe("DataConnectFormScene · connection preflight", () => {
 
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
+    getDataConnectConnectorTypeMock.mockResolvedValue({
+      category: "table",
+      description: "Microsoft SQL Server 关系型数据库连接器",
+      enabled: true,
+      fieldConfig: {
+        database: connectorField("数据库名", "string", true),
+        host: connectorField("主机地址", "string", true),
+        password: connectorField("密码", "string", true, true),
+        port: connectorField("端口号", "integer", true),
+        username: connectorField("用户名", "string", true),
+      },
+      mode: "local",
+      name: "SQL Server",
+      type: "sqlserver",
+    });
     listDataConnectConnectorTypesMock.mockResolvedValue([
       {
         category: "table",
@@ -654,9 +706,10 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(await findConnectorCard("SQL Server"));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
-    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+    fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
       target: { value: "sqlserver-orders" },
     });
+    expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("sqlserver");
     fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
       target: { value: "sqlserver.example.com" },
     });
