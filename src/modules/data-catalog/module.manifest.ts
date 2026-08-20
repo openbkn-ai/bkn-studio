@@ -17,9 +17,8 @@ export const dataCatalogModuleManifest = {
     "catalog:task_manage",
     "catalog:resource_manage",
     "resource:view_detail",
-    // 后端两个动词都认（老动词在前、短路），所以这里两边都要声明:自定义角色
-    // 手上还是 resource:*，只问 catalog:* 会让它们按钮全消失而接口其实可用。
-    "resource:create",
+    // 改表/删表/任务这几个动词后端仍是「先问这张表、拒了再问目录」，所以两边都要
+    // 声明。建表不在其列：它只判目标目录，因为通配对象答不了「建在哪个目录」。
     "resource:task_manage",
     "resource:query_data",
     "catalog:query_data",

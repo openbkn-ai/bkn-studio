@@ -486,7 +486,7 @@ export function CatalogDetailPanel({
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
               {dataCatalogCreationAvailable ? (
-                <PermissionGate mode="any" permissions={["resource:create", "catalog:resource_manage"]}>
+                <PermissionGate permissions="catalog:resource_manage">
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
                   </AppButton>
@@ -575,7 +575,7 @@ export function CatalogDetailPanel({
                 </AppButton>
               ) : !physical && !catalog.internal ? (
                 dataCatalogCreationAvailable ? (
-                  <PermissionGate mode="any" permissions={["resource:create", "catalog:resource_manage"]}>
+                  <PermissionGate permissions="catalog:resource_manage">
                     <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                       {t("dataCatalog.resource.create")}
                     </AppButton>
