@@ -10,24 +10,30 @@ import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
+import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 vi.setConfig({ testTimeout: 20_000 });
 
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
 }));
+type ModalConfirmOptions = {
+  onOk?: () => void;
+};
 /** 集群档位。默认没有快照——社区部署,也是卖点该出现的那一侧。 */
 const entitlementState = vi.hoisted(() => ({
   loading: false,
   snapshot: null as { capabilities: string[]; edition: string; extensions: string[] } | null,
 }));
 const createDataConnectRecordMock = vi.hoisted(() => vi.fn());
+const getDataConnectConnectorTypeMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
 const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn<(options: ModalConfirmOptions) => void>());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
@@ -37,7 +43,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
       warning: vi.fn(),
     },
     modal: {
-      confirm: vi.fn(),
+      confirm: modalConfirmMock,
     },
   }),
 }));
@@ -83,6 +89,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   createDataConnectRecord: createDataConnectRecordMock,
+  getDataConnectConnectorType: getDataConnectConnectorTypeMock,
   getDataConnectRecord: getDataConnectRecordMock,
   isDataConnectConnectionTestFailure: vi.fn(() => false),
   listDataConnectConnectorTypes: listDataConnectConnectorTypesMock,
@@ -141,8 +148,44 @@ describe("DataConnectFormScene · connection preflight", () => {
     entitlementState.snapshot = null;
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
+    modalConfirmMock.mockReset();
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
+    getDataConnectConnectorTypeMock.mockReset();
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => {
+      if (type === "sqlserver") {
+        return {
+          category: "table",
+          description: "",
+          enabled: true,
+          fieldConfig: {
+            api_token: connectorField("API Token", "string", false, true),
+            application_name: connectorField("应用名称", "string", false),
+            database: connectorField("数据库名", "string", true),
+            host: connectorField("主机地址", "string", true),
+            options: connectorField("连接参数", "object", false),
+            password: connectorField("密码", "string", true, true),
+            port: connectorField("端口号", "integer", true),
+            schemas: connectorField("Schema 列表", "array", false),
+            session_settings: connectorField("会话设置", "object", false),
+            username: connectorField("用户名", "string", true),
+          },
+          mode: "local",
+          name: "SQL Server",
+          type,
+        };
+      }
+
+      return {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: { host: connectorField("Host", "string", true) },
+        mode: "local",
+        name: "PostgreSQL",
+        type,
+      };
+    });
     getDataConnectRecordMock.mockReset();
     testDataConnectConfigMock.mockReset();
     testDataConnectConfigMock.mockResolvedValue(undefined);
@@ -191,6 +234,171 @@ describe("DataConnectFormScene · connection preflight", () => {
       updaterName: "-",
     });
   });
+
+  it("confirms before leaving a create form with unsaved changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const onBack = vi.fn();
+
+    render(<DataConnectFormScene mode="create" onBack={onBack} />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+      target: { value: "orders" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /common\.back/ }));
+
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cancelText: "common.cancel",
+        content: "dataConnect.discardChangesDescription",
+        okText: "dataConnect.discardChangesConfirm",
+        title: "dataConnect.discardChangesTitle",
+      }),
+    );
+    expect(onBack).not.toHaveBeenCalled();
+
+    const onOk = modalConfirmMock.mock.calls[0]?.[0]?.onOk;
+    if (!onOk) {
+      throw new Error("Expected the discard confirmation to provide an onOk callback");
+    }
+    onOk();
+    expect(onBack).toHaveBeenCalledOnce();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  it("leaves immediately when the form has no user changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const onBack = vi.fn();
+
+    render(<DataConnectFormScene mode="create" onBack={onBack} />);
+
+    await findConnectorCard("PostgreSQL");
+    fireEvent.click(screen.getByRole("button", { name: /common\.back/ }));
+
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    expect(onBack).toHaveBeenCalledOnce();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  it("does not advance with a stale connector definition after the selection changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const postgresqlDetail = createDeferred<DataConnectConnectorType>();
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
+      type === "postgresql"
+        ? postgresqlDetail.promise
+        : Promise.resolve({
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { database: connectorField("Database", "string", true) },
+            mode: "local",
+            name: "SQL Server",
+            type,
+          })
+    ));
+    listDataConnectConnectorTypesMock.mockResolvedValue([
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "PostgreSQL",
+        type: "postgresql",
+      },
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "SQL Server",
+        type: "sqlserver",
+      },
+    ]);
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    await waitFor(() => {
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("postgresql");
+    });
+    fireEvent.click(await findConnectorCard("SQL Server"));
+    postgresqlDetail.resolve({
+      category: "table",
+      description: "",
+      enabled: true,
+      fieldConfig: { host: connectorField("Host", "string", true) },
+      mode: "local",
+      name: "PostgreSQL",
+      type: "postgresql",
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("common.next").closest("button")?.classList.contains("ant-btn-loading"),
+      ).toBe(false);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+    expect(await screen.findByPlaceholderText("dataConnect.namePlaceholder")).toBeTruthy();
+    expect(getDataConnectConnectorTypeMock).toHaveBeenLastCalledWith("sqlserver");
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  it("does not show an error from a stale connector definition request", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const postgresqlDetail = createDeferred<DataConnectConnectorType>();
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
+      type === "postgresql"
+        ? postgresqlDetail.promise
+        : Promise.resolve({
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { database: connectorField("Database", "string", true) },
+            mode: "local",
+            name: "SQL Server",
+            type,
+          })
+    ));
+    listDataConnectConnectorTypesMock.mockResolvedValue([
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "PostgreSQL",
+        type: "postgresql",
+      },
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "SQL Server",
+        type: "sqlserver",
+      },
+    ]);
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    await waitFor(() => {
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("postgresql");
+    });
+    fireEvent.click(await findConnectorCard("SQL Server"));
+    postgresqlDetail.reject(new Error("PostgreSQL definition unavailable"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("common.next").closest("button")?.classList.contains("ant-btn-loading"),
+      ).toBe(false);
+    });
+    expect(messageErrorMock).not.toHaveBeenCalled();
+  }, HEAVY_SCENE_TIMEOUT_MS);
 
   afterEach(() => {
     vi.useRealTimers();
@@ -588,6 +796,21 @@ describe("DataConnectFormScene · connection preflight", () => {
 
   it("creates a SQL Server catalog with the default port", async () => {
     permissionState.values = new Set(["catalog:create"]);
+    getDataConnectConnectorTypeMock.mockResolvedValue({
+      category: "table",
+      description: "Microsoft SQL Server 关系型数据库连接器",
+      enabled: true,
+      fieldConfig: {
+        database: connectorField("数据库名", "string", true),
+        host: connectorField("主机地址", "string", true),
+        password: connectorField("密码", "string", true, true),
+        port: connectorField("端口号", "integer", true),
+        username: connectorField("用户名", "string", true),
+      },
+      mode: "local",
+      name: "SQL Server",
+      type: "sqlserver",
+    });
     listDataConnectConnectorTypesMock.mockResolvedValue([
       {
         category: "table",
@@ -611,9 +834,10 @@ describe("DataConnectFormScene · connection preflight", () => {
     fireEvent.click(await findConnectorCard("SQL Server"));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
 
-    fireEvent.change(screen.getByPlaceholderText("dataConnect.namePlaceholder"), {
+    fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
       target: { value: "sqlserver-orders" },
     });
+    expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("sqlserver");
     fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
       target: { value: "sqlserver.example.com" },
     });
@@ -653,17 +877,30 @@ describe("DataConnectFormScene · connection preflight", () => {
 });
 
 function connectorField(
-  name: string,
+  _name: string,
   type: string,
   required: boolean,
   encrypted = false,
 ) {
   return {
-    description: "",
     encrypted,
-    name,
     required,
     type,
+  };
+}
+
+function createDeferred<T>() {
+  let resolve: (value: T) => void;
+  let reject: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return {
+    promise,
+    reject: (reason?: unknown) => reject(reason),
+    resolve: (value: T) => resolve(value),
   };
 }
 

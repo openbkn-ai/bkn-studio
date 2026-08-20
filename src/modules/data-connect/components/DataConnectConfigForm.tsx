@@ -16,6 +16,8 @@ import {
   getConnectorTemplateMeta,
   groupConnectorFields,
   humanizeConnectorFieldLabel,
+  isConnectorFieldRequired,
+  isConnectorFieldVisible,
   isValidJSONObject,
   resolveConnectorFieldControl,
   type ConnectorFieldControl,
@@ -82,6 +84,7 @@ export function DataConnectConfigForm({
   const healthCheckScheduleMode = Form.useWatch<DataConnectHealthCheckScheduleMode>(
     ["healthCheckSchedule", "mode"],
   );
+  const connectorConfig = Form.useWatch<Record<string, unknown>>("connectorConfig");
 
   const groupedFields = useMemo(
     () => groupConnectorFields(selectedConnectorType),
@@ -211,68 +214,13 @@ export function DataConnectConfigForm({
         <div className={styles.sectionTitle}>{t("dataConnect.connectorConfigSection")}</div>
         <div className={styles.groupStack}>
           {groupedFields.map((group) => (
-            <div className={styles.group} key={group.key}>
-              <div className={styles.groupTitle}>{group.title}</div>
-              <div className={styles.grid}>
-                {group.fields.map(([fieldName, fieldConfig]) => {
-                  const control = resolveConnectorFieldControl(fieldName, fieldConfig.type);
-                  const label = fieldConfig.name || humanizeConnectorFieldLabel(fieldName);
-
-                  return (
-                    <InlineField
-                      align={control.kind === "json" ? "start" : "center"}
-                      extra={
-                        isEdit && fieldConfig.encrypted
-                          ? t("dataConnect.encryptedFieldEditHint")
-                          : undefined
-                      }
-                      key={fieldName}
-                      label={label}
-                      name={["connectorConfig", fieldName]}
-                      required={fieldConfig.required}
-                      rules={[
-                        {
-                          message: t("common.required"),
-                          required: fieldConfig.required,
-                        },
-                        ...(control.kind === "json"
-                          ? [
-                              {
-                                validator: (_: unknown, value: unknown) =>
-                                  isValidJSONObject(value)
-                                    ? Promise.resolve()
-                                    : Promise.reject(
-                                        new Error(t("dataConnect.jsonObjectInvalid")),
-                                      ),
-                              },
-                            ]
-                          : []),
-                      ]}
-                      span={
-                        control.kind === "json" || control.kind === "tags" ? "full" : "half"
-                      }
-                      valuePropName={control.kind === "switch" ? "checked" : "value"}
-                    >
-                      {renderField({
-                        connectorType: selectedConnectorType?.type,
-                        control,
-                        encrypted: fieldConfig.encrypted,
-                        encryptedPlaceholder: t("dataConnect.encryptedFieldPlaceholder", {
-                          field: label,
-                        }),
-                        fieldName,
-                        fieldType: fieldConfig.type,
-                        selectPlaceholder: t("dataConnect.selectFieldPlaceholder", {
-                          field: label,
-                        }),
-                        switchOff: t("dataConnect.switchOff"),
-                        switchOn: t("dataConnect.switchOn"),
-                      })}
-                    </InlineField>
-                  );
-                })}
-              </div>
-            </div>
+            <ConnectorFieldGroup
+              connectorConfig={connectorConfig}
+              connectorType={selectedConnectorType?.type}
+              group={group}
+              isEdit={isEdit}
+              key={group.key}
+            />
           ))}
         </div>
       </section>
@@ -331,6 +279,97 @@ export function DataConnectConfigForm({
           </div>
         </section>
       ) : null}
+    </div>
+  );
+}
+
+type ConnectorFieldGroupProps = {
+  connectorConfig?: Record<string, unknown>;
+  connectorType?: string;
+  group: ReturnType<typeof groupConnectorFields>[number];
+  isEdit: boolean;
+};
+
+function ConnectorFieldGroup({
+  connectorConfig,
+  connectorType,
+  group,
+  isEdit,
+}: ConnectorFieldGroupProps) {
+  const { t } = useTranslation();
+  const visibleFields = group.fields.filter(([fieldName]) =>
+    isConnectorFieldVisible(connectorType, fieldName, connectorConfig),
+  );
+
+  if (visibleFields.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={styles.group}>
+      <div className={styles.groupTitle}>{group.title}</div>
+      <div className={styles.grid}>
+        {visibleFields.map(([fieldName, fieldConfig]) => {
+          const control = resolveConnectorFieldControl(
+            fieldName,
+            fieldConfig.type,
+            connectorType,
+          );
+          const label = humanizeConnectorFieldLabel(fieldName, connectorType);
+          const required = isConnectorFieldRequired(
+            connectorType,
+            fieldName,
+            fieldConfig.required,
+            connectorConfig,
+          );
+
+          return (
+            <InlineField
+              align={control.kind === "json" ? "start" : "center"}
+              extra={
+                isEdit && fieldConfig.encrypted
+                  ? t("dataConnect.encryptedFieldEditHint")
+                  : undefined
+              }
+              key={fieldName}
+              label={label}
+              name={["connectorConfig", fieldName]}
+              required={required}
+              rules={[
+                { message: t("common.required"), required },
+                ...(control.kind === "json"
+                  ? [
+                      {
+                        validator: (_: unknown, value: unknown) =>
+                          isValidJSONObject(value)
+                            ? Promise.resolve()
+                            : Promise.reject(new Error(t("dataConnect.jsonObjectInvalid"))),
+                      },
+                    ]
+                  : []),
+              ]}
+              span={control.kind === "json" || control.kind === "tags" ? "full" : "half"}
+              valuePropName={control.kind === "switch" ? "checked" : "value"}
+            >
+              {renderField({
+                connectorType,
+                control,
+                encrypted: fieldConfig.encrypted,
+                encryptedPlaceholder: t("dataConnect.encryptedFieldPlaceholder", {
+                  field: label,
+                }),
+                fieldName,
+                fieldType: fieldConfig.type,
+                selectPlaceholder: t("dataConnect.selectFieldPlaceholder", {
+                  field: label,
+                }),
+                switchOff: t("dataConnect.switchOff"),
+                switchOn: t("dataConnect.switchOn"),
+              })}
+            </InlineField>
+          );
+        })}
+      </div>
     </div>
   );
 }

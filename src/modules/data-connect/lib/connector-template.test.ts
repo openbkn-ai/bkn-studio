@@ -17,6 +17,9 @@ import {
   getConnectorTemplateMeta,
   getConnectorTypeTags,
   groupConnectorFields,
+  humanizeConnectorFieldLabel,
+  isConnectorFieldRequired,
+  isConnectorFieldVisible,
   isValidJSONObject,
   mergeKnownConnectorTypes,
   resolveConnectorFieldControl,
@@ -158,6 +161,8 @@ describe("connector-template · SQL Server", () => {
     expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
       "For example: 1433",
     );
+    expect(humanizeConnectorFieldLabel("host")).toBe("Host");
+    expect(humanizeConnectorFieldLabel("cluster")).toBe("Cluster");
     expect(resolveConnectorFieldControl("ssl_mode", "string")).toEqual({
       kind: "select",
       options: [
@@ -169,13 +174,107 @@ describe("connector-template · SQL Server", () => {
       ],
     });
   });
+
+  it("uses frontend locale resources for field labels", () => {
+    expect(humanizeConnectorFieldLabel("host")).toBe("主机地址");
+    expect(humanizeConnectorFieldLabel("cluster")).toBe("集群");
+    expect(humanizeConnectorFieldLabel("custom_setting")).toBe("Custom setting");
+  });
+
+  it("localizes every built-in connector field without backend display text", async () => {
+    const zhLabels = {
+      app_id: "应用 ID",
+      app_secret: "应用密钥",
+      auth_type: "认证方式",
+      database: "数据库",
+      databases: "数据库列表",
+      doc_lib_type: "文档库类型",
+      host: "主机地址",
+      index_pattern: "索引模式",
+      options: "连接参数",
+      password: "密码",
+      paths: "路径列表",
+      port: "端口号",
+      protocol: "协议",
+      schemas: "Schema 列表",
+      token: "访问令牌",
+      username: "用户名",
+    };
+    const enLabels: Record<string, string> = {
+      app_id: "Application ID",
+      app_secret: "Application secret",
+      auth_type: "Authentication type",
+      database: "Database",
+      databases: "Database list",
+      doc_lib_type: "Document library type",
+      host: "Host",
+      index_pattern: "Index pattern",
+      options: "Connection options",
+      password: "Password",
+      paths: "Paths",
+      port: "Port",
+      protocol: "Protocol",
+      schemas: "Schema list",
+      token: "Access token",
+      username: "Username",
+    };
+    const builtInConnectorFieldKeys = {
+      mariadb: ["host", "port", "username", "password", "databases", "options"],
+      mysql: ["host", "port", "username", "password", "databases", "options"],
+      postgresql: ["host", "port", "username", "password", "database", "schemas", "options"],
+      sqlserver: ["host", "port", "username", "password", "database", "schemas", "options"],
+      opensearch: ["host", "port", "username", "password", "index_pattern"],
+      anyshare: ["protocol", "host", "port", "auth_type", "token", "app_id", "app_secret", "doc_lib_type", "paths"],
+    } as const;
+
+    for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
+      for (const fieldName of fields) {
+        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
+          zhLabels[fieldName],
+        );
+      }
+    }
+
+    await i18n.changeLanguage("en-US");
+    for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
+      for (const fieldName of fields) {
+        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
+          enLabels[fieldName],
+        );
+      }
+    }
+  });
+
+  it("uses the AnyShare template for enum controls and conditional credentials", () => {
+    expect(resolveConnectorFieldControl("protocol", "string", "anyshare")).toEqual({
+      kind: "select",
+      options: [
+        { label: "HTTP", value: "http" },
+        { label: "HTTPS", value: "https" },
+      ],
+    });
+    expect(resolveConnectorFieldControl("auth_type", "integer", "anyshare")).toEqual({
+      kind: "select",
+      options: [
+        { label: "访问令牌", value: 1 },
+        { label: "应用凭据", value: 2 },
+      ],
+    });
+    expect(isConnectorFieldVisible("anyshare", "token", { auth_type: 1 })).toBe(true);
+    expect(isConnectorFieldVisible("anyshare", "token", { auth_type: 2 })).toBe(false);
+    expect(isConnectorFieldRequired("anyshare", "token", false, { auth_type: 1 })).toBe(true);
+    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 1 })).toBe(
+      false,
+    );
+    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 2 })).toBe(
+      true,
+    );
+  });
 });
 
-function field(name: string, type: string, required: boolean, encrypted = false) {
+function field(_name: string, type: string, required: boolean, encrypted = false) {
   return {
-    description: "",
     encrypted,
-    name,
     required,
     type,
   };

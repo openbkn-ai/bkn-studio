@@ -23,10 +23,12 @@ import { DataConnectConfigForm } from "@/modules/data-connect/components/DataCon
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import {
   getConnectorConfigDefaults,
+  isConnectorFieldVisible,
   mergeKnownConnectorTypes,
 } from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
+  getDataConnectConnectorType,
   getDataConnectRecord,
   isDataConnectConnectionTestFailure,
   listDataConnectConnectorTypes,
@@ -57,10 +59,13 @@ export function DataConnectFormScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [loadingConnectorDefinition, setLoadingConnectorDefinition] = useState(false);
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const selectedConnectorTypeRef = useRef<string | undefined>(undefined);
   const recordIdentityKey = mode === "edit" ? (recordId ?? "") : "";
   const recordIdentityRef = useRef({ generation: 0, key: recordIdentityKey });
   if (recordIdentityRef.current.key !== recordIdentityKey) {
@@ -69,6 +74,11 @@ export function DataConnectFormScene({
       key: recordIdentityKey,
     };
   }
+
+  const selectConnectorType = (connectorType: string) => {
+    selectedConnectorTypeRef.current = connectorType;
+    setSelectedConnectorType(connectorType);
+  };
 
   useEffect(() => {
     let active = true;
@@ -93,10 +103,14 @@ export function DataConnectFormScene({
           setRecord(currentRecord);
 
           if (currentRecord) {
-            const connector = mergedTypes.find(
-              (item) => item.type === currentRecord.connectorType,
-            );
-            setSelectedConnectorType(currentRecord.connectorType);
+            const connector = await getDataConnectConnectorType(currentRecord.connectorType);
+            if (!active) {
+              return;
+            }
+            setConnectorTypes((currentTypes) => currentTypes.map((item) => (
+              item.type === connector.type ? connector : item
+            )));
+            selectConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
               connectorConfig: sanitizeConnectorConfig(
                 currentRecord.connectorConfig,
@@ -121,6 +135,7 @@ export function DataConnectFormScene({
             tags: [],
           });
         }
+        setHasUnsavedChanges(false);
       } catch (error) {
         if (active) {
           setLoadError(extractRequestErrorMessage(error));
@@ -157,7 +172,7 @@ export function DataConnectFormScene({
         const connector = connectorTypes.find(
           (item) => item.type === latestRecord.connectorType,
         );
-        setSelectedConnectorType(latestRecord.connectorType);
+        selectConnectorType(latestRecord.connectorType);
         form.setFieldsValue({
           connectorConfig: sanitizeConnectorConfig(
             latestRecord.connectorConfig,
@@ -169,6 +184,7 @@ export function DataConnectFormScene({
           name: latestRecord.name,
           tags: latestRecord.tags,
         });
+        setHasUnsavedChanges(false);
       }
     } catch (refreshError) {
       if (recordIdentityRef.current === submittedRecordIdentity) {
@@ -197,7 +213,7 @@ export function DataConnectFormScene({
     { title: t("dataConnect.configStep") },
   ];
 
-  const handleBack = () => {
+  const leavePage = () => {
     if (onBack) {
       onBack();
       return;
@@ -206,25 +222,57 @@ export function DataConnectFormScene({
     void navigate("/data-connect");
   };
 
-  const handleNext = () => {
+  const handleBack = () => {
+    if (!hasUnsavedChanges) {
+      leavePage();
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t("dataConnect.discardChangesDescription"),
+      okButtonProps: { danger: true },
+      okText: t("dataConnect.discardChangesConfirm"),
+      onOk: leavePage,
+      title: t("dataConnect.discardChangesTitle"),
+    });
+  };
+
+  const handleNext = async () => {
     if (!selectedConnectorType) {
       void message.warning(t("dataConnect.selectConnectorTypeRequired"));
       return;
     }
 
-    const connector = connectorTypes.find((item) => item.type === selectedConnectorType);
-    const defaults = getConnectorConfigDefaults(connector);
-    const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
-    const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
-      ...defaults,
-      ...sanitizeConnectorConfig(currentConfig, connector?.fieldConfig),
-    };
+    try {
+      setLoadingConnectorDefinition(true);
+      const connector = await getDataConnectConnectorType(selectedConnectorType);
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
+      setConnectorTypes((currentTypes) => currentTypes.map((item) => (
+        item.type === connector.type ? connector : item
+      )));
+      const defaults = getConnectorConfigDefaults(connector);
+      const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
+      const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
+        ...defaults,
+        ...sanitizeConnectorConfig(currentConfig, connector.fieldConfig),
+      };
 
-    form.setFieldsValue({
-      connectorConfig: mergedConfig,
-      connectorType: selectedConnectorType,
-    });
-    setCurrentStep(1);
+      form.setFieldsValue({
+        connectorConfig: mergedConfig,
+        connectorType: selectedConnectorType,
+      });
+      setCurrentStep(1);
+    } catch (error) {
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setLoadingConnectorDefinition(false);
+    }
   };
 
   const buildMutationPayload = async () => {
@@ -234,6 +282,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
@@ -265,6 +314,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType:
         selectedConnectorType ?? currentValues.connectorType,
@@ -465,6 +515,9 @@ export function DataConnectFormScene({
                 }
                 colon={false}
                 form={form}
+                onValuesChange={() => {
+                  setHasUnsavedChanges(true);
+                }}
                 labelAlign="right"
                 labelCol={
                   currentStep === 0 && mode === "create"
@@ -484,7 +537,8 @@ export function DataConnectFormScene({
                   <ConnectorTypePicker
                     onChange={(value) => {
                       const connector = connectorTypes.find((item) => item.type === value);
-                      setSelectedConnectorType(value);
+                      setHasUnsavedChanges(true);
+                      selectConnectorType(value);
                       form.setFieldsValue({
                         connectorConfig: getConnectorConfigDefaults(connector),
                         connectorType: value,
@@ -527,7 +581,7 @@ export function DataConnectFormScene({
               </PermissionGate>
             ) : null}
             <AppButton
-              loading={submitting}
+              loading={submitting || loadingConnectorDefinition}
               onClick={() => {
                 void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
               }}
@@ -577,11 +631,13 @@ function sanitizeConnectorConfig(
 function normalizeConnectorConfig(
   config: Record<string, unknown>,
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
+  connectorType?: string,
 ) {
   return Object.fromEntries(
     Object.entries(config)
       .filter(
         ([key, value]) =>
+          isConnectorFieldVisible(connectorType, key, config) &&
           !shouldOmitConnectorConfigValue(fieldConfig[key], value),
       )
       .map(([key, value]) => {
