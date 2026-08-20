@@ -274,7 +274,6 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
   if (filters.actorId.trim()) parameters.set("actor_id", filters.actorId.trim());
-  if (filters.action.trim()) parameters.set("action", filters.action.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
   parameters.set("time_from", filters.timeRange[0].toISOString());
   parameters.set("time_to", filters.timeRange[1].toISOString());
