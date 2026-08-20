@@ -237,8 +237,8 @@ export function TraceAnalysisScene() {
           <Select allowClear options={["completed", "failed", "running", "unknown"].map((value) => ({ label: value, value }))} placeholder={t("bknTrace.traceWorkspace.filters.status")} />
         </Form.Item>
         <Form.Item name="errorKeyword"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.error")} /></Form.Item>
-        <Form.Item name="from"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.from")} format="YYYY-MM-DD HH:mm" showTime={{ format: "HH:mm" }} /></Form.Item>
-        <Form.Item name="to"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.to")} format="YYYY-MM-DD HH:mm" showTime={{ format: "HH:mm" }} /></Form.Item>
+        <Form.Item name="from"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.from")} format="YYYY-MM-DD HH:mm" placeholder={t("bknTrace.traceWorkspace.filters.from")} showTime={{ format: "HH:mm", showSecond: false }} /></Form.Item>
+        <Form.Item name="to"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.to")} format="YYYY-MM-DD HH:mm" placeholder={t("bknTrace.traceWorkspace.filters.to")} showTime={{ format: "HH:mm", showSecond: false }} /></Form.Item>
         <Button htmlType="submit" icon={<SearchOutlined />} type="primary">{t("bknTrace.actions.query")}</Button>
       </Form>
 

@@ -134,7 +134,9 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
       catalogId: string;
       cronExpr: string;
       enabled: boolean;
+      endTime?: number;
       name: string;
+      startTime?: number;
       strategy: "full_sync";
     }) => Promise<void>;
     submitting: boolean;
@@ -147,7 +149,9 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
           catalogId: "catalog-1",
           cronExpr: "0 * * * *",
           enabled: true,
+          endTime: undefined,
           name: "nightly",
+          startTime: undefined,
           strategy: "full_sync",
         })}
         type="button"
@@ -181,12 +185,14 @@ const schedule = (expectedUpdateTime: number) => ({
   cronExpr: "0 * * * *",
   enabled: true,
   endTime: "-",
+  endTimeValue: Date.parse("2026-08-20T11:00:00"),
   expectedUpdateTime,
   id: "schedule-1",
   lastRun: "-",
   name: "nightly",
   nextRun: "-",
   startTime: "-",
+  startTimeValue: Date.parse("2026-08-20T10:00:00"),
   strategy: "full_sync" as const,
   updateTime: "-",
   updaterName: "-",
@@ -234,6 +240,27 @@ describe("DataConnectDiscoverScene", () => {
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
 
     expect(screen.getByTestId("schedule-submitting").textContent).toBe("false");
+  });
+
+  it("sends cleared schedule times to the update service", async () => {
+    updateScheduleMock.mockResolvedValue(undefined);
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await openScheduleEditor();
+    fireEvent.click(screen.getByRole("button", { name: "submit schedule 100" }));
+
+    await waitFor(() => {
+      expect(updateScheduleMock).toHaveBeenCalledWith("schedule-1", {
+        catalogId: "catalog-1",
+        cronExpr: "0 * * * *",
+        enabled: true,
+        endTime: undefined,
+        expectedUpdateTime: 100,
+        name: "nightly",
+        startTime: undefined,
+        strategy: "full_sync",
+      });
+    });
   });
 
   it("clears the submitting state when a schedule modal closes during submission", async () => {

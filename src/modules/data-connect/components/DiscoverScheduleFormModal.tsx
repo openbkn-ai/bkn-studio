@@ -279,7 +279,7 @@ export function DiscoverScheduleFormModal({
             >
               <DatePicker
                 format="YYYY-MM-DD HH:mm"
-                showTime={{ format: "HH:mm" }}
+                showTime={{ format: "HH:mm", showSecond: false }}
                 style={{ width: "100%" }}
               />
             </InlineField>
@@ -291,7 +291,7 @@ export function DiscoverScheduleFormModal({
             >
               <DatePicker
                 format="YYYY-MM-DD HH:mm"
-                showTime={{ format: "HH:mm" }}
+                showTime={{ format: "HH:mm", showSecond: false }}
                 style={{ width: "100%" }}
               />
             </InlineField>
@@ -359,5 +359,5 @@ function parseDateTimeLocal(value: unknown) {
     return undefined;
   }
 
-  return value.valueOf();
+  return value.startOf("minute").valueOf();
 }

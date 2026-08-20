@@ -577,16 +577,6 @@ export function DataConnectDiscoverScene({
           scheduleModalState?.mode === "edit" && editingSchedule
             ? editingSchedule.catalogId
             : payload.catalogId,
-        endTime:
-          payload.endTime ??
-          (scheduleModalState?.mode === "edit"
-            ? editingSchedule?.endTimeValue
-            : undefined),
-        startTime:
-          payload.startTime ??
-          (scheduleModalState?.mode === "edit"
-            ? editingSchedule?.startTimeValue
-            : undefined),
       };
 
       if (scheduleModalState?.mode === "edit" && scheduleModalState.scheduleId) {

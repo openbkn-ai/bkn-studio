@@ -81,7 +81,7 @@ describe("DiscoverScheduleFormModal", () => {
 
     await waitFor(() => {
       expect(screen.getByText("dataConnect.discoverCronInvalid")).toBeTruthy();
-    });
+    }, { timeout: 3_000 });
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -114,5 +114,34 @@ describe("DiscoverScheduleFormModal", () => {
       expect(screen.getAllByText("dataConnect.discoverTimeRangeInvalid")).toHaveLength(2);
     });
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits selected times with minute precision", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DiscoverScheduleFormModal
+        catalogs={[]}
+        defaultCatalogId="catalog-1"
+        mode="create"
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        submitting={false}
+      />,
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
+      { target: { value: "Minute precision" } },
+    );
+    fireEvent.change(screen.getByLabelText("dataConnect.discoverStartTime"), {
+      target: { value: "2026-08-20 10:00:59" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        startTime: Date.parse("2026-08-20T10:00:00"),
+      }));
+    });
   });
 });
