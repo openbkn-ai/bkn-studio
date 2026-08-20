@@ -16,7 +16,6 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
 import { presentLogAction, presentLogActor, presentLogTarget } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
-import { resolveAuditActionFilter } from "@/modules/bkn-trace/utils/audit-action-filter";
 import {
   listLogs,
   type AuditOutcome,
@@ -42,7 +41,6 @@ type ObservabilityLogsSceneProps = {
 };
 
 type Filters = {
-  action: string;
   actorId: string;
   businessModule?: BusinessModule;
   outcome?: AuditOutcome;
@@ -81,7 +79,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
         ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
-        ...(nextFilters.action.trim() ? { action: resolveAuditActionFilter(nextFilters.action, (key, options) => t(key, options)) } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
@@ -204,7 +201,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           </div>
           <div className={styles.filterRowSecondary}>
             <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, action: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actionPlaceholder")} value={filters.action} />
             <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
             <Space><Button icon={<SearchOutlined />} onClick={submit} type="primary">{t("bknTrace.actions.query")}</Button><Button onClick={reset}>{t("bknTrace.actions.reset")}</Button></Space>
           </div>
@@ -234,7 +230,7 @@ function ClampedText({ secondary, value }: { secondary?: string; value: string }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
   const end = dayjs();
-  return { action: "", actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
+  return { actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
 }
 
 function readInitialFilters(mode: "audit" | "logs"): Filters {
@@ -247,7 +243,6 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
   return {
     ...defaults,
-    action: parameters.get("action") ?? "",
     actorId: parameters.get("actor_id") ?? "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
