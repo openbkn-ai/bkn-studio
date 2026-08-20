@@ -18,6 +18,7 @@ import {
 } from "@ant-design/icons";
 import { App, Select, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
@@ -145,13 +146,14 @@ function MaskedKeyInput({
   onManage: () => void;
   onCopy: () => void;
 }) {
+  const { t } = useTranslation();
   const [focused, setFocused] = useState(false);
   return (
     <div className={styles.keyField}>
       <input
         className={styles.keyInput}
         value={focused ? value : value ? maskKey(value) : ""}
-        placeholder="Paste bak_ API Key"
+        placeholder={t("knowledgeNetwork.contextLoaderPanel.experience.apiKeyPlaceholder")}
         spellCheck={false}
         autoComplete="off"
         onFocus={() => setFocused(true)}
@@ -159,14 +161,14 @@ function MaskedKeyInput({
         onChange={(event) => onChange(event.target.value)}
       />
       {value.trim() ? (
-        <Tooltip title="Copy plain API Key">
+        <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.experience.copyApiKeyPlain")}>
           <button type="button" className={styles.keyCopy} onClick={onCopy}>
             <CopyOutlined />
           </button>
         </Tooltip>
       ) : null}
       <button type="button" className={styles.keyManage} onClick={onManage}>
-        Issue API Key
+        {t("knowledgeNetwork.contextLoaderPanel.experience.issueApiKey")}
       </button>
     </div>
   );
@@ -188,6 +190,7 @@ export function ExperienceScene({
 }: ExperienceSceneProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const runtimeConfig = useRuntimeConfig();
   const { message } = App.useApp();
   const { networkId } = useParams<{ networkId: string }>();
@@ -196,13 +199,19 @@ export function ExperienceScene({
   const apiKeyPagePath = buildApiKeyPagePath(currentPath);
 
   const copy = useCallback(
-    (text: string, label = "Copied") => {
+    (text: string, label?: string) => {
       void navigator.clipboard
         ?.writeText(text)
-        .then(() => message.success(label))
-        .catch(() => message.error("Copy failed"));
+        .then(() =>
+          message.success(
+            label ?? t("knowledgeNetwork.contextLoaderPanel.experience.copied"),
+          ),
+        )
+        .catch(() =>
+          message.error(t("knowledgeNetwork.contextLoaderPanel.experience.copyFailed")),
+        );
     },
-    [message],
+    [message, t],
   );
 
   const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
@@ -228,8 +237,8 @@ export function ExperienceScene({
     if (!key) return;
     setAuthMode("apikey");
     setAppKey(key);
-    message.success("Newly issued API Key filled automatically");
-  }, [currentPath, message]);
+    message.success(t("knowledgeNetwork.contextLoaderPanel.experience.apiKeyAutoFilled"));
+  }, [currentPath, message, t]);
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
@@ -382,7 +391,11 @@ export function ExperienceScene({
         })
         .catch((err) => {
           if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current && !controller.signal.aborted) {
-            setToolsError(err instanceof Error ? err.message : "tools/list failed");
+            setToolsError(
+              err instanceof Error
+                ? err.message
+                : t("knowledgeNetwork.contextLoaderPanel.experience.toolsListFailed"),
+            );
           }
         })
         .finally(() => {
@@ -392,7 +405,7 @@ export function ExperienceScene({
           }
         });
     },
-    [env, knId, toolDefs, toolsLoading, tokenProvider],
+    [env, knId, t, toolDefs, toolsLoading, tokenProvider],
   );
   // Fetch once when entering MCP mode; failures are shown inline only.
   useEffect(() => {
@@ -473,7 +486,11 @@ export function ExperienceScene({
         JSON.parse(bodyText || "{}");
         setBodyError(null);
       } catch (error) {
-        setBodyError(error instanceof Error ? error.message : "JSON parse failed");
+        setBodyError(
+          error instanceof Error
+            ? error.message
+            : t("knowledgeNetwork.contextLoaderPanel.experience.jsonParseFailed"),
+        );
         return;
       }
     }
@@ -493,7 +510,7 @@ export function ExperienceScene({
       // tokenProvider refreshes once after 401. One click equals one managed interaction.
       const result = await withManagedTurn(
         lifecycle,
-        `Console call ${op.id}`,
+        t("knowledgeNetwork.contextLoaderPanel.experience.debugTurn", { id: op.id }),
         async (turn) => {
           const sent = await sendRequest(
             freshEnv,
@@ -514,14 +531,18 @@ export function ExperienceScene({
       setResponse(result);
     } catch (error) {
       if (requestSequence !== requestSequenceRef.current || controller.signal.aborted) return;
-      setReqError(error instanceof Error ? error.message : "Request failed; the service may be unreachable");
+      setReqError(
+        error instanceof Error
+          ? error.message
+          : t("knowledgeNetwork.contextLoaderPanel.experience.requestFailed"),
+      );
     } finally {
       if (requestSequence === requestSequenceRef.current) {
         requestControllerRef.current = null;
         setSending(false);
       }
     }
-  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider, lifecycle]);
+  }, [env, op, mode, queryVals, bodyText, runtimeConfig, authMode, appKey, tokenProvider, lifecycle, t]);
 
   // Fill test data from the current network schema and sample rows.
   const onFillTestData = useCallback(async () => {
@@ -533,7 +554,10 @@ export function ExperienceScene({
     setFillingTest(true);
     try {
       // Fetching schema/sample rows also goes through /kn/* and shares one managed interaction.
-      const fill = await withManagedTurn(lifecycle, `Fill ${op.id} test data`, async (turn) => {
+      const fill = await withManagedTurn(
+        lifecycle,
+        t("knowledgeNetwork.contextLoaderPanel.experience.fillTestTurn", { id: op.id }),
+        async (turn) => {
         const detail =
           knDetailRef.current?.knId === knId
             ? knDetailRef.current.detail
@@ -546,14 +570,18 @@ export function ExperienceScene({
         if (op.id === "query_object_instance" || op.id === "run_sql") {
           ot = pickQueryableObjectType(detail);
           if (!ot) {
-            message.warning("The current knowledge network has no object types bound to data resources, so test data cannot be generated");
+            message.warning(
+              t("knowledgeNetwork.contextLoaderPanel.experience.noQueryableObjectType"),
+            );
             return null;
           }
         }
         if (op.id === "query_metric") {
           const metricOwner = detail.object_types.find((item) => (item.related_metric_count ?? 0) > 0) ?? detail.object_types[0];
           if (!metricOwner) {
-            message.warning("The current knowledge network has no object types, so metric test data cannot be generated");
+            message.warning(
+              t("knowledgeNetwork.contextLoaderPanel.experience.noObjectTypeForMetric"),
+            );
             return null;
           }
           const objectTypes = await fetchMcpObjectTypes(
@@ -565,7 +593,11 @@ export function ExperienceScene({
           if (fillSequence !== fillSequenceRef.current) return null;
           ot = objectTypes.find((item) => item.id === metricOwner.id) ?? objectTypes[0] ?? null;
           if (!ot?.related_metrics?.length) {
-            message.warning(`Object type ${metricOwner.name || metricOwner.id} has no available metrics, so test data cannot be generated`);
+            message.warning(
+              t("knowledgeNetwork.contextLoaderPanel.experience.noMetricForObjectType", {
+                name: metricOwner.name || metricOwner.id,
+              }),
+            );
             return null;
           }
         }
@@ -575,22 +607,33 @@ export function ExperienceScene({
           sampleRow = rows[0] ?? null;
         }
         return buildTestData(op, mode, knId, detail, ot, sampleRow);
-      });
+        },
+      );
       if (!fill || fillSequence !== fillSequenceRef.current) return;
       setBodyText(fill.body);
       setBodyError(null);
       if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
-      message.success(fill.note ? `Test data filled · ${fill.note}` : "Test data filled");
+      message.success(
+        fill.note
+          ? t("knowledgeNetwork.contextLoaderPanel.experience.testDataFilledWithNote", {
+              note: fill.note,
+            })
+          : t("knowledgeNetwork.contextLoaderPanel.experience.testDataFilled"),
+      );
     } catch (error) {
       if (fillSequence !== fillSequenceRef.current || controller.signal.aborted) return;
-      message.error(error instanceof Error ? error.message : "Failed to generate test data");
+      message.error(
+        error instanceof Error
+          ? error.message
+          : t("knowledgeNetwork.contextLoaderPanel.experience.generateTestDataFailed"),
+      );
     } finally {
       if (fillSequence === fillSequenceRef.current) {
         fillControllerRef.current = null;
         setFillingTest(false);
       }
     }
-  }, [env, op, mode, knId, message, tokenProvider, lifecycle]);
+  }, [env, op, mode, knId, message, tokenProvider, lifecycle, t]);
 
   // Whether the current op fetches by object type, controlling data-browser fill action visibility.
   const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
@@ -601,13 +644,18 @@ export function ExperienceScene({
       if (!op) return;
       try {
         if (op.id === "run_sql" && !ot.data_source?.id) {
-          message.warning("This object type is not bound to a data resource, so SQL test data cannot be generated");
+          message.warning(
+            t("knowledgeNetwork.contextLoaderPanel.experience.objectTypeNoResource"),
+          );
           return;
         }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
-          const rows = await withManagedTurn(lifecycle, `Fetch ${ot.id} sample rows`, (turn) =>
-            fetchObjectInstances(env, ot.id, 1, tokenProvider, undefined, turn ?? undefined),
+          const rows = await withManagedTurn(
+            lifecycle,
+            t("knowledgeNetwork.contextLoaderPanel.experience.previewRowsTurn", { id: ot.id }),
+            (turn) =>
+              fetchObjectInstances(env, ot.id, 1, tokenProvider, undefined, turn ?? undefined),
           );
           sampleRow = rows[0] ?? null;
         }
@@ -616,12 +664,21 @@ export function ExperienceScene({
         setBodyText(fill.body);
         setBodyError(null);
         if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
-        message.success(`Test request filled with ${ot.name || ot.id}${fill.note ? ` · ${fill.note}` : ""}`);
+        message.success(
+          t("knowledgeNetwork.contextLoaderPanel.experience.testRequestFilledFromObject", {
+            name: ot.name || ot.id,
+            note: fill.note ? ` · ${fill.note}` : "",
+          }),
+        );
       } catch (error) {
-        message.error(error instanceof Error ? error.message : "Failed to generate test data");
+        message.error(
+          error instanceof Error
+            ? error.message
+            : t("knowledgeNetwork.contextLoaderPanel.experience.generateTestDataFailed"),
+        );
       }
     },
-    [env, op, mode, knId, message, tokenProvider, lifecycle],
+    [env, op, mode, knId, message, tokenProvider, lifecycle, t],
   );
 
   // Data-browser relation card fills relation_type_paths for query_instance_subgraph.
@@ -632,9 +689,13 @@ export function ExperienceScene({
       setBodyText(JSON.stringify(body, null, 2));
       setBodyError(null);
       if (mode === "rest") setQueryVals((prev) => ({ ...prev, kn_id: knId }));
-      message.success(`Subgraph path filled · ${rel.name || rel.id}`);
+      message.success(
+        t("knowledgeNetwork.contextLoaderPanel.experience.subgraphFilled", {
+          name: rel.name || rel.id,
+        }),
+      );
     },
-    [mode, knId, message],
+    [mode, knId, message, t],
   );
 
   // Data-browser fill: write REST query params when present, otherwise JSON body fields.
@@ -644,7 +705,9 @@ export function ExperienceScene({
       // 1) Current REST op exposes this field as a query parameter.
       if (mode === "rest" && op.query.some((param) => param.name === key)) {
         setQueryVals((prev) => ({ ...prev, [key]: value }));
-        message.success(`${key} filled`);
+        message.success(
+          t("knowledgeNetwork.contextLoaderPanel.experience.fieldFilled", { key }),
+        );
         return;
       }
       // 2) Otherwise write into request-body JSON.
@@ -654,15 +717,20 @@ export function ExperienceScene({
           (obj as Record<string, unknown>)[key] = value;
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success(`${key} filled`);
+          message.success(
+            t("knowledgeNetwork.contextLoaderPanel.experience.fieldFilled", { key }),
+          );
           return;
         }
       } catch {
         /* Fall back to copy. */
       }
-      copy(value, `Copied; current API has no ${key} field, paste it manually`);
+      copy(
+        value,
+        t("knowledgeNetwork.contextLoaderPanel.experience.fieldCopiedFallback", { key }),
+      );
     },
-    [mode, op, bodyText, copy, message],
+    [mode, op, bodyText, copy, message, t],
   );
 
   const fillResource = useCallback(
@@ -677,15 +745,20 @@ export function ExperienceScene({
             : `SELECT * FROM ${token} LIMIT 20`;
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success("Resource filled into SQL");
+          message.success(
+            t("knowledgeNetwork.contextLoaderPanel.experience.resourceFilledSql"),
+          );
           return;
         }
       } catch {
         /* Fall back to copy. */
       }
-      copy(token, "Resource placeholder copied");
+      copy(
+        token,
+        t("knowledgeNetwork.contextLoaderPanel.experience.resourcePlaceholderCopied"),
+      );
     },
-    [bodyText, copy, message],
+    [bodyText, copy, message, t],
   );
 
   // Add concept_group into the request body's concept_groups array.
@@ -698,15 +771,24 @@ export function ExperienceScene({
           if (!arr.includes(groupId)) arr.push(groupId);
           setBodyText(JSON.stringify(obj, null, 2));
           setBodyError(null);
-          message.success(`Concept group ${groupId} added`);
+          message.success(
+            t("knowledgeNetwork.contextLoaderPanel.experience.conceptGroupAdded", {
+              id: groupId,
+            }),
+          );
           return;
         }
       } catch {
         /* Fall back to copy. */
       }
-      copy(groupId, `Concept group ${groupId} copied; current API has no concept_groups`);
+      copy(
+        groupId,
+        t("knowledgeNetwork.contextLoaderPanel.experience.conceptGroupCopiedFallback", {
+          id: groupId,
+        }),
+      );
     },
-    [bodyText, copy, message],
+    [bodyText, copy, message, t],
   );
 
   return (
@@ -715,7 +797,8 @@ export function ExperienceScene({
       <div className={styles.topbar}>
         {!embedded && network ? (
           <button type="button" className={styles.back} onClick={() => void navigate(`/knowledge-network/workspace/${id}/overview`)}>
-            <ArrowLeftOutlined /> Back to {network.name}
+            <ArrowLeftOutlined />
+            {t("knowledgeNetwork.contextLoaderPanel.experience.back", { name: network.name })}
           </button>
         ) : null}
         {showModeTabs ? (
@@ -727,7 +810,7 @@ export function ExperienceScene({
               className={`${styles.tab} ${mode === value ? styles.tabActive : ""}`}
               onClick={() => selectMode(value)}
             >
-              {value === "agent" ? "Agent Chat" : value === "rest" ? "REST APIs" : "MCP Tools"}
+              {t(`knowledgeNetwork.contextLoaderPanel.experience.modes.${value}`)}
             </button>
           ))}
         </div>
@@ -735,7 +818,7 @@ export function ExperienceScene({
         {showEnvSettings ? (
         <div className={styles.envset}>
           <div className={styles.ef}>
-            <label>Knowledge Network kn_id</label>
+            <label>{t("knowledgeNetwork.contextLoaderPanel.experience.knId")}</label>
             <div className={styles.knLock}>
               <KeyOutlined />
               <span className={styles.knName}>{network?.name ?? "—"}</span>
@@ -743,7 +826,7 @@ export function ExperienceScene({
             </div>
           </div>
           <div className={styles.ef}>
-            <label>Service Address</label>
+            <label>{t("knowledgeNetwork.contextLoaderPanel.experience.serviceAddress")}</label>
             <div
               className={styles.addr}
               title={mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
@@ -753,8 +836,8 @@ export function ExperienceScene({
           </div>
           <div className={styles.ef}>
             <label>
-              Auth Mode
-              <Tooltip title="OAuth Token uses the current signed-in session. API Key uses a long-lived bak_ key from Profile and only applies to Context Loader.">
+              {t("knowledgeNetwork.contextLoaderPanel.experience.authMode")}
+              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.experience.authModeTooltip")}>
                 <QuestionCircleOutlined className={styles.hintIcon} />
               </Tooltip>
             </label>
@@ -775,7 +858,12 @@ export function ExperienceScene({
                 value={appKey}
                 onChange={setAppKey}
                 onManage={() => void navigate(apiKeyPagePath)}
-                onCopy={() => copy(appKey.trim(), "API Key copied")}
+                onCopy={() =>
+                  copy(
+                    appKey.trim(),
+                    t("knowledgeNetwork.contextLoaderPanel.experience.apiKeyCopied"),
+                  )
+                }
               />
             </div>
           ) : null}
@@ -813,7 +901,11 @@ export function ExperienceScene({
               setBodyText(JSON.stringify(JSON.parse(bodyText), null, 2));
               setBodyError(null);
             } catch (error) {
-              setBodyError(error instanceof Error ? error.message : "JSON ????");
+              setBodyError(
+                error instanceof Error
+                  ? error.message
+                  : t("knowledgeNetwork.contextLoaderPanel.experience.jsonParseFailed"),
+              );
             }
           }}
           displayPath={displayPath}

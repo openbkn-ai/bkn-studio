@@ -23,7 +23,6 @@ import {
 } from "@/shared/catalog/catalog-mock";
 import {
   filterCatalogs,
-  formatCatalogTimestamp,
   inferConnectorCategory,
   mapBackendCatalog,
   type BackendCatalog,
@@ -199,7 +198,7 @@ export async function setCatalogEnabled(id: string, enabled: boolean) {
       enabled,
       status: enabled ? "enabled" : "disabled",
       expectedUpdateTime: now,
-      updateTime: formatCatalogTimestamp(now),
+      updateTime: now,
       healthStatus: enabled ? record.healthStatus : "unchecked",
     }));
     await wait(undefined);
@@ -224,10 +223,10 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       status: "enabled",
       healthStatus: "healthy",
       healthCheckResult: "",
-      lastCheckTime: "-",
+      lastCheckTime: null,
       expectedUpdateTime: now,
-      updateTime: formatCatalogTimestamp(now),
-      createTime: formatCatalogTimestamp(now),
+      updateTime: now,
+      createTime: now,
       updaterName: "Local Admin",
       creatorName: "Local Admin",
       tags: [],
@@ -312,7 +311,7 @@ export async function updateCatalog(
       tags: input.tags,
       connectorConfig: input.connectorConfig,
       expectedUpdateTime: now,
-      updateTime: formatCatalogTimestamp(now),
+      updateTime: now,
     }));
     await wait(undefined);
     return;
@@ -372,10 +371,10 @@ options: CatalogMutationOptions = {},
       status: input.enabled ? "enabled" : "disabled",
       healthStatus: "unchecked",
       healthCheckResult: "",
-      lastCheckTime: "-",
+      lastCheckTime: null,
       expectedUpdateTime: now,
-      updateTime: formatCatalogTimestamp(now),
-      createTime: formatCatalogTimestamp(now),
+      updateTime: now,
+      createTime: now,
       updaterName: "Local Admin",
       creatorName: "Local Admin",
       tags: input.tags,
@@ -565,14 +564,11 @@ function buildMockHealthCheckSchedule(
         : input.mode === "disabled"
           ? previous?.cronExpr ?? ""
           : "",
-    lastRun: previous?.lastRun ?? "-",
+    lastRun: previous?.lastRun ?? null,
     mode: input.mode,
     expectedUpdateTime: now,
-    nextRun:
-      input.mode === "disabled"
-        ? "-"
-        : formatCatalogTimestamp(nextRunValue),
-    updateTime: formatCatalogTimestamp(now),
+    nextRun: input.mode === "disabled" ? null : nextRunValue ?? null,
+    updateTime: now,
   };
 }
 
@@ -582,10 +578,10 @@ function mapHealthCheckSchedule(
   return {
     catalogId: schedule.catalog_id,
     cronExpr: schedule.cron_expr ?? "",
-    lastRun: formatCatalogTimestamp(schedule.last_run),
+    lastRun: schedule.last_run || null,
     mode: schedule.mode,
-    nextRun: formatCatalogTimestamp(schedule.next_run),
+    nextRun: schedule.next_run || null,
     expectedUpdateTime: schedule.update_time ?? 0,
-    updateTime: formatCatalogTimestamp(schedule.update_time),
+    updateTime: schedule.update_time || null,
   };
 }

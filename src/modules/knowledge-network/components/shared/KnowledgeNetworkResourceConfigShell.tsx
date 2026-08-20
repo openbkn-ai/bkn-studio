@@ -7,6 +7,7 @@
 
 import { LeftOutlined } from "@ant-design/icons";
 import type { PropsWithChildren, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import styles from "./KnowledgeNetworkResourceConfigShell.module.css";
 
@@ -24,11 +25,13 @@ export function KnowledgeNetworkResourceConfigShell({
   subtitle,
   title,
 }: KnowledgeNetworkResourceConfigShellProps) {
+  const { t } = useTranslation();
+
   return (
     <section className={styles.page}>
       <header className={styles.header}>
         <button
-          aria-label="back"
+          aria-label={t("common.back")}
           className={styles.backButton}
           onClick={onBack}
           type="button"

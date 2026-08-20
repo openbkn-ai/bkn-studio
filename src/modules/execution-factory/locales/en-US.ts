@@ -30,6 +30,8 @@ export const executionFactoryEnUS = {
     publishStatusFilter: "Publish status",
     loadMore: "Load more",
     toolCountLabel: "{{count}} tools",
+    toolCountLabel_one: "{{count}} tool",
+    toolCountLabel_other: "{{count}} tools",
     releaseTimeLabel: "Released: {{time}}",
     updateTimeLabel: "Updated: {{time}}",
     executionUnitTabs: {
@@ -96,7 +98,9 @@ export const executionFactoryEnUS = {
       "Registers the same OpenAPI as an operator with category, timeout, and retry settings for orchestration.",
     operatorSyncDirectPublish: "Publish operator immediately after registration",
     quickApiCreateWithOperatorSuccess: "API added to toolset and operator registered",
-    importOpenApiCapabilityWithOperatorSuccess: "Imported {{count}} tool(s) and registered operator",
+    importOpenApiCapabilityWithOperatorSuccess: "Imported {{count}} tools and registered operator",
+    importOpenApiCapabilityWithOperatorSuccess_one: "Imported {{count}} tool and registered operator",
+    importOpenApiCapabilityWithOperatorSuccess_other: "Imported {{count}} tools and registered operator",
     addCapabilityButton: "Add Capability",
     capabilityCreateMenu: {
       addHttpApi: "Add HTTP API",
@@ -121,9 +125,13 @@ export const executionFactoryEnUS = {
     importOpenApiCapabilityHint:
       "Upload a full OpenAPI 3.0 document. Each path becomes a tool—best when you already have a spec with many endpoints.",
     importOpenApiCapabilitySave: "Import and finish",
-    importOpenApiCapabilitySuccess: "Imported {{count}} tool(s) successfully",
-    importOpenApiCapabilityPartial: "Imported {{success}} tool(s), {{failed}} failed",
-    importOpenApiCapabilityParsed: "Detected {{count}} endpoint(s). Confirm the toolset and import.",
+    importOpenApiCapabilitySuccess: "Imported {{count}} tools successfully",
+    importOpenApiCapabilitySuccess_one: "Imported {{count}} tool successfully",
+    importOpenApiCapabilitySuccess_other: "Imported {{count}} tools successfully",
+    importOpenApiCapabilityPartial: "Imported: {{success}}; failed: {{failed}}",
+    importOpenApiCapabilityParsed: "Detected {{count}} endpoints. Confirm the toolset and import.",
+    importOpenApiCapabilityParsed_one: "Detected {{count}} endpoint. Confirm the toolset and import.",
+    importOpenApiCapabilityParsed_other: "Detected {{count}} endpoints. Confirm the toolset and import.",
     importOpenApiRelativeServerResolved:
       "Detected relative OpenAPI server {{relativeUrl}} and resolved it to {{serviceUrl}}.",
     importOpenApiServiceUrlRequired:
@@ -133,7 +141,9 @@ export const executionFactoryEnUS = {
     importOpenApiMissingServerManual:
       "This OpenAPI document has no servers entry. Use the Service URL field below as the runtime base URL before importing.",
     importOpenApiCapabilityFileReady: "File ready. It will be parsed and imported on save.",
-    importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoint(s)",
+    importOpenApiCapabilityPreview: "OpenAPI {{version}} · {{count}} endpoints",
+    importOpenApiCapabilityPreview_one: "OpenAPI {{version}} · {{count}} endpoint",
+    importOpenApiCapabilityPreview_other: "OpenAPI {{version}} · {{count}} endpoints",
     createdNextStepsTitle: "HTTP API added to toolset",
     createdNextStepsDescription:
       "Next, debug the tool or edit its description and usage rules. You can also open the toolset to continue managing tools.",
@@ -181,6 +191,8 @@ export const executionFactoryEnUS = {
     quickApiParsedOk: "API detected. Confirm the name and toolset, then save.",
     quickApiIoPreviewTitle: "Endpoint preview (verify inputs, body, and responses before saving)",
     quickApiParsedParams: "Detected {{count}} request parameters. You can edit them below.",
+    quickApiParsedParams_one: "Detected {{count}} request parameter. You can edit it below.",
+    quickApiParsedParams_other: "Detected {{count}} request parameters. You can edit them below.",
     quickApiBuildFailed: "Could not build an API definition from the input.",
     quickApiContractParameters: "Before detection, add Query, Path, Header, or Cookie parameters.",
     quickApiContractRequestBody: "Before detection, add a request example; its schema is inferred automatically.",
@@ -258,6 +270,8 @@ export const executionFactoryEnUS = {
     skillNameLabel: "SKILL Name",
     skillFilesSectionTitle: "Package Files",
     skillFileListTitle: "Package files - {{count}}",
+    skillFileListTitle_one: "Package file - {{count}}",
+    skillFileListTitle_other: "Package files - {{count}}",
     skillFilterFiles: "Filter files…",
     skillFileListEmptyFiltered: "No matching files",
     internalTag: "System built-in",
@@ -383,10 +397,14 @@ export const executionFactoryEnUS = {
     updateSkillPackageTitle: "Update SKILL package: {{name}}",
     skillPackageUpdateSuccess: "SKILL package updated",
     mcpHeadersLabel: "Headers",
+    mcpHeaderNamePlaceholder: "Header",
+    mcpHeaderValuePlaceholder: "Value",
     addHeader: "Add Header",
     mcpToolsEmptyHint: "No tools yet. Parse the URL first",
     mcpToolImportedComingSoon: "Adding MCP tools from a toolbox will arrive in a later release",
     parseSseSuccess: "Parsed {{count}} tools successfully",
+    parseSseSuccess_one: "Parsed {{count}} tool successfully",
+    parseSseSuccess_other: "Parsed {{count}} tools successfully",
     importSkillTitle: "Import SKILL",
     skillCategoryRequired: "Please select a SKILL category",
     skillUnsupportedFile: "Only .zip or SKILL.md files are supported",
@@ -473,6 +491,8 @@ export const executionFactoryEnUS = {
     toolboxToolsDebugHint:
       "Select a tool on the left, review parameters and examples under Input / Output, then click Debug to send a trial request.",
     toolboxToolListTitle: "Tool list - {{count}}",
+    toolboxToolListTitle_one: "Tool list - {{count}}",
+    toolboxToolListTitle_other: "Tool list - {{count}}",
     toolboxFilterTools: "Filter tools…",
     toolEndpointLabel: "Endpoint",
     toolServerRootLabel: "Base URL",
@@ -549,7 +569,9 @@ export const executionFactoryEnUS = {
     importOpenApiToolsButton: "Import OpenAPI Tools",
     importOpenApiToolsTitle: "Import OpenAPI Tools",
     importOpenApiToolsHint: "Upload an OpenAPI document to parse and create tools in batch.",
-    importOpenApiToolsSuccess: "Imported {{count}} tool(s) successfully",
+    importOpenApiToolsSuccess: "Imported {{count}} tools successfully",
+    importOpenApiToolsSuccess_one: "Imported {{count}} tool successfully",
+    importOpenApiToolsSuccess_other: "Imported {{count}} tools successfully",
     importOpenApiToolsAllFailed: "No tools were imported. Please check the OpenAPI document.",
     downloadImportTemplate: "Download import template",
     importPartialFailureTitle: "Some tools failed to import",
@@ -641,13 +663,23 @@ export const executionFactoryEnUS = {
     mcpToolImportedToolboxLabel: "Source Toolbox",
     mcpToolImportedToolboxPlaceholder: "Select a toolbox",
     mcpToolImportedSelectedCount: "{{count}} tools selected",
+    mcpToolImportedSelectedCount_one: "{{count}} tool selected",
+    mcpToolImportedSelectedCount_other: "{{count}} tools selected",
     mcpToolImportedRequired: "Select at least one tool",
     toolBatchSelectedCount: "{{count}} selected",
     toolBatchStatusConfirmTitle: "Batch Update Tool Status",
     toolBatchStatusConfirmDescription:
       'Change the status of {{count}} selected tools to "{{status}}"?',
+    toolBatchStatusConfirmDescription_one:
+      'Change the status of {{count}} selected tool to "{{status}}"?',
+    toolBatchStatusConfirmDescription_other:
+      'Change the status of {{count}} selected tools to "{{status}}"?',
     toolBatchDeleteConfirmTitle: "Batch Delete Tools",
     toolBatchDeleteConfirmDescription:
+      "Delete {{count}} selected tools? This action cannot be undone.",
+    toolBatchDeleteConfirmDescription_one:
+      "Delete {{count}} selected tool? This action cannot be undone.",
+    toolBatchDeleteConfirmDescription_other:
       "Delete {{count}} selected tools? This action cannot be undone.",
     convertToTool: "Convert to Tool",
     convertToToolTitle: "Convert Operator to Tool",
@@ -708,6 +740,8 @@ export const executionFactoryEnUS = {
     skillDetailCatalogContentHint:
       "Full content in catalog mode is available after introducing to this domain. If already introduced, open from unit management.",
     skillFileCountLabel: "{{count}} files",
+    skillFileCountLabel_one: "{{count}} file",
+    skillFileCountLabel_other: "{{count}} files",
     skillFilePreviewTitle: "File Preview",
     skillFilePreviewBinaryHint: "This file is binary and cannot be previewed inline. Use the link below to download it.",
     skillFilePreviewDownloadLink: "Open download link",
@@ -733,6 +767,8 @@ export const executionFactoryEnUS = {
     mcpDetailCatalogToolsHint:
       "Tool lists in catalog mode are available after introducing to this domain. If already introduced, open from unit management.",
     mcpToolCountLabel: "{{count}} MCP tools",
+    mcpToolCountLabel_one: "{{count}} MCP tool",
+    mcpToolCountLabel_other: "{{count}} MCP tools",
     mcpToolCountFieldLabel: "Tool count",
     mcpToolSchemaEmptyHint:
       "This tool has no input schema. Refer to the MCP server docs when filling debug arguments.",
@@ -765,6 +801,8 @@ export const executionFactoryEnUS = {
     skillHistoryPublishConfirmTitle: "Publish history version",
     skillHistoryPublishConfirmDescription: 'Publish version "{{version}}" as the current release?',
     mcpToolListTitle: "MCP tools - {{count}}",
+    mcpToolListTitle_one: "MCP tool - {{count}}",
+    mcpToolListTitle_other: "MCP tools - {{count}}",
     mcpFilterTools: "Filter tools…",
     mcpToolListEmptyFiltered: "No matching tools",
     mcpToolsEmpty: "No tools discovered from this MCP server.",
@@ -893,7 +931,9 @@ export const executionFactoryEnUS = {
     workbenchDependencyHint:
       "Dependencies are stored per tool but installed per sandbox session, and sessions are pooled — functions can affect each other.",
     publishAnyway: "Publish Anyway",
-    publishPreflightSummary: "Pre-publish check found {{count}} issue(s):",
+    publishPreflightSummary: "Pre-publish check found {{count}} issues:",
+    publishPreflightSummary_one: "Pre-publish check found {{count}} issue:",
+    publishPreflightSummary_other: "Pre-publish check found {{count}} issues:",
     publishIssues: {
       emptyToolbox: "The toolbox has no tools, so agents gain no callable capability",
       toolMissingName: "Tool #{{index}} has no name",
@@ -916,10 +956,10 @@ export const executionFactoryEnUS = {
     openapiInputPastePlaceholder: "Paste a standard OpenAPI JSON or YAML document",
     openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
     openapiOperationIoSummary:
-      "{{paramCount}} URL/Header parameter(s) · {{responseCount}} response(s)",
+      "URL/Header parameters: {{paramCount}} · responses: {{responseCount}}",
     openapiOperationIoSummaryWithBody:
-      "{{paramCount}} URL/Header parameter(s) · request body {{bodyFieldCount}} field(s) · {{responseCount}} response(s)",
-    openapiOperationIoRequestBody: "request body {{bodyFieldCount}} field(s)",
+      "URL/Header parameters: {{paramCount}} · request body fields: {{bodyFieldCount}} · responses: {{responseCount}}",
+    openapiOperationIoRequestBody: "Request body fields: {{bodyFieldCount}}",
     openapiInputPaste: "Paste",
     openapiInputFile: "Upload File",
     openapiInputUrl: "URL",
@@ -930,12 +970,22 @@ export const executionFactoryEnUS = {
     openapiUrlFetchFailed: "Unable to fetch the OpenAPI document. Check the URL or network.",
     openapiValidationOk: "OpenAPI document validated successfully",
     openapiValidationOkWithCount:
-      "OpenAPI document validated. Detected {{count}} endpoint(s).",
+      "OpenAPI document validated. Detected {{count}} endpoints.",
+    openapiValidationOkWithCount_one:
+      "OpenAPI document validated. Detected {{count}} endpoint.",
+    openapiValidationOkWithCount_other:
+      "OpenAPI document validated. Detected {{count}} endpoints.",
     openapiPreviewServer: "Server URL",
     openapiPreviewServerUnset: "Not set (will use the form Service URL)",
     openapiPreviewVersion: "Spec version",
-    openapiPreviewMore: "{{count}} more endpoint(s) not shown",
+    openapiPreviewMore: "{{count}} more endpoints not shown",
+    openapiPreviewMore_one: "{{count}} more endpoint not shown",
+    openapiPreviewMore_other: "{{count}} more endpoints not shown",
     openapiMultiOperationWarning:
+      "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
+    openapiMultiOperationWarning_one:
+      "This document contains {{count}} endpoint and will register {{count}} operator. Keep only the target endpoint for a single operator.",
+    openapiMultiOperationWarning_other:
       "This document contains {{count}} endpoints and will register {{count}} operators. Keep only the target endpoint for a single operator.",
     openapiVersion31Hint:
       "OpenAPI 3.1 detected. If save fails, try OpenAPI 3.0.x or keep a single endpoint only.",

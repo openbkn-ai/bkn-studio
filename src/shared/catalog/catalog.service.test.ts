@@ -7,7 +7,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatCatalogTimestamp } from "@/shared/catalog/catalog-mapper";
 import { calculateNextHourlyCronRun } from "@/shared/hourly-cron";
 
 const getMock = vi.hoisted(() => vi.fn());
@@ -246,11 +245,11 @@ describe("catalog.service · health check schedule", () => {
       catalogId: "catalog-1",
       cronExpr: "0 * * * *",
       expectedUpdateTime: 1_785_398_400_000,
+      lastRun: 1_785_398_400_000,
       mode: "enabled",
+      nextRun: 1_785_402_000_000,
+      updateTime: 1_785_398_400_000,
     });
-    expect(schedule.lastRun).not.toBe("-");
-    expect(schedule.nextRun).not.toBe("-");
-    expect(schedule.updateTime).not.toBe("");
   });
 
   it("updates a schedule without sending cron for inherit mode", async () => {
@@ -283,10 +282,14 @@ describe("catalog.service · health check schedule", () => {
       },
       { skipErrorToast: true },
     );
-    expect(schedule.mode).toBe("inherit");
-    expect(schedule.cronExpr).toBe("");
-    expect(schedule.expectedUpdateTime).toBe(124);
-    expect(schedule.updateTime).not.toBe("");
+    expect(schedule).toMatchObject({
+      cronExpr: "",
+      expectedUpdateTime: 124,
+      lastRun: null,
+      mode: "inherit",
+      nextRun: 1_785_402_000_000,
+      updateTime: 124,
+    });
   });
 });
 
@@ -327,7 +330,7 @@ describe("catalog.service · mock health check schedule", () => {
       catalogId,
       cronExpr: "0 */2 * * *",
       mode: "disabled",
-      nextRun: "-",
+      nextRun: null,
     });
 
     const disabled = await getCatalogHealthCheckSchedule(catalogId);
@@ -336,7 +339,7 @@ describe("catalog.service · mock health check schedule", () => {
       { cronExpr: "0 2 * * *", mode: "enabled" },
       disabled.expectedUpdateTime,
     );
-    expect(enabled.nextRun).toContain("02:00:00");
+    expect(new Date(enabled.nextRun ?? 0).getHours()).toBe(2);
   });
 
   it("schedules inherit mode at the next default cron boundary", async () => {
@@ -354,7 +357,7 @@ describe("catalog.service · mock health check schedule", () => {
       );
 
       expect(inherited.nextRun).toBe(
-        formatCatalogTimestamp(calculateNextHourlyCronRun("0 * * * *", Date.now())),
+        calculateNextHourlyCronRun("0 * * * *", Date.now()),
       );
     } finally {
       nowSpy.mockRestore();

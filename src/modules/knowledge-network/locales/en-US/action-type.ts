@@ -39,6 +39,8 @@ export const actiontypePart = {
     actionTypeExecutionObjectProperty: "Object property",
     actionTypeExecutionObjectPropertyPlaceholder: "Select an object property",
     actionTypeExecutionParameterCount: "{{count}} execution parameters",
+    actionTypeExecutionParameterCount_one: "{{count}} execution parameter",
+    actionTypeExecutionParameterCount_other: "{{count}} execution parameters",
     actionTypeExecutionParameterEmpty: "No execution parameter mappings yet.",
     actionTypeExecutionParameterName: "Parameter name",
     actionTypeExecutionParameterType: "Parameter type",

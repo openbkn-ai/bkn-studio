@@ -10,6 +10,10 @@ export const relationtypePart = {
     relationTypeBasicInfo: "Basic information",
     relationTypeBatchDeleteDescription:
       "Delete the selected {{count}} relation types? This action cannot be undone.",
+    relationTypeBatchDeleteDescription_one:
+      "Delete the selected {{count}} relation type? This action cannot be undone.",
+    relationTypeBatchDeleteDescription_other:
+      "Delete the selected {{count}} relation types? This action cannot be undone.",
     relationTypeBatchDeleteTitle: "Delete relation types",
     relationTypeConfigSection: "Configuration",
     relationTypeCreateDescription:
@@ -17,6 +21,8 @@ export const relationtypePart = {
     relationTypeCreateTitle: "Create relation type",
     relationTypeResourceMapping: "Resource mapping",
     relationTypeResourceMappingCount: "{{count}} resource mappings",
+    relationTypeResourceMappingCount_one: "{{count}} resource mapping",
+    relationTypeResourceMappingCount_other: "{{count}} resource mappings",
     relationTypeResourceMappingHint:
       "Connect source and target object properties through a resource. Configure object types, the resource, and field mappings.",
     relationTypeResourceMappingOption:
@@ -71,6 +77,8 @@ export const relationtypePart = {
     relationTypeNameRequired: "Please enter a relation type name.",
     relationTypeObjectLink: "Object link",
     relationTypePropertyMappingCount: "{{count}} property mappings",
+    relationTypePropertyMappingCount_one: "{{count}} property mapping",
+    relationTypePropertyMappingCount_other: "{{count}} property mappings",
     relationTypePropertyMappingEmpty: "No property mappings yet.",
     relationTypePropertyMappingRequired:
       "Configure at least one valid property mapping.",

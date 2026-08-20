@@ -8,7 +8,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  formatCatalogTimestamp,
   mapBackendCatalog,
 } from "@/shared/catalog/catalog-mapper";
 
@@ -26,7 +25,7 @@ describe("catalog-mapper · health status", () => {
       name: "orders",
     });
 
-    expect(catalog.lastCheckTime).toBe(formatCatalogTimestamp(lastCheckTime));
+    expect(catalog.lastCheckTime).toBe(lastCheckTime);
     expect(catalog.healthCheckResult).toBe("Connection test succeeded.");
     expect(catalog.healthStatus).toBe("healthy");
     expect(catalog.internal).toBe(false);
@@ -53,7 +52,23 @@ describe("catalog-mapper · health status", () => {
       name: "orders",
     });
 
-    expect(catalog.lastCheckTime).toBe("-");
+    expect(catalog.lastCheckTime).toBeNull();
     expect(catalog.healthStatus).toBe("unchecked");
+  });
+
+  it("treats zero backend timestamps as missing values", () => {
+    const catalog = mapBackendCatalog({
+      connector_type: "postgresql",
+      create_time: 0,
+      enabled: true,
+      id: "catalog-1",
+      last_check_time: 0,
+      name: "orders",
+      update_time: 0,
+    });
+
+    expect(catalog.createTime).toBeNull();
+    expect(catalog.lastCheckTime).toBeNull();
+    expect(catalog.updateTime).toBeNull();
   });
 });
