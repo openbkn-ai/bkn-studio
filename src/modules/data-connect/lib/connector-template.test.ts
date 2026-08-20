@@ -162,6 +162,7 @@ describe("connector-template · SQL Server", () => {
       "For example: 1433",
     );
     expect(humanizeConnectorFieldLabel("host")).toBe("Host");
+    expect(humanizeConnectorFieldLabel("cluster")).toBe("Cluster");
     expect(resolveConnectorFieldControl("ssl_mode", "string")).toEqual({
       kind: "select",
       options: [
@@ -176,6 +177,7 @@ describe("connector-template · SQL Server", () => {
 
   it("uses frontend locale resources for field labels", () => {
     expect(humanizeConnectorFieldLabel("host")).toBe("主机地址");
+    expect(humanizeConnectorFieldLabel("cluster")).toBe("集群");
     expect(humanizeConnectorFieldLabel("custom_setting")).toBe("Custom setting");
   });
 
@@ -197,8 +199,8 @@ describe("connector-template · SQL Server", () => {
       schemas: "Schema 列表",
       token: "访问令牌",
       username: "用户名",
-    } as const;
-    const enLabels = {
+    };
+    const enLabels: Record<string, string> = {
       app_id: "Application ID",
       app_secret: "Application secret",
       auth_type: "Authentication type",
@@ -215,7 +217,7 @@ describe("connector-template · SQL Server", () => {
       schemas: "Schema list",
       token: "Access token",
       username: "Username",
-    } as const;
+    };
     const builtInConnectorFieldKeys = {
       mariadb: ["host", "port", "username", "password", "databases", "options"],
       mysql: ["host", "port", "username", "password", "databases", "options"],
@@ -228,7 +230,7 @@ describe("connector-template · SQL Server", () => {
     for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
       for (const fieldName of fields) {
         expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
-          zhLabels[fieldName as keyof typeof zhLabels],
+          zhLabels[fieldName],
         );
       }
     }
@@ -237,7 +239,7 @@ describe("connector-template · SQL Server", () => {
     for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
       for (const fieldName of fields) {
         expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
-          enLabels[fieldName as keyof typeof enLabels],
+          enLabels[fieldName],
         );
       }
     }

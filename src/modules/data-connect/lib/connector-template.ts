@@ -326,6 +326,7 @@ const GENERIC_FIELD_LABELS: Record<string, string> = {
   character_encoding: "Character encoding",
   character_set: "Character set",
   charset: "Character set",
+  cluster: "Cluster",
   connection_mode: "Connection mode",
   database: "Database",
   database_list: "Database list",

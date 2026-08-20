@@ -16,6 +16,9 @@ vi.setConfig({ testTimeout: 20_000 });
 const permissionState = vi.hoisted(() => ({
   values: new Set<string>(),
 }));
+type ModalConfirmOptions = {
+  onOk?: () => void;
+};
 /** 集群档位。默认没有快照——社区部署,也是卖点该出现的那一侧。 */
 const entitlementState = vi.hoisted(() => ({
   loading: false,
@@ -29,7 +32,7 @@ const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
 const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
-const modalConfirmMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn<(options: ModalConfirmOptions) => void>());
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
@@ -148,7 +151,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     createDataConnectRecordMock.mockReset();
     createDataConnectRecordMock.mockResolvedValue(undefined);
     getDataConnectConnectorTypeMock.mockReset();
-    getDataConnectConnectorTypeMock.mockImplementation(async (type: string) => {
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => {
       if (type === "sqlserver") {
         return {
           category: "table",
@@ -254,7 +257,10 @@ describe("DataConnectFormScene · connection preflight", () => {
     );
     expect(onBack).not.toHaveBeenCalled();
 
-    const [[{ onOk }]] = modalConfirmMock.mock.calls;
+    const onOk = modalConfirmMock.mock.calls[0]?.[0]?.onOk;
+    if (!onOk) {
+      throw new Error("Expected the discard confirmation to provide an onOk callback");
+    }
     onOk();
     expect(onBack).toHaveBeenCalledOnce();
   }, HEAVY_SCENE_TIMEOUT_MS);
