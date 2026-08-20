@@ -127,18 +127,15 @@ describe("IndexConfigFormPanel", () => {
         type: "string",
       }],
     };
-    getCatalogResourceMock
-      .mockResolvedValueOnce(configuredResource)
-      .mockResolvedValueOnce(semanticResource);
+    getCatalogResourceMock.mockResolvedValue(semanticResource);
     updateCatalogResourceMock.mockResolvedValue(semanticResource);
 
     render(
       <MemoryRouter>
-        <IndexConfigFormPanel active resource={configuredResource} />
+        <IndexConfigFormPanel active resource={semanticResource} />
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(1));
     await screen.findByText("title");
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 

@@ -37,7 +37,6 @@ import {
 import {
   buildTaskStatusLabelKey,
 } from "@/modules/data-catalog/services/build-task.service";
-import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -174,35 +173,16 @@ export function ResourceIndexPanel({
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
-  const [detailResource, setDetailResource] = useState<CatalogResource>(resource);
   const autoPickedRef = useRef(false);
 
-  const reloadResource = () => {
-    void getCatalogResource(resource.id).then((detail) => {
-      if (detail) {
-        setDetailResource(detail);
-      }
-    });
-  };
-
   useEffect(() => {
-    setDetailResource(resource);
     autoPickedRef.current = false;
-    let cancelled = false;
-    void getCatalogResource(resource.id).then((detail) => {
-      if (!cancelled && detail) {
-        setDetailResource(detail);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [resource]);
+  }, [resource.id]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
   const gate = resourceGateOf(catalog);
-  const resourceBlockReason = resourceQueryBlockReason(detailResource);
+  const resourceBlockReason = resourceQueryBlockReason(resource);
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
   const readOnly = isResourceIndexReadOnly(catalog);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
@@ -363,11 +343,10 @@ export function ResourceIndexPanel({
           active={active && indexView === "config"}
           hideBuildControls={readOnly}
           onSaved={() => {
-            reloadResource();
             void onRefresh();
           }}
           readOnly={readOnly}
-          resource={detailResource}
+          resource={resource}
         />
       </div>
     </>
@@ -475,7 +454,7 @@ export function ResourceIndexPanel({
                 onStarted={() => {
                   void onRefresh();
                 }}
-                resource={detailResource}
+                resource={resource}
               />
             </PermissionGate>
           </div>
