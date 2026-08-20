@@ -80,7 +80,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
         ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
-        ...(nextFilters.actorId.trim() ? { actorId: nextFilters.actorId.trim() } : {}),
+        ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
         ...(nextFilters.action.trim() ? { action: resolveAuditActionFilter(nextFilters.action, (key, options) => t(key, options)) } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),

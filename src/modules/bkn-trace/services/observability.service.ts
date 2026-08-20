@@ -165,6 +165,7 @@ export type ArchiveJob = {
 export type LogListQuery = {
   action?: string;
   actorId?: string;
+  actorQuery?: string;
   categories?: LogCategory[];
   conversationId?: string;
   cursor?: string;
@@ -418,6 +419,7 @@ function logQueryParams(query: LogListQuery) {
   const params: Record<string, boolean | number | string | string[]> = {};
   if (query.action) params.action = query.action;
   if (query.actorId) params.actor_id = query.actorId;
+  if (query.actorQuery) params.actor = query.actorQuery;
   if (query.categories?.length) params.categories = query.categories;
   if (query.conversationId) params.conversation_id = query.conversationId;
   if (query.cursor) params.cursor = query.cursor;
