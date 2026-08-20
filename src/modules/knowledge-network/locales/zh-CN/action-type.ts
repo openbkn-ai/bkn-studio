@@ -35,6 +35,8 @@ export const actiontypePart = {
     actionTypeExecutionObjectProperty: "对象属性",
     actionTypeExecutionObjectPropertyPlaceholder: "选择对象属性",
     actionTypeExecutionParameterCount: "{{count}} 个执行参数",
+    actionTypeExecutionParameterCount_one: "{{count}} 个执行参数",
+    actionTypeExecutionParameterCount_other: "{{count}} 个执行参数",
     actionTypeExecutionParameterEmpty: "当前没有执行参数映射。",
     actionTypeExecutionParameterName: "参数名称",
     actionTypeExecutionParameterType: "参数类型",

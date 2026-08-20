@@ -7,7 +7,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { formatCatalogTimestamp } from "@/shared/catalog/catalog-mapper";
 import { calculateNextHourlyCronRun } from "@/shared/hourly-cron";
 
 const getMock = vi.hoisted(() => vi.fn());
@@ -327,7 +326,7 @@ describe("catalog.service · mock health check schedule", () => {
       catalogId,
       cronExpr: "0 */2 * * *",
       mode: "disabled",
-      nextRun: "-",
+      nextRun: null,
     });
 
     const disabled = await getCatalogHealthCheckSchedule(catalogId);
@@ -336,7 +335,7 @@ describe("catalog.service · mock health check schedule", () => {
       { cronExpr: "0 2 * * *", mode: "enabled" },
       disabled.expectedUpdateTime,
     );
-    expect(enabled.nextRun).toContain("02:00:00");
+    expect(new Date(enabled.nextRun ?? 0).getHours()).toBe(2);
   });
 
   it("schedules inherit mode at the next default cron boundary", async () => {
@@ -354,7 +353,7 @@ describe("catalog.service · mock health check schedule", () => {
       );
 
       expect(inherited.nextRun).toBe(
-        formatCatalogTimestamp(calculateNextHourlyCronRun("0 * * * *", Date.now())),
+        calculateNextHourlyCronRun("0 * * * *", Date.now()),
       );
     } finally {
       nowSpy.mockRestore();

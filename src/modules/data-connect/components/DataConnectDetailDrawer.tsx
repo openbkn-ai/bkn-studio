@@ -28,6 +28,7 @@ import type {
   DataConnectHealthCheckSchedule,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
+import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 
 import styles from "./DataConnectDetailDrawer.module.css";
 
@@ -197,7 +198,10 @@ export function DataConnectDetailDrawer({
                 {
                   key: "createTime",
                   label: t("dataConnect.createTime"),
-                  children: record.createTime,
+                  children: formatCatalogTime(
+                    record.createTime,
+                    i18n.resolvedLanguage ?? i18n.language,
+                  ),
                 },
                 {
                   key: "updater",
@@ -207,7 +211,10 @@ export function DataConnectDetailDrawer({
                 {
                   key: "updateTime",
                   label: t("dataConnect.updateTime"),
-                  children: record.updateTime,
+                  children: formatCatalogTime(
+                    record.updateTime,
+                    i18n.resolvedLanguage ?? i18n.language,
+                  ),
                 },
               ]}
             />
@@ -257,17 +264,26 @@ export function DataConnectDetailDrawer({
                   {
                     key: "lastRun",
                     label: t("dataConnect.healthCheckSchedule.lastRun"),
-                    children: schedule.lastRun,
+                    children: formatCatalogTime(
+                      schedule.lastRun,
+                      i18n.resolvedLanguage ?? i18n.language,
+                    ),
                   },
                   {
                     key: "nextRun",
                     label: t("dataConnect.healthCheckSchedule.nextRun"),
-                    children: schedule.nextRun,
+                    children: formatCatalogTime(
+                      schedule.nextRun,
+                      i18n.resolvedLanguage ?? i18n.language,
+                    ),
                   },
                   {
                     key: "updateTime",
                     label: t("dataConnect.updateTime"),
-                    children: schedule.updateTime,
+                    children: formatCatalogTime(
+                      schedule.updateTime,
+                      i18n.resolvedLanguage ?? i18n.language,
+                    ),
                   },
                 ]}
               />
@@ -285,7 +301,10 @@ export function DataConnectDetailDrawer({
                 {
                   key: "lastCheckTime",
                   label: t("dataConnect.lastCheckTime"),
-                  children: record.lastCheckTime,
+                  children: formatCatalogTime(
+                    record.lastCheckTime,
+                    i18n.resolvedLanguage ?? i18n.language,
+                  ),
                 },
                 {
                   key: "healthResult",

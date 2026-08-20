@@ -37,24 +37,6 @@ type BackendCatalog = {
   updater?: BackendAccountInfo;
 };
 
-export function formatCatalogTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
-    .format(value)
-    .replace(/\//g, "-");
-}
-
 function normalizeHealthStatus(value?: string): CatalogHealthStatus {
   switch (value) {
     case "healthy":
@@ -92,10 +74,10 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     healthStatus: normalizeHealthStatus(item.health_check_status),
     internal: item.internal ?? false,
     healthCheckResult: item.health_check_result ?? "",
-    lastCheckTime: formatCatalogTimestamp(item.last_check_time),
+    lastCheckTime: item.last_check_time ?? null,
     expectedUpdateTime: item.update_time ?? 0,
-    updateTime: formatCatalogTimestamp(item.update_time),
-    createTime: formatCatalogTimestamp(item.create_time),
+    updateTime: item.update_time ?? null,
+    createTime: item.create_time ?? null,
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     tags: item.tags ?? [],

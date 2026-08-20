@@ -8,7 +8,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  formatCatalogTimestamp,
   mapBackendCatalog,
 } from "@/shared/catalog/catalog-mapper";
 
@@ -26,7 +25,7 @@ describe("catalog-mapper · health status", () => {
       name: "orders",
     });
 
-    expect(catalog.lastCheckTime).toBe(formatCatalogTimestamp(lastCheckTime));
+    expect(catalog.lastCheckTime).toBe(lastCheckTime);
     expect(catalog.healthCheckResult).toBe("Connection test succeeded.");
     expect(catalog.healthStatus).toBe("healthy");
     expect(catalog.internal).toBe(false);
@@ -53,7 +52,7 @@ describe("catalog-mapper · health status", () => {
       name: "orders",
     });
 
-    expect(catalog.lastCheckTime).toBe("-");
+    expect(catalog.lastCheckTime).toBeNull();
     expect(catalog.healthStatus).toBe("unchecked");
   });
 });

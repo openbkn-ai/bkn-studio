@@ -7,6 +7,7 @@
 
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import type { PropsWithChildren, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button, Space, Typography } from "antd";
 
@@ -26,6 +27,8 @@ export function CrudFormPage({
   onBack,
   title,
 }: CrudFormPageProps) {
+  const { t } = useTranslation();
+
   return (
     <PageContainer>
       <Space className="page-section" direction="vertical" size={20}>
@@ -34,7 +37,7 @@ export function CrudFormPage({
             <Space align="center" size={4}>
               {onBack ? (
                 <Button
-                  aria-label="back"
+                  aria-label={t("common.back")}
                   icon={<ArrowLeftOutlined />}
                   onClick={onBack}
                   type="text"

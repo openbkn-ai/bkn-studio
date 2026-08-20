@@ -8,9 +8,15 @@
 export const objecttypePart = {
     objectTypeAddDataProperty: "Add data property",
     objectTypeAddProperty: "Add property",
-    objectTypeAutoLineSuccess: "Added {{count}} connection(s)",
+    objectTypeAutoLineSuccess: "Added {{count}} connections",
+    objectTypeAutoLineSuccess_one: "Added {{count}} connection",
+    objectTypeAutoLineSuccess_other: "Added {{count}} connections",
     objectTypeBasicInfo: "Basic information",
     objectTypeBatchDeleteDescription:
+      "Delete the selected {{count}} object types? This action cannot be undone.",
+    objectTypeBatchDeleteDescription_one:
+      "Delete the selected {{count}} object type? This action cannot be undone.",
+    objectTypeBatchDeleteDescription_other:
       "Delete the selected {{count}} object types? This action cannot be undone.",
     objectTypeBatchDeleteTitle: "Delete object types",
     objectTypeBindResource: "Bound resource",
@@ -36,6 +42,8 @@ export const objecttypePart = {
     objectTypeCreateTitle: "Create object type",
     objectTypeDataProperty: "Data properties",
     objectTypeDataPropertyCount: "{{count}} data properties",
+    objectTypeDataPropertyCount_one: "{{count}} data property",
+    objectTypeDataPropertyCount_other: "{{count}} data properties",
     objectTypeDataPropertyHint: "Configure data properties and set at least one primary key.",
     objectTypeDataPropertyNamePattern:
       "Name must start with a letter or number and may contain letters, numbers, underscores, and hyphens.",
@@ -43,11 +51,15 @@ export const objecttypePart = {
     objectTypeDataQueryDescription:
       "Preview sample rows for this object type and filter them by keyword.",
     objectTypeDataQueryMetaSummary: "{{name}} · {{count}} samples · Filter by keyword",
+    objectTypeDataQueryMetaSummary_one: "{{name}} · {{count}} sample · Filter by keyword",
+    objectTypeDataQueryMetaSummary_other: "{{name}} · {{count}} samples · Filter by keyword",
     objectTypeDataQueryAction: "Query",
     objectTypeDataQueryCollapse: "Collapse",
     objectTypeDataQueryEmpty: "No sample data available.",
     objectTypeDataQueryResourceName: "Object type",
     objectTypeDataQuerySampleCount: "{{count}} sample rows",
+    objectTypeDataQuerySampleCount_one: "{{count}} sample row",
+    objectTypeDataQuerySampleCount_other: "{{count}} sample rows",
     objectTypeDataQuerySearchPlaceholder: "Search sample data",
     objectTypeDataQueryTitle: "Data query",
     objectTypeDataViewIndexLoading: "Loading",
@@ -56,7 +68,9 @@ export const objecttypePart = {
     objectTypeDataViewResourceId: "Resource ID",
     objectTypeResource: "Resource",
     objectTypeResourceAll: "All resources",
-    objectTypeResourceCheckedCount: "{{count}} resource(s) selected",
+    objectTypeResourceCheckedCount: "{{count}} resources selected",
+    objectTypeResourceCheckedCount_one: "{{count}} resource selected",
+    objectTypeResourceCheckedCount_other: "{{count}} resources selected",
     objectTypeResourceClearAll: "Clear all",
     objectTypeResourcePreviewEmpty: "Select a resource on the left to preview data",
     objectTypeResourcePreviewTip: "(Partial preview)",
@@ -97,7 +111,11 @@ export const objecttypePart = {
     objectTypeDetailLogicTrialMissingPrimaryKey:
       "Primary keys are not configured, so instance identity cannot be built.",
     objectTypeDetailLogicTrialSkippedRows:
-      "Skipped {{count}} sample row(s) without a complete primary key.",
+      "Skipped {{count}} sample rows without a complete primary key.",
+    objectTypeDetailLogicTrialSkippedRows_one:
+      "Skipped {{count}} sample row without a complete primary key.",
+    objectTypeDetailLogicTrialSkippedRows_other:
+      "Skipped {{count}} sample rows without a complete primary key.",
     objectTypeDetailUseSampleForLogicTrial: "Use for logic trial",
     objectTypeDetailTrialSelectMetric: "Trial metric",
     objectTypeDetailTrialAction: "Trial",
@@ -129,6 +147,10 @@ export const objecttypePart = {
     objectTypeLogicAttributeDeleteConfirm: 'Delete logic property "{{name}}"?',
     objectTypeLogicAttributeDeleteConfirmMultiple:
       "Delete the selected {{count}} logic properties?",
+    objectTypeLogicAttributeDeleteConfirmMultiple_one:
+      "Delete the selected {{count}} logic property?",
+    objectTypeLogicAttributeDeleteConfirmMultiple_other:
+      "Delete the selected {{count}} logic properties?",
     objectTypeLogicAttributeFillParameters: "Please complete all parameter settings.",
     objectTypeLogicAttributeMapping: "Logic property mapping",
     objectTypeLogicAttributeNameExists:
@@ -154,6 +176,8 @@ export const objecttypePart = {
     objectTypeLogicNo: "No",
     objectTypeLogicProperty: "Logic properties",
     objectTypeLogicPropertyCount: "{{count}} logic properties",
+    objectTypeLogicPropertyCount_one: "{{count}} logic property",
+    objectTypeLogicPropertyCount_other: "{{count}} logic properties",
     objectTypeLogicPropertyEmpty: "No logic properties yet.",
     objectTypeLogicPropertyHint: "Optionally configure logic properties for this object type.",
     objectTypeLogicPropertyTip:

@@ -30,8 +30,9 @@ export function formatRowCount(value: number, locale = i18n.language) {
     });
   }
   return i18n.t("dataCatalog.format.rows", {
-    count: formatCount(value, locale),
-    defaultValue: "{{count}} rows",
+    count: value,
+    formattedCount: formatCount(value, locale),
+    defaultValue: "{{formattedCount}} rows",
     lng: locale,
   });
 }

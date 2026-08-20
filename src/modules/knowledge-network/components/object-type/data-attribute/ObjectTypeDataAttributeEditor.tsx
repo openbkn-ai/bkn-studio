@@ -1588,7 +1588,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
         <div className={styles.canvasControls}>
           <button
-            aria-label="zoom in"
+            aria-label={t("common.zoomIn")}
             className={styles.canvasControlButton}
             onClick={() => setZoom((current) => Math.min(2, current + 0.1))}
             type="button"
@@ -1596,7 +1596,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             <PlusOutlined />
           </button>
           <button
-            aria-label="zoom out"
+            aria-label={t("common.zoomOut")}
             className={styles.canvasControlButton}
             onClick={() => setZoom((current) => Math.max(0.3, current - 0.1))}
             type="button"
@@ -1604,7 +1604,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             <MinusOutlined />
           </button>
           <button
-            aria-label="fit view"
+            aria-label={t("common.fitView")}
             className={styles.canvasControlButton}
             onClick={() => {
               setZoom(1);

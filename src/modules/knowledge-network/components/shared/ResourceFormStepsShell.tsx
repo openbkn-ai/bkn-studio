@@ -8,6 +8,7 @@
 import { LeftOutlined } from "@ant-design/icons";
 import { Steps } from "antd";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 
@@ -48,12 +49,14 @@ export function ResourceFormStepsShell({
   steps,
   title,
 }: ResourceFormStepsShellProps) {
+  const { t } = useTranslation();
+
   return (
     <section className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <button
-            aria-label="back"
+            aria-label={t("common.back")}
             className={styles.backButton}
             onClick={onBack}
             type="button"

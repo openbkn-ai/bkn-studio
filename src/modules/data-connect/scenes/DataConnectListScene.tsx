@@ -33,6 +33,7 @@ import {
 } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType, DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
+import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import {
   DeleteImpactAlert,
   useDangerDelete,
@@ -105,7 +106,7 @@ export function DataConnectListScene({
   onOpenDetail,
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
@@ -408,6 +409,8 @@ export function DataConnectListScene({
     {
       dataIndex: "updateTime",
       title: t("dataConnect.updateTime"),
+      render: (value: DataConnectRecord["updateTime"]) =>
+        formatCatalogTime(value, i18n.resolvedLanguage ?? i18n.language),
     },
     {
       key: "actions",

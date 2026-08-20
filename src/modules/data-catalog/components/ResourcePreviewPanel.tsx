@@ -187,8 +187,14 @@ export function ResourcePreviewPanel({
       <div className={styles.metaRow}>
         <span>
           {t("dataCatalog.preview.summary", {
-            count: rows.length,
-            total: formatCount(total) as never,
+            totalRows: t("dataCatalog.format.rows", {
+              count: total,
+              formattedCount: formatCount(total),
+            }),
+            visibleRows: t("dataCatalog.format.rows", {
+              count: rows.length,
+              formattedCount: formatCount(rows.length),
+            }),
           })}
         </span>
       </div>

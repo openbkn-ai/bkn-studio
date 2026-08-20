@@ -18,6 +18,8 @@ export const agentChatPart = {
       scale: "Scale: {{objectTypes}} object types and {{relations}} relation types",
       objectTypes: "Object types: {{names}}",
       objectTypesMore: "Object types: {{names}} and {{count}} total",
+      objectTypesMore_one: "Object type: {{names}} ({{count}} total)",
+      objectTypesMore_other: "Object types: {{names}} ({{count}} total)",
     },
     templateSuggestions: {
       firstObject: "What data does {{name}} have? Show a few records first.",
@@ -61,6 +63,8 @@ export const agentChatPart = {
       zero: "0 calls",
       errorName: "{{name}}(failed)",
       summary: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
+      summary_one: "{{count}} call ({{ok}} succeeded{{errorPart}}): {{names}}",
+      summary_other: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
       errorPart: " / {{err}} failed",
     },
     errors: {

@@ -18,6 +18,8 @@ export const agentChatPart = {
       scale: "规模：{{objectTypes}} 个对象类、{{relations}} 个关系类",
       objectTypes: "对象类：{{names}}",
       objectTypesMore: "对象类：{{names}} 等 {{count}} 个",
+      objectTypesMore_one: "对象类：{{names}} 等 {{count}} 个",
+      objectTypesMore_other: "对象类：{{names}} 等 {{count}} 个",
     },
     templateSuggestions: {
       firstObject: "{{name}}有哪些数据？先看几条",
@@ -61,6 +63,8 @@ export const agentChatPart = {
       zero: "0 次",
       errorName: "{{name}}(失败)",
       summary: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
+      summary_one: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
+      summary_other: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
       errorPart: " / {{err}} 失败",
     },
     errors: {

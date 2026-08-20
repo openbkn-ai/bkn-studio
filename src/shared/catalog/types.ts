@@ -38,11 +38,13 @@ export type CatalogHealthCheckSchedule = {
   catalogId: string;
   cronExpr: string;
   expectedUpdateTime: number;
-  lastRun: string;
+  lastRun: CatalogTimestamp;
   mode: CatalogHealthCheckScheduleMode;
-  nextRun: string;
-  updateTime: string;
+  nextRun: CatalogTimestamp;
+  updateTime: CatalogTimestamp;
 };
+
+export type CatalogTimestamp = number | string | null;
 
 export type CatalogMutationOptions = {
   allowUnhealthy?: boolean;
@@ -77,7 +79,7 @@ export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;
   connectorType: string;
-  createTime: string;
+  createTime: CatalogTimestamp;
   creatorName: string;
   description: string;
   enabled: boolean;
@@ -86,7 +88,7 @@ export type CatalogRecord = {
   id: string;
   /** System-managed catalogs are visible but must remain read-only in Studio. */
   internal: boolean;
-  lastCheckTime: string;
+  lastCheckTime: CatalogTimestamp;
   metadata: Record<string, unknown>;
   mode: string;
   name: string;
@@ -94,7 +96,7 @@ export type CatalogRecord = {
   status: CatalogRecordStatus;
   tags: string[];
   type: string;
-  updateTime: string;
+  updateTime: CatalogTimestamp;
   expectedUpdateTime: number;
   updaterName: string;
 };
