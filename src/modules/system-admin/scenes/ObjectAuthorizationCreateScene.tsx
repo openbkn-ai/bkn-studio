@@ -9,7 +9,7 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Alert, Select, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -39,6 +39,25 @@ function parseObjValue(value?: string): { objId: string; objType: string } | nul
   return { objId: id, objType: type };
 }
 
+const GRANT_LIST_PATH = "/system/authorizations";
+
+type ObjectGrantLocationState = {
+  objectGrantReturnTo?: string;
+};
+
+/**
+ * The wizard is reachable from the object's own page as well as from the grant list, so leaving it
+ * has to land where the user came from. Only same-origin absolute paths are honoured — a caller
+ * cannot send someone off-site through this.
+ */
+function resolveReturnPath(state: ObjectGrantLocationState | null): string {
+  const candidate = state?.objectGrantReturnTo;
+  if (typeof candidate !== "string" || !candidate.startsWith("/") || candidate.startsWith("//")) {
+    return GRANT_LIST_PATH;
+  }
+  return candidate;
+}
+
 export function ObjectAuthorizationCreateScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -46,6 +65,8 @@ export function ObjectAuthorizationCreateScene() {
   // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
   // from a data catalog does not have to find it again among hundreds of objects.
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const returnPath = resolveReturnPath(location.state as ObjectGrantLocationState | null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -192,7 +213,7 @@ export function ObjectAuthorizationCreateScene() {
         ),
       );
       message.success(t("systemAdmin.objectGrants.toast.grantCreated"));
-      void navigate("/system/authorizations");
+      void navigate(returnPath);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -210,7 +231,7 @@ export function ObjectAuthorizationCreateScene() {
           <div className={styles.toolbarActions}>
             <AppButton
               icon={<ArrowLeftOutlined />}
-              onClick={() => void navigate("/system/authorizations")}
+              onClick={() => void navigate(returnPath)}
             >
               {t("common.back")}
             </AppButton>
@@ -333,7 +354,7 @@ export function ObjectAuthorizationCreateScene() {
           </div>
 
           <div className={styles.createFooterBar}>
-            <AppButton onClick={() => void navigate("/system/authorizations")}>
+            <AppButton onClick={() => void navigate(returnPath)}>
               {t("common.cancel")}
             </AppButton>
             <PermissionGate permissions={authzPoints.grant}>

@@ -10,7 +10,7 @@ import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuPro
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
@@ -20,6 +20,8 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
@@ -125,6 +127,8 @@ export function CatalogDetailPanel({
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { runtimeConfig } = useAppServices();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
@@ -157,6 +161,10 @@ export function CatalogDetailPanel({
   // Granting access to this catalog is the one action available on every catalog, built-in ones
   // aside, so the bar shows whenever the catalog is a real one.
   const canAuthorizeCatalog = !catalog.internal;
+  const canAuthorizeGrants = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.grant,
+  });
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
@@ -421,6 +429,10 @@ export function CatalogDetailPanel({
             indexLabel
           ),
         });
+        if (canAuthorizeGrants && !catalog.internal) {
+          // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
+          moreItems.push({ key: "authorize", label: t("dataCatalog.catalog.authorize") });
+        }
         if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
@@ -450,6 +462,13 @@ export function CatalogDetailPanel({
                   }
                   if (key === "index") {
                     onOpenResource(record.id, "index");
+                    return;
+                  }
+                  if (key === "authorize") {
+                    void navigate(
+                      `/system/authorizations/new?object=${encodeURIComponent(`resource::${record.id}`)}`,
+                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
+                    );
                     return;
                   }
                   if (key === "semantic-understanding") {
@@ -496,6 +515,8 @@ export function CatalogDetailPanel({
                   onClick={() => {
                     void navigate(
                       `/system/authorizations/new?object=${encodeURIComponent(`catalog::${catalog.id}`)}`,
+                      // Leaving the wizard should land back on this catalog, not in system management.
+                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
                     );
                   }}
                 >
