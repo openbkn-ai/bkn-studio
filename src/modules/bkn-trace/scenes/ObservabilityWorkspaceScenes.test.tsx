@@ -49,6 +49,7 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
 
 vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
   useAuditUserDirectory: () => new Map([
+    ["user-a", "Current Administrator"],
     ["266c6a42-6131-4d62-8f39-853e7093701c", "Administrator"],
   ]),
 }));
@@ -146,7 +147,7 @@ describe("observability workspace scenes", () => {
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
     expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "users" });
     expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
-    expect(screen.getByText("Administrator")).not.toBeNull();
+    expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.source_query_failed") ?? false)).not.toHaveLength(0);
   });
 
@@ -161,7 +162,20 @@ describe("observability workspace scenes", () => {
     render(<ObservabilityLogsScene />);
 
     expect(await screen.findAllByText((_content, element) => element?.textContent === "available-source · bknTrace.logs.sourceStatus.healthy")).not.toHaveLength(0);
-    expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.unavailable") ?? false)).not.toHaveLength(0);
+    expect(screen.getAllByText((_content, element) => element?.textContent?.includes("network_timeout") ?? false)).not.toHaveLength(0);
+  });
+
+  it("将未接入来源与实际查询故障区分展示", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "partial", value: 0 }, data: [], partial: true,
+      sourceStatus: [
+        { coveredModules: [], reason: "source_not_integrated", reliability: "best_effort", sourceId: "not-integrated-source", status: "not_integrated" },
+      ],
+    });
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findAllByText((_content, element) => element?.textContent === "not-integrated-source · bknTrace.logs.sourceStatus.notIntegrated")).not.toHaveLength(0);
+    expect(screen.queryByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures") ?? false)).toBeNull();
   });
 
   it("以业务语言展示领域知识网络管理事实", async () => {

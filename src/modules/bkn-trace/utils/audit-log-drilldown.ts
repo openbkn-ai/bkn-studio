@@ -7,7 +7,6 @@
 
 export type AuditLogDrilldown = {
   apiResourceType: string;
-  displayName: string;
   displayType: string;
   targetId: string;
 };
@@ -18,7 +17,6 @@ export function readAuditLogDrilldown(parameters: URLSearchParams): AuditLogDril
   const displayType = rawType === "users" ? "user" : rawType;
   return {
     apiResourceType: displayType === "user" ? "users" : rawType,
-    displayName: parameters.get("target_name")?.trim() ?? "",
     displayType,
     targetId,
   };
