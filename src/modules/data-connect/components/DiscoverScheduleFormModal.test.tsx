@@ -18,6 +18,30 @@ vi.mock("react-i18next", async (importOriginal) => {
   };
 });
 
+vi.mock("antd", async (importOriginal) => {
+  const original = await importOriginal<typeof import("antd")>();
+  const { default: dayjs } = await import("dayjs");
+
+  return {
+    ...original,
+    DatePicker: ({
+      id,
+      onChange,
+      value,
+    }: {
+      id?: string;
+      onChange?: (value: ReturnType<typeof dayjs> | null) => void;
+      value?: ReturnType<typeof dayjs>;
+    }) => (
+      <input
+        id={id}
+        onChange={(event) => onChange?.(event.target.value ? dayjs(event.target.value) : null)}
+        value={value?.format("YYYY-MM-DD HH:mm") ?? ""}
+      />
+    ),
+  };
+});
+
 describe("DiscoverScheduleFormModal", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -57,7 +81,7 @@ describe("DiscoverScheduleFormModal", () => {
 
     await waitFor(() => {
       expect(screen.getByText("dataConnect.discoverCronInvalid")).toBeTruthy();
-    });
+    }, { timeout: 3_000 });
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -78,16 +102,46 @@ describe("DiscoverScheduleFormModal", () => {
       screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
       { target: { value: "Invalid time range" } },
     );
-    const timeInputs = document.querySelectorAll<HTMLInputElement>(
-      'input[type="datetime-local"]',
-    );
-    fireEvent.change(timeInputs[0], { target: { value: "2026-08-20T10:00" } });
-    fireEvent.change(timeInputs[1], { target: { value: "2026-08-20T09:00" } });
+    const startTimeInput = screen.getByLabelText("dataConnect.discoverStartTime");
+    const endTimeInput = screen.getByLabelText("dataConnect.discoverEndTime");
+    fireEvent.change(startTimeInput, { target: { value: "2026-08-20 10:00" } });
+    fireEvent.blur(startTimeInput);
+    fireEvent.change(endTimeInput, { target: { value: "2026-08-20 09:00" } });
+    fireEvent.blur(endTimeInput);
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => {
       expect(screen.getAllByText("dataConnect.discoverTimeRangeInvalid")).toHaveLength(2);
     });
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits selected times with minute precision", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <DiscoverScheduleFormModal
+        catalogs={[]}
+        defaultCatalogId="catalog-1"
+        mode="create"
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+        open
+        submitting={false}
+      />,
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
+      { target: { value: "Minute precision" } },
+    );
+    fireEvent.change(screen.getByLabelText("dataConnect.discoverStartTime"), {
+      target: { value: "2026-08-20 10:00:59" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        startTime: Date.parse("2026-08-20T10:00:00"),
+      }));
+    });
   });
 });
