@@ -5,20 +5,22 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, KeyOutlined } from "@ant-design/icons";
 import { Alert, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { ResourceDetailPanel } from "@/modules/data-catalog/components/ResourceDetailPanel";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
@@ -61,7 +63,14 @@ export function ResourceWorkspaceScene({
 }: ResourceWorkspaceSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
+  const location = useLocation();
+  // Reading this table's rows is granted on the table itself; its management verbs live on the
+  // owning catalog (openbkn-ai/bkn-foundry#986). Shown to whoever may issue grants at all.
+  const canAuthorizeGrants = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.grant,
+  });
   const [resource, setResource] = useState<CatalogResource | null>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
@@ -287,6 +296,19 @@ export function ResourceWorkspaceScene({
               ) : null}
             </div>
           </div>
+          {canAuthorizeGrants && !catalog?.internal ? (
+            <AppButton
+              icon={<KeyOutlined />}
+              onClick={() => {
+                void navigate(
+                  `/system/authorizations/new?object=${encodeURIComponent(`resource::${resource.id}`)}`,
+                  { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
+                );
+              }}
+            >
+              {t("dataCatalog.catalog.authorize")}
+            </AppButton>
+          ) : null}
         </div>
 
         {discoveryFailed || queryBlockReason ? (
