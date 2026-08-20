@@ -11,7 +11,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import {
   extractRequestErrorMessage,
   isRequestConflict,
@@ -226,17 +225,15 @@ export function DataConnectDetailDrawer({
                 {t("dataConnect.healthCheckSchedule.title")}
               </h3>
               {schedule ? (
-                <PermissionGate permissions="catalog:modify">
-                  <AppButton
-                    onClick={() => {
-                      setScheduleModalOpen(true);
-                    }}
-                    size="small"
-                    type="link"
-                  >
-                    {t("common.edit")}
-                  </AppButton>
-                </PermissionGate>
+                <AppButton
+                  onClick={() => {
+                    setScheduleModalOpen(true);
+                  }}
+                  size="small"
+                  type="link"
+                >
+                  {t("common.edit")}
+                </AppButton>
               ) : null}
             </div>
             {scheduleError ? (

@@ -11,7 +11,6 @@ import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, useLocation, useParams, type RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
-import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const DataCatalogPage = lazy(async () => {
@@ -29,12 +28,15 @@ const IndexBuildPage = lazy(async () => {
   return { default: module.IndexBuildPage };
 });
 
-function withRouteLoading(permissions: string | string[], element: ReactNode) {
-  return (
-    <RequirePermission mode="any" permissions={permissions}>
-      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
-    </RequirePermission>
-  );
+/*
+ * The data-catalog console is deliberately un-gated: bkn-safe grants on `catalog` and `resource`
+ * can only be issued from the object-authorization page, which is an enterprise capability, so on
+ * community deployments no administrator can hand these permission points out. Gating here would
+ * hide working functionality from everyone but the super administrator. Authorization is enforced
+ * by the backend, which answers 403 for calls the caller may not make.
+ */
+function withRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
 function LegacyDataCatalogRootRedirect() {
@@ -67,7 +69,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.title",
       },
     },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage />),
+    element: withRouteLoading(<DataCatalogPage />),
   },
   {
     path: "data-directory/catalog/:catalogId",
@@ -78,7 +80,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.catalogDetailTitle",
       },
     },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage selectionType="catalog" />),
+    element: withRouteLoading(<DataCatalogPage selectionType="catalog" />),
   },
   {
     path: "data-directory/resource/:resourceId",
@@ -89,7 +91,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.resourceDetailTitle",
       },
     },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <ResourceWorkspacePage />),
+    element: withRouteLoading(<ResourceWorkspacePage />),
   },
   {
     path: "data-catalog",
@@ -112,7 +114,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withRouteLoading(["catalog:task_manage", "resource:task_manage"], <IndexBuildPage />),
+    element: withRouteLoading(<IndexBuildPage />),
   },
 ];
 

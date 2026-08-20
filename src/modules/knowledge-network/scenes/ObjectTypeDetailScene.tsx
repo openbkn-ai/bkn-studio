@@ -12,8 +12,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
@@ -157,7 +155,6 @@ export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const runtimeConfig = useRuntimeConfig();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
     objectTypeId: string;
@@ -222,11 +219,6 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
-  const canLoadResourceIndexStates = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    mode: "any",
-    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
-  });
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
@@ -627,7 +619,7 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     const resourceId = detail?.dataSource?.id;
 
-    if (!canLoadResourceIndexStates || !resourceId) {
+    if (!resourceId) {
       setResourceBuildTasks([]);
       setResourceBuildTasksLoading(false);
       return;
@@ -656,7 +648,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [canLoadResourceIndexStates, detail?.dataSource?.id]);
+  }, [detail?.dataSource?.id]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -1152,13 +1144,9 @@ export function ObjectTypeDetailScene() {
                   {t("knowledgeNetwork.objectTypeDataViewIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
-                  {canLoadResourceIndexStates
-                    ? resourceBuildTasksLoading
-                      ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-                      : formatIndexStateLabel(resourceIndexState, t)
-                    : detail.hasIndex
-                      ? t("knowledgeNetwork.previewIndexed")
-                      : t("knowledgeNetwork.previewNotIndexed")}
+                  {resourceBuildTasksLoading
+                    ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+                    : formatIndexStateLabel(resourceIndexState, t)}
                 </span>
               </div>
             </div>

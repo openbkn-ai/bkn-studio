@@ -6,7 +6,6 @@
  */
 
 import { configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
@@ -14,9 +13,6 @@ import type { DataConnectConnectorType } from "@/modules/data-connect/types/data
 
 vi.setConfig({ testTimeout: 20_000 });
 
-const permissionState = vi.hoisted(() => ({
-  values: new Set<string>(),
-}));
 type ModalConfirmOptions = {
   onOk?: () => void;
 };
@@ -50,23 +46,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
   useEntitlementContext: () => entitlementState,
-}));
-
-vi.mock("@/framework/permission/PermissionGate", () => ({
-  PermissionGate: ({
-    children,
-    fallback = null,
-    permissions,
-  }: {
-    children: ReactNode;
-    fallback?: ReactNode;
-    permissions: string | string[];
-  }) => {
-    const required = Array.isArray(permissions) ? permissions : [permissions];
-    return required.every((permission) => permissionState.values.has(permission))
-      ? children
-      : fallback;
-  },
 }));
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -144,7 +123,6 @@ describe("DataConnectFormScene · connection preflight", () => {
 
   beforeEach(() => {
     vi.useRealTimers();
-    permissionState.values = new Set(["catalog:modify"]);
     entitlementState.snapshot = null;
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
@@ -236,7 +214,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("confirms before leaving a create form with unsaved changes", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     const onBack = vi.fn();
 
     render(<DataConnectFormScene mode="create" onBack={onBack} />);
@@ -267,7 +244,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("leaves immediately when the form has no user changes", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     const onBack = vi.fn();
 
     render(<DataConnectFormScene mode="create" onBack={onBack} />);
@@ -280,7 +256,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("does not advance with a stale connector definition after the selection changes", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     const postgresqlDetail = createDeferred<DataConnectConnectorType>();
     getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
       type === "postgresql"
@@ -346,7 +321,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("does not show an error from a stale connector definition request", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     const postgresqlDetail = createDeferred<DataConnectConnectorType>();
     getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
       type === "postgresql"
@@ -404,18 +378,8 @@ describe("DataConnectFormScene · connection preflight", () => {
     vi.useRealTimers();
   });
 
-  it("hides the preflight action without catalog create permission", async () => {
-    render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
-
-    await screen.findByDisplayValue("orders");
-
-    expect(
-      screen.queryByRole("button", { name: "common.testConnection" }),
-    ).toBeNull();
-  });
 
   it("tests connector fields even when an unrelated catalog field is invalid", async () => {
-    permissionState.values.add("catalog:create");
     render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
 
     const nameInput = await screen.findByDisplayValue("orders");
@@ -436,7 +400,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("shows backend connection details when the preflight fails", async () => {
-    permissionState.values.add("catalog:create");
     testDataConnectConfigMock.mockRejectedValue(
       new Error("dial tcp db.example.com:3306: i/o timeout"),
     );
@@ -523,7 +486,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("normalizes SQL Server schemas and options in the connection test request", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({ "connection timeout": 15, encrypt: true });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
@@ -550,7 +512,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("rejects invalid JSON options before testing the connection", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({ encrypt: true });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
@@ -577,7 +538,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("omits object fields cleared to an empty string", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({ encrypt: true });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
@@ -609,7 +569,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("omits null options returned by the backend from the connection test", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog(null);
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
@@ -635,7 +594,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("omits empty optional encrypted fields from the connection test", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog({}, { api_token: "" });
 
     render(<DataConnectFormScene mode="edit" recordId="catalog-sqlserver" />);
@@ -662,7 +620,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   });
 
   it("trims and preserves empty or null-like values outside options", async () => {
-    permissionState.values.add("catalog:create");
     mockSQLServerEditCatalog(
       {},
       {
@@ -703,7 +660,6 @@ describe("DataConnectFormScene · connection preflight", () => {
    * render a selectable edition badge and show upgrade guidance instead of an unavailable state.
    */
   it("认证连接器被后端关掉时给升级引导,不画「暂不可用」", async () => {
-    permissionState.values = new Set(["catalog:create"]);
 
     render(<DataConnectFormScene mode="create" />);
 
@@ -732,7 +688,6 @@ describe("DataConnectFormScene · connection preflight", () => {
    * 「请升级镜像」既指错方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
    */
   it("装了且证够时不再推销,照普通连接器画「暂不可用」", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     entitlementState.snapshot = {
       capabilities: ["connector_certified", "rbac_basic"],
       edition: "enterprise",
@@ -755,7 +710,6 @@ describe("DataConnectFormScene · connection preflight", () => {
    * 该说的是「换镜像」,不是「买证书」——客户已经买过了,弹窗里不该再出购买按钮。
    */
   it("证够了但镜像不含 → 说换镜像,不出购买按钮", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     entitlementState.snapshot = {
       capabilities: ["rbac_basic"],
       edition: "enterprise",
@@ -777,7 +731,6 @@ describe("DataConnectFormScene · connection preflight", () => {
    * 「换一张证就能用」的状态,也是唯一该出商务信息的地方。
    */
   it("装了没买 → 画档位徽标并给升级引导", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     entitlementState.snapshot = {
       capabilities: [],
       edition: "community",
@@ -795,7 +748,6 @@ describe("DataConnectFormScene · connection preflight", () => {
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   it("creates a SQL Server catalog with the default port", async () => {
-    permissionState.values = new Set(["catalog:create"]);
     getDataConnectConnectorTypeMock.mockResolvedValue({
       category: "table",
       description: "Microsoft SQL Server 关系型数据库连接器",

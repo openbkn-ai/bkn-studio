@@ -90,11 +90,7 @@ export function ObjectTypeListPanel({
     () => items.map((item) => item.dataSource?.id),
     [items],
   );
-  const {
-    buildTasksByResourceId,
-    canLoadResourceIndexStates,
-    loading: resourceBuildTasksLoading,
-  } =
+  const { buildTasksByResourceId, loading: resourceBuildTasksLoading } =
     useResourceIndexStates(boundResourceIds);
 
   useEffect(() => {
@@ -376,13 +372,9 @@ export function ObjectTypeListPanel({
           return "--";
         }
 
-        const label = canLoadResourceIndexStates
-          ? resourceBuildTasksLoading
-            ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-            : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t)
-          : record.hasIndex
-            ? t("knowledgeNetwork.previewIndexed")
-            : t("knowledgeNetwork.previewNotIndexed");
+        const label = resourceBuildTasksLoading
+          ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+          : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
 
         return (
           <button

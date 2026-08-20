@@ -9,9 +9,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
-import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
-import { dataConnectModuleManifest } from "@/modules/data-connect/module.manifest";
 
 const DataConnectListPage = lazy(async () => {
   const module = await import("@/modules/data-connect/pages/DataConnectListPage");
@@ -28,12 +26,15 @@ const DataConnectDiscoverPage = lazy(async () => {
   return { default: module.DataConnectDiscoverPage };
 });
 
-function withRouteLoading(permissions: string | string[], element: ReactNode) {
-  return (
-    <RequirePermission mode="any" permissions={permissions}>
-      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
-    </RequirePermission>
-  );
+/*
+ * The data-connect console is deliberately un-gated: bkn-safe grants on `catalog` and `resource`
+ * can only be issued from the object-authorization page, which is an enterprise capability, so on
+ * community deployments no administrator can hand these permission points out. Gating here would
+ * hide working functionality from everyone but the super administrator. Authorization is enforced
+ * by the backend, which answers 403 for calls the caller may not make.
+ */
+function withRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
 export const dataConnectRoutes: RouteObject[] = [
@@ -46,7 +47,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.title",
       },
     },
-    element: withRouteLoading([...dataConnectModuleManifest.permissions], <DataConnectListPage />),
+    element: withRouteLoading(<DataConnectListPage />),
   },
   {
     path: "data-connect/new",
@@ -57,7 +58,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.createTitle",
       },
     },
-    element: withRouteLoading("catalog:create", <DataConnectFormPage mode="create" />),
+    element: withRouteLoading(<DataConnectFormPage mode="create" />),
   },
   {
     path: "data-connect/:recordId/edit",
@@ -68,7 +69,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.editTitle",
       },
     },
-    element: withRouteLoading("catalog:modify", <DataConnectFormPage mode="edit" />),
+    element: withRouteLoading(<DataConnectFormPage mode="edit" />),
   },
   {
     path: "data-connect/discover",
@@ -79,7 +80,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.discoverTitle",
       },
     },
-    element: withRouteLoading("catalog:task_manage", <DataConnectDiscoverPage />),
+    element: withRouteLoading(<DataConnectDiscoverPage />),
   },
 ];
 

@@ -12,11 +12,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -125,7 +122,6 @@ export function CatalogDetailPanel({
   tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
-  const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
@@ -152,10 +148,6 @@ export function CatalogDetailPanel({
 
   const physical = isCatalogPhysical(catalog);
   const showIndexState = !catalog.internal;
-  const canManageResourceTasks = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "resource:task_manage",
-  });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
@@ -402,29 +394,27 @@ export function CatalogDetailPanel({
             ),
           },
         ];
-        if (canManageResourceTasks) {
-          moreItems.push({
-            disabled: indexDisabled,
-            key: "index",
-            label: queryBlockReason ? (
-              <Tooltip
-                title={t(
-                  queryBlockReason === "missing"
-                    ? "dataCatalog.actions.indexMissingHint"
-                    : queryBlockReason === "disabled"
-                      ? "dataCatalog.actions.indexDisabledHint"
-                      : queryBlockReason === "stale"
-                        ? "dataCatalog.actions.indexStaleHint"
-                        : "dataCatalog.actions.indexMetadataUnavailableHint",
-                )}
-              >
-                <span>{indexLabel}</span>
-              </Tooltip>
-            ) : (
-              indexLabel
-            ),
-          });
-        }
+        moreItems.push({
+          disabled: indexDisabled,
+          key: "index",
+          label: queryBlockReason ? (
+            <Tooltip
+              title={t(
+                queryBlockReason === "missing"
+                  ? "dataCatalog.actions.indexMissingHint"
+                  : queryBlockReason === "disabled"
+                    ? "dataCatalog.actions.indexDisabledHint"
+                    : queryBlockReason === "stale"
+                      ? "dataCatalog.actions.indexStaleHint"
+                      : "dataCatalog.actions.indexMetadataUnavailableHint",
+              )}
+            >
+              <span>{indexLabel}</span>
+            </Tooltip>
+          ) : (
+            indexLabel
+          ),
+        });
         if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
@@ -485,11 +475,9 @@ export function CatalogDetailPanel({
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
               {dataCatalogCreationAvailable ? (
-                <PermissionGate permissions="resource:create">
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
-                </PermissionGate>
+                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                  {t("dataCatalog.resource.create")}
+                </AppButton>
               ) : null}
             </div>
           </div>
@@ -574,11 +562,9 @@ export function CatalogDetailPanel({
                 </AppButton>
               ) : !physical && !catalog.internal ? (
                 dataCatalogCreationAvailable ? (
-                  <PermissionGate permissions="resource:create">
-                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                      {t("dataCatalog.resource.create")}
-                    </AppButton>
-                  </PermissionGate>
+                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                    {t("dataCatalog.resource.create")}
+                  </AppButton>
                 ) : null
               ) : null
             }

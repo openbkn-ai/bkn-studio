@@ -16,8 +16,6 @@ import type { DataConnectListSceneProps } from "@/modules/data-connect/contracts
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -107,7 +105,7 @@ export function DataConnectListScene({
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
   const { i18n, t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const { message, modal } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
@@ -147,14 +145,6 @@ export function DataConnectListScene({
     () => new Map(connectorTypes.map((item) => [item.type, item.name])),
     [connectorTypes],
   );
-  const canModifyCatalog = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:modify",
-  });
-  const canDeleteCatalog = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:delete",
-  });
 
   const loadConnectorTypes = async () => {
     const nextTypes = await listDataConnectConnectorTypes();
@@ -313,27 +303,23 @@ export function DataConnectListScene({
       },
     ];
 
-    if (canModifyCatalog) {
-      items.push({
-        key: "edit",
-        label: t("common.edit"),
-      });
-      items.push({
-        key: "test",
-        label: t("common.testConnection"),
-      });
-      items.push({
-        key: "toggle",
-        label: record.enabled ? t("common.disabled") : t("common.enabled"),
-      });
-    }
-    if (canDeleteCatalog) {
-      items.push({
-        danger: true,
-        key: "delete",
-        label: t("common.delete"),
-      });
-    }
+    items.push({
+      key: "edit",
+      label: t("common.edit"),
+    });
+    items.push({
+      key: "test",
+      label: t("common.testConnection"),
+    });
+    items.push({
+      key: "toggle",
+      label: record.enabled ? t("common.disabled") : t("common.enabled"),
+    });
+    items.push({
+      danger: true,
+      key: "delete",
+      label: t("common.delete"),
+    });
 
     return {
       items,
@@ -365,8 +351,6 @@ export function DataConnectListScene({
       },
     };
   }, [
-    canDeleteCatalog,
-    canModifyCatalog,
     deleteRecord,
     openDetail,
     openDiscovers,
@@ -444,20 +428,18 @@ export function DataConnectListScene({
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-                <PermissionGate permissions="catalog:create">
-                  <AppButton
-                    onClick={() => {
-                      if (onCreate) {
-                        onCreate();
-                        return;
-                      }
-                      void navigate("/data-connect/new");
-                    }}
-                    type="primary"
-                >
-                  {t("common.create")}
-                </AppButton>
-              </PermissionGate>
+                <AppButton
+                  onClick={() => {
+                    if (onCreate) {
+                      onCreate();
+                      return;
+                    }
+                    void navigate("/data-connect/new");
+                  }}
+                  type="primary"
+              >
+                {t("common.create")}
+              </AppButton>
               <AppButton
                 icon={<ReloadOutlined />}
                 onClick={() => {

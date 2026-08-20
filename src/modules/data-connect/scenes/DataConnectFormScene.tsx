@@ -5,14 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Form, Result, Spin, Steps } from "antd";
+import { Alert, Form, Spin, Steps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import type { DataConnectFormSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import {
   extractRequestErrorMessage,
   isRequestConflict,
@@ -198,9 +197,6 @@ export function DataConnectFormScene({
     [connectorTypes, selectedConnectorType],
   );
 
-  // Align with backend catalog operation vocabulary (catalog.json): create=catalog:create and edit=catalog:modify.
-  // Legacy data-connect:create/edit keys were invented by the frontend and absent from /me/permissions, causing permanent 403 responses.
-  const permission = mode === "create" ? "catalog:create" : "catalog:modify";
   const pageTitle =
     mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");
   const pageDescription =
@@ -464,139 +460,132 @@ export function DataConnectFormScene({
   };
 
   return (
-    <PermissionGate
-      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
-      permissions={permission}
-    >
-      <section className={styles.contentSurface}>
-        <DataConnectPageHeader
-          description={pageDescription}
-          layout={mode === "create" ? "default" : "inline"}
-          onBack={handleBack}
-          title={pageTitle}
-          trailing={
-            mode === "create" ? (
-              <div className={styles.headerSteps}>
-                <Steps current={currentStep} items={stepItems} />
-              </div>
-            ) : undefined
-          }
-        />
-        <div className={styles.formShell}>
-          {loading ? (
-            <div className={styles.loadingState}>
-              <Spin />
+    <section className={styles.contentSurface}>
+      <DataConnectPageHeader
+        description={pageDescription}
+        layout={mode === "create" ? "default" : "inline"}
+        onBack={handleBack}
+        title={pageTitle}
+        trailing={
+          mode === "create" ? (
+            <div className={styles.headerSteps}>
+              <Steps current={currentStep} items={stepItems} />
             </div>
-          ) : loadError ? (
-            <Alert
-              action={
-                <AppButton
-                  onClick={() => {
-                    window.location.reload();
-                  }}
-                  type="link"
-                >
-                  {t("common.retry")}
-                </AppButton>
-              }
-              message={loadError}
-              showIcon
-              type="error"
-            />
-          ) : mode === "edit" && !record ? (
-            <Alert message={t("common.notFound")} showIcon type="warning" />
-          ) : (
-            <div className={styles.stepPanel}>
-              <Form
-                className={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : styles.configFormHorizontal
-                }
-                colon={false}
-                form={form}
-                onValuesChange={() => {
-                  setHasUnsavedChanges(true);
-                }}
-                labelAlign="right"
-                labelCol={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : { flex: "0 0 96px" }
-                }
-                layout={
-                  currentStep === 0 && mode === "create" ? "vertical" : "horizontal"
-                }
-                wrapperCol={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : { flex: "1 1 0" }
-                }
-              >
-                {currentStep === 0 && mode === "create" ? (
-                  <ConnectorTypePicker
-                    onChange={(value) => {
-                      const connector = connectorTypes.find((item) => item.type === value);
-                      setHasUnsavedChanges(true);
-                      selectConnectorType(value);
-                      form.setFieldsValue({
-                        connectorConfig: getConnectorConfigDefaults(connector),
-                        connectorType: value,
-                      });
-                    }}
-                    options={connectorTypes}
-                    value={selectedConnectorType}
-                  />
-                ) : (
-                  <DataConnectConfigForm
-                    isEdit={mode === "edit"}
-                    selectedConnectorType={selectedConnector}
-                  />
-                )}
-              </Form>
-            </div>
-          )}
-        </div>
-        <div className={styles.footerBar}>
-          <div className={styles.actionsRight}>
-            {currentStep === 1 && mode === "create" ? (
+          ) : undefined
+        }
+      />
+      <div className={styles.formShell}>
+        {loading ? (
+          <div className={styles.loadingState}>
+            <Spin />
+          </div>
+        ) : loadError ? (
+          <Alert
+            action={
               <AppButton
                 onClick={() => {
-                  setCurrentStep(0);
+                  window.location.reload();
                 }}
+                type="link"
               >
-                {t("common.previous")}
+                {t("common.retry")}
               </AppButton>
-            ) : null}
-            {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
-              <PermissionGate permissions="catalog:create">
-                <AppButton
-                  loading={testingConnection}
-                  onClick={() => {
-                    void handleTestConnection();
-                  }}
-                >
-                  {t("common.testConnection")}
-                </AppButton>
-              </PermissionGate>
-            ) : null}
-            <AppButton
-              loading={submitting || loadingConnectorDefinition}
-              onClick={() => {
-                void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
+            }
+            message={loadError}
+            showIcon
+            type="error"
+          />
+        ) : mode === "edit" && !record ? (
+          <Alert message={t("common.notFound")} showIcon type="warning" />
+        ) : (
+          <div className={styles.stepPanel}>
+            <Form
+              className={
+                currentStep === 0 && mode === "create"
+                  ? undefined
+                  : styles.configFormHorizontal
+              }
+              colon={false}
+              form={form}
+              onValuesChange={() => {
+                setHasUnsavedChanges(true);
               }}
-              type="primary"
+              labelAlign="right"
+              labelCol={
+                currentStep === 0 && mode === "create"
+                  ? undefined
+                  : { flex: "0 0 96px" }
+              }
+              layout={
+                currentStep === 0 && mode === "create" ? "vertical" : "horizontal"
+              }
+              wrapperCol={
+                currentStep === 0 && mode === "create"
+                  ? undefined
+                  : { flex: "1 1 0" }
+              }
             >
-              {currentStep === 0 && mode === "create"
-                ? t("common.next")
-                : currentStep === 1 && mode === "create"
-                  ? t("common.confirm")
-                  : t("common.save")}
-            </AppButton>
+              {currentStep === 0 && mode === "create" ? (
+                <ConnectorTypePicker
+                  onChange={(value) => {
+                    const connector = connectorTypes.find((item) => item.type === value);
+                    setHasUnsavedChanges(true);
+                    selectConnectorType(value);
+                    form.setFieldsValue({
+                      connectorConfig: getConnectorConfigDefaults(connector),
+                      connectorType: value,
+                    });
+                  }}
+                  options={connectorTypes}
+                  value={selectedConnectorType}
+                />
+              ) : (
+                <DataConnectConfigForm
+                  isEdit={mode === "edit"}
+                  selectedConnectorType={selectedConnector}
+                />
+              )}
+            </Form>
           </div>
+        )}
+      </div>
+      <div className={styles.footerBar}>
+        <div className={styles.actionsRight}>
+          {currentStep === 1 && mode === "create" ? (
+            <AppButton
+              onClick={() => {
+                setCurrentStep(0);
+              }}
+            >
+              {t("common.previous")}
+            </AppButton>
+          ) : null}
+          {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
+            <AppButton
+              loading={testingConnection}
+              onClick={() => {
+                void handleTestConnection();
+              }}
+            >
+              {t("common.testConnection")}
+            </AppButton>
+          ) : null}
+          <AppButton
+            loading={submitting || loadingConnectorDefinition}
+            onClick={() => {
+              void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
+            }}
+            type="primary"
+          >
+            {currentStep === 0 && mode === "create"
+              ? t("common.next")
+              : currentStep === 1 && mode === "create"
+                ? t("common.confirm")
+                : t("common.save")}
+          </AppButton>
         </div>
-      </section>
-    </PermissionGate>
+      </div>
+    </section>
   );
 }
 

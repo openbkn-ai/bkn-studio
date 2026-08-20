@@ -21,7 +21,12 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
   it("仅持有系统管理权限的用户只显示首页和获授权的系统管理菜单", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));
     expect(group).toBeUndefined();
-    expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual(["home"]);
+    // 数据面(数据连接/数据目录/任务管理)不做前端权限管控,授权只能在企业档的对象授权页发放,
+    // 挡在这里等于对社区版所有非超管永久隐藏。后端 403 才是判据。
+    expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual([
+      "home",
+      "general-business-knowledge-network",
+    ]);
   });
 
   it("超管(全部权限)→ 系统管理可见,4 个子项齐全", () => {
@@ -74,17 +79,25 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "admin-authz:view",
     ]);
 
-    expect(keys(filtered)).toEqual(["home", "system-management"]);
+    expect(keys(filtered)).toEqual([
+      "home",
+      "general-business-knowledge-network",
+      "system-management",
+    ]);
   });
 
-  it("Catalog 查看权限显示数据连接和数据目录入口", () => {
-    const filtered = filterNavByPermission(consoleNavigation, ["catalog:view_detail"]);
+  it("数据面入口不看权限点:没有任何授权也能进,越权由后端拦", () => {
+    const filtered = filterNavByPermission(consoleNavigation, []);
     const businessGroup = filtered.find(
       (item) => item.key === "general-business-knowledge-network",
     );
 
     expect(keys(filtered)).toContain("home");
-    expect(keys(businessGroup?.children ?? [])).toEqual(["data-connection", "data-catalog"]);
+    expect(keys(businessGroup?.children ?? [])).toEqual([
+      "data-connection",
+      "data-catalog",
+      "index-builds",
+    ]);
   });
 
   it("领域知识网络拆分为管理和调用两个入口", () => {

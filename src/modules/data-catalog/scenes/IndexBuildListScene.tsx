@@ -19,8 +19,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTime } from "@/framework/i18n/format";
-import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -79,7 +77,7 @@ function EllipsisText({ text, title }: { text: string; title?: string }) {
 
 export function IndexBuildListScene() {
   const { t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [taskColumnWidth, setTaskColumnWidth] = useState(() => {
@@ -123,10 +121,6 @@ export function IndexBuildListScene() {
   const [total, setTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  const canManageResourceTasks = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "resource:task_manage",
-  });
 
   // Query parameters for server pagination, sorting, and status filtering.
   const taskQuery = useMemo<BuildTaskPageQuery>(
@@ -524,18 +518,17 @@ export function IndexBuildListScene() {
 
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
         if (
-          canManageResourceTasks &&
-          (record.status === "running" ||
-            record.status === "listening" ||
-            record.status === "pending" ||
-            record.status === "paused")
+          record.status === "running" ||
+          record.status === "listening" ||
+          record.status === "pending" ||
+          record.status === "paused"
         ) {
           menuItems.push({ key: "pauseResume", label: pauseResumeLabel });
         }
-        if (canManageResourceTasks && record.status === "failed") {
+        if (record.status === "failed") {
           menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
         }
-        if (canManageResourceTasks && record.status !== "stopping") {
+        if (record.status !== "stopping") {
           menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
         }
 
@@ -578,18 +571,16 @@ export function IndexBuildListScene() {
             <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
               {t("common.refresh")}
             </AppButton>
-            <PermissionGate permissions="resource:task_manage">
-              <AppButton
-                danger
-                disabled={selectedKeys.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={handleBatchDelete}
-              >
-                {selectedKeys.length > 0
-                  ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
-                  : t("dataCatalog.task.batchDelete")}
-              </AppButton>
-            </PermissionGate>
+            <AppButton
+              danger
+              disabled={selectedKeys.length === 0}
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+            >
+              {selectedKeys.length > 0
+                ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
+                : t("dataCatalog.task.batchDelete")}
+            </AppButton>
         </Space>
         <Space className={sceneStyles.taskFilters}>
             <Select
