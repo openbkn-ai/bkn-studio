@@ -442,6 +442,7 @@ export const systemAdminEnUS = {
         empty: "No members yet",
         memberUser: "User",
         memberDept: "Department",
+        memberDeptInactive: "Department (inactive)",
         remove: "Remove",
         note: "Members can be users or departments; department members inherit the role's permissions.",
       },

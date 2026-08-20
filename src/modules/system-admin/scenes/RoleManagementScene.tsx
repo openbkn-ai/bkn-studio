@@ -633,9 +633,11 @@ export function RoleManagementScene() {
 
             <span className={styles.singleLineText}>
 
-              {t("systemAdmin.roles.membersModal.memberUser")} {userCount} ·{" "}
+              {t("systemAdmin.roles.membersModal.memberUser")} {userCount}
 
-              {t("systemAdmin.roles.membersModal.memberDept")} {deptCount}
+              {deptCount > 0
+                ? ` · ${t("systemAdmin.roles.membersModal.memberDeptInactive")} ${deptCount}`
+                : ""}
 
             </span>
 

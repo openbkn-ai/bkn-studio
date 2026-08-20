@@ -385,9 +385,7 @@ export function ObjectAuthorizeDrawer({
         <div className={styles.authzObjStats}>
           <span className={styles.authzObjStat}>
             <strong>{grants.length}</strong>
-            <span>
-              {t("systemAdmin.objectGrants.granteeUser")}/{t("systemAdmin.objectGrants.granteeDept")}
-            </span>
+            <span>{t("systemAdmin.objectGrants.granteeUser")}</span>
           </span>
           <span className={styles.authzObjStat}>
             <strong>{ops.length}</strong>

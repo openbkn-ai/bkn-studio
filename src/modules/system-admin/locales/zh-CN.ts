@@ -440,6 +440,7 @@ export const systemAdminZhCN = {
         empty: "暂无成员",
         memberUser: "用户",
         memberDept: "部门",
+        memberDeptInactive: "部门（不生效）",
         remove: "移除",
         note: "成员可以是用户或部门；部门成员会自动继承该角色的权限。",
       },

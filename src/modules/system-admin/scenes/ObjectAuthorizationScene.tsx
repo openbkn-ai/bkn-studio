@@ -107,6 +107,8 @@ export function ObjectAuthorizationScene() {
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim(), 300);
   const [objTypeFilter, setObjTypeFilter] = useState<string>();
+  // Only users can hold an object grant, so the filter offers no department option. Department
+  // names are still resolved, since rows written before that rule may name one.
   const [granteeType, setGranteeType] = useState<"all" | "user" | "department">("all");
   // Aggregate rows returned by server pagination for grouped views by object or member.
   const [groups, setGroups] = useState<AuthzGroup[]>([]);
@@ -657,10 +659,6 @@ export function ObjectAuthorizationScene() {
                 {
                   label: t("systemAdmin.objectGrants.granteeUser"),
                   value: "user",
-                },
-                {
-                  label: t("systemAdmin.objectGrants.granteeDept"),
-                  value: "department",
                 },
               ]}
               value={granteeType}
