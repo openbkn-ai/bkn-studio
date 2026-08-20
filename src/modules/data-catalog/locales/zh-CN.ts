@@ -202,6 +202,7 @@ export const dataCatalogZhCN = {
       collapse: "收起",
     },
     catalog: {
+      authorize: "授权",
       notFound: "未找到该连接下的资源，连接可能已被删除",
       selectPhysicalDescription: "请从左侧物理数据源树中选择一个数据连接。",
       resourceSection: "资源列表",

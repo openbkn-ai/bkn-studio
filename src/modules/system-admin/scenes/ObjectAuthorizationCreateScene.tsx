@@ -9,7 +9,7 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Alert, Select, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -43,6 +43,9 @@ export function ObjectAuthorizationCreateScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
+  // from a data catalog does not have to find it again among hundreds of objects.
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,7 +55,9 @@ export function ObjectAuthorizationCreateScene() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
 
-  const [objectValue, setObjectValue] = useState<string>();
+  const [objectValue, setObjectValue] = useState<string | undefined>(
+    () => (parseObjValue(searchParams.get("object") ?? undefined) ? searchParams.get("object") ?? undefined : undefined),
+  );
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
 

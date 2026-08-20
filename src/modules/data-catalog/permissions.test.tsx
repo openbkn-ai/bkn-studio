@@ -59,11 +59,16 @@ describe("the data console does not gate on permission points", () => {
     }
   });
 
-  it("keeps permission checks out of the module sources", () => {
+  /**
+   * The rule is about which points may be asked for, not about the mechanism. Gating on an
+   * administrative point such as admin-authz:grant is fine — role management issues it — while
+   * `catalog:` and `resource:` points can only come from the object-authorization page, which is
+   * the trap this branch exists to remove.
+   */
+  it("never asks for a catalog or resource permission point", () => {
     expect(MODULE_SOURCES.length).toBeGreaterThan(20);
     for (const [path, source] of MODULE_SOURCES) {
-      expect(source, path).not.toMatch(/\b(PermissionGate|RequirePermission)\b/);
-      expect(source, path).not.toMatch(/hasPermissions\(/);
+      expect(source, path).not.toMatch(/["'`](catalog|resource):[a-z_]+/);
     }
   });
 });

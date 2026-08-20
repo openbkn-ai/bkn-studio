@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, EllipsisOutlined, SearchOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, EllipsisOutlined, KeyOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,8 +20,10 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
@@ -152,9 +154,13 @@ export function CatalogDetailPanel({
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
     (showIndexState && indexFilter.length > 0);
+  // Granting access to this catalog is the one action available on every catalog, built-in ones
+  // aside, so the bar shows whenever the catalog is a real one.
+  const canAuthorizeCatalog = !catalog.internal;
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
+    canAuthorizeCatalog ||
     (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
   const tasksByResource = useMemo(() => {
@@ -471,17 +477,34 @@ export function CatalogDetailPanel({
   return (
     <section className={styles.contentSurface}>
       {showOperationBar ? <div className={styles.operationBar}>
-        {!physical && !catalog.internal ? (
-          <div className={styles.operationPrimary}>
-            <div className={styles.toolbarActions}>
-              {dataCatalogCreationAvailable ? (
-                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                  {t("dataCatalog.resource.create")}
+        <div className={styles.operationPrimary}>
+          <div className={styles.toolbarActions}>
+            {dataCatalogCreationAvailable && !physical && !catalog.internal ? (
+              <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                {t("dataCatalog.resource.create")}
+              </AppButton>
+            ) : null}
+            {/*
+              授权发生在系统管理的对象授权页,这里只是把当前目录带过去,省掉在几百个对象里
+              重新找一遍。看得见这颗按钮的前提是有 admin-authz:grant——那张页面本身要的点位,
+              不是数据面的动词(数据面已不做前端权限管控)。
+            */}
+            {canAuthorizeCatalog ? (
+              <PermissionGate permissions={authzPoints.grant}>
+                <AppButton
+                  icon={<KeyOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/system/authorizations/new?object=${encodeURIComponent(`catalog::${catalog.id}`)}`,
+                    );
+                  }}
+                >
+                  {t("dataCatalog.catalog.authorize")}
                 </AppButton>
-              ) : null}
-            </div>
+              </PermissionGate>
+            ) : null}
           </div>
-        ) : null}
+        </div>
         {resourceTotal > 0 || hasResourceQuery ? (
           <>
             <Input
