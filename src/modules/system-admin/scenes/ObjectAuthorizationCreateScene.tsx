@@ -16,12 +16,13 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import { listDepartments, listUsers } from "@/modules/system-admin/services/admin.service";
+import { listUsers } from "@/modules/system-admin/services/admin.service";
+import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import {
   listAuthorizableObjects,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
@@ -74,11 +75,11 @@ export function ObjectAuthorizationCreateScene() {
 
   const [objects, setObjects] = useState<AuthorizableObject[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
 
-  const [objectValue, setObjectValue] = useState<string | undefined>(
-    () => (parseObjValue(searchParams.get("object") ?? undefined) ? searchParams.get("object") ?? undefined : undefined),
-  );
+  const deepLinkedObject = parseObjValue(searchParams.get("object") ?? undefined)
+    ? (searchParams.get("object") ?? undefined)
+    : undefined;
+  const [objectValue, setObjectValue] = useState<string | undefined>(deepLinkedObject);
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
 
@@ -109,20 +110,32 @@ export function ObjectAuthorizationCreateScene() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [objList, userList, deptList] = await Promise.all([
-        listAuthorizableObjects(),
-        listUsers(),
-        listDepartments(),
-      ]);
+      const [objList, userList] = await Promise.all([listAuthorizableObjects(), listUsers()]);
+      // A deep link can name an object the picker's first page never loaded. Resolve its name so the
+      // field reads like a table rather than `resource::d9pc...`, and keep it selectable.
+      const linked = parseObjValue(deepLinkedObject);
+      const alreadyListed =
+        !linked || objList.some((item) => item.type === linked.objType && item.id === linked.objId);
+      if (!alreadyListed) {
+        const [resolved] = await resolveGrantNames([
+          {
+            accessorId: "",
+            objId: linked.objId,
+            objName: linked.objId,
+            objType: linked.objType,
+            operations: [],
+          },
+        ]);
+        objList.push({ id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType });
+      }
       setObjects(objList);
       setUsers(userList);
-      setDepartments(deptList);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deepLinkedObject]);
 
   useEffect(() => {
     void load();
@@ -158,6 +171,9 @@ export function ObjectAuthorizationCreateScene() {
     }));
   }, [objects]);
 
+  // bkn-safe accepts only user accessors on /admin/object-grants: a department id is answered with
+  // 400 BknSafe.InvalidRequest, in every payload shape, and no department-scoped endpoint exists.
+  // Offering departments here only produced an unexplained failure at submit time.
   const granteeOptions = useMemo(
     () => [
       {
@@ -167,15 +183,8 @@ export function ObjectAuthorizationCreateScene() {
           label: `${user.name} (${user.account})`,
         })),
       },
-      {
-        label: t("systemAdmin.objectGrants.granteeDept"),
-        options: departments.map((department) => ({
-          value: department.id,
-          label: department.name,
-        })),
-      },
     ],
-    [departments, t, users],
+    [t, users],
   );
 
   const toggleOp = (opKey: string) => {
