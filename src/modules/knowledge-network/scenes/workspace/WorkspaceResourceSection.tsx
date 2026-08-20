@@ -28,6 +28,7 @@ type WorkspaceData = ReturnType<typeof useWorkspaceData>;
 
 type WorkspaceResourceSectionProps = {
   canDelete: boolean;
+  canManageActionExecution: boolean;
   canModify: boolean;
   data: WorkspaceData;
   networkId: string;
@@ -36,6 +37,7 @@ type WorkspaceResourceSectionProps = {
 
 export function WorkspaceResourceSection({
   canDelete,
+  canManageActionExecution,
   canModify,
   data,
   networkId,
@@ -113,6 +115,7 @@ export function WorkspaceResourceSection({
       return (
         <ActionTypeListPanel
           items={data.actionTypes}
+          canManageExecution={canManageActionExecution}
           canModify={canModify}
           canDelete={canDelete}
           loading={data.sectionLoading}

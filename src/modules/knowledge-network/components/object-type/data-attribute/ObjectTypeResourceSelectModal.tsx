@@ -229,7 +229,6 @@ export function ObjectTypeResourceSelectModal({
       return;
     }
 
-    listRequestIdRef.current += 1;
     const timer = window.setTimeout(() => {
       setDebouncedSearchValue(searchValue.trim());
       setPagination((current) =>

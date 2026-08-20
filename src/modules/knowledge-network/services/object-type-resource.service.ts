@@ -230,7 +230,8 @@ export async function queryObjectTypeResources(
 ): Promise<ObjectTypeResourceListResult> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 10;
-  const normalizedName = query.name?.trim().toLowerCase();
+  const trimmedName = query.name?.trim();
+  const normalizedName = trimmedName?.toLowerCase();
 
   if (useMock) {
     let items = (mockObjectTypeResources[networkId] ?? []).map((item) => ({ ...item }));
@@ -254,7 +255,7 @@ export async function queryObjectTypeResources(
     params: {
       catalog_id: query.dataSourceId || undefined,
       limit: pageSize,
-      name: normalizedName || undefined,
+      name: trimmedName || undefined,
       offset: (page - 1) * pageSize,
       sort: "update_time",
     },

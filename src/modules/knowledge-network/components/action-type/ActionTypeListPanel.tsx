@@ -37,6 +37,7 @@ import styles from "@/modules/knowledge-network/components/shared/ResourceListPa
 
 type ActionTypeListPanelProps = {
   canDelete: boolean;
+  canManageExecution: boolean;
   canModify: boolean;
   items: KnowledgeNetworkActionTypeRecord[];
   loading?: boolean;
@@ -65,6 +66,7 @@ function getActionKindLabel(
 
 export function ActionTypeListPanel({
   canDelete,
+  canManageExecution,
   canModify,
   items,
   loading,
@@ -239,11 +241,9 @@ export function ActionTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify
-            ? [
-                { key: "edit", label: t("common.edit") },
-                { key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") },
-              ]
+          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
+          ...(canManageExecution
+            ? [{ key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") }]
             : []),
           ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
         ];

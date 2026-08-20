@@ -56,7 +56,7 @@ describe("object-type-resource.service", () => {
     expect(result?.rowTotalCount).toBe(1);
   });
 
-  it("normalizes resource search names for case-insensitive matching", async () => {
+  it("preserves resource search name casing for backend requests", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
     const { queryObjectTypeResources } = await import(
       "@/modules/knowledge-network/services/object-type-resource.service"
@@ -73,7 +73,7 @@ describe("object-type-resource.service", () => {
       params: {
         catalog_id: "catalog-1",
         limit: 20,
-        name: "supply_demo",
+        name: "Supply_DEMO",
         offset: 20,
         sort: "update_time",
       },

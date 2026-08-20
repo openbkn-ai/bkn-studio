@@ -145,4 +145,40 @@ describe("ObjectTypeResourceSelectModal search", () => {
     expect(screen.getByText("test.reviews")).toBeTruthy();
     expect(screen.queryByText("public.coupon_templates")).toBeNull();
   });
+
+  it("keeps an in-flight request valid when raw search trims to the same value", async () => {
+    const initialResult = createDeferred<ObjectTypeResourceListResult>();
+    queryObjectTypeResources.mockReturnValue(initialResult.promise);
+
+    render(
+      <ObjectTypeResourceSelectModal
+        networkId="kn-1"
+        onCancel={vi.fn()}
+        onOk={vi.fn()}
+        open
+      />,
+    );
+
+    await waitFor(() => {
+      expect(queryObjectTypeResources).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("common.search"), {
+      target: { value: " " },
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+    });
+
+    await act(async () => {
+      initialResult.resolve({
+        items: [createResource("resource-1", "Supply_DEMO")],
+        total: 1,
+      });
+      await initialResult.promise;
+    });
+
+    expect(await screen.findByText("Supply_DEMO")).toBeTruthy();
+    expect(queryObjectTypeResources).toHaveBeenCalledTimes(1);
+  });
 });

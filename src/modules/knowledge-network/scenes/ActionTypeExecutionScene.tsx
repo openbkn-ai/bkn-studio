@@ -18,6 +18,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeExecuteModal } from "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal";
 import {
@@ -32,16 +33,24 @@ import { ActionTypeTaskManagementPanel } from "@/modules/knowledge-network/compo
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
+  needsActionTypeActionSourceDisplayResolution,
+  resolveActionTypeActionSourceDisplayWithTimeout,
+} from "@/modules/knowledge-network/services/action-type-tool.service";
+import {
   executeKnowledgeNetworkActionTypeNow,
   getKnowledgeNetworkActionTypeDetail,
   updateKnowledgeNetworkActionType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ActionTypeDetail,
+  ActionTypeActionSource,
   ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
-import { getActionSourceDisplayName } from "@/modules/knowledge-network/utils/action-type-execution";
+import {
+  getActionSourceDisplayName,
+  getReadableActionSourceDisplayName,
+} from "@/modules/knowledge-network/utils/action-type-execution";
 
 import detailStyles from "./ActionTypeDetailScene.module.css";
 import styles from "./KnowledgeNetworkResourceConfigScene.module.css";
@@ -53,13 +62,18 @@ const ACTION_TYPE_EXECUTION_OPERATIONS = ["modify", "task_manage"] as const;
 export function ActionTypeExecutionScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const [searchParams, setSearchParams] = useSearchParams();
   const { actionTypeId = "", networkId = "" } = useParams<{
     actionTypeId: string;
     networkId: string;
   }>();
   const [detail, setDetail] = useState<ActionTypeDetail | null>(null);
+  const [resolvedRunActionSource, setResolvedRunActionSource] = useState<
+    ActionTypeActionSource | undefined
+  >();
+  const [runSourceResolutionFailed, setRunSourceResolutionFailed] = useState(false);
+  const [runSourceResolving, setRunSourceResolving] = useState(false);
   const [executionValue, setExecutionValue] = useState<ActionTypeExecutionConfig>(
     createDefaultActionTypeExecutionConfig(),
   );
@@ -82,6 +96,20 @@ export function ActionTypeExecutionScene() {
     );
   const canModify = operationAccess.modify;
   const canTaskManage = operationAccess.task_manage;
+  const actionSource = detail?.executionConfig.actionSource;
+  const canViewToolbox = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:toolbox:view",
+  });
+  const canViewMcp = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:mcp:view",
+  });
+  const canResolveActionSource =
+    !actionSource ||
+    actionSource.type === "manual" ||
+    (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
+
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/detail`;
@@ -122,6 +150,50 @@ export function ActionTypeExecutionScene() {
 
     void loadData();
   }, [actionTypeId, networkId, t]);
+
+  useEffect(() => {
+    setResolvedRunActionSource(actionSource);
+
+    if (!actionSource || !needsActionTypeActionSourceDisplayResolution(actionSource)) {
+      setRunSourceResolutionFailed(false);
+      setRunSourceResolving(false);
+      return;
+    }
+
+    if (!canResolveActionSource) {
+      setRunSourceResolutionFailed(true);
+      setRunSourceResolving(false);
+      return;
+    }
+
+    let cancelled = false;
+    setRunSourceResolutionFailed(false);
+    setRunSourceResolving(true);
+
+    void resolveActionTypeActionSourceDisplayWithTimeout(actionSource)
+      .then((resolved) => {
+        if (!cancelled) {
+          setResolvedRunActionSource(resolved);
+          setRunSourceResolutionFailed(
+            needsActionTypeActionSourceDisplayResolution(resolved),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRunSourceResolutionFailed(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setRunSourceResolving(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actionSource, canResolveActionSource]);
 
   const setActiveTab = (tab: ExecutionTab) => {
     if (tab === "run") {
@@ -219,10 +291,16 @@ export function ActionTypeExecutionScene() {
     }
 
     const dynamicParameters = getActionTypeDynamicParameters(detail.executionConfig.parameters);
+    const sourceUnavailable =
+      runSourceResolutionFailed &&
+      needsActionTypeActionSourceDisplayResolution(resolvedRunActionSource);
     const sourceName =
-      getActionSourceDisplayName(detail.executionConfig.actionSource) ||
-      detail.executionConfig.sourceName ||
-      t("knowledgeNetwork.actionTypeEmptyValue");
+      runSourceResolving || sourceUnavailable
+        ? ""
+        : getReadableActionSourceDisplayName(resolvedRunActionSource) ||
+          (!detail.executionConfig.actionSource
+            ? detail.executionConfig.sourceName.trim()
+            : "");
 
     return (
       <Card className={styles.executionCard} title={t("knowledgeNetwork.actionTypeExecutionRunTitle")}>
@@ -231,7 +309,14 @@ export function ActionTypeExecutionScene() {
             {detail.objectTypeName || detail.objectTypeId}
           </Descriptions.Item>
           <Descriptions.Item label={t("knowledgeNetwork.actionTypeOperatorLabel")}>
-            {sourceName}
+            {runSourceResolving ? (
+              <span>
+                <Spin size="small" />{" "}
+                {t("knowledgeNetwork.actionTypeExecutionSourceResolving")}
+              </span>
+            ) : (
+              sourceName || t("knowledgeNetwork.actionTypeEmptyValue")
+            )}
           </Descriptions.Item>
           <Descriptions.Item label={t("knowledgeNetwork.actionTypeExecutionParameters")}>
             {t("knowledgeNetwork.actionTypeExecutionParameterCount", {
@@ -265,6 +350,14 @@ export function ActionTypeExecutionScene() {
   };
 
   const renderConfigPanel = () => {
+    if (isPermissionLoading) {
+      return (
+        <div className={styles.loadingState}>
+          <Spin />
+        </div>
+      );
+    }
+
     if (!canModify) {
       return (
         <Alert
@@ -300,7 +393,7 @@ export function ActionTypeExecutionScene() {
   return (
     <KnowledgeNetworkResourceConfigShell
       actions={
-        activeTab === "config" && canModify ? (
+        isPermissionLoading ? undefined : activeTab === "config" && canModify ? (
           <AppButton
             disabled={isPermissionLoading}
             loading={submitting}
