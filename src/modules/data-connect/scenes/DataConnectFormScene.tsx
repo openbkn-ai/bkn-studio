@@ -65,6 +65,7 @@ export function DataConnectFormScene({
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const selectedConnectorTypeRef = useRef<string | undefined>(undefined);
   const recordIdentityKey = mode === "edit" ? (recordId ?? "") : "";
   const recordIdentityRef = useRef({ generation: 0, key: recordIdentityKey });
   if (recordIdentityRef.current.key !== recordIdentityKey) {
@@ -73,6 +74,11 @@ export function DataConnectFormScene({
       key: recordIdentityKey,
     };
   }
+
+  const selectConnectorType = (connectorType: string) => {
+    selectedConnectorTypeRef.current = connectorType;
+    setSelectedConnectorType(connectorType);
+  };
 
   useEffect(() => {
     let active = true;
@@ -104,7 +110,7 @@ export function DataConnectFormScene({
             setConnectorTypes((currentTypes) => currentTypes.map((item) => (
               item.type === connector.type ? connector : item
             )));
-            setSelectedConnectorType(currentRecord.connectorType);
+            selectConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
               connectorConfig: sanitizeConnectorConfig(
                 currentRecord.connectorConfig,
@@ -166,7 +172,7 @@ export function DataConnectFormScene({
         const connector = connectorTypes.find(
           (item) => item.type === latestRecord.connectorType,
         );
-        setSelectedConnectorType(latestRecord.connectorType);
+        selectConnectorType(latestRecord.connectorType);
         form.setFieldsValue({
           connectorConfig: sanitizeConnectorConfig(
             latestRecord.connectorConfig,
@@ -241,6 +247,9 @@ export function DataConnectFormScene({
     try {
       setLoadingConnectorDefinition(true);
       const connector = await getDataConnectConnectorType(selectedConnectorType);
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
       setConnectorTypes((currentTypes) => currentTypes.map((item) => (
         item.type === connector.type ? connector : item
       )));
@@ -526,7 +535,7 @@ export function DataConnectFormScene({
                     onChange={(value) => {
                       const connector = connectorTypes.find((item) => item.type === value);
                       setHasUnsavedChanges(true);
-                      setSelectedConnectorType(value);
+                      selectConnectorType(value);
                       form.setFieldsValue({
                         connectorConfig: getConnectorConfigDefaults(connector),
                         connectorType: value,

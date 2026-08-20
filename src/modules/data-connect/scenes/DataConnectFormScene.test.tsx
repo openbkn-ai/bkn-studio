@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectFormScene } from "@/modules/data-connect/scenes/DataConnectFormScene";
+import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 vi.setConfig({ testTimeout: 20_000 });
 
@@ -276,6 +277,72 @@ describe("DataConnectFormScene · connection preflight", () => {
 
     expect(modalConfirmMock).not.toHaveBeenCalled();
     expect(onBack).toHaveBeenCalledOnce();
+  }, HEAVY_SCENE_TIMEOUT_MS);
+
+  it("does not advance with a stale connector definition after the selection changes", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    const postgresqlDetail = createDeferred<DataConnectConnectorType>();
+    getDataConnectConnectorTypeMock.mockImplementation((type: string) => (
+      type === "postgresql"
+        ? postgresqlDetail.promise
+        : Promise.resolve({
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { database: connectorField("Database", "string", true) },
+            mode: "local",
+            name: "SQL Server",
+            type,
+          })
+    ));
+    listDataConnectConnectorTypesMock.mockResolvedValue([
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "PostgreSQL",
+        type: "postgresql",
+      },
+      {
+        category: "table",
+        description: "",
+        enabled: true,
+        fieldConfig: {},
+        mode: "local",
+        name: "SQL Server",
+        type: "sqlserver",
+      },
+    ]);
+
+    render(<DataConnectFormScene mode="create" />);
+
+    fireEvent.click(await findConnectorCard("PostgreSQL"));
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+    await waitFor(() => {
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("postgresql");
+    });
+    fireEvent.click(await findConnectorCard("SQL Server"));
+    postgresqlDetail.resolve({
+      category: "table",
+      description: "",
+      enabled: true,
+      fieldConfig: { host: connectorField("Host", "string", true) },
+      mode: "local",
+      name: "PostgreSQL",
+      type: "postgresql",
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("common.next").closest("button")?.classList.contains("ant-btn-loading"),
+      ).toBe(false);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+    expect(await screen.findByPlaceholderText("dataConnect.namePlaceholder")).toBeTruthy();
+    expect(getDataConnectConnectorTypeMock).toHaveBeenLastCalledWith("sqlserver");
   }, HEAVY_SCENE_TIMEOUT_MS);
 
   afterEach(() => {
@@ -765,6 +832,15 @@ function connectorField(
     required,
     type,
   };
+}
+
+function createDeferred<T>() {
+  let resolve: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve: (value: T) => resolve(value) };
 }
 
 function mockSQLServerEditCatalog(
