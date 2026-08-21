@@ -20,3 +20,4 @@
 @container (max-width:900px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @container (max-width:480px){.filters{grid-template-columns:1fr}}
 .listCard :global(.ant-table-thead > tr > th){font-size:14px}
+.conversationHeading h1{font-size:18px}.roundSidebarTitle h3,.operationCard h3{font-size:16px}.roundList strong,.interactionSummary h2,.sourceTexts p,.operationCard p{font-size:14px}

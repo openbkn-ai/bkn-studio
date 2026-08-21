@@ -247,6 +247,31 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("本轮输入（原文）")).not.toBeNull();
   });
 
+  it("uses compact typography throughout the analysis workspace", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-compact", questionPreview: "紧凑会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-compact", questionPreview: "紧凑轮次" }], total: 1 });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-compact",
+      conversationContext: [],
+      derivedFacts: [],
+      contextRelations: [],
+      operations: [{ operationId: "op-compact", toolName: "查询库存", elements: [], query: { conditions: {}, resultCount: 1 } }],
+    });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "紧凑会话" }));
+
+    const conversationTitle = await screen.findByRole("heading", { level: 1, name: "业务会话" });
+    const roundTitle = screen.getByRole("heading", { level: 2, name: "紧凑轮次" });
+    const operationTitle = screen.getByRole("heading", { level: 3, name: "查询库存" });
+    const inputText = screen.getByText("紧凑轮次", { selector: "p" });
+
+    expect(getComputedStyle(conversationTitle).fontSize).toBe("18px");
+    expect(getComputedStyle(roundTitle).fontSize).toBe("16px");
+    expect(getComputedStyle(operationTitle).fontSize).toBe("16px");
+    expect(getComputedStyle(inputText).fontSize).toBe("14px");
+  });
+
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
     getConversations.mockResolvedValue({ entries: [
       { conversationId: "conv-1", questionPreview: "查询采购订单", interactionCount: 2, resultPreview: "无记录", agentName: "Supply Agent", status: "completed", evidenceCompleteness: "complete", startedAt: "2026-08-10", durationMs: 42 },
