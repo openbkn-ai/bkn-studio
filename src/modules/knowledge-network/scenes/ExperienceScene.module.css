@@ -2657,8 +2657,6 @@
 }
 
 /* ---------------- 数据浏览器 Drawer ---------------- */
-/* antd Drawer/Modal 会把内容 portal 到 <body>，脱离 .page，故这里重新声明设计变量，
-   否则 var(--accent) 等失效（如 .dbChip:hover 背景丢失 → 白字白底，控件“消失”）。 */
 .dbWrap,
 .guideRoot,
 .schemaModal {
