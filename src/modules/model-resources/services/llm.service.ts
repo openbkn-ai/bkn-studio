@@ -107,7 +107,7 @@ function mapLlmModel(item: BackendLlmModel): LlmModel {
   };
 }
 
-function mapSavePayload(payload: LlmSavePayload) {
+function mapSavePayload(payload: LlmSavePayload, includeDefault = false) {
   const body: Record<string, unknown> = {
     model_name: payload.modelName,
     model_series: payload.modelSeries,
@@ -133,6 +133,10 @@ function mapSavePayload(payload: LlmSavePayload) {
 
   if (payload.change) {
     body.change = true;
+  }
+
+  if (includeDefault) {
+    body.default = payload.default ?? false;
   }
 
   return body;
@@ -205,6 +209,12 @@ export async function listLlmModels(query: LlmListQuery): Promise<LlmListResult>
 
 export async function createLlmModel(payload: LlmSavePayload) {
   if (useMock) {
+    const shouldSetDefault = payload.default || !mockLlmModels.some((item) => item.default);
+    if (shouldSetDefault) {
+      mockLlmModels.forEach((item) => {
+        item.default = false;
+      });
+    }
     mockLlmModels.unshift({
       modelId: `llm-${mockLlmModels.length + 1}`,
       modelName: payload.modelName,
@@ -213,6 +223,7 @@ export async function createLlmModel(payload: LlmSavePayload) {
       maxModelLen: payload.maxModelLen,
       modelParameters: payload.modelParameters,
       quota: payload.quota,
+      default: shouldSetDefault,
       createBy: "admin",
       createTime: new Date().toISOString().slice(0, 19).replace("T", " "),
       updateBy: "admin",
@@ -224,7 +235,7 @@ export async function createLlmModel(payload: LlmSavePayload) {
 
   const response = await http.post<BackendStatusResponse>(
     `${API_PREFIX}/llm/add`,
-    mapSavePayload(payload),
+    mapSavePayload(payload, true),
   );
 
   return response.data;

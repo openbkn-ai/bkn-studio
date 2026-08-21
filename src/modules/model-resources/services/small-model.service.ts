@@ -96,7 +96,7 @@ function mapSmallModel(item: BackendSmallModel): SmallModel {
   };
 }
 
-function mapSavePayload(payload: SmallModelSavePayload) {
+function mapSavePayload(payload: SmallModelSavePayload, includeDefault = false) {
   const body: Record<string, unknown> = {
     model_name: payload.modelName,
     model_type: payload.modelType,
@@ -135,6 +135,10 @@ function mapSavePayload(payload: SmallModelSavePayload) {
 
   if (payload.change) {
     body.change = true;
+  }
+
+  if (includeDefault) {
+    body.default = payload.default ?? false;
   }
 
   return body;
@@ -208,6 +212,15 @@ export async function listSmallModels(
 
 export async function createSmallModel(payload: SmallModelSavePayload) {
   if (useMock) {
+    const shouldSetDefault =
+      payload.default || !mockSmallModels.some((item) => item.modelType === payload.modelType && item.default);
+    if (shouldSetDefault) {
+      mockSmallModels.forEach((item) => {
+        if (item.modelType === payload.modelType) {
+          item.default = false;
+        }
+      });
+    }
     mockSmallModels.unshift({
       modelId: `sm-${mockSmallModels.length + 1}`,
       modelName: payload.modelName,
@@ -224,13 +237,14 @@ export async function createSmallModel(payload: SmallModelSavePayload) {
       updateBy: "admin",
       updateTime: new Date().toISOString().slice(0, 19).replace("T", " "),
       operations: ["modify", "delete", "authorize"],
+      default: shouldSetDefault,
     });
     return { status: "ok" };
   }
 
   const response = await http.post<BackendStatusResponse>(
     `${API_PREFIX}/small-model/add`,
-    mapSavePayload(payload),
+    mapSavePayload(payload, true),
   );
 
   return response.data;

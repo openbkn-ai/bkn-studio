@@ -20,6 +20,7 @@ export type LlmFormValues = {
   maxModelLen: number;
   modelParameters?: number | null;
   quota?: boolean;
+  default?: boolean;
 };
 
 export type SmallModelFormValues = {
@@ -35,6 +36,7 @@ export type SmallModelFormValues = {
   batchSize?: number;
   maxTokens?: number;
   maxDocuments?: number;
+  default?: boolean;
 };
 
 export function llmModelToFormValues(record: LlmModel): LlmFormValues {
@@ -52,6 +54,7 @@ export function llmModelToFormValues(record: LlmModel): LlmFormValues {
     maxModelLen: record.maxModelLen ?? 0,
     modelParameters: record.modelParameters,
     quota: record.quota,
+    default: record.default,
   };
 }
 
@@ -88,6 +91,7 @@ export function buildLlmSavePayload(
     maxModelLen: values.maxModelLen,
     modelParameters,
     quota: values.quota,
+    default: values.default,
     modelConfig,
     change: !source || apiKeyChanged,
   };
@@ -109,6 +113,7 @@ export function smallModelToFormValues(record: SmallModel): SmallModelFormValues
     batchSize: record.batchSize,
     maxTokens: record.maxTokens,
     maxDocuments: record.maxDocuments,
+    default: record.default,
   };
 }
 
@@ -129,6 +134,7 @@ export function buildSmallModelSavePayload(
       batchSize: values.batchSize,
       maxTokens: values.maxTokens,
       maxDocuments: values.maxDocuments,
+      default: values.default,
       change: !source || apiKeyChanged,
     };
   }
@@ -142,6 +148,7 @@ export function buildSmallModelSavePayload(
     batchSize: values.batchSize,
     maxTokens: values.maxTokens,
     maxDocuments: values.maxDocuments,
+    default: values.default,
     modelConfig: {
       apiModel: values.apiModel?.trim() ?? "",
       apiUrl: values.apiUrl?.trim() ?? "",

@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -88,6 +89,7 @@ export function LlmModelFormModal({
       modelType: "llm",
       auth: "empty",
       quota: false,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -305,6 +307,22 @@ export function LlmModelFormModal({
                 : t("modelResources.models.modal.quotaTitleDescribe2Edit")}
             </div>
           </>
+        ) : null}
+        {modalMode === "create" ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.defaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (

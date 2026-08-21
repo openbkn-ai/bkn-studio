@@ -118,6 +118,8 @@ export const modelResourcesEnUS = {
           "- After disabling this feature, no quota configuration is required and all users can use the model without limits.",
         quotaTitleDescribe2Edit:
           "- After disabling this feature, all users can use the model without limits. Existing usage records are kept, but previous quota rules are cleared.",
+        defaultModel: "Set as default model",
+        defaultModelHint: "If this category has no default model, the new model is selected automatically.",
         enterPlaceholder: "Enter value",
         selectPlaceholder: "Select",
         apiModelPlaceholder: "Enter value (case sensitive)",

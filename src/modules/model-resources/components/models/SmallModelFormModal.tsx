@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, InputNumber, Modal, Select, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Modal, Select, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -82,6 +83,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
       auth: "empty",
       adapter: false,
       batchSize: 32,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -308,6 +310,22 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
           </>
+        ) : null}
+        {modalMode === "create" ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.defaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (
