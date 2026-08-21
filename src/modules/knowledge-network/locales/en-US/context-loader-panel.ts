@@ -182,6 +182,17 @@ export const contextLoaderPanelPart = {
       copiedCursor: "Cursor config copied",
       copiedGeneric: "mcp.json config copied",
     },
+    mcpSecurity: {
+      httpTitle: "HTTP connection detected",
+      httpDescription:
+        "The generated config includes --allow-http. Bearer keys are sent without transport encryption, so only use this on a trusted network.",
+      httpsTitle: "HTTPS certificate verification enabled",
+      httpsDescription: "The generated config verifies the server certificate by default.",
+      allowSelfSigned: "Allow a self-signed certificate",
+      insecureTitle: "Certificate verification disabled",
+      insecureDescription:
+        "Use only for a trusted self-signed certificate. The generated config adds NODE_TLS_REJECT_UNAUTHORIZED=0.",
+    },
     mcpSetup: {
       title: "Connect MCP (Claude Code / Cursor)",
       externalPrefix: "This guide is for ",

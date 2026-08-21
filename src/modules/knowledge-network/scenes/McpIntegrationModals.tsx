@@ -7,13 +7,18 @@
 
 import { ApiOutlined, CopyOutlined } from "@ant-design/icons";
 import { Modal, Spin, Tabs } from "antd";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
-import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig } from "@/modules/knowledge-network/services/mcp-client-config";
+import {
+  createClaudeCodeMcpCommand,
+  createMcpRemoteJsonConfig,
+  getMcpConnectionProtocol,
+} from "@/modules/knowledge-network/services/mcp-client-config";
 
 import styles from "./ExperienceScene.module.css";
+import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
 
@@ -88,9 +93,16 @@ export function McpSetupModal({
   copy: (text: string, label?: string) => void;
 }) {
   const { t } = useTranslation();
+  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
   const tk = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
-  const jsonConfig = createMcpRemoteJsonConfig(mcpUrl, tk);
-  const claudeCli = createClaudeCodeMcpCommand(mcpUrl, tk);
+  const protocol = getMcpConnectionProtocol(mcpUrl);
+  const options = { allowInsecureTls };
+  const jsonConfig = createMcpRemoteJsonConfig(mcpUrl, tk, options);
+  const claudeCli = createClaudeCodeMcpCommand(mcpUrl, tk, options);
+
+  useEffect(() => {
+    if (protocol === "http") setAllowInsecureTls(false);
+  }, [protocol]);
 
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={680} title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.title")}>
@@ -110,6 +122,11 @@ export function McpSetupModal({
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}<code>Authorization: Bearer</code>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
       </p>
+      <McpConnectionSecurity
+        protocol={protocol}
+        allowInsecureTls={allowInsecureTls}
+        onAllowInsecureTlsChange={setAllowInsecureTls}
+      />
       <Tabs
         defaultActiveKey="claude"
         items={[
