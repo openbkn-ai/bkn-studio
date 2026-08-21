@@ -29,6 +29,7 @@ import {
   withMcpTrailingSlash,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
+import { businessRequestExample, schemaFields, splitInputSchemaFields, type McpSchemaField } from "@/modules/knowledge-network/services/mcp-schema-doc";
 
 import styles from "./ExperienceScene.module.css";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
@@ -164,6 +165,59 @@ function CodeBlock({
   );
 }
 
+function formatSchemaValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
+function SchemaFieldTable({ fields }: { fields: McpSchemaField[] }) {
+  const { t } = useTranslation();
+  if (fields.length === 0) return <div className={styles.schemaNoFields}>{t("knowledgeNetwork.contextLoaderPanel.schema.noFields")}</div>;
+
+  return (
+    <div className={styles.schemaFieldTable} role="table">
+      <div className={styles.schemaFieldHeader} role="row">
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.field")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.type")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.requirement")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.description")}</span>
+      </div>
+      {fields.map((field) => (
+        <div key={field.path} className={styles.schemaFieldRow} role="row">
+          <code role="cell" className={styles.schemaFieldName} style={{ paddingInlineStart: `${field.depth * 16}px` }} title={field.path}>
+            {field.name}
+          </code>
+          <span role="cell" className={styles.schemaType}>{field.type}</span>
+          <span role="cell" className={field.required ? styles.schemaRequired : styles.schemaOptional}>
+            {field.required ? t("knowledgeNetwork.contextLoaderPanel.schema.required") : t("knowledgeNetwork.contextLoaderPanel.schema.optional")}
+          </span>
+          <span role="cell" className={styles.schemaDescription}>
+            {field.description ?? t("knowledgeNetwork.contextLoaderPanel.schema.noDescription")}
+            {field.defaultValue !== undefined ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.defaultValue", { value: formatSchemaValue(field.defaultValue) })}</em> : null}
+            {field.enumValues ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.enumValues", { values: field.enumValues.map(formatSchemaValue).join(", ") })}</em> : null}
+            {field.allowsAdditionalProperties ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.dynamicFields")}</em> : null}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SchemaExample({ code, onCopy }: { code: string; onCopy: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className={styles.schemaExample}>
+      <div className={styles.schemaExampleHead}>
+        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.businessExample")}</span>
+        <button type="button" className={styles.mini} onClick={onCopy}>
+          <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+        </button>
+      </div>
+      <pre className={styles.schemaExampleCode}><JsonHighlight text={code} /></pre>
+    </div>
+  );
+}
+
 function QueryParamRow({
   param,
   value,
@@ -246,6 +300,7 @@ export function ContextLoaderIntegrationPanel({
   const verb = mode === "mcp" ? "MCP" : "POST";
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
+  const [schemaTab, setSchemaTab] = useState<"docs" | "raw">("docs");
   const [queryParamsOpen, setQueryParamsOpen] = useState(true);
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
@@ -401,6 +456,9 @@ export function ContextLoaderIntegrationPanel({
   }
 
   const opDisplay = displayOf(op);
+  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [] };
+  const outputSchemaFields = currentTool ? schemaFields(currentTool.outputSchema) : [];
+  const schemaExample = businessRequestExample(bodyText);
 
   return (
     <div className={mainClassName}>
@@ -552,7 +610,7 @@ export function ContextLoaderIntegrationPanel({
             {isVerifyView ? (
               <div className={styles.reqActions}>
                 {mode === "mcp" ? (
-                  <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
+                  <button type="button" className={styles.docBtn} onClick={() => { setSchemaTab("docs"); setSchemaOpen(true); }}>
                     <FileTextOutlined /> {t("knowledgeNetwork.contextLoaderPanel.request.doc")}
                   </button>
                 ) : null}
@@ -766,24 +824,73 @@ export function ContextLoaderIntegrationPanel({
           ) : toolsError ? (
             <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.loadFailed", { error: toolsError })}</div>
           ) : currentTool ? (
-            <div className={styles.schemaGrid}>
-              <CodeBlock
-                title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
-                code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
-                json
-                onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))}
-              />
-              {currentTool.outputSchema !== undefined ? (
-                <CodeBlock
-                  title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
-                  code={JSON.stringify(currentTool.outputSchema, null, 2)}
-                  json
-                  onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))}
-                />
+            <>
+              <div className={styles.schemaTabs} role="tablist" aria-label={t("knowledgeNetwork.contextLoaderPanel.schema.view") }>
+                <button type="button" role="tab" aria-selected={schemaTab === "docs"} className={schemaTab === "docs" ? styles.schemaTabOn : styles.schemaTab} onClick={() => setSchemaTab("docs")}>
+                  {t("knowledgeNetwork.contextLoaderPanel.schema.docsTab")}
+                </button>
+                <button type="button" role="tab" aria-selected={schemaTab === "raw"} className={schemaTab === "raw" ? styles.schemaTabOn : styles.schemaTab} onClick={() => setSchemaTab("raw")}>
+                  {t("knowledgeNetwork.contextLoaderPanel.schema.rawTab")}
+                </button>
+              </div>
+              {schemaTab === "docs" ? (
+                <div className={styles.schemaDocs}>
+                  <section className={styles.schemaOverview}>
+                    <span>{t("knowledgeNetwork.contextLoaderPanel.schema.overview")}</span>
+                    <p>{currentTool.description || op.summary}</p>
+                  </section>
+                  <SchemaExample
+                    code={schemaExample}
+                    onCopy={() => onCopy(schemaExample, t("knowledgeNetwork.contextLoaderPanel.schema.copiedExample"))}
+                  />
+                  <section className={styles.schemaDocSection}>
+                    <div className={styles.schemaDocSectionHead}>
+                      <div>
+                        <h3>{t("knowledgeNetwork.contextLoaderPanel.schema.businessParams")}</h3>
+                        <p>{t("knowledgeNetwork.contextLoaderPanel.schema.businessParamsHint")}</p>
+                      </div>
+                    </div>
+                    <SchemaFieldTable fields={inputSchemaFields.businessFields} />
+                  </section>
+                  <details className={styles.schemaTrace}>
+                    <summary>
+                      <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceTitle")}</span>
+                      <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceBadge")}</span>
+                    </summary>
+                    <p>{t("knowledgeNetwork.contextLoaderPanel.schema.traceHint")}</p>
+                    <SchemaFieldTable fields={inputSchemaFields.traceFields} />
+                  </details>
+                  <section className={styles.schemaDocSection}>
+                    <div className={styles.schemaDocSectionHead}>
+                      <div>
+                        <h3>{t("knowledgeNetwork.contextLoaderPanel.schema.responseShape")}</h3>
+                        <p>{t("knowledgeNetwork.contextLoaderPanel.schema.responseShapeHint")}</p>
+                      </div>
+                    </div>
+                    {currentTool.outputSchema !== undefined ? <SchemaFieldTable fields={outputSchemaFields} /> : <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>}
+                  </section>
+                </div>
               ) : (
-                <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
+                <div className={styles.schemaGrid}>
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
+                    code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
+                    json
+                    onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))}
+                  />
+                  {currentTool.outputSchema !== undefined ? (
+                    <CodeBlock
+                      title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
+                      code={JSON.stringify(currentTool.outputSchema, null, 2)}
+                      json
+                      onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))}
+                    />
+                  ) : (
+                    <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           ) : toolDefs ? (
             <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.missingTool", { id: op.id })}</div>
           ) : (
