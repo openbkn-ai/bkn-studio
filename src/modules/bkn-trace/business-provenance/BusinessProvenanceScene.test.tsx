@@ -305,6 +305,16 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("做了什么")).not.toBeNull();
   }, 60_000);
 
+  it("keeps the full conversation question available when the table clamps it", async () => {
+    const question = "基于供应链本体知识网络查询长期积压订单并分析每个仓库的成因";
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-clamped", questionPreview: question, interactionCount: 1 }], total: 1 });
+
+    render(<BusinessProvenanceScene />);
+
+    const questionButton = await screen.findByRole("button", { name: question });
+    expect(questionButton.getAttribute("aria-label")).toBe(question);
+  });
+
   it("shows ambiguous BKN bindings as candidates instead of touched objects", async () => {
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "查询采购", interactionCount: 1, agentName: "Supply Agent" }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-ambiguous", questionPreview: "查询采购" }], total: 1 });

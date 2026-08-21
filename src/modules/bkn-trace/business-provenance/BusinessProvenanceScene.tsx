@@ -6,7 +6,7 @@
  */
 
 import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Input, Result, Segmented, Select, Spin, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Empty, Input, Result, Segmented, Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -149,6 +149,10 @@ function elementKindText(kind: string) {
 function conversationTitle(conversation: BusinessProvenanceConversation) {
   const agent = conversation.agentName?.trim();
   return agent ? bpText("conversation.titleWithAgent", { agent }) : bpText("conversation.title");
+}
+
+function ClampedText({ value }: { value: string }) {
+  return <Tooltip title={value}><span aria-label={value} className={styles.tableClamp}>{value}</span></Tooltip>;
 }
 
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
@@ -393,14 +397,17 @@ export function BusinessProvenanceScene() {
   }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork, conversationStatus]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
-    { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: 180, render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
-    { dataIndex: "questionPreview", title: bpText("columns.question"), width: 260, render: (value: string | undefined, item) => <Button type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{value || bpText("questionNotRecorded")}</Button> },
-    { dataIndex: "interactionCount", title: bpText("columns.interactions"), width: 90, align: "center", render: (value?: number) => value ?? 0 },
-    { dataIndex: "resultPreview", title: bpText("columns.result"), width: 260, ellipsis: true, render: (value?: string) => <span className={styles.tableClamp}>{value || "—"}</span> },
-    { dataIndex: "agentName", title: "Agent", width: 140, render: (value?: string) => <span className={styles.tableClamp}>{value || bpText("agentNotRecorded")}</span> },
-    { dataIndex: "status", title: bpText("columns.status"), width: 90, render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
-    { title: bpText("columns.evidence"), width: 120, render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
-    { dataIndex: "durationMs", title: bpText("columns.duration"), width: 90, render: (value?: number) => formatDuration(value) },
+    { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: "15%", render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
+    { dataIndex: "questionPreview", title: bpText("columns.question"), width: "20%", render: (value: string | undefined, item) => {
+      const text = value || bpText("questionNotRecorded");
+      return <Tooltip title={text}><Button aria-label={text} type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{text}</Button></Tooltip>;
+    } },
+    { dataIndex: "interactionCount", title: bpText("columns.interactions"), width: "8%", align: "center", render: (value?: number) => value ?? 0 },
+    { dataIndex: "resultPreview", title: bpText("columns.result"), width: "20%", render: (value?: string) => <ClampedText value={value || "—"} /> },
+    { dataIndex: "agentName", title: "Agent", width: "14%", render: (value?: string) => <ClampedText value={value || bpText("agentNotRecorded")} /> },
+    { dataIndex: "status", title: bpText("columns.status"), width: "8%", render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
+    { title: bpText("columns.evidence"), width: "9%", render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
+    { dataIndex: "durationMs", title: bpText("columns.duration"), width: "6%", render: (value?: number) => formatDuration(value) },
   ];
 
   if (conversationLoadState) {
@@ -434,7 +441,7 @@ export function BusinessProvenanceScene() {
         <Button type="primary" icon={<SearchOutlined />} onClick={submitConversationQuery}>{bpText("actions.query")}</Button>
         <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
       </div>
-      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
+      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
     </section>
   </main>;
 
