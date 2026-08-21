@@ -13,7 +13,6 @@ export const systemAdminEnUS = {
         authorize: "Authorize",
         create: "Create",
         create_system_agent: "Create system agent",
-        data_query: "Data query",
         delete: "Delete",
         display: "Display",
         edit: "Edit",

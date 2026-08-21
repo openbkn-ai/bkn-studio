@@ -113,7 +113,7 @@ let roles: AdminRole[] = [
     permissions: [
       grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
       grant("resource", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
-      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "data_query", "authorize", "task_manage"]),
+      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "query_data", "authorize", "task_manage"]),
       grant("small_model", "*", ["display", "create", "modify", "execute"]),
       grant("large_model", "*", ["display", "create", "modify", "execute"]),
       grant("operator", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
@@ -129,7 +129,7 @@ let roles: AdminRole[] = [
     permissions: [
       grant("catalog", "*", ["view_detail"]),
       grant("resource", "*", ["view_detail"]),
-      grant("knowledge_network", "*", ["view_detail", "data_query"]),
+      grant("knowledge_network", "*", ["view_detail", "query_data"]),
       grant("small_model", "*", ["display", "execute"]),
       grant("large_model", "*", ["display", "execute"]),
       grant("operator", "*", ["view", "execute"]),

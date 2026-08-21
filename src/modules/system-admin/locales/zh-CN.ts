@@ -13,7 +13,6 @@ export const systemAdminZhCN = {
         authorize: "授权",
         create: "新建",
         create_system_agent: "创建系统智能体",
-        data_query: "数据查询",
         delete: "删除",
         display: "展示",
         edit: "编辑",

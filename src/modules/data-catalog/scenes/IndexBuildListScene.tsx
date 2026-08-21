@@ -23,6 +23,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { collectVisiblePage, pagerTotal } from "@/modules/data-catalog/lib/visible-page";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
@@ -118,7 +119,11 @@ export function IndexBuildListScene() {
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<BuildTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
-  const [total, setTotal] = useState(0);
+  // Page cursors into the raw (unfiltered) space. offsets[n] starts page n+1; the backend filters
+  // after paging, so a page number alone cannot say where its rows begin (#977).
+  const [offsets, setOffsets] = useState<number[]>([0]);
+  const [hasMore, setHasMore] = useState(false);
+  const [rawTotal, setRawTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
@@ -160,30 +165,53 @@ export function IndexBuildListScene() {
     [listFilters, searchParams, setSearchParams],
   );
 
+  const readPage = useCallback(
+    async (startOffset: number) =>
+      collectVisiblePage(
+        (offset, limit) =>
+          listBuildTaskPage({ ...taskQuery, limit, offset }).then((result) => ({
+            items: result.items,
+            total: result.total,
+          })),
+        { pageSize, startOffset },
+      ),
+    [pageSize, taskQuery],
+  );
+
+  const applyPage = useCallback(
+    (result: Awaited<ReturnType<typeof readPage>>) => {
+      setTasks(result.items);
+      setRawTotal(result.rawTotal);
+      setHasMore(!result.exhausted);
+      setOffsets((current) => {
+        const next = [...current];
+        next[page] = result.nextOffset;
+        return next;
+      });
+    },
+    [page],
+  );
+
   const loadTasks = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const taskResult = await listBuildTaskPage(taskQuery);
-      setTasks(taskResult.items);
-      setTotal(taskResult.total);
+      applyPage(await readPage(offsets[page - 1] ?? 0));
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [taskQuery]);
+  }, [applyPage, offsets, page, readPage]);
 
   // Poll only tasks on the current page to prevent request volume growing with resource count.
   const refreshTasksSilently = useCallback(async () => {
     try {
-      const result = await listBuildTaskPage(taskQuery);
-      setTasks(result.items);
-      setTotal(result.total);
+      applyPage(await readPage(offsets[page - 1] ?? 0));
     } catch {
       // Retain existing data when polling fails and wait for the next cycle.
     }
-  }, [taskQuery]);
+  }, [applyPage, offsets, page, readPage]);
 
   useEffect(() => {
     void loadTasks();
@@ -662,9 +690,13 @@ export function IndexBuildListScene() {
           />
         ) : !loading && tasks.length === 0 ? (
           <EmptyStatePanel
-            description={t("dataCatalog.task.emptyDescription")}
+            description={
+              rawTotal > 0
+                ? t("dataCatalog.task.emptyUnauthorizedDescription")
+                : t("dataCatalog.task.emptyDescription")
+            }
             icon={<UnorderedListOutlined />}
-            title={t("dataCatalog.task.empty")}
+            title={rawTotal > 0 ? t("dataCatalog.task.emptyVisible") : t("dataCatalog.task.empty")}
           />
         ) : (
           <AppTable<BuildTask>
@@ -682,17 +714,24 @@ export function IndexBuildListScene() {
           />
         )}
       </TableSurface>
-      {total > 0 ? (
+      {tasks.length > 0 || page > 1 ? (
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
+            if (nextPageSize !== pageSize) {
+              setOffsets([0]);
+              setPage(1);
+              setPageSize(nextPageSize);
+              return;
+            }
+            // Only pages whose cursor is known can be entered; the pager offers no others.
+            setPage(Math.min(nextPage, offsets.length));
           }}
           pageSize={pageSize}
           showSizeChanger
-          showTotal={(count) => t("common.total", { total: count })}
-          total={total}
+          // The backend's count includes tasks this account cannot see, so it is not shown as a total.
+          showTotal={() => t("dataCatalog.task.visibleCount", { count: tasks.length })}
+          total={pagerTotal({ hasMore, loaded: tasks.length, page, pageSize })}
         />
       ) : null}
 

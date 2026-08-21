@@ -642,12 +642,15 @@ export async function deleteDataConnectDiscoverSchedule(id: string) {
 export async function listDataConnectDiscoverTasks(
   query: DataConnectDiscoverTaskListQuery,
 ): Promise<DataConnectDiscoverTaskListResult> {
+  const pageSize = query.pageSize ?? 10;
+  const limit = query.limit ?? pageSize;
+  const offset = query.offset ?? ((query.page ?? 1) - 1) * pageSize;
+
   if (useMock) {
     const filtered = filterTasks(mockTasks, query);
-    const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize).map(toTaskSummary),
+      items: filtered.slice(offset, offset + limit).map(toTaskSummary),
       total: filtered.length,
     });
   }
@@ -658,8 +661,8 @@ export async function listDataConnectDiscoverTasks(
       params: {
         catalog_id: query.catalogId,
         direction: query.direction ?? "desc",
-        limit: query.pageSize,
-        offset: (query.page - 1) * query.pageSize,
+        limit,
+        offset,
         schedule_id: query.scheduleId,
         sort: query.sort ?? "create_time",
         status: query.status,

@@ -19,7 +19,7 @@ describe("resource-catalog", () => {
     await i18n.changeLanguage("en-US");
 
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
-    expect(operationLabel("knowledge_network", "data_query")).toBe("Data query");
+    expect(operationLabel("knowledge_network", "query_data")).toBe("Query data");
     expect(operationsForType("catalog").map((item) => item.label)).toContain("View details");
   });
 

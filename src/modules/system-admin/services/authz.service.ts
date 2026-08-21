@@ -68,7 +68,7 @@ const seed = (
 };
 
 let grants: ObjectGrant[] = [
-  seed("knowledge_network", "kn-customer-360", "u-li", ["view_detail", "modify", "data_query"]),
+  seed("knowledge_network", "kn-customer-360", "u-li", ["view_detail", "modify", "query_data"]),
   seed("knowledge_network", "kn-finance-risk", "u-li", ["view_detail"]),
   seed("catalog", "cat-customer-mysql", "u-li", ["view_detail", "modify", "task_manage"]),
   seed("catalog", "cat-customer-mysql", "u-chen", ["view_detail"]),
