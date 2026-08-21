@@ -27,6 +27,12 @@ vi.mock("@/modules/execution-factory/services/tool.service", () => ({
   debugTool: vi.fn(),
 }));
 
+// ToolDebugPanel tests the request flow, not Monaco. Rendering the real JSON editor starts an
+// unrelated dynamic Monaco import that can outlive this test under Vitest's parallel workers.
+vi.mock("@/modules/execution-factory/components/JsonEditor", () => ({
+  JsonEditor: () => null,
+}));
+
 describe("ToolDebugPanel", () => {
   beforeAll(() => {
     Object.defineProperty(window, "matchMedia", {
