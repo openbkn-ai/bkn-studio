@@ -87,6 +87,12 @@ export function pagerTotal(options: {
   loaded: number;
   hasMore: boolean;
 }): number {
-  const before = (options.page - 1) * options.pageSize;
-  return before + options.loaded + (options.hasMore ? options.pageSize : 0);
+  const { hasMore, loaded, page, pageSize } = options;
+  const seen = (page - 1) * pageSize + loaded;
+  if (!hasMore) {
+    return seen;
+  }
+  // While the scan is open the next page must stay clickable even when this one came back empty —
+  // which is exactly what happens when the request budget runs out before the first visible row.
+  return Math.max(seen + pageSize, page * pageSize + 1);
 }

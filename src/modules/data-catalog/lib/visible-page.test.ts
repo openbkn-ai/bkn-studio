@@ -96,6 +96,14 @@ describe("pagerTotal", () => {
     expect(pagerTotal({ hasMore: true, loaded: 10, page: 2, pageSize: 10 })).toBe(30);
   });
 
+  it("keeps the next page clickable after a page that came back empty", () => {
+    // A spent request budget looks like this: nothing visible yet, more raw rows behind.
+    const total = pagerTotal({ hasMore: true, loaded: 0, page: 1, pageSize: 10 });
+
+    expect(total).toBeGreaterThan(10);
+    expect(Math.ceil(total / 10)).toBeGreaterThan(1);
+  });
+
   it("settles on what was actually seen once the list ends", () => {
     expect(pagerTotal({ hasMore: false, loaded: 3, page: 2, pageSize: 10 })).toBe(13);
   });

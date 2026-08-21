@@ -121,9 +121,11 @@ export function IndexBuildListScene() {
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<BuildTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
-  // Page cursors into the raw (unfiltered) space. offsets[n] starts page n+1; the backend filters
-  // after paging, so a page number alone cannot say where its rows begin (#977).
-  const [offsets, setOffsets] = useState<number[]>([0]);
+  // Page cursors into the raw (unfiltered) space: offsets[n] starts page n+1, because the backend
+  // filters after paging and a page number alone cannot say where its rows begin (#977). Held in a
+  // ref, not state — loading a page writes the next cursor, so as state it would re-create the
+  // loader that produced it and the effect below would load forever.
+  const offsetsRef = useRef<number[]>([0]);
   const [hasMore, setHasMore] = useState(false);
   const [rawTotal, setRawTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
@@ -166,6 +168,7 @@ export function IndexBuildListScene() {
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
       setSearchParams(next, { replace: true });
+      offsetsRef.current = [0];
       setPage(1);
     },
     [listFilters, searchParams, setSearchParams],
@@ -188,12 +191,9 @@ export function IndexBuildListScene() {
     (result: Awaited<ReturnType<typeof readPage>>) => {
       setTasks(result.items);
       setRawTotal(result.rawTotal);
+      // A spent request budget is not the end of the list: the next page stays reachable.
       setHasMore(!result.exhausted);
-      setOffsets((current) => {
-        const next = [...current];
-        next[page] = result.nextOffset;
-        return next;
-      });
+      offsetsRef.current[page] = result.nextOffset;
     },
     [page],
   );
@@ -202,22 +202,22 @@ export function IndexBuildListScene() {
     setLoading(true);
     setLoadError(null);
     try {
-      applyPage(await readPage(offsets[page - 1] ?? 0));
+      applyPage(await readPage(offsetsRef.current[page - 1] ?? 0));
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [applyPage, offsets, page, readPage]);
+  }, [applyPage, page, readPage]);
 
   // Poll only tasks on the current page to prevent request volume growing with resource count.
   const refreshTasksSilently = useCallback(async () => {
     try {
-      applyPage(await readPage(offsets[page - 1] ?? 0));
+      applyPage(await readPage(offsetsRef.current[page - 1] ?? 0));
     } catch {
       // Retain existing data when polling fails and wait for the next cycle.
     }
-  }, [applyPage, offsets, page, readPage]);
+  }, [applyPage, page, readPage]);
 
   useEffect(() => {
     void loadTasks();
@@ -723,18 +723,18 @@ export function IndexBuildListScene() {
           />
         )}
       </TableSurface>
-      {tasks.length > 0 || page > 1 ? (
+      {tasks.length > 0 || page > 1 || hasMore ? (
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
             if (nextPageSize !== pageSize) {
-              setOffsets([0]);
+              offsetsRef.current = [0];
               setPage(1);
               setPageSize(nextPageSize);
               return;
             }
-            // Only pages whose cursor is known can be entered; the pager offers no others.
-            setPage(Math.min(nextPage, offsets.length));
+            // Only a page whose cursor is known can be entered, which is this one or the next.
+            setPage(Math.min(nextPage, page + 1));
           }}
           pageSize={pageSize}
           showSizeChanger

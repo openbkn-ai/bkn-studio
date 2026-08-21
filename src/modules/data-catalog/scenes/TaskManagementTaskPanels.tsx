@@ -8,7 +8,7 @@
 import { DeleteOutlined, EllipsisOutlined, FilterOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Popover, Select, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -151,8 +151,10 @@ export function DiscoverTaskListPanel() {
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  // Cursors into the raw space: the backend filters each page after reading it (#977).
-  const [offsets, setOffsets] = useState<number[]>([0]);
+  // Cursors into the raw space: the backend filters each page after reading it (#977). Held in a
+  // ref, not state — loading a page writes the next cursor, so as state it would re-create the
+  // loader that produced it and the effect below would load forever.
+  const offsetsRef = useRef<number[]>([0]);
   const [hasMore, setHasMore] = useState(false);
   const [rawTotal, setRawTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -180,22 +182,19 @@ export function DiscoverTaskListPanel() {
             strategy,
             triggerType,
           }),
-        { pageSize, startOffset: offsets[page - 1] ?? 0 },
+        { pageSize, startOffset: offsetsRef.current[page - 1] ?? 0 },
       );
       setTasks(result.items);
       setRawTotal(result.rawTotal);
+      // A spent request budget is not the end of the list: the next page stays reachable.
       setHasMore(!result.exhausted);
-      setOffsets((current) => {
-        const next = [...current];
-        next[page] = result.nextOffset;
-        return next;
-      });
+      offsetsRef.current[page] = result.nextOffset;
     } catch (loadError) {
       setError(extractRequestErrorMessage(loadError));
     } finally {
       setLoading(false);
     }
-  }, [catalogId, direction, offsets, page, pageSize, sort, status, strategy, triggerType]);
+  }, [catalogId, direction, page, pageSize, sort, status, strategy, triggerType]);
 
   useEffect(() => void load(), [load]);
   useEffect(() => {
@@ -333,7 +332,7 @@ export function DiscoverTaskListPanel() {
       <Select allowClear className={styles.select} options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     </Space></div>
     <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
-    <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { setOffsets([0]); setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, offsets.length)); }} />
+    <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />
     {detailTaskId ? <DataConnectDiscoverTaskDrawer catalogs={catalogs} onClose={() => setDetailTaskId(null)} open schedules={schedules} taskId={detailTaskId} /> : null}
   </TaskPanel>;
 }
@@ -393,7 +392,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(10);
   // Cursors into the raw space: the backend filters each page after reading it (#977).
-  const [offsets, setOffsets] = useState<number[]>([0]); const [hasMore, setHasMore] = useState(false); const [rawTotal, setRawTotal] = useState(0);
+  const offsetsRef = useRef<number[]>([0]); const [hasMore, setHasMore] = useState(false); const [rawTotal, setRawTotal] = useState(0);
   const [scope, setScope] = useState<SemanticTask["scope"]>();
   const [catalogId, setCatalogId] = useState<string>();
   const [resourceId, setResourceId] = useState<string>();
@@ -414,12 +413,12 @@ export function SemanticUnderstandingTaskListPanel() {
     try {
       const result = await collectVisiblePage(
         (offset, limit) => listSemanticTasks(offset, limit, { scope, catalogId, resourceId, status, applyMode, applied, sort, direction }),
-        { pageSize, startOffset: offsets[page - 1] ?? 0 },
+        { pageSize, startOffset: offsetsRef.current[page - 1] ?? 0 },
       );
       setTasks(result.items); setRawTotal(result.rawTotal); setHasMore(!result.exhausted);
-      setOffsets((current) => { const next = [...current]; next[page] = result.nextOffset; return next; });
+      offsetsRef.current[page] = result.nextOffset;
     } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); }
-  }, [applied, applyMode, catalogId, direction, offsets, page, pageSize, resourceId, scope, sort, status]);
+  }, [applied, applyMode, catalogId, direction, page, pageSize, resourceId, scope, sort, status]);
   useEffect(() => void load(), [load]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -580,7 +579,7 @@ export function SemanticUnderstandingTaskListPanel() {
     <Select allowClear className={styles.select} disabled={scope === "catalog"} filterOption={false} onSearch={setResourceKeyword} options={resourceOptions} placeholder={t("dataCatalog.build.resource")} showSearch value={resourceId} onChange={(value) => { setResourceId(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />
     <Popover content={advancedFilters} trigger="click"><AppButton icon={<FilterOutlined />}>{moreFiltersLabel}</AppButton></Popover>
-  </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { setOffsets([0]); setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, offsets.length)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
+  </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }
 
 function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, rawTotal = 0, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; rawTotal?: number; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
@@ -596,5 +595,5 @@ function TaskTable<T extends { id: string }>({ error, loading, data, columns, em
 function Pagination({ page, pageSize, loaded, hasMore, onChange }: { page: number; pageSize: number; loaded: number; hasMore: boolean; onChange: (page: number, pageSize: number) => void }) {
   const { t } = useTranslation();
   // The backend's count includes tasks this account cannot see, so it is never shown as a total.
-  return loaded > 0 || page > 1 ? <TablePaginationBar current={page} pageSize={pageSize} total={pagerTotal({ hasMore, loaded, page, pageSize })} showSizeChanger showTotal={() => t("dataCatalog.task.visibleCount", { count: loaded })} onChange={onChange} /> : null;
+  return loaded > 0 || page > 1 || hasMore ? <TablePaginationBar current={page} pageSize={pageSize} total={pagerTotal({ hasMore, loaded, page, pageSize })} showSizeChanger showTotal={() => t("dataCatalog.task.visibleCount", { count: loaded })} onChange={onChange} /> : null;
 }
