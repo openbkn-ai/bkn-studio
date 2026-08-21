@@ -8,6 +8,7 @@
 .workspace {
 	background: #fff;
 	border: 1px solid #e2e7ef;
+	container-type: inline-size;
 	display: grid;
 	gap: 16px;
 	min-height: 100%;
@@ -74,19 +75,57 @@
 
 .auditTable {
   min-width: 0;
+  width: 100%;
+}
+
+.auditTable :global(.ant-table),
+.auditTable :global(.ant-table-container),
+.auditTable :global(.ant-table-content),
+.auditTable :global(table) {
+  max-width: 100%;
+  width: 100%;
 }
 
 .auditTable :global(.ant-table-cell) {
   overflow: hidden;
+  overflow-wrap: anywhere;
   vertical-align: top;
 }
 
 .clampedCell {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  cursor: help;
+  display: -webkit-box;
   min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
-.clampedCell :global(.ant-typography) {
-  margin: 0;
+.clampedCell .technicalId {
+  color: #8a97aa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+@container (max-width: 960px) {
+  .filterRowPrimary,
+  .filterRowSecondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 640px) {
+  .filterRowPrimary,
+  .filterRowSecondary {
+    grid-template-columns: 1fr;
+  }
+
+  .resultSummary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .loadMore {

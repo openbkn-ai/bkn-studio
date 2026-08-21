@@ -6,7 +6,7 @@
  */
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -117,35 +117,35 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   }, [associatedScope, load, t]);
 
   const columns = useMemo<ColumnsType<LogRecord>>(() => [
-    { dataIndex: "eventTime", key: "time", title: t("bknTrace.logs.columns.time"), width: 150, render: formatTime },
+    { dataIndex: "eventTime", key: "time", title: t("bknTrace.logs.columns.time"), width: "12%", render: formatTime },
     {
-      dataIndex: "businessModule", key: "businessModule", title: t("bknTrace.logs.columns.module"), width: 145,
+      dataIndex: "businessModule", key: "businessModule", title: t("bknTrace.logs.columns.module"), width: "12%",
       render: (value: string) => <Tag>{moduleLabel(value, t)}</Tag>,
     },
     {
-      dataIndex: "action", key: "action", title: t("bknTrace.logs.columns.action"), width: 190,
+      dataIndex: "action", key: "action", title: t("bknTrace.logs.columns.action"), width: "14%",
       render: (_value: string, record) => <ClampedText value={presentLogAction(record, t)} />,
     },
     {
-      dataIndex: "target", key: "target", title: t("bknTrace.logs.columns.target"), width: 230,
+      dataIndex: "target", key: "target", title: t("bknTrace.logs.columns.target"), width: "20%",
       render: (_target: LogRecord["target"], record) => {
         const value = presentLogTarget(record, t);
         return <ClampedText secondary={value.secondary} value={value.primary} />;
       },
     },
     {
-      dataIndex: "actor", key: "actor", title: t("bknTrace.logs.columns.actor"), width: 180,
+      dataIndex: "actor", key: "actor", title: t("bknTrace.logs.columns.actor"), width: "18%",
       render: (_actor: LogRecord["actor"], record) => {
         const value = presentLogActor(record, t, userDirectory);
         return <ClampedText secondary={value.secondary} value={value.primary} />;
       },
     },
     {
-      dataIndex: "outcome", key: "outcome", title: t("bknTrace.logs.columns.outcome"), width: 105,
+      dataIndex: "outcome", key: "outcome", title: t("bknTrace.logs.columns.outcome"), width: "9%",
       render: (value: AuditOutcome) => <Tag color={outcomeColor(value)}>{t(`bknTrace.logs.outcomes.${value}`)}</Tag>,
     },
     {
-      dataIndex: "sourceId", key: "source", title: t("bknTrace.logs.columns.source"), width: 145,
+      dataIndex: "sourceId", key: "source", title: t("bknTrace.logs.columns.source"), width: "15%",
       render: (value: string, record) => <ClampedText secondary={record.sourceChannel} value={value} />,
     },
   ], [t, userDirectory]);
@@ -231,10 +231,13 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 }
 
 function ClampedText({ secondary, value }: { secondary?: string; value: string }) {
-  return <div className={styles.clampedCell}>
-    <Typography.Paragraph ellipsis={{ rows: 2, tooltip: value }}>{value}</Typography.Paragraph>
-    {secondary && secondary !== value ? <Typography.Text className={styles.technicalId}>{secondary}</Typography.Text> : null}
-  </div>;
+  const fullText = secondary && secondary !== value ? `${value}\n${secondary}` : value;
+  return <Tooltip title={fullText}>
+    <span aria-label={fullText} className={styles.clampedCell}>
+      <span>{value}</span>
+      {secondary && secondary !== value ? <span className={styles.technicalId}> · {secondary}</span> : null}
+    </span>
+  </Tooltip>;
 }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {

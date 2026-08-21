@@ -130,8 +130,10 @@ describe("observability workspace scenes", () => {
     expect(dayjs(query?.timeTo).diff(dayjs(query?.timeFrom), "day")).toBe(7);
     expect(await screen.findByText("bknTrace.logs.auditActions.startAgentConversation")).not.toBeNull();
     expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
-    expect(screen.getByText("供应链管理员")).not.toBeNull();
-    expect(screen.getByText("通过 API Key")).not.toBeNull();
+    expect(screen.getByText("供应链分析助手 的业务会话").closest("[aria-label]")).not.toBeNull();
+    const actor = screen.getByText("供应链管理员").closest("[aria-label]");
+    expect(actor).not.toBeNull();
+    expect(actor?.getAttribute("aria-label")).toContain("通过 API Key");
     expect(screen.getByText("bknTrace.logs.partialWarning")).not.toBeNull();
     expect(screen.getByText("bknTrace.logs.modules.domain_knowledge_network")).not.toBeNull();
     for (const column of ["time", "module", "action", "target", "actor", "outcome", "source"]) {
