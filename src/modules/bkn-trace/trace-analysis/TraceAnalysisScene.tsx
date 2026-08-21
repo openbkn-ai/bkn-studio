@@ -207,7 +207,7 @@ export function TraceAnalysisScene() {
     <section className={`${styles.workspace} ${styles.pageSurface}`}>
       <header className={styles.pageHeader}>
         <div>
-          <Typography.Title level={2}>{t("bknTrace.traceAnalysis.title")}</Typography.Title>
+          <Typography.Title level={3}>{t("bknTrace.traceAnalysis.title")}</Typography.Title>
           <Typography.Paragraph type="secondary">{t("bknTrace.traceWorkspace.description")}</Typography.Paragraph>
         </div>
         <Button icon={<ReloadOutlined />} onClick={() => void loadList(query, page)}>{t("bknTrace.actions.refresh")}</Button>
