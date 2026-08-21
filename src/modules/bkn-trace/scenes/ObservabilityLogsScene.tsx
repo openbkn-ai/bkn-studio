@@ -70,6 +70,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     if (!canSearchLogs(access, associatedScope)) return;
     setLoading(true);
     setError(undefined);
+    setResult(undefined);
     try {
       const query: LogListQuery = {
         page: nextPage,
@@ -209,15 +210,17 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         </div>
       ) : null}
 
-      <div className={styles.resultSummary}>
-        <Typography.Text>{t("bknTrace.logs.resultCount", { count: result?.count.value ?? 0 })}</Typography.Text>
-        {result?.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
-      </div>
+      {!error && result ? <>
+        <div className={styles.resultSummary}>
+          <Typography.Text>{t("bknTrace.logs.resultCount", { count: result.count.value ?? 0 })}</Typography.Text>
+          {result.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
+        </div>
 
-      <Spin spinning={loading}>
-        <Table className={styles.auditTable} columns={columns} dataSource={result?.data ?? []} locale={{ emptyText: t(associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="eventId" tableLayout="fixed" />
-      </Spin>
-      {result?.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
+        <Spin spinning={loading}>
+          <Table className={styles.auditTable} columns={columns} dataSource={result.data} locale={{ emptyText: t(associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="eventId" tableLayout="fixed" />
+        </Spin>
+        {result.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
+      </> : null}
       <LogDetailDrawer logId={selectedEventId} onClose={() => setSelectedEventId(undefined)} />
     </div>
   );
@@ -272,7 +275,7 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (scope.conversationId) parameters.set("conversation_id", scope.conversationId);
   if (scope.requestId) parameters.set("request_id", scope.requestId);
   if (scope.targetId) parameters.set("target_id", scope.targetId);
-  if (scope.targetType) parameters.set("target_type", scope.targetType === "users" ? "user" : scope.targetType);
+  if (scope.targetType) parameters.set("target_type", scope.targetType);
   if (scope.traceId) parameters.set("trace_id", scope.traceId);
   if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
@@ -288,7 +291,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 function AssociatedScopeTag({ scope, t, userDirectory }: { scope: AssociatedLogScope; t: Translate; userDirectory: Map<string, string> }) {
   if (scope.targetId) {
-    const displayType = scope.targetType === "users" ? "user" : "resource";
+    const displayType = scope.targetType === "user" ? "user" : "resource";
     return <Tag color="blue"><span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span> <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span></Tag>;
   }
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
