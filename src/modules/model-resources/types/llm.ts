@@ -65,6 +65,7 @@ export type LlmSavePayload = {
   maxModelLen: number;
   modelParameters?: number;
   quota?: boolean;
+  default?: boolean;
   modelConfig: LlmModelConfig;
   change?: boolean;
 };

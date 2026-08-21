@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,7 @@ import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels
 import modalStyles from "./LlmModelFormModal.module.css";
 
 type LlmModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
@@ -37,6 +39,7 @@ type LlmModelFormModalProps = {
 };
 
 export function LlmModelFormModal({
+  canSetDefault = false,
   mode,
   onClose,
   open,
@@ -88,6 +91,7 @@ export function LlmModelFormModal({
       modelType: "llm",
       auth: "empty",
       quota: false,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -305,6 +309,22 @@ export function LlmModelFormModal({
                 : t("modelResources.models.modal.quotaTitleDescribe2Edit")}
             </div>
           </>
+        ) : null}
+        {modalMode === "create" && canSetDefault ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.llmDefaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (

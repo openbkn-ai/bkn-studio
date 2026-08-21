@@ -64,6 +64,7 @@ export function SmallModelListPanel() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [canCreate, setCanCreate] = useState(false);
+  const [canSetDefaultOnCreate, setCanSetDefaultOnCreate] = useState(false);
   const [activeRecord, setActiveRecord] = useState<SmallModel | null>(null);
   const [formMode, setFormMode] = useState<"create" | "edit" | "view">("create");
   const [formOpen, setFormOpen] = useState(false);
@@ -104,6 +105,7 @@ export function SmallModelListPanel() {
   useEffect(() => {
     void getSmallModelRolePermissions().then((operations) => {
       setCanCreate(operations.includes("create"));
+      setCanSetDefaultOnCreate(operations.includes("modify"));
     });
   }, []);
 
@@ -496,6 +498,7 @@ export function SmallModelListPanel() {
       />
 
       <SmallModelFormModal
+        canSetDefault={canSetDefaultOnCreate}
         mode={formMode}
         onClose={(refresh) => {
           setFormOpen(false);

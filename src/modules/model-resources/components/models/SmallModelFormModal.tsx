@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, InputNumber, Modal, Select, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Modal, Select, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -28,13 +29,20 @@ import {
 import { AdaptationCodeEditor } from "./AdaptationCodeEditor";
 
 type SmallModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
   record: SmallModel | null;
 };
 
-export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelFormModalProps) {
+export function SmallModelFormModal({
+  canSetDefault = false,
+  mode,
+  onClose,
+  open,
+  record,
+}: SmallModelFormModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<SmallModelFormValues>();
@@ -82,6 +90,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
       auth: "empty",
       adapter: false,
       batchSize: 32,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -308,6 +317,22 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
           </>
+        ) : null}
+        {modalMode === "create" && canSetDefault ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.smallDefaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (

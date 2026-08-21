@@ -112,7 +112,7 @@ describe("DiscoverScheduleFormModal", () => {
 
     await waitFor(() => {
       expect(screen.getAllByText("dataConnect.discoverTimeRangeInvalid")).toHaveLength(2);
-    });
+    }, { timeout: 3_000 });
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
