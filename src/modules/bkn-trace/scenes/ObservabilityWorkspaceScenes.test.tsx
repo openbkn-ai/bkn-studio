@@ -140,7 +140,7 @@ describe("observability workspace scenes", () => {
   });
 
   it("从用户管理审计下钻按操作者筛选并展示异常来源原因", async () => {
-    window.history.replaceState({}, "", "/system/audit?actor_id=user-a");
+    window.history.replaceState({}, "", "/system/audit?actor_id=user-a&actor_match=exact");
     render(<ObservabilityLogsScene mode="audit" />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
@@ -149,6 +149,25 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
     expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.source_query_failed") ?? false)).not.toHaveLength(0);
+  });
+
+  it("将旧链接中的 actor_id 保持为自由文本操作者筛选", async () => {
+    window.history.replaceState({}, "", "/observability/logs?actor_id=%E5%BC%A0%E4%B8%89");
+    render(<ObservabilityLogsScene />);
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query).toMatchObject({ actorQuery: "张三" });
+    expect(query).not.toHaveProperty("actorId");
+    expect(screen.getByDisplayValue("张三")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.associatedTarget.user")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.reset" }));
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    const [resetQuery] = vi.mocked(listLogs).mock.calls[1] ?? [];
+    expect(resetQuery).not.toHaveProperty("actorId");
+    expect(resetQuery).not.toHaveProperty("actorQuery");
+    expect(new URLSearchParams(window.location.search).has("actor_id")).toBe(false);
   });
 
   it("将可用来源标为正常并为未知失败原因提供本地化兜底", async () => {
@@ -241,7 +260,7 @@ describe("observability workspace scenes", () => {
 
     await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
     expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
-    expect(document.querySelector(".ant-spin-spinning")).not.toBeNull();
+    await waitFor(() => expect(document.querySelector(".ant-spin-spinning")).not.toBeNull());
   });
 
   it("总数不可知时不显示为零条结果", async () => {

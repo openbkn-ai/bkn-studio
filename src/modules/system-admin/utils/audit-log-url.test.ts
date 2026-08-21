@@ -11,6 +11,6 @@ import { buildAuditLogHref } from "./audit-log-url";
 
 describe("buildAuditLogHref", () => {
   it("filters by the selected user as the audit actor without putting mutable display data in the URL", () => {
-    expect(buildAuditLogHref("user-a")).toBe("/system/audit?actor_id=user-a");
+    expect(buildAuditLogHref("user-a")).toBe("/system/audit?actor_id=user-a&actor_match=exact");
   });
 });
