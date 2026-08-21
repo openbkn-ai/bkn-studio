@@ -48,6 +48,7 @@ export const bknTraceRoutes: RouteObject[] = [
       <RequireEdition
         capability={CAPABILITIES.BUSINESS_PROVENANCE}
         minEdition="enterprise"
+        mountLockedContent={false}
       >
         {withRouteLoading(<BusinessProvenancePage />)}
       </RequireEdition>

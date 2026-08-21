@@ -6,6 +6,7 @@
  */
 
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -57,6 +58,13 @@ function renderGuard(capability: string, minEdition: "professional" | "enterpris
   );
 }
 
+const RequireEditionWithPreviewControl = RequireEdition as unknown as (props: {
+  capability: string;
+  children: ReactNode;
+  minEdition: "professional" | "enterprise";
+  mountLockedContent?: boolean;
+}) => ReactNode;
+
 describe("RequireEdition · 快照缺席", () => {
   // 空白内容区说不清是加载中、还是端点根本不存在,用户只能去查路由配置。
   it("加载中给骨架,不留白", () => {
@@ -106,6 +114,23 @@ describe("RequireEdition · 核实不了镜像的能力以证书为准", () => {
     renderGuard(CAPABILITIES.BUSINESS_PROVENANCE, "enterprise");
 
     expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
+  });
+
+  it("锁定页可选择不挂载实时内容", () => {
+    contextState.snapshot = entitlement({});
+
+    render(
+      <RequireEditionWithPreviewControl
+        capability={CAPABILITIES.BUSINESS_PROVENANCE}
+        minEdition="enterprise"
+        mountLockedContent={false}
+      >
+        <p>protected live content</p>
+      </RequireEditionWithPreviewControl>,
+    );
+
+    expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
+    expect(screen.queryByText("protected live content")).toBeNull();
   });
 });
 
