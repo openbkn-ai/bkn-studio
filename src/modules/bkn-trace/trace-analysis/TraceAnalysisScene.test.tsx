@@ -154,6 +154,12 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     });
   });
 
+  it("uses the standard level-three page title", async () => {
+    render(<TraceAnalysisScene />);
+
+    expect(await screen.findByRole("heading", { level: 3, name: "bknTrace.traceAnalysis.title" })).not.toBeNull();
+  });
+
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {
     const { container } = render(<TraceAnalysisScene />);
     expect(container.firstElementChild?.className).toContain("pageSurface");

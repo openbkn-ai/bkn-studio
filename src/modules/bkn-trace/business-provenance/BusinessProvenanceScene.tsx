@@ -428,7 +428,7 @@ export function BusinessProvenanceScene() {
 
   if (!selectedConversation) return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>{bpText("list.title")}</Typography.Title><Typography.Text>{bpText("list.description")}</Typography.Text></div>
+      <div><Typography.Title level={3}>{bpText("list.title")}</Typography.Title><Typography.Text>{bpText("list.description")}</Typography.Text></div>
       <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.listCard}>
@@ -447,7 +447,7 @@ export function BusinessProvenanceScene() {
 
   return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
+      <div><Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
       <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.workspace}>

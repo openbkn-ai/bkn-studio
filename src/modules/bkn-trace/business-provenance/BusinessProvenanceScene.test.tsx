@@ -117,6 +117,14 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByRole("button", { name: /重\s*试/ })).not.toBeNull();
   });
 
+  it("uses the standard level-three page title", async () => {
+    getConversations.mockResolvedValue({ entries: [], total: 0 });
+
+    render(<BusinessProvenanceScene />);
+
+    expect(await screen.findByRole("heading", { level: 3, name: "业务溯源" })).not.toBeNull();
+  });
+
   it("submits supported conversation filters only when the user queries", async () => {
     getConversations.mockResolvedValue({ entries: [], total: 0 });
 
