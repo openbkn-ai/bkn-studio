@@ -8,7 +8,6 @@
 import { Form, Input, InputNumber, Select, Switch } from "antd";
 import type { Rule } from "antd/es/form";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -86,10 +85,7 @@ export function DataConnectConfigForm({
   );
   const connectorConfig = Form.useWatch<Record<string, unknown>>("connectorConfig");
 
-  const groupedFields = useMemo(
-    () => groupConnectorFields(selectedConnectorType),
-    [selectedConnectorType],
-  );
+  const groupedFields = groupConnectorFields(selectedConnectorType);
 
   const templateMeta = selectedConnectorType
     ? getConnectorTemplateMeta(selectedConnectorType)
