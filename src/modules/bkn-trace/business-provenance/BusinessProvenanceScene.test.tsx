@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -245,6 +248,15 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 
     expect(await screen.findByText("本轮未记录调用事实")).not.toBeNull();
     expect(screen.getByText("本轮输入（原文）")).not.toBeNull();
+  });
+
+  it("defines compact typography for the analysis workspace", () => {
+    const styles = readFileSync(resolve(process.cwd(), "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css"), "utf8");
+
+    expect(styles).toContain(".conversationHeading h1{font-size:18px}");
+    expect(styles).toContain(".roundSidebarTitle h3,.operationCard h3{font-size:16px}");
+    expect(styles).toContain(".roundList strong,.interactionSummary h2,.sourceTexts p,.operationCard p{font-size:14px}");
+    expect(styles).not.toContain(".conversationHeading h1{width:100%;font-size:25px}");
   });
 
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
