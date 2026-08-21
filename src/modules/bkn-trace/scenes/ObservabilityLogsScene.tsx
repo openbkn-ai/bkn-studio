@@ -36,6 +36,7 @@ const BUSINESS_MODULES: BusinessModule[] = [
 
 const AUDIT_OUTCOMES: AuditOutcome[] = ["success", "failure", "denied", "canceled", "unknown"];
 const SYSTEM_AUDIT_CATEGORIES: LogCategory[] = ["audit.admin"];
+const EXACT_ACTOR_MATCH = "exact";
 
 type ObservabilityLogsSceneProps = {
   mode?: "audit" | "logs";
@@ -81,6 +82,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
         ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
+        ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
         ...(associatedScope.targetId ? { targetId: associatedScope.targetId } : {}),
@@ -175,7 +177,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   }
 
-  const associated = associatedScope.conversationId || associatedScope.traceId || associatedScope.requestId || associatedScope.targetId;
+  const associated = associatedScope.actorId || associatedScope.conversationId || associatedScope.traceId || associatedScope.requestId || associatedScope.targetId;
   return (
     <div className={styles.workspace}>
       <header className={styles.header}>
@@ -248,9 +250,10 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const timeFrom = dayjs(parameters.get("time_from"));
   const timeTo = dayjs(parameters.get("time_to"));
   const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
+  const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
     ...defaults,
-    actorId: parameters.get("actor_id") ?? "",
+    actorId: parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
     query: parameters.get("q") ?? "",
@@ -258,12 +261,14 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   };
 }
 
-type AssociatedLogScope = { conversationId: string; requestId: string; targetId: string; targetType: string; traceId: string };
+type AssociatedLogScope = { actorId: string; conversationId: string; requestId: string; targetId: string; targetType: string; traceId: string };
 
 function readAssociatedLogScope(): AssociatedLogScope {
   const parameters = new URLSearchParams(window.location.search);
   const target = readAuditLogDrilldown(parameters);
+  const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
+    actorId: exactActorMatch ? parameters.get("actor_id")?.trim() ?? "" : "",
     conversationId: parameters.get("conversation_id") ?? "",
     requestId: parameters.get("request_id") ?? "",
     targetId: target.targetId,
@@ -279,9 +284,13 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (scope.targetId) parameters.set("target_id", scope.targetId);
   if (scope.targetType) parameters.set("target_type", scope.targetType);
   if (scope.traceId) parameters.set("trace_id", scope.traceId);
+  if (scope.actorId) {
+    parameters.set("actor_id", scope.actorId);
+    parameters.set("actor_match", EXACT_ACTOR_MATCH);
+  }
   if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
-  if (filters.actorId.trim()) parameters.set("actor_id", filters.actorId.trim());
+  if (filters.actorId.trim()) parameters.set("actor", filters.actorId.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
   parameters.set("time_from", filters.timeRange[0].toISOString());
   parameters.set("time_to", filters.timeRange[1].toISOString());
@@ -295,6 +304,9 @@ function AssociatedScopeTag({ scope, t, userDirectory }: { scope: AssociatedLogS
   if (scope.targetId) {
     const displayType = scope.targetType === "user" ? "user" : "resource";
     return <Tag color="blue"><span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span> <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span></Tag>;
+  }
+  if (scope.actorId) {
+    return <Tag color="blue"><span>{t("bknTrace.logs.associatedTarget.user")}</span> <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span></Tag>;
   }
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
 }

@@ -7,6 +7,7 @@
 
 export const AUDIT_RESOURCE_PARAM = "target_type";
 export const AUDIT_ACTOR_PARAM = "actor_id";
+export const AUDIT_ACTOR_MATCH_PARAM = "actor_match";
 export const AUDIT_TARGET_PARAM = "target_id";
 export const AUDIT_FAILED_PARAM = "failed";
 export const AUDIT_FROM_PARAM = "from";
@@ -111,9 +112,9 @@ export function applyAuditLogFilters(
   return next;
 }
 
-export function buildAuditLogHref(targetId: string, resource = "user") {
+export function buildAuditLogHref(actorId: string) {
   const params = new URLSearchParams();
-  params.set(AUDIT_TARGET_PARAM, targetId);
-  params.set(AUDIT_RESOURCE_PARAM, resource);
+  params.set(AUDIT_ACTOR_PARAM, actorId);
+  params.set(AUDIT_ACTOR_MATCH_PARAM, "exact");
   return `/system/audit?${params.toString()}`;
 }

@@ -429,7 +429,7 @@ export function UserManagementScene() {
             return;
           }
           if (key === "auditLogs") {
-            void navigate(buildAuditLogHref(user.id, "user"));
+            void navigate(buildAuditLogHref(user.id));
           }
         },
       };
