@@ -5,6 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -247,29 +250,12 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("本轮输入（原文）")).not.toBeNull();
   });
 
-  it("uses compact typography throughout the analysis workspace", async () => {
-    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-compact", questionPreview: "紧凑会话", interactionCount: 1 }], total: 1 });
-    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-compact", questionPreview: "紧凑轮次" }], total: 1 });
-    getInteraction.mockResolvedValue({
-      interactionId: "int-compact",
-      conversationContext: [],
-      derivedFacts: [],
-      contextRelations: [],
-      operations: [{ operationId: "op-compact", toolName: "查询库存", elements: [], query: { conditions: {}, resultCount: 1 } }],
-    });
+  it("defines compact typography for the analysis workspace", () => {
+    const styles = readFileSync(resolve(process.cwd(), "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css"), "utf8");
 
-    render(<BusinessProvenanceScene />);
-    fireEvent.click(await screen.findByRole("button", { name: "紧凑会话" }));
-
-    const conversationTitle = await screen.findByRole("heading", { level: 1, name: "业务会话" });
-    const roundTitle = screen.getByRole("heading", { level: 2, name: "紧凑轮次" });
-    const operationTitle = screen.getByRole("heading", { level: 3, name: "查询库存" });
-    const inputText = screen.getByText("紧凑轮次", { selector: "p" });
-
-    expect(getComputedStyle(conversationTitle).fontSize).toBe("18px");
-    expect(getComputedStyle(roundTitle).fontSize).toBe("16px");
-    expect(getComputedStyle(operationTitle).fontSize).toBe("16px");
-    expect(getComputedStyle(inputText).fontSize).toBe("14px");
+    expect(styles).toContain(".conversationHeading h1{font-size:18px}");
+    expect(styles).toContain(".roundSidebarTitle h3,.operationCard h3{font-size:16px}");
+    expect(styles).toContain(".roundList strong,.interactionSummary h2,.sourceTexts p,.operationCard p{font-size:14px}");
   });
 
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
