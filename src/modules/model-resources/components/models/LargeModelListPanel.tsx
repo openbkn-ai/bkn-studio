@@ -77,6 +77,7 @@ export function LargeModelListPanel() {
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
   const [canCreate, setCanCreate] = useState(false);
+  const [canSetDefaultOnCreate, setCanSetDefaultOnCreate] = useState(false);
   const userPermissions = runtimeConfig.currentUser.permissions;
   // `is_admin` is held by all three administrator roles, not only the resource-wildcard
   // super administrator. Resource operations must therefore come from effective grants.
@@ -140,6 +141,7 @@ export function LargeModelListPanel() {
   useEffect(() => {
     void getLlmRolePermissions().then((operations) => {
       setCanCreate(operations.includes("create"));
+      setCanSetDefaultOnCreate(operations.includes("modify"));
     });
   }, []);
 
@@ -644,6 +646,7 @@ export function LargeModelListPanel() {
       />
 
       <LlmModelFormModal
+        canSetDefault={canSetDefaultOnCreate}
         mode={formMode}
         onClose={(refresh) => {
           setFormOpen(false);

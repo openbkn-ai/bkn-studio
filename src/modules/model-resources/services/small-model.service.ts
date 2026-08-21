@@ -371,7 +371,7 @@ export async function setDefaultSmallModel(modelId: string, asDefault = true) {
 
 export async function getSmallModelRolePermissions(): Promise<string[]> {
   if (useMock) {
-    return ["create"];
+    return ["create", "modify"];
   }
 
   try {

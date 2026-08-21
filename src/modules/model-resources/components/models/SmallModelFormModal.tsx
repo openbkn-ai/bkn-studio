@@ -29,13 +29,20 @@ import {
 import { AdaptationCodeEditor } from "./AdaptationCodeEditor";
 
 type SmallModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
   record: SmallModel | null;
 };
 
-export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelFormModalProps) {
+export function SmallModelFormModal({
+  canSetDefault = false,
+  mode,
+  onClose,
+  open,
+  record,
+}: SmallModelFormModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<SmallModelFormValues>();
@@ -311,12 +318,12 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
             </Form.Item>
           </>
         ) : null}
-        {modalMode === "create" ? (
+        {modalMode === "create" && canSetDefault ? (
           <Form.Item
             label={
               <span>
                 {t("modelResources.models.modal.defaultModel")}
-                <Tooltip title={t("modelResources.models.modal.defaultModelHint")}>
+                <Tooltip title={t("modelResources.models.modal.smallDefaultModelHint")}>
                   <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
                 </Tooltip>
               </span>

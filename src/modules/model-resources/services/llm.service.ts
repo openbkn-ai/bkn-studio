@@ -305,7 +305,7 @@ export async function getLlmItemPermissions(
 
 export async function getLlmRolePermissions(): Promise<string[]> {
   if (useMock) {
-    return ["create"];
+    return ["create", "modify"];
   }
 
   try {

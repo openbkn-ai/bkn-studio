@@ -117,7 +117,8 @@ export const modelResourcesZhCN = {
         quotaTitleDescribe2Edit:
           "- 关闭功能后，无需配置使用额度，所有用户均可无限制使用，且系统会自动保留用户之前用掉的额度记录，但会把之前设置的“额度规则”清零。",
         defaultModel: "设为默认模型",
-        defaultModelHint: "当前类别尚未设置默认模型时，系统会自动将新模型设为默认。",
+        llmDefaultModelHint: "未设置默认大模型时会自动设为默认；开启后将替换当前默认大模型。",
+        smallDefaultModelHint: "当前类型未设置默认模型时会自动设为默认；开启后将替换同类型默认模型。",
         enterPlaceholder: "请输入",
         selectPlaceholder: "请选择",
         apiModelPlaceholder: "请输入（填写字段时，请注意区分大小写字母）",

@@ -30,6 +30,7 @@ import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels
 import modalStyles from "./LlmModelFormModal.module.css";
 
 type LlmModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
@@ -38,6 +39,7 @@ type LlmModelFormModalProps = {
 };
 
 export function LlmModelFormModal({
+  canSetDefault = false,
   mode,
   onClose,
   open,
@@ -308,12 +310,12 @@ export function LlmModelFormModal({
             </div>
           </>
         ) : null}
-        {modalMode === "create" ? (
+        {modalMode === "create" && canSetDefault ? (
           <Form.Item
             label={
               <span>
                 {t("modelResources.models.modal.defaultModel")}
-                <Tooltip title={t("modelResources.models.modal.defaultModelHint")}>
+                <Tooltip title={t("modelResources.models.modal.llmDefaultModelHint")}>
                   <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
                 </Tooltip>
               </span>
