@@ -111,9 +111,8 @@ export function applyAuditLogFilters(
   return next;
 }
 
-export function buildAuditLogHref(targetId: string, resource = "user") {
+export function buildAuditLogHref(actorId: string) {
   const params = new URLSearchParams();
-  params.set(AUDIT_TARGET_PARAM, targetId);
-  params.set(AUDIT_RESOURCE_PARAM, resource);
+  params.set(AUDIT_ACTOR_PARAM, actorId);
   return `/system/audit?${params.toString()}`;
 }

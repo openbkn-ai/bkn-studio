@@ -139,13 +139,13 @@ describe("observability workspace scenes", () => {
     }
   });
 
-  it("从用户管理审计下钻规范化目标并展示异常来源原因", async () => {
-    window.history.replaceState({}, "", "/system/audit?target_id=user-a&target_type=users&target_name=Administrator");
+  it("从用户管理审计下钻按操作者筛选并展示异常来源原因", async () => {
+    window.history.replaceState({}, "", "/system/audit?actor_id=user-a");
     render(<ObservabilityLogsScene mode="audit" />);
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
-    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "user" });
+    expect(query).toMatchObject({ actorId: "user-a", categories: ["audit.admin"] });
     expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
     expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.source_query_failed") ?? false)).not.toHaveLength(0);
