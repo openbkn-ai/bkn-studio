@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
@@ -284,84 +285,86 @@ export function CatalogTreePanel({
             {isBuiltinLogicalCatalog(catalog) ? (
               <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
             ) : dataCatalogCreationAvailable ? (
-              <button
-                aria-label={t("common.delete")}
-                className={styles.treeActionBtnVisible}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  void (async () => {
-                    let impact;
-                    try {
-                      impact = await previewCatalogDeletion(catalog.id);
-                    } catch (error) {
-                      void message.error(extractRequestErrorMessage(error));
-                      return;
-                    }
+              <PermissionGate permissions="catalog:delete">
+                <button
+                  aria-label={t("common.delete")}
+                  className={styles.treeActionBtnVisible}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void (async () => {
+                      let impact;
+                      try {
+                        impact = await previewCatalogDeletion(catalog.id);
+                      } catch (error) {
+                        void message.error(extractRequestErrorMessage(error));
+                        return;
+                      }
 
-                    if (!impact.canDelete) {
-                      void modal.warning({
-                        content: (
-                          <div>
+                      if (!impact.canDelete) {
+                        void modal.warning({
+                          content: (
                             <div>
-                              {t("dataCatalog.tree.deleteLogicalBlockedDescription")}
+                              <div>
+                                {t("dataCatalog.tree.deleteLogicalBlockedDescription")}
+                              </div>
+                              <ul>
+                                {impact.blockers.map((blocker) => {
+                                  const count =
+                                    blocker === "protected_resources"
+                                      ? impact.protectedResources
+                                      : blocker === "build_tasks_running_or_stopping"
+                                        ? impact.buildTasks.blocking
+                                        : blocker === "discover_tasks_running"
+                                          ? impact.discoverTasks.blocking
+                                          : impact.semanticUnderstandingTasks.blocking;
+                                  return (
+                                    <li key={blocker}>
+                                      {t(
+                                        `dataCatalog.tree.deleteLogicalBlockers.${blocker}`,
+                                        { count },
+                                      )}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             </div>
-                            <ul>
-                              {impact.blockers.map((blocker) => {
-                                const count =
-                                  blocker === "protected_resources"
-                                    ? impact.protectedResources
-                                    : blocker === "build_tasks_running_or_stopping"
-                                      ? impact.buildTasks.blocking
-                                      : blocker === "discover_tasks_running"
-                                        ? impact.discoverTasks.blocking
-                                        : impact.semanticUnderstandingTasks.blocking;
-                                return (
-                                  <li key={blocker}>
-                                    {t(
-                                      `dataCatalog.tree.deleteLogicalBlockers.${blocker}`,
-                                      { count },
-                                    )}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        ),
-                        okText: t("common.confirm"),
-                        title: t("dataCatalog.tree.deleteLogicalBlockedTitle"),
-                      });
-                      return;
-                    }
+                          ),
+                          okText: t("common.confirm"),
+                          title: t("dataCatalog.tree.deleteLogicalBlockedTitle"),
+                        });
+                        return;
+                      }
 
-                    void modal.confirm({
-                      title: t("dataCatalog.tree.deleteLogicalTitle"),
-                      content: t("dataCatalog.tree.deleteLogicalDescription", {
-                        name: catalog.name,
-                        resources: impact.resources,
-                        semanticTasks: impact.semanticUnderstandingTasks.willCancel,
-                      }),
-                      okText: t("common.delete"),
-                      cancelText: t("common.cancel"),
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        try {
-                          await deleteCatalog(catalog.id);
-                          message.success(t("common.success"));
-                          await onRefresh();
-                        } catch (error) {
-                          void message.error(extractRequestErrorMessage(error));
-                          throw error;
-                        }
-                      },
-                    });
-                  })();
-                }}
-                title={t("common.delete")}
-                type="button"
-              >
-                <DeleteOutlined />
-              </button>
+                      void modal.confirm({
+                        title: t("dataCatalog.tree.deleteLogicalTitle"),
+                        content: t("dataCatalog.tree.deleteLogicalDescription", {
+                          name: catalog.name,
+                          resources: impact.resources,
+                          semanticTasks: impact.semanticUnderstandingTasks.willCancel,
+                        }),
+                        okText: t("common.delete"),
+                        cancelText: t("common.cancel"),
+                        okButtonProps: { danger: true },
+                        onOk: async () => {
+                          try {
+                            await deleteCatalog(catalog.id);
+                            message.success(t("common.success"));
+                            await onRefresh();
+                          } catch (error) {
+                            void message.error(extractRequestErrorMessage(error));
+                            throw error;
+                          }
+                        },
+                      });
+                    })();
+                  }}
+                  title={t("common.delete")}
+                  type="button"
+                >
+                  <DeleteOutlined />
+                </button>
+              </PermissionGate>
             ) : null}
           </span>
         ),
@@ -498,17 +501,19 @@ export function CatalogTreePanel({
         headerActions={
           <>
             {dataCatalogCreationAvailable ? (
-              <Tooltip title={t("dataCatalog.tree.addLogical")}>
-                <AppButton
-                  aria-label={t("dataCatalog.tree.addLogical")}
-                  className={styles.treeActionBtn}
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    form.resetFields();
-                    setCreateOpen(true);
-                  }}
-                />
-              </Tooltip>
+              <PermissionGate permissions="catalog:create">
+                <Tooltip title={t("dataCatalog.tree.addLogical")}>
+                  <AppButton
+                    aria-label={t("dataCatalog.tree.addLogical")}
+                    className={styles.treeActionBtn}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      form.resetFields();
+                      setCreateOpen(true);
+                    }}
+                  />
+                </Tooltip>
+              </PermissionGate>
             ) : null}
             <Tooltip title={t("dataCatalog.tree.collapse")}>
               <AppButton

@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTime } from "@/framework/i18n/format";
+import { hasPermissions } from "@/framework/permission/has-permissions";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -135,7 +137,7 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }
 
 export function DiscoverTaskListPanel() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<DataConnectDiscoverTaskSummary[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
@@ -157,6 +159,10 @@ export function DiscoverTaskListPanel() {
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const canManageCatalogTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -287,12 +293,14 @@ export function DiscoverTaskListPanel() {
       width: 84,
       render: (_, record) => {
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
-        menuItems.push({
-          danger: true,
-          disabled: record.status === "pending" || record.status === "running",
-          key: "delete",
-          label: t("common.delete"),
-        });
+        if (canManageCatalogTasks) {
+          menuItems.push({
+            danger: true,
+            disabled: record.status === "pending" || record.status === "running",
+            key: "delete",
+            label: t("common.delete"),
+          });
+        }
         return (
           <Dropdown
             menu={{
@@ -318,7 +326,7 @@ export function DiscoverTaskListPanel() {
   ];
 
   return <TaskPanel>
-    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></Space><Space className={styles.toolbarFilters}>
+    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
       <Select allowClear className={styles.select} filterOption={false} onSearch={setCatalogKeyword} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} showSearch value={catalogId} onChange={(value) => { setCatalogId(value); setPage(1); }} />
       <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.discoverStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
       <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.discoverTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
@@ -376,7 +384,7 @@ async function deleteSemanticTask(id: string) {
 
 export function SemanticUnderstandingTaskListPanel() {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<SemanticTask[]>([]);
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
@@ -397,6 +405,10 @@ export function SemanticUnderstandingTaskListPanel() {
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const canManageCatalogTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
@@ -527,12 +539,14 @@ export function SemanticUnderstandingTaskListPanel() {
       width: 84,
       render: (_, record) => {
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
-        menuItems.push({
-          danger: true,
-          disabled: record.status === "pending" || record.status === "running",
-          key: "delete",
-          label: t("common.delete"),
-        });
+        if (canManageCatalogTasks) {
+          menuItems.push({
+            danger: true,
+            disabled: record.status === "pending" || record.status === "running",
+            key: "delete",
+            label: t("common.delete"),
+          });
+        }
         return (
           <Dropdown
             menu={{
@@ -561,7 +575,7 @@ export function SemanticUnderstandingTaskListPanel() {
     ? t("dataCatalog.taskManagement.moreFiltersWithCount", { count: advancedFilterCount })
     : t("dataCatalog.taskManagement.moreFilters");
   const advancedFilters = <Space direction="vertical" size={12}><Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); if (value === "catalog") setResourceId(undefined); setPage(1); }} /><Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} /><Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} /><AppButton disabled={advancedFilterCount === 0} type="link" onClick={() => { setScope(undefined); setApplyMode(undefined); setApplied(undefined); setPage(1); }}>{t("dataCatalog.taskManagement.clearAdvancedFilters")}</AppButton></Space>;
-  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></Space><Space className={styles.toolbarFilters}>
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
     <Select allowClear className={styles.select} filterOption={false} onSearch={setCatalogKeyword} options={catalogs.map((item) => ({ label: item.name, value: item.id }))} placeholder={t("dataCatalog.resource.catalog")} showSearch value={catalogId} onChange={(value) => { setCatalogId(value); setResourceId(undefined); setPage(1); }} />
     <Select allowClear className={styles.select} disabled={scope === "catalog"} filterOption={false} onSearch={setResourceKeyword} options={resourceOptions} placeholder={t("dataCatalog.build.resource")} showSearch value={resourceId} onChange={(value) => { setResourceId(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={["pending", "running", "succeeded", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("common.status")} value={status} onChange={(value) => { setStatus(value); setPage(1); }} />

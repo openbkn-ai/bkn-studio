@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import type { DataConnectDiscoverSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import {
   extractRequestErrorMessage,
   isRequestConflict,
@@ -308,36 +309,38 @@ export function DataConnectDiscoverScene({
       dataIndex: "enabled",
       title: t("common.status"),
       render: (value: boolean, record) => (
-        <Switch
-          checked={value}
-          onChange={(checked) => {
-            void modal.confirm({
-              title: checked
-                ? t("dataConnect.discoverScheduleEnableConfirmTitle")
-                : t("dataConnect.discoverScheduleDisableConfirmTitle"),
-              content: checked
-                ? t("dataConnect.discoverScheduleEnableConfirmDescription", {
-                    name: record.name,
-                  })
-                : t("dataConnect.discoverScheduleDisableConfirmDescription", {
-                    name: record.name,
-                  }),
-              okText: checked ? t("common.enabled") : t("common.disabled"),
-              cancelText: t("common.cancel"),
-              okButtonProps: checked ? undefined : { danger: true },
-              onOk: async () => {
-                try {
-                  await setDataConnectDiscoverScheduleEnabled(record.id, checked);
-                  message.success(t("common.success"));
-                  await Promise.all([loadSchedules(), loadTasks()]);
-                } catch (error) {
-                  void message.error(extractRequestErrorMessage(error));
-                  throw error;
-                }
-              },
-            });
-          }}
-        />
+        <PermissionGate permissions="catalog:task_manage">
+          <Switch
+            checked={value}
+            onChange={(checked) => {
+              void modal.confirm({
+                title: checked
+                  ? t("dataConnect.discoverScheduleEnableConfirmTitle")
+                  : t("dataConnect.discoverScheduleDisableConfirmTitle"),
+                content: checked
+                  ? t("dataConnect.discoverScheduleEnableConfirmDescription", {
+                      name: record.name,
+                    })
+                  : t("dataConnect.discoverScheduleDisableConfirmDescription", {
+                      name: record.name,
+                    }),
+                okText: checked ? t("common.enabled") : t("common.disabled"),
+                cancelText: t("common.cancel"),
+                okButtonProps: checked ? undefined : { danger: true },
+                onOk: async () => {
+                  try {
+                    await setDataConnectDiscoverScheduleEnabled(record.id, checked);
+                    message.success(t("common.success"));
+                    await Promise.all([loadSchedules(), loadTasks()]);
+                  } catch (error) {
+                    void message.error(extractRequestErrorMessage(error));
+                    throw error;
+                  }
+                },
+              });
+            }}
+          />
+        </PermissionGate>
       ),
     },
     {
@@ -365,63 +368,69 @@ export function DataConnectDiscoverScene({
           >
             {t("dataConnect.discoverViewTasks")}
           </AppButton>
-          <AppButton
-            onClick={() => {
-              setScheduleModalState({ mode: "edit", scheduleId: record.id });
-            }}
-            type="link"
-          >
-            {t("common.edit")}
-          </AppButton>
-          <AppButton
-            loading={triggeringScheduleId === record.id}
-            onClick={() => {
-              void modal.confirm({
-                title: t("dataConnect.discoverRunScheduleConfirmTitle"),
-                content: t("dataConnect.discoverRunScheduleConfirmDescription", {
-                  name: record.name,
-                }),
-                okText: t("dataConnect.discoverRunSchedule"),
-                cancelText: t("common.cancel"),
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              onClick={() => {
+                setScheduleModalState({ mode: "edit", scheduleId: record.id });
+              }}
+              type="link"
+            >
+              {t("common.edit")}
+            </AppButton>
+          </PermissionGate>
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              loading={triggeringScheduleId === record.id}
+              onClick={() => {
+                void modal.confirm({
+                  title: t("dataConnect.discoverRunScheduleConfirmTitle"),
+                  content: t("dataConnect.discoverRunScheduleConfirmDescription", {
+                    name: record.name,
+                  }),
+                  okText: t("dataConnect.discoverRunSchedule"),
+                  cancelText: t("common.cancel"),
+                    onOk: async () => {
+                    try {
+                      setTriggeringScheduleId(record.id);
+                      await runDiscover(record.catalogId, record.strategy);
+                    } catch (error) {
+                      void message.error(extractRequestErrorMessage(error));
+                      throw error;
+                    } finally {
+                      setTriggeringScheduleId(null);
+                    }
+                  },
+                });
+              }}
+              type="link"
+            >
+              {t("dataConnect.discoverRunSchedule")}
+            </AppButton>
+          </PermissionGate>
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              danger
+              onClick={() => {
+                void modal.confirm({
+                  title: t("dataConnect.discoverDeleteConfirmTitle"),
+                  content: t("dataConnect.discoverDeleteConfirmDescription", {
+                    name: record.name,
+                  }),
+                  okText: t("common.delete"),
+                  cancelText: t("common.cancel"),
+                  okButtonProps: { danger: true },
                   onOk: async () => {
-                  try {
-                    setTriggeringScheduleId(record.id);
-                    await runDiscover(record.catalogId, record.strategy);
-                  } catch (error) {
-                    void message.error(extractRequestErrorMessage(error));
-                    throw error;
-                  } finally {
-                    setTriggeringScheduleId(null);
-                  }
-                },
-              });
-            }}
-            type="link"
-          >
-            {t("dataConnect.discoverRunSchedule")}
-          </AppButton>
-          <AppButton
-            danger
-            onClick={() => {
-              void modal.confirm({
-                title: t("dataConnect.discoverDeleteConfirmTitle"),
-                content: t("dataConnect.discoverDeleteConfirmDescription", {
-                  name: record.name,
-                }),
-                okText: t("common.delete"),
-                cancelText: t("common.cancel"),
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  await deleteDataConnectDiscoverSchedule(record.id);
-                  void message.success(t("common.success"));
-                  await Promise.all([loadSchedules(), loadTasks()]);
-                },
-              });
-            }}
-            type="link"
-          >
-            {t("common.delete")}
-          </AppButton>
+                    await deleteDataConnectDiscoverSchedule(record.id);
+                    void message.success(t("common.success"));
+                    await Promise.all([loadSchedules(), loadTasks()]);
+                  },
+                });
+              }}
+              type="link"
+            >
+              {t("common.delete")}
+            </AppButton>
+          </PermissionGate>
         </Space>
       ),
     },
@@ -495,32 +504,34 @@ export function DataConnectDiscoverScene({
           >
             {t("common.detail")}
           </AppButton>
-          <AppButton
-            danger
-            disabled={record.status === "pending" || record.status === "running"}
-            onClick={() => {
-              void modal.confirm({
-                title: t("dataConnect.discoverTaskDeleteConfirmTitle"),
-                content: t("dataConnect.discoverTaskDeleteConfirmDescription", {
-                  id: record.id,
-                }),
-                okText: t("common.delete"),
-                cancelText: t("common.cancel"),
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  await deleteDataConnectDiscoverTask(record.id);
-                  void message.success(t("common.success"));
-                  if (detailTaskId === record.id) {
-                    setDetailTaskId(null);
-                  }
-                  await loadTasks();
-                },
-              });
-            }}
-            type="link"
-          >
-            {t("common.delete")}
-          </AppButton>
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              danger
+              disabled={record.status === "pending" || record.status === "running"}
+              onClick={() => {
+                void modal.confirm({
+                  title: t("dataConnect.discoverTaskDeleteConfirmTitle"),
+                  content: t("dataConnect.discoverTaskDeleteConfirmDescription", {
+                    id: record.id,
+                  }),
+                  okText: t("common.delete"),
+                  cancelText: t("common.cancel"),
+                  okButtonProps: { danger: true },
+                  onOk: async () => {
+                    await deleteDataConnectDiscoverTask(record.id);
+                    void message.success(t("common.success"));
+                    if (detailTaskId === record.id) {
+                      setDetailTaskId(null);
+                    }
+                    await loadTasks();
+                  },
+                });
+              }}
+              type="link"
+            >
+              {t("common.delete")}
+            </AppButton>
+          </PermissionGate>
         </Space>
       ),
     },
@@ -662,15 +673,17 @@ export function DataConnectDiscoverScene({
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
-            <AppButton
-              onClick={() => {
-                setEditingSchedule(null);
-                setScheduleModalState({ mode: "create" });
-              }}
-              type="primary"
-            >
-              {t("dataConnect.discoverCreate")}
-            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                onClick={() => {
+                  setEditingSchedule(null);
+                  setScheduleModalState({ mode: "create" });
+                }}
+                type="primary"
+              >
+                {t("dataConnect.discoverCreate")}
+              </AppButton>
+            </PermissionGate>
             <AppButton
               icon={<ReloadOutlined />}
               onClick={() => {
@@ -735,14 +748,16 @@ export function DataConnectDiscoverScene({
         ) : !loadingSchedules && schedules.length === 0 ? (
           <EmptyStatePanel
             action={
-              <AppButton
-                onClick={() => {
-                  setScheduleModalState({ mode: "create" });
-                }}
-                type="primary"
-              >
-                {t("dataConnect.discoverCreate")}
-              </AppButton>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  onClick={() => {
+                    setScheduleModalState({ mode: "create" });
+                  }}
+                  type="primary"
+                >
+                  {t("dataConnect.discoverCreate")}
+                </AppButton>
+              </PermissionGate>
             }
             description={t("dataConnect.discoverScheduleEmptyDescription")}
             title={t("dataConnect.discoverScheduleEmpty")}
@@ -778,18 +793,20 @@ export function DataConnectDiscoverScene({
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
-            <AppButton
-              disabled={!selectedCatalogId}
-              onClick={() => {
-                if (!selectedCatalogId) {
-                  return;
-                }
-                setRunNowOpen(true);
-              }}
-              type="primary"
-            >
-              {t("dataConnect.discoverRunNow")}
-            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                disabled={!selectedCatalogId}
+                onClick={() => {
+                  if (!selectedCatalogId) {
+                    return;
+                  }
+                  setRunNowOpen(true);
+                }}
+                type="primary"
+              >
+                {t("dataConnect.discoverRunNow")}
+              </AppButton>
+            </PermissionGate>
             <AppButton
               icon={<ReloadOutlined />}
               onClick={() => {

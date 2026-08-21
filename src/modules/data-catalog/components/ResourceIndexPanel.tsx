@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { formatDateTime } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -288,19 +289,25 @@ export function ResourceIndexPanel({
             {t("common.detail")}
           </AppButton>
           {canManageBuildTasks && ACTIVE_TASK_STATUSES.has(record.status) ? (
-            <AppButton onClick={() => void pauseOrResume(record)} type="link">
-              {pauseResumeLabelOf(record)}
-            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton onClick={() => void pauseOrResume(record)} type="link">
+                {pauseResumeLabelOf(record)}
+              </AppButton>
+            </PermissionGate>
           ) : null}
           {canManageBuildTasks && record.status === "failed" ? (
-            <AppButton onClick={() => void retry(record)} type="link">
-              {t("dataCatalog.task.rerun")}
-            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton onClick={() => void retry(record)} type="link">
+                {t("dataCatalog.task.rerun")}
+              </AppButton>
+            </PermissionGate>
           ) : null}
           {canManageBuildTasks ? (
-            <AppButton danger onClick={() => remove(record)} type="link">
-              {t("common.delete")}
-            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton danger onClick={() => remove(record)} type="link">
+                {t("common.delete")}
+              </AppButton>
+            </PermissionGate>
           ) : null}
         </Space>
       ),
@@ -364,31 +371,37 @@ export function ResourceIndexPanel({
             (activeTask.status === "listening" ||
               activeTask.status === "running" ||
               activeTask.status === "pending") ? (
-              <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
-                {pauseResumeLabel}
-              </AppButton>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
+                  {pauseResumeLabel}
+                </AppButton>
+              </PermissionGate>
             ) : null}
             {canManageBuildTasks && activeTask?.status === "paused" ? (
-              <AppButton
-                disabled={buildActionsDisabled}
-                onClick={() => void pauseOrResume(activeTask)}
-                size="small"
-              >
-                {pauseResumeLabel}
-              </AppButton>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  disabled={buildActionsDisabled}
+                  onClick={() => void pauseOrResume(activeTask)}
+                  size="small"
+                >
+                  {pauseResumeLabel}
+                </AppButton>
+              </PermissionGate>
             ) : null}
             {canManageBuildTasks && latest?.status === "failed" ? (
-              <AppButton
-                disabled={buildActionsDisabled}
-                onClick={() => {
-                  if (latest) {
-                    void retry(latest);
-                  }
-                }}
-                size="small"
-              >
-                {t("dataCatalog.task.rerun")}
-              </AppButton>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  disabled={buildActionsDisabled}
+                  onClick={() => {
+                    if (latest) {
+                      void retry(latest);
+                    }
+                  }}
+                  size="small"
+                >
+                  {t("dataCatalog.task.rerun")}
+                </AppButton>
+              </PermissionGate>
             ) : null}
           </div>
         </div>
@@ -433,15 +446,17 @@ export function ResourceIndexPanel({
                 {t("dataCatalog.indexWorkspace.launchTitle")}
               </h3>
             </div>
-            <BuildTaskLaunchPanel
-              active={active && indexView === "tasks"}
-              disabled={buildActionsDisabled}
-              onGoConfigure={() => onIndexViewChange("config")}
-              onStarted={() => {
-                void onRefresh();
-              }}
-              resource={resource}
-            />
+            <PermissionGate permissions="catalog:task_manage">
+              <BuildTaskLaunchPanel
+                active={active && indexView === "tasks"}
+                disabled={buildActionsDisabled}
+                onGoConfigure={() => onIndexViewChange("config")}
+                onStarted={() => {
+                  void onRefresh();
+                }}
+                resource={resource}
+              />
+            </PermissionGate>
           </div>
         ) : null}
       </div>

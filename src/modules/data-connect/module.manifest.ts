@@ -8,9 +8,13 @@
 export const dataConnectModuleManifest = {
   id: "data-connect",
   name: "Data Connect",
-  // No permission points: the console does not gate data-catalog actions. See routes.tsx
-  // for why, and the backend for the authorization that actually applies.
-  permissions: [],
+  permissions: [
+    "catalog:view_detail",
+    "catalog:create",
+    "catalog:modify",
+    "catalog:delete",
+    "catalog:task_manage",
+  ],
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,

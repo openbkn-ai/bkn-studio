@@ -12,17 +12,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { hasPermissions } from "@/framework/permission/has-permissions";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import { useAppServices } from "@/framework/context/use-app-services";
-import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { authzPoints } from "@/modules/system-admin/permissions";
@@ -126,9 +126,9 @@ export function CatalogDetailPanel({
   tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const location = useLocation();
-  const { runtimeConfig } = useAppServices();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
@@ -154,6 +154,10 @@ export function CatalogDetailPanel({
 
   const physical = isCatalogPhysical(catalog);
   const showIndexState = !catalog.internal;
+  const canManageResourceTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
@@ -408,27 +412,29 @@ export function CatalogDetailPanel({
             ),
           },
         ];
-        moreItems.push({
-          disabled: indexDisabled,
-          key: "index",
-          label: queryBlockReason ? (
-            <Tooltip
-              title={t(
-                queryBlockReason === "missing"
-                  ? "dataCatalog.actions.indexMissingHint"
-                  : queryBlockReason === "disabled"
-                    ? "dataCatalog.actions.indexDisabledHint"
-                    : queryBlockReason === "stale"
-                      ? "dataCatalog.actions.indexStaleHint"
-                      : "dataCatalog.actions.indexMetadataUnavailableHint",
-              )}
-            >
-              <span>{indexLabel}</span>
-            </Tooltip>
-          ) : (
-            indexLabel
-          ),
-        });
+        if (canManageResourceTasks) {
+          moreItems.push({
+            disabled: indexDisabled,
+            key: "index",
+            label: queryBlockReason ? (
+              <Tooltip
+                title={t(
+                  queryBlockReason === "missing"
+                    ? "dataCatalog.actions.indexMissingHint"
+                    : queryBlockReason === "disabled"
+                      ? "dataCatalog.actions.indexDisabledHint"
+                      : queryBlockReason === "stale"
+                        ? "dataCatalog.actions.indexStaleHint"
+                        : "dataCatalog.actions.indexMetadataUnavailableHint",
+                )}
+              >
+                <span>{indexLabel}</span>
+              </Tooltip>
+            ) : (
+              indexLabel
+            ),
+          });
+        }
         if (canAuthorizeGrants && !catalog.internal) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({ key: "authorize", label: t("dataCatalog.catalog.authorize") });
@@ -499,14 +505,16 @@ export function CatalogDetailPanel({
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
             {dataCatalogCreationAvailable && !physical && !catalog.internal ? (
-              <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                {t("dataCatalog.resource.create")}
-              </AppButton>
+              <PermissionGate permissions="catalog:resource_manage">
+                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                  {t("dataCatalog.resource.create")}
+                </AppButton>
+              </PermissionGate>
             ) : null}
             {/*
               授权发生在系统管理的对象授权页,这里只是把当前目录带过去,省掉在几百个对象里
               重新找一遍。看得见这颗按钮的前提是有 admin-authz:grant——那张页面本身要的点位,
-              不是数据面的动词(数据面已不做前端权限管控)。
+              而不是数据面的动词。
             */}
             {canAuthorizeCatalog ? (
               <PermissionGate permissions={authzPoints.grant}>
@@ -606,9 +614,11 @@ export function CatalogDetailPanel({
                 </AppButton>
               ) : !physical && !catalog.internal ? (
                 dataCatalogCreationAvailable ? (
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
+                  <PermissionGate permissions="catalog:resource_manage">
+                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                      {t("dataCatalog.resource.create")}
+                    </AppButton>
+                  </PermissionGate>
                 ) : null
               ) : null
             }

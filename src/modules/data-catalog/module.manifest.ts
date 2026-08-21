@@ -8,9 +8,20 @@
 export const dataCatalogModuleManifest = {
   id: "data-catalog",
   name: "Data Catalog",
-  // No permission points: the console does not gate data-catalog actions. See routes.tsx
-  // for why, and the backend for the authorization that actually applies.
-  permissions: [],
+  // Permission points align with the bkn-safe authorization catalog (resource_type:operation).
+  permissions: [
+    "catalog:view_detail",
+    "catalog:create",
+    "catalog:modify",
+    "catalog:delete",
+    "catalog:task_manage",
+    // Managing a table -- creating, editing, deleting it, running its tasks -- is judged on the
+    // catalog it lives in (openbkn-ai/bkn-foundry#986). The table itself declares only view_detail
+    // and query_data, so the resource-side management verbs are gone from the backend vocabulary
+    // and from these gates.
+    "catalog:resource_manage",
+    "resource:view_detail",
+  ],
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
