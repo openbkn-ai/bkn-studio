@@ -1446,6 +1446,353 @@
   flex: 1 1 auto;
 }
 
+.schemaTabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 3px;
+  border: 1px solid #d9e2f1;
+  border-radius: 8px;
+  background: #f4f7fb;
+}
+
+.schemaTab,
+.schemaTabOn {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #62718a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.schemaTab:hover {
+  color: #2457d6;
+}
+
+.schemaTabOn {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(34, 59, 98, 0.14);
+  color: #1647bd;
+}
+
+.schemaDocs {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.schemaOverview {
+  position: relative;
+  margin: 0 0 14px;
+  padding: 12px 15px 12px 17px;
+  border: 1px solid #dce7fc;
+  border-radius: 8px;
+  background: linear-gradient(105deg, #f5f8ff 0%, #fbfdff 76%);
+}
+
+.schemaOverview::before {
+  position: absolute;
+  top: 11px;
+  bottom: 11px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: #416fe0;
+  content: "";
+}
+
+.schemaOverview > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #3460c7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.schemaOverview p,
+.schemaDocSectionHead p,
+.schemaTrace p {
+  margin: 0;
+  color: #596a84;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.schemaOverviewToggle {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2e68ff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schemaOverviewToggle:hover {
+  color: #1647bd;
+  text-decoration: underline;
+}
+
+.schemaExample {
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid #d9e2f1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schemaExampleHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 11px 0 13px;
+  border-bottom: 1px solid #e5ebf4;
+  color: #334b70;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schemaExampleCode {
+  max-height: 184px;
+  margin: 0;
+  padding: 11px 13px;
+  overflow: auto;
+  background: #fbfcff;
+  color: #283a59;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.schemaExampleInvalid,
+.schemaTruncated {
+  margin: 0 0 16px;
+  padding: 10px 13px;
+  border: 1px dashed #cfd9e8;
+  border-radius: 8px;
+  background: #fafcff;
+  color: #70809a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.schemaDocSection .schemaTruncated {
+  margin: 8px 0 0;
+}
+
+.schemaDocSection {
+  margin: 0 0 16px;
+}
+
+.schemaDocSectionHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.schemaDocSectionHead h3 {
+  margin: 0 0 3px;
+  color: #283a59;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.schemaFieldTable {
+  overflow: hidden;
+  border: 1px solid #dfe6f1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schemaFieldHeader,
+.schemaFieldRow {
+  display: grid;
+  grid-template-columns: minmax(128px, 0.85fr) minmax(76px, 0.42fr) minmax(58px, 0.38fr) minmax(180px, 1.7fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.schemaFieldHeader {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e3e9f3;
+  background: #f7f9fd;
+  color: #70809a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schemaFieldRow {
+  padding: 10px 12px;
+  border-bottom: 1px solid #edf0f5;
+  color: #50607a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.schemaFieldRow:last-child {
+  border-bottom: 0;
+}
+
+.schemaFieldRow:hover {
+  background: #fbfcff;
+}
+
+.schemaFieldName {
+  min-width: 0;
+  overflow: hidden;
+  color: #2457bd;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.schemaType {
+  color: #6d5b9a;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.schemaRequired,
+.schemaOptional {
+  width: max-content;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.schemaRequired {
+  background: #fff0ee;
+  color: #b4473e;
+}
+
+.schemaOptional {
+  background: #eef3fc;
+  color: #587098;
+}
+
+.schemaDescription {
+  color: #586982;
+  overflow-wrap: anywhere;
+}
+
+.schemaDescription em {
+  display: block;
+  margin-top: 3px;
+  color: #7889a2;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.schemaNoFields {
+  padding: 16px;
+  border: 1px dashed #cfd9e8;
+  border-radius: 8px;
+  color: #70809a;
+  font-size: 12px;
+  text-align: center;
+}
+
+.schemaTrace {
+  margin: 0 0 16px;
+  border: 1px solid #e0e6f0;
+  border-radius: 8px;
+  background: #fafbfe;
+}
+
+.schemaTrace summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 13px;
+  color: #3c4e6b;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.schemaTrace summary::-webkit-details-marker {
+  display: none;
+}
+
+.schemaTrace summary::before {
+  margin-right: 8px;
+  color: #6c7d98;
+  content: "▸";
+  transition: transform 160ms ease;
+}
+
+.schemaTrace[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.schemaTrace summary > span:first-child {
+  margin-right: auto;
+}
+
+.schemaTrace summary > span:last-child {
+  padding: 2px 7px;
+  border: 1px solid #d7e0ef;
+  border-radius: 999px;
+  color: #6d7d98;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.schemaTrace p {
+  margin: 0 13px 10px;
+}
+
+.schemaTrace .schemaFieldTable {
+  margin: 0 13px 13px;
+}
+
+@media (max-width: 720px) {
+  .schemaFieldHeader {
+    display: none;
+  }
+
+  .schemaFieldRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 10px;
+  }
+
+  .schemaType {
+    text-align: right;
+  }
+
+  .schemaRequired,
+  .schemaOptional {
+    grid-column: 1 / -1;
+  }
+
+  .schemaDescription {
+    grid-column: 1 / -1;
+  }
+}
+
 .secHead {
   display: flex;
   align-items: center;
@@ -2342,10 +2689,9 @@
 }
 
 /* ---------------- 数据浏览器 Drawer ---------------- */
-/* antd Drawer/Modal 会把内容 portal 到 <body>，脱离 .page，故这里重新声明设计变量，
-   否则 var(--accent) 等失效（如 .dbChip:hover 背景丢失 → 白字白底，控件“消失”）。 */
 .dbWrap,
-.guideRoot {
+.guideRoot,
+.schemaModal {
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --accent: #2e68ff;
   --line: rgba(15, 30, 54, 0.1);
