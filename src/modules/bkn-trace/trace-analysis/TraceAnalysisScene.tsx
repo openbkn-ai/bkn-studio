@@ -377,10 +377,10 @@ function OperationPanel({ onClose, operation, traceId }: { onClose: () => void; 
         <Button aria-label={t("bknTrace.traceWorkspace.closeDetail")} icon={<CloseOutlined />} onClick={onClose} type="text" />
       </header>
       <Descriptions column={1} size="small">
-        <Descriptions.Item label="Operation ID">{operation.fact.operationId}</Descriptions.Item>
-        <Descriptions.Item label="Request ID">{operation.fact.requestId || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.operationId")}>{operation.fact.operationId}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.requestId")}>{operation.fact.requestId || "-"}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.source")}>{operation.fact.sourceModule} · {operation.fact.protocol.toUpperCase()}</Descriptions.Item>
-        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{operation.state} · Attempt {operation.fact.attempt}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{t("bknTrace.traceWorkspace.stateWithAttempt", { attempt: operation.fact.attempt, state: operation.state })}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.startedAt")}>{operation.fact.startedAt || "-"}</Descriptions.Item>
       </Descriptions>
       <Tabs items={items} />

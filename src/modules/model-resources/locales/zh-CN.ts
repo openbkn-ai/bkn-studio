@@ -105,6 +105,9 @@ export const modelResourcesZhCN = {
         modelName: "模型名称",
         baseModel: "基础模型",
         auth: "鉴权",
+        apiKey: "API Key",
+        apiModel: "API 模型",
+        apiUrl: "API 地址",
         adaptationFile: "适配文件",
         vectorDimension: "向量维度",
         batchSize: "批次大小",
@@ -117,6 +120,7 @@ export const modelResourcesZhCN = {
         quotaTitleDescribe2Edit:
           "- 关闭功能后，无需配置使用额度，所有用户均可无限制使用，且系统会自动保留用户之前用掉的额度记录，但会把之前设置的“额度规则”清零。",
         enterPlaceholder: "请输入",
+        secretKey: "Secret Key",
         selectPlaceholder: "请选择",
         apiModelPlaceholder: "请输入（填写字段时，请注意区分大小写字母）",
         adapterPlaceholder: "请输入 Python 适配代码",

@@ -106,6 +106,9 @@ export const modelResourcesEnUS = {
         modelName: "Model name",
         baseModel: "Base model",
         auth: "Authentication",
+        apiKey: "API Key",
+        apiModel: "API Model",
+        apiUrl: "API URL",
         adaptationFile: "Adapter file",
         vectorDimension: "Vector dimension",
         batchSize: "Batch size",
@@ -119,6 +122,7 @@ export const modelResourcesEnUS = {
         quotaTitleDescribe2Edit:
           "- After disabling this feature, all users can use the model without limits. Existing usage records are kept, but previous quota rules are cleared.",
         enterPlaceholder: "Enter value",
+        secretKey: "Secret Key",
         selectPlaceholder: "Select",
         apiModelPlaceholder: "Enter value (case sensitive)",
         adapterPlaceholder: "Enter Python adapter code",
