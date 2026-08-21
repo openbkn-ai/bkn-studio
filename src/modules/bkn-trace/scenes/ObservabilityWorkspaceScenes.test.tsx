@@ -145,7 +145,7 @@ describe("observability workspace scenes", () => {
 
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
-    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "users" });
+    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "user" });
     expect(await screen.findByText("bknTrace.logs.associatedTarget.user")).not.toBeNull();
     expect(screen.getByText("Current Administrator")).not.toBeNull();
     expect(screen.getAllByText((_content, element) => element?.textContent?.includes("bknTrace.logs.sourceFailures.source_query_failed") ?? false)).not.toHaveLength(0);
@@ -216,9 +216,43 @@ describe("observability workspace scenes", () => {
     render(<AuditLogPage />);
     await waitFor(() => expect(listLogs).toHaveBeenCalled());
     const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
-    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "users" });
+    expect(query).toMatchObject({ categories: ["audit.admin"], targetId: "user-a", targetType: "user" });
     expect(dayjs(query?.timeTo).diff(dayjs(query?.timeFrom), "day")).toBe(30);
     expect(await screen.findByText("bknTrace.logs.auditTitle")).not.toBeNull();
+  });
+
+  it("审计查询失败时仅展示错误，不伪装成零条结果", async () => {
+    window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=user-a");
+    vi.mocked(listLogs).mockRejectedValueOnce(new Error("resource_type is not part of the operation audit query contract"));
+
+    render(<AuditLogPage />);
+
+    expect(await screen.findByText("resource_type is not part of the operation audit query contract")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
+    expect(screen.queryByText("bknTrace.logs.emptyAssociated")).toBeNull();
+  });
+
+  it("刷新查询时保留已有结果并展示加载反馈", async () => {
+    render(<ObservabilityLogsScene />);
+    expect(await screen.findByText("供应链分析助手 的业务会话")).not.toBeNull();
+    vi.mocked(listLogs).mockImplementationOnce(() => new Promise(() => undefined));
+
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
+    expect(document.querySelector(".ant-spin-spinning")).not.toBeNull();
+  });
+
+  it("总数不可知时不显示为零条结果", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "partial", value: null }, data: [], partial: true, sourceStatus: [],
+    });
+
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findByText("bknTrace.logs.resultCountUnknown")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
   });
 
   it("按页读取日志并保留当前筛选条件", async () => {

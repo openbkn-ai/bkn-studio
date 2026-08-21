@@ -149,6 +149,7 @@ export const bknTraceZhCN = {
     resultCount: "共 {{count}} 条可核对事实",
     resultCount_one: "共 {{count}} 条可核对事实",
     resultCount_other: "共 {{count}} 条可核对事实",
+    resultCountUnknown: "可核对事实总数暂不可知",
       searchPlaceholder: "搜索操作、对象、操作者或 ID",
       startTime: "开始时间",
       modules: {
