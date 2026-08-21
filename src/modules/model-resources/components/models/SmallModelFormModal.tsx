@@ -238,14 +238,14 @@ export function SmallModelFormModal({
         {!adapterEnabled ? (
           <>
             <Form.Item
-              label="API Model"
+              label={t("modelResources.models.modal.apiModel")}
               name="apiModel"
               rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
             >
               <Input placeholder={t("modelResources.models.modal.apiModelPlaceholder")} />
             </Form.Item>
             <Form.Item
-              label="API URL"
+              label={t("modelResources.models.modal.apiUrl")}
               name="apiUrl"
               rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
             >

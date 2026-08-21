@@ -9,11 +9,22 @@ export function Bad() {
   const url = "https://example.com/中文文档";
   const mediaType = "application/*+json";
   const blockMarkerLabel = "块注释符号之后的硬编码";
+  const count = 2;
+  const loading = false;
   /* scanner terminator */
+
+  message.success(`Saved ${count} records`);
+  notification.error({ message: "Save failed", description: "Try again later" });
+  Modal.confirm({ title: "Delete record", content: "This action cannot be undone" });
+  window.confirm("Delete this record");
 
   return (
     <>
       <button aria-label="back">Copy failed</button>
+      <button>{"Save changes"}</button>
+      <p>{loading ? "Loading records" : "Records ready"}</p>
+      <Form.Item label="Display name" help="Enter a display name" />
+      <Modal okText="Save changes" cancelText="Discard changes" />
       <p>复制失败</p>
       <p>{url}</p>
       <p>{mediaType}{blockMarkerLabel}</p>

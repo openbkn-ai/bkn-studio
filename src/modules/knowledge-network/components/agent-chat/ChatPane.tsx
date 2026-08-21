@@ -293,13 +293,14 @@ export const MarkdownView = memo(function MarkdownView({ text, streaming = false
 
 /** Streaming reasoning_content display; live reasoning auto-expands. */
 function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
+  const { t } = useTranslation();
   // Collapsed by default; users can expand manually.
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
         <span>
-          Reasoning {live ? "in progress" : "trace"}
+          {live ? t("knowledgeNetwork.agentChat.reasoning.live") : t("knowledgeNetwork.agentChat.reasoning.done")}
           {live ? (
             <span className={styles.thinkDots}>
               <i />
