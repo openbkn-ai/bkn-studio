@@ -256,6 +256,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(styles).toContain(".conversationHeading h1{font-size:18px}");
     expect(styles).toContain(".roundSidebarTitle h3,.operationCard h3{font-size:16px}");
     expect(styles).toContain(".roundList strong,.interactionSummary h2,.sourceTexts p,.operationCard p{font-size:14px}");
+    expect(styles).not.toContain(".conversationHeading h1{width:100%;font-size:25px}");
   });
 
   it("keeps an eight-column conversation list before opening one interaction workspace", async () => {
