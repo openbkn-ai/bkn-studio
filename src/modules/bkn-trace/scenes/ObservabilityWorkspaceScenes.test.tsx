@@ -232,6 +232,29 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.logs.emptyAssociated")).toBeNull();
   });
 
+  it("刷新查询时保留已有结果并展示加载反馈", async () => {
+    render(<ObservabilityLogsScene />);
+    expect(await screen.findByText("供应链分析助手 的业务会话")).not.toBeNull();
+    vi.mocked(listLogs).mockImplementationOnce(() => new Promise(() => undefined));
+
+    fireEvent.click(screen.getByRole("button", { name: "bknTrace.actions.refresh" }));
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("供应链分析助手 的业务会话")).not.toBeNull();
+    expect(document.querySelector(".ant-spin-spinning")).not.toBeNull();
+  });
+
+  it("总数不可知时不显示为零条结果", async () => {
+    vi.mocked(listLogs).mockResolvedValueOnce({
+      count: { accuracy: "partial", value: null }, data: [], partial: true, sourceStatus: [],
+    });
+
+    render(<ObservabilityLogsScene />);
+
+    expect(await screen.findByText("bknTrace.logs.resultCountUnknown")).not.toBeNull();
+    expect(screen.queryByText("bknTrace.logs.resultCount")).toBeNull();
+  });
+
   it("按页读取日志并保留当前筛选条件", async () => {
     vi.mocked(listLogs)
       .mockResolvedValueOnce({

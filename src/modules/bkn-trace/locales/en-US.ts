@@ -149,6 +149,7 @@ export const bknTraceEnUS = {
     resultCount: "{{count}} verifiable facts",
     resultCount_one: "{{count}} verifiable fact",
     resultCount_other: "{{count}} verifiable facts",
+    resultCountUnknown: "Total verifiable facts unknown",
       searchPlaceholder: "Search actions, targets, actors, or IDs",
       startTime: "Start time",
       modules: {

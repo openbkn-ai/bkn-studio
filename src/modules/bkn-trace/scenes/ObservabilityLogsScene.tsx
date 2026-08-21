@@ -70,7 +70,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     if (!canSearchLogs(access, associatedScope)) return;
     setLoading(true);
     setError(undefined);
-    setResult(undefined);
     try {
       const query: LogListQuery = {
         page: nextPage,
@@ -210,9 +209,12 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         </div>
       ) : null}
 
+      {loading && !result && !error ? <Spin /> : null}
       {!error && result ? <>
         <div className={styles.resultSummary}>
-          <Typography.Text>{t("bknTrace.logs.resultCount", { count: result.count.value ?? 0 })}</Typography.Text>
+          <Typography.Text>{result.count.value === null
+            ? t("bknTrace.logs.resultCountUnknown")
+            : t("bknTrace.logs.resultCount", { count: result.count.value })}</Typography.Text>
           {result.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
         </div>
 
