@@ -160,22 +160,10 @@ export function RoleMembersModal({
     [departments, deptIdSet, userLabels],
   );
 
-  const candidateOptions = useMemo(() => {
-    const query = debouncedCandidateSearch.toLowerCase();
-    const deptOptions = departments
-      .filter((dept) => !accessorIds.includes(dept.id))
-      .filter((dept) => {
-        if (!query) {
-          return true;
-        }
-        return deptPath(departments, dept.id).toLowerCase().includes(query);
-      })
-      .map((dept) => ({
-        label: `${t("systemAdmin.roles.membersModal.memberDept")} · ${deptPath(departments, dept.id)}`,
-        value: dept.id,
-      }));
-    return [...userCandidateOptions, ...deptOptions];
-  }, [accessorIds, debouncedCandidateSearch, departments, t, userCandidateOptions]);
+  // Users only. bkn-safe accepts a department binding (204) but casbin holds no user→department
+  // membership, so the policy never matches at enforce time — the binding looks applied and grants
+  // nothing. Departments already bound stay listed, marked as ineffective, so they can be removed.
+  const candidateOptions = useMemo(() => userCandidateOptions, [userCandidateOptions]);
 
   const notifyChanged = useCallback(() => {
     onChanged();
@@ -272,7 +260,7 @@ export function RoleMembersModal({
             <span className={styles.subText}>
               {member.type === "user"
                 ? t("systemAdmin.roles.membersModal.memberUser")
-                : t("systemAdmin.roles.membersModal.memberDept")}
+                : t("systemAdmin.roles.membersModal.memberDeptInactive")}
             </span>
           </div>
         ),
@@ -285,7 +273,7 @@ export function RoleMembersModal({
           <Tag className={member.type === "user" ? styles.roleTag : styles.permChip}>
             {member.type === "user"
               ? t("systemAdmin.roles.membersModal.memberUser")
-              : t("systemAdmin.roles.membersModal.memberDept")}
+              : t("systemAdmin.roles.membersModal.memberDeptInactive")}
           </Tag>
         ),
       },
@@ -328,10 +316,14 @@ export function RoleMembersModal({
             <span className={modalStyles.summaryLabel}>{t("systemAdmin.roles.membersModal.memberUser")}</span>
             <strong className={modalStyles.summaryValue}>{memberCounts.userCount}</strong>
           </div>
-          <div className={modalStyles.summaryCard}>
-            <span className={modalStyles.summaryLabel}>{t("systemAdmin.roles.membersModal.memberDept")}</span>
-            <strong className={modalStyles.summaryValue}>{memberCounts.deptCount}</strong>
-          </div>
+          {memberCounts.deptCount > 0 ? (
+            <div className={modalStyles.summaryCard}>
+              <span className={modalStyles.summaryLabel}>
+                {t("systemAdmin.roles.membersModal.memberDeptInactive")}
+              </span>
+              <strong className={modalStyles.summaryValue}>{memberCounts.deptCount}</strong>
+            </div>
+          ) : null}
         </div>
 
         <div className={modalStyles.toolbarCard}>

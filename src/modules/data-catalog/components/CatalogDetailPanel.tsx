@@ -5,12 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, EllipsisOutlined, SearchOutlined } from "@ant-design/icons";
+import { DatabaseOutlined, EllipsisOutlined, KeyOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -25,6 +25,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
@@ -127,6 +128,7 @@ export function CatalogDetailPanel({
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
@@ -154,15 +156,23 @@ export function CatalogDetailPanel({
   const showIndexState = !catalog.internal;
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "resource:task_manage",
+    requiredPermissions: "catalog:task_manage",
   });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
     (showIndexState && indexFilter.length > 0);
+  // Granting access to this catalog is the one action available on every catalog, built-in ones
+  // aside, so the bar shows whenever the catalog is a real one.
+  const canAuthorizeCatalog = !catalog.internal;
+  const canAuthorizeGrants = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.grant,
+  });
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
+    canAuthorizeCatalog ||
     (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
   const tasksByResource = useMemo(() => {
@@ -425,6 +435,10 @@ export function CatalogDetailPanel({
             ),
           });
         }
+        if (canAuthorizeGrants && !catalog.internal) {
+          // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
+          moreItems.push({ key: "authorize", label: t("dataCatalog.catalog.authorize") });
+        }
         if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
@@ -456,6 +470,13 @@ export function CatalogDetailPanel({
                     onOpenResource(record.id, "index");
                     return;
                   }
+                  if (key === "authorize") {
+                    void navigate(
+                      `/system/authorizations/new?object=${encodeURIComponent(`resource::${record.id}`)}`,
+                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
+                    );
+                    return;
+                  }
                   if (key === "semantic-understanding") {
                     onOpenResource(record.id, "semantic-understanding");
                   }
@@ -481,19 +502,38 @@ export function CatalogDetailPanel({
   return (
     <section className={styles.contentSurface}>
       {showOperationBar ? <div className={styles.operationBar}>
-        {!physical && !catalog.internal ? (
-          <div className={styles.operationPrimary}>
-            <div className={styles.toolbarActions}>
-              {dataCatalogCreationAvailable ? (
-                <PermissionGate permissions="resource:create">
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
-                </PermissionGate>
-              ) : null}
-            </div>
+        <div className={styles.operationPrimary}>
+          <div className={styles.toolbarActions}>
+            {dataCatalogCreationAvailable && !physical && !catalog.internal ? (
+              <PermissionGate permissions="catalog:resource_manage">
+                <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                  {t("dataCatalog.resource.create")}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+            {/*
+              授权发生在系统管理的对象授权页,这里只是把当前目录带过去,省掉在几百个对象里
+              重新找一遍。看得见这颗按钮的前提是有 admin-authz:grant——那张页面本身要的点位,
+              而不是数据面的动词。
+            */}
+            {canAuthorizeCatalog ? (
+              <PermissionGate permissions={authzPoints.grant}>
+                <AppButton
+                  icon={<KeyOutlined />}
+                  onClick={() => {
+                    void navigate(
+                      `/system/authorizations/new?object=${encodeURIComponent(`catalog::${catalog.id}`)}`,
+                      // Leaving the wizard should land back on this catalog, not in system management.
+                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
+                    );
+                  }}
+                >
+                  {t("dataCatalog.catalog.authorize")}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
           </div>
-        ) : null}
+        </div>
         {resourceTotal > 0 || hasResourceQuery ? (
           <>
             <Input
@@ -574,7 +614,7 @@ export function CatalogDetailPanel({
                 </AppButton>
               ) : !physical && !catalog.internal ? (
                 dataCatalogCreationAvailable ? (
-                  <PermissionGate permissions="resource:create">
+                  <PermissionGate permissions="catalog:resource_manage">
                     <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                       {t("dataCatalog.resource.create")}
                     </AppButton>

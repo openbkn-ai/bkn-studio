@@ -9,19 +9,20 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { Alert, Select, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import { listDepartments, listUsers } from "@/modules/system-admin/services/admin.service";
+import { listUsers } from "@/modules/system-admin/services/admin.service";
+import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import {
   listAuthorizableObjects,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
@@ -39,10 +40,34 @@ function parseObjValue(value?: string): { objId: string; objType: string } | nul
   return { objId: id, objType: type };
 }
 
+const GRANT_LIST_PATH = "/system/authorizations";
+
+type ObjectGrantLocationState = {
+  objectGrantReturnTo?: string;
+};
+
+/**
+ * The wizard is reachable from the object's own page as well as from the grant list, so leaving it
+ * has to land where the user came from. Only same-origin absolute paths are honoured — a caller
+ * cannot send someone off-site through this.
+ */
+function resolveReturnPath(state: ObjectGrantLocationState | null): string {
+  const candidate = state?.objectGrantReturnTo;
+  if (typeof candidate !== "string" || !candidate.startsWith("/") || candidate.startsWith("//")) {
+    return GRANT_LIST_PATH;
+  }
+  return candidate;
+}
+
 export function ObjectAuthorizationCreateScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
+  // from a data catalog does not have to find it again among hundreds of objects.
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const returnPath = resolveReturnPath(location.state as ObjectGrantLocationState | null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,9 +75,11 @@ export function ObjectAuthorizationCreateScene() {
 
   const [objects, setObjects] = useState<AuthorizableObject[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
 
-  const [objectValue, setObjectValue] = useState<string>();
+  const deepLinkedObject = parseObjValue(searchParams.get("object") ?? undefined)
+    ? (searchParams.get("object") ?? undefined)
+    : undefined;
+  const [objectValue, setObjectValue] = useState<string | undefined>(deepLinkedObject);
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
 
@@ -83,20 +110,32 @@ export function ObjectAuthorizationCreateScene() {
     setLoading(true);
     setLoadError(null);
     try {
-      const [objList, userList, deptList] = await Promise.all([
-        listAuthorizableObjects(),
-        listUsers(),
-        listDepartments(),
-      ]);
+      const [objList, userList] = await Promise.all([listAuthorizableObjects(), listUsers()]);
+      // A deep link can name an object the picker's first page never loaded. Resolve its name so the
+      // field reads like a table rather than `resource::d9pc...`, and keep it selectable.
+      const linked = parseObjValue(deepLinkedObject);
+      const alreadyListed =
+        !linked || objList.some((item) => item.type === linked.objType && item.id === linked.objId);
+      if (!alreadyListed) {
+        const [resolved] = await resolveGrantNames([
+          {
+            accessorId: "",
+            objId: linked.objId,
+            objName: linked.objId,
+            objType: linked.objType,
+            operations: [],
+          },
+        ]);
+        objList.push({ id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType });
+      }
       setObjects(objList);
       setUsers(userList);
-      setDepartments(deptList);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deepLinkedObject]);
 
   useEffect(() => {
     void load();
@@ -132,6 +171,9 @@ export function ObjectAuthorizationCreateScene() {
     }));
   }, [objects]);
 
+  // bkn-safe accepts only user accessors on /admin/object-grants: a department id is answered with
+  // 400 BknSafe.InvalidRequest, in every payload shape, and no department-scoped endpoint exists.
+  // Offering departments here only produced an unexplained failure at submit time.
   const granteeOptions = useMemo(
     () => [
       {
@@ -141,15 +183,8 @@ export function ObjectAuthorizationCreateScene() {
           label: `${user.name} (${user.account})`,
         })),
       },
-      {
-        label: t("systemAdmin.objectGrants.granteeDept"),
-        options: departments.map((department) => ({
-          value: department.id,
-          label: department.name,
-        })),
-      },
     ],
-    [departments, t, users],
+    [t, users],
   );
 
   const toggleOp = (opKey: string) => {
@@ -187,7 +222,7 @@ export function ObjectAuthorizationCreateScene() {
         ),
       );
       message.success(t("systemAdmin.objectGrants.toast.grantCreated"));
-      void navigate("/system/authorizations");
+      void navigate(returnPath);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -205,7 +240,7 @@ export function ObjectAuthorizationCreateScene() {
           <div className={styles.toolbarActions}>
             <AppButton
               icon={<ArrowLeftOutlined />}
-              onClick={() => void navigate("/system/authorizations")}
+              onClick={() => void navigate(returnPath)}
             >
               {t("common.back")}
             </AppButton>
@@ -328,7 +363,7 @@ export function ObjectAuthorizationCreateScene() {
           </div>
 
           <div className={styles.createFooterBar}>
-            <AppButton onClick={() => void navigate("/system/authorizations")}>
+            <AppButton onClick={() => void navigate(returnPath)}>
               {t("common.cancel")}
             </AppButton>
             <PermissionGate permissions={authzPoints.grant}>

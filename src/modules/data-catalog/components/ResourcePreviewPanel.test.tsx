@@ -126,4 +126,25 @@ describe("ResourcePreviewPanel", () => {
       });
     });
   });
+  // 读行数据与看结构是两份授权。面板自己发请求,一条裸 403 让人分不清是表、连接还是
+  // 自己的权限出了问题——按状态码翻译成一句人话,不去问权限点(前端已不做权限管控)。
+  it("names the missing grant when the backend refuses the read", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("forbidden"), {
+        isAxiosError: true,
+        response: { status: 403, data: { description: "no permission" } },
+      }),
+    );
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "id", type: "integer" }] }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("dataCatalog.preview.noQueryPermission")).toBeTruthy();
+    });
+  });
 });

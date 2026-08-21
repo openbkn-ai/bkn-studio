@@ -98,8 +98,11 @@ export type DataConnectDiscoverScheduleListQuery = {
 
 export type DataConnectDiscoverTaskListQuery = {
   catalogId?: string;
-  page: number;
-  pageSize: number;
+  /** Raw window. Callers scan by offset because the backend filters after paging (#977). */
+  limit?: number;
+  offset?: number;
+  page?: number;
+  pageSize?: number;
   scheduleId?: string;
   direction?: "asc" | "desc";
   sort?: DataConnectDiscoverTaskSort;

@@ -302,11 +302,13 @@ export async function listBuildTasks(
   const backendStatuses = query.statuses?.length
     ? backendStatusParams(query.statuses)
     : undefined;
+  // The backend filters each page after reading it, so a short or empty page says nothing about
+  // what comes after it and the count covers rows the caller may not see (#977). Walk the raw
+  // space by the requested window until it runs out; stopping on a short page loses the rest.
   const tasks: BuildTask[] = [];
   let offset = 0;
-  let total = Number.POSITIVE_INFINITY;
 
-  while (tasks.length < total) {
+  for (;;) {
     const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
       "/vega-backend/v1/build-tasks",
       {
@@ -321,14 +323,12 @@ export async function listBuildTasks(
         skipErrorToast: query.silent,
       },
     );
-    const pageItems = response.data.entries.map(mapBuildTask);
-    tasks.push(...pageItems);
-    total = response.data.total_count;
+    tasks.push(...response.data.entries.map(mapBuildTask));
+    offset += BUILD_TASK_LIST_PAGE_SIZE;
 
-    if (pageItems.length === 0 || pageItems.length < BUILD_TASK_LIST_PAGE_SIZE) {
+    if (offset >= response.data.total_count) {
       break;
     }
-    offset += pageItems.length;
   }
 
   return filterTasks(tasks, query);
@@ -390,7 +390,9 @@ function sortMockTasks(
 export async function listBuildTaskPage(
   query: BuildTaskPageQuery,
 ): Promise<BuildTaskPageResult> {
-  const { page, pageSize } = query;
+  const pageSize = query.pageSize ?? 10;
+  const limit = query.limit ?? pageSize;
+  const offset = query.offset ?? ((query.page ?? 1) - 1) * pageSize;
 
   if (useMock) {
     ensureMockTicker();
@@ -415,14 +417,13 @@ export async function listBuildTaskPage(
     }
     items = sortMockTasks(items, query.sort ?? "create_time", query.direction ?? "desc");
     const total = items.length;
-    const start = (page - 1) * pageSize;
-    return wait({ items: items.slice(start, start + pageSize), total }, 120);
+    return wait({ items: items.slice(offset, offset + limit), total }, 120);
   }
 
   const params: Record<string, unknown> = {
     direction: query.direction ?? "desc",
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
+    limit,
+    offset,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
     mode: query.mode || undefined,

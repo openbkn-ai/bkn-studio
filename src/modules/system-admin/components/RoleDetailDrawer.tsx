@@ -136,8 +136,10 @@ export function RoleDetailDrawer({
           </div>
           {memberSummary ? (
             <div className={styles.muted} style={{ marginTop: 8 }}>
-              {t("systemAdmin.roles.membersModal.memberUser")} {memberSummary.userCount} ·{" "}
-              {t("systemAdmin.roles.membersModal.memberDept")} {memberSummary.deptCount}
+              {t("systemAdmin.roles.membersModal.memberUser")} {memberSummary.userCount}
+              {memberSummary.deptCount > 0
+                ? ` · ${t("systemAdmin.roles.membersModal.memberDeptInactive")} ${memberSummary.deptCount}`
+                : ""}
             </div>
           ) : null}
           {role.description ? (

@@ -13,6 +13,7 @@ import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog
 
 export const AUTHZ_OBJECT_TYPES = [
   "catalog",
+  "resource",
   "knowledge_network",
   "small_model",
   "large_model",

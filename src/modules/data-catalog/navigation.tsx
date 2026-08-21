@@ -25,7 +25,7 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.indexBuild",
       icon: <ThunderboltOutlined />,
       path: "/index-builds",
-      permission: ["catalog:task_manage", "resource:task_manage"],
+      permission: ["catalog:task_manage"],
       permissionMode: "any",
     },
   ],

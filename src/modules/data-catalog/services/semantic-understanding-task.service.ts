@@ -112,11 +112,13 @@ export function buildSemanticUnderstandingTaskListParams(
   page: number,
   pageSize: number,
   filters: SemanticUnderstandingTaskListFilters,
+  /** Raw window, when the caller scans by offset because the backend filters after paging (#977). */
+  window?: { limit: number; offset: number },
 ) {
   return {
     direction: filters.direction ?? "desc",
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
+    limit: window?.limit ?? pageSize,
+    offset: window?.offset ?? (page - 1) * pageSize,
     sort: filters.sort ?? "create_time",
     scope: filters.scope,
     catalog_id: filters.catalogId,

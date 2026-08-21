@@ -198,8 +198,12 @@ export type BuildTaskPageQuery = {
   catalogId?: string;
   mode?: BuildMode;
   direction?: "asc" | "desc";
-  page: number;
-  pageSize: number;
+  /** Raw window. The caller scans by offset because the backend filters after paging (#977). */
+  limit?: number;
+  offset?: number;
+  /** Page coordinates, kept for callers that read a fixed page. Ignored when offset/limit are given. */
+  page?: number;
+  pageSize?: number;
   resourceId?: string;
   sort?: BuildTaskSort;
   statuses?: BuildTaskStatus[];
@@ -207,6 +211,7 @@ export type BuildTaskPageQuery = {
 
 export type BuildTaskPageResult = {
   items: BuildTask[];
+  /** Unfiltered count reported by the backend; not the number of rows the caller may see (#977). */
   total: number;
 };
 

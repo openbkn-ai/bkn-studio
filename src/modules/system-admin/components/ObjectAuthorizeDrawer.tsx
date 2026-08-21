@@ -251,17 +251,13 @@ export function ObjectAuthorizeDrawer({
     [grants, isProtected],
   );
 
+  // Users only — the backend rejects department accessors (see ObjectAuthorizationCreateScene).
+  // Departments are still resolved for display, since older grants may name one.
   const candidates = useMemo(() => {
     const taken = new Set(grants.map((grant) => grant.accessorId));
     const userOptions = candidateUserOptions.filter((option) => !taken.has(option.value));
-    const deptOptions = departments
-      .filter((department) => !taken.has(department.id))
-      .map((department) => ({ value: department.id, label: department.name }));
-    return [
-      { label: t("systemAdmin.objectGrants.granteeUser"), options: userOptions },
-      { label: t("systemAdmin.objectGrants.granteeDept"), options: deptOptions },
-    ];
-  }, [candidateUserOptions, departments, grants, t]);
+    return [{ label: t("systemAdmin.objectGrants.granteeUser"), options: userOptions }];
+  }, [candidateUserOptions, grants, t]);
 
   const targetOf = (grant: ObjectGrant) => ({
     accessorId: grant.accessorId,
@@ -389,9 +385,7 @@ export function ObjectAuthorizeDrawer({
         <div className={styles.authzObjStats}>
           <span className={styles.authzObjStat}>
             <strong>{grants.length}</strong>
-            <span>
-              {t("systemAdmin.objectGrants.granteeUser")}/{t("systemAdmin.objectGrants.granteeDept")}
-            </span>
+            <span>{t("systemAdmin.objectGrants.granteeUser")}</span>
           </span>
           <span className={styles.authzObjStat}>
             <strong>{ops.length}</strong>

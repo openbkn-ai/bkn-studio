@@ -90,7 +90,7 @@ export const dataCatalogEnUS = {
     },
     semanticWorkspace: { summary: "Semantic Understanding Result", applied: "Semantic results loaded", notApplied: "No semantic results loaded", processing: "Semantic understanding is in progress", create: "Create Task", createTitle: "Create Semantic Understanding Task", start: "Start", started: "Semantic understanding task started", empty: "No semantic-understanding tasks", confidenceThreshold: "Confidence threshold", includeSamples: "Include sample data", includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking." },
     emptyDescription:
-      "Create and discover a connection first, then browse resources and build indexes here.",
+      "Create and discover a connection first, then browse resources and build indexes here. If the platform already holds connections you cannot see here, access to their catalogs has not been granted to you.",
     backToCatalog: "Back to Data Catalog",
     buildChip: "Building · {{count}}",
     format: {
@@ -212,6 +212,7 @@ export const dataCatalogEnUS = {
       collapse: "Collapse",
     },
     catalog: {
+      authorize: "Authorize",
       notFound: "No resources found for this connection; it may have been deleted",
       selectPhysicalDescription: "Select a data connection from the physical data source tree.",
       resourceSection: "Resources",
@@ -308,6 +309,9 @@ export const dataCatalogEnUS = {
       goEnable: "Open connections",
     },
     preview: {
+      noQueryPermission: "No permission to read this data",
+      noQueryPermissionDescription:
+        "You can see this table's structure, but reading its rows is granted separately. Ask an administrator for query permission on this table or the catalog it belongs to.",
       summary: "Showing {{visibleRows}} · {{totalRows}} total",
       empty: "No data",
       metadataDiscoveryFailed: "Resource metadata discovery failed",
@@ -486,6 +490,10 @@ export const dataCatalogEnUS = {
       progress: "Progress",
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
+      emptyVisible: "No tasks you can see",
+      emptyUnauthorizedDescription:
+        "Only tasks you may see are listed, and that is decided on the catalog each task belongs to. Ask an administrator to grant you access to the catalogs whose tasks you expect here.",
+      visibleCount: "{{count}} on this page",
       emptyDescription:
         "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
       pauseListening: "Pause Listening",

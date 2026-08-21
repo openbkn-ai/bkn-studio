@@ -66,7 +66,6 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <KeyOutlined />,
         path: "/system/authorizations",
         permission: systemAdminPermissions.authorizations,
-        capability: CAPABILITIES.PERM_OBJECT_LEVEL,
       },
       {
         key: "license-management",

@@ -56,6 +56,7 @@ type ListConfig = {
 // 7.1 List instances.
 const LIST_CONFIG: Record<string, ListConfig> = {
   catalog: { path: "/vega-backend/v1/catalogs", domain: false, envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
+  resource: { path: "/vega-backend/v1/resources", domain: false, envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
   knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", domain: true, envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
   small_model: { path: "/mf-model-manager/v1/small-model/list", domain: false, envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
   large_model: { path: "/mf-model-manager/v1/llm/list", domain: false, envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
@@ -111,8 +112,8 @@ const NAMES_CONFIG: Record<string, NamesConfig> = {
   skill: { kind: "post", domain: true, path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", domain: true, path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },
-  // Resources are not selectable for new grants, but the backend may contain existing resource-level
-  // grants. Keep name lookup so lists can display their names, using the legacy Vega batch API as catalog does.
+  // A single table can be granted on its own — reading rows is judged there, while its management
+  // verbs live on the owning catalog. Same batch API as catalog for name display.
   resource: { kind: "vega", path: "/vega-backend/v1/resources" },
   mcp: { kind: "mcp" },
 };

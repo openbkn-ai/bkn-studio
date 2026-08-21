@@ -112,7 +112,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withRouteLoading(["catalog:task_manage", "resource:task_manage"], <IndexBuildPage />),
+    element: withRouteLoading(["catalog:task_manage"], <IndexBuildPage />),
   },
 ];
 

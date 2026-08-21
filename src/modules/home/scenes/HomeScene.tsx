@@ -137,7 +137,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         optional: true,
         path: "/data-directory",
         permissionMode: "any",
-        permissions: ["catalog:task_manage", "resource:task_manage"],
+        permissions: ["catalog:task_manage"],
         summaryKey: "home.platform.stages.data.required.indexBuild.summary",
         titleKey: "home.platform.stages.data.required.indexBuild.title",
       },

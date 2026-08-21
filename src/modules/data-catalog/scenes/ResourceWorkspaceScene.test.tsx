@@ -29,11 +29,16 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("react-router-dom", () => ({
+  useLocation: () => ({ pathname: "/data-directory/resource/resource-1", search: "" }),
   useNavigate: () => vi.fn(),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { error: vi.fn() }, modal: { confirm: vi.fn() } }),
+  useAppServices: () => ({
+    message: { error: vi.fn() },
+    modal: { confirm: vi.fn() },
+    runtimeConfig: { currentUser: { permissions: [] } },
+  }),
 }));
 
 vi.mock("@/framework/ui/common/AppButton", () => ({

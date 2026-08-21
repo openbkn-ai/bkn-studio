@@ -15,11 +15,12 @@ export const dataCatalogModuleManifest = {
     "catalog:modify",
     "catalog:delete",
     "catalog:task_manage",
+    // Managing a table -- creating, editing, deleting it, running its tasks -- is judged on the
+    // catalog it lives in (openbkn-ai/bkn-foundry#986). The table itself declares only view_detail
+    // and query_data, so the resource-side management verbs are gone from the backend vocabulary
+    // and from these gates.
+    "catalog:resource_manage",
     "resource:view_detail",
-    "resource:create",
-    "resource:modify",
-    "resource:delete",
-    "resource:task_manage",
   ],
   requiresShell: true,
   supportsEmbedded: false,

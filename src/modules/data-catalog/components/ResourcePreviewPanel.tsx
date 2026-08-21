@@ -10,7 +10,10 @@ import { Alert, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorMessage,
+  isRequestForbidden,
+} from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatCount } from "@/modules/data-catalog/lib/format";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
@@ -85,6 +88,7 @@ export function ResourcePreviewPanel({
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const queryBlockReason = resourceQueryBlockReason(resource);
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -95,6 +99,7 @@ export function ResourcePreviewPanel({
     async (nextOffset: number, nextLimit: number) => {
       setLoading(true);
       setError(null);
+      setForbidden(false);
       try {
         const data = await previewCatalogResource(resource.id, {
           limit: nextLimit,
@@ -102,6 +107,10 @@ export function ResourcePreviewPanel({
         });
         setResult(data);
       } catch (loadError) {
+        // Reading rows is granted separately from seeing the table's structure. The panel loads on
+        // its own, so a bare 403 leaves the user guessing whether the table, the connection or
+        // their own access is the problem — name it instead.
+        setForbidden(isRequestForbidden(loadError));
         setError(extractRequestErrorMessage(loadError));
         setResult(null);
       } finally {
@@ -198,7 +207,14 @@ export function ResourcePreviewPanel({
           })}
         </span>
       </div>
-      {error ? (
+      {forbidden ? (
+        <Alert
+          description={t("dataCatalog.preview.noQueryPermissionDescription")}
+          message={t("dataCatalog.preview.noQueryPermission")}
+          showIcon
+          type="info"
+        />
+      ) : error ? (
         <Alert message={error} showIcon type="error" />
       ) : (
         <Spin spinning={loading} wrapperClassName={styles.tableSection}>
