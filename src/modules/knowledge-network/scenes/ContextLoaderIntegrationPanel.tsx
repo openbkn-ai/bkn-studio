@@ -29,7 +29,7 @@ import {
   withMcpTrailingSlash,
 } from "@/modules/knowledge-network/services/mcp-client-config";
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
-import { businessRequestExample, schemaFields, splitInputSchemaFields, type McpSchemaField } from "@/modules/knowledge-network/services/mcp-schema-doc";
+import { businessRequestExample, schemaDocumentation, splitInputSchemaFields, type McpSchemaField } from "@/modules/knowledge-network/services/mcp-schema-doc";
 
 import styles from "./ExperienceScene.module.css";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
@@ -203,8 +203,10 @@ function SchemaFieldTable({ fields }: { fields: McpSchemaField[] }) {
   );
 }
 
-function SchemaExample({ code, onCopy }: { code: string; onCopy: () => void }) {
+function SchemaExample({ code, onCopy }: { code: string | null; onCopy: () => void }) {
   const { t } = useTranslation();
+  if (code === null) return <div className={styles.schemaExampleInvalid}>{t("knowledgeNetwork.contextLoaderPanel.schema.invalidExample")}</div>;
+
   return (
     <div className={styles.schemaExample}>
       <div className={styles.schemaExampleHead}>
@@ -301,6 +303,7 @@ export function ContextLoaderIntegrationPanel({
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
   const [schemaTab, setSchemaTab] = useState<"docs" | "raw">("docs");
+  const [schemaOverviewExpanded, setSchemaOverviewExpanded] = useState(false);
   const [queryParamsOpen, setQueryParamsOpen] = useState(true);
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
@@ -379,6 +382,7 @@ export function ContextLoaderIntegrationPanel({
   useEffect(() => {
     setQueryParamsOpen(true);
     setCallParamsOpen(true);
+    setSchemaOverviewExpanded(false);
   }, [op?.id]);
 
   useEffect(() => {
@@ -456,8 +460,9 @@ export function ContextLoaderIntegrationPanel({
   }
 
   const opDisplay = displayOf(op);
-  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [] };
-  const outputSchemaFields = currentTool ? schemaFields(currentTool.outputSchema) : [];
+  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [], truncated: false };
+  const outputSchema = currentTool ? schemaDocumentation(currentTool.outputSchema) : { fields: [], truncated: false };
+  const schemaOverview = currentTool?.description || op.summary;
   const schemaExample = businessRequestExample(bodyText);
 
   return (
@@ -610,7 +615,7 @@ export function ContextLoaderIntegrationPanel({
             {isVerifyView ? (
               <div className={styles.reqActions}>
                 {mode === "mcp" ? (
-                  <button type="button" className={styles.docBtn} onClick={() => { setSchemaTab("docs"); setSchemaOpen(true); }}>
+                  <button type="button" className={styles.docBtn} onClick={() => { setSchemaOverviewExpanded(false); setSchemaTab("docs"); setSchemaOpen(true); }}>
                     <FileTextOutlined /> {t("knowledgeNetwork.contextLoaderPanel.request.doc")}
                   </button>
                 ) : null}
@@ -837,11 +842,18 @@ export function ContextLoaderIntegrationPanel({
                 <div className={styles.schemaDocs}>
                   <section className={styles.schemaOverview}>
                     <span>{t("knowledgeNetwork.contextLoaderPanel.schema.overview")}</span>
-                    <p>{currentTool.description || op.summary}</p>
+                    <p>{schemaOverviewExpanded ? schemaOverview : toolSummaryPreview(schemaOverview)}</p>
+                    {isLongToolSummary(schemaOverview) ? (
+                      <button type="button" className={styles.schemaOverviewToggle} onClick={() => setSchemaOverviewExpanded((open) => !open)}>
+                        {schemaOverviewExpanded
+                          ? t("knowledgeNetwork.contextLoaderPanel.schema.overviewCollapse")
+                          : t("knowledgeNetwork.contextLoaderPanel.schema.overviewExpand")}
+                      </button>
+                    ) : null}
                   </section>
                   <SchemaExample
                     code={schemaExample}
-                    onCopy={() => onCopy(schemaExample, t("knowledgeNetwork.contextLoaderPanel.schema.copiedExample"))}
+                    onCopy={() => { if (schemaExample !== null) onCopy(schemaExample, t("knowledgeNetwork.contextLoaderPanel.schema.copiedExample")); }}
                   />
                   <section className={styles.schemaDocSection}>
                     <div className={styles.schemaDocSectionHead}>
@@ -851,15 +863,18 @@ export function ContextLoaderIntegrationPanel({
                       </div>
                     </div>
                     <SchemaFieldTable fields={inputSchemaFields.businessFields} />
+                    {inputSchemaFields.truncated ? <div className={styles.schemaTruncated}>{t("knowledgeNetwork.contextLoaderPanel.schema.truncatedFields")}</div> : null}
                   </section>
-                  <details className={styles.schemaTrace}>
-                    <summary>
-                      <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceTitle")}</span>
-                      <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceBadge")}</span>
-                    </summary>
-                    <p>{t("knowledgeNetwork.contextLoaderPanel.schema.traceHint")}</p>
-                    <SchemaFieldTable fields={inputSchemaFields.traceFields} />
-                  </details>
+                  {inputSchemaFields.traceFields.length > 0 ? (
+                    <details className={styles.schemaTrace}>
+                      <summary>
+                        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceTitle")}</span>
+                        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceBadge")}</span>
+                      </summary>
+                      <p>{t("knowledgeNetwork.contextLoaderPanel.schema.traceHint")}</p>
+                      <SchemaFieldTable fields={inputSchemaFields.traceFields} />
+                    </details>
+                  ) : null}
                   <section className={styles.schemaDocSection}>
                     <div className={styles.schemaDocSectionHead}>
                       <div>
@@ -867,7 +882,12 @@ export function ContextLoaderIntegrationPanel({
                         <p>{t("knowledgeNetwork.contextLoaderPanel.schema.responseShapeHint")}</p>
                       </div>
                     </div>
-                    {currentTool.outputSchema !== undefined ? <SchemaFieldTable fields={outputSchemaFields} /> : <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>}
+                    {currentTool.outputSchema !== undefined ? (
+                      <>
+                        <SchemaFieldTable fields={outputSchema.fields} />
+                        {outputSchema.truncated ? <div className={styles.schemaTruncated}>{t("knowledgeNetwork.contextLoaderPanel.schema.truncatedFields")}</div> : null}
+                      </>
+                    ) : <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>}
                   </section>
                 </div>
               ) : (

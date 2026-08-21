@@ -1525,6 +1525,22 @@
   line-height: 1.65;
 }
 
+.schemaOverviewToggle {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2e68ff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schemaOverviewToggle:hover {
+  color: #1647bd;
+  text-decoration: underline;
+}
+
 .schemaExample {
   overflow: hidden;
   margin-bottom: 16px;
@@ -1557,6 +1573,22 @@
   font-size: 12px;
   line-height: 1.65;
   white-space: pre-wrap;
+}
+
+.schemaExampleInvalid,
+.schemaTruncated {
+  margin: 0 0 16px;
+  padding: 10px 13px;
+  border: 1px dashed #cfd9e8;
+  border-radius: 8px;
+  background: #fafcff;
+  color: #70809a;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.schemaDocSection .schemaTruncated {
+  margin: 8px 0 0;
 }
 
 .schemaDocSection {

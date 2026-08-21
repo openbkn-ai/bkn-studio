@@ -18,6 +18,11 @@ export type McpSchemaField = {
   allowsAdditionalProperties: boolean;
 };
 
+export type McpSchemaDocumentation = {
+  fields: McpSchemaField[];
+  truncated: boolean;
+};
+
 type JsonRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): JsonRecord | null {
@@ -64,46 +69,61 @@ function fieldOf(name: string, schema: unknown, path: string, depth: number, req
   };
 }
 
-function nestedFields(schema: unknown, path: string, depth: number): McpSchemaField[] {
-  if (depth >= 4) return [];
+function nestedFields(schema: unknown, path: string, depth: number): McpSchemaDocumentation {
   const record = asRecord(schema);
-  if (!record) return [];
+  if (!record) return { fields: [], truncated: false };
   const objectSchema = record.type === "array" ? record.items : schema;
+  if (depth >= 4) return { fields: [], truncated: Object.keys(propertiesOf(objectSchema)).length > 0 };
   const props = propertiesOf(objectSchema);
   const required = requiredOf(objectSchema);
   const suffix = record.type === "array" ? "[]" : "";
-  return Object.entries(props).flatMap(([name, child]) => {
+  return Object.entries(props).reduce<McpSchemaDocumentation>((documentation, [name, child]) => {
     const childPath = `${path}${suffix}.${name}`;
-    return [fieldOf(name, child, childPath, depth, required.has(name)), ...nestedFields(child, childPath, depth + 1)];
-  });
+    const nested = nestedFields(child, childPath, depth + 1);
+    documentation.fields.push(fieldOf(name, child, childPath, depth, required.has(name)), ...nested.fields);
+    documentation.truncated ||= nested.truncated;
+    return documentation;
+  }, { fields: [], truncated: false });
 }
 
 /** Flattens object and array properties while retaining an indentation depth for rendering. */
 export function schemaFields(schema: unknown): McpSchemaField[] {
+  return schemaDocumentation(schema).fields;
+}
+
+/** Creates the field list and indicates when deeply nested fields are intentionally omitted. */
+export function schemaDocumentation(schema: unknown): McpSchemaDocumentation {
   const props = propertiesOf(schema);
   const required = requiredOf(schema);
-  return Object.entries(props).flatMap(([name, child]) => [fieldOf(name, child, name, 0, required.has(name)), ...nestedFields(child, name, 1)]);
+  return Object.entries(props).reduce<McpSchemaDocumentation>((documentation, [name, child]) => {
+    const nested = nestedFields(child, name, 1);
+    documentation.fields.push(fieldOf(name, child, name, 0, required.has(name)), ...nested.fields);
+    documentation.truncated ||= nested.truncated;
+    return documentation;
+  }, { fields: [], truncated: false });
 }
 
 /** Separates Studio-managed lifecycle data from parameters a person is expected to choose. */
-export function splitInputSchemaFields(schema: unknown): { businessFields: McpSchemaField[]; traceFields: McpSchemaField[] } {
-  const fields = schemaFields(schema);
+export function splitInputSchemaFields(schema: unknown): { businessFields: McpSchemaField[]; traceFields: McpSchemaField[]; truncated: boolean } {
+  const documentation = schemaDocumentation(schema);
+  const { fields } = documentation;
   const isTraceField = (field: McpSchemaField) => field.path === "bkn_context" || field.path.startsWith("bkn_context.") || field.path.startsWith("bkn_context[]");
   return {
     businessFields: fields.filter((field) => !isTraceField(field)),
     traceFields: fields.filter(isTraceField),
+    truncated: documentation.truncated,
   };
 }
 
 /** Formats the current request editor contents without the managed context injected by Studio. */
-export function businessRequestExample(bodyText: string): string {
+export function businessRequestExample(bodyText: string): string | null {
   try {
     const body = asRecord(JSON.parse(bodyText));
-    if (!body) return "{}";
+    if (!body) return null;
     const businessBody = { ...body };
     delete businessBody.bkn_context;
     return JSON.stringify(businessBody, null, 2);
   } catch {
-    return "{}";
+    return null;
   }
 }

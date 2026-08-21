@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { businessRequestExample, schemaFields, splitInputSchemaFields } from "./mcp-schema-doc";
+import { businessRequestExample, schemaDocumentation, schemaFields, splitInputSchemaFields } from "./mcp-schema-doc";
 
 const searchSchemaInput = {
   type: "object",
@@ -61,5 +61,40 @@ describe("MCP schema documentation", () => {
     expect(businessRequestExample('{"kn_id":"kn_demo","query":"orders","bkn_context":{"conversation_id":"c_1"}}')).toBe(
       '{\n  "kn_id": "kn_demo",\n  "query": "orders"\n}',
     );
+  });
+
+  it("does not fabricate an empty request example when the editor contains invalid JSON", () => {
+    expect(businessRequestExample('{"kn_id":')).toBeNull();
+    expect(businessRequestExample("[]")).toBeNull();
+  });
+
+  it("reports when deeply nested fields are omitted from the guided view", () => {
+    const documentation = schemaDocumentation({
+      type: "object",
+      properties: {
+        level_0: {
+          type: "object",
+          properties: {
+            level_1: {
+              type: "object",
+              properties: {
+                level_2: {
+                  type: "object",
+                  properties: {
+                    level_3: {
+                      type: "object",
+                      properties: { level_4: { type: "string" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(documentation.fields.map((field) => field.path)).toEqual(["level_0", "level_0.level_1", "level_0.level_1.level_2", "level_0.level_1.level_2.level_3"]);
+    expect(documentation.truncated).toBe(true);
   });
 });
