@@ -24,6 +24,8 @@ type RequireEditionProps = {
   /** 能力 key,只用于取文案(`subscription.capabilities.<key>.*`)。 */
   capability: string;
   children: ReactNode;
+  /** 锁定时是否仍挂载内容预览。默认保留现有升级引导体验。 */
+  mountLockedContent?: boolean;
   minEdition: Edition;
 };
 
@@ -38,7 +40,12 @@ type RequireEditionProps = {
  * 真正的强制力始终在服务端,这层只是体验。等 §6.2 的每服务自述端点落地,这里就能和
  * bkn-safe 自己的能力走同一条判据。
  */
-export function RequireEdition({ capability, children, minEdition }: RequireEditionProps) {
+export function RequireEdition({
+  capability,
+  children,
+  minEdition,
+  mountLockedContent = true,
+}: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { loading, snapshot } = useEntitlementContext();
@@ -80,13 +87,11 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
 
   return (
     <div className="console-upgrade-locked">
-      {/*
-        底下照常渲染真实页面,盖一层蒙版:客户看得见这块功能长什么样,才知道自己在买什么。
-        内容层不可点、不可选、焦点也进不去——但蒙版只是体验层,真正的强制力在服务端。
-      */}
-      <div aria-hidden className="console-upgrade-locked-content" inert>
-        {children}
-      </div>
+      {mountLockedContent ? (
+        <div aria-hidden className="console-upgrade-locked-content" inert>
+          {children}
+        </div>
+      ) : null}
       <div className="console-upgrade-mask">
         <div className={`console-upgrade-card ${tierClass ? "console-upgrade-enterprise" : ""}`}>
           <div className={`console-upgrade-hero ${tierClass}`}>
