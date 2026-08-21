@@ -22,10 +22,16 @@ import {
   isLongToolSummary,
   toolSummaryPreview,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
+import {
+  createClaudeCodeMcpCommand,
+  createMcpRemoteJsonConfig,
+  getMcpConnectionProtocol,
+  withMcpTrailingSlash,
+} from "@/modules/knowledge-network/services/mcp-client-config";
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./ExperienceScene.module.css";
+import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
 
@@ -249,13 +255,16 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
+  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
+  const mcpProtocol = getMcpConnectionProtocol(mcpUrlWithSlash);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
-  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
-  const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
+  const mcpClientOptions = { allowInsecureTls };
+  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey, mcpClientOptions);
+  const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey, mcpClientOptions);
   // Display names and groups come from tools/list metadata first, with local fallback for old servers.
   const toolMetaByName = useMemo(() => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])), [toolDefs]);
   const displayOf = useCallback(
@@ -324,6 +333,10 @@ export function ContextLoaderIntegrationPanel({
   useEffect(() => {
     if (appKeyValue) setMcpConfigKey(appKeyValue);
   }, [appKeyValue]);
+
+  useEffect(() => {
+    if (mcpProtocol === "http") setAllowInsecureTls(false);
+  }, [mcpProtocol]);
 
   useEffect(() => {
     if (sending || response !== null || reqError !== null) {
@@ -432,6 +445,11 @@ export function ContextLoaderIntegrationPanel({
                   </button>
                 </div>
               </div>
+              <McpConnectionSecurity
+                protocol={mcpProtocol}
+                allowInsecureTls={allowInsecureTls}
+                onAllowInsecureTlsChange={setAllowInsecureTls}
+              />
               <div className={styles.mcpConfigBody}>
                 {mcpConfigTab === "claude" ? (
                   <>

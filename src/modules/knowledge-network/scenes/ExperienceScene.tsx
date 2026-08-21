@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import {
   formatPrecisionSafeJSON,
@@ -200,8 +201,7 @@ export function ExperienceScene({
 
   const copy = useCallback(
     (text: string, label?: string) => {
-      void navigator.clipboard
-        ?.writeText(text)
+      void writeTextToClipboard(text)
         .then(() =>
           message.success(
             label ?? t("knowledgeNetwork.contextLoaderPanel.experience.copied"),

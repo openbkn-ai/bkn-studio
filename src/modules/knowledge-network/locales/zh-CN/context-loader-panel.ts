@@ -182,6 +182,16 @@ export const contextLoaderPanelPart = {
       copiedCursor: "Cursor 配置已复制",
       copiedGeneric: "mcp.json 配置已复制",
     },
+    mcpSecurity: {
+      httpTitle: "检测到 HTTP 连接",
+      httpDescription: "生成的配置会自动加入 --allow-http。Bearer Key 将以未加密方式传输，请仅在可信网络中使用。",
+      httpsTitle: "已启用 HTTPS 证书校验",
+      httpsDescription: "生成的配置默认校验服务端证书。",
+      allowSelfSigned: "允许使用自签名证书",
+      insecureTitle: "证书校验已关闭",
+      insecureDescription:
+        "仅用于可信的自签名证书。生成的配置会加入 NODE_TLS_REJECT_UNAUTHORIZED=0。",
+    },
     mcpSetup: {
       title: "接入 MCP（Claude Code / Cursor）",
       externalPrefix: "接入指南用于",
