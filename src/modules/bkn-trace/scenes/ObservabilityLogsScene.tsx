@@ -46,7 +46,6 @@ type Filters = {
   actorId: string;
   businessModule?: BusinessModule;
   outcome?: AuditOutcome;
-  query: string;
   timeRange: [Dayjs, Dayjs];
 };
 
@@ -78,7 +77,6 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         timeFrom: nextFilters.timeRange[0].toISOString(),
         timeTo: nextFilters.timeRange[1].toISOString(),
         ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-        ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
         ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
@@ -197,15 +195,11 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
       {profile?.globalLogSearch ? (
         <div className={styles.filterPanel}>
-          <div className={styles.filterRowPrimary}>
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, query: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.searchPlaceholder")} prefix={<SearchOutlined />} value={filters.query} />
-            <DatePicker allowClear={false} onChange={(value) => { if (value) setFilters((current) => ({ ...current, timeRange: [value, current.timeRange[1]] })); }} placeholder={t("bknTrace.logs.startTime")} showTime value={filters.timeRange[0]} />
-            <DatePicker allowClear={false} onChange={(value) => { if (value) setFilters((current) => ({ ...current, timeRange: [current.timeRange[0], value] })); }} placeholder={t("bknTrace.logs.endTime")} showTime value={filters.timeRange[1]} />
+          <div className={styles.filterRow}>
+            <DatePicker.RangePicker allowClear={false} onChange={(value) => { const [start, end] = value ?? []; if (start && end) setFilters((current) => ({ ...current, timeRange: [start, end] })); }} placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]} showTime value={filters.timeRange} />
             <Select allowClear onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))} options={BUSINESS_MODULES.map((module) => ({ label: moduleLabel(module, t), value: module }))} placeholder={t("bknTrace.logs.modulePlaceholder")} value={filters.businessModule} />
-          </div>
-          <div className={styles.filterRowSecondary}>
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
             <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
+            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
             <Space><Button icon={<SearchOutlined />} onClick={submit} type="primary">{t("bknTrace.actions.query")}</Button><Button onClick={reset}>{t("bknTrace.actions.reset")}</Button></Space>
           </div>
         </div>
@@ -242,7 +236,7 @@ function ClampedText({ secondary, value }: { secondary?: string; value: string }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
   const end = dayjs();
-  return { actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
+  return { actorId: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
 }
 
 function readInitialFilters(mode: "audit" | "logs"): Filters {
@@ -259,7 +253,6 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
     actorId: parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
-    query: parameters.get("q") ?? "",
     ...(hasValidTimeRange ? { timeRange: [timeFrom, timeTo] } : {}),
   };
 }
@@ -291,7 +284,6 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
     parameters.set("actor_id", scope.actorId);
     parameters.set("actor_match", EXACT_ACTOR_MATCH);
   }
-  if (filters.query.trim()) parameters.set("q", filters.query.trim());
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
   if (filters.actorId.trim()) parameters.set("actor", filters.actorId.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
