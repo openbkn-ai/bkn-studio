@@ -1,5 +1,9 @@
 # Audit Filter Layout Design
 
+## Status
+
+Implemented.
+
 ## Goal
 
 Make the audit-log filters compact and reliable: a single row containing time range, resource or business module, result status, and an operator value that accepts either a name or an ID.
