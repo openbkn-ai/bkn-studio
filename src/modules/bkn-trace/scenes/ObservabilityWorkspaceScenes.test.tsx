@@ -232,6 +232,18 @@ describe("observability workspace scenes", () => {
     expect(query?.timeTo).toBe("2026-08-03T00:00:00.000Z");
   });
 
+  it("忽略已废弃的 q 参数，仅保留结构化筛选", async () => {
+    window.history.replaceState({}, "", "/observability/logs?q=legacy-keyword&actor=%E5%BC%A0%E4%B8%89&outcome=failure");
+
+    render(<ObservabilityLogsScene />);
+
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query).toMatchObject({ actorQuery: "张三", outcomes: ["failure"] });
+    expect(query).not.toHaveProperty("query");
+    expect(screen.queryByPlaceholderText("bknTrace.logs.searchPlaceholder")).toBeNull();
+  });
+
   it("系统管理日志入口复用统一工作台并保留对象下钻条件", async () => {
     window.history.replaceState({}, "", "/system/audit?target_type=user&target_id=user-a");
     render(<AuditLogPage />);
