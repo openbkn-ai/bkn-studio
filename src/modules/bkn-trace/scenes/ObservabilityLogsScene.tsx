@@ -196,7 +196,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       {profile?.globalLogSearch ? (
         <div className={styles.filterPanel}>
           <div className={styles.filterRow}>
-            <DatePicker.RangePicker allowClear={false} onChange={(value) => { if (value?.[0] && value[1]) setFilters((current) => ({ ...current, timeRange: [value[0], value[1]] })); }} placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]} showTime value={filters.timeRange} />
+            <DatePicker.RangePicker allowClear={false} onChange={(value) => { const [start, end] = value ?? []; if (start && end) setFilters((current) => ({ ...current, timeRange: [start, end] })); }} placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]} showTime value={filters.timeRange} />
             <Select allowClear onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))} options={BUSINESS_MODULES.map((module) => ({ label: moduleLabel(module, t), value: module }))} placeholder={t("bknTrace.logs.modulePlaceholder")} value={filters.businessModule} />
             <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
             <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
