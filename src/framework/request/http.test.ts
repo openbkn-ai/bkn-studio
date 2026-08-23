@@ -70,4 +70,18 @@ describe("http request headers", () => {
 
     expect(notify).not.toHaveBeenCalled();
   });
+
+  it("notifies globally when a request error does not opt out", async () => {
+    const notify = vi.fn();
+    setRequestErrorHandler(notify);
+    const missingRoute: AxiosAdapter = (config) => Promise.reject(Object.assign(
+      new Error("Request failed with status code 404"),
+      { config, isAxiosError: true, response: { status: 404 } },
+    ));
+
+    await expect(http.get("/enterprise-only", { adapter: missingRoute }))
+      .rejects.toThrow("Request failed with status code 404");
+
+    expect(notify).toHaveBeenCalledTimes(1);
+  });
 });
