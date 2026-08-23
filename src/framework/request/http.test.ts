@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AxiosAdapter } from "axios";
 
-import { http } from "@/framework/request/http";
+import { http, setRequestErrorHandler } from "@/framework/request/http";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
 const adapter = vi.fn<AxiosAdapter>((config) => Promise.resolve({
@@ -26,6 +26,7 @@ describe("http request headers", () => {
   });
 
   afterEach(() => {
+    setRequestErrorHandler(null);
     setRuntimeConfig(createRuntimeConfig());
   });
 
@@ -54,5 +55,19 @@ describe("http request headers", () => {
 
     expect(adapter.mock.calls[0]?.[0].headers?.get("Accept-Language")).toBe("en-US");
     expect(adapter.mock.calls[1]?.[0].headers?.get("Accept-Language")).toBe("zh-CN");
+  });
+
+  it("does not notify globally when an expected request error opts out", async () => {
+    const notify = vi.fn();
+    setRequestErrorHandler(notify);
+    const missingRoute: AxiosAdapter = (config) => Promise.reject(Object.assign(
+      new Error("Request failed with status code 404"),
+      { config, isAxiosError: true, response: { status: 404 } },
+    ));
+
+    await expect(http.get("/enterprise-only", { adapter: missingRoute, skipErrorToast: true }))
+      .rejects.toThrow("Request failed with status code 404");
+
+    expect(notify).not.toHaveBeenCalled();
   });
 });
