@@ -25,6 +25,8 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
 import {
   createKnowledgeNetwork,
@@ -67,6 +69,8 @@ export function KnowledgeNetworkListScene({
   const [formOpen, setFormOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [authorizingRecord, setAuthorizingRecord] =
+    useState<KnowledgeNetworkRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(
     null,
   );
@@ -349,6 +353,7 @@ export function KnowledgeNetworkListScene({
                 {items.map((record) => (
                   <KnowledgeNetworkCard
                     key={record.id}
+                    onAuthorize={setAuthorizingRecord}
                     onDelete={openDelete}
                     onEdit={openEdit}
                     onExport={(nextRecord) => {
@@ -386,6 +391,14 @@ export function KnowledgeNetworkListScene({
         onSubmit={submitForm}
         open={formOpen}
         record={editingRecord}
+      />
+      <ObjectAuthorizeDrawer
+        objectAuthorized={hasKnowledgeNetworkRecordOperation(authorizingRecord, "authorize")}
+        objId={authorizingRecord?.id ?? ""}
+        objName={authorizingRecord?.name ?? ""}
+        objType="knowledge_network"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
       />
       <Modal
         centered

@@ -20,6 +20,7 @@ import {
 import styles from "./KnowledgeNetworkCard.module.css";
 
 type KnowledgeNetworkCardProps = {
+  onAuthorize: (record: KnowledgeNetworkRecord) => void;
   onDelete: (record: KnowledgeNetworkRecord) => void;
   onEdit: (record: KnowledgeNetworkRecord) => void;
   onExport: (record: KnowledgeNetworkRecord) => void;
@@ -28,6 +29,7 @@ type KnowledgeNetworkCardProps = {
 };
 
 export function KnowledgeNetworkCard({
+  onAuthorize,
   onDelete,
   onEdit,
   onExport,
@@ -48,7 +50,9 @@ export function KnowledgeNetworkCard({
             ? t("common.edit")
             : key === "export"
               ? t("knowledgeNetwork.export")
-              : t("common.delete"),
+              : key === "authorize"
+                ? t("knowledgeNetwork.authorizeAction")
+                : t("common.delete"),
     }),
   );
 
@@ -103,6 +107,11 @@ export function KnowledgeNetworkCard({
 
               if (key === "export") {
                 onExport(record);
+                return;
+              }
+
+              if (key === "authorize") {
+                onAuthorize(record);
                 return;
               }
 

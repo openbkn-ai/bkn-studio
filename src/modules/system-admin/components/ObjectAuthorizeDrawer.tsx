@@ -26,14 +26,13 @@ import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
-import { listUsersPage } from "@/modules/system-admin/services/admin.service";
+import { listGrantableUsersForObject } from "@/modules/system-admin/services/authz.service";
 import {
-  listObjectGrants,
-  revokeObjectGrant,
-  upsertObjectGrant,
+  listObjectGrantsForObject,
+  revokeObjectGrantForObject,
+  upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
@@ -52,6 +51,13 @@ import {
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type ObjectAuthorizeDrawerProps = {
+  /**
+   * Whether the caller holds `authorize` on THIS object, from the object's own record rather than
+   * from the global permission set (which drops resource.id and cannot answer per-object questions).
+   * Omitted means "decide from the admin permission points alone", which is what the platform
+   * authorization page and the model panels want.
+   */
+  objectAuthorized?: boolean;
   objId: string;
   objName: string;
   objSub?: string;
@@ -93,6 +99,7 @@ function mergeObjectGrants(
 }
 
 export function ObjectAuthorizeDrawer({
+  objectAuthorized = false,
   objId,
   objName,
   objSub,
@@ -109,15 +116,23 @@ export function ObjectAuthorizeDrawer({
   // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
   // who has access to an object is legitimate for read-only reviewers. Guard each write control,
   // rather than blocking access to the drawer.
+  //
+  // Two ways to earn the write controls, matching what bkn-safe accepts: the platform-wide
+  // admin-authz points, or `authorize` on this one object — the row the domain services write to
+  // whoever created it. Without the second, the person the grant was written for opened the drawer
+  // and could only look.
   const currentPermissions = runtimeConfig.currentUser.permissions;
-  const canGrant = hasPermissions({
+  const isAdminGrantor = hasPermissions({
     currentPermissions,
     requiredPermissions: authzPoints.grant,
   });
-  const canRevoke = hasPermissions({
-    currentPermissions,
-    requiredPermissions: authzPoints.revoke,
-  });
+  const canGrant = objectAuthorized || isAdminGrantor;
+  const canRevoke =
+    objectAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: authzPoints.revoke,
+    });
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
@@ -132,22 +147,38 @@ export function ObjectAuthorizeDrawer({
   >([]);
   const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
 
+  // `authorize` is offered only to platform administrators. bkn-safe refuses it from anyone else —
+  // a delegate that could pass `authorize` on would mint further delegates, and only an
+  // administrator can take it back — so showing the chip to an owner would be a control that always
+  // 403s. Owners share their object; deciding who else may share it stays administrative.
   const ops = useMemo(
-    () => operationsForType(objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key)),
-    [objType],
+    () =>
+      operationsForType(objType).filter(
+        (op) =>
+          !HIDDEN_INSTANCE_OPS.has(op.key) && (op.key !== "authorize" || !objectAuthorized || isAdminGrantor),
+      ),
+    [isAdminGrantor, objType, objectAuthorized],
   );
 
+  // Best-effort: departments and user details come from admin-only endpoints, and this drawer is
+  // also opened by resource owners who hold no admin permission. Their names arrive with the grant
+  // rows instead (primed below), so a 403 here costs a department label, not the screen.
   const syncLookup = useCallback(async (accessorIds: string[]) => {
-    const deptList = await getCachedDepartments();
-    setDepartments(deptList);
-    await hydrateUserLookup(accessorIds);
+    try {
+      setDepartments(await getCachedDepartments());
+      await hydrateUserLookup(accessorIds);
+    } catch {
+      // Leave whatever the cache already holds.
+    }
     setLookupRevision((revision) => revision + 1);
   }, []);
 
   const loadRemote = useCallback(async () => {
     setLoading(true);
     try {
-      const grantList = await listObjectGrants({ resourceType: objType, resourceId: objId });
+      const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
+      // Prime first: these accounts are the only source of names an owner has.
+      primeUserLookupCache(accounts);
       setGrants(grantList);
       await syncLookup(grantList.map((grant) => grant.accessorId));
     } catch (error) {
@@ -189,8 +220,15 @@ export function ObjectAuthorizeDrawer({
     }
     let cancelled = false;
     setCandidateSearchLoading(true);
-    void listUsersPage({ search: debouncedCandidateKeyword || undefined, limit: 20 })
-      .then(({ users }) => {
+    // Search is required server-side: holding authorize on one object is not a licence to page
+    // through the directory. With nothing typed there is nothing to ask for.
+    if (!debouncedCandidateKeyword) {
+      setCandidateUserOptions([]);
+      setCandidateSearchLoading(false);
+      return;
+    }
+    void listGrantableUsersForObject(objType, objId, debouncedCandidateKeyword)
+      .then((users) => {
         if (cancelled) {
           return;
         }
@@ -215,7 +253,7 @@ export function ObjectAuthorizeDrawer({
     return () => {
       cancelled = true;
     };
-  }, [debouncedCandidateKeyword, open]);
+  }, [debouncedCandidateKeyword, objId, objType, open]);
 
   const deptMap = useMemo(
     () => new Map(departments.map((department) => [department.id, department])),
@@ -278,7 +316,7 @@ export function ObjectAuthorizeDrawer({
     }
     setBusy(true);
     try {
-      await upsertObjectGrant({
+      await upsertObjectGrantForObject({
         accessorId: candidate,
         objType,
         objId,
@@ -315,7 +353,7 @@ export function ObjectAuthorizeDrawer({
     const commit = async () => {
       setBusy(true);
       try {
-        await upsertObjectGrant({ ...targetOf(grant), operations: next });
+        await upsertObjectGrantForObject({ ...targetOf(grant), operations: next });
         const nextGrants = next.length
           ? grants.map((item) =>
               item.accessorId === grant.accessorId ? { ...item, operations: next } : item,
@@ -353,7 +391,7 @@ export function ObjectAuthorizeDrawer({
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
+          await revokeObjectGrantForObject(grant.accessorId, grant.objType, grant.objId);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
           applyLocalGrants(grants.filter((item) => item.accessorId !== grant.accessorId));
           onChanged?.();
@@ -402,7 +440,7 @@ export function ObjectAuthorizeDrawer({
         </span>
       </div>
 
-      <PermissionGate permissions={authzPoints.grant}>
+      {canGrant ? (
       <section className={styles.createPanel}>
         <div className={styles.createPanelHead}>
           <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.add")}</h3>
@@ -428,7 +466,7 @@ export function ObjectAuthorizeDrawer({
           </div>
         </div>
       </section>
-      </PermissionGate>
+      ) : null}
 
       {loading ? (
         <div className={styles.createLoading}>
@@ -485,7 +523,7 @@ export function ObjectAuthorizeDrawer({
                           </span>
                         </Tooltip>
                       ) : (
-                        <PermissionGate permissions={authzPoints.revoke}>
+                        canRevoke ? (
                           <AppButton
                             className={[styles.actionLink, styles.actionDanger].join(" ")}
                             onClick={() => handleRemove(grant)}
@@ -493,7 +531,7 @@ export function ObjectAuthorizeDrawer({
                           >
                             {t("systemAdmin.objectGrants.remove")}
                           </AppButton>
-                        </PermissionGate>
+                        ) : null
                       )}
                     </div>
                     <div className={styles.chipGroup}>
