@@ -382,6 +382,7 @@ export function WorkspaceOverviewSection({
 
       {detail ? (
         <ObjectAuthorizeDrawer
+          objectAuthorized={canAuthorize}
           objId={networkId}
           objName={detail.name}
           objType="knowledge_network"

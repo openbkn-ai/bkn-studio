@@ -25,6 +25,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
 import {
@@ -392,6 +393,7 @@ export function KnowledgeNetworkListScene({
         record={editingRecord}
       />
       <ObjectAuthorizeDrawer
+        objectAuthorized={hasKnowledgeNetworkRecordOperation(authorizingRecord, "authorize")}
         objId={authorizingRecord?.id ?? ""}
         objName={authorizingRecord?.name ?? ""}
         objType="knowledge_network"
