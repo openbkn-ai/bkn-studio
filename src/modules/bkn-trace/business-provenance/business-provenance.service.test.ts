@@ -22,7 +22,7 @@ vi.mock("@/framework/runtime/config", () => ({
 describe("EE business provenance service", () => {
   beforeEach(() => { getMock.mockReset(); postMock.mockReset(); });
 
-  it("reads the EE conversation list rather than the removed community endpoint", async () => {
+  it("silences the expected missing-EE-route response while reading the conversation list", async () => {
     getMock.mockResolvedValue({ data: { entries: [{ conversation_id: "conv-1" }], total: 1 } });
     const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
 
@@ -30,7 +30,11 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/conversations",
-      { headers: { "x-business-domain": "bd_demo" }, params: { page: 2, page_size: 20, keyword: "采购" } },
+      {
+        headers: { "x-business-domain": "bd_demo" },
+        params: { page: 2, page_size: 20, keyword: "采购" },
+        skipErrorToast: true,
+      },
     );
     expect(page.entries[0]?.conversationId).toBe("conv-1");
   });

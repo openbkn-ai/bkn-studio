@@ -118,7 +118,7 @@ export async function getBusinessProvenanceConversations(
 ): Promise<BusinessProvenancePage<BusinessProvenanceConversation>> {
   const response = await http.get<{ entries?: BackendConversation[]; total?: number; page?: number; page_size?: number }>(
     `${EE_PROVENANCE_PREFIX}/conversations`,
-    { headers: provenanceHeaders(), params: provenanceParams(query) },
+    { headers: provenanceHeaders(), params: provenanceParams(query), skipErrorToast: true },
   );
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
