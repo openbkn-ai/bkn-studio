@@ -471,6 +471,7 @@ export function AgentChat({
   const summaryLifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
+        agentName: "bkn-agent-smart-qa-summary",
         conversationStore: memoryConversationStore(),
       }),
     [env.base, knId, tokenProvider],

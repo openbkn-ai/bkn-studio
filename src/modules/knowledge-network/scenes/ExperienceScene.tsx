@@ -58,10 +58,12 @@ import {
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import {
+  LIFECYCLE_TOOL_NAMES,
   createBknLifecycle,
   lifecycleEnv,
   memoryConversationStore,
   withManagedTurn,
+  type BknTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { AgentChat } from "@/modules/knowledge-network/components/agent-chat/AgentChat";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
@@ -349,7 +351,11 @@ export function ExperienceScene({
    * Fill Test Data action is one interaction. Memory store resets on refresh.
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { conversationStore: memoryConversationStore() }),
+    () =>
+      createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, {
+        agentName: "bkn-agent-mcp-debug",
+        conversationStore: memoryConversationStore(),
+      }),
     [base, knId, tokenProvider],
   );
 
@@ -507,26 +513,19 @@ export function ExperienceScene({
       const freshToken =
         authMode === "apikey" ? appKey.trim() : runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token;
       const freshEnv = { ...env, token: freshToken };
-      // tokenProvider refreshes once after 401. One click equals one managed interaction.
-      const result = await withManagedTurn(
-        lifecycle,
-        t("knowledgeNetwork.contextLoaderPanel.experience.debugTurn", { id: op.id }),
-        async (turn) => {
-          const sent = await sendRequest(
-            freshEnv,
-            op,
-            mode,
-            queryVals,
-            bodyText,
-            tokenProvider,
-            controller.signal,
-            turn?.nextContext(),
+      const send = (turn: BknTurn | null = null) =>
+        sendRequest(freshEnv, op, mode, queryVals, bodyText, tokenProvider, controller.signal, turn?.nextContext());
+      // Lifecycle tools are entered directly by the debugger. Wrapping them would
+      // recursively create a turn and inject a bkn_context that their schema rejects.
+      const result = LIFECYCLE_TOOL_NAMES.has(op.id)
+        ? await send()
+        : await withManagedTurn(
+            lifecycle,
+            t("knowledgeNetwork.contextLoaderPanel.experience.debugTurn", { id: op.id }),
+            send,
+            // Even if the business call returns 500, this interaction completed from the caller side.
+            (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,
           );
-          return sent;
-        },
-        // Even if the business call returns 500, this interaction completed from the caller side.
-        (sent) => `HTTP ${sent.status} · ${sent.sizeBytes}B`,
-      );
       if (requestSequence !== requestSequenceRef.current) return;
       setResponse(result);
     } catch (error) {
