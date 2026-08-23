@@ -24,8 +24,8 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import type { KnowledgeNetworkListSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkCard } from "@/modules/knowledge-network/components/network/KnowledgeNetworkCard";
-import { KnowledgeNetworkAuthorizeDrawer } from "@/modules/knowledge-network/components/network/KnowledgeNetworkAuthorizeDrawer";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { KnowledgeNetworkImportButton } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkImportButton";
 import {
   createKnowledgeNetwork,
@@ -391,9 +391,10 @@ export function KnowledgeNetworkListScene({
         open={formOpen}
         record={editingRecord}
       />
-      <KnowledgeNetworkAuthorizeDrawer
-        networkId={authorizingRecord?.id ?? ""}
-        networkName={authorizingRecord?.name ?? ""}
+      <ObjectAuthorizeDrawer
+        objId={authorizingRecord?.id ?? ""}
+        objName={authorizingRecord?.name ?? ""}
+        objType="knowledge_network"
         onClose={() => setAuthorizingRecord(null)}
         open={Boolean(authorizingRecord)}
       />

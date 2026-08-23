@@ -10,6 +10,7 @@ import {
   listDomainObjects,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type {
   AuthorizableObject,
   AuthzSummary,
@@ -350,4 +351,128 @@ function mapEntry(item: BackendEntry): ObjectGrant {
     objName: objId,
     operations: item.operations ?? [],
   };
+}
+
+// ---- object-scoped self-service ---------------------------------------------
+
+/**
+ * Reads and writes for the grants on ONE object, through bkn-safe's self-service surface
+ * (`/safe/v1/me/...`) rather than the admin one.
+ *
+ * The admin endpoints sit behind a platform-administrator gate that a business role never passes,
+ * so the person who created a knowledge network could not see or change who else could reach it.
+ * The self-service endpoints answer to either an administrator or the holder of `authorize` on the
+ * very object named in the request — the row the domain services write to the creator — so one code
+ * path serves both audiences and the admin case keeps working unchanged.
+ *
+ * Scoped to a single object by construction. "Every grant on the platform" stays on the admin
+ * listing above.
+ */
+
+type BackendMeGrantEntry = {
+  accessor_account?: string;
+  accessor_id?: string;
+  accessor_name?: string;
+  operations?: string[];
+};
+
+/** Grantees of one object, with accounts resolved server-side (the user directory is admin-only). */
+export async function listObjectGrantsForObject(
+  objType: string,
+  objId: string,
+): Promise<{ accounts: AdminUser[]; grants: ObjectGrant[] }> {
+  if (useMock) {
+    return { accounts: [], grants: await listObjectGrants({ resourceType: objType, resourceId: objId }) };
+  }
+  const response = await http.get<{ entries?: BackendMeGrantEntry[] }>("/safe/v1/me/object-grants", {
+    params: { resource_id: objId, resource_type: objType },
+  });
+  const entries = (response.data.entries ?? []).filter((entry) => entry.accessor_id);
+  return {
+    // Shaped as AdminUser only so the shared display cache can be primed from it. The fields this
+    // surface cannot know (roles, departments, enabled) stay empty rather than being invented.
+    accounts: entries
+      .filter((entry) => entry.accessor_account)
+      .map((entry) => ({
+        account: entry.accessor_account ?? "",
+        accountType: "",
+        email: "",
+        enabled: true,
+        id: entry.accessor_id ?? "",
+        name: entry.accessor_name || entry.accessor_account || "",
+        roleIds: [],
+        telephone: "",
+      })),
+    grants: entries.map((entry) => ({
+      accessorId: entry.accessor_id ?? "",
+      objId,
+      objName: objId,
+      objType,
+      operations: entry.operations ?? [],
+    })),
+  };
+}
+
+/** Replaces one grantee's operation set on this object. An empty set revokes, as with the admin write. */
+export async function upsertObjectGrantForObject(input: ObjectGrantInput): Promise<void> {
+  if (!input.operations.length) {
+    await revokeObjectGrantForObject(input.accessorId, input.objType, input.objId);
+    return;
+  }
+  if (useMock) {
+    await upsertObjectGrant(input);
+    return;
+  }
+  await http.post("/safe/v1/me/object-grants", {
+    accessor_id: input.accessorId,
+    operations: input.operations,
+    resource: { id: input.objId, type: input.objType },
+  });
+}
+
+/** Removes one grantee's access to this object entirely. Idempotent server-side. */
+export async function revokeObjectGrantForObject(
+  accessorId: string,
+  objType: string,
+  objId: string,
+): Promise<void> {
+  if (useMock) {
+    await revokeObjectGrant(accessorId, objType, objId);
+    return;
+  }
+  await http.delete("/safe/v1/me/object-grants", {
+    data: { accessor_id: accessorId, resource: { id: objId, type: objType } },
+  });
+}
+
+/**
+ * Accounts this object can be shared with.
+ *
+ * Scoped to the object rather than to the platform: the user directory is admin-only, and bkn-safe
+ * opens this lookup exactly to callers who may already authorize the object they name.
+ */
+export async function listGrantableUsersForObject(
+  objType: string,
+  objId: string,
+  search: string,
+): Promise<AdminUser[]> {
+  if (useMock) {
+    return [];
+  }
+  const response = await http.get<{ users?: { account?: string; id?: string; name?: string }[] }>(
+    "/safe/v1/me/grantable-users",
+    { params: { resource_id: objId, resource_type: objType, search: search.trim() } },
+  );
+  return (response.data.users ?? [])
+    .filter((user) => user.id)
+    .map((user) => ({
+      account: user.account ?? "",
+      accountType: "",
+      email: "",
+      enabled: true,
+      id: user.id ?? "",
+      name: user.name || user.account || "",
+      roleIds: [],
+      telephone: "",
+    }));
 }
