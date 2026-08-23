@@ -301,7 +301,11 @@ export function DataBrowserPanel({
    * require bkn_context or Context Loader rejects them. This is not a chat, so one session lasts for this mount.
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { conversationStore: memoryConversationStore() }),
+    () =>
+      createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, {
+        agentName: "bkn-agent-data-browser",
+        conversationStore: memoryConversationStore(),
+      }),
     [env.base, env.knId, auth],
   );
 
