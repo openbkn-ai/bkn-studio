@@ -29,11 +29,11 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
-import { listUsersPage } from "@/modules/system-admin/services/admin.service";
+import { listGrantableUsersForObject } from "@/modules/system-admin/services/authz.service";
 import {
-  listObjectGrants,
-  revokeObjectGrant,
-  upsertObjectGrant,
+  listObjectGrantsForObject,
+  revokeObjectGrantForObject,
+  upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
@@ -137,17 +137,25 @@ export function ObjectAuthorizeDrawer({
     [objType],
   );
 
+  // Best-effort: departments and user details come from admin-only endpoints, and this drawer is
+  // also opened by resource owners who hold no admin permission. Their names arrive with the grant
+  // rows instead (primed below), so a 403 here costs a department label, not the screen.
   const syncLookup = useCallback(async (accessorIds: string[]) => {
-    const deptList = await getCachedDepartments();
-    setDepartments(deptList);
-    await hydrateUserLookup(accessorIds);
+    try {
+      setDepartments(await getCachedDepartments());
+      await hydrateUserLookup(accessorIds);
+    } catch {
+      // Leave whatever the cache already holds.
+    }
     setLookupRevision((revision) => revision + 1);
   }, []);
 
   const loadRemote = useCallback(async () => {
     setLoading(true);
     try {
-      const grantList = await listObjectGrants({ resourceType: objType, resourceId: objId });
+      const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
+      // Prime first: these accounts are the only source of names an owner has.
+      primeUserLookupCache(accounts);
       setGrants(grantList);
       await syncLookup(grantList.map((grant) => grant.accessorId));
     } catch (error) {
@@ -189,8 +197,15 @@ export function ObjectAuthorizeDrawer({
     }
     let cancelled = false;
     setCandidateSearchLoading(true);
-    void listUsersPage({ search: debouncedCandidateKeyword || undefined, limit: 20 })
-      .then(({ users }) => {
+    // Search is required server-side: holding authorize on one object is not a licence to page
+    // through the directory. With nothing typed there is nothing to ask for.
+    if (!debouncedCandidateKeyword) {
+      setCandidateUserOptions([]);
+      setCandidateSearchLoading(false);
+      return;
+    }
+    void listGrantableUsersForObject(objType, objId, debouncedCandidateKeyword)
+      .then((users) => {
         if (cancelled) {
           return;
         }
@@ -215,7 +230,7 @@ export function ObjectAuthorizeDrawer({
     return () => {
       cancelled = true;
     };
-  }, [debouncedCandidateKeyword, open]);
+  }, [debouncedCandidateKeyword, objId, objType, open]);
 
   const deptMap = useMemo(
     () => new Map(departments.map((department) => [department.id, department])),
@@ -278,7 +293,7 @@ export function ObjectAuthorizeDrawer({
     }
     setBusy(true);
     try {
-      await upsertObjectGrant({
+      await upsertObjectGrantForObject({
         accessorId: candidate,
         objType,
         objId,
@@ -315,7 +330,7 @@ export function ObjectAuthorizeDrawer({
     const commit = async () => {
       setBusy(true);
       try {
-        await upsertObjectGrant({ ...targetOf(grant), operations: next });
+        await upsertObjectGrantForObject({ ...targetOf(grant), operations: next });
         const nextGrants = next.length
           ? grants.map((item) =>
               item.accessorId === grant.accessorId ? { ...item, operations: next } : item,
@@ -353,7 +368,7 @@ export function ObjectAuthorizeDrawer({
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
+          await revokeObjectGrantForObject(grant.accessorId, grant.objType, grant.objId);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
           applyLocalGrants(grants.filter((item) => item.accessorId !== grant.accessorId));
           onChanged?.();
