@@ -622,6 +622,18 @@ function withBknContext(
   return { ...payload, bkn_context: bknContext };
 }
 
+function isLifecycleTool(op: ContextLoaderOp): boolean {
+  return op.id === "bkn_start_interaction" || op.id === "bkn_finish_interaction";
+}
+
+function withOperationContext(
+  op: ContextLoaderOp,
+  payload: Record<string, unknown>,
+  bknContext: BknContext | undefined,
+): Record<string, unknown> {
+  return isLifecycleTool(op) ? payload : withBknContext(payload, bknContext);
+}
+
 /**
  * Whether the payload already carries a context worth keeping.
  *
@@ -665,6 +677,7 @@ function strictBodyObject(bodyText: string): Record<string, unknown> {
  * response_format selector because MCP has no query string.
  */
 function mcpCallArgs(
+  op: ContextLoaderOp,
   bodyText: string,
   queryValues: Record<string, string>,
   bknContext?: BknContext,
@@ -674,7 +687,12 @@ function mcpCallArgs(
   if (responseFormat && !("response_format" in args)) {
     args.response_format = responseFormat;
   }
-  return withBknContext(args, bknContext);
+  return withOperationContext(op, args, bknContext);
+}
+
+function displayAuthHeaders(env: ContextLoaderEnv): Record<string, string> {
+  const headers = authHeaders(env);
+  return headers.Authorization ? { ...headers, Authorization: "Bearer <redacted>" } : headers;
 }
 
 export function buildCurl(
@@ -687,8 +705,8 @@ export function buildCurl(
 ): string {
   if (mode === "mcp") {
     const url = mcpBase(env);
-    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...authHeaders(env) };
-    const args = mcpCallArgs(bodyText, queryValues, bknContext);
+    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...displayAuthHeaders(env) };
+    const args = mcpCallArgs(op, bodyText, queryValues, bknContext);
     const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: args } };
     let curl = `curl -X POST '${url}'`;
     Object.entries(headers).forEach(([key, value]) => {
@@ -698,7 +716,7 @@ export function buildCurl(
     return curl;
   }
   const url = buildRestUrl(env, op, queryValues);
-  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...authHeaders(env) };
+  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...displayAuthHeaders(env) };
   let curl = `curl -X POST '${url}'`;
   Object.entries(headers).forEach(([key, value]) => {
     curl += ` \\\n  -H '${key}: ${value}'`;
@@ -708,7 +726,7 @@ export function buildCurl(
     // If the body is being edited and is not valid JSON yet, preserve user text.
     let body: string;
     try {
-      body = JSON.stringify(withBknContext(strictBodyObject(bodyText), bknContext));
+      body = JSON.stringify(withOperationContext(op, strictBodyObject(bodyText), bknContext));
     } catch {
       body = (bodyText || "{}").replace(/\n\s*/g, "");
     }
@@ -789,7 +807,7 @@ export async function sendRequest(
           jsonrpc: "2.0",
           id: 2,
           method: "tools/call",
-          params: { name: op.id, arguments: mcpCallArgs(bodyText, queryValues, bknContext) },
+          params: { name: op.id, arguments: mcpCallArgs(op, bodyText, queryValues, bknContext) },
         }),
       });
       const text = await response.text();
@@ -806,7 +824,7 @@ export async function sendRequest(
     const headers = { "Content-Type": "application/json", ...languageHeaders(), ...bearer };
     const init: RequestInit = { method: "POST", headers, signal };
     if (op.body !== null) {
-      init.body = JSON.stringify(withBknContext(strictBodyObject(bodyText), bknContext));
+      init.body = JSON.stringify(withOperationContext(op, strictBodyObject(bodyText), bknContext));
     }
     const response = await fetch(url, init);
     const text = await response.text();
