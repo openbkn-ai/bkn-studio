@@ -36,6 +36,7 @@ export const networkPart = {
     emptyMetrics: "当前没有指标。",
     emptyTitle: "暂无知识网络",
     enterWorkspace: "进入工作区",
+    authorizeAction: "授权",
     export: "导出",
     exportSuccess: "导出成功",
     iconField: "图标",

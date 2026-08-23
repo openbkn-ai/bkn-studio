@@ -17,6 +17,9 @@ export function getKnowledgeNetworkCardMenuKeys(record: KnowledgeNetworkRecord) 
     "view",
     ...(hasKnowledgeNetworkRecordOperation(record, "modify") ? ["edit"] : []),
     "export",
+    // Sharing is per network and driven by the record's own operations, not by a
+    // platform permission point: the creator holds `authorize` on what they made.
+    ...(hasKnowledgeNetworkRecordOperation(record, "authorize") ? ["authorize"] : []),
     ...(hasKnowledgeNetworkRecordOperation(record, "delete") ? ["delete"] : []),
   ];
 }
