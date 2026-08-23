@@ -18,9 +18,17 @@ import {
   fetchKnDetailRestLegacy,
   listMcpTools,
   sendRequest,
+  type ContextLoaderOp,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 const searchSchema = CONTEXT_LOADER_OPS.find((operation) => operation.id === "search_schema")!;
+const startInteraction: ContextLoaderOp = {
+  id: "bkn_start_interaction",
+  summary: "Start an interaction",
+  path: "/api/agent-retrieval/v1/kn/bkn_start_interaction",
+  query: [],
+  body: {},
+};
 
 const bknContext = {
   conversation_id: "conv_1",
@@ -312,6 +320,21 @@ describe("fetchMcpObjectTypes", () => {
 });
 
 describe("buildCurl", () => {
+  it("does not inject managed context or expose the bearer token for lifecycle tools", () => {
+    const curl = buildCurl(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      startInteraction,
+      "mcp",
+      {},
+      '{"agent_name":"bkn-studio","conversation_mode":"new","question":"订单查询"}',
+      bknContext,
+    );
+
+    expect(curl).not.toContain("bkn_context");
+    expect(curl).not.toContain("token-1");
+    expect(curl).toContain("Authorization: Bearer <redacted>");
+  });
+
   it("includes the managed context so the copied command is the one that was sent", () => {
     const curl = buildCurl(
       { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },

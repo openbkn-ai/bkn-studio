@@ -132,6 +132,18 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("ChatPane 受管生命周期接线", () => {
+  it("以稳定的智能问答场景名创建受管会话", () => {
+    stubLifecycle();
+
+    renderPane();
+
+    expect(createBknLifecycle).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ agentName: "bkn-agent-smart-qa" }),
+    );
+  });
+
   it("一轮问答开一轮交互，把它交给工具循环，并以答复正文终结", async () => {
     const { beginTurn, finish, session } = stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
