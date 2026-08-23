@@ -122,12 +122,11 @@ export function ObjectAuthorizeDrawer({
   // whoever created it. Without the second, the person the grant was written for opened the drawer
   // and could only look.
   const currentPermissions = runtimeConfig.currentUser.permissions;
-  const canGrant =
-    objectAuthorized ||
-    hasPermissions({
-      currentPermissions,
-      requiredPermissions: authzPoints.grant,
-    });
+  const isAdminGrantor = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.grant,
+  });
+  const canGrant = objectAuthorized || isAdminGrantor;
   const canRevoke =
     objectAuthorized ||
     hasPermissions({
@@ -148,9 +147,17 @@ export function ObjectAuthorizeDrawer({
   >([]);
   const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
 
+  // `authorize` is offered only to platform administrators. bkn-safe refuses it from anyone else —
+  // a delegate that could pass `authorize` on would mint further delegates, and only an
+  // administrator can take it back — so showing the chip to an owner would be a control that always
+  // 403s. Owners share their object; deciding who else may share it stays administrative.
   const ops = useMemo(
-    () => operationsForType(objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key)),
-    [objType],
+    () =>
+      operationsForType(objType).filter(
+        (op) =>
+          !HIDDEN_INSTANCE_OPS.has(op.key) && (op.key !== "authorize" || !objectAuthorized || isAdminGrantor),
+      ),
+    [isAdminGrantor, objType, objectAuthorized],
   );
 
   // Best-effort: departments and user details come from admin-only endpoints, and this drawer is
