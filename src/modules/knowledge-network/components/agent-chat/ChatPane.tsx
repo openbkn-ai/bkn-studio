@@ -91,6 +91,12 @@ const FALLBACK_SUGGESTION_KEYS = [
 
 export type PaneKey = "solo" | "base" | "kn";
 
+const AGENT_NAME_BY_PANE: Record<PaneKey, string> = {
+  solo: "bkn-agent-smart-qa",
+  base: "bkn-agent-base-data-chat",
+  kn: "bkn-agent-knowledge-network-chat",
+};
+
 /** Pane profile controlling defaults, context injection, tool selection, and storage keys. */
 export type PaneProfile = {
   paneKey: PaneKey;
@@ -701,6 +707,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const lifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
+        agentName: AGENT_NAME_BY_PANE[profile.paneKey],
         conversationStore: localConversationStore(
           conversationLsKey(knId, profile.paneKey),
           legacyConversationLsKey(knId, profile.paneKey),

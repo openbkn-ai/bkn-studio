@@ -351,7 +351,11 @@ export function ExperienceScene({
    * Fill Test Data action is one interaction. Memory store resets on refresh.
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, { conversationStore: memoryConversationStore() }),
+    () =>
+      createBknLifecycle(lifecycleEnv(base, knId), tokenProvider, {
+        agentName: "bkn-agent-mcp-debug",
+        conversationStore: memoryConversationStore(),
+      }),
     [base, knId, tokenProvider],
   );
 
