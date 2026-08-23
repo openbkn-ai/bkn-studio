@@ -26,7 +26,6 @@ import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 import { listGrantableUsersForObject } from "@/modules/system-admin/services/authz.service";
@@ -52,6 +51,13 @@ import {
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type ObjectAuthorizeDrawerProps = {
+  /**
+   * Whether the caller holds `authorize` on THIS object, from the object's own record rather than
+   * from the global permission set (which drops resource.id and cannot answer per-object questions).
+   * Omitted means "decide from the admin permission points alone", which is what the platform
+   * authorization page and the model panels want.
+   */
+  objectAuthorized?: boolean;
   objId: string;
   objName: string;
   objSub?: string;
@@ -93,6 +99,7 @@ function mergeObjectGrants(
 }
 
 export function ObjectAuthorizeDrawer({
+  objectAuthorized = false,
   objId,
   objName,
   objSub,
@@ -109,15 +116,24 @@ export function ObjectAuthorizeDrawer({
   // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
   // who has access to an object is legitimate for read-only reviewers. Guard each write control,
   // rather than blocking access to the drawer.
+  //
+  // Two ways to earn the write controls, matching what bkn-safe accepts: the platform-wide
+  // admin-authz points, or `authorize` on this one object — the row the domain services write to
+  // whoever created it. Without the second, the person the grant was written for opened the drawer
+  // and could only look.
   const currentPermissions = runtimeConfig.currentUser.permissions;
-  const canGrant = hasPermissions({
-    currentPermissions,
-    requiredPermissions: authzPoints.grant,
-  });
-  const canRevoke = hasPermissions({
-    currentPermissions,
-    requiredPermissions: authzPoints.revoke,
-  });
+  const canGrant =
+    objectAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: authzPoints.grant,
+    });
+  const canRevoke =
+    objectAuthorized ||
+    hasPermissions({
+      currentPermissions,
+      requiredPermissions: authzPoints.revoke,
+    });
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
@@ -417,7 +433,7 @@ export function ObjectAuthorizeDrawer({
         </span>
       </div>
 
-      <PermissionGate permissions={authzPoints.grant}>
+      {canGrant ? (
       <section className={styles.createPanel}>
         <div className={styles.createPanelHead}>
           <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.add")}</h3>
@@ -443,7 +459,7 @@ export function ObjectAuthorizeDrawer({
           </div>
         </div>
       </section>
-      </PermissionGate>
+      ) : null}
 
       {loading ? (
         <div className={styles.createLoading}>
@@ -500,7 +516,7 @@ export function ObjectAuthorizeDrawer({
                           </span>
                         </Tooltip>
                       ) : (
-                        <PermissionGate permissions={authzPoints.revoke}>
+                        canRevoke ? (
                           <AppButton
                             className={[styles.actionLink, styles.actionDanger].join(" ")}
                             onClick={() => handleRemove(grant)}
@@ -508,7 +524,7 @@ export function ObjectAuthorizeDrawer({
                           >
                             {t("systemAdmin.objectGrants.remove")}
                           </AppButton>
-                        </PermissionGate>
+                        ) : null
                       )}
                     </div>
                     <div className={styles.chipGroup}>
