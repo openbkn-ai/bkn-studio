@@ -28,7 +28,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
-import { listGrantableUsersForObject } from "@/modules/system-admin/services/authz.service";
+import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
   listObjectGrantsForObject,
   revokeObjectGrantForObject,
@@ -160,9 +160,10 @@ export function ObjectAuthorizeDrawer({
     [isAdminGrantor, objType, objectAuthorized],
   );
 
-  // Best-effort: departments and user details come from admin-only endpoints, and this drawer is
-  // also opened by resource owners who hold no admin permission. Their names arrive with the grant
-  // rows instead (primed below), so a 403 here costs a department label, not the screen.
+  // Best-effort: departments and user details come from admin-path endpoints. Those reads now admit
+  // the holder of `authorize` on a concrete object as well as the platform administrator, so an
+  // owner gets real answers here — a narrower projection than an administrator sees, which is all
+  // this drawer displays. A failure still costs a label rather than the screen.
   const syncLookup = useCallback(async (accessorIds: string[]) => {
     try {
       setDepartments(await getCachedDepartments());
@@ -220,14 +221,13 @@ export function ObjectAuthorizeDrawer({
     }
     let cancelled = false;
     setCandidateSearchLoading(true);
-    // Search is required server-side: holding authorize on one object is not a licence to page
-    // through the directory. With nothing typed there is nothing to ask for.
-    if (!debouncedCandidateKeyword) {
-      setCandidateUserOptions([]);
-      setCandidateSearchLoading(false);
-      return;
-    }
-    void listGrantableUsersForObject(objType, objId, debouncedCandidateKeyword)
+    // Nothing typed lists the first page rather than nothing, which is how every other grantee
+    // picker in the console behaves (role members, department members, the administrator's
+    // authorization page). This drawer was the exception only because the owner surface could not
+    // reach the directory at all and had to use a per-object endpoint that made search mandatory;
+    // now that an object owner may read it, opening the field shows people again.
+    void listUsersPage({ limit: 20, search: debouncedCandidateKeyword || undefined }, { skipErrorToast: true })
+      .then((result) => result.users)
       .then((users) => {
         if (cancelled) {
           return;
