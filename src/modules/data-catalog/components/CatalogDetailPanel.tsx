@@ -25,6 +25,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
@@ -38,7 +39,7 @@ import type {
   CatalogResource,
   ResourceDiscoverStatus,
 } from "@/modules/data-catalog/types/data-catalog";
-import type { CatalogRecord } from "@/shared/catalog";
+import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
@@ -141,6 +142,7 @@ export function CatalogDetailPanel({
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [nameColumnWidth, setNameColumnWidth] = useState(() => {
     try {
       const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
@@ -162,13 +164,15 @@ export function CatalogDetailPanel({
     resourceKeyword.trim().length > 0 ||
     categoryFilter.length > 0 ||
     (showIndexState && indexFilter.length > 0);
-  // Granting access to this catalog is the one action available on every catalog, built-in ones
-  // aside, so the bar shows whenever the catalog is a real one.
-  const canAuthorizeCatalog = !catalog.internal;
   const canAuthorizeGrants = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.grant,
   });
+  // Two ways to earn the button, and they are different questions. `authorize` on THIS catalog is
+  // what its creator holds (vega writes it at create time); admin-authz:grant is the platform-wide
+  // point. Asking only the second one hid the button from every person who built a data connection.
+  const ownsCatalogAuthorize = hasCatalogOperation(catalog, "authorize");
+  const canAuthorizeCatalog = !catalog.internal && (ownsCatalogAuthorize || canAuthorizeGrants);
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
@@ -512,25 +516,16 @@ export function CatalogDetailPanel({
               </PermissionGate>
             ) : null}
             {/*
-              授权发生在系统管理的对象授权页,这里只是把当前目录带过去,省掉在几百个对象里
-              重新找一遍。看得见这颗按钮的前提是有 admin-authz:grant——那张页面本身要的点位,
-              而不是数据面的动词。
+              授权在抽屉里当场做完,走 /me/object-grants 自助面。原先这里跳系统管理的对象授权页,
+              那张页面打的是 /admin/object-grants,整组挂在 RequireAdmin 后面——建这个连接的人
+              够不到,而按钮本身又门控在 admin-authz:grant 上,于是"自己建的目录自己授不了"。
+              判定改成问这个目录自己的 operations:建目录时创建者就拿到了 authorize,
+              管理员则继续走平台点位。
             */}
             {canAuthorizeCatalog ? (
-              <PermissionGate permissions={authzPoints.grant}>
-                <AppButton
-                  icon={<KeyOutlined />}
-                  onClick={() => {
-                    void navigate(
-                      `/system/authorizations/new?object=${encodeURIComponent(`catalog::${catalog.id}`)}`,
-                      // Leaving the wizard should land back on this catalog, not in system management.
-                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
-                    );
-                  }}
-                >
-                  {t("dataCatalog.catalog.authorize")}
-                </AppButton>
-              </PermissionGate>
+              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                {t("dataCatalog.catalog.authorize")}
+              </AppButton>
             ) : null}
           </div>
         </div>
@@ -661,6 +656,15 @@ export function CatalogDetailPanel({
           total={showIndexState && indexFilter ? displayResources.length : resourceTotal}
         />
       ) : null}
+
+      <ObjectAuthorizeDrawer
+        objectAuthorized={ownsCatalogAuthorize}
+        objId={catalog.id}
+        objName={catalog.name}
+        objType="catalog"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+      />
     </section>
   );
 }
