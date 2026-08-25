@@ -53,6 +53,7 @@ function catalogResource(id: string, catalogId: string): CatalogResource {
   return {
     id,
     catalogId,
+    localIndexStatus: "unavailable",
     category: "table",
     columnCount: 0,
     description: "",

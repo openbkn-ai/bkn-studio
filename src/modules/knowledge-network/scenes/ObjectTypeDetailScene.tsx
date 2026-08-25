@@ -16,10 +16,9 @@ import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
-import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
+import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
+import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
@@ -211,7 +210,8 @@ export function ObjectTypeDetailScene() {
     useState<string | null>(null);
   const [relatedActionsPage, setRelatedActionsPage] = useState(1);
   const [relatedActionsPageSize, setRelatedActionsPageSize] = useState(10);
-  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
+  const [resourceLocalIndexStatus, setResourceLocalIndexStatus] =
+    useState<ResourceLocalIndexStatus | undefined>();
   const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
   const [dataPage, setDataPage] = useState(1);
   const [dataPageSize, setDataPageSize] = useState(10);
@@ -628,7 +628,7 @@ export function ObjectTypeDetailScene() {
     const resourceId = detail?.dataSource?.id;
 
     if (!canLoadResourceIndexStates || !resourceId) {
-      setResourceBuildTasks([]);
+      setResourceLocalIndexStatus(undefined);
       setResourceBuildTasksLoading(false);
       return;
     }
@@ -636,15 +636,15 @@ export function ObjectTypeDetailScene() {
     let cancelled = false;
     setResourceBuildTasksLoading(true);
 
-    void listBuildTasks({ resourceId, silent: true })
-      .then((tasks) => {
+    void getCatalogResources([resourceId])
+      .then(([resource]) => {
         if (!cancelled) {
-          setResourceBuildTasks(tasks);
+          setResourceLocalIndexStatus(resource?.localIndexStatus);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setResourceBuildTasks([]);
+          setResourceLocalIndexStatus(undefined);
         }
       })
       .finally(() => {
@@ -731,11 +731,6 @@ export function ObjectTypeDetailScene() {
 
     return relatedActions.filter((item) => normalizedSearchText(item.name).includes(normalized));
   }, [relatedActions, relatedKeyword]);
-
-  const resourceIndexState = useMemo(
-    () => indexStateOf(resourceBuildTasks),
-    [resourceBuildTasks],
-  );
 
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
@@ -1155,7 +1150,7 @@ export function ObjectTypeDetailScene() {
                   {canLoadResourceIndexStates
                     ? resourceBuildTasksLoading
                       ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-                      : formatIndexStateLabel(resourceIndexState, t)
+                      : formatResourceIndexStateLabel(resourceLocalIndexStatus, t)
                     : detail.hasIndex
                       ? t("knowledgeNetwork.previewIndexed")
                       : t("knowledgeNetwork.previewNotIndexed")}

@@ -33,12 +33,12 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
 import { hasServingResourceIndex } from "@/modules/knowledge-network/utils/resource-index-state";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./OntologyGraphCard.module.css";
 
 type OntologyGraphCardProps = {
-  buildTasksByResourceId?: Map<string, BuildTask[]>;
+  localIndexStatusByResourceId?: Map<string, ResourceLocalIndexStatus | undefined>;
   networkId: string;
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
@@ -46,7 +46,7 @@ type OntologyGraphCardProps = {
 };
 
 export function OntologyGraphCard({
-  buildTasksByResourceId,
+  localIndexStatusByResourceId,
   networkId,
   objectTypes: objectTypesProp,
   relationTypes: relationTypesProp,
@@ -102,7 +102,7 @@ export function OntologyGraphCard({
   );
 
   const indexedIds = useMemo(() => {
-    if (buildTasksByResourceId) {
+    if (localIndexStatusByResourceId) {
       return new Set(
         objectTypes
           .filter((item) => {
@@ -110,14 +110,14 @@ export function OntologyGraphCard({
             if (!resourceId) {
               return false;
             }
-            return hasServingResourceIndex(buildTasksByResourceId.get(resourceId) ?? []);
+            return hasServingResourceIndex(localIndexStatusByResourceId.get(resourceId));
           })
           .map((item) => item.id),
       );
     }
 
     return new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id));
-  }, [buildTasksByResourceId, objectTypes]);
+  }, [localIndexStatusByResourceId, objectTypes]);
 
   // Concept-group membership from node to group ID for logical-group clustering. Group details supply member object types.
   const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
@@ -182,7 +182,7 @@ export function OntologyGraphCard({
           </div>
           <aside className={styles.graphAside}>
             <OntologyInspectorPanel
-              buildTasksByResourceId={buildTasksByResourceId}
+              localIndexStatusByResourceId={localIndexStatusByResourceId}
               networkId={networkId}
               objectTypes={objectTypes}
               relationTypes={relationTypes}

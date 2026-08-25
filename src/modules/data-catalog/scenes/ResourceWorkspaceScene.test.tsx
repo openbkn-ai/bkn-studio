@@ -84,6 +84,7 @@ import { ResourceWorkspaceScene } from "./ResourceWorkspaceScene";
 
 const staleResource: CatalogResource = {
   catalogId: "catalog-1",
+  localIndexStatus: "unavailable",
   category: "table",
   columnCount: 1,
   description: "",

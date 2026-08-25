@@ -180,7 +180,10 @@ export function ResourceIndexPanel({
   }, [resource.id]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
-  const state = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
+  const state = useMemo(
+    () => indexStateOf(sortedTasks, resource.localIndexStatus),
+    [resource.localIndexStatus, sortedTasks],
+  );
   const gate = resourceGateOf(catalog);
   const resourceBlockReason = resourceQueryBlockReason(resource);
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
@@ -363,7 +366,10 @@ export function ResourceIndexPanel({
               {t("dataCatalog.indexWorkspace.statusCardTitle")}
             </span>
             <span className={panelStyles.statusStripValue}>
-              {statusSummary ?? t("dataCatalog.resource.noEffectiveIndex")}
+              {statusSummary ??
+                (resource.localIndexStatus === "available"
+                  ? t("dataCatalog.resource.effectiveActive")
+                  : t("dataCatalog.resource.noEffectiveIndex"))}
             </span>
           </div>
           <div className={panelStyles.sectionActions}>

@@ -100,7 +100,7 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
 
   const remove = useCallback(
     (task: BuildTask) => {
-      const isActive = task.status === "running" || task.status === "listening";
+      const isActive = ACTIVE_BUILD_TASK_STATUSES.has(task.status);
       void modal.confirm({
         title: t("dataCatalog.task.deleteConfirmTitle", { id: task.id }),
         content: isActive

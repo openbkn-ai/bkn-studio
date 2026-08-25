@@ -163,7 +163,10 @@ export function ResourceWorkspaceScene({
   }, [loadAll]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
-  const indexState = useMemo(() => indexStateOf(sortedTasks), [sortedTasks]);
+  const indexState = useMemo(
+    () => indexStateOf(sortedTasks, resource?.localIndexStatus ?? "unavailable"),
+    [resource?.localIndexStatus, sortedTasks],
+  );
   const gate = resourceGateOf(catalog);
   const hideSemanticUnderstanding = Boolean(catalog?.internal);
   const discoveryFailed = resource?.lastDiscoverStatus === "error";

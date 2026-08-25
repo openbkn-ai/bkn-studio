@@ -9,6 +9,7 @@ import type { CatalogRecord } from "@/shared/catalog";
 import type {
   BuildTask,
   IndexState,
+  ResourceLocalIndexStatus,
   ResourceGate,
 } from "@/modules/data-catalog/types/data-catalog";
 
@@ -17,10 +18,7 @@ export function sortTasks(tasks: BuildTask[]) {
   return [...tasks].sort((left, right) => right.createTime - left.createTime);
 }
 
-/**
- * Current effective index: the most recent successful build or a streaming task still serving
- * data (listening, or paused after synchronizing data). Queries use this version.
- */
+/** Most recent task that can supply historical display context for an available Resource index. */
 export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
   return (
     sortTasks(tasks).find(
@@ -34,16 +32,25 @@ export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
 }
 
 /**
- * Index state combines the effective index and latest task. When the latest task fails but an
- * older index still serves, the state is failed-stale (rebuild failed, retaining old index).
+ * Index state combines Resource-owned query availability with the latest task's progress/error.
  */
-export function indexStateOf(tasks: BuildTask[]): IndexState {
+export function indexStateOf(
+  tasks: BuildTask[],
+  localIndexStatus: ResourceLocalIndexStatus | undefined,
+): IndexState {
   const sorted = sortTasks(tasks);
   const latest = sorted[0] ?? null;
-  const effective = effectiveIndexOf(sorted);
+  // Resource local_index_status is the source of truth for query availability. A task is only
+  // retained here as optional display context for history and progress.
+  const effective =
+    localIndexStatus === "available" ? effectiveIndexOf(sorted) : null;
 
   if (!latest) {
-    return { key: "none", latest: null, effective: null };
+    return {
+      key: localIndexStatus === "available" ? "built" : "none",
+      latest: null,
+      effective,
+    };
   }
 
   if (
@@ -52,38 +59,25 @@ export function indexStateOf(tasks: BuildTask[]): IndexState {
     latest.status === "stopping"
   ) {
     return {
-      key: effective && effective.id !== latest.id ? "rebuilding" : "building",
+      key: localIndexStatus === "available" ? "rebuilding" : "building",
       latest,
       effective,
     };
   }
 
-  if (latest.status === "listening") {
-    return { key: "listening", latest, effective };
+  if (latest.status === "failed") {
+    return {
+      key: localIndexStatus === "available" ? "failed-stale" : "failed",
+      latest,
+      effective,
+    };
   }
 
-  if (latest.status === "paused") {
-    return { key: "paused", latest, effective };
-  }
-
-  if (latest.status === "succeeded") {
-    return { key: "built", latest, effective };
-  }
-
-  if (latest.status === "cancelled") {
-    if (!effective) {
-      return { key: "none", latest, effective };
-    }
-    if (effective.status === "listening") {
-      return { key: "listening", latest, effective };
-    }
-    if (effective.status === "paused") {
-      return { key: "paused", latest, effective };
-    }
-    return { key: "built", latest, effective };
-  }
-
-  return { key: effective ? "failed-stale" : "failed", latest, effective };
+  return {
+    key: localIndexStatus === "available" ? "built" : "none",
+    latest,
+    effective,
+  };
 }
 
 /**

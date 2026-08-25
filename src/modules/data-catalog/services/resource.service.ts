@@ -207,6 +207,8 @@ type BackendResource = {
   id: string;
   index_config?: BackendIndexConfig | null;
   last_discover_status?: string;
+  local_index_name?: string;
+  local_index_status?: string;
   logic_type?: string;
   name: string;
   row_count?: number;
@@ -279,6 +281,17 @@ function normalizeResourceStatus(value?: string): CatalogResource["status"] {
   }
 }
 
+function normalizeLocalIndexStatus(value?: string): CatalogResource["localIndexStatus"] {
+  switch (value) {
+    case "available":
+    case "stale":
+    case "unavailable":
+      return value;
+    default:
+      return "unavailable";
+  }
+}
+
 function mapResource(item: BackendResource): CatalogResource {
   return {
     id: item.id,
@@ -290,6 +303,8 @@ function mapResource(item: BackendResource): CatalogResource {
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
+    localIndexName: item.local_index_name?.trim() || undefined,
+    localIndexStatus: normalizeLocalIndexStatus(item.local_index_status),
     // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
@@ -431,6 +446,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       category: input.category,
       sourceIdentifier: input.sourceIdentifier,
       description: input.description,
+      localIndexStatus: "unavailable",
       schema:
         input.schema.length > 0
           ? input.schema
@@ -472,6 +488,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       category: input.category,
       sourceIdentifier: input.sourceIdentifier,
       description: input.description,
+      localIndexStatus: "unavailable",
       schema: input.schema,
       columnCount: input.schema.length,
       rowCount: 0,

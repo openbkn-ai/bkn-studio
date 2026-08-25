@@ -25,6 +25,7 @@ import { ResourcePreviewPanel } from "./ResourcePreviewPanel";
 
 const resource: CatalogResource = {
   catalogId: "catalog-1",
+  localIndexStatus: "unavailable",
   category: "table",
   columnCount: 0,
   description: "",

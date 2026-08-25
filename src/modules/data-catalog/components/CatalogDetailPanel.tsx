@@ -190,7 +190,10 @@ export function CatalogDetailPanel({
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
       if (showIndexState && indexFilter) {
-        const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
+        const key = indexStateOf(
+          tasksByResource.get(resource.id) ?? [],
+          resource.localIndexStatus,
+        ).key;
         if (indexFilterBucket(key) !== indexFilter) {
           return false;
         }
@@ -369,7 +372,10 @@ export function CatalogDetailPanel({
             width: 140,
             render: (_: unknown, record: CatalogResource) => {
               const label = formatIndexStateLabel(
-                indexStateOf(tasksByResource.get(record.id) ?? []),
+                indexStateOf(
+                  tasksByResource.get(record.id) ?? [],
+                  record.localIndexStatus,
+                ),
                 t,
               );
               return <EllipsisText text={label} />;

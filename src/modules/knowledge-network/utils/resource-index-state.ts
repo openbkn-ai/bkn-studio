@@ -7,15 +7,18 @@
 
 import type { TFunction } from "i18next";
 
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
-import { effectiveIndexOf, indexStateOf } from "@/modules/data-catalog/lib/index-state";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 
-/** Whether the resource currently has a serving index (built or active streaming). */
-export function hasServingResourceIndex(tasks: BuildTask[]) {
-  return effectiveIndexOf(tasks) !== null;
+/** Resource local_index_status is the authoritative query-availability signal. */
+export function hasServingResourceIndex(status: ResourceLocalIndexStatus | undefined) {
+  return status === "available";
 }
 
-export function formatResourceIndexStateLabel(tasks: BuildTask[], t: TFunction) {
-  return formatIndexStateLabel(indexStateOf(tasks), t);
+export function formatResourceIndexStateLabel(
+  status: ResourceLocalIndexStatus | undefined,
+  t: TFunction,
+) {
+  return status === "available"
+    ? t("dataCatalog.indexState.built")
+    : t("dataCatalog.indexState.none");
 }
