@@ -671,10 +671,7 @@ export function IndexBuildListScene() {
                 updateListFilters({ statuses: value });
               }}
               options={STATUS_OPTIONS.map((status) => ({
-                label:
-                  status === "stopped"
-                    ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
-                    : t(`dataCatalog.task.statuses.${status}`),
+                label: t(`dataCatalog.task.statuses.${status}`),
                 value: status,
               }))}
               placeholder={t("common.status")}
