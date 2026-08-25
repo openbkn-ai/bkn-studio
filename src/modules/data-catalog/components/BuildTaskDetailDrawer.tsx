@@ -193,7 +193,7 @@ export function BuildTaskDetailDrawer({
     return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
   }
 
-  const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
   const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
 
   return (
@@ -226,9 +226,9 @@ export function BuildTaskDetailDrawer({
                 sharedStyles.tag,
                 task.status === "failed"
                   ? sharedStyles.taskFailed
-                  : task.status === "succeeded"
+                  : task.status === "completed"
                     ? sharedStyles.taskSucceeded
-                    : task.status === "listening"
+                    : task.status === "running"
                       ? sharedStyles.modeStreaming
                       : task.status === "cancelled"
                         ? sharedStyles.taskPending

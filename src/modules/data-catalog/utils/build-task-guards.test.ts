@@ -40,11 +40,11 @@ describe("build-task-guards", () => {
   it("treats pending/running/listening/stopping as active", () => {
     expect(isActiveBuildTask(task("pending"))).toBe(true);
     expect(isActiveBuildTask(task("running"))).toBe(true);
-    expect(isActiveBuildTask(task("listening"))).toBe(true);
-    expect(isActiveBuildTask(task("paused"))).toBe(false);
+    expect(isActiveBuildTask(task("running"))).toBe(true);
+    expect(isActiveBuildTask(task("stopped"))).toBe(false);
     expect(isActiveBuildTask(task("stopping"))).toBe(true);
     expect(isActiveBuildTask(task("cancelled"))).toBe(false);
-    expect(isActiveBuildTask(task("succeeded"))).toBe(false);
+    expect(isActiveBuildTask(task("completed"))).toBe(false);
     expect(isActiveBuildTask(null)).toBe(false);
   });
 

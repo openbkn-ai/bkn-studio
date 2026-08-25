@@ -62,10 +62,9 @@ import taskPanelStyles from "./TaskManagementTaskPanels.module.css";
 const STATUS_OPTIONS: BuildTaskStatus[] = [
   "pending",
   "running",
-  "listening",
   "stopping",
-  "paused",
-  "succeeded",
+  "stopped",
+  "completed",
   "failed",
   "cancelled",
 ];
@@ -307,7 +306,7 @@ export function IndexBuildListScene() {
         const results = await Promise.allSettled(
           targets.map((task) =>
             deleteBuildTask(task.id, {
-              stopFirst: task.status === "running" || task.status === "listening",
+              stopFirst: isActiveBuildTask(task),
             }),
           ),
         );
@@ -538,7 +537,7 @@ export function IndexBuildListScene() {
       fixed: "right",
       render: (_, record) => {
         const pauseResumeLabel =
-          record.status === "paused"
+          record.status === "stopped"
             ? t(
                 record.mode === "streaming"
                   ? "dataCatalog.task.resumeListening"
@@ -554,9 +553,8 @@ export function IndexBuildListScene() {
         if (
           canManageResourceTasks &&
           (record.status === "running" ||
-            record.status === "listening" ||
             record.status === "pending" ||
-            record.status === "paused")
+            record.status === "stopped")
         ) {
           menuItems.push({ key: "pauseResume", label: pauseResumeLabel });
         }
@@ -674,7 +672,7 @@ export function IndexBuildListScene() {
               }}
               options={STATUS_OPTIONS.map((status) => ({
                 label:
-                  status === "paused"
+                  status === "stopped"
                     ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
                     : t(`dataCatalog.task.statuses.${status}`),
                 value: status,

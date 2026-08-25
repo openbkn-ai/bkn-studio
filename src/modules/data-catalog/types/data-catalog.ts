@@ -125,13 +125,12 @@ export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
   | "cancelled"
+  | "completed"
   | "failed"
-  | "listening"
-  | "paused"
   | "pending"
   | "running"
   | "stopping"
-  | "succeeded";
+  | "stopped";
 
 export type BuildTaskCreator = {
   id: string;

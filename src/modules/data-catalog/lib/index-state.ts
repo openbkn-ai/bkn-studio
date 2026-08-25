@@ -23,9 +23,9 @@ export function effectiveIndexOf(tasks: BuildTask[]): BuildTask | null {
   return (
     sortTasks(tasks).find(
       (task) =>
-        task.status === "succeeded" ||
+        task.status === "completed" ||
         (task.mode === "streaming" &&
-          (task.status === "listening" || task.status === "paused") &&
+          (task.status === "running" || task.status === "stopped") &&
           task.syncedCount > 0),
     ) ?? null
   );

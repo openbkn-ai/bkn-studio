@@ -12,7 +12,6 @@ import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 export const ACTIVE_BUILD_TASK_STATUSES = new Set<BuildTask["status"]>([
   "pending",
   "running",
-  "listening",
   "stopping",
 ]);
 

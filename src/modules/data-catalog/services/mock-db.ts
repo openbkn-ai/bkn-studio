@@ -379,7 +379,7 @@ export const mockBuildTasks: BuildTask[] = [
     id: "bt-cust-01",
     resourceId: "res-customers",
     mode: "batch",
-    status: "succeeded",
+    status: "completed",
     embeddingFields: ["profile_text"],
     buildKeyFields: ["updated_at"],
     embeddingModel: "sm-1",
@@ -427,7 +427,7 @@ export const mockBuildTasks: BuildTask[] = [
     id: "bt-chunks-01",
     resourceId: "res-kn-chunks",
     mode: "batch",
-    status: "succeeded",
+    status: "completed",
     embeddingFields: ["content"],
     buildKeyFields: ["updated_at"],
     embeddingModel: "sm-1",
@@ -575,8 +575,7 @@ function hasActiveTask() {
   return mockBuildTasks.some(
     (task) =>
       task.status === "pending" ||
-      task.status === "running" ||
-      task.status === "listening",
+      task.status === "running",
   );
 }
 
@@ -585,7 +584,7 @@ function tick() {
 
   mockBuildTasks.forEach((task) => {
     if (task.status === "pending") {
-      task.status = task.mode === "streaming" ? "listening" : "running";
+      task.status = "running";
       task.startTime = Date.now();
       changed = true;
       return;
@@ -599,7 +598,7 @@ function tick() {
       );
       task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
       if (task.syncedCount >= task.totalCount) {
-        task.status = "succeeded";
+        task.status = "completed";
         const finishedAt = Date.now();
         task.finishTime = finishedAt;
       }
@@ -607,27 +606,6 @@ function tick() {
       return;
     }
 
-    if (task.status === "listening") {
-      if (task.syncedCount < task.totalCount) {
-        const step = Math.max(80, Math.floor(task.totalCount * 0.06));
-        task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-        task.lastProgressTime = Date.now();
-        changed = true;
-        return;
-      }
-
-      if (Math.random() < 0.16) {
-        const delta = 1 + Math.floor(Math.random() * 36);
-        task.totalCount += delta;
-        task.syncedCount += delta;
-        task.lastProgressTime = Date.now();
-        const resource = mockResources.find((item) => item.id === task.resourceId);
-        if (resource) {
-          resource.rowCount = task.totalCount;
-        }
-        changed = true;
-      }
-    }
   });
 
   if (changed) {

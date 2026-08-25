@@ -29,7 +29,7 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
       count: formatCount(task.syncedCount) as never,
     });
     const eventLabel =
-      task.status === "paused"
+      task.status === "stopped"
         ? t("dataCatalog.indexState.paused")
         : t("dataCatalog.progress.lastEvent", {
             time: timeAgo(task.lastProgressTime ?? task.createTime, i18n.language),
@@ -58,7 +58,7 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
   const total = Math.max(1, task.totalCount, task.syncedCount);
   const syncedPercent = Math.min(100, (task.syncedCount / total) * 100);
   const fillClass =
-    task.status === "succeeded"
+    task.status === "completed"
       ? styles.progressFillDone
       : task.status === "failed"
         ? styles.progressFillFailed

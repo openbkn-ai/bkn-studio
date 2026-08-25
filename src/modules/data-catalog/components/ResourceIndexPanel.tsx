@@ -59,19 +59,19 @@ type ResourceIndexPanelProps = {
 const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
   "pending",
   "running",
-  "listening",
-  "paused",
+  "running",
+  "stopped",
 ]);
 
 function formatTaskStatus(task: BuildTask, t: TFunction) {
-  return t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  return t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
 }
 
 function formatEffectiveState(task: BuildTask, t: TFunction) {
-  if (task.mode === "streaming" && task.status === "listening") {
+  if (task.mode === "streaming" && task.status === "running") {
     return t("dataCatalog.indexState.listening");
   }
-  if (task.status === "paused") {
+  if (task.status === "stopped") {
     return t("dataCatalog.indexState.paused");
   }
   return t("dataCatalog.resource.effectiveActive");
@@ -118,12 +118,12 @@ function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
     if (
       effective &&
       effective.id === latest.id &&
-      latest.status === "listening" &&
+      latest.status === "running" &&
       latest.mode === "streaming"
     ) {
       return null;
     }
-    if (effective && effective.id === latest.id && latest.status === "succeeded") {
+    if (effective && effective.id === latest.id && latest.status === "completed") {
       return null;
     }
     return latest;
@@ -226,20 +226,20 @@ export function ResourceIndexPanel({
   }, [sortedTasks, taskPage, taskPageSize]);
 
   const pauseResumeLabel =
-    activeTask?.status === "paused"
+    activeTask?.status === "stopped"
       ? t(
           activeTask.mode === "streaming"
             ? "dataCatalog.task.resumeListening"
             : "dataCatalog.task.resumeBuild",
         )
       : t(
-          activeTask?.mode === "streaming" && activeTask.status === "listening"
+          activeTask?.mode === "streaming" && activeTask.status === "running"
             ? "dataCatalog.task.pauseListening"
             : "dataCatalog.task.stopBuild",
         );
 
   const pauseResumeLabelOf = (task: BuildTask) =>
-    task.status === "paused"
+    task.status === "stopped"
       ? t(
           task.mode === "streaming"
             ? "dataCatalog.task.resumeListening"
@@ -374,8 +374,7 @@ export function ResourceIndexPanel({
           </div>
           <div className={panelStyles.sectionActions}>
             {canManageBuildTasks && activeTask &&
-            (activeTask.status === "listening" ||
-              activeTask.status === "running" ||
+            (activeTask.status === "running" ||
               activeTask.status === "pending") ? (
               <PermissionGate permissions="catalog:task_manage">
                 <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
@@ -383,7 +382,7 @@ export function ResourceIndexPanel({
                 </AppButton>
               </PermissionGate>
             ) : null}
-            {canManageBuildTasks && activeTask?.status === "paused" ? (
+            {canManageBuildTasks && activeTask?.status === "stopped" ? (
               <PermissionGate permissions="catalog:task_manage">
                 <AppButton
                   disabled={buildActionsDisabled}

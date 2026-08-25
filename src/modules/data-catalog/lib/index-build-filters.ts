@@ -9,13 +9,12 @@ import type { BuildMode, BuildTaskStatus } from "@/modules/data-catalog/types/da
 
 const STATUS_SET = new Set<BuildTaskStatus>([
   "cancelled",
+  "completed",
   "failed",
-  "listening",
-  "paused",
   "pending",
   "running",
   "stopping",
-  "succeeded",
+  "stopped",
 ]);
 
 export function parseIndexBuildStatusParam(value: string | null): BuildTaskStatus[] {

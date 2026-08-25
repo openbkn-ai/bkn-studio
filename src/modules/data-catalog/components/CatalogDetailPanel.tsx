@@ -43,7 +43,7 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
-const INDEX_FILTERS = ["built", "none", "building", "listening", "failed"] as const;
+const INDEX_FILTERS = ["built", "none", "building", "running", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
 const DISCOVER_STATUS_COLORS: Record<ResourceDiscoverStatus, string> = {
@@ -59,7 +59,7 @@ function indexFilterBucket(key: string) {
   if (key === "built") return "built";
   if (key === "none") return "none";
   if (key === "building" || key === "rebuilding") return "building";
-  if (key === "listening" || key === "paused") return "listening";
+  if (key === "running" || key === "stopped") return "running";
   return "failed";
 }
 

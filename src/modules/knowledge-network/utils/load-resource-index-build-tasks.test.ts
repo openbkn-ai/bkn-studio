@@ -32,7 +32,7 @@ function buildTask(resourceId: string, id = `${resourceId}-task`): BuildTask {
     id,
     resourceId,
     mode: "batch",
-    status: "succeeded",
+    status: "completed",
     embeddingFields: [],
     buildKeyFields: [],
     embeddingModel: "",
