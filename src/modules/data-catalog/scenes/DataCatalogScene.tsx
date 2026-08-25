@@ -167,8 +167,7 @@ export function DataCatalogScene({
       tasks.some(
         (task) =>
           task.status === "pending" ||
-          task.status === "running" ||
-          task.status === "listening",
+          task.status === "running",
       ) || discover.some((discover) => discover.status === "running"),
     [discover, tasks],
   );

@@ -20,7 +20,7 @@ type BuildStatusTagProps = {
 /** Build-task status tag. */
 export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
   const { t } = useTranslation();
-  const label = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status, task.mode)}`);
+  const label = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
 
   if (plain) {
     return <span className={styles.plainText}>{label}</span>;
@@ -29,11 +29,9 @@ export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
   const statusClass =
     task.status === "failed"
       ? styles.taskFailed
-      : task.status === "succeeded"
+      : task.status === "completed"
         ? styles.taskSucceeded
-        : task.status === "listening"
-          ? styles.modeStreaming
-          : task.status === "running" || task.status === "stopping"
+        : task.status === "running" || task.status === "stopping"
             ? styles.taskRunning
             : styles.taskPending;
 

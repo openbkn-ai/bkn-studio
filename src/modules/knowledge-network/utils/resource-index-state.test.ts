@@ -7,56 +7,26 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 import {
   formatResourceIndexStateLabel,
   hasServingResourceIndex,
 } from "@/modules/knowledge-network/utils/resource-index-state";
 
-function buildTask(
-  status: BuildTask["status"],
-  overrides: Partial<BuildTask> = {},
-): BuildTask {
-  return {
-    id: "task-1",
-    resourceId: "res-1",
-    mode: "batch",
-    status,
-    embeddingFields: [],
-    buildKeyFields: [],
-    embeddingModel: "",
-    modelDimensions: 0,
-    fulltextFields: [],
-    fulltextAnalyzer: "",
-    totalCount: 10,
-    syncedCount: status === "succeeded" ? 10 : 0,
-    createTime: 1,
-    finishTime: null,
-    lastProgressTime: null,
-    startTime: null,
-    error: null,
-    ...overrides,
-  };
-}
-
-const succeededTask = buildTask("succeeded", { id: "task-2", createTime: 2 });
-const failedTask = buildTask("failed", { id: "task-3", createTime: 3 });
-
 describe("hasServingResourceIndex", () => {
-  it("returns true when a succeeded build exists", () => {
-    expect(hasServingResourceIndex([failedTask, succeededTask])).toBe(true);
+  it("returns true only for an available Resource index", () => {
+    expect(hasServingResourceIndex("available")).toBe(true);
   });
 
-  it("returns false when there are no serving tasks", () => {
-    expect(hasServingResourceIndex([])).toBe(false);
-    expect(hasServingResourceIndex([failedTask])).toBe(false);
+  it("returns false for unavailable Resource indexes", () => {
+    expect(hasServingResourceIndex("stale")).toBe(false);
+    expect(hasServingResourceIndex("unavailable")).toBe(false);
   });
 });
 
 describe("formatResourceIndexStateLabel", () => {
   it("uses data-catalog index state labels", () => {
     const t = ((key: string) => key) as never;
-    expect(formatResourceIndexStateLabel([succeededTask], t)).toBe("dataCatalog.indexState.built");
-    expect(formatResourceIndexStateLabel([], t)).toBe("dataCatalog.indexState.none");
+    expect(formatResourceIndexStateLabel("available", t)).toBe("dataCatalog.indexState.built");
+    expect(formatResourceIndexStateLabel("unavailable", t)).toBe("dataCatalog.indexState.none");
   });
 });

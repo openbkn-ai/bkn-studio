@@ -101,25 +101,21 @@ function splitFields(value?: string | string[]): string[] {
 
 /**
  * Vega backend enum values: pending, running, completed, stopping, stopped, failed, and cancelled.
- * In streaming mode, running means persistent listening, while stopped is presented as paused.
  */
-function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskStatus {
+function normalizeStatus(value: string | undefined): BuildTaskStatus {
   switch (value) {
     case "running":
-      return mode === "streaming" ? "listening" : "running";
+      return "running";
     case "completed":
-      return "succeeded";
+      return "completed";
     case "stopped":
-      return "paused";
+      return "stopped";
     case "stopping":
       return "stopping";
     case "failed":
       return "failed";
     case "cancelled":
       return "cancelled";
-    case "listening":
-    case "paused":
-    case "succeeded":
     case "pending":
       return value;
     default:
@@ -128,13 +124,9 @@ function normalizeStatus(value: string | undefined, mode: BuildMode): BuildTaskS
 }
 
 /**
- * Status label keys use paused internally, but stopping a batch aborts rather than creates a
- * resumable pause. Display batch as statuses.stopped and streaming as statuses.paused.
+ * Build-task status labels directly follow the backend enum.
  */
-export function buildTaskStatusLabelKey(status: BuildTaskStatus, mode: BuildMode) {
-  if (status === "paused" && mode === "batch") {
-    return "stopped";
-  }
+export function buildTaskStatusLabelKey(status: BuildTaskStatus) {
   return status;
 }
 
@@ -229,7 +221,7 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
 export function mapBuildTask(item: BackendBuildTask): BuildTask {
   const createTime = item.create_time ?? 0;
   const mode: BuildMode = item.mode === "streaming" ? "streaming" : "batch";
-  const status = normalizeStatus(item.status, mode);
+  const status = normalizeStatus(item.status);
   const snapshot = snapshotFieldsOf(item);
 
   const synced = item.synced_count ?? 0;
@@ -334,13 +326,12 @@ export async function listBuildTasks(
   return filterTasks(tasks, query);
 }
 
-// Frontend normalized states mapped to backend enums. paused maps to stopped; listening maps to running.
+// Task statuses are passed through to the backend unchanged.
 const FE_TO_BACKEND_STATUS: Record<BuildTaskStatus, string[]> = {
   pending: ["pending"],
   running: ["running"],
-  listening: ["running"],
-  succeeded: ["completed"],
-  paused: ["stopped"],
+  completed: ["completed"],
+  stopped: ["stopped"],
   stopping: ["stopping"],
   failed: ["failed"],
   cancelled: ["cancelled"],
@@ -461,7 +452,6 @@ function hasActiveTaskForResource(resourceId: string) {
       task.resourceId === resourceId &&
       (task.status === "pending" ||
         task.status === "running" ||
-        task.status === "listening" ||
         task.status === "stopping"),
   );
 }
@@ -536,8 +526,8 @@ export async function createBuildTask(
 export async function pauseBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
-    if (task && (task.status === "listening" || task.status === "running")) {
-      task.status = "paused";
+    if (task && task.status === "running") {
+      task.status = "stopped";
       task.lastProgressTime = Date.now();
       emitMockChange();
     }
@@ -552,7 +542,7 @@ export async function pauseBuildTask(id: string) {
 export async function resumeBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
-    if (task && task.status === "paused") {
+    if (task && task.status === "stopped") {
       task.status = "pending";
       task.startTime = null;
       task.finishTime = null;
@@ -637,7 +627,7 @@ export async function retryBuildTask(
   return getBuildTask(id);
 }
 
-/** Pauses all listening streaming tasks when a connection is disabled; this is mock behavior and the real backend coordinates it server-side. */
+/** Stops all running tasks when a connection is disabled; this is mock behavior only. */
 export function pauseListeningTasksOfCatalog(resourceIds: string[]) {
   if (!useMock) {
     return;
@@ -645,8 +635,8 @@ export function pauseListeningTasksOfCatalog(resourceIds: string[]) {
 
   let changed = false;
   mockBuildTasks.forEach((task) => {
-    if (resourceIds.includes(task.resourceId) && task.status === "listening") {
-      task.status = "paused";
+    if (resourceIds.includes(task.resourceId) && task.status === "running") {
+      task.status = "stopped";
       changed = true;
     }
   });

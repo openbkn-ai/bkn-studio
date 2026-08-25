@@ -43,7 +43,7 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
-const INDEX_FILTERS = ["built", "none", "building", "listening", "failed"] as const;
+const INDEX_FILTERS = ["built", "none", "building", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
 const DISCOVER_STATUS_COLORS: Record<ResourceDiscoverStatus, string> = {
@@ -59,7 +59,6 @@ function indexFilterBucket(key: string) {
   if (key === "built") return "built";
   if (key === "none") return "none";
   if (key === "building" || key === "rebuilding") return "building";
-  if (key === "listening" || key === "paused") return "listening";
   return "failed";
 }
 
@@ -190,7 +189,10 @@ export function CatalogDetailPanel({
   const displayResources = useMemo(() => {
     return resources.filter((resource) => {
       if (showIndexState && indexFilter) {
-        const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
+        const key = indexStateOf(
+          tasksByResource.get(resource.id) ?? [],
+          resource.localIndexStatus,
+        ).key;
         if (indexFilterBucket(key) !== indexFilter) {
           return false;
         }
@@ -369,7 +371,10 @@ export function CatalogDetailPanel({
             width: 140,
             render: (_: unknown, record: CatalogResource) => {
               const label = formatIndexStateLabel(
-                indexStateOf(tasksByResource.get(record.id) ?? []),
+                indexStateOf(
+                  tasksByResource.get(record.id) ?? [],
+                  record.localIndexStatus,
+                ),
                 t,
               );
               return <EllipsisText text={label} />;

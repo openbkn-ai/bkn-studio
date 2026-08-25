@@ -32,7 +32,7 @@ function buildTask(resourceId: string, id = `${resourceId}-task`): BuildTask {
     id,
     resourceId,
     mode: "batch",
-    status: "succeeded",
+    status: "completed",
     embeddingFields: [],
     buildKeyFields: [],
     embeddingModel: "",
@@ -53,6 +53,7 @@ function catalogResource(id: string, catalogId: string): CatalogResource {
   return {
     id,
     catalogId,
+    localIndexStatus: "unavailable",
     category: "table",
     columnCount: 0,
     description: "",

@@ -17,6 +17,9 @@ export type ResourceDiscoverStatus =
 
 export type ResourceStatus = "active" | "deprecated" | "disabled" | "stale";
 
+/** Whether the Resource's local OpenSearch index is currently usable for queries. */
+export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
+
 /** Field-level indexing capabilities: keyword, fulltext, and vector (aligned with Vega feature_type). */
 export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 
@@ -66,6 +69,10 @@ export type CatalogResource = {
   indexConfig?: ResourceIndexConfig;
   /** Latest source-discovery observation reported by Vega. */
   lastDiscoverStatus?: ResourceDiscoverStatus;
+  /** Name of the Resource's current local index, when one has been published. */
+  localIndexName?: string;
+  /** Authoritative query availability of the Resource's local index. */
+  localIndexStatus: ResourceLocalIndexStatus;
   name: string;
   rowCount: number;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
@@ -118,13 +125,12 @@ export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
   | "cancelled"
+  | "completed"
   | "failed"
-  | "listening"
-  | "paused"
   | "pending"
   | "running"
   | "stopping"
-  | "succeeded";
+  | "stopped";
 
 export type BuildTaskCreator = {
   id: string;

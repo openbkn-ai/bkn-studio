@@ -171,7 +171,7 @@ export function OverviewOntologyBlock({
     [objectTypes],
   );
   const {
-    buildTasksByResourceId,
+    localIndexStatusByResourceId,
     canLoadResourceIndexStates,
     loading: resourceIndexLoading,
   } =
@@ -187,14 +187,14 @@ export function OverviewOntologyBlock({
       const label = canLoadResourceIndexStates
         ? resourceIndexLoading
           ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-          : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t)
+          : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
         : entity.hasIndex
           ? t("knowledgeNetwork.previewIndexed")
           : t("knowledgeNetwork.previewNotIndexed");
 
       return <span>{label}</span>;
     },
-    [buildTasksByResourceId, canLoadResourceIndexStates, resourceIndexLoading, t],
+    [canLoadResourceIndexStates, localIndexStatusByResourceId, resourceIndexLoading, t],
   );
 
   const entityColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = useMemo(
@@ -337,8 +337,8 @@ export function OverviewOntologyBlock({
     <div className={styles.block}>
       <Spin spinning={previewLoading}>
         <OntologyGraphCard
-          buildTasksByResourceId={
-            canLoadResourceIndexStates ? buildTasksByResourceId : undefined
+          localIndexStatusByResourceId={
+            canLoadResourceIndexStates ? localIndexStatusByResourceId : undefined
           }
           networkId={networkId}
           objectTypes={objectTypes}

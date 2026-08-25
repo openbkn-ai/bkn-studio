@@ -22,12 +22,12 @@ import {
   formatResourceIndexStateLabel,
   hasServingResourceIndex,
 } from "@/modules/knowledge-network/utils/resource-index-state";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
+import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./OntologyInspectorPanel.module.css";
 
 type OntologyInspectorPanelProps = {
-  buildTasksByResourceId?: Map<string, BuildTask[]>;
+  localIndexStatusByResourceId?: Map<string, ResourceLocalIndexStatus | undefined>;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   relationTypes: KnowledgeNetworkRelationTypeRecord[];
@@ -37,7 +37,7 @@ type OntologyInspectorPanelProps = {
 };
 
 export function OntologyInspectorPanel({
-  buildTasksByResourceId,
+  localIndexStatusByResourceId,
   networkId,
   objectTypes,
   relationTypes,
@@ -53,11 +53,11 @@ export function OntologyInspectorPanel({
     if (!resourceId) {
       return "—";
     }
-    if (buildTasksByResourceId) {
+    if (localIndexStatusByResourceId) {
       if (resourceIndexLoading) {
         return t("knowledgeNetwork.objectTypeDataViewIndexLoading");
       }
-      return formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t);
+      return formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t);
     }
     return record.hasIndex
       ? t("knowledgeNetwork.previewIndexed")
@@ -66,11 +66,11 @@ export function OntologyInspectorPanel({
 
   const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) => {
     const resourceId = record.dataSource?.id;
-    if (buildTasksByResourceId && resourceId) {
+    if (localIndexStatusByResourceId && resourceId) {
       if (resourceIndexLoading) {
         return false;
       }
-      return hasServingResourceIndex(buildTasksByResourceId.get(resourceId) ?? []);
+      return hasServingResourceIndex(localIndexStatusByResourceId.get(resourceId));
     }
     return record.hasIndex;
   };

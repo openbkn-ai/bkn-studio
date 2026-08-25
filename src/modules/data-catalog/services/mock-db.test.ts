@@ -58,7 +58,7 @@ describe("data catalog discover-status mocks", () => {
       ensureMockTicker();
       vi.advanceTimersByTime(1100);
 
-      expect(task.status).toBe("succeeded");
+      expect(task.status).toBe("completed");
       expect(resource.expectedUpdateTime).toBe(originalExpectedUpdateTime);
       expect(resource.updateTime).toBe(originalUpdateTime);
     } finally {

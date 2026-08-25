@@ -50,6 +50,7 @@ import { IndexConfigFormPanel } from "./IndexConfigFormPanel";
 
 const resource: CatalogResource = {
   catalogId: "catalog-1",
+  localIndexStatus: "unavailable",
   category: "table",
   columnCount: 1,
   description: "",

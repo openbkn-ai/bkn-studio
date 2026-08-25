@@ -9,10 +9,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
-import { loadResourceIndexBuildTasks } from "@/modules/knowledge-network/utils/load-resource-index-build-tasks";
+import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
+import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
-/** Load data-catalog index build tasks for a deduplicated set of resource ids. */
+/** Load Resource-owned local-index availability for a deduplicated set of resource ids. */
 export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
   const runtimeConfig = useRuntimeConfig();
   const canLoadResourceIndexStates = hasPermissions({
@@ -26,12 +26,12 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     [resourceIds],
   );
 
-  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
+  const [resources, setResources] = useState<CatalogResource[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!canLoadResourceIndexStates || boundResourceIds.length === 0) {
-      setResourceBuildTasks([]);
+      setResources([]);
       setLoading(false);
       return undefined;
     }
@@ -39,15 +39,15 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     let cancelled = false;
     setLoading(true);
 
-    void loadResourceIndexBuildTasks(boundResourceIds)
-      .then((tasks) => {
+    void getCatalogResources(boundResourceIds)
+      .then((items) => {
         if (!cancelled) {
-          setResourceBuildTasks(tasks);
+          setResources(items);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setResourceBuildTasks([]);
+          setResources([]);
         }
       })
       .finally(() => {
@@ -61,13 +61,13 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
     };
   }, [boundResourceIds, canLoadResourceIndexStates]);
 
-  const buildTasksByResourceId = useMemo(() => {
-    const next = new Map<string, BuildTask[]>();
-    resourceBuildTasks.forEach((task) => {
-      next.set(task.resourceId, [...(next.get(task.resourceId) ?? []), task]);
+  const localIndexStatusByResourceId = useMemo(() => {
+    const next = new Map<string, CatalogResource["localIndexStatus"]>();
+    resources.forEach((resource) => {
+      next.set(resource.id, resource.localIndexStatus);
     });
     return next;
-  }, [resourceBuildTasks]);
+  }, [resources]);
 
-  return { buildTasksByResourceId, canLoadResourceIndexStates, loading };
+  return { canLoadResourceIndexStates, loading, localIndexStatusByResourceId };
 }

@@ -136,7 +136,7 @@ describe("mapBuildTask", () => {
 
   it("keeps stopping distinct and preserves cancelled", () => {
     expect(mapBuildTask({ id: "task-1", status: "stopping" }).status).toBe("stopping");
-    expect(mapBuildTask({ id: "task-2", status: "stopped" }).status).toBe("paused");
+    expect(mapBuildTask({ id: "task-2", status: "stopped" }).status).toBe("stopped");
     expect(mapBuildTask({ id: "task-3", status: "cancelled" }).status).toBe("cancelled");
   });
 });
@@ -186,7 +186,7 @@ describe("createBuildTask", () => {
       await listBuildTaskPage({
         page: 1,
         pageSize: 20,
-        statuses: ["stopping", "paused", "cancelled"],
+        statuses: ["stopping", "stopped", "cancelled"],
       });
 
       expect(getMock).toHaveBeenCalledOnce();
@@ -243,7 +243,7 @@ describe("pauseBuildTask", () => {
     await vi.advanceTimersByTimeAsync(120);
     await paused;
 
-    expect(task.status).toBe("paused");
+    expect(task.status).toBe("stopped");
     expect(task.finishTime).toBeNull();
     expect(task.lastProgressTime).toBe(500);
 
