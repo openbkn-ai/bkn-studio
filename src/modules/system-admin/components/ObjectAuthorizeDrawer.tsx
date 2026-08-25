@@ -98,6 +98,27 @@ function mergeObjectGrants(
   return [...others, ...objectGrants];
 }
 
+/** The subject bkn-safe writes when the execution factory publishes something to everyone. */
+const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * Whether bkn-safe will refuse a non-administrator write against this row
+ * (its protectAuthorizeHolder guard), so the drawer can lock it rather than offer a control that
+ * always 403s.
+ *
+ * Two rows are off limits to a delegate, and both because the write erases: POST is
+ * replace-semantics and DELETE removes everything the accessor holds.
+ *
+ * - A row carrying `authorize` — the object's creator, or anyone an administrator trusted with
+ *   sharing. Letting a delegate rewrite it would let them take the object away from the person who
+ *   made it, and `authorize` is administrator-conferred, so nobody inside the drawer could put it
+ *   back. This covers the caller's OWN row: an owner cannot drop their own authorize either.
+ * - The public-access row, whose removal would un-publish the object platform-wide.
+ */
+function isDelegateProtected(grant: ObjectGrant) {
+  return grant.accessorId === PUBLIC_ACCESSOR_ID || grant.operations.includes("authorize");
+}
+
 export function ObjectAuthorizeDrawer({
   objectAuthorized = false,
   objId,
@@ -499,7 +520,9 @@ export function ObjectAuthorizeDrawer({
             ) : null}
             <div className={styles.authzList}>
               {grants.map((grant) => {
-                const locked = isProtected(grant.accessorId);
+                const builtinLocked = isProtected(grant.accessorId);
+                const delegateLocked = !isAdminGrantor && isDelegateProtected(grant);
+                const locked = builtinLocked || delegateLocked;
                 const grantee = resolveGrantee(grant.accessorId);
                 return (
                   <div className={styles.authzCard} key={grant.accessorId}>
@@ -517,7 +540,13 @@ export function ObjectAuthorizeDrawer({
                         </Tag>
                       </span>
                       {locked ? (
-                        <Tooltip title={t("systemAdmin.objectGrants.adminLocked")}>
+                        <Tooltip
+                          title={t(
+                            builtinLocked
+                              ? "systemAdmin.objectGrants.adminLocked"
+                              : "systemAdmin.objectGrants.delegateLocked",
+                          )}
+                        >
                           <span className={styles.subText}>
                             <LockOutlined />
                           </span>
