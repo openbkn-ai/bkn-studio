@@ -118,6 +118,11 @@ export function CatalogTreePanel({
   );
   const sortLocale = i18n.language || undefined;
 
+  useEffect(() => {
+    loadingSchemaCatalogIds.current.clear();
+    setSchemaNamesByCatalogId({});
+  }, [catalogs]);
+
   const selectedCatalogId = selection?.id;
 
   const selectedKey = useMemo(() => {
