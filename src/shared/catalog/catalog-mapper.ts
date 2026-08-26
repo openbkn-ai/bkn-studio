@@ -16,8 +16,7 @@ type BackendAccountInfo = {
   name?: string | null;
 };
 
-type BackendCatalog = {
-  connector_config?: Record<string, unknown>;
+export type BackendCatalogSummary = {
   connector_type: string;
   create_time?: number;
   creator?: BackendAccountInfo;
@@ -28,13 +27,17 @@ type BackendCatalog = {
   id: string;
   internal?: boolean;
   last_check_time?: number;
-  metadata?: Record<string, unknown>;
   name: string;
   operations?: string[];
   tags?: string[];
   type?: string;
   update_time?: number;
   updater?: BackendAccountInfo;
+};
+
+export type BackendCatalog = BackendCatalogSummary & {
+  connector_config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 };
 
 function normalizeHealthStatus(value?: string): CatalogHealthStatus {
@@ -65,7 +68,11 @@ export function inferConnectorCategory(connectorType: string) {
   return "table";
 }
 
-export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
+function mapCatalogRecord(
+  item: BackendCatalogSummary,
+  connectorConfig: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): CatalogRecord {
   return {
     id: item.id,
     name: item.name,
@@ -85,11 +92,19 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     tags: item.tags ?? [],
-    connectorConfig: item.connector_config ?? {},
-    metadata: item.metadata ?? {},
+    connectorConfig,
+    metadata,
     operations: item.operations ?? [],
     type: item.type ?? "physical",
   };
+}
+
+export function mapBackendCatalogSummary(item: BackendCatalogSummary): CatalogRecord {
+  return mapCatalogRecord(item, {}, {});
+}
+
+export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
+  return mapCatalogRecord(item, item.connector_config ?? {}, item.metadata ?? {});
 }
 
 export function matchesCatalogType(item: CatalogRecord, type: CatalogListQuery["type"]) {
@@ -118,5 +133,3 @@ export function filterCatalogs(items: CatalogRecord[], query: CatalogListQuery) 
     return matchesType && matchesKeyword && matchesConnectorType;
   });
 }
-
-export type { BackendCatalog };
