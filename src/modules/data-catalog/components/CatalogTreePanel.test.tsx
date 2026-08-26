@@ -106,8 +106,6 @@ describe("CatalogTreePanel", () => {
     expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(1);
 
     rerender(<CatalogTreePanel {...props} catalogs={[{ ...catalog }]} />);
-    fireEvent.click(screen.getByRole("button", { name: "collapse catalog" }));
-    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
     await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(2));
   });
 });
