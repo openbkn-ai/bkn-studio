@@ -55,7 +55,6 @@ type BackendSchemaField = {
   attributes?: Record<string, unknown> | null;
   description?: string;
   display_name?: string;
-  extensions?: Record<string, string>;
   features?: BackendFieldFeature[] | null;
   name?: string;
   original_description?: string;
@@ -159,7 +158,6 @@ function mapSchemaFieldUpdateToBackend(field: ResourceSchemaField): BackendSchem
     ? { ...field.raw }
     : ({
         attributes: field.attributes,
-        extensions: field.extensions,
         name: field.name,
         original_description: field.originalDescription ?? "",
         original_name: field.originalName ?? "",
@@ -190,7 +188,6 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
     displayName:
       displayName && displayName !== name ? displayName : undefined,
     description: description || undefined,
-    extensions: field.extensions,
     features: features.length > 0 ? features : undefined,
     originalDescription: field.original_description,
     originalName: field.original_name,

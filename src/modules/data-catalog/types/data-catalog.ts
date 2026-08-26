@@ -40,7 +40,6 @@ export type ResourceSchemaField = {
   displayName?: string;
   /** Field description (backend description). */
   description?: string;
-  extensions?: Record<string, string>;
   /** Field-level index features, such as full text and vectors. */
   features?: ResourceFieldFeature[];
   name: string;
