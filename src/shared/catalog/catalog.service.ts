@@ -129,6 +129,7 @@ export async function getCatalog(id: string) {
   return catalog ? mapBackendCatalog(catalog) : null;
 }
 
+/** Load full catalog records for consumers that require fields omitted from list summaries. */
 export async function deleteCatalog(id: string) {
   if (useMock) {
     removeMockCatalog(id);

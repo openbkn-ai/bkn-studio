@@ -7,9 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  mapBackendCatalog,
-} from "@/shared/catalog/catalog-mapper";
+import { mapBackendCatalog } from "@/shared/catalog/catalog-mapper";
 
 describe("catalog-mapper · health status", () => {
   it("maps the latest health check time from the catalog response", () => {

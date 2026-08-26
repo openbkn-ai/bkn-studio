@@ -52,6 +52,7 @@ describe("catalog.service · listCatalogs", () => {
 
     expect(lastParams()).toMatchObject({ type: undefined });
   });
+
 });
 
 describe("catalog.service · deletion preflight", () => {
