@@ -5,9 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Result } from "antd";
 import type { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router-dom";
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import {
@@ -17,26 +16,20 @@ import {
 
 type RequirePermissionProps = {
   children: ReactNode;
-  fallback?: ReactNode;
   mode?: PermissionCheckMode;
   permissions: string | string[];
 };
 
-/**
- * Route-level permission guard. Renders 403 instead of children when unauthorized, so guarded
- * pages never mount or trigger data-fetching side effects that would repeatedly show error toasts.
- */
+/** Route-level permission guard that redirects unauthorized users before guarded pages mount. */
 export function RequirePermission({
   children,
-  fallback,
   mode = "any",
   permissions,
 }: RequirePermissionProps) {
-  const { t } = useTranslation();
   // Route guards also protect standalone routes, whose page-level Antd/App
   // providers are mounted inside the guarded element. Read only the runtime
-  // context available above that boundary so the guard itself cannot fail
-  // before it has a chance to render the permission result.
+  // context available above that boundary so the guard can redirect before a
+  // protected page has a chance to mount.
   const runtimeConfig = useRuntimeConfig();
   const allowed = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -48,7 +41,5 @@ export function RequirePermission({
     return <>{children}</>;
   }
 
-  return (
-    fallback ?? <Result status="403" subTitle={t("common.noPermission")} title="403" />
-  );
+  return <Navigate replace to="/home" />;
 }
