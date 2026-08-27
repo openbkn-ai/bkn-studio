@@ -7,10 +7,11 @@
 
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "@/app/providers/AppProviders";
+import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { createRuntimeConfig } from "@/framework/runtime/config";
 
@@ -38,7 +39,7 @@ describe("RequirePermission", () => {
     expect(screen.getByText("standalone content")).toBeTruthy();
   });
 
-  it("redirects an unauthorized standalone user to the home page", async () => {
+  it("redirects an unauthorized standalone user through the default entry route", async () => {
     renderGuard(
       [],
       <MemoryRouter initialEntries={["/knowledge-network"]}>
@@ -51,12 +52,15 @@ describe("RequirePermission", () => {
               </RequirePermission>
             )}
           />
-          <Route path="/home" element={<div>home content</div>} />
+          <Route path={DEFAULT_APP_ENTRY_PATH}>
+            <Route index element={<Navigate replace to="/custom-default" />} />
+          </Route>
+          <Route path="/custom-default" element={<div>default entry content</div>} />
         </Routes>
       </MemoryRouter>,
     );
 
     expect(screen.queryByText("standalone content")).toBeNull();
-    expect(await screen.findByText("home content")).toBeTruthy();
+    expect(await screen.findByText("default entry content")).toBeTruthy();
   });
 });

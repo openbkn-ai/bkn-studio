@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
+import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import {
   hasPermissions,
@@ -41,5 +42,5 @@ export function RequirePermission({
     return <>{children}</>;
   }
 
-  return <Navigate replace to="/home" />;
+  return <Navigate replace to={DEFAULT_APP_ENTRY_PATH} />;
 }
