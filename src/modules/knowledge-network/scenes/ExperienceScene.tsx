@@ -846,14 +846,14 @@ export function ExperienceScene({
               value={authMode}
               onChange={setAuthMode}
               options={[
-                { value: "oauth", label: "OAuth Token" },
-                { value: "apikey", label: "API Key" },
+                { value: "oauth", label: t("knowledgeNetwork.contextLoaderPanel.common.oauthToken") },
+                { value: "apikey", label: t("knowledgeNetwork.contextLoaderPanel.common.apiKey") },
               ]}
             />
           </div>
           {authMode === "apikey" ? (
             <div className={styles.ef}>
-              <label>API Key</label>
+              <label>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</label>
               <MaskedKeyInput
                 value={appKey}
                 onChange={setAppKey}

@@ -247,7 +247,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
             </Form.Item>
             {authValue === "auth" ? (
               <Form.Item
-                label="API Key"
+                label={t("modelResources.models.modal.apiKey")}
                 name="apiKey"
                 rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
               >

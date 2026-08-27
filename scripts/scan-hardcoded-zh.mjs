@@ -26,13 +26,13 @@ const messageMethods = new Set(["error", "info", "success", "warning"]);
 const feedbackObjectProperties = new Set(["content", "description", "message", "title"]);
 const browserPromptMethods = new Set(["alert", "confirm", "prompt"]);
 const singleWordUiText = new Set([
-  "back", "cancel", "close", "copy", "delete", "description", "header", "name",
+  "attempt", "back", "cancel", "close", "copy", "delete", "description", "header", "name",
   "next", "previous", "refresh", "reset", "save", "search", "value",
 ]);
 const stableTechnicalText = new Set([
-  "API Key", "Access Token", "Authorization: Bearer", "DB", "ID", "JSON", "MCP",
+  "Access Token", "Authorization: Bearer", "DB", "ID", "JSON", "MCP",
   "My", "OAuth Token", "PG", "PK", "POST", "REST APIs", "SQL", "TOON",
-  "Trace ID", "Request ID", "api", "application/json", "body.json", "fx",
+  "api", "application/json", "body.json", "fx",
   "inputSchema", "mcp", "outputSchema", "token",
 ]);
 

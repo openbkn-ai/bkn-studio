@@ -213,7 +213,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     await screen.findByRole("button", { name: "initial" });
     fireEvent.click(screen.getByTitle("2"));
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(2));
-    fireEvent.change(screen.getByPlaceholderText("Trace ID"), { target: { value: "filtered" } });
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.traceWorkspace.filters.traceId"), { target: { value: "filtered" } });
     fireEvent.click(screen.getByRole("button", { name: /bknTrace.actions.query/ }));
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(3));
     expect(await screen.findByRole("button", { name: "filtered" })).not.toBeNull();

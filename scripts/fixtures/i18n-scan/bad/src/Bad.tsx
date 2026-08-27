@@ -24,6 +24,10 @@ export function Bad() {
       <button>{"Save changes"}</button>
       <p>{loading ? "Loading records" : "Records ready"}</p>
       <Form.Item label="Display name" help="Enter a display name" />
+      <Form.Item label="API Key" />
+      <Form.Item label="Request ID" />
+      <Form.Item label="Trace ID" />
+      <p>Attempt</p>
       <Modal okText="Save changes" cancelText="Discard changes" />
       <p>复制失败</p>
       <p>{url}</p>

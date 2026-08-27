@@ -100,7 +100,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
             {record.conversationId ? <Descriptions.Item label={t("bknTrace.logs.detail.conversationId")}><a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`)}>{record.conversationId}</a></Descriptions.Item> : null}
             {record.requestId ? <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}><span className={styles.technicalId}>{record.requestId}</span></Descriptions.Item> : null}
             {record.taskId ? <Descriptions.Item label={t("bknTrace.logs.detail.taskId")}><span className={styles.technicalId}>{record.taskId}</span></Descriptions.Item> : null}
-            {record.traceId ? <Descriptions.Item label="Trace ID"><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
+            {record.traceId ? <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
           </Descriptions>
         </DetailSection> : null}
 
