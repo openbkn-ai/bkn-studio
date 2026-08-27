@@ -492,6 +492,13 @@ export function DataConnectDiscoverScene({
       render: renderTableTime,
     },
     {
+      dataIndex: "finishTime",
+      key: "finish_time",
+      title: t("dataCatalog.task.finishedAt"),
+      width: 180,
+      render: renderTableTime,
+    },
+    {
       key: "actions",
       className: styles.taskActionCell,
       title: t("common.actions"),

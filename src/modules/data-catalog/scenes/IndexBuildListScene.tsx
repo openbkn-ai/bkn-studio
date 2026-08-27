@@ -415,9 +415,9 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "status",
-      title: t("common.status"),
+      title: t("dataCatalog.task.detailSections.status"),
       width: 116,
-      render: (_value: BuildTaskStatus, record) => <BuildStatusTag plain task={record} />,
+      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
     {
       key: "progress",
@@ -433,6 +433,15 @@ export function IndexBuildListScene() {
       width: 180,
       sorter: true,
       sortOrder: sortOrderOf("last_progress_time"),
+      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+    },
+    {
+      dataIndex: "finishTime",
+      key: "finish_time",
+      title: t("dataCatalog.task.finishedAt"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("finish_time"),
       render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
     },
     {

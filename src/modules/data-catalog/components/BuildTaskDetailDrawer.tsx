@@ -190,7 +190,7 @@ export function BuildTaskDetailDrawer({
   }, [open, taskId]);
 
   if (!task) {
-    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
+    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.buildDetail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
   }
 
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
@@ -206,17 +206,17 @@ export function BuildTaskDetailDrawer({
         body: { padding: 16 },
         header: { padding: "12px 16px" },
       }}
-      title={`${t("dataCatalog.task.detail")} · ${task.id}`}
+      title={`${t("dataCatalog.task.buildDetail")} · ${task.id}`}
       width={560}
     >
       <div className={styles.drawerContent}>
         <section className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("common.status")}</h3>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
           <div className={styles.statusRow}>
             <span
               className={[
                 sharedStyles.tag,
-                task.mode === "batch" ? sharedStyles.modeBatch : sharedStyles.modeStreaming,
+                sharedStyles.taskRunning,
               ].join(" ")}
             >
               {t(`dataCatalog.modes.${task.mode}`)}
@@ -267,8 +267,9 @@ export function BuildTaskDetailDrawer({
         </section>
 
         <section className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.modalTitle")}</h3>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label="ID">{task.id}</Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
               {task.catalogName ?? task.catalogId ?? "—"}
             </Descriptions.Item>
@@ -280,6 +281,9 @@ export function BuildTaskDetailDrawer({
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
               {task.resourceId}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.build.mode")}>
+              {t(`dataCatalog.modes.${task.mode}`)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
               {renderFieldTags(task.buildKeyFields)}
@@ -320,6 +324,12 @@ export function BuildTaskDetailDrawer({
                   ),
               })}
             </Descriptions.Item>
+          </Descriptions>
+        </section>
+
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.execution")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
             <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
               {renderSyncedMark(task.syncedMark)}
             </Descriptions.Item>
@@ -332,6 +342,12 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
               {formatDateTimeYmdHms(task.finishTime)}
             </Descriptions.Item>
+          </Descriptions>
+        </section>
+
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.audit")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
             <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
               {task.creator?.name || task.creator?.id || "—"}
             </Descriptions.Item>

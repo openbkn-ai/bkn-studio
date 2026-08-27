@@ -222,6 +222,8 @@ export const dataConnectEnUS = {
       normal: "Normal ({{priority}})",
     },
     discoverResult: "Discover Result",
+    discoverResultMetric: "Metric",
+    discoverResultCount: "Count",
     discoverResultEmpty: "No discover result available",
     discoverResultNew: "New Resources",
     discoverResultUpdated: "Updated Resources",

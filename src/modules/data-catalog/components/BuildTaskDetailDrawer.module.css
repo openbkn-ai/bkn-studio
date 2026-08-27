@@ -44,6 +44,13 @@
   font-weight: 600;
 }
 
+.detailSubsectionTitle {
+  margin: 14px 0 8px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .statusRow {
   display: flex;
   flex-wrap: wrap;
@@ -141,6 +148,10 @@
 
 .fieldDetailTable {
   margin-top: 10px;
+}
+
+.resultTable {
+  margin: 0;
 }
 
 .fieldDetailTable :global(.ant-table-cell) {
