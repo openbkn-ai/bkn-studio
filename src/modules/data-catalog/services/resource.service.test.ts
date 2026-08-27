@@ -75,8 +75,8 @@ describe("resource.service · listCatalogResourcePage", () => {
             category: "table",
             id: "res-1",
             last_discover_status: "error",
-            local_index_name: "bkn_res-1",
-            local_index_status: "available",
+            index_name: "bkn_res-1",
+            local_status: "available",
             name: "orders",
             schema: "external_data",
             status: "stale",
@@ -123,6 +123,45 @@ describe("resource.service · listCatalogResourcePage", () => {
       total: 21,
     });
     expect(result.items[0]?.updateTime).not.toBe("");
+  });
+});
+
+describe("resource.service · getCatalogResources", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uses the same index fields for detail responses", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "table",
+            id: "res-1",
+            index_name: "bkn_res-1",
+            local_status: "available",
+            name: "orders",
+          },
+        ],
+      },
+    });
+    const { getCatalogResources } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    await expect(getCatalogResources(["res-1"])).resolves.toEqual([
+      expect.objectContaining({
+        localIndexName: "bkn_res-1",
+        localIndexStatus: "available",
+      }),
+    ]);
   });
 });
 

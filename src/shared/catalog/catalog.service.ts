@@ -25,7 +25,9 @@ import {
   filterCatalogs,
   inferConnectorCategory,
   mapBackendCatalog,
+  mapBackendCatalogSummary,
   type BackendCatalog,
+  type BackendCatalogSummary,
 } from "@/shared/catalog/catalog-mapper";
 import type {
   CatalogConnectionTestInput,
@@ -92,7 +94,7 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
     });
   }
 
-  const response = await http.get<ListResponse<BackendCatalog>>("/vega-backend/v1/catalogs", {
+  const response = await http.get<ListResponse<BackendCatalogSummary>>("/vega-backend/v1/catalogs", {
     params: {
       connector_type: query.connectorType || undefined,
       direction: "desc",
@@ -104,7 +106,7 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
     },
   });
 
-  const mapped = response.data.entries.map(mapBackendCatalog);
+  const mapped = response.data.entries.map(mapBackendCatalogSummary);
   const filtered = filterCatalogs(mapped, query);
   const usesClientTypeFilter = query.type && query.type !== "all";
 
@@ -127,6 +129,7 @@ export async function getCatalog(id: string) {
   return catalog ? mapBackendCatalog(catalog) : null;
 }
 
+/** Load full catalog records for consumers that require fields omitted from list summaries. */
 export async function deleteCatalog(id: string) {
   if (useMock) {
     removeMockCatalog(id);

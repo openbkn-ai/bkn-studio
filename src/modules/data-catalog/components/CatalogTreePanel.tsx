@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Form, Input, Modal, Tooltip } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -43,6 +43,7 @@ type CatalogTreePanelProps = {
   collapsed?: boolean;
   connectorTypes: DataConnectConnectorType[];
   onRefresh: () => Promise<void> | void;
+  onLoadCatalogSchemas: (catalogId: string) => Promise<string[]>;
   onSelectCatalog: (catalogId: string) => void;
   onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
@@ -81,12 +82,8 @@ function schemaKey(catalogId: string, schema: string) {
   return `schema:${catalogId}:${schema}`;
 }
 
-function catalogSchemas(catalog: CatalogRecord, locale?: string) {
-  const schemas = catalog.metadata.schemas;
-  if (!Array.isArray(schemas)) {
-    return [];
-  }
-  return [...new Set(schemas.filter((schema): schema is string => typeof schema === "string" && schema.trim().length > 0))]
+function catalogSchemas(schemas: string[], locale?: string) {
+  return [...new Set(schemas.filter((schema) => schema.trim().length > 0))]
     .map((schema) => schema.trim())
     .sort((left, right) => left.localeCompare(right, locale));
 }
@@ -97,6 +94,7 @@ export function CatalogTreePanel({
   collapsed = false,
   connectorTypes,
   onRefresh,
+  onLoadCatalogSchemas,
   onSelectCatalog,
   onSelectScope,
   onToggleCollapsed,
@@ -106,8 +104,14 @@ export function CatalogTreePanel({
 }: CatalogTreePanelProps) {
   const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
+  const messageRef = useRef(message);
   const [keyword, setKeyword] = useState("");
   const [expandedKeys, setExpandedKeys] = useState<string[]>([PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY]);
+  const [schemaNamesByCatalogId, setSchemaNamesByCatalogId] = useState<Record<string, string[]>>({});
+  const expandedKeysRef = useRef(expandedKeys);
+  const schemaNamesByCatalogIdRef = useRef<Record<string, string[]>>({});
+  const schemaLoadGeneration = useRef(0);
+  const loadingSchemaCatalogIds = useRef(new Map<string, number>());
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<LogicalFormValues>();
@@ -117,6 +121,58 @@ export function CatalogTreePanel({
     [connectorTypes],
   );
   const sortLocale = i18n.language || undefined;
+
+  const loadCatalogSchemas = useCallback((catalogId: string, force = false) => {
+    const generation = schemaLoadGeneration.current;
+    if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
+      return;
+    }
+    if (!force && Object.hasOwn(schemaNamesByCatalogIdRef.current, catalogId)) {
+      return;
+    }
+    loadingSchemaCatalogIds.current.set(catalogId, generation);
+    void onLoadCatalogSchemas(catalogId)
+      .then((schemas) => {
+        if (schemaLoadGeneration.current !== generation) {
+          return;
+        }
+        setSchemaNamesByCatalogId((current) => {
+          const next = { ...current, [catalogId]: schemas };
+          schemaNamesByCatalogIdRef.current = next;
+          return next;
+        });
+      })
+      .catch((error) => {
+        if (schemaLoadGeneration.current === generation) {
+          void messageRef.current.error(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
+          loadingSchemaCatalogIds.current.delete(catalogId);
+        }
+      });
+  }, [onLoadCatalogSchemas]);
+
+  useEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
+  useEffect(() => {
+    expandedKeysRef.current = expandedKeys;
+  }, [expandedKeys]);
+
+  useEffect(() => {
+    schemaLoadGeneration.current += 1;
+    loadingSchemaCatalogIds.current.clear();
+    schemaNamesByCatalogIdRef.current = {};
+    setSchemaNamesByCatalogId({});
+
+    const expandedCatalogKeys = new Set(expandedKeysRef.current);
+    catalogs
+      .filter((catalog) => catalog.type !== "logical" && expandedCatalogKeys.has(catalogKey(catalog.id)))
+      .forEach((catalog) => loadCatalogSchemas(catalog.id, true));
+  }, [catalogs, loadCatalogSchemas]);
 
   const selectedCatalogId = selection?.id;
 
@@ -182,7 +238,7 @@ export function CatalogTreePanel({
     const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
     const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
-      const schemas = catalogSchemas(catalog, sortLocale);
+      const schemas = catalogSchemas(schemaNamesByCatalogId[catalog.id] ?? [], sortLocale);
       if (schemas.length === 0) {
         return undefined;
       }
@@ -237,6 +293,7 @@ export function CatalogTreePanel({
           metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
           return {
             children: attachCatalogChildren(catalog),
+            isLeaf: false,
             key: nodeKey,
             title: (
               <span className={styles.catalogNodeTitle}>
@@ -427,6 +484,7 @@ export function CatalogTreePanel({
     physicalCatalogs,
     query,
     discoveringCatalogIds,
+    schemaNamesByCatalogId,
     selectedCatalogId,
     sortLocale,
     t,
@@ -533,7 +591,21 @@ export function CatalogTreePanel({
         <BusinessTree
           className={styles.catalogTree}
           expandedKeys={expandedKeys}
-          onExpand={(keys) => setExpandedKeys(keys.map(String))}
+          onExpand={(keys) => {
+            const nextKeys = keys.map(String);
+            setExpandedKeys(nextKeys);
+            expandedKeysRef.current = nextKeys;
+            for (const key of nextKeys) {
+              if (expandedKeys.includes(key)) {
+                continue;
+              }
+              const meta = treeModel.metaMap.get(key);
+              if (meta?.type !== "catalog") {
+                continue;
+              }
+              loadCatalogSchemas(meta.catalogId);
+            }
+          }}
           onSelect={(keys) => {
             const key = String(keys[0] ?? "");
             if (!key) {

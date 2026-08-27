@@ -196,31 +196,36 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
   };
 }
 
-type BackendResource = {
+type BackendResourceSummary = {
   catalog_id: string;
   category?: string;
   column_count?: number;
   description?: string;
   id: string;
-  index_config?: BackendIndexConfig | null;
   last_discover_status?: string;
-  local_index_name?: string;
-  local_index_status?: string;
+  index_name?: string;
+  local_status?: string;
   logic_type?: string;
   name: string;
   row_count?: number;
   schema?: string;
-  schema_definition?: BackendSchemaField[] | null;
   source_identifier?: string;
+  status?: string;
+  status_message?: string;
+  update_time?: number;
+};
+
+type BackendResourceDetailFields = {
+  index_config?: BackendIndexConfig | null;
+  schema_definition?: BackendSchemaField[] | null;
   source_metadata?: {
     properties?: {
       row_count?: number;
     };
   } | null;
-  status?: string;
-  status_message?: string;
-  update_time?: number;
 };
+
+type BackendResource = BackendResourceSummary & BackendResourceDetailFields;
 
 type ListResponse<T> = {
   entries: T[];
@@ -289,7 +294,7 @@ function normalizeLocalIndexStatus(value?: string): CatalogResource["localIndexS
   }
 }
 
-function mapResource(item: BackendResource): CatalogResource {
+function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetailFields>): CatalogResource {
   return {
     id: item.id,
     catalogId: item.catalog_id,
@@ -300,8 +305,8 @@ function mapResource(item: BackendResource): CatalogResource {
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
-    localIndexName: item.local_index_name?.trim() || undefined,
-    localIndexStatus: normalizeLocalIndexStatus(item.local_index_status),
+    localIndexName: item.index_name?.trim() || undefined,
+    localIndexStatus: normalizeLocalIndexStatus(item.local_status),
     // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
@@ -350,7 +355,7 @@ export async function listCatalogResourcePage(
     });
   }
 
-  const response = await http.get<ListResponse<BackendResource>>(
+  const response = await http.get<ListResponse<BackendResourceSummary>>(
     "/vega-backend/v1/resources",
     {
       params: {

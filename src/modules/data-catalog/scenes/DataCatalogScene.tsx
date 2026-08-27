@@ -32,7 +32,7 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
-import { catalogListAllQuery, listCatalogs, type CatalogRecord } from "@/shared/catalog";
+import { catalogListAllQuery, getCatalog, listCatalogs, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
 
@@ -102,6 +102,14 @@ export function DataCatalogScene({
       return;
     }
     setTasks(await listBuildTasks({ catalogId }));
+  }, []);
+
+  const loadCatalogSchemas = useCallback(async (catalogId: string) => {
+    const catalog = await getCatalog(catalogId);
+    const schemas = catalog?.metadata.schemas;
+    return Array.isArray(schemas)
+      ? schemas.filter((schema): schema is string => typeof schema === "string")
+      : [];
   }, []);
 
   const refreshResourceTotal = useCallback(async () => {
@@ -366,6 +374,7 @@ export function DataCatalogScene({
           onRefresh={async () => {
             await loadAll();
           }}
+          onLoadCatalogSchemas={loadCatalogSchemas}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
             next.delete("schema");
