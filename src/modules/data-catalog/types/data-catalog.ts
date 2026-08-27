@@ -15,7 +15,7 @@ export type ResourceDiscoverStatus =
   | "unchanged"
   | "updated";
 
-export type ResourceStatus = "active" | "deprecated" | "disabled" | "stale";
+export type ResourceStatus = "active" | "deprecated" | "stale";
 
 /** Whether the Resource's local OpenSearch index is currently usable for queries. */
 export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
@@ -63,6 +63,8 @@ export type CatalogResource = {
   /** Field count from a detail schema or list summary; null when the list response omits it. */
   columnCount: number | null;
   description: string;
+  /** Resource access state, independent from discovery lifecycle status. */
+  enabled?: boolean;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
@@ -106,6 +108,8 @@ export type ResourceCreateInput = {
 };
 
 export type ResourceUpdateInput = ResourceCreateInput & {
+  /** Preserved by full PUT; changes use the enable/disable action endpoints. */
+  enabled?: boolean;
   expectedUpdateTime: number;
 };
 

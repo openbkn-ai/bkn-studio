@@ -77,6 +77,13 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }
   return <div className={sharedStyles.progressWrapCompact}><div className={sharedStyles.progressTrack}><span className={[sharedStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={sharedStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
 }
 
+function DiscoverTaskPriority({ priority }: { priority: number }) {
+  const { t } = useTranslation();
+  const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
+  const color = level === "high" ? "error" : level === "low" ? "default" : "processing";
+  return <Tag color={color}>{t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}</Tag>;
+}
+
 export function DataConnectDiscoverScene({
   catalogId,
   onBackToConnections,
@@ -455,6 +462,12 @@ export function DataConnectDiscoverScene({
       title: t("dataConnect.discoverTriggerType"),
       width: 120,
       render: (value: DataConnectDiscoverTaskSummary["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
+    },
+    {
+      dataIndex: "queuePriority",
+      title: t("dataConnect.discoverQueuePriority"),
+      width: 120,
+      render: (value: number) => <DiscoverTaskPriority priority={value} />,
     },
     {
       dataIndex: "status",

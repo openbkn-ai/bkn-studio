@@ -19,6 +19,11 @@ import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-ta
 
 import styles from "./DataConnectDiscoverTaskDrawer.module.css";
 
+function priorityLabel(priority: number, t: (key: string, options?: Record<string, unknown>) => string) {
+  const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
+  return t(`dataConnect.discoverTaskPriorities.${level}`, { priority });
+}
+
 type DataConnectDiscoverTaskDrawerProps = {
   catalogs: Array<{ id: string; name: string }>;
   onClose: () => void;
@@ -122,7 +127,12 @@ export function DataConnectDiscoverTaskDrawer({
             <div className={styles.detailGrid}>
               <DetailItem label="ID" value={task.id} />
               <DetailItem label={t("dataConnect.discoverCatalogId")} value={task.catalogId || "-"} />
+              <DetailItem label={t("dataConnect.discoverResourceId")} value={task.resourceId || "-"} />
               <DetailItem label={t("dataConnect.discoverScheduleId")} value={task.scheduleId || "-"} />
+              <DetailItem
+                label={t("dataConnect.discoverQueuePriority")}
+                value={priorityLabel(task.queuePriority, t)}
+              />
               <DetailItem
                 label={t("dataConnect.discoverStrategy")}
                 value={t(`dataConnect.discoverStrategies.${task.strategy}`)}

@@ -63,12 +63,13 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "columnCount" | "localIndexStatus" | "updateTime"> &
-    Partial<Pick<CatalogResource, "localIndexStatus">>,
+  input: Omit<CatalogResource, "columnCount" | "enabled" | "localIndexStatus" | "updateTime"> &
+    Partial<Pick<CatalogResource, "enabled" | "localIndexStatus">>,
 ): CatalogResource {
   return {
     ...input,
     columnCount: input.schema.length,
+    enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };

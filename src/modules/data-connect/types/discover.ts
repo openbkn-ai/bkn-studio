@@ -57,6 +57,10 @@ export type DataConnectDiscoverTask = {
   lastProgressTime?: number;
   message: string;
   progress: number;
+  /** Server-computed queue priority; greater values run earlier. */
+  queuePriority: number;
+  /** Present only for a resource-level metadata refresh task. */
+  resourceId?: string;
   result?: DataConnectDiscoverResult;
   scheduleId: string;
   startTime?: number;
@@ -103,6 +107,7 @@ export type DataConnectDiscoverTaskListQuery = {
   offset?: number;
   page?: number;
   pageSize?: number;
+  resourceId?: string;
   scheduleId?: string;
   direction?: "asc" | "desc";
   sort?: DataConnectDiscoverTaskSort;

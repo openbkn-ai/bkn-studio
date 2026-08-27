@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,6 +44,14 @@ import {
 } from "@/shared/catalog";
 
 import styles from "./DataConnectListScene.module.css";
+
+const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
+  degraded: "orange",
+  healthy: "success",
+  offline: "error",
+  unchecked: "default",
+  unhealthy: "error",
+};
 
 function hasCascadeImpact(impact: CatalogDeletionImpact) {
   return (
@@ -395,12 +403,18 @@ export function DataConnectListScene({
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (_, record) => <span>{record.enabled ? t("common.enabled") : t("common.disabled")}</span>,
+      render: (_, record) => (
+        <Tag color={record.enabled ? "success" : "default"}>
+          {record.enabled ? t("common.enabled") : t("common.disabled")}
+        </Tag>
+      ),
     },
     {
       dataIndex: "healthStatus",
       title: t("common.healthStatus"),
-      render: (value: DataConnectRecord["healthStatus"]) => <span>{t(`dataConnect.healthStatuses.${value}`)}</span>,
+      render: (value: DataConnectRecord["healthStatus"]) => (
+        <Tag color={HEALTH_STATUS_COLORS[value]}>{t(`dataConnect.healthStatuses.${value}`)}</Tag>
+      ),
     },
     {
       dataIndex: "updaterName",

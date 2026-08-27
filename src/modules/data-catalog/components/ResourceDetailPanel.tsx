@@ -156,6 +156,7 @@ export function ResourceDetailPanel({
         catalogId: resource.catalogId,
         category: resource.category,
         description: descriptionDraft.trim(),
+        enabled: resource.enabled ?? true,
         expectedUpdateTime: resource.expectedUpdateTime,
         name: resource.name,
         schema: schemaDraft.map((field) => ({

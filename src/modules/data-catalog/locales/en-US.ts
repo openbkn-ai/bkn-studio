@@ -40,6 +40,10 @@ export const dataCatalogEnUS = {
         "No usable field metadata is available. Add or refresh the resource fields before querying or building an index.",
       statusMessageDetail: "Status details: {{message}}",
       openDiscovery: "Open discovery",
+      refreshMetadata: "Refresh Metadata",
+      discoveryQueued: "Resource metadata refresh task created.",
+      enableSuccess: "Resource enabled.",
+      disableSuccess: "Resource disabled.",
     },
     indexWorkspace: {
       backToOverview: "Back to Tasks",
@@ -236,6 +240,7 @@ export const dataCatalogEnUS = {
       catalog: "Catalog",
       catalogPlaceholder: "Select a catalog",
       category: "Category",
+      enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
       rowCount: "Rows",
       indexState: "Index State",

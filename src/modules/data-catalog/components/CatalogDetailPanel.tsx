@@ -331,6 +331,16 @@ export function CatalogDetailPanel({
       ),
     },
     {
+      dataIndex: "enabled",
+      ellipsis: true,
+      title: t("dataCatalog.resource.enabledStatus"),
+      width: 96,
+      render: (value: boolean | undefined) => {
+        const enabled = value !== false;
+        return <Tag color={enabled ? "success" : "default"}>{t(enabled ? "common.enabled" : "common.disabled")}</Tag>;
+      },
+    },
+    {
       dataIndex: "lastDiscoverStatus",
       ellipsis: true,
       title: t("dataCatalog.resource.discoverStatus"),

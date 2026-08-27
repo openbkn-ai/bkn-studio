@@ -27,11 +27,11 @@ const resource: CatalogResource = {
 };
 
 describe("resourceQueryBlockReason", () => {
-  it("gives disabled lifecycle status precedence over a missing discovery result", () => {
+  it("gives disabled state precedence over a missing discovery result", () => {
     expect(resourceQueryBlockReason({
       ...resource,
+      enabled: false,
       lastDiscoverStatus: "missing",
-      status: "disabled",
     })).toBe("disabled");
   });
 

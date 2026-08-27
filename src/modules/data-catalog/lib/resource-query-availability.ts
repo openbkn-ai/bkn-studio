@@ -17,7 +17,7 @@ export function resourceQueryBlockReason(
   resource: CatalogResource,
   fieldCount: number | null = resource.schema.length,
 ): ResourceQueryBlockReason | null {
-  if (resource.status === "disabled") {
+  if (resource.enabled === false) {
     return "disabled";
   }
   if (resource.status === "stale") {

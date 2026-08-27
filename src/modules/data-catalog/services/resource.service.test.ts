@@ -119,10 +119,42 @@ describe("resource.service · listCatalogResourcePage", () => {
         schemaName: "external_data",
         status: "stale",
         statusMessage: "discover metadata failed",
+        enabled: true,
       })],
       total: 21,
     });
     expect(result.items[0]?.updateTime).not.toBe("");
+  });
+});
+
+describe("resource.service · discovery and enabled actions", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uses dedicated endpoints for resource metadata refresh and enablement", async () => {
+    postMock.mockResolvedValueOnce({ data: { id: "task-1" } }).mockResolvedValue({ data: undefined });
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ catalog_id: "cat-1", enabled: false, id: "res-1", name: "orders" }],
+      },
+    });
+    const { discoverCatalogResource, setCatalogResourceEnabled } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    await expect(discoverCatalogResource("res-1")).resolves.toEqual({ id: "task-1" });
+    await setCatalogResourceEnabled("res-1", false);
+
+    expect(postMock).toHaveBeenNthCalledWith(1, "/vega-backend/v1/resources/res-1/discover");
+    expect(postMock).toHaveBeenNthCalledWith(2, "/vega-backend/v1/resources/res-1/disable");
   });
 });
 

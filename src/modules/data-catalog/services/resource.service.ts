@@ -201,6 +201,7 @@ type BackendResourceSummary = {
   category?: string;
   column_count?: number;
   description?: string;
+  enabled?: boolean;
   id: string;
   last_discover_status?: string;
   index_name?: string;
@@ -275,7 +276,6 @@ function normalizeResourceStatus(value?: string): CatalogResource["status"] {
   switch (value) {
     case "active":
     case "deprecated":
-    case "disabled":
     case "stale":
       return value;
     default:
@@ -302,6 +302,7 @@ function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetai
     category: normalizeCategory(item.category, item.logic_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
+    enabled: item.enabled ?? true,
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
@@ -448,6 +449,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       category: input.category,
       sourceIdentifier: input.sourceIdentifier,
       description: input.description,
+      enabled: true,
       localIndexStatus: "unavailable",
       schema:
         input.schema.length > 0
@@ -473,6 +475,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       catalog_id: input.catalogId,
       category: input.category,
       description: input.description,
+      enabled: true,
       name: input.name,
       schema_definition:
         input.schema.length > 0 ? input.schema.map(mapSchemaFieldToBackend) : undefined,
@@ -490,6 +493,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       category: input.category,
       sourceIdentifier: input.sourceIdentifier,
       description: input.description,
+      enabled: true,
       localIndexStatus: "unavailable",
       schema: input.schema,
       columnCount: input.schema.length,
@@ -558,6 +562,7 @@ export async function updateCatalogResource(
     catalog_id: input.catalogId,
     category: input.category,
     description: input.description,
+    ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
     name: input.name,
     schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
     index_config: mapIndexConfigToBackend(input.indexConfig),
@@ -585,6 +590,44 @@ export async function deleteCatalogResource(id: string) {
   }
 
   await http.delete(`/vega-backend/v1/resources/${id}`);
+}
+
+/** Trigger asynchronous metadata refresh for one Resource. */
+export async function discoverCatalogResource(id: string): Promise<{ id: string }> {
+  if (useMock) {
+    const resource = mockResources.find((item) => item.id === id);
+    if (!resource) {
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
+    }
+    await wait(undefined);
+    return { id: `discover-resource-${id}` };
+  }
+
+  const response = await http.post<{ id: string }>(`/vega-backend/v1/resources/${id}/discover`);
+  return response.data;
+}
+
+/** Change Resource access state through its dedicated action endpoint. */
+export async function setCatalogResourceEnabled(id: string, enabled: boolean) {
+  if (useMock) {
+    const index = mockResources.findIndex((item) => item.id === id);
+    if (index < 0) {
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
+    }
+    const expectedUpdateTime = Date.now();
+    const updated = {
+      ...mockResources[index],
+      enabled,
+      expectedUpdateTime,
+      updateTime: formatMockTimestamp(expectedUpdateTime),
+    };
+    mockResources[index] = updated;
+    emitMockChange();
+    return wait(updated);
+  }
+
+  await http.post(`/vega-backend/v1/resources/${id}/${enabled ? "enable" : "disable"}`);
+  return getCatalogResource(id);
 }
 
 const PREVIEW_CELL_POOL: Record<string, (row: number) => unknown> = {
