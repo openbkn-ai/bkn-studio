@@ -13,6 +13,7 @@ import {
   moduleRoutes,
   standaloneModuleRoutes,
 } from "@/app/router/module-routes";
+import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
@@ -30,7 +31,7 @@ export function createAppRouter(basename?: string) {
         errorElement: <RouteErrorPage />,
       })),
       {
-        path: "/",
+        path: DEFAULT_APP_ENTRY_PATH,
         errorElement: <RouteErrorPage />,
         element: (
           <Suspense fallback={<RouteLoading />}>

@@ -43,7 +43,7 @@ function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
-// Route-level guards render 403 when unauthorized, so guarded pages do not mount or trigger data-fetching side effects.
+// Route-level guards redirect before guarded pages mount, so they do not trigger data-fetching side effects.
 function guarded(permissions: readonly string[], element: ReactNode) {
   return (
     <RequirePermission permissions={[...permissions]}>

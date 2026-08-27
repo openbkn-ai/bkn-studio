@@ -7,19 +7,13 @@
 
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { MemoryRouter, Navigate, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "@/app/providers/AppProviders";
+import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { createRuntimeConfig } from "@/framework/runtime/config";
-
-vi.mock("react-i18next", async (importOriginal) => {
-  const original = await importOriginal<typeof import("react-i18next")>();
-  return {
-    ...original,
-    useTranslation: () => ({ t: (key: string) => key }),
-  };
-});
 
 function renderGuard(permissions: string[], children: ReactNode) {
   const runtimeConfig = createRuntimeConfig({
@@ -45,15 +39,28 @@ describe("RequirePermission", () => {
     expect(screen.getByText("standalone content")).toBeTruthy();
   });
 
-  it("renders the permission result when the standalone user is unauthorized", () => {
+  it("redirects an unauthorized standalone user through the default entry route", async () => {
     renderGuard(
       [],
-      <RequirePermission permissions="knowledge-network:view">
-        <div>standalone content</div>
-      </RequirePermission>,
+      <MemoryRouter initialEntries={["/knowledge-network"]}>
+        <Routes>
+          <Route
+            path="/knowledge-network"
+            element={(
+              <RequirePermission permissions="knowledge-network:view">
+                <div>standalone content</div>
+              </RequirePermission>
+            )}
+          />
+          <Route path={DEFAULT_APP_ENTRY_PATH}>
+            <Route index element={<Navigate replace to="/custom-default" />} />
+          </Route>
+          <Route path="/custom-default" element={<div>default entry content</div>} />
+        </Routes>
+      </MemoryRouter>,
     );
 
     expect(screen.queryByText("standalone content")).toBeNull();
-    expect(screen.getByText("403")).toBeTruthy();
+    expect(await screen.findByText("default entry content")).toBeTruthy();
   });
 });
