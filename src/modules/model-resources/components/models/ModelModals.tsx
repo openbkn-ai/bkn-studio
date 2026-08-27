@@ -219,14 +219,14 @@ export function LlmModelFormModal({
           )}
         </Form.Item>
         <Form.Item
-          label="API Model"
+          label={t("modelResources.models.modal.apiModel")}
           name="apiModel"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
           <Input placeholder={t("modelResources.models.modal.apiModelPlaceholder")} />
         </Form.Item>
         <Form.Item
-          label="API URL"
+          label={t("modelResources.models.modal.apiUrl")}
           name="apiUrl"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
@@ -241,7 +241,7 @@ export function LlmModelFormModal({
         </Form.Item>
         {authValue === "auth" || authValue === "dual_key" ? (
           <Form.Item
-            label="API Key"
+            label={t("modelResources.models.modal.apiKey")}
             name="apiKey"
             rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
           >
@@ -250,7 +250,7 @@ export function LlmModelFormModal({
         ) : null}
         {authValue === "dual_key" ? (
           <Form.Item
-            label="Secret Key"
+            label={t("modelResources.models.modal.secretKey")}
             name="secretKey"
             rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
           >

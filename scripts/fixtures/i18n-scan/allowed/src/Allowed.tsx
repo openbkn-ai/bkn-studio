@@ -8,7 +8,7 @@
 export function Allowed() {
   return (
     <>
-      <label>API Key</label>
+      <label>REST APIs</label>
       <input placeholder="https://example.com/mcp" />
       <code>SQL</code>
     </>

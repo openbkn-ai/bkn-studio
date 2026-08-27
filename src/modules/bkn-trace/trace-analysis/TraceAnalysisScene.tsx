@@ -230,7 +230,7 @@ export function TraceAnalysisScene() {
           });
         }}
       >
-        <Form.Item name="traceId"><Input allowClear placeholder="Trace ID" /></Form.Item>
+        <Form.Item name="traceId"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.traceId")} /></Form.Item>
         <Form.Item name="service"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.service")} /></Form.Item>
         <Form.Item name="tool"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.tool")} /></Form.Item>
         <Form.Item name="status">
@@ -299,7 +299,7 @@ function TraceDetail({
 
       <article className={styles.summaryCard}>
         <Descriptions column={4} size="small">
-          <Descriptions.Item label="Request ID">{summary.requestId || "-"}</Descriptions.Item>
+          <Descriptions.Item label={t("bknTrace.traceWorkspace.requestId")}>{summary.requestId || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("bknTrace.traceWorkspace.columns.agent")}>{summary.agentName || summary.agentOrApp || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("bknTrace.traceWorkspace.columns.duration")}>{summary.durationMs === undefined ? "-" : `${summary.durationMs} ms`}</Descriptions.Item>
           <Descriptions.Item label="Span">{summary.spanCountStatus === "unavailable" ? t("bknTrace.traceWorkspace.spanUnavailable") : summary.spanCount}</Descriptions.Item>
@@ -345,7 +345,7 @@ function TraceDetail({
               >
                 <span>
                   <strong>{event.value.fact.toolName || t("bknTrace.traceWorkspace.unknownOperation")}</strong>
-                  <small>{event.value.fact.sourceModule} · {event.value.fact.protocol.toUpperCase()} · Attempt {event.value.fact.attempt}</small>
+                  <small>{event.value.fact.sourceModule} · {event.value.fact.protocol.toUpperCase()} · {t("bknTrace.traceWorkspace.attempt", { attempt: event.value.fact.attempt })}</small>
                 </span>
                 <span className={styles.operationState}><StatusTag status={event.value.state} /><small>{operationDuration(event.value)}</small></span>
               </button>
@@ -377,10 +377,10 @@ function OperationPanel({ onClose, operation, traceId }: { onClose: () => void; 
         <Button aria-label={t("bknTrace.traceWorkspace.closeDetail")} icon={<CloseOutlined />} onClick={onClose} type="text" />
       </header>
       <Descriptions column={1} size="small">
-        <Descriptions.Item label="Operation ID">{operation.fact.operationId}</Descriptions.Item>
-        <Descriptions.Item label="Request ID">{operation.fact.requestId || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.operationId")}>{operation.fact.operationId}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.requestId")}>{operation.fact.requestId || "-"}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.source")}>{operation.fact.sourceModule} · {operation.fact.protocol.toUpperCase()}</Descriptions.Item>
-        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{operation.state} · Attempt {operation.fact.attempt}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{t("bknTrace.traceWorkspace.stateWithAttempt", { attempt: operation.fact.attempt, state: operation.state })}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.startedAt")}>{operation.fact.startedAt || "-"}</Descriptions.Item>
       </Descriptions>
       <Tabs items={items} />

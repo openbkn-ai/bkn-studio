@@ -109,7 +109,7 @@ export function McpSetupModal({
       <div className={styles.guideRoot}>
       <p className={styles.guideNote}>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalPrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalClient")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}<b>API Key</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}<b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalSuffix")}
         <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
           {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
@@ -118,7 +118,7 @@ export function McpSetupModal({
       <p className={styles.guideNote}>
         <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceTitle")}</b>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferencePrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.sessionToken")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}<b>API Key</b>
+        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}<b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}<code>Authorization: Bearer</code>
         {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
       </p>

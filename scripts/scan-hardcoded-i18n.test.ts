@@ -24,13 +24,28 @@ function scanFixture(name: string) {
 }
 
 describe("hardcoded i18n scanner", () => {
-  it("finds Chinese HTML, TSX strings with comment markers, and user-facing English text", () => {
+  it("finds Chinese HTML and the supported user-facing English text patterns", () => {
     const result = scanFixture("bad");
 
     expect(result.findings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ language: "en", text: "back" }),
         expect.objectContaining({ language: "en", text: "Copy failed" }),
+        expect.objectContaining({ language: "en", text: "Save changes" }),
+        expect.objectContaining({ language: "en", text: "Loading records" }),
+        expect.objectContaining({ language: "en", text: "Records ready" }),
+        expect.objectContaining({ language: "en", text: "Display name" }),
+        expect.objectContaining({ language: "en", text: "API Key" }),
+        expect.objectContaining({ language: "en", text: "Request ID" }),
+        expect.objectContaining({ language: "en", text: "Trace ID" }),
+        expect.objectContaining({ language: "en", text: "Attempt" }),
+        expect.objectContaining({ language: "en", text: "Discard changes" }),
+        expect.objectContaining({ language: "en", text: "Saved records" }),
+        expect.objectContaining({ language: "en", text: "Save failed" }),
+        expect.objectContaining({ language: "en", text: "Try again later" }),
+        expect.objectContaining({ language: "en", text: "Delete record" }),
+        expect.objectContaining({ language: "en", text: "This action cannot be undone" }),
+        expect.objectContaining({ language: "en", text: "Delete this record" }),
         expect.objectContaining({ language: "zh", relativePath: "public/review.html" }),
         expect.objectContaining({
           language: "zh",

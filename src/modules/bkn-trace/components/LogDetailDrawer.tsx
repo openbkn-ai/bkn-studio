@@ -97,10 +97,10 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
 
         {record.conversationId || record.requestId || record.taskId || record.traceId ? <DetailSection title={t("bknTrace.logs.detail.associations")}>
           <Descriptions column={1} size="small">
-            {record.conversationId ? <Descriptions.Item label="Conversation ID"><a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`)}>{record.conversationId}</a></Descriptions.Item> : null}
-            {record.requestId ? <Descriptions.Item label="Request ID"><span className={styles.technicalId}>{record.requestId}</span></Descriptions.Item> : null}
-            {record.taskId ? <Descriptions.Item label="Task ID"><span className={styles.technicalId}>{record.taskId}</span></Descriptions.Item> : null}
-            {record.traceId ? <Descriptions.Item label="Trace ID"><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
+            {record.conversationId ? <Descriptions.Item label={t("bknTrace.logs.detail.conversationId")}><a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`)}>{record.conversationId}</a></Descriptions.Item> : null}
+            {record.requestId ? <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}><span className={styles.technicalId}>{record.requestId}</span></Descriptions.Item> : null}
+            {record.taskId ? <Descriptions.Item label={t("bknTrace.logs.detail.taskId")}><span className={styles.technicalId}>{record.taskId}</span></Descriptions.Item> : null}
+            {record.traceId ? <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
           </Descriptions>
         </DetailSection> : null}
 
@@ -115,7 +115,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
                 <Descriptions.Item label={t("bknTrace.logs.detail.rawAction")}>{record.action}</Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.targetId")}><span className={styles.technicalId}>{record.target.id}</span></Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.actorId")}><span className={styles.technicalId}>{record.actor.id}</span></Descriptions.Item>
-                <Descriptions.Item label="Event ID"><span className={styles.technicalId}>{record.eventId}</span></Descriptions.Item>
+                <Descriptions.Item label={t("bknTrace.logs.detail.eventId")}><span className={styles.technicalId}>{record.eventId}</span></Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.recordedAt")}>{formatTime(record.recordedAt)}</Descriptions.Item>
               </Descriptions>,
             },

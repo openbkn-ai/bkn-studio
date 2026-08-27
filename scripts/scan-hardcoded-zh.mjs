@@ -18,16 +18,21 @@ const chinesePattern = /[\u4e00-\u9fff]/;
 const scannedExtensions = new Set([".html", ".ts", ".tsx"]);
 const ignoredPathParts = new Set([".git", "dist", "node_modules", "locales"]);
 const ignoredFilePatterns = [/\.test\.tsx?$/, /\.spec\.tsx?$/, /mock/i];
-const userFacingAttributes = new Set(["alt", "aria-label", "placeholder", "title"]);
+const userFacingAttributes = new Set([
+  "alt", "aria-label", "placeholder", "title", "label", "description", "content",
+  "help", "okText", "cancelText", "emptyText", "confirmText",
+]);
 const messageMethods = new Set(["error", "info", "success", "warning"]);
+const feedbackObjectProperties = new Set(["content", "description", "message", "title"]);
+const browserPromptMethods = new Set(["alert", "confirm", "prompt"]);
 const singleWordUiText = new Set([
-  "back", "cancel", "close", "copy", "delete", "description", "header", "name",
+  "attempt", "back", "cancel", "close", "copy", "delete", "description", "header", "name",
   "next", "previous", "refresh", "reset", "save", "search", "value",
 ]);
 const stableTechnicalText = new Set([
-  "API Key", "Access Token", "Authorization: Bearer", "DB", "ID", "JSON", "MCP",
+  "Access Token", "Authorization: Bearer", "DB", "ID", "JSON", "MCP",
   "My", "OAuth Token", "PG", "PK", "POST", "REST APIs", "SQL", "TOON",
-  "Trace ID", "Request ID", "api", "application/json", "body.json", "fx",
+  "api", "application/json", "body.json", "fx",
   "inputSchema", "mcp", "outputSchema", "token",
 ]);
 
@@ -100,9 +105,13 @@ function scanTypeScriptEnglishText(filePath, source) {
     if (ts.isJsxText(node)) {
       addEnglishNodeFinding(filePath, sourceFile, node, node.getText(sourceFile));
     } else if (ts.isJsxAttribute(node) && userFacingAttributes.has(node.name.text)) {
-      addEnglishNodeFinding(filePath, sourceFile, node, stringValueOfJsxAttribute(node));
-    } else if (isUserMessageCall(node)) {
-      addEnglishNodeFinding(filePath, sourceFile, node, stringValueOfExpression(node.arguments[0]));
+      addEnglishExpressionFindings(filePath, sourceFile, node, expressionOfJsxAttribute(node));
+    } else if (isDirectJsxExpression(node)) {
+      addEnglishExpressionFindings(filePath, sourceFile, node, node.expression);
+    } else if (isUserMessageCall(node) || isBrowserPromptCall(node)) {
+      addEnglishExpressionFindings(filePath, sourceFile, node, node.arguments[0]);
+    } else if (isFeedbackObjectCall(node)) {
+      scanFeedbackObject(filePath, sourceFile, node.arguments[0]);
     }
     ts.forEachChild(node, visit);
   };
@@ -119,22 +128,36 @@ function scanHtmlEnglishText(filePath, source) {
   });
 }
 
-function stringValueOfJsxAttribute(attribute) {
+function expressionOfJsxAttribute(attribute) {
   const initializer = attribute.initializer;
-  if (!initializer) return "";
-  if (ts.isStringLiteral(initializer)) return initializer.text;
-  if (ts.isJsxExpression(initializer) && initializer.expression) {
-    return stringValueOfExpression(initializer.expression);
-  }
-  return "";
+  if (!initializer) return undefined;
+  if (ts.isStringLiteral(initializer)) return initializer;
+  return ts.isJsxExpression(initializer) ? initializer.expression : undefined;
 }
 
-function stringValueOfExpression(expression) {
-  if (!expression) return "";
+function isDirectJsxExpression(node) {
+  return ts.isJsxExpression(node)
+    && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent));
+}
+
+function stringValuesOfExpression(expression) {
+  if (!expression) return [];
   if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
-    return expression.text;
+    return [expression.text];
   }
-  return "";
+  if (ts.isTemplateExpression(expression)) {
+    return [expression.head.text + expression.templateSpans.map((span) => span.literal.text).join("")];
+  }
+  if (ts.isParenthesizedExpression(expression)) {
+    return stringValuesOfExpression(expression.expression);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return [...stringValuesOfExpression(expression.whenTrue), ...stringValuesOfExpression(expression.whenFalse)];
+  }
+  if (ts.isBinaryExpression(expression) && (expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || expression.operatorToken.kind === ts.SyntaxKind.BarBarToken)) {
+    return [...stringValuesOfExpression(expression.left), ...stringValuesOfExpression(expression.right)];
+  }
+  return [];
 }
 
 function isUserMessageCall(node) {
@@ -144,6 +167,41 @@ function isUserMessageCall(node) {
     && ts.isIdentifier(expression.expression)
     && expression.expression.text === "message"
     && messageMethods.has(expression.name.text);
+}
+
+function isFeedbackObjectCall(node) {
+  if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
+  const expression = node.expression;
+  return ts.isPropertyAccessExpression(expression)
+    && ts.isIdentifier(expression.expression)
+    && (expression.expression.text === "notification" || expression.expression.text === "Modal");
+}
+
+function isBrowserPromptCall(node) {
+  if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
+  if (ts.isIdentifier(node.expression)) return browserPromptMethods.has(node.expression.text);
+  return ts.isPropertyAccessExpression(node.expression)
+    && ts.isIdentifier(node.expression.expression)
+    && node.expression.expression.text === "window"
+    && browserPromptMethods.has(node.expression.name.text);
+}
+
+function scanFeedbackObject(filePath, sourceFile, object) {
+  if (!ts.isObjectLiteralExpression(object)) return;
+  for (const property of object.properties) {
+    if (!ts.isPropertyAssignment(property) || !feedbackObjectProperties.has(propertyNameOf(property.name))) continue;
+    addEnglishExpressionFindings(filePath, sourceFile, property, property.initializer);
+  }
+}
+
+function propertyNameOf(name) {
+  return ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : "";
+}
+
+function addEnglishExpressionFindings(filePath, sourceFile, node, expression) {
+  for (const value of new Set(stringValuesOfExpression(expression))) {
+    addEnglishNodeFinding(filePath, sourceFile, node, value);
+  }
 }
 
 function addEnglishNodeFinding(filePath, sourceFile, node, value) {
