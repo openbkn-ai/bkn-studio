@@ -269,17 +269,17 @@ export function BuildTaskDetailDrawer({
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.modalTitle")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
+              {task.catalogName ?? task.catalogId ?? "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.catalogId")}>
+              {task.catalogId ?? "—"}
+            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.build.resource")}>
               {resource?.name ?? task.resourceName ?? task.resourceId}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
               {task.resourceId}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.resource.catalog")}>
-              {task.catalogName ?? task.catalogId ?? "—"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
-              {task.creator?.name || task.creator?.id || "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
               {renderFieldTags(task.buildKeyFields)}
@@ -322,6 +322,9 @@ export function BuildTaskDetailDrawer({
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
               {renderSyncedMark(task.syncedMark)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
+              {task.creator?.name || task.creator?.id || "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
               {task.createTime ? formatDateTime(task.createTime) : "-"}

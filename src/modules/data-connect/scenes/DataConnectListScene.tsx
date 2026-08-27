@@ -388,21 +388,25 @@ export function DataConnectListScene({
     {
       dataIndex: "name",
       title: t("dataConnect.name"),
+      width: 200,
       render: (_, record) => <span className={styles.nameTitle}>{record.name}</span>,
     },
     {
       dataIndex: "connectorType",
       title: t("dataConnect.connectorType"),
+      width: 150,
       render: (value: string) => <span>{connectorTypeMap.get(value) ?? value}</span>,
     },
     {
       dataIndex: "mode",
       title: t("common.mode"),
+      width: 96,
       render: (value: string) => <span className={styles.modeText}>{t(`dataConnect.modes.${value}`)}</span>,
     },
     {
       dataIndex: "status",
       title: t("common.status"),
+      width: 96,
       render: (_, record) => (
         <Tag color={record.enabled ? "success" : "default"}>
           {record.enabled ? t("common.enabled") : t("common.disabled")}
@@ -412,6 +416,7 @@ export function DataConnectListScene({
     {
       dataIndex: "healthStatus",
       title: t("common.healthStatus"),
+      width: 112,
       render: (value: DataConnectRecord["healthStatus"]) => (
         <Tag color={HEALTH_STATUS_COLORS[value]}>{t(`dataConnect.healthStatuses.${value}`)}</Tag>
       ),
@@ -419,10 +424,12 @@ export function DataConnectListScene({
     {
       dataIndex: "updaterName",
       title: t("dataConnect.updater"),
+      width: 120,
     },
     {
       dataIndex: "updateTime",
       title: t("dataConnect.updateTime"),
+      width: 176,
       render: (value: DataConnectRecord["updateTime"]) =>
         formatCatalogTime(value, i18n.resolvedLanguage ?? i18n.language),
     },
@@ -430,6 +437,7 @@ export function DataConnectListScene({
       key: "actions",
       title: t("common.actions"),
       align: "center",
+      fixed: "right",
       width: 84,
       render: (_, record) => {
         const moreMenu = buildActionMoreMenu(record);
@@ -555,6 +563,7 @@ export function DataConnectListScene({
               locale={{ emptyText: t("dataConnect.empty") }}
               pagination={false}
               rowKey="id"
+              scroll={{ x: 1034 }}
             />
           )}
         </TableSurface>

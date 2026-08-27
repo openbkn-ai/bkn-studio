@@ -200,6 +200,8 @@ type BackendResourceSummary = {
   catalog_id: string;
   category?: string;
   column_count?: number;
+  create_time?: number;
+  creator?: { id?: string; name?: string };
   description?: string;
   enabled?: boolean;
   id: string;
@@ -213,7 +215,9 @@ type BackendResourceSummary = {
   source_identifier?: string;
   status?: string;
   status_message?: string;
+  tags?: string[];
   update_time?: number;
+  updater?: { id?: string; name?: string };
 };
 
 type BackendResourceDetailFields = {
@@ -299,6 +303,7 @@ function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetai
     id: item.id,
     catalogId: item.catalog_id,
     name: item.name,
+    tags: item.tags ?? [],
     category: normalizeCategory(item.category, item.logic_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
@@ -316,7 +321,10 @@ function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetai
     status: normalizeResourceStatus(item.status),
     statusMessage: item.status_message?.trim() || undefined,
     expectedUpdateTime: item.update_time ?? 0,
+    createTime: item.create_time ? formatTimestamp(item.create_time) : undefined,
+    creatorName: item.creator?.name ?? item.creator?.id,
     updateTime: formatTimestamp(item.update_time),
+    updaterName: item.updater?.name ?? item.updater?.id,
   };
 }
 

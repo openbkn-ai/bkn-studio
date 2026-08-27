@@ -73,7 +73,7 @@ export const dataCatalogZhCN = {
     indexBuildDescription: "管理数据资源相关任务，支持任务查看，暂停，重启，删除等操作。",
     taskManagement: {
       tabs: { indexBuild: "索引构建任务", discover: "探查任务", semanticUnderstanding: "语义理解任务" },
-      columns: { task: "任务 ID", strategy: "探查策略", trigger: "触发方式", scope: "范围", applyMode: "应用方式", confidence: "置信度", applied: "已应用" },
+      columns: { task: "任务 ID", catalog: "所属目录", strategy: "探查策略", trigger: "触发方式", scope: "范围", applyMode: "应用方式", confidence: "置信度", applied: "已应用" },
       scope: { catalog: "数据连接", resource: "数据资源" },
       applyMode: { dryRun: "仅预览", fillEmpty: "填充空值", force: "强制覆盖" },
       applied: { applied: "已应用", notApplied: "未应用" },
@@ -230,10 +230,14 @@ export const dataCatalogZhCN = {
       catalog: "所属 Catalog",
       catalogPlaceholder: "选择 Catalog",
       category: "类别",
+      createTime: "创建时间",
+      creator: "创建人",
       enabledStatus: "启用状态",
       discoverStatus: "探查状态",
       rowCount: "行数",
       indexState: "索引状态",
+      indexName: "本地索引名称",
+      localIndexStatuses: { available: "可用", stale: "已失效", unavailable: "不可用" },
       searchPlaceholder: "搜索资源名称",
       noMatch: "没有符合筛选条件的资源",
       fieldCount: "字段数",
@@ -241,7 +245,11 @@ export const dataCatalogZhCN = {
       createTitle: "新建数据资源",
       created: "资源已创建:{{name}}",
       description: "描述",
-      sourceIdentifier: "源标识 source_identifier",
+      sourceIdentifier: "源端标识",
+      statusMessage: "状态说明",
+      schemaName: "源 Schema",
+      tags: "标签",
+      updater: "更新人",
       sourceIdentifierPlaceholder: "如 crm_core.customers 或一段 SQL",
       sourceIdentifierHint:
         "数据源中的表名 / 视图定义；探查（discover）发现的资源会自动填写。",
@@ -290,6 +298,7 @@ export const dataCatalogZhCN = {
       unchanged: "未变化",
       updated: "已更新",
     },
+    resourceStatuses: { active: "活跃", deprecated: "已废弃", stale: "已失效" },
     gate: {
       catalogDisabled:
         "所属连接「{{name}}」已停用,无法预览数据或构建索引。",
@@ -499,6 +508,7 @@ export const dataCatalogZhCN = {
       model: "模型",
       finishedAt: "完成时间",
       fields: {
+        catalogId: "目录 ID",
         resourceId: "资源 ID",
         embeddingFields: "向量字段",
         buildKeyFields: "增量键字段",

@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSemanticUnderstandingTaskListParams,
+  getSemanticUnderstandingTask,
+  listSemanticUnderstandingTasks,
   mapSemanticUnderstandingTaskSummary,
 } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
@@ -103,5 +105,18 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "cancelled" }).status).toBe(
       "cancelled",
     );
+  });
+});
+
+describe("semantic-understanding mock tasks", () => {
+  it("serves the same mock task to the list and detail query", async () => {
+    const list = await listSemanticUnderstandingTasks({}, { limit: 20, offset: 0 });
+    const task = list.items.find((item) => item.id === "semantic-task-001");
+    const detail = await getSemanticUnderstandingTask("semantic-task-001");
+
+    expect(task).toMatchObject({ resourceId: "res-001", status: "succeeded" });
+    expect(detail?.id).toBe("semantic-task-001");
+    expect(typeof detail?.resultJson).toBe("string");
+    expect(typeof detail?.applyDetailJson).toBe("string");
   });
 });

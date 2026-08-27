@@ -164,11 +164,6 @@ export function DataConnectDiscoverScene({
         .length,
     [tasks],
   );
-  const scheduleNameMap = useMemo(
-    () => new Map(schedules.map((item) => [item.id, item.name])),
-    [schedules],
-  );
-
   const loadCatalogs = useCallback(async () => {
     setLoadingCatalogs(true);
     setCatalogError(null);
@@ -446,10 +441,18 @@ export function DataConnectDiscoverScene({
   const taskColumns: ColumnsType<DataConnectDiscoverTaskSummary> = [
     { dataIndex: "id", title: "ID", width: 160, ellipsis: true },
     {
-      dataIndex: "scheduleId",
-      title: t("dataConnect.discoverScheduleName"),
+      dataIndex: "resourceId",
+      title: t("dataCatalog.build.resource"),
       width: 160,
-      render: (value: string) => value ? scheduleNameMap.get(value) ?? value : t("dataConnect.discoverManualTask"),
+      ellipsis: true,
+      render: (value: string | undefined, record: DataConnectDiscoverTaskSummary) =>
+        value ? (
+          <AppButton onClick={() => void navigate(`/data-directory/resource/${value}`)} type="link">
+            {record.resourceName ?? value}
+          </AppButton>
+        ) : (
+          "-"
+        ),
     },
     {
       dataIndex: "strategy",

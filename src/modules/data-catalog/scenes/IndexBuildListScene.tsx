@@ -407,7 +407,7 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "catalogId",
-      title: t("dataCatalog.resource.catalog"),
+      title: t("dataCatalog.taskManagement.columns.catalog"),
       width: 180,
       render: (value: string | undefined, record) => {
         const catalogId = value ?? record.catalogId;
@@ -631,7 +631,7 @@ export function IndexBuildListScene() {
               }}
               onSearch={setCatalogSearch}
               options={catalogOptions.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
-              placeholder={t("dataCatalog.resource.catalog")}
+              placeholder={t("dataCatalog.taskManagement.columns.catalog")}
               showSearch
               value={listFilters.catalogId ?? null}
             />

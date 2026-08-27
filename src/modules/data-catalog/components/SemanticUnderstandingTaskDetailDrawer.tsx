@@ -194,7 +194,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
         <h3 className={styles.sectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.task")}</h3>
         <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
           <Descriptions.Item label={t("dataCatalog.taskManagement.columns.scope")}>{t(`dataCatalog.taskManagement.scope.${task.scope}`)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.resource.catalog")}>{task.catalogName || task.catalogId || "-"}</Descriptions.Item>
+          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>{task.catalogName || task.catalogId || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.catalogId")}>{task.catalogId || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("dataCatalog.build.resource")}>{task.resourceName || task.resourceId || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceId")}>{task.resourceId || "-"}</Descriptions.Item>

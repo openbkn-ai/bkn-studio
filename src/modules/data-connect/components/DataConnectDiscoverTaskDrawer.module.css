@@ -52,6 +52,13 @@
   border-top: 1px solid #e8edf3;
 }
 
+.headerProgress {
+  display: grid;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #e8edf3;
+}
+
 .headerRow {
   display: grid;
   gap: 2px;

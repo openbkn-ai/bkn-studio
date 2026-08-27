@@ -61,6 +61,8 @@ export type DataConnectDiscoverTask = {
   queuePriority: number;
   /** Present only for a resource-level metadata refresh task. */
   resourceId?: string;
+  /** Current display name of the refreshed resource, populated by the server. */
+  resourceName?: string;
   result?: DataConnectDiscoverResult;
   scheduleId: string;
   startTime?: number;

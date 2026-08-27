@@ -179,7 +179,7 @@ export function DataConnectDetailDrawer({
                     record.tags.length > 0 ? (
                       <Space size={[4, 4]} wrap>
                         {record.tags.map((tag) => (
-                          <Tag key={tag}>{tag}</Tag>
+                          <Tag className={styles.catalogTag} key={tag}>{tag}</Tag>
                         ))}
                       </Space>
                     ) : (

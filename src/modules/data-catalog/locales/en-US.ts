@@ -80,7 +80,7 @@ export const dataCatalogEnUS = {
       "Manage data-resource tasks, including viewing, pausing, restarting, and deleting tasks.",
     taskManagement: {
       tabs: { indexBuild: "Index Build Tasks", discover: "Discover Tasks", semanticUnderstanding: "Semantic Understanding Tasks" },
-      columns: { task: "Task ID", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", applyMode: "Apply Mode", confidence: "Confidence", applied: "Applied" },
+      columns: { task: "Task ID", catalog: "Catalog", strategy: "Discover Strategy", trigger: "Trigger", scope: "Scope", applyMode: "Apply Mode", confidence: "Confidence", applied: "Applied" },
       scope: { catalog: "Data Connection", resource: "Data Resource" },
       applyMode: { dryRun: "Preview only", fillEmpty: "Fill empty fields", force: "Force overwrite" },
       applied: { applied: "Applied", notApplied: "Not applied" },
@@ -240,10 +240,14 @@ export const dataCatalogEnUS = {
       catalog: "Catalog",
       catalogPlaceholder: "Select a catalog",
       category: "Category",
+      createTime: "Created",
+      creator: "Created by",
       enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
       rowCount: "Rows",
       indexState: "Index State",
+      indexName: "Local Index Name",
+      localIndexStatuses: { available: "Available", stale: "Stale", unavailable: "Unavailable" },
       searchPlaceholder: "Search resource name",
       noMatch: "No resources match the current filters",
       fieldCount: "Fields",
@@ -251,7 +255,11 @@ export const dataCatalogEnUS = {
       createTitle: "New Data Resource",
       created: "Resource created: {{name}}",
       description: "Description",
-      sourceIdentifier: "source_identifier",
+      sourceIdentifier: "Source Identifier",
+      statusMessage: "Status Message",
+      schemaName: "Source Schema",
+      tags: "Tags",
+      updater: "Updated by",
       sourceIdentifierPlaceholder: "e.g. crm_core.customers or a SQL statement",
       sourceIdentifierHint:
         "Table name / view definition in the source; resources found by discover fill this automatically.",
@@ -307,6 +315,7 @@ export const dataCatalogEnUS = {
       unchanged: "Unchanged",
       updated: "Updated",
     },
+    resourceStatuses: { active: "Active", deprecated: "Deprecated", stale: "Stale" },
     gate: {
       catalogDisabled:
         "Connection \"{{name}}\" is disabled; preview and build are unavailable.",
@@ -536,6 +545,7 @@ export const dataCatalogEnUS = {
       model: "Model",
       finishedAt: "Finished At",
       fields: {
+        catalogId: "Catalog ID",
         resourceId: "Resource ID",
         embeddingFields: "Embedding fields",
         buildKeyFields: "Build key fields",

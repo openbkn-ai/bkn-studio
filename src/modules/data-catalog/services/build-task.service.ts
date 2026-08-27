@@ -11,6 +11,7 @@ import { http } from "@/framework/request/http";
 import {
   emitMockChange,
   ensureMockTicker,
+  mockCatalogName,
   mockBuildTasks,
   mockResources,
   mockSlug,
@@ -479,7 +480,10 @@ export async function createBuildTask(
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
+      catalogId: resource?.catalogId,
+      catalogName: mockCatalogName(resource?.catalogId),
       resourceId: input.resourceId,
+      resourceName: resource?.name,
       mode: input.mode,
       executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
       status: "pending",

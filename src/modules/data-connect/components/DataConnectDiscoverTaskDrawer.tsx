@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Drawer, Empty } from "antd";
+import { Alert, Descriptions, Drawer, Empty, Progress, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,11 +17,35 @@ import type {
 } from "@/modules/data-connect/types/discover";
 import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-task-time";
 
-import styles from "./DataConnectDiscoverTaskDrawer.module.css";
+import styles from "@/modules/data-catalog/components/BuildTaskDetailDrawer.module.css";
 
 function priorityLabel(priority: number, t: (key: string, options?: Record<string, unknown>) => string) {
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
   return t(`dataConnect.discoverTaskPriorities.${level}`, { priority });
+}
+
+function priorityTag(priority: number, t: (key: string, options?: Record<string, unknown>) => string) {
+  const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
+  return (
+    <Tag color={level === "high" ? "error" : level === "low" ? "default" : "processing"}>
+      {priorityLabel(priority, t)}
+    </Tag>
+  );
+}
+
+function statusTag(
+  status: DataConnectDiscoverTask["status"],
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
+  const color =
+    status === "completed"
+      ? "success"
+      : status === "failed"
+        ? "error"
+        : status === "cancelled"
+          ? "default"
+          : "processing";
+  return <Tag color={color}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</Tag>;
 }
 
 type DataConnectDiscoverTaskDrawerProps = {
@@ -85,118 +109,76 @@ export function DataConnectDiscoverTaskDrawer({
         body: { padding: 16 },
         header: { padding: "12px 16px" },
       }}
-      title={t("dataConnect.discoverTaskDetailTitle")}
-      width={520}
+      title={`${t("dataConnect.discoverTaskDetailTitle")} · ${taskId}`}
+      width={560}
     >
       {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
       {!loading && !loadError && !task ? (
         <Empty description={t("common.notFound")} />
       ) : null}
       {!loading && !loadError && task ? (
-        <div className={styles.content}>
-          <section className={styles.headerCard}>
-            <div className={styles.headerRow}>
-              <span className={styles.headerLabel}>{t("dataConnect.discoverScheduleName")}</span>
-              <span className={styles.headerValue}>{scheduleName}</span>
+        <div className={styles.drawerContent}>
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("common.status")}</h3>
+            <div className={styles.statusRow}>
+              <Tag color="processing">{t(`dataConnect.discoverStrategies.${task.strategy}`)}</Tag>
+              {statusTag(task.status, t)}
             </div>
-            <div className={styles.headerRow}>
-              <span className={styles.headerLabel}>{t("dataConnect.discoverCatalog")}</span>
-              <span className={styles.headerValue}>{catalogName}</span>
-            </div>
-            <div className={styles.headerMeta}>
-              <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.discoverTaskStatus")}</span>
-                <span className={styles.headerValue}>
-                  {t(`dataConnect.discoverTaskStatuses.${task.status}`)}
-                </span>
-              </div>
-              <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.discoverTriggerType")}</span>
-                <span className={styles.headerValue}>
-                  {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
-                </span>
-              </div>
-              <div className={styles.headerRow}>
-                <span className={styles.headerLabel}>{t("dataConnect.discoverProgress")}</span>
-                <span className={styles.headerValue}>{task.progress}%</span>
-              </div>
-            </div>
+            <Progress
+              percent={task.progress}
+              showInfo
+              size="small"
+              status={task.status === "failed" ? "exception" : undefined}
+            />
           </section>
 
-          <section className={styles.detailCard}>
-            <div className={styles.detailGrid}>
-              <DetailItem label="ID" value={task.id} />
-              <DetailItem label={t("dataConnect.discoverCatalogId")} value={task.catalogId || "-"} />
-              <DetailItem label={t("dataConnect.discoverResourceId")} value={task.resourceId || "-"} />
-              <DetailItem label={t("dataConnect.discoverScheduleId")} value={task.scheduleId || "-"} />
-              <DetailItem
-                label={t("dataConnect.discoverQueuePriority")}
-                value={priorityLabel(task.queuePriority, t)}
-              />
-              <DetailItem
-                label={t("dataConnect.discoverStrategy")}
-                value={t(`dataConnect.discoverStrategies.${task.strategy}`)}
-              />
-              <DetailItem
-                label={t("dataConnect.discoverStartTime")}
-                value={formatDiscoverTaskTime(task.startTime)}
-              />
-              <DetailItem
-                label={t("dataConnect.discoverFinishTime")}
-                value={formatDiscoverTaskTime(task.finishTime)}
-              />
-              <DetailItem
-                label={t("dataConnect.discoverLastProgressTime")}
-                value={formatDiscoverTaskTime(task.lastProgressTime)}
-              />
-              <DetailItem
-                label={t("dataConnect.creator")}
-                value={task.creatorName || "-"}
-              />
-              <DetailItem
-                label={t("dataConnect.createTime")}
-                value={formatDiscoverTaskTime(task.createTime)}
-              />
-              <DetailItem
-                full
-                label={t("dataConnect.discoverMessage")}
-                value={task.message || "-"}
-              />
-            </div>
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("dataCatalog.taskManagement.details.taskInformation")}</h3>
+            <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+              <Descriptions.Item label="ID">{task.id}</Descriptions.Item>
+              <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>{catalogName}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverCatalogId")}>{task.catalogId || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataCatalog.build.resource")}>{task.resourceName || task.resourceId || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverResourceId")}>{task.resourceId || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverScheduleName")}>{scheduleName}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverScheduleId")}>{task.scheduleId || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverTriggerType")}>
+                {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverQueuePriority")}>
+                {priorityTag(task.queuePriority, t)}
+              </Descriptions.Item>
+            </Descriptions>
           </section>
-          <section className={styles.detailCard}>
+
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("dataConnect.discoverTaskExecution")}</h3>
+            <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+              <Descriptions.Item label={t("dataConnect.creator")}>{task.creatorName || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.createTime")}>{formatDiscoverTaskTime(task.createTime)}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverStartTime")}>{formatDiscoverTaskTime(task.startTime)}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverLastProgressTime")}>{formatDiscoverTaskTime(task.lastProgressTime)}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverFinishTime")}>{formatDiscoverTaskTime(task.finishTime)}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.discoverMessage")}>{task.message || "-"}</Descriptions.Item>
+            </Descriptions>
+          </section>
+
+          <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.discoverResult")}</h3>
-            {task.result ? <div className={styles.detailGrid}>
-              <DetailItem label={t("dataConnect.discoverResultNew")} value={String(task.result.newCount)} />
-              <DetailItem label={t("dataConnect.discoverResultUpdated")} value={String(task.result.updatedCount)} />
-              <DetailItem label={t("dataConnect.discoverResultStale")} value={String(task.result.staleCount)} />
-              <DetailItem label={t("dataConnect.discoverResultRestored")} value={String(task.result.restoredCount)} />
-              <DetailItem label={t("dataConnect.discoverResultUnchanged")} value={String(task.result.unchangedCount)} />
-              <DetailItem label={t("dataConnect.discoverResultFailed")} value={String(task.result.failedCount)} />
-              <DetailItem full label={t("dataConnect.discoverResultMessage")} value={task.result.message || "-"} />
-            </div> : <div className={styles.emptyResult}>{t("dataConnect.discoverResultEmpty")}</div>}
+            {task.result ? (
+              <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+                <Descriptions.Item label={t("dataConnect.discoverResultNew")}>{task.result.newCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultUpdated")}>{task.result.updatedCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultStale")}>{task.result.staleCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultRestored")}>{task.result.restoredCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultUnchanged")}>{task.result.unchangedCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultFailed")}>{task.result.failedCount}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverResultMessage")}>{task.result.message || "-"}</Descriptions.Item>
+              </Descriptions>
+            ) : <div className={styles.metaLine}>{t("dataConnect.discoverResultEmpty")}</div>}
           </section>
         </div>
       ) : null}
     </Drawer>
-  );
-}
-
-function DetailItem({
-  full = false,
-  label,
-  value,
-}: {
-  full?: boolean;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={full ? `${styles.detailItem} ${styles.detailItemFull}` : styles.detailItem}>
-      <span className={styles.detailLabel}>{label}</span>
-      <span className={styles.detailValue} title={value}>
-        {value}
-      </span>
-    </div>
   );
 }

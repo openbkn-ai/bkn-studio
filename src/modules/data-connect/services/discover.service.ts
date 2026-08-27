@@ -67,6 +67,7 @@ type BackendDiscoverTask = {
   progress?: number;
   queue_priority?: number;
   resource_id?: string;
+  resource_name?: string;
   result?: {
     catalog_id?: string;
     failed_count?: number;
@@ -164,6 +165,16 @@ let mockTasks: DataConnectDiscoverTask[] = [
     progress: 100,
     queuePriority: 10,
     message: discoverMockText("syncCompleted", { count: 48 }),
+    result: {
+      catalogId: "cat-001",
+      newCount: 12,
+      updatedCount: 6,
+      staleCount: 2,
+      restoredCount: 1,
+      unchangedCount: 27,
+      failedCount: 0,
+      message: discoverMockText("syncCompleted", { count: 48 }),
+    },
     startTime: Date.parse("2026-06-03T02:00:11"),
     finishTime: Date.parse("2026-06-03T02:12:04"),
     lastProgressTime: Date.parse("2026-06-03T02:11:50"),
@@ -173,12 +184,13 @@ let mockTasks: DataConnectDiscoverTask[] = [
   {
     id: "discover-task-1002",
     catalogId: "cat-002",
-    scheduleId: "discover-schedule-002",
+    resourceId: "res-002",
+    scheduleId: "",
     strategy: "create_only",
-    triggerType: "scheduled",
+    triggerType: "manual",
     status: "running",
     progress: 56,
-    queuePriority: 10,
+    queuePriority: 30,
     message: discoverMockText("pullingIndexChanges"),
     startTime: Date.parse("2026-06-03T11:30:08"),
     lastProgressTime: Date.parse("2026-06-03T11:42:20"),
@@ -289,6 +301,7 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     progress: item.progress ?? 0,
     queuePriority: item.queue_priority ?? 20,
     resourceId: item.resource_id,
+    resourceName: item.resource_name,
     result: item.result
       ? {
           catalogId: item.result.catalog_id ?? item.catalog_id,
@@ -335,6 +348,7 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     progress: task.progress,
     queuePriority: task.queuePriority,
     resourceId: task.resourceId,
+    resourceName: task.resourceName,
     result,
     scheduleId: task.scheduleId,
     startTime: task.startTime,

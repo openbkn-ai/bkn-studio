@@ -345,9 +345,13 @@ export function ResourceWorkspaceScene({
             </PermissionGate>
             <PermissionGate permissions="catalog:resource_manage">
               <AppButton
+                color={resource.enabled === false ? "green" : undefined}
+                danger={resource.enabled !== false}
                 disabled={detailEditing}
                 loading={resourceAction === "enabled"}
                 onClick={() => void updateResourceEnabled(resource.enabled === false)}
+                type={resource.enabled === false ? "primary" : "default"}
+                variant={resource.enabled === false ? "solid" : undefined}
               >
                 {t(resource.enabled === false ? "common.enable" : "common.disable")}
               </AppButton>

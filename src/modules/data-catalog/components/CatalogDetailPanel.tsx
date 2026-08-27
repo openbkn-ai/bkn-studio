@@ -46,13 +46,13 @@ import styles from "./CatalogDetailPanel.module.css";
 const INDEX_FILTERS = ["built", "none", "building", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
-const DISCOVER_STATUS_COLORS: Record<ResourceDiscoverStatus, string> = {
-  error: "error",
-  missing: "error",
-  new: "processing",
-  restored: "success",
-  unchanged: "success",
-  updated: "processing",
+const DISCOVER_STATUS_CLASSES: Record<ResourceDiscoverStatus, string> = {
+  error: styles.statusTagError,
+  missing: styles.statusTagError,
+  new: styles.statusTagProcessing,
+  restored: styles.statusTagSuccess,
+  unchanged: styles.statusTagSuccess,
+  updated: styles.statusTagProcessing,
 };
 
 function indexFilterBucket(key: string) {
@@ -337,7 +337,7 @@ export function CatalogDetailPanel({
       width: 96,
       render: (value: boolean | undefined) => {
         const enabled = value !== false;
-        return <Tag color={enabled ? "success" : "default"}>{t(enabled ? "common.enabled" : "common.disabled")}</Tag>;
+        return <Tag className={enabled ? styles.statusTagSuccess : styles.statusTagNeutral}>{t(enabled ? "common.enabled" : "common.disabled")}</Tag>;
       },
     },
     {
@@ -347,7 +347,7 @@ export function CatalogDetailPanel({
       width: 112,
       render: (value: ResourceDiscoverStatus | undefined) =>
         value ? (
-          <Tag color={DISCOVER_STATUS_COLORS[value]}>
+          <Tag className={DISCOVER_STATUS_CLASSES[value]}>
             {t(`dataCatalog.discoverStatuses.${value}`)}
           </Tag>
         ) : (
@@ -380,14 +380,13 @@ export function CatalogDetailPanel({
             title: t("dataCatalog.resource.indexState"),
             width: 140,
             render: (_: unknown, record: CatalogResource) => {
-              const label = formatIndexStateLabel(
-                indexStateOf(
-                  tasksByResource.get(record.id) ?? [],
-                  record.localIndexStatus,
-                ),
-                t,
-              );
-              return <EllipsisText text={label} />;
+              const state = indexStateOf(tasksByResource.get(record.id) ?? [], record.localIndexStatus);
+              const label = formatIndexStateLabel(state, t);
+              const className = state.key === "built" ? styles.statusTagSuccess
+                : state.key === "building" || state.key === "rebuilding" || state.key === "listening" ? styles.statusTagProcessing
+                  : state.key === "failed" || state.key === "failed-stale" ? styles.statusTagError
+                    : styles.statusTagNeutral;
+              return <Tag className={className}>{label}</Tag>;
             },
           },
         ]
@@ -396,6 +395,7 @@ export function CatalogDetailPanel({
       key: "actions",
       title: t("common.actions"),
       align: "center",
+      fixed: "right",
       width: 84,
       render: (_, record) => {
         const blockedByDisabledCatalog = physical && !catalog.enabled;
@@ -653,6 +653,7 @@ export function CatalogDetailPanel({
             locale={{ emptyText: t("dataCatalog.resource.noMatch") }}
             pagination={false}
             rowKey="id"
+            scroll={{ x: 1040 }}
             tableLayout="fixed"
           />
         )}

@@ -84,6 +84,14 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.customers",
     description: "客户主数据表,含联系方式与生命周期状态。",
+    tags: ["crm", "core"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(28)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "updated",
+    localIndexName: "idx_customers_v3",
+    localIndexStatus: "available",
+    status: "active",
     schema: [
       {
         name: "customer_id",
@@ -134,6 +142,12 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.orders",
     description: "订单事实表。",
+    tags: ["crm", "orders"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(26)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "unchanged",
+    status: "active",
     schema: [
       { name: "order_id", type: "bigint" },
       { name: "customer_id", type: "bigint" },
@@ -349,6 +363,16 @@ export const mockResources: CatalogResource[] = [
   }),
 ];
 
+const mockCatalogNames: Record<string, string> = {
+  "cat-001": "customer_master",
+  "cat-002": "knowledge_index",
+  "cat-003": "finance_dw",
+};
+
+export function mockCatalogName(id?: string) {
+  return id ? mockCatalogNames[id] : undefined;
+}
+
 function makeTask(
   input: Omit<
     BuildTask,
@@ -365,8 +389,13 @@ function makeTask(
     fulltextFields?: string[];
   },
 ): BuildTask {
+  const resource = mockResources.find((item) => item.id === input.resourceId);
+  const catalogId = input.catalogId ?? resource?.catalogId;
   return {
     ...input,
+    catalogId,
+    catalogName: input.catalogName ?? mockCatalogName(catalogId),
+    resourceName: input.resourceName ?? resource?.name,
     fulltextAnalyzer: input.fulltextAnalyzer ?? "ik_max_word",
     fulltextFields: input.fulltextFields ?? input.embeddingFields,
     startTime: input.startedAt ?? (input.status === "pending" ? null : input.createTime),
