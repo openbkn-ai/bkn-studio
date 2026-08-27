@@ -185,7 +185,6 @@ let mockTasks: DataConnectDiscoverTask[] = [
     id: "discover-task-1002",
     catalogId: "cat-002",
     resourceId: "res-002",
-    scheduleId: "",
     strategy: "create_only",
     triggerType: "manual",
     status: "running",
@@ -200,7 +199,6 @@ let mockTasks: DataConnectDiscoverTask[] = [
   {
     id: "discover-task-1003",
     catalogId: "cat-003",
-    scheduleId: "discover-schedule-003",
     strategy: "cleanup_only",
     triggerType: "manual",
     status: "failed",
@@ -294,7 +292,7 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     id: item.id,
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
-    scheduleId: item.schedule_id ?? "",
+    scheduleId: item.schedule_id || undefined,
     strategy: normalizeStrategy(item.strategy),
     triggerType: normalizeTriggerType(item.trigger_type),
     status: normalizeTaskStatus(item.status),
@@ -735,7 +733,6 @@ export async function triggerDataConnectDiscover(
     const task: DataConnectDiscoverTask = {
       id: crypto.randomUUID(),
       catalogId,
-      scheduleId: "",
       strategy: strategy ?? "full_sync",
       triggerType: "manual",
       status: "pending",

@@ -114,7 +114,7 @@ export function DataConnectListScene({
   onOpenDetail,
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
@@ -430,8 +430,7 @@ export function DataConnectListScene({
       dataIndex: "updateTime",
       title: t("dataConnect.updateTime"),
       width: 176,
-      render: (value: DataConnectRecord["updateTime"]) =>
-        formatCatalogTime(value, i18n.resolvedLanguage ?? i18n.language),
+      render: (value: DataConnectRecord["updateTime"]) => formatCatalogTime(value),
     },
     {
       key: "actions",

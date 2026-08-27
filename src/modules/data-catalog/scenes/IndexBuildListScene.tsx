@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -41,10 +41,6 @@ import {
   listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
-import {
-  getCatalogResource,
-  listCatalogResourcePage,
-} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildMode,
   BuildTask,
@@ -53,8 +49,6 @@ import type {
   BuildTaskStatus,
 } from "@/modules/data-catalog/types/data-catalog";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
-import { getCatalog, listCatalogs } from "@/shared/catalog";
-import type { CatalogRecord } from "@/shared/catalog";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
 import taskPanelStyles from "./TaskManagementTaskPanels.module.css";
@@ -110,10 +104,6 @@ export function IndexBuildListScene() {
   );
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
-  const [catalogOptions, setCatalogOptions] = useState<CatalogRecord[]>([]);
-  const [resourceOptions, setResourceOptions] = useState<{ label: string; value: string }[]>([]);
-  const [catalogSearch, setCatalogSearch] = useState("");
-  const [resourceSearch, setResourceSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -141,16 +131,12 @@ export function IndexBuildListScene() {
       pageSize,
       sort,
       direction,
-      catalogId: listFilters.catalogId,
       mode: listFilters.mode,
-      resourceId: listFilters.resourceId,
       statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
     [
       direction,
-      listFilters.catalogId,
       listFilters.mode,
-      listFilters.resourceId,
       listFilters.statuses,
       page,
       pageSize,
@@ -161,9 +147,7 @@ export function IndexBuildListScene() {
   const updateListFilters = useCallback(
     (patch: Partial<typeof listFilters>) => {
       const next = applyIndexBuildListFilters(searchParams, {
-        catalogId: "catalogId" in patch ? patch.catalogId : listFilters.catalogId,
         mode: "mode" in patch ? patch.mode : listFilters.mode,
-        resourceId: "resourceId" in patch ? patch.resourceId : listFilters.resourceId,
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
       setSearchParams(next, { replace: true });
@@ -238,55 +222,6 @@ export function IndexBuildListScene() {
     }, 10_000);
     return () => window.clearInterval(timer);
   }, [hasActive, refreshTasksSilently]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void listCatalogs({ keyword: catalogSearch, page: 1, pageSize: 50, type: "all" })
-        .then((result) => setCatalogOptions(result.items))
-        .catch(() => setCatalogOptions([]));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [catalogSearch]);
-
-  useEffect(() => {
-    if (!listFilters.catalogId) {
-      setResourceOptions([]);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void listCatalogResourcePage({
-        catalogId: listFilters.catalogId,
-        keyword: resourceSearch,
-        limit: 50,
-        offset: 0,
-      })
-        .then((result) =>
-          setResourceOptions(result.items.map((resource) => ({ label: resource.name, value: resource.id }))),
-        )
-        .catch(() => setResourceOptions([]));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [listFilters.catalogId, resourceSearch]);
-
-  useEffect(() => {
-    if (!listFilters.catalogId || catalogOptions.some((item) => item.id === listFilters.catalogId)) {
-      return;
-    }
-    void getCatalog(listFilters.catalogId).then((catalog) => {
-      if (catalog) setCatalogOptions((items) => [catalog, ...items]);
-    }).catch(() => undefined);
-  }, [catalogOptions, listFilters.catalogId]);
-
-  useEffect(() => {
-    if (!listFilters.resourceId || resourceOptions.some((item) => item.value === listFilters.resourceId)) {
-      return;
-    }
-    void getCatalogResource(listFilters.resourceId).then((resource) => {
-      if (resource) {
-        setResourceOptions((items) => [{ label: resource.name, value: resource.id }, ...items]);
-      }
-    }).catch(() => undefined);
-  }, [listFilters.resourceId, resourceOptions]);
 
   const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
     useBuildTaskActions(loadTasks);
@@ -492,42 +427,13 @@ export function IndexBuildListScene() {
       render: (_, record) => <BuildProgress compact task={record} />,
     },
     {
-      dataIndex: "startTime",
-      key: "start_time",
-      title: t("dataCatalog.task.fields.startTime"),
-      width: 180,
-      sorter: true,
-      sortOrder: sortOrderOf("start_time"),
-      render: (value: number | null) => <EllipsisText text={formatDateTime(value || undefined)} />,
-    },
-    {
       dataIndex: "lastProgressTime",
       key: "last_progress_time",
       title: t("dataCatalog.task.fields.lastProgressTime"),
       width: 180,
       sorter: true,
       sortOrder: sortOrderOf("last_progress_time"),
-      render: (value: number | null) => <EllipsisText text={formatDateTime(value || undefined)} />,
-    },
-    {
-      dataIndex: "finishTime",
-      key: "finish_time",
-      title: t("dataCatalog.task.finishedAt"),
-      width: 180,
-      sorter: true,
-      sortOrder: sortOrderOf("finish_time"),
-      render: (value: number | null) => <EllipsisText text={formatDateTime(value || undefined)} />,
-    },
-    {
-      dataIndex: "createTime",
-      key: "create_time",
-      title: t("dataCatalog.task.createTime"),
-      width: 180,
-      sorter: true,
-      sortOrder: sortOrderOf("create_time"),
-      render: (value: number) => (
-        <EllipsisText text={formatDateTime(value || undefined)} />
-      ),
+      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
     },
     {
       align: "center",
@@ -618,37 +524,6 @@ export function IndexBuildListScene() {
             </PermissionGate>
         </Space>
         <Space className={sceneStyles.taskFilters}>
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              filterOption={false}
-              onChange={(value) => {
-                setResourceSearch("");
-                updateListFilters({
-                  catalogId: value ?? undefined,
-                  resourceId: undefined,
-                });
-              }}
-              onSearch={setCatalogSearch}
-              options={catalogOptions.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
-              placeholder={t("dataCatalog.taskManagement.columns.catalog")}
-              showSearch
-              value={listFilters.catalogId ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              disabled={!listFilters.catalogId && !listFilters.resourceId}
-              filterOption={false}
-              onChange={(value) => {
-                updateListFilters({ resourceId: value ?? undefined });
-              }}
-              onSearch={setResourceSearch}
-              options={resourceOptions}
-              placeholder={t("dataCatalog.build.resource")}
-              showSearch
-              value={listFilters.resourceId ?? null}
-            />
             <Select
               allowClear
               className={taskPanelStyles.select}

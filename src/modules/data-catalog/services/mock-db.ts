@@ -10,7 +10,7 @@ import type {
   CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
 /**
  * Shared mock storage for data resources, build tasks, and discovery records. It models SDK behavior:
@@ -48,14 +48,7 @@ export function mockSlug(length = 20) {
 }
 
 export function formatMockTimestamp(value: number) {
-  return formatDateTime(value, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    second: "2-digit",
-    year: "numeric",
-  }).replace(/\//g, "-");
+  return formatDateTimeYmdHms(value);
 }
 
 const now = Date.now();

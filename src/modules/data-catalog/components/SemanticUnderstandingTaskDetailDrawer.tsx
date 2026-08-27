@@ -10,7 +10,7 @@ import { Alert, Descriptions, Drawer, Empty, Table, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
@@ -39,7 +39,7 @@ type FieldApplyDetail = {
 function formatTime(value?: number) {
   if (!value) return "-";
   const timestamp = value < 100_000_000_000 ? value * 1000 : value;
-  return formatDateTime(timestamp);
+  return formatDateTimeYmdHms(timestamp);
 }
 
 function jsonDetail(value?: string) {
@@ -257,10 +257,10 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
       <section className={styles.sectionCard}>
         <h3 className={styles.sectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.audit")}</h3>
         <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>{creator}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.task.createTime")}>{formatTime(task.createTime)}</Descriptions.Item>
           <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>{formatTime(task.startTime)}</Descriptions.Item>
           <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>{formatTime(task.finishTime)}</Descriptions.Item>
+          <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>{creator}</Descriptions.Item>
+          <Descriptions.Item label={t("dataCatalog.task.createTime")}>{formatTime(task.createTime)}</Descriptions.Item>
         </Descriptions>
       </section>
     </div>

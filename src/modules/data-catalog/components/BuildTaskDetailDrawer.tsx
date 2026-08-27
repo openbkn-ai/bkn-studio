@@ -10,7 +10,7 @@ import { Alert, Descriptions, Drawer, Empty } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import { formatCount } from "@/modules/data-catalog/lib/format";
@@ -323,20 +323,20 @@ export function BuildTaskDetailDrawer({
             <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
               {renderSyncedMark(task.syncedMark)}
             </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>
+              {formatDateTimeYmdHms(task.startTime)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.lastProgressTime")}>
+              {formatDateTimeYmdHms(task.lastProgressTime)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
+              {formatDateTimeYmdHms(task.finishTime)}
+            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
               {task.creator?.name || task.creator?.id || "—"}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
-              {task.createTime ? formatDateTime(task.createTime) : "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>
-              {task.startTime ? formatDateTime(task.startTime) : "—"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.lastProgressTime")}>
-              {task.lastProgressTime ? formatDateTime(task.lastProgressTime) : "—"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
-              {task.finishTime ? formatDateTime(task.finishTime) : "—"}
+              {formatDateTimeYmdHms(task.createTime)}
             </Descriptions.Item>
           </Descriptions>
         </section>

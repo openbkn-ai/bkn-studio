@@ -64,7 +64,8 @@ export type DataConnectDiscoverTask = {
   /** Current display name of the refreshed resource, populated by the server. */
   resourceName?: string;
   result?: DataConnectDiscoverResult;
-  scheduleId: string;
+  /** Present only for a task triggered by a discover schedule. */
+  scheduleId?: string;
   startTime?: number;
   status: DataConnectDiscoverTaskStatus;
   strategy: DataConnectDiscoverStrategy;

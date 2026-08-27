@@ -521,7 +521,7 @@ export const dataCatalogZhCN = {
         syncedMark: "同步断点",
         totalCount: "总行数",
         startTime: "开始时间",
-        lastProgressTime: "最近进度更新时间",
+        lastProgressTime: "进度更新时间",
       },
       statuses: {
         pending: "排队中",

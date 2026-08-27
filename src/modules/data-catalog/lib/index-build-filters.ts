@@ -35,19 +35,15 @@ export function writeIndexBuildStatusParam(statuses: BuildTaskStatus[]): string 
 }
 
 export type IndexBuildListFilters = {
-  catalogId?: string;
   mode?: BuildMode;
-  resourceId?: string;
   statuses: BuildTaskStatus[];
 };
 
 export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildListFilters {
-  const catalogId = params.get("catalogId")?.trim() || undefined;
   const rawMode = params.get("mode");
   const mode = rawMode === "batch" || rawMode === "streaming" ? rawMode : undefined;
-  const resourceId = params.get("resourceId")?.trim() || undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
-  return { catalogId, mode, resourceId, statuses };
+  return { mode, statuses };
 }
 
 export function applyIndexBuildListFilters(
@@ -55,21 +51,13 @@ export function applyIndexBuildListFilters(
   filters: IndexBuildListFilters,
 ): URLSearchParams {
   const next = new URLSearchParams(base);
-  if (filters.catalogId) {
-    next.set("catalogId", filters.catalogId);
-  } else {
-    next.delete("catalogId");
-  }
+  next.delete("catalogId");
   if (filters.mode) {
     next.set("mode", filters.mode);
   } else {
     next.delete("mode");
   }
-  if (filters.resourceId) {
-    next.set("resourceId", filters.resourceId);
-  } else {
-    next.delete("resourceId");
-  }
+  next.delete("resourceId");
   const statusValue = writeIndexBuildStatusParam(filters.statuses);
   if (statusValue) {
     next.set("status", statusValue);

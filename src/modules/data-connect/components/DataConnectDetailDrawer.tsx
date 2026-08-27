@@ -54,7 +54,7 @@ export function DataConnectDetailDrawer({
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =
@@ -232,10 +232,7 @@ export function DataConnectDetailDrawer({
                 {
                   key: "createTime",
                   label: t("dataConnect.createTime"),
-                  children: formatCatalogTime(
-                    record.createTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
+                  children: formatCatalogTime(record.createTime),
                 },
                 {
                   key: "updater",
@@ -245,10 +242,7 @@ export function DataConnectDetailDrawer({
                 {
                   key: "updateTime",
                   label: t("dataConnect.updateTime"),
-                  children: formatCatalogTime(
-                    record.updateTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
+                  children: formatCatalogTime(record.updateTime),
                 },
               ]}
             />
@@ -284,10 +278,7 @@ export function DataConnectDetailDrawer({
                 {
                   key: "lastCheckTime",
                   label: t("dataConnect.lastCheckTime"),
-                  children: formatCatalogTime(
-                    record.lastCheckTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
+                  children: formatCatalogTime(record.lastCheckTime),
                 },
                 {
                   key: "healthResult",
@@ -342,26 +333,17 @@ export function DataConnectDetailDrawer({
                   {
                     key: "lastRun",
                     label: t("dataConnect.healthCheckSchedule.lastRun"),
-                    children: formatCatalogTime(
-                      schedule.lastRun,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.lastRun),
                   },
                   {
                     key: "nextRun",
                     label: t("dataConnect.healthCheckSchedule.nextRun"),
-                    children: formatCatalogTime(
-                      schedule.nextRun,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.nextRun),
                   },
                   {
                     key: "updateTime",
                     label: t("dataConnect.updateTime"),
-                    children: formatCatalogTime(
-                      schedule.updateTime,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.updateTime),
                   },
                 ]}
               />

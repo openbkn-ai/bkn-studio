@@ -173,6 +173,18 @@ describe("discover.service · mock task sorting", () => {
     ]);
   });
 
+  it("does not associate manually triggered mock tasks with a discover schedule", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
+
+    const manualTasks = result.items.filter((item) => item.triggerType === "manual");
+    expect(manualTasks).not.toHaveLength(0);
+    manualTasks.forEach((item) => expect(item.scheduleId).toBeUndefined());
+  });
+
   it("rejects a stale discover schedule version", async () => {
     const {
       getDataConnectDiscoverSchedule,

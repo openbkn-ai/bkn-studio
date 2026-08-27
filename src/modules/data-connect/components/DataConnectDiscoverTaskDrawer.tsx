@@ -96,7 +96,7 @@ export function DataConnectDiscoverTaskDrawer({
   const scheduleName = task?.scheduleId
     ? (schedules.find((item) => item.id === task.scheduleId)?.name ??
       task.scheduleId)
-    : t("dataConnect.discoverManualTask");
+    : "-";
 
   return (
     <Drawer
@@ -140,8 +140,10 @@ export function DataConnectDiscoverTaskDrawer({
               <Descriptions.Item label={t("dataConnect.discoverCatalogId")}>{task.catalogId || "-"}</Descriptions.Item>
               <Descriptions.Item label={t("dataCatalog.build.resource")}>{task.resourceName || task.resourceId || "-"}</Descriptions.Item>
               <Descriptions.Item label={t("dataConnect.discoverResourceId")}>{task.resourceId || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t("dataConnect.discoverScheduleName")}>{scheduleName}</Descriptions.Item>
-              <Descriptions.Item label={t("dataConnect.discoverScheduleId")}>{task.scheduleId || "-"}</Descriptions.Item>
+              {task.triggerType === "scheduled" ? <>
+                <Descriptions.Item label={t("dataConnect.discoverScheduleName")}>{scheduleName}</Descriptions.Item>
+                <Descriptions.Item label={t("dataConnect.discoverScheduleId")}>{task.scheduleId || "-"}</Descriptions.Item>
+              </> : null}
               <Descriptions.Item label={t("dataConnect.discoverTriggerType")}>
                 {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
               </Descriptions.Item>
@@ -154,12 +156,12 @@ export function DataConnectDiscoverTaskDrawer({
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataConnect.discoverTaskExecution")}</h3>
             <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-              <Descriptions.Item label={t("dataConnect.creator")}>{task.creatorName || "-"}</Descriptions.Item>
-              <Descriptions.Item label={t("dataConnect.createTime")}>{formatDiscoverTaskTime(task.createTime)}</Descriptions.Item>
               <Descriptions.Item label={t("dataConnect.discoverStartTime")}>{formatDiscoverTaskTime(task.startTime)}</Descriptions.Item>
               <Descriptions.Item label={t("dataConnect.discoverLastProgressTime")}>{formatDiscoverTaskTime(task.lastProgressTime)}</Descriptions.Item>
               <Descriptions.Item label={t("dataConnect.discoverFinishTime")}>{formatDiscoverTaskTime(task.finishTime)}</Descriptions.Item>
               <Descriptions.Item label={t("dataConnect.discoverMessage")}>{task.message || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.creator")}>{task.creatorName || "-"}</Descriptions.Item>
+              <Descriptions.Item label={t("dataConnect.createTime")}>{formatDiscoverTaskTime(task.createTime)}</Descriptions.Item>
             </Descriptions>
           </section>
 

@@ -166,7 +166,7 @@ export const dataConnectEnUS = {
     discoverCatalog: "Data Connection",
     discoverCatalogFilterPlaceholder: "Filter by data connection",
     discoverStatusFilter: "Status",
-    discoverScheduleName: "Schedule Name",
+    discoverScheduleName: "Discovery Schedule Name",
     discoverScheduleNamePlaceholder: "e.g. Daily full discovery",
     discoverScheduleConfig: "Schedule",
     discoverStrategy: "Discover Strategy",
