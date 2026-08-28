@@ -19,14 +19,6 @@ import type {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 /**
  * Sandbox dependency installation defaults to 300s, so leave a small margin.
@@ -73,7 +65,6 @@ export async function executeFunction(
       ...(dependencies.length > 0 ? { dependencies } : {}),
     },
     {
-      headers: getBusinessDomainHeaders(),
       // Dependency installs happen before sandbox execution and can exceed the default http timeout.
       ...(dependencies.length > 0 ? { timeout: DEPENDENCY_INSTALL_TIMEOUT_MS } : {}),
     },
@@ -165,7 +156,7 @@ export async function inferFunctionSchema(code: string): Promise<InferredFunctio
   }>(
     `${API_PREFIX}/function/infer-schema`,
     { code },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {
@@ -190,7 +181,6 @@ export async function listDependencyVersions(
   const response = await http.get<{ package_name?: string; versions?: string[] }>(
     `${API_PREFIX}/function/dependency-versions/${encodeURIComponent(packageName)}`,
     {
-      headers: getBusinessDomainHeaders(),
       params: {
         pypi_repo_url: options?.pypiRepoUrl || undefined,
         python_version: options?.pythonVersion || undefined,
@@ -288,7 +278,6 @@ export async function generateFunction(
       query: buildQuery(input),
     },
     {
-      headers: getBusinessDomainHeaders(),
       // LLM generation can exceed 40s, so the default 15s/30s timeout is too short.
       timeout: 120_000,
     },
@@ -351,7 +340,6 @@ export async function generateFunctionStream(
       headers: {
         "Accept-Language": runtimeConfig.locale,
         "Content-Type": "application/json",
-        ...getBusinessDomainHeaders(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       method: "POST",
@@ -448,7 +436,6 @@ export async function getFunctionPrompt(
     description?: string;
     system_prompt?: string;
   }>(`${API_PREFIX}/ai_generate/prompt/${type}`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   return {

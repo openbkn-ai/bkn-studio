@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   ToolboxEditInput,
   ToolboxListQuery,
@@ -54,7 +53,6 @@ type BackendToolboxListResponse = {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 let mockToolboxes: ToolboxRecord[] = [
   {
@@ -91,13 +89,6 @@ let mockToolboxes: ToolboxRecord[] = [
     isInternal: false,
   },
 ];
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 function mapTool(item: BackendToolInfo): ToolboxToolRecord {
   return {
@@ -174,7 +165,6 @@ async function fetchToolboxList(
   query: ToolboxListQuery,
 ): Promise<ToolboxListResult> {
   const response = await http.get<BackendToolboxListResponse>(path, {
-    headers: getBusinessDomainHeaders(),
     params: {
       all: query.all || undefined,
       page: query.page,
@@ -233,7 +223,7 @@ export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
 
   const response = await http.get<BackendToolboxInfo>(
     `${API_PREFIX}/tool-box/market/${boxId}`,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return mapToolbox(response.data);
@@ -255,7 +245,7 @@ export async function getToolbox(
 
   const response = await http.get<BackendToolboxInfo>(
     `${API_PREFIX}/tool-box/${boxId}`,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: options?.skipErrorToast },
+    { skipErrorToast: options?.skipErrorToast },
   );
 
   return mapToolbox(response.data);
@@ -294,7 +284,7 @@ export async function createToolbox(
       data: parseOpenApiDataPayload(input.openapiSpec, "edit"),
       metadata_type: input.metadataType,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   if (!response.data.box_id) {
@@ -332,7 +322,7 @@ export async function updateToolbox(input: ToolboxEditInput): Promise<void> {
       data: parseOpenApiDataPayload(input.openapiSpec, "edit"),
       metadata_type: input.metadataType,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -350,7 +340,7 @@ export async function updateToolboxStatus(
   await http.post(
     `${API_PREFIX}/tool-box/${boxId}/status`,
     { status },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -361,6 +351,5 @@ export async function deleteToolbox(boxId: string): Promise<void> {
   }
 
   await http.delete(`${API_PREFIX}/tool-box/${boxId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 }

@@ -34,7 +34,7 @@ describe("capabilities-lab.service", () => {
     vi.restoreAllMocks();
   });
 
-  it("passes function debug business context to the real sandbox execution API", async () => {
+  it("does not add business domain context to the sandbox execution API", async () => {
     await executePython({
       code: "def handler(event):\n    return event",
       event: { city: "beijing" },
@@ -55,7 +55,6 @@ describe("capabilities-lab.service", () => {
         user_name: "Local Admin",
       },
       expect.objectContaining({
-        headers: { "x-business-domain": "bd_public" },
         skipErrorToast: true,
         timeout: 60_000,
       }),

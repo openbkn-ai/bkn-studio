@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import i18n from "@/app/locales/i18n";
 
 export type OperatorCategoryOption = {
@@ -20,7 +19,6 @@ type BackendCategoryItem = {
 };
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 function getFallbackCategories(): OperatorCategoryOption[] {
   return [
@@ -35,18 +33,11 @@ function getFallbackCategories(): OperatorCategoryOption[] {
   ];
 }
 
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
-
 export async function listOperatorCategories(): Promise<OperatorCategoryOption[]> {
   try {
     const response = await http.get<BackendCategoryItem[]>(
       `${API_PREFIX}/operator/category`,
-      { headers: getBusinessDomainHeaders() },
+      {},
     );
 
     const items = response.data ?? [];
