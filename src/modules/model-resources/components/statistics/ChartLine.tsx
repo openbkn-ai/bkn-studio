@@ -9,13 +9,19 @@ import type { EChartsOption } from "echarts";
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
+
 type ChartLineProps = {
   option: EChartsOption;
 };
 
 export function ChartLine({ option }: ChartLineProps) {
+  const resolvedTheme = useResolvedTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  const optionRef = useRef(option);
+
+  optionRef.current = option;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -24,11 +30,9 @@ export function ChartLine({ option }: ChartLineProps) {
       return;
     }
 
-    if (!chartRef.current) {
-      chartRef.current = echarts.init(container);
-    }
-
-    chartRef.current.setOption(option, true);
+    const chart = echarts.init(container, resolvedTheme === "dark" ? "dark" : undefined);
+    chartRef.current = chart;
+    chart.setOption(optionRef.current, true);
 
     const handleResize = () => {
       chartRef.current?.resize();
@@ -38,15 +42,16 @@ export function ChartLine({ option }: ChartLineProps) {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      chart.dispose();
+      if (chartRef.current === chart) {
+        chartRef.current = null;
+      }
     };
-  }, [option]);
+  }, [resolvedTheme]);
 
   useEffect(() => {
-    return () => {
-      chartRef.current?.dispose();
-      chartRef.current = null;
-    };
-  }, []);
+    chartRef.current?.setOption(option, true);
+  }, [option]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

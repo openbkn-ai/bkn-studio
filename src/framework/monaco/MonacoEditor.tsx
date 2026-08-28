@@ -8,6 +8,7 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import type { EditorProps } from "@monaco-editor/react";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
 import { ensureMonacoSetup } from "@/framework/monaco/ensure";
 
 const MonacoEditorImpl = lazy(async () => {
@@ -22,9 +23,14 @@ type MonacoEditorProps = EditorProps & {
 };
 
 export function MonacoEditor({ fallback = null, ...props }: MonacoEditorProps) {
+  const resolvedTheme = useResolvedTheme();
+
   return (
     <Suspense fallback={fallback}>
-      <MonacoEditorImpl {...props} />
+      <MonacoEditorImpl
+        {...props}
+        theme={props.theme ?? (resolvedTheme === "dark" ? "vs-dark" : "vs")}
+      />
     </Suspense>
   );
 }

@@ -11,8 +11,8 @@
   gap: 14px;
   min-height: auto;
   padding: 14px 12px 20px;
-  background: #ffffff;
-  color: #172033;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -23,12 +23,12 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .introTitle {
   margin: 0;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
 }
@@ -36,7 +36,7 @@
 .introDescription {
   max-width: 920px;
   margin: 6px 0 0;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -49,11 +49,11 @@
 
 .metric {
   min-height: 92px;
-  border: 1px solid #d9e0ea;
-  border-left: 3px solid #d9e0ea;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
   border-radius: 0;
   padding: 12px 14px;
-  background: #f7f9fc;
+  background: var(--color-interface-panel-bg);
 }
 
 .metric.good {
@@ -72,7 +72,7 @@
 .metricHelper {
   display: block;
   overflow: hidden;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -81,18 +81,18 @@
 .metricValue {
   display: block;
   margin: 6px 0 4px;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 22px;
   font-weight: 600;
   line-height: 1.2;
 }
 
 .metric.warn .metricValue {
-  color: #ad6800;
+  color: var(--color-warning-text);
 }
 
 .metric.bad .metricValue {
-  color: #cf1322;
+  color: var(--color-error-text);
 }
 
 .toolbar {
@@ -101,7 +101,7 @@
   align-items: center;
   gap: 12px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter {
@@ -142,39 +142,39 @@
 .page .tag,
 .drawerBody .tag {
   margin: 0;
-  border: 1px solid #d9e0ea;
-  background: #f7f9fc;
-  color: #4b5563;
+  border: 1px solid var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 20px;
 }
 
 .page .tagGood,
 .drawerBody .tagGood {
-  border-color: #cfe6d6;
-  background: #f4faf6;
-  color: #2f7d4f;
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .page .tagWarn,
 .drawerBody .tagWarn {
-  border-color: #f0dcb4;
-  background: #fdf8ee;
-  color: #9a6614;
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .page .tagBad,
 .drawerBody .tagBad {
-  border-color: #f1cfcc;
-  background: #fdf4f3;
-  color: #b23c34;
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .page .tagBusy,
 .drawerBody .tagBusy {
-  border-color: #c9d9f0;
-  background: #f4f8fd;
-  color: #2a5aa8;
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-text-link);
 }
 
 .sessionRow {

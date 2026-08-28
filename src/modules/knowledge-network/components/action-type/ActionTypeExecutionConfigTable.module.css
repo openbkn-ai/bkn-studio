@@ -12,8 +12,8 @@
 }
 
 .metaRow {
-  background: #f8fafc;
-  border: 1px solid #eef1f5;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-divider);
   border-radius: 6px;
   display: grid;
   gap: 16px;
@@ -30,7 +30,7 @@
 }
 
 .metaRow span {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -39,19 +39,19 @@
 }
 
 .metaRow strong {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
 .loadingSource {
   align-items: center;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   display: inline-flex;
   gap: 8px;
 }
 
 .unavailableSource {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .propertyCell {
@@ -61,17 +61,17 @@
 }
 
 .root :global(.ant-table-wrapper) {
-  border: 1px solid #eef1f5;
+  border: 1px solid var(--color-divider);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .root :global(.ant-table) {
-  color: rgba(0, 0, 0, 0.82);
+  color: var(--color-text-primary);
 }
 
 .root :global(.ant-table-thead > tr > th) {
-  background: #f8fafc;
-  color: rgba(0, 0, 0, 0.72);
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }

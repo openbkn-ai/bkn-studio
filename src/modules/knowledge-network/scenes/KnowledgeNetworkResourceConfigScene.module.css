@@ -6,8 +6,8 @@
  */
 
 .placeholderCard {
-  background: #fff;
-  border: 1px solid #e8ebf2;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   box-shadow: 0 2px 10px rgba(31, 35, 41, 0.04);
   display: grid;
@@ -17,14 +17,14 @@
 }
 
 .placeholderCard h2 {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
 
 .placeholderCard p {
-  color: #64748b;
+  color: var(--color-text-secondary);
   line-height: 1.7;
   margin: 0;
 }
@@ -37,13 +37,13 @@
 }
 
 .sectionList li {
-  color: #334155;
+  color: var(--color-text-primary);
   line-height: 1.6;
 }
 
 .summaryPanel {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   display: grid;
   gap: 12px;
@@ -57,12 +57,12 @@
 }
 
 .summaryPanel span {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .summaryPanel strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
@@ -80,13 +80,13 @@
 }
 
 .executionCard {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: none;
 }
 
 .executionActionBar {
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid var(--color-divider);
   display: flex;
   gap: 12px;
   margin-top: 20px;

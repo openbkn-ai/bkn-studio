@@ -16,8 +16,8 @@
 
 .summaryCard,
 .sectionCard {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 20px;
 }
@@ -35,21 +35,21 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 18px;
   flex-shrink: 0;
 }
 
 .summaryTitle {
   margin: 0 0 8px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 500;
 }
 
 .summaryDescription {
   margin: 0;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
 }
 
 .tagRow {
@@ -64,13 +64,13 @@
   flex-wrap: wrap;
   gap: 24px;
   margin-top: 16px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .sectionCard h3 {
   margin: 0 0 16px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 500;
 }
@@ -88,12 +88,12 @@
 }
 
 .infoGrid span {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .infoGrid strong {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
 }
@@ -106,5 +106,5 @@
 }
 
 .placeholder {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }

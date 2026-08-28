@@ -1446,7 +1446,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
               <div className={styles.panelTitleBox}>
                 <span
                   className={styles.panelIcon}
-                  style={{ backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR, borderRadius: 4, color: "#fff", fontSize: 14, height: 20, width: 20 }}
+                  style={{ backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR, borderRadius: 4, color: "var(--color-text-inverse)", fontSize: 14, height: 20, width: 20 }}
                 >
                   {renderResourceIcon(basicValue.icon)}
                 </span>

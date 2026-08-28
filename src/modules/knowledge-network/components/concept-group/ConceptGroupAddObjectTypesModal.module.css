@@ -16,8 +16,8 @@
 }
 
 .header {
-  border-bottom: 1px solid #f0f0f0;
-  color: #1f2329;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 500;
   padding: 16px 24px;
@@ -32,7 +32,7 @@
 }
 
 .leftPanel {
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid var(--color-divider);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -52,7 +52,7 @@
 }
 
 .selectedTitle {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -87,7 +87,7 @@
 }
 
 .footer {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--color-divider);
   display: flex;
   gap: 8px;
   justify-content: flex-end;
@@ -104,7 +104,7 @@
 .nameIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;

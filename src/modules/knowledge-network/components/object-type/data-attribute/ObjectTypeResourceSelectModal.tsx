@@ -386,7 +386,7 @@ export function ObjectTypeResourceSelectModal({
                   setPagination((current) => ({ ...current, page: 1 }));
                 }}
                 placeholder={t("common.search")}
-                prefix={<SearchOutlined style={{ color: "rgba(0,0,0,0.3)", fontSize: 16 }} />}
+                prefix={<SearchOutlined style={{ color: "var(--color-text-disabled)", fontSize: 16 }} />}
                 value={searchValue}
               />
             </div>

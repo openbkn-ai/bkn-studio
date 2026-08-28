@@ -6,7 +6,7 @@
  */
 
 .editorBorder {
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 4px 11px 11px 0;
   position: relative;
@@ -21,7 +21,7 @@
   top: 2px;
   left: 48px;
   z-index: 2;
-  color: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
   position: absolute;
   pointer-events: none;
 }

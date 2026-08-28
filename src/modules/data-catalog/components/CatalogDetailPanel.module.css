@@ -58,9 +58,9 @@
 .operationBar :global(.ant-input-affix-wrapper) {
   height: 32px;
   padding-inline: 11px;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0 !important;
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: none;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .searchIcon {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
@@ -87,7 +87,7 @@
 
 .filterLabel {
   flex-shrink: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 32px;
@@ -100,7 +100,7 @@
 
 .filterSelect :global(.ant-select-selector) {
   height: 32px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -145,10 +145,10 @@
   white-space: nowrap;
 }
 
-.statusTagSuccess { border-color: #bbf7d0 !important; background: #f0fdf4 !important; color: #15803d !important; }
-.statusTagProcessing { border-color: #bfdbfe !important; background: #eff6ff !important; color: #1d4ed8 !important; }
-.statusTagError { border-color: #fecaca !important; background: #fef2f2 !important; color: #dc2626 !important; }
-.statusTagNeutral { border-color: #e2e8f0 !important; background: #f8fafc !important; color: #64748b !important; }
+.statusTagSuccess { border-color: var(--color-success-border) !important; background: var(--color-success-bg) !important; color: var(--color-success-text) !important; }
+.statusTagProcessing { border-color: var(--color-info-border) !important; background: var(--color-info-bg) !important; color: var(--color-text-link) !important; }
+.statusTagError { border-color: var(--color-error-border) !important; background: var(--color-error-bg) !important; color: var(--color-error-text) !important; }
+.statusTagNeutral { border-color: var(--color-border) !important; background: var(--color-interface-panel-bg) !important; color: var(--color-text-secondary) !important; }
 
 .ellipsisLink {
   display: inline-flex !important;
@@ -199,7 +199,7 @@
   bottom: 10px;
   left: 50%;
   width: 1px;
-  background: #e5eaf2;
+  background: var(--color-border);
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.12s ease;

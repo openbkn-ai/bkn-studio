@@ -19,7 +19,7 @@
 
 .toolbarHint {
   flex: 1;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -72,14 +72,14 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 8px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .previewList {
   margin: 0;
   padding-left: 18px;
-  color: rgba(0, 0, 0, 0.75);
+  color: var(--color-text-primary);
   font-size: 12px;
 }
 
@@ -104,5 +104,5 @@
 }
 
 .validationSuccess :global(.ant-alert-message) {
-  color: rgba(15, 30, 54, 0.78);
+  color: var(--color-text-primary);
 }

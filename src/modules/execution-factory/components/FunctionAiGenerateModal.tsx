@@ -241,7 +241,7 @@ export function FunctionAiGenerateModal({
       {submitting && !streamContent ? (
         <div style={{ alignItems: "center", display: "flex", gap: 8, marginBottom: 12 }}>
           <Spin size="small" />
-          <span style={{ color: "#64748b", fontSize: 13 }}>
+          <span style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>
             {t("executionFactory.functionAiGenerateThinking")}
           </span>
         </div>
@@ -262,7 +262,7 @@ export function FunctionAiGenerateModal({
                   }}
                   ref={reasoningBoxRef}
                   style={{
-                    color: "#64748b",
+                    color: "var(--color-text-secondary)",
                     fontSize: 12,
                     lineHeight: 1.7,
                     maxHeight: 180,
@@ -287,7 +287,7 @@ export function FunctionAiGenerateModal({
       {error ? <Alert message={error} showIcon style={{ marginBottom: 16 }} type="error" /> : null}
       {streamContent || outcome ? (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ color: "#475569", fontSize: 13, marginBottom: 6 }}>
+          <div style={{ color: "var(--color-text-secondary)", fontSize: 13, marginBottom: 6 }}>
             {submitting
               ? t("executionFactory.functionAiGenerateStreaming")
               : t("executionFactory.functionAiGenerateResultTitle")}

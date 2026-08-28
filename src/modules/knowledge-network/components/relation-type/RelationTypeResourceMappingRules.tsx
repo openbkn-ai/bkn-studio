@@ -293,7 +293,7 @@ export function RelationTypeResourceMappingRules({
               >
                 {cellValue || t("knowledgeNetwork.relationTypeChooseResource")}
               </span>
-              <DownOutlined style={{ color: "#d9d9d9", fontSize: 12 }} />
+              <DownOutlined style={{ color: "var(--color-text-disabled)", fontSize: 12 }} />
             </button>
           );
         }

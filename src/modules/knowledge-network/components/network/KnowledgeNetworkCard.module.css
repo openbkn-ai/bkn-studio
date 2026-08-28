@@ -12,8 +12,8 @@
   min-height: 156px;
   overflow: hidden;
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
   transition:
@@ -32,8 +32,8 @@
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--network-accent) 42%, #d8e2ee);
-  background: #fff;
+  border-color: color-mix(in srgb, var(--network-accent) 42%, var(--color-border));
+  background: var(--color-bg-surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
 }
@@ -60,9 +60,9 @@
   justify-content: center;
   width: 42px;
   height: 42px;
-  border: 1px solid color-mix(in srgb, var(--network-accent) 18%, #e1e8f0);
+  border: 1px solid color-mix(in srgb, var(--network-accent) 18%, var(--color-border));
   border-radius: 6px;
-  background: color-mix(in srgb, var(--network-accent) 7%, #f7f9fc);
+  background: color-mix(in srgb, var(--network-accent) 7%, var(--color-hover));
   font-size: 18px;
   font-weight: 500;
 }
@@ -76,7 +76,7 @@
 
 .titleText {
   overflow: hidden;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   line-height: 22px;
@@ -90,7 +90,7 @@
   min-height: 38px;
   margin-top: 10px;
   overflow: hidden;
-  color: #5f6f82;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 19px;
   text-overflow: ellipsis;
@@ -109,16 +109,16 @@
   max-height: 340px;
   overflow: auto;
   padding: 10px 12px;
-  color: #334155;
-  border: 1px solid #d9e0ea;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 .descriptionTooltip :global(.ant-tooltip-arrow::before) {
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
 }
 
 .moreButton {
@@ -132,12 +132,12 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .moreButton:hover {
-  color: #2e68ff;
+  color: var(--color-text-link);
   background: rgba(46, 104, 255, 0.08);
 }
 
@@ -155,11 +155,11 @@
   gap: 12px;
   margin-top: auto;
   padding: 10px 18px;
-  color: #7a8798;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 18px;
-  border-top: 1px solid #edf1f5;
-  background: #f8fafc;
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-interface-panel-bg);
 }
 
 .footerLeft {
@@ -180,6 +180,6 @@
 
 .metaItem :global(.anticon) {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }

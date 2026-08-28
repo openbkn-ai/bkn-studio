@@ -51,6 +51,12 @@ jobs:
       - name: Internationalization checks
         run: pnpm run i18n:check
 
+      - name: Semantic text color checks
+        run: pnpm run theme:check
+
+      - name: Theme surface checks
+        run: pnpm run theme:scan-surfaces
+
       - name: Unit tests
         run: pnpm exec vitest --run
 

@@ -15,7 +15,7 @@
 
 .title {
   margin: 0;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 600;
   line-height: 28px;
@@ -78,7 +78,7 @@
 }
 
 .searchInput :global(.ant-input-prefix) {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-muted);
   margin-inline-end: 8px;
 }
 
@@ -96,7 +96,7 @@
   display: inline-flex;
   align-items: center;
   height: 32px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 32px;
   white-space: nowrap;
@@ -125,43 +125,43 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .iconButton:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: rgba(0, 0, 0, 0.65);
+  background: var(--color-hover);
+  color: var(--color-text-primary);
 }
 
 .iconButtonActive {
   background: rgba(18, 110, 227, 0.08);
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .iconButtonActive:hover {
   background: rgba(18, 110, 227, 0.12);
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .tableCard {
   flex: 1;
   min-height: 0;
   padding: 0;
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
 }
 
 .tableCard :global(.ant-table-thead > tr > th) {
-  background: #fff;
-  color: #1f2329;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }
 
 .tableCard :global(.ant-table-tbody > tr > td) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
 }
 
@@ -179,7 +179,7 @@
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -204,15 +204,15 @@
 }
 
 .relatedIconObject {
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .relatedIconRelation {
-  color: #08979c;
+  color: var(--color-text-teal);
 }
 
 .relatedIconAction {
-  color: #90c06b;
+  color: var(--color-success-text);
 }
 
 .tableTags {
@@ -243,16 +243,16 @@
 }
 
 .tableTagsTooltipOverlay :global(.ant-tooltip-inner) {
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
   padding: 8px;
 }
 
 .tableTagsTooltipOverlay :global(.ant-tooltip-arrow::before) {
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
 }
 
 .tableTagsTooltip :global(.ant-tag) {
@@ -262,7 +262,7 @@
 .tableLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   max-width: 100%;
@@ -274,7 +274,7 @@
 }
 
 .tableLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .emptyPanel {
@@ -289,7 +289,7 @@
 
 .integratedFilterBar {
   align-items: center;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 0;
   min-height: 40px;
@@ -305,7 +305,7 @@
 }
 
 .integratedFilterSearchIcon {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-muted);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -326,17 +326,17 @@
 }
 
 .integratedFilterSearchInput :global(.ant-input-clear-icon) {
-  color: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
 .integratedFilterSearchInput :global(.ant-input-clear-icon:hover) {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .integratedFilterDivider {
   align-self: stretch;
-  background: #e5e5e5;
+  background: var(--color-border);
   flex-shrink: 0;
   margin: 8px 12px;
   width: 1px;
@@ -350,7 +350,7 @@
 }
 
 .integratedFilterLabel {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 22px;
   white-space: nowrap;
@@ -368,7 +368,7 @@
 
 .integratedFilterSelect :global(.ant-select-selection-item),
 .integratedFilterSelect :global(.ant-select-selection-placeholder) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 22px !important;
 }
@@ -378,7 +378,7 @@
   background: transparent;
   border: 0;
   border-radius: 4px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: inline-flex;
   flex-shrink: 0;
@@ -389,8 +389,8 @@
 }
 
 .integratedFilterClear:hover {
-  background: rgba(0, 0, 0, 0.04);
-  color: rgba(0, 0, 0, 0.65);
+  background: var(--color-hover);
+  color: var(--color-text-primary);
 }
 
 .objectTypePage {
@@ -399,7 +399,7 @@
 }
 
 .objectTypePage .title {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
@@ -407,7 +407,7 @@
 
 .objectTypePage .toolbar {
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .objectTypePage .toolbarButton,
@@ -423,14 +423,14 @@
 }
 
 .objectTypePage .iconButton:hover {
-  background: #f3f6fa;
+  background: var(--color-hover);
 }
 
 .objectTypePage .tableCard {
   flex: 0 0 auto;
   min-height: auto;
   overflow: hidden;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0;
 }
 
@@ -446,17 +446,17 @@
 }
 
 .objectTypePage .tableCard :global(.ant-table-thead > tr > th) {
-  background: #f3f6fa;
-  border-bottom: 1px solid #d9e0ea;
-  color: #111827;
+  background: var(--color-interface-panel-bg);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .objectTypePage .tableCard :global(.ant-table-tbody > tr > td) {
-  border-bottom: 1px solid #e5eaf2;
-  color: #1f2937;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 400;
   padding-top: 13px;
@@ -464,7 +464,7 @@
 }
 
 .objectTypePage .tableCard :global(.ant-table-tbody > tr:hover > td) {
-  background: #f8fbff;
+  background: var(--color-hover);
 }
 
 .loadingEmptyState {
@@ -478,9 +478,9 @@
 .objectTypePage .objectIconSquare {
   width: 28px;
   height: 28px;
-  border: 1px solid #e8edf3;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 14px;
 }
 
@@ -498,15 +498,15 @@
 }
 
 .objectTypePage .objectName {
-  color: #111827;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
 .objectTypePage .tableTags :global(.ant-tag) {
   margin-inline-end: 0;
-  border-color: #bfd2ff;
-  background: #f8fbff;
-  color: #1d4ed8;
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
 .objectTypePage .paginationBar {
@@ -515,8 +515,8 @@
 }
 
 .objectTypePage .integratedFilterBar {
-  border-bottom-color: #d9e0ea;
-  background: #fff;
+  border-bottom-color: var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .objectTypePage .integratedFilterSearchInput:global(.ant-input-affix-wrapper),
@@ -526,19 +526,19 @@
 }
 
 .objectTypePage .integratedFilterClear:hover {
-  background: #f3f6fa;
+  background: var(--color-hover);
 }
 
 .relationTypePage .objectIconSquare {
-  color: #08979c;
+  color: var(--color-text-teal);
 }
 
 .actionTypePage .objectIconSquare {
-  color: #90c06b;
+  color: var(--color-success-text);
 }
 
 .metricPage .objectIconSquare {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .metricPage .noticeBanner {

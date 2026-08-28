@@ -101,7 +101,7 @@ export function AddHttpCapabilityDrawer({
         </AppButton>
       }
     >
-      <p style={{ color: "rgba(0,0,0,0.55)", marginTop: 0 }}>
+      <p style={{ color: "var(--color-text-secondary)", marginTop: 0 }}>
         {t("executionFactoryLab.addDrawerHint")}
       </p>
 
@@ -143,7 +143,7 @@ export function AddHttpCapabilityDrawer({
         >
           <Switch />
         </Form.Item>
-        <p style={{ color: "rgba(0,0,0,0.45)", marginTop: -8 }}>
+        <p style={{ color: "var(--color-text-tertiary)", marginTop: -8 }}>
           {t("executionFactoryLab.orchestrationHint")}
         </p>
       </Form>

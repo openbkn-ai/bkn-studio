@@ -24,7 +24,7 @@
 
 .switchLabelRow {
   align-items: center;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   display: inline-flex;
   gap: 4px;
   justify-content: flex-start;
@@ -35,11 +35,11 @@
 }
 
 .switchHelpIcon {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-muted);
   cursor: help;
   font-size: 12px;
 }
 
 .switchLabelColon {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }

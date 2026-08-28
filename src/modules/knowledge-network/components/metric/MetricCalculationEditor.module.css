@@ -6,14 +6,14 @@
  */
 
 .sectionCard {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 20px;
   padding: 0 0 20px;
 }
 
 .sectionTitle {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
@@ -22,7 +22,7 @@
 }
 
 .subsectionTitle {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
@@ -30,7 +30,7 @@
 }
 
 .embeddedSubsection {
-  border-top: 1px solid #eef0f3;
+  border-top: 1px solid var(--color-divider);
   margin-top: 4px;
   padding-top: 16px;
 }

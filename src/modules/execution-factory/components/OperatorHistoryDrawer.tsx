@@ -62,7 +62,7 @@ export function OperatorHistoryDrawer({
       })}
       width={720}
     >
-      <p style={{ color: "rgba(0,0,0,0.45)", marginBottom: 16 }}>
+      <p style={{ color: "var(--color-text-tertiary)", marginBottom: 16 }}>
         {t("executionFactory.operatorHistoryHint")}
       </p>
       {loading ? (

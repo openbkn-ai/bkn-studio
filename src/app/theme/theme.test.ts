@@ -37,7 +37,7 @@ const runtimeConfig: RuntimeConfig = {
 
 describe("createThemeConfig", () => {
   it("keeps selectable table row states light and visually distinct", () => {
-    const tableTokens = createThemeConfig(runtimeConfig).components?.Table;
+    const tableTokens = createThemeConfig(runtimeConfig, "light").components?.Table;
 
     if (!tableTokens) {
       throw new Error("Table theme tokens are not configured");
@@ -91,5 +91,17 @@ describe("createThemeConfig", () => {
     expect(luminance(rowSelectedBg)).toBeGreaterThan(
       luminance(rowSelectedHoverBg),
     );
+  });
+
+  it("uses the Ant Design dark algorithm and dark table states", () => {
+    const darkTheme = createThemeConfig(runtimeConfig, "dark");
+    const tableTokens = darkTheme.components?.Table;
+
+    expect(darkTheme.algorithm).toBeDefined();
+    expect(darkTheme.token?.colorBgLayout).toBe("#0f172a");
+    expect(darkTheme.token?.colorText).toBe("#f1f5f9");
+    expect(tableTokens?.rowHoverBg).toBe("#243047");
+    expect(tableTokens?.rowSelectedBg).toBe("#1e3a5f");
+    expect(tableTokens?.rowSelectedHoverBg).toBe("#254b78");
   });
 });

@@ -49,35 +49,35 @@
   max-width: 100%;
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid #e5eaf2;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .contextLabel {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .contextName {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
 
 .contextMeta {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .contextDivider {
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
 }
 
 .textLink {
   padding: 0;
   border: 0;
   background: none;
-  color: #1d4ed8;
+  color: var(--color-text-link);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -139,7 +139,7 @@
 }
 
 .pageTabs :global(.ant-tabs-nav::before) {
-  border-bottom-color: #e8edf3;
+  border-bottom-color: var(--color-border);
 }
 
 .pageTabs :global(.ant-tabs-tab) {
@@ -155,7 +155,7 @@
 }
 
 .pageTabs :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .tabPanel {

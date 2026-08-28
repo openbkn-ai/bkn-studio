@@ -37,7 +37,7 @@ export function ModelApiGuideTable({ dataSource }: ModelApiGuideTableProps) {
         render: (_value, row) => (
           <span>
             {row.arguments}
-            {row.required ? <span style={{ color: "#ff4d4f", marginLeft: 8 }}>*</span> : null}
+            {row.required ? <span style={{ color: "var(--color-error-text)", marginLeft: 8 }}>*</span> : null}
           </span>
         ),
       },

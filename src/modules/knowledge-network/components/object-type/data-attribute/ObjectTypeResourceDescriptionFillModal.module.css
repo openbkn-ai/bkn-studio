@@ -17,10 +17,10 @@
 
 .summary {
   align-items: center;
-  background: #f7f8fa;
-  border: 1px solid #ebeef2;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   display: flex;
   font-size: 13px;
   min-height: 36px;
@@ -35,7 +35,7 @@
 }
 
 .identityCell strong {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   overflow: hidden;
@@ -44,7 +44,7 @@
 }
 
 .identityCell span {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -52,7 +52,7 @@
 }
 
 .descriptionCell {
-  color: rgba(0, 0, 0, 0.72);
+  color: var(--color-text-primary);
   display: -webkit-box;
   font-size: 13px;
   line-height: 20px;
@@ -64,18 +64,18 @@
 }
 
 .emptyDescription {
-  color: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
 }
 
 .modal :global(.ant-table-wrapper) {
-  border: 1px solid #ebeef2;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .modal :global(.ant-table-thead > tr > th) {
-  background: #f7f8fa;
-  color: rgba(0, 0, 0, 0.65);
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
 }

@@ -10,7 +10,7 @@
 }
 
 .mappingTable :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-interface-panel-bg);
   font-weight: 600;
 }
 

@@ -6,8 +6,8 @@
  */
 
 .panel {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 20px;
   width: 100%;
@@ -37,12 +37,12 @@
 }
 
 .successIcon {
-  color: #52c41a;
+  color: var(--color-success-text);
   margin-right: 4px;
 }
 
 .failedIcon {
-  color: #ff4d4f;
+  color: var(--color-error-text);
   margin-right: 4px;
 }
 

@@ -20,7 +20,7 @@ export function LabFilterHint({ label, tooltip }: LabFilterHintProps) {
     <span style={{ alignItems: "center", display: "inline-flex", gap: 4 }}>
       {label}
       <Tooltip title={tooltip}>
-        <QuestionCircleOutlined style={{ color: "rgba(0,0,0,0.45)", fontSize: 12 }} />
+        <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", fontSize: 12 }} />
       </Tooltip>
     </span>
   );

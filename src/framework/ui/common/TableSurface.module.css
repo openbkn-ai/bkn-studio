@@ -11,9 +11,9 @@
   min-height: auto;
   overflow: hidden;
   padding-top: 0 !important;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--business-color-border);
   border-radius: 0;
-  background: #fff;
+  background: var(--business-color-surface);
 }
 
 .surface :global(.ant-table-wrapper) {
@@ -33,16 +33,16 @@
 }
 
 .surface :global(.ant-table-thead > tr > th) {
-  background: #f3f6fa;
-  border-bottom: 1px solid #d9e0ea;
-  color: #111827;
+  background: var(--business-color-surface-muted);
+  border-bottom: 1px solid var(--business-color-border);
+  color: var(--business-color-text);
   font-size: 14px;
   font-weight: 600;
 }
 
 .surface :global(.ant-table-tbody > tr > td) {
-  border-bottom: 1px solid #e5eaf2;
-  color: #1f2937;
+  border-bottom: 1px solid var(--business-color-border-soft);
+  color: var(--business-color-text);
   font-size: 14px;
   font-weight: 400;
   padding-top: 13px;
@@ -50,7 +50,7 @@
 }
 
 .surface :global(.ant-table-tbody > tr:hover > td) {
-  background: #f8fbff;
+  background: var(--business-color-surface-hover);
 }
 
 .surface :global(.ant-table-pagination) {
@@ -62,7 +62,7 @@
 
 .surface :global(.ant-pagination-total-text) {
   margin-inline-end: auto;
-  color: #111827;
+  color: var(--business-color-text);
   font-size: 14px;
   font-weight: 400;
 }
@@ -75,10 +75,10 @@
 }
 
 .surface :global(.ant-pagination-item-active) {
-  border-color: #1e3a8a;
+  border-color: var(--business-color-primary);
 }
 
 .surface :global(.ant-pagination-item-active a) {
-  color: #1e3a8a;
+  color: var(--business-color-primary);
   font-weight: 500;
 }

@@ -11,8 +11,8 @@
   gap: 14px;
   min-height: auto;
   padding: 14px 12px 20px;
-  background: #ffffff;
-  color: #172033;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 6px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .introTitleRow {
@@ -33,14 +33,14 @@
 
 .introTitle {
   margin: 0;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
 }
 
 .introDescription {
   margin: 0;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
   max-width: 880px;
@@ -48,10 +48,10 @@
 
 .experimentTag {
   margin: 0;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0;
-  background: #f7f9fc;
-  color: #4b5563;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-weight: 400;
 }
 
@@ -62,7 +62,7 @@
   align-items: center;
   justify-content: space-between;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filters {
@@ -127,7 +127,7 @@
 .empty {
   padding: 48px 16px;
   text-align: center;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   border: 1px dashed #bfdbfe;
   border-radius: 0;
   display: flex;
@@ -155,20 +155,20 @@
 
 .dualTrackCollapse :global(.ant-collapse-header) {
   padding: 4px 0 !important;
-  color: #4b5563 !important;
+  color: var(--color-text-secondary) !important;
   font-size: 13px;
 }
 
 .dualTrackCollapse :global(.ant-collapse-content-box) {
   padding: 4px 0 0 !important;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
 
 .menuItemDesc {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   line-height: 1.4;
   margin-top: 2px;
 }

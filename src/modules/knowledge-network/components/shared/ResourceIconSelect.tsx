@@ -174,7 +174,7 @@ export function ResourceIconSelect({
                   setKeyword("");
                   setOpen(false);
                 }}
-                style={{ color: selected ? "#1677ff" : "#000" }}
+                style={{ color: selected ? "var(--color-text-link)" : "var(--color-text-primary)" }}
                 title={glyph.name}
                 type="button"
               >

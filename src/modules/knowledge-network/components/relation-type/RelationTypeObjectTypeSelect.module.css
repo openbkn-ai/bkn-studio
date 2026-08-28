@@ -15,7 +15,7 @@
 .optionIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;

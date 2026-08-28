@@ -8,7 +8,7 @@
 .treePanel {
   height: 100%;
   padding: 12px 10px;
-  background: var(--admin-color-surface, #fff);
+  background: var(--admin-color-surface);
 }
 
 .treeHeader {
@@ -81,11 +81,11 @@
 }
 
 .scopeItem:hover {
-  background: var(--admin-color-surface-hover, #f7faff);
+  background: var(--admin-color-surface-hover);
 }
 
 .scopeItemActive {
-  background: var(--admin-color-link-bg, #eff6ff);
+  background: var(--admin-color-link-bg);
 }
 
 .scopeLeading {
@@ -131,11 +131,11 @@
 }
 
 .navTree :global(.ant-tree-treenode:hover) {
-  background: var(--admin-color-surface-hover, #f7faff);
+  background: var(--admin-color-surface-hover);
 }
 
 .navTree :global(.ant-tree-treenode-selected) {
-  background: var(--admin-color-link-bg, #eff6ff) !important;
+  background: var(--admin-color-link-bg) !important;
 }
 
 .navTree :global(.ant-tree-node-selected) {
@@ -224,7 +224,7 @@
   color: var(--admin-color-link, #1d4ed8);
   font-size: 11px;
   line-height: 18px;
-  background: var(--admin-color-link-bg, #eff6ff);
+  background: var(--admin-color-link-bg);
 }
 
 .countBadge {
@@ -237,7 +237,7 @@
   font-weight: 600;
   line-height: 20px;
   text-align: center;
-  background: var(--admin-color-surface-muted, #f3f6fa);
+  background: var(--admin-color-surface-muted);
 }
 
 .scopeItemActive .countBadge,
@@ -249,7 +249,7 @@
 .searchHit {
   padding: 0;
   color: inherit;
-  background: #fef08a;
+  background: var(--color-warning-bg);
 }
 
 .emptySearch {

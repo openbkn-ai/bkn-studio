@@ -6,7 +6,7 @@
  */
 
 .root {
-  background: #fff;
+  background: var(--color-bg-surface);
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -16,8 +16,8 @@
 
 .infoBar {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-shrink: 0;
   gap: 16px;
@@ -36,7 +36,7 @@
 .infoIcon {
   align-items: center;
   border-radius: 0;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;
@@ -46,7 +46,7 @@
 }
 
 .infoName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
@@ -71,11 +71,11 @@
 }
 
 .infoLabel {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
 }
 
 .infoHintIcon {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-tertiary);
   cursor: help;
   flex-shrink: 0;
   font-size: 12px;
@@ -83,11 +83,11 @@
 }
 
 .infoHintIcon:hover {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-secondary);
 }
 
 .infoValue {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   cursor: pointer;
   max-width: 200px;
   overflow: hidden;
@@ -96,20 +96,20 @@
 }
 
 .infoValueEmpty {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   cursor: pointer;
 }
 
 .infoDivider {
-  background: #d9d9d9;
+  background: var(--color-border);
   height: 14px;
   width: 1px;
 }
 
 .mappingToolbar {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-shrink: 0;
   gap: 16px;
@@ -118,26 +118,26 @@
 }
 
 .mappingSummary {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   font-size: 13px;
   white-space: nowrap;
 }
 
 .infoKeyIconPrimary {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
 .infoKeyIconTitle {
-  color: #faad14;
+  color: var(--color-warning-text);
   font-size: 14px;
 }
 
 .countBadge {
   align-items: center;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--color-fill-secondary);
   border-radius: 2px;
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   cursor: pointer;
   display: inline-flex;
   font-size: 10px;
@@ -154,7 +154,7 @@
 }
 
 .keyPanelEmpty {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   font-size: 14px;
   padding: 4px 0;
 }
@@ -185,7 +185,7 @@
 .keyPanelClear {
   background: none;
   border: 0;
-  color: #1677ff;
+  color: var(--color-text-link);
   cursor: pointer;
   font-size: 14px;
   margin-top: 8px;
@@ -199,7 +199,7 @@
 }
 
 .canvas {
-  background: #fff;
+  background: var(--color-bg-surface);
   cursor: grab;
   height: 100%;
   min-height: 0;
@@ -240,7 +240,7 @@
 }
 
 .connectionLineHover {
-  stroke: #000;
+  stroke: var(--color-text-primary);
   stroke-width: 2;
 }
 
@@ -251,12 +251,12 @@
 
 .connectionLineDimmed {
   opacity: 0.12;
-  stroke: #d9d9d9;
+  stroke: var(--color-border);
 }
 
 .panelNode {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -291,11 +291,11 @@
 }
 
 .panelIconView {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
 }
 
 .panelTitle {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   max-width: 180px;
@@ -305,9 +305,9 @@
 }
 
 .panelCount {
-  background: #f5f5f5;
+  background: var(--color-fill-secondary);
   border-radius: 4px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
   font-size: 12px;
   line-height: 1.2;
@@ -322,14 +322,14 @@
 }
 
 .panelActionIcon {
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font-size: 16px;
 }
 
 .panelSearch {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
   padding: 12px 16px;
 }
 
@@ -342,17 +342,17 @@
 }
 
 .panelSectionDivider {
-  background: #fafafa;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  color: rgba(0, 0, 0, 0.45);
+  background: var(--color-fill-secondary);
+  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
   font-size: 12px;
   font-weight: 500;
   padding: 6px 16px;
 }
 
 .invalidNameIcon {
-  color: #ff4d4f;
+  color: var(--color-error-text);
   flex-shrink: 0;
   font-size: 12px;
   margin-left: 4px;
@@ -360,7 +360,7 @@
 
 .panelItem {
   align-items: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   display: flex;
   gap: 8px;
@@ -376,7 +376,7 @@
 }
 
 .panelItem:hover {
-  background: #f5f7fa;
+  background: var(--color-fill-secondary);
 }
 
 .panelItem:hover .itemIconsStatus {
@@ -389,12 +389,12 @@
 }
 
 .panelItemHighlighted {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemHighlighted:hover {
-  background: #d6ebff;
+  background: var(--color-hover);
 }
 
 .panelItemMapped {
@@ -404,17 +404,17 @@
 /* Pending selection must stay visible even when the field is already mapped. */
 .panelItemMapped.panelItemHighlighted,
 .panelItemMapped.panelItemHighlighted:hover {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemSelected {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemSelected:hover {
-  background: #d6ebff;
+  background: var(--color-hover);
 }
 
 .panelItemDimmed {
@@ -429,7 +429,7 @@
 }
 
 .itemName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
@@ -439,7 +439,7 @@
 
 .itemTechName {
   align-items: center;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   display: flex;
   font-size: 12px;
   gap: 4px;
@@ -450,9 +450,9 @@
 
 .itemTypeIcon {
   align-items: center;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--color-fill-secondary);
   border-radius: 4px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 11px;
@@ -463,8 +463,8 @@
 }
 
 .panelHandle {
-  background: #fff;
-  border: 2px solid rgba(0, 0, 0, 0.06);
+  background: var(--color-bg-surface);
+  border: 2px solid var(--color-border);
   border-radius: 50%;
   flex-shrink: 0;
   height: 10px;
@@ -505,22 +505,22 @@
 }
 
 .rowActionIcon {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
   cursor: pointer;
   font-size: 16px;
 }
 
 .rowActionIconActivePrimary {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
 }
 
 .rowActionIconActiveTitle {
-  color: #faad14;
+  color: var(--color-warning-text);
 }
 
 .canvasControls {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -534,9 +534,9 @@
 
 .canvasControlButton {
   align-items: center;
-  background: #fff;
+  background: var(--color-bg-surface);
   border: 0;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: inline-flex;
   font-size: 16px;
@@ -546,16 +546,16 @@
 }
 
 .canvasControlButton:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .canvasControlButton:hover {
-  color: #1677ff;
+  color: var(--color-text-link);
 }
 
 .attrDrawer {
-  background: #fff;
-  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
   bottom: 0;
   display: flex;
   flex-direction: column;
@@ -572,7 +572,7 @@
 
 .attrDrawerHeader {
   align-items: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   justify-content: space-between;
   padding: 16px 20px;
@@ -585,7 +585,7 @@
 }
 
 .attrDrawerFooter {
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--color-border);
   display: flex;
   gap: 8px;
   justify-content: flex-end;
