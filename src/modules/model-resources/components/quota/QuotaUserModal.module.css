@@ -15,7 +15,7 @@
 }
 
 .quotaModal :global(.ant-modal-title) {
-  color: #10233f;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 700;
 }
@@ -23,9 +23,9 @@
 .header {
   margin-bottom: 10px;
   padding: 10px 12px;
-  border: 1px solid #e4ebf5;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #f7f9fc;
+  background: var(--color-interface-panel-bg);
 }
 
 .modelTitle {
@@ -35,14 +35,14 @@
 }
 
 .modelName {
-  color: #10233f;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 700;
 }
 
 .modelMeta {
   margin-top: 6px;
-  color: rgba(15, 30, 54, 0.62);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 18px;
 }
@@ -55,7 +55,7 @@
 }
 
 .remainAlert :global(.ant-alert-message) {
-  color: #10233f;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
@@ -65,9 +65,9 @@
   gap: 10px;
   margin-bottom: 10px;
   padding: 10px;
-  border: 1px solid #e7edf6;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .userSelect {
@@ -76,7 +76,7 @@
 
 .userTable {
   overflow: hidden;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--color-divider);
   border-radius: 3px;
 }
 
@@ -85,8 +85,8 @@
 }
 
 .userTable :global(.ant-table-thead > tr > th) {
-  background: #f7f9fc;
-  color: #10233f;
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .inlineUnit {
-  color: rgba(15, 30, 54, 0.68);
+  color: var(--color-text-secondary);
   font-size: 13px;
   white-space: nowrap;
 }
@@ -127,7 +127,7 @@
   gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #edf1f7;
+  border-top: 1px solid var(--color-divider);
 }
 
 .footer :global(.ant-btn),

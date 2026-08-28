@@ -10,9 +10,9 @@
   align-self: center;
   height: 32px;
   padding: 0 12px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
-  color: #334155;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   box-shadow: none;
   font-size: 14px;
   font-weight: 400;
@@ -20,7 +20,7 @@
 }
 
 .backButton:global(.ant-btn:hover) {
-  color: #1677ff;
-  border-color: #91caff;
-  background: #fff;
+  color: var(--color-primary-600);
+  border-color: var(--color-primary-border);
+  background: var(--color-bg-surface);
 }

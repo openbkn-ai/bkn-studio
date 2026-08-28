@@ -12,8 +12,8 @@
 }
 
 .structureCard {
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .structureToggle {
@@ -25,8 +25,8 @@
   min-height: 48px;
   padding: 0 16px;
   border: 0;
-  background: #fff;
-  color: #111827;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   text-align: left;
@@ -34,15 +34,15 @@
 }
 
 .structureToggle:hover {
-  background: #f8fbff;
+  background: var(--color-hover);
 }
 
 .structureToggleExpanded {
-  border-bottom: 1px solid #e5eaf2;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .structureToggleIcon {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -55,15 +55,15 @@
 }
 
 .tabs {
-  background: #ffffff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0;
   border-top: 0;
   padding: 4px 18px 18px;
 }
 
 .tabs :global(.ant-tabs-nav)::before {
-  border-bottom-color: #e5eaf2;
+  border-bottom-color: var(--color-border);
 }
 
 .tabs :global(.ant-tabs-tab) {
@@ -97,7 +97,7 @@
 
 .sectionCardSecondary {
   padding-left: 24px;
-  border-left: 1px solid #e5eaf2;
+  border-left: 1px solid var(--color-border);
 }
 
 /* 左右双表统一行高，逐行对齐（关系列带 chip，否则比实体行高、往下累积错位）。 */
@@ -119,7 +119,7 @@
   align-items: baseline;
   gap: 8px;
   margin-bottom: 12px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }

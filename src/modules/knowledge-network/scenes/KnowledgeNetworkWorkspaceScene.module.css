@@ -23,8 +23,8 @@
   width: 100%;
   height: 60px;
   padding: 0 24px;
-  border-bottom: 1px solid #e9e9e9;
-  background: #fff;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .workspaceIdentity {
@@ -42,7 +42,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   cursor: pointer;
 }
@@ -52,16 +52,16 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border: 1px solid #e8edf3;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f3f6fa;
+  background: var(--color-hover);
   display: inline-flex;
   font-size: 15px;
 }
 
 /* 标题对齐其它模块页头（model-resources 22/700、data-catalog 21/700） */
 .workspaceNameTitle {
-  color: #152239;
+  color: var(--color-text-primary);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -78,8 +78,8 @@
 }
 
 .workspaceSide {
-  background: #fff;
-  border-right: 1px solid #e9e9e9;
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -105,8 +105,8 @@
   flex: 0 0 auto;
   justify-content: flex-end;
   padding: 12px 12px 14px;
-  border-top: 1px solid #e9e9e9;
-  background: #fff;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .workspaceSideCollapsed .workspaceSideFooter {
@@ -121,17 +121,17 @@
   justify-content: center;
   width: 38px;
   height: 38px;
-  border: 1px solid #c9d9ff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 0;
-  background: #eef4ff;
-  color: #1d4ed8;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
   font-size: 16px;
   cursor: pointer;
 }
 
 .sideCollapseButton:hover {
-  border-color: #2e68ff;
-  background: #e2ecff;
+  border-color: var(--color-primary-600);
+  background: var(--color-hover);
 }
 
 .sideItem,
@@ -141,7 +141,7 @@
   border: 0;
   border-radius: 4px;
   box-sizing: border-box;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   cursor: pointer;
   display: flex;
   font-size: 14px;
@@ -159,16 +159,16 @@
 }
 
 .sideItemActive {
-  background: #f1f6fd;
-  color: #126ee3;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
 .sideItem:hover {
-  background: #f0f0f0;
+  background: var(--color-hover);
 }
 
 .sideItemActive:hover {
-  background: #f1f6fd;
+  background: var(--color-primary-100);
 }
 
 .workspaceContent {
@@ -179,11 +179,11 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .workspaceContentOverview {
-  background: #fff;
+  background: var(--color-bg-surface);
   overflow: auto;
 }
 
@@ -238,17 +238,17 @@
 }
 
 .sideItem .sideItemMeta :global(svg) {
-  color: #000;
+  color: var(--color-text-primary);
 }
 
 .sideItemActive .sideItemMeta :global(svg) {
-  color: #126ee3;
+  color: var(--color-primary-700);
 }
 
 .sideItemCount {
-  background: #eeeff0;
+  background: var(--color-hover);
   border-radius: 4px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   display: inline-flex;
   font-size: 12px;
   min-width: 20px;
@@ -271,7 +271,7 @@
 .sideTitle {
   height: 30px;
   padding-left: 12px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 30px;
   opacity: 0.65;
@@ -285,14 +285,14 @@
   width: 100%;
   min-height: min-content;
   padding: 14px 12px 20px;
-  background: #fff;
+  background: var(--color-bg-layout);
 }
 
 .overviewHeaderCard {
   padding: 16px 16px 0;
   margin-bottom: 14px;
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
 
@@ -353,7 +353,7 @@
   padding: 12px 0;
   font-size: 13px;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
 }
 
 .overviewHeaderFooterLabel {
@@ -389,7 +389,7 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -418,8 +418,8 @@
   flex: 1;
   padding: 12px 14px 0;
   margin-bottom: 14px;
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
 
@@ -496,8 +496,8 @@
   display: flex;
   flex-direction: column;
   padding: 0;
-  background: #fff;
-  border: 1px solid #d9e0ea;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 0;
 }
 
@@ -564,8 +564,8 @@
   min-height: 48px;
   padding: 0 16px;
   border: 0;
-  background: #fff;
-  color: #111827;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   text-align: left;
@@ -581,7 +581,7 @@
 }
 
 .overviewSectionToggleIcon {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -605,17 +605,17 @@
 }
 
 .statCard span {
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .statCard strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: 28px;
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #e5e5e5;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   box-shadow: none;
 }
@@ -673,7 +673,7 @@
 }
 
 .metaText {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -690,7 +690,7 @@
 
 .previewNode {
   align-items: center;
-  background: #f8fafc;
+  background: var(--color-fill-secondary);
   border-radius: 999px;
   display: inline-flex;
   gap: 10px;
@@ -710,7 +710,7 @@
 }
 
 .previewEdge {
-  background: #f8fafc;
+  background: var(--color-fill-secondary);
   border-radius: 16px;
   display: grid;
   gap: 6px;
@@ -718,7 +718,7 @@
 }
 
 .groupStats {
-  color: #64748b;
+  color: var(--color-text-secondary);
   display: grid;
   gap: 6px;
   justify-items: end;

@@ -10,7 +10,7 @@
 .root {
   flex: 1 1 auto;
   min-height: 0;
-  background: #fff;
+  background: var(--color-bg-surface);
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
@@ -25,7 +25,7 @@
   justify-content: space-between;
   padding: 8px 26px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+  background: var(--color-bg-surface);
 }
 .headerLeft,
 .headerActions {
@@ -51,10 +51,10 @@
 .modeToggle :global(.ant-switch) {
   min-width: 34px;
   height: 20px;
-  background: #aebbd0;
+  background: var(--color-fill-secondary);
 }
 .modeToggle :global(.ant-switch.ant-switch-checked) {
-  background: #23489c;
+  background: var(--color-primary-600);
 }
 .modeToggle :global(.ant-switch .ant-switch-handle) {
   top: 2px;
@@ -67,7 +67,7 @@
   align-items: center;
   gap: 5px;
   border: 1px solid rgba(46, 104, 255, 0.28);
-  background: #fff;
+  background: var(--color-bg-surface);
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
@@ -97,6 +97,18 @@
   font-size: 13px;
   color: var(--txt);
 }
+
+:global(:root[data-theme="dark"]) .rptRoot,
+:global(:root[data-theme="dark"]) .configDrawer {
+  --accent: var(--color-primary-500);
+  --line: var(--color-border);
+  --txt: var(--color-text-primary);
+  --txt2: var(--color-text-secondary);
+  --faint: var(--color-text-tertiary);
+  --code: var(--color-interface-code-bg);
+  --chip: var(--color-interface-panel-bg);
+  --field-bd: var(--color-border);
+}
 /* Report header actions (copy / export) */
 .rptActions {
   display: flex;
@@ -109,7 +121,7 @@
   align-items: center;
   gap: 5px;
   border: 1px solid rgba(46, 104, 255, 0.28);
-  background: #fff;
+  background: var(--color-bg-surface);
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
@@ -229,7 +241,7 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 .rptAnsHead {
   display: flex;
@@ -274,7 +286,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
-  background: #fff;
+  background: var(--color-bg-surface);
   max-height: 320px;
   overflow: auto;
 }
@@ -507,7 +519,7 @@
   flex: 0 0 auto;
   padding: 12px 22px 14px;
   border-bottom: 1px solid var(--line);
-  background: #fbfcfe;
+  background: var(--color-bg-layout);
 }
 .promptEdit textarea {
   display: block;
@@ -521,7 +533,7 @@
   line-height: 1.6;
   font-family: var(--mono);
   color: var(--txt);
-  background: #fff;
+  background: var(--color-bg-surface);
   outline: none;
 }
 .promptEdit textarea:focus {
@@ -541,7 +553,7 @@
   line-height: 1.6;
   font-family: var(--mono);
   color: var(--txt);
-  background: #fff;
+  background: var(--color-bg-surface);
   outline: none;
 }
 .promptTa:focus {
@@ -580,13 +592,13 @@
 }
 .configDrawer :global(.ant-drawer-body) {
   padding: 16px;
-  background: #f7f9fc;
+  background: var(--color-bg-layout);
 }
 .configSection {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 .configSection + .configSection {
   margin-top: 12px;
@@ -733,7 +745,7 @@
   text-align: left;
   font-size: 13px;
   color: var(--txt);
-  background: #fff;
+  background: var(--color-bg-surface);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 8px 12px;
@@ -742,7 +754,7 @@
 }
 .sug:hover {
   border-color: var(--accent);
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: 0 4px 14px rgba(46, 104, 255, 0.1);
 }
 .sugText {
@@ -939,7 +951,7 @@
   bottom: 0;
   z-index: 4;
   border-top: 1px solid var(--line);
-  background: #fff;
+  background: var(--color-bg-surface);
   padding: 12px 48px 14px;
 }
 .cwrap {
@@ -961,7 +973,7 @@
   line-height: 1.5;
   font-family: inherit;
   color: var(--txt);
-  background: #fff;
+  background: var(--color-bg-surface);
   outline: none;
 }
 .cInput:focus {
@@ -1234,7 +1246,7 @@
 }
 .promptTab {
   border: 1px solid var(--field-bd);
-  background: #fff;
+  background: var(--color-bg-surface);
   color: var(--txt2);
   font-size: 12px;
   padding: 4px 11px;
@@ -1308,7 +1320,7 @@
   font-family: var(--mono);
   font-weight: 400;
   color: var(--txt);
-  background: #fff;
+  background: var(--color-bg-surface);
   outline: none;
 }
 .cfgInput:focus {
@@ -1353,7 +1365,7 @@
   padding: 0 16px;
   border: 1px solid var(--field-bd);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-bg-surface);
   color: var(--txt2);
   font-size: 12.5px;
   font-weight: 600;

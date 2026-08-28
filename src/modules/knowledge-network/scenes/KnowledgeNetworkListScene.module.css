@@ -13,13 +13,13 @@
   height: 100%;
   min-height: calc(100vh - 72px - 24px - 32px);
   padding: 14px 12px 20px;
-  background: #f6f8fb;
+  background: var(--color-bg-page);
 }
 
 .title {
   flex-shrink: 0;
   margin: 0 0 10px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 600;
   line-height: 28px;
@@ -33,7 +33,7 @@
   gap: 16px;
   min-height: 32px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .toolbarLeft,
@@ -82,7 +82,7 @@
 }
 
 .searchInput :global(.ant-input-prefix) {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-muted);
   margin-inline-end: 8px;
 }
 
@@ -100,7 +100,7 @@
   display: inline-flex;
   align-items: center;
   height: 32px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 32px;
   white-space: nowrap;
@@ -135,13 +135,13 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .iconButton:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
-  color: rgba(0, 0, 0, 0.65);
+  background: var(--color-hover);
+  color: var(--color-text-primary);
 }
 
 .iconButton:disabled {
@@ -231,7 +231,7 @@
 }
 
 .deleteModalRoot :global(.ant-modal-close):hover {
-  color: #64748b;
+  color: var(--color-text-secondary);
   background: transparent;
 }
 

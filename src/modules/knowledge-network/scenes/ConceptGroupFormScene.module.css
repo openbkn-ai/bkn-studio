@@ -6,7 +6,7 @@
  */
 
 .formPanel {
-  background: #fff;
+  background: var(--color-bg-surface);
   border-radius: 4px;
   margin: 0 auto;
   max-width: 880px;

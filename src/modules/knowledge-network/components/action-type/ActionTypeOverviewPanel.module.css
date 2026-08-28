@@ -21,8 +21,8 @@
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 18px 20px;
 }
@@ -32,7 +32,7 @@
 }
 
 .panel > h2 {
-  color: #1f2937;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   line-height: 22px;
@@ -41,7 +41,7 @@
 
 .infoGrid span,
 .fullWidthItem span {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -72,7 +72,7 @@
 
 .basicFields > div > span:first-child,
 .auditBar span {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -83,7 +83,7 @@
 
 .basicFields strong,
 .auditBar strong {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -100,7 +100,7 @@
 
 .auditBar {
   align-items: center;
-  border-top: 1px solid #eef1f5;
+  border-top: 1px solid var(--color-divider);
   display: flex;
   gap: 32px;
   justify-content: flex-start;
@@ -140,14 +140,14 @@
 
 .infoGrid strong,
 .fullWidthItem strong {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-weight: 500;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
 .emptyValue {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .objectCell {
@@ -168,7 +168,7 @@
 
 .colorValue {
   align-items: center;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   display: inline-flex;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
@@ -176,7 +176,7 @@
 }
 
 .colorValue i {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--color-border);
   border-radius: 3px;
   height: 16px;
   width: 16px;
@@ -200,7 +200,7 @@
 }
 
 .ruleSection + .ruleSection {
-  border-top: 1px solid #eef1f5;
+  border-top: 1px solid var(--color-divider);
 }
 
 .ruleHeading {
@@ -212,9 +212,9 @@
 
 .ruleHeading > span {
   align-items: center;
-  background: #e8f1ff;
+  background: var(--color-primary-100);
   border-radius: 50%;
-  color: #1668dc;
+  color: var(--color-primary-700);
   display: inline-flex;
   font-size: 12px;
   font-weight: 600;
@@ -224,7 +224,7 @@
 }
 
 .ruleHeading h4 {
-  color: #1f2937;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   margin: 0;

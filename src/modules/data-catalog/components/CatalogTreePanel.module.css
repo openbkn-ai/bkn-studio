@@ -10,7 +10,7 @@
    live in framework/ui/common/BusinessTreePanel*. */
 .catalogTree:global(.ant-tree) {
   background: transparent;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 .catalogTree :global(.ant-tree-indent-unit) {
@@ -27,7 +27,7 @@
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .catalogTree :global(.ant-tree-list-holder-inner) {
@@ -48,13 +48,13 @@
 }
 
 .catalogTree :global(.ant-tree-node-content-wrapper:hover) {
-  background: #f8fafc;
+  background: var(--color-hover);
 }
 
 .catalogTree :global(.ant-tree-node-selected),
 .catalogTree :global(.ant-tree-node-selected:hover) {
-  background: #eff6ff !important;
-  color: #1d4ed8 !important;
+  background: var(--color-primary-100) !important;
+  color: var(--color-primary-700) !important;
 }
 
 .catalogTree :global(.ant-tree-title) {
@@ -66,7 +66,7 @@
 .catalogTree :global(.ant-tree-node-selected) .catalogNodeName,
 .catalogTree :global(.ant-tree-node-selected) .scopeGroupName,
 .catalogTree :global(.ant-tree-node-selected) .scopeLeafName {
-  color: #1d4ed8;
+  color: var(--color-primary-700);
 }
 
 .catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) :global(.ant-tree-node-content-wrapper) {
@@ -108,7 +108,7 @@
   height: 16px;
   margin-top: 8px;
   margin-right: 2px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper) {
@@ -144,14 +144,14 @@
 }
 
 .rootNodeName {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .groupNodeName {
-  color: #334155;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
@@ -162,7 +162,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -176,9 +176,9 @@
   min-width: 18px;
   height: 18px;
   padding: 0 6px;
-  border: 1px solid #e5eaf2;
-  background: #f8fafc;
-  color: #64748b;
+  border: 1px solid var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
@@ -201,7 +201,7 @@
 .rootIcon,
 .catalogIcon,
 .logicalIcon {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -298,7 +298,7 @@
 .treeMiniTag {
   padding: 0 6px;
   border: 1px solid #e5eaf2;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;
   flex: none;
@@ -323,8 +323,8 @@
   height: 18px;
   margin-left: auto;
   border: 1px solid #e5eaf2;
-  background: #fff;
-  color: #64748b;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   font-size: 11px;
   cursor: pointer;
   flex: none;

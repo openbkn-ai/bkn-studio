@@ -110,7 +110,7 @@
 
   flex-shrink: 0;
 
-  color: #111827;
+  color: var(--color-text-primary);
 
   font-size: 13px;
 
@@ -162,7 +162,7 @@
 
   height: 32px !important;
 
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
 
   border-radius: 0 !important;
 
@@ -176,7 +176,7 @@
 
   height: 32px !important;
 
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
 
   border-radius: 0 !important;
 
@@ -194,7 +194,7 @@
 
   padding-block: 2px 3px;
 
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
 
   border-radius: 0 !important;
 
@@ -260,7 +260,7 @@
 
 .tableSurface :global(.ant-table-wrapper) {
 
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
 
   border-radius: 0;
 
@@ -270,7 +270,7 @@
 
 .tableSurface :global(.ant-table) {
 
-  background: #ffffff;
+  background: var(--color-bg-surface);
 
 }
 
@@ -280,11 +280,11 @@
 
   height: 48px;
 
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 
-  background: #f3f6fa;
+  background: var(--color-interface-panel-bg);
 
-  color: #111827;
+  color: var(--color-text-primary);
 
   font-size: 14px;
 

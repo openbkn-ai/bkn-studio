@@ -38,6 +38,32 @@
   --admin-font-weight-stat: 700;
 }
 
+:global(:root[data-theme="dark"]) {
+  --admin-color-text: var(--color-text-primary);
+  --admin-color-heading: var(--color-text-primary);
+  --admin-color-secondary: var(--color-text-secondary);
+  --admin-color-muted: var(--color-text-muted);
+  --admin-color-placeholder: var(--color-text-muted);
+  --admin-color-border: var(--color-border);
+  --admin-color-border-soft: var(--color-divider);
+  --admin-color-surface: var(--color-bg-surface);
+  --admin-color-surface-muted: var(--color-interface-panel-bg);
+  --admin-color-surface-hover: var(--color-hover);
+  --admin-color-surface-subtle: var(--color-interface-panel-bg);
+  --admin-color-primary: var(--color-primary-700);
+  --admin-color-link: var(--color-primary-700);
+  --admin-color-link-hover: var(--color-primary-600);
+  --admin-color-link-bg: var(--color-primary-100);
+  --admin-color-link-border: var(--color-primary-border);
+  --admin-color-danger: var(--color-error-text);
+  --admin-color-success: var(--color-success-text);
+  --admin-color-success-bg: var(--color-success-bg);
+  --admin-color-success-border: var(--color-success-border);
+  --admin-color-warning: var(--color-warning-text);
+  --admin-color-warning-bg: var(--color-warning-bg);
+  --admin-color-warning-border: var(--color-warning-border);
+}
+
 .contentSurface {
   composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   min-height: auto;

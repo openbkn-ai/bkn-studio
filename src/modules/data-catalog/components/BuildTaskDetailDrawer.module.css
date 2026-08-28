@@ -12,17 +12,17 @@
 }
 
 .drawer :global(.ant-drawer-header) {
-  border-bottom: 1px solid #e8edf3;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .drawer :global(.ant-drawer-title) {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
 }
 
 .drawer :global(.ant-drawer-body) {
-  background: #f8fafc;
+  background: var(--color-bg-page);
 }
 
 .drawerContent {
@@ -32,14 +32,14 @@
 
 .sectionCard {
   padding: 12px 14px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .sectionTitle {
   margin: 0 0 10px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -87,7 +87,7 @@
 
 .metaLine {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -105,14 +105,14 @@
 
 .descriptionBlock :global(.ant-descriptions-item-label) {
   width: 120px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
   font-weight: 500;
   white-space: nowrap;
 }
 
 .descriptionBlock :global(.ant-descriptions-item-content) {
-  color: #111827;
+  color: var(--color-text-primary);
   word-break: break-word;
 }
 
@@ -123,7 +123,7 @@
 }
 
 .fieldText {
-  color: #111827;
+  color: var(--color-text-primary);
   font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -158,8 +158,8 @@
   margin: 8px 0 0;
   padding: 8px;
   overflow: auto;
-  background: #f8fafc;
-  color: #334155;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 12px;
   white-space: pre-wrap;

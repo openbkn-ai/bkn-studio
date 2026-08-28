@@ -3320,3 +3320,51 @@
     max-height: 200px;
   }
 }
+
+/* The agent workspace also renders drawers and overlays outside the application shell.
+   Keep its local palette aligned with the global system theme. */
+:global(:root[data-theme="dark"]) .page {
+  --accent: var(--color-primary-500);
+  --line: var(--color-border);
+  --line2: var(--color-border-secondary);
+  --txt: var(--color-text-primary);
+  --txt2: var(--color-text-secondary);
+  --faint: var(--color-text-tertiary);
+  --code: var(--color-interface-code-bg);
+  --chip: var(--color-interface-panel-bg);
+  --field-bd: var(--color-border);
+  background: var(--color-bg-layout);
+}
+
+:global(:root[data-theme="dark"]) .page .tabActive,
+:global(:root[data-theme="dark"]) .page .topbar,
+:global(:root[data-theme="dark"]) .page .keyInput,
+:global(:root[data-theme="dark"]) .page .keyCopy,
+:global(:root[data-theme="dark"]) .page .main,
+:global(:root[data-theme="dark"]) .page .mcpWork,
+:global(:root[data-theme="dark"]) .page .mcpConnectPage,
+:global(:root[data-theme="dark"]) .page .mcpConnectTitleBlock,
+:global(:root[data-theme="dark"]) .page .mcpConfigureKeyBtn,
+:global(:root[data-theme="dark"]) .page .listHead,
+:global(:root[data-theme="dark"]) .page .reloadCapabilitiesBtn,
+:global(:root[data-theme="dark"]) .page .listSearch,
+:global(:root[data-theme="dark"]) .page .grpCount,
+:global(:root[data-theme="dark"]) .page .req,
+:global(:root[data-theme="dark"]) .page .cfgInput,
+:global(:root[data-theme="dark"]) .page .reqHead,
+:global(:root[data-theme="dark"]) .page .docBtn,
+:global(:root[data-theme="dark"]) .page .reqId,
+:global(:root[data-theme="dark"]) .page .sec,
+:global(:root[data-theme="dark"]) .page .callParamsToggle,
+:global(:root[data-theme="dark"]) .page .paramToolBtn,
+:global(:root[data-theme="dark"]) .page .schemaExample,
+:global(:root[data-theme="dark"]) .page .schemaFieldTable,
+:global(:root[data-theme="dark"]) .page .resetBtn,
+:global(:root[data-theme="dark"]) .page .res,
+:global(:root[data-theme="dark"]) .page .resHead,
+:global(:root[data-theme="dark"]) .page .chat,
+:global(:root[data-theme="dark"]) .page .dbWrap,
+:global(:root[data-theme="dark"]) .page .rightTabs,
+:global(:root[data-theme="dark"]) .page .dbCard {
+  background: var(--color-bg-surface);
+}

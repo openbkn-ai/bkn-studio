@@ -15,8 +15,8 @@
 
 .infoBar {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 8px;
   min-height: 48px;
@@ -36,7 +36,7 @@
 }
 
 .infoName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   line-height: 22px;
@@ -63,14 +63,14 @@
 }
 
 .title {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 500;
   line-height: 22px;
 }
 
 .helpIcon {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   cursor: help;
 }
 
@@ -104,7 +104,7 @@
 }
 
 .dataName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
 }
 
 .rowError {
@@ -156,13 +156,13 @@
 }
 
 .resourceName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 1;
 }
 
 .emptyTip {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   margin-left: auto;
   margin-right: auto;
   margin-top: 8px;
@@ -171,7 +171,7 @@
 }
 
 .propertyTable :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-interface-panel-bg);
   font-weight: 600;
 }
 

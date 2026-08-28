@@ -6,7 +6,7 @@
  */
 
 .drawer :global(.ant-drawer-body) {
-  background: #f8fafc;
+  background: var(--color-bg-page);
 }
 
 .drawerBody {
@@ -23,9 +23,9 @@
   display: flex;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .summaryAvatar {
@@ -35,7 +35,7 @@
   flex-shrink: 0;
   width: 48px;
   height: 48px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   background: var(--admin-color-surface, #fff);
   color: var(--admin-color-primary, #1e3a8a);
   font-size: 18px;
@@ -96,7 +96,7 @@
   padding: 12px 14px;
   border: 1px solid #e5eaf2;
   border-radius: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .formSectionHead {
@@ -134,7 +134,7 @@
 
 .fieldGroupLabel {
   margin: 0 0 12px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
@@ -142,7 +142,7 @@
 
 .formSectionTitle {
   margin: 0 0 4px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -150,7 +150,7 @@
 
 .formSectionDesc {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -193,7 +193,7 @@
 
 .rolePanel {
   padding-top: 14px;
-  border-top: 1px solid #e5eaf2;
+  border-top: 1px solid var(--color-border);
 }
 
 .controlledRolePanel {
@@ -235,8 +235,8 @@
   display: grid;
   gap: 3px;
   padding: 9px 11px;
-  border: 1px dashed #bfd2ea;
-  background: #ffffff;
+  border: 1px dashed var(--admin-color-border, var(--color-border));
+  background: var(--admin-color-surface, var(--color-bg-surface));
 }
 
 .roleGrid {
@@ -252,8 +252,8 @@
   align-items: flex-start;
   min-height: 58px;
   padding: 10px 12px;
-  border: 1px solid #d9e2ef;
-  background: #ffffff;
+  border: 1px solid var(--admin-color-border, var(--color-border));
+  background: var(--admin-color-surface, var(--color-bg-surface));
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -263,7 +263,7 @@
 
 .roleOption:hover {
   border-color: var(--admin-color-link, #1d4ed8);
-  background: #f8fbff;
+  background: var(--admin-color-surface-muted, var(--color-fill-secondary));
 }
 
 .roleOptionSelected {

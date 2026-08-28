@@ -17,8 +17,8 @@
   gap: 16px;
   flex-wrap: wrap;
   padding: 14px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .detailHeadMain {
@@ -38,13 +38,13 @@
 }
 
 .headerLabel {
-  color: #94a3b8;
+  color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .headerValue {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.5;
@@ -66,7 +66,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #1d4ed8;
+  color: var(--color-primary-700);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -81,22 +81,22 @@
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #92400e;
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .sectionCard {
   padding: 14px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .sectionTitle {
   margin: 0 0 12px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }
@@ -115,7 +115,7 @@
 
 .subSectionTitle {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -132,20 +132,20 @@
 }
 
 .editingMeta {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .editHint {
   margin: -4px 0 12px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 
 .sectionCaption {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -157,7 +157,7 @@
 
 .basicInfoRow {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.6;
   word-break: break-word;
@@ -165,11 +165,11 @@
 
 .basicInfoDivider {
   margin: 0 12px;
-  color: #cbd5e1;
+  color: var(--color-text-muted);
 }
 
 .basicInfoLabel {
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .descriptionInput {
@@ -198,7 +198,7 @@
   gap: 4px;
   min-width: 0;
   padding: 10px 0;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .detailItem:nth-child(odd) {
@@ -222,7 +222,7 @@
 }
 
 .detailValue {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
@@ -260,7 +260,7 @@
 
 .emptyHint {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -270,7 +270,7 @@
   gap: 12px;
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid var(--color-divider);
 }
 
 @media (max-width: 768px) {

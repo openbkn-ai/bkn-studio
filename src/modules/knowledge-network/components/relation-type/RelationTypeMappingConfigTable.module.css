@@ -100,11 +100,11 @@
 }
 
 .emptyValue {
-  color: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
 }
 
 .mappingTable :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-interface-panel-bg);
   font-weight: 600;
 }
 
@@ -113,7 +113,7 @@
 }
 
 .rowTypeLabel {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
 }

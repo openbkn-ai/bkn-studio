@@ -8,8 +8,8 @@
 .resourcePicker {
   align-items: center;
   appearance: none;
-  background: #fff;
-  border: 1px solid #d9d9d9;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -24,16 +24,16 @@
 }
 
 .resourcePicker:hover {
-  background: #fff;
+  background: var(--color-bg-surface);
   border-color: #4096ff;
 }
 
 .resourcePickerPlaceholder {
-  color: rgba(0, 0, 0, 0.25);
+  color: var(--color-text-muted);
 }
 
 .resourcePickerValue {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -58,7 +58,7 @@
 }
 
 .mappingTable :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-interface-panel-bg);
   font-weight: 600;
 }
 

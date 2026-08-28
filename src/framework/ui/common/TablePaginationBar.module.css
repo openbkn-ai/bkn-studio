@@ -19,7 +19,7 @@
 
 .bar :global(.ant-pagination-total-text) {
   margin-inline-end: 14px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
   font-weight: 400;
   line-height: 28px;
@@ -44,7 +44,7 @@
 
 .bar :global(.ant-pagination-item a) {
   line-height: 26px !important;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
 }
 
@@ -77,12 +77,12 @@
 .bar :global(.ant-pagination-options-size-changer .ant-select-selector) {
   height: 28px !important;
   padding: 0 6px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   box-shadow: none !important;
 }
 
 .bar :global(.ant-pagination-options-size-changer .ant-select-selection-item) {
   line-height: 26px !important;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
 }

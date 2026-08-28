@@ -34,9 +34,9 @@
 }
 
 .section {
-  border: 1px solid #dbe5f2;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   padding: 18px;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .sectionTitle {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
@@ -57,7 +57,7 @@
 }
 
 .sectionDesc {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
   margin: 4px 0 0;
@@ -68,6 +68,6 @@
 }
 
 .advanced {
-  border-color: #e2e8f0;
-  background: #fbfdff;
+  border-color: var(--color-border);
+  background: var(--color-interface-panel-bg);
 }

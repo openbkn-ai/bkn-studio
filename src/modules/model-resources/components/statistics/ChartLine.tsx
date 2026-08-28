@@ -9,11 +9,14 @@ import type { EChartsOption } from "echarts";
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
+
 type ChartLineProps = {
   option: EChartsOption;
 };
 
 export function ChartLine({ option }: ChartLineProps) {
+  const resolvedTheme = useResolvedTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -24,9 +27,8 @@ export function ChartLine({ option }: ChartLineProps) {
       return;
     }
 
-    if (!chartRef.current) {
-      chartRef.current = echarts.init(container);
-    }
+    chartRef.current?.dispose();
+    chartRef.current = echarts.init(container, resolvedTheme === "dark" ? "dark" : undefined);
 
     chartRef.current.setOption(option, true);
 
@@ -38,15 +40,10 @@ export function ChartLine({ option }: ChartLineProps) {
 
     return () => {
       window.removeEventListener("resize", handleResize);
-    };
-  }, [option]);
-
-  useEffect(() => {
-    return () => {
       chartRef.current?.dispose();
       chartRef.current = null;
     };
-  }, []);
+  }, [option, resolvedTheme]);
 
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

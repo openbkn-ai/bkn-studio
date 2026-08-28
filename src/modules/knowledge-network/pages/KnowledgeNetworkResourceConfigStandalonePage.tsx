@@ -8,8 +8,6 @@
 import type { ReactNode } from "react";
 
 import { TopBar } from "@/app/shell/TopBar";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { AntdProviders } from "@/framework/ui/AntdProviders";
 
 type KnowledgeNetworkResourceConfigStandalonePageProps = {
   children: ReactNode;
@@ -20,8 +18,6 @@ export function KnowledgeNetworkResourceConfigStandalonePage({
   children,
   immersive = false,
 }: KnowledgeNetworkResourceConfigStandalonePageProps) {
-  const runtimeConfig = useRuntimeConfig();
-
   return (
     <div
       className={
@@ -34,9 +30,7 @@ export function KnowledgeNetworkResourceConfigStandalonePage({
       {immersive ? null : <TopBar />}
 
       <main className="knowledge-workspace-main">
-        <AntdProviders runtimeConfig={runtimeConfig}>
-          <div className="knowledge-workspace-scene-host">{children}</div>
-        </AntdProviders>
+        <div className="knowledge-workspace-scene-host">{children}</div>
       </main>
     </div>
   );

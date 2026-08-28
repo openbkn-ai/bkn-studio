@@ -10,9 +10,9 @@
   flex-direction: column;
   gap: 14px;
   padding: 16px 14px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   height: calc(100vh - 110px);
 }
 
@@ -44,7 +44,7 @@
 }
 
 .headTitle {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -53,7 +53,7 @@
 .search:global(.ant-input),
 .search:global(.ant-input-affix-wrapper) {
   height: 32px;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0 !important;
   box-shadow: none;
 }
@@ -92,7 +92,7 @@
 
 .tree:global(.ant-tree) {
   background: transparent;
-  color: #111827;
+  color: var(--color-text-primary);
 }
 
 .tree :global(.ant-tree-list-holder-inner) {
@@ -128,13 +128,13 @@
 }
 
 .tree :global(.ant-tree-node-content-wrapper:hover) {
-  background: #f8fafc;
+  background: var(--color-hover);
 }
 
 .tree :global(.ant-tree-node-selected),
 .tree :global(.ant-tree-node-selected:hover) {
-  background: #eff6ff !important;
-  color: #1d4ed8 !important;
+  background: var(--color-primary-100) !important;
+  color: var(--color-primary-700) !important;
 }
 
 .tree :global(.ant-tree-title) {
@@ -155,7 +155,7 @@
 
 .foot {
   padding-top: 10px;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid var(--color-divider);
   color: #94a3b8;
   font-size: 12px;
   line-height: 1.5;
@@ -188,8 +188,8 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid #e5eaf2;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   font-size: 16px;
 }

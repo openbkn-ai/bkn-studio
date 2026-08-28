@@ -11,6 +11,7 @@ import { RouterProvider } from "react-router-dom";
 import i18n from "@/app/locales/i18n";
 import { AppProviders } from "@/app/providers/AppProviders";
 import { createAppRouter } from "@/app/router/create-router";
+import { ThemeProvider } from "@/app/theme/ThemeProvider";
 import { AuthGate } from "@/framework/auth/AuthGate";
 import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
 import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
+import { AntdProviders } from "@/framework/ui/AntdProviders";
 
 type AppProps = {
   runtimeConfig: RuntimeConfig;
@@ -59,12 +61,16 @@ export function App({ runtimeConfig }: AppProps) {
 
   return (
     <AppProviders runtimeConfig={config} updateLocale={handleLocaleChange}>
-      <AuthGate onCurrentUser={handleCurrentUser}>
-        {/* Entitlements require an authentication token, so load them inside AuthGate. */}
-        <EntitlementProvider>
-          <RouterProvider router={router} />
-        </EntitlementProvider>
-      </AuthGate>
+      <ThemeProvider>
+        <AntdProviders runtimeConfig={config}>
+          <AuthGate onCurrentUser={handleCurrentUser}>
+            {/* Entitlements require an authentication token, so load them inside AuthGate. */}
+            <EntitlementProvider>
+              <RouterProvider router={router} />
+            </EntitlementProvider>
+          </AuthGate>
+        </AntdProviders>
+      </ThemeProvider>
     </AppProviders>
   );
 }

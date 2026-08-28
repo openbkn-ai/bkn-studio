@@ -11,8 +11,8 @@
   gap: 14px;
   min-height: auto;
   padding: 14px 12px 20px;
-  background: #ffffff;
-  color: #172033;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 400;
 }
@@ -23,12 +23,12 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .introTitle {
   margin: 0;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
 }
@@ -36,7 +36,7 @@
 .introDescription {
   max-width: 920px;
   margin: 6px 0 0;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -49,11 +49,11 @@
 
 .metric {
   min-height: 92px;
-  border: 1px solid #d9e0ea;
-  border-left: 3px solid #d9e0ea;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
   border-radius: 0;
   padding: 12px 14px;
-  background: #f7f9fc;
+  background: var(--color-interface-panel-bg);
 }
 
 .metric.good {
@@ -72,7 +72,7 @@
 .metricHelper {
   display: block;
   overflow: hidden;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -81,7 +81,7 @@
 .metricValue {
   display: block;
   margin: 6px 0 4px;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 22px;
   font-weight: 600;
   line-height: 1.2;

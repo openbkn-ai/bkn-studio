@@ -17,13 +17,13 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .viewTabs {
   display: inline-flex;
-  border: 1px solid #d9e0ea;
-  background: #f3f6fa;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .viewTab {
@@ -31,7 +31,7 @@
   padding: 6px 16px;
   border: 0;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.5;
   cursor: pointer;
@@ -43,8 +43,8 @@
 
 .viewTabActive {
   composes: viewTab;
-  background: #fff;
-  color: #111827;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-weight: 600;
   box-shadow: inset 0 -2px 0 #2e68ff;
 }
@@ -57,13 +57,13 @@
 
 .sectionCard {
   padding: 14px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .opsCard {
   border: 1px solid #d9e0ea;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .statusStrip {
@@ -73,7 +73,7 @@
   gap: 16px;
   padding: 10px 16px;
   border-bottom: 1px solid #e8edf4;
-  background: #f8fafc;
+  background: var(--color-interface-panel-bg);
 }
 
 .statusStripMain {
@@ -86,13 +86,13 @@
 
 .statusStripLabel {
   flex-shrink: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
 
 .statusStripValue {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
@@ -119,7 +119,7 @@
 
 .sectionTitle {
   margin: 0 0 2px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -127,7 +127,7 @@
 
 .sectionSummary {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -207,7 +207,7 @@
 }
 
 .failureAlertContent strong {
-  color: #111827;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
@@ -217,7 +217,7 @@
 
 .failureRaw {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .failureRaw summary {
@@ -233,8 +233,8 @@
   padding: 8px 10px;
   overflow: auto;
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #334155;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -248,15 +248,15 @@
   align-items: center;
   gap: 14px;
   padding: 32px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
   text-align: center;
 }
 
 .emptyText {
   margin: 0;
   max-width: 420px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -271,7 +271,7 @@
 
 .historyTitle {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }

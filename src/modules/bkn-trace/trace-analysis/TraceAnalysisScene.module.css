@@ -51,3 +51,6 @@
 .payload { background: #111827; border-radius: 6px; color: #dbeafe; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.65; max-height: 340px; padding: 14px; }
 @media (max-width: 1180px) { .filters { grid-template-columns: 1fr 1fr 1fr; } .detailLayoutOpen { grid-template-columns: 1fr; } .operationPanel { max-height: none; position: static; } }
 @media (max-width: 760px) { .pageSurface { padding: 16px; } .filters, .summaryTextGrid { grid-template-columns: 1fr; } }
+
+:global(:root[data-theme="dark"]) .pageSurface,:global(:root[data-theme="dark"]) .filters,:global(:root[data-theme="dark"]) .tableCard,:global(:root[data-theme="dark"]) .summaryCard,:global(:root[data-theme="dark"]) .diagnosticsCard,:global(:root[data-theme="dark"]) .executionCard,:global(:root[data-theme="dark"]) .operationPanel,:global(:root[data-theme="dark"]) .operationNode{background:var(--color-bg-surface);border-color:var(--color-border)}
+:global(:root[data-theme="dark"]) .endpoint,:global(:root[data-theme="dark"]) .spanNode{background:var(--color-interface-panel-bg);border-color:var(--color-border)}

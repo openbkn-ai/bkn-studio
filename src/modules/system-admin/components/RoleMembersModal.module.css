@@ -6,7 +6,7 @@
  */
 
 .modal :global(.ant-modal-body) {
-  background: #f8fafc;
+  background: var(--color-bg-page);
 }
 
 .content {
@@ -26,14 +26,14 @@
   justify-content: space-between;
   min-width: 0;
   padding: 12px 14px;
-  border: 1px solid #dbe5f1;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .summaryLabel {
   min-width: 0;
   overflow: hidden;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.4;
   text-overflow: ellipsis;
@@ -42,7 +42,7 @@
 
 .summaryValue {
   flex: 0 0 auto;
-  color: #172033;
+  color: var(--color-text-primary);
   font-family: "SFMono-Regular", "JetBrains Mono", monospace;
   font-size: 18px;
   font-weight: 600;
@@ -55,8 +55,8 @@
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid #dbe5f1;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .addRow {
@@ -81,18 +81,18 @@
 
 .memberPanel {
   overflow: hidden;
-  border: 1px solid #dbe5f1;
-  background: #ffffff;
+  border: 1px solid var(--admin-color-border, var(--color-border));
+  background: var(--admin-color-surface, var(--color-bg-surface));
 }
 
 .memberPanel :global(.ant-table-tbody > tr > td) {
   padding-top: 12px !important;
   padding-bottom: 12px !important;
-  border-bottom-color: #edf2f7;
+  border-bottom-color: var(--admin-color-border, var(--color-border));
 }
 
 .memberPanel :global(.ant-table-tbody > tr:hover > td) {
-  background: #f8fbff;
+  background: var(--admin-color-surface-muted, var(--color-fill-secondary));
 }
 
 .memberTable :global(.ant-table-wrapper) {
@@ -100,17 +100,17 @@
 }
 
 .memberTable :global(.ant-table) {
-  background: #ffffff;
+  background: var(--admin-color-surface, var(--color-bg-surface));
 }
 
 .memberTable :global(.ant-table-thead > tr > th) {
-  border-bottom-color: #dbe5f1;
-  background: #f3f6fa;
+  border-bottom-color: var(--admin-color-border, var(--color-border));
+  background: var(--admin-color-surface-muted, var(--color-fill-secondary));
 }
 
 .note {
   margin: 2px 0 0;
-  color: #64748b;
+  color: var(--admin-color-muted, var(--color-text-secondary));
   font-size: 12px;
   line-height: 1.6;
 }

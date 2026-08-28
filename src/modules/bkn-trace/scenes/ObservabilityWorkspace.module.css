@@ -6,8 +6,8 @@
  */
 
 .workspace {
-	background: #fff;
-	border: 1px solid #e2e7ef;
+	background: var(--color-bg-surface);
+	border: 1px solid var(--color-border);
 	container-type: inline-size;
 	display: grid;
 	gap: 16px;
@@ -29,7 +29,7 @@
 }
 
 .filterPanel {
-  border: 1px solid #e7ebf1;
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -141,7 +141,7 @@
 }
 
 .detailSection {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--color-divider);
   display: grid;
   gap: 10px;
   padding-top: 14px;
@@ -166,8 +166,8 @@
 }
 
 .attributeBlock {
-  background: #f5f7fa;
-  border: 1px solid #e2e7ef;
+  background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   margin: 0;
   max-height: 280px;
   overflow: auto;
@@ -177,7 +177,7 @@
 }
 
 .section {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--color-divider);
   display: grid;
   gap: 12px;
   padding-top: 18px;
@@ -194,8 +194,8 @@
 }
 
 .metric {
-  background: #f7f9fc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 6px;
   min-height: 68px;
@@ -214,8 +214,8 @@
 }
 
 .storageSummary {
-  background: #f7f9fc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 8px;
   align-content: start;

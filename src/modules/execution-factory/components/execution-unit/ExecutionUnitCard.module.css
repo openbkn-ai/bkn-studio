@@ -13,9 +13,9 @@
   height: 100%;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: none;
   transition:
     background-color 0.18s ease,
@@ -24,8 +24,8 @@
 
 .card:hover,
 .card:focus-visible {
-  border-color: #bfdbfe;
-  background: #f7faff;
+  border-color: var(--color-primary-border);
+  background: var(--color-hover);
   box-shadow: none;
   outline: none;
 }
@@ -54,7 +54,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -101,9 +101,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 1px solid #e8edf3;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f3f6fa;
+  background: var(--color-hover);
   color: var(--color-primary-600);
   font-size: 16px;
 }
@@ -134,7 +134,7 @@
   min-width: 0;
   margin: 0 !important;
   overflow: hidden;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px !important;
   font-weight: 500;
   line-height: 22px !important;
@@ -157,7 +157,7 @@
   min-width: 0;
   margin-top: 2px;
   overflow: hidden;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 18px;
   white-space: nowrap;

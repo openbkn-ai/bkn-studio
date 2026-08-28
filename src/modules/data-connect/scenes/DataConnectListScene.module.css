@@ -38,9 +38,9 @@
 .toolbarFilters :global(.ant-input-affix-wrapper) {
   height: 32px;
   padding-inline: 11px;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0 !important;
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: none;
 }
 
@@ -67,7 +67,7 @@
 
 .filterLabel {
   flex-shrink: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 32px;
@@ -80,7 +80,7 @@
 
 .filterSelect :global(.ant-select-selector) {
   height: 32px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }

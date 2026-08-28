@@ -17,7 +17,7 @@
 }
 
 .basicForm :global(.ant-form-item-label > label) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   height: auto;
 }
@@ -27,7 +27,7 @@
 }
 
 .formSection {
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   padding: 0 0 20px;
 }
 
@@ -41,7 +41,7 @@
 }
 
 .formSection h3 {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;
@@ -50,7 +50,7 @@
 
 .ruleHeader {
   align-items: center;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: inline-flex;
   font-size: 14px;
   font-weight: 600;
@@ -82,8 +82,8 @@
 }
 
 .ruleCollapse :global(.ant-collapse-item) {
-  background: #fff;
-  border: 1px solid #e5e7eb !important;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border) !important;
   margin-bottom: 10px;
 }
 
@@ -93,7 +93,7 @@
 }
 
 .ruleCollapse :global(.ant-collapse-content) {
-  border-top: 1px solid #eef0f3 !important;
+  border-top: 1px solid var(--color-divider) !important;
 }
 
 .ruleCollapse :global(.ant-collapse-content-box) {
@@ -107,7 +107,7 @@
 }
 
 .helpIcon {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 

@@ -6,7 +6,7 @@
  */
 
 .drawer :global(.ant-drawer-body) {
-  background: #f8fafc;
+  background: var(--color-bg-page);
 }
 
 .content {
@@ -16,13 +16,13 @@
 
 .sectionCard {
   padding: 14px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .sectionTitle {
   margin: 0 0 10px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -43,7 +43,7 @@
 }
 
 .muted {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -67,8 +67,8 @@
 }
 
 .grantTypeBlock {
-  border: 1px solid #dbe5f1;
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .grantTypeHead {
@@ -78,13 +78,13 @@
   gap: 12px;
   padding: 9px 12px;
   border-bottom: 1px solid #e8eef6;
-  background: #f8fafc;
+  background: var(--color-interface-panel-bg);
 }
 
 .grantTypeName {
   min-width: 0;
   overflow: hidden;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -94,7 +94,7 @@
 
 .grantTypeMeta {
   flex: 0 0 auto;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 

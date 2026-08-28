@@ -9,9 +9,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid #eef1f6;
+  border: 1px solid var(--color-border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   overflow: hidden;
 }
 
@@ -21,7 +21,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  border-bottom: 1px solid #f0f2f6;
+  border-bottom: 1px solid var(--color-divider);
   flex-shrink: 0;
 }
 
@@ -30,7 +30,7 @@
   align-items: baseline;
   gap: 8px;
   margin: 0;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
 }
@@ -52,7 +52,7 @@
 .graphCanvas {
   min-height: 480px;
   padding: 12px;
-  border-right: 1px solid #f0f2f6;
+  border-right: 1px solid var(--color-divider);
   min-width: 0;
 }
 
@@ -78,6 +78,6 @@
 
   .graphAside {
     max-height: none;
-    border-top: 1px solid #f0f2f6;
+    border-top: 1px solid var(--color-divider);
   }
 }

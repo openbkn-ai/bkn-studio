@@ -21,3 +21,8 @@
 @container (max-width:480px){.filters{grid-template-columns:1fr}}
 .listCard :global(.ant-table-thead > tr > th){font-size:14px}
 .conversationHeading h1{font-size:18px}.roundSidebarTitle h3,.operationCard h3{font-size:16px}.roundList strong,.interactionSummary h2,.sourceTexts p,.operationCard p{font-size:14px}
+
+/* Shared surfaces must not remain white when the application follows a dark system theme. */
+:global(:root[data-theme="dark"]) .page{color:var(--color-text-primary)}
+:global(:root[data-theme="dark"]) .pageSurface,:global(:root[data-theme="dark"]) .listCard,:global(:root[data-theme="dark"]) .workspace,:global(:root[data-theme="dark"]) .interactionSummary,:global(:root[data-theme="dark"]) .operationCard,:global(:root[data-theme="dark"]) .networkCard,:global(:root[data-theme="dark"]) .knowledgeColumn button,:global(:root[data-theme="dark"]) .contextCard,:global(:root[data-theme="dark"]) .knowledgeInspector,:global(:root[data-theme="dark"]) .detailPanel,:global(:root[data-theme="dark"]) .agentPanel,:global(:root[data-theme="dark"]) .knowledgeInspector header,:global(:root[data-theme="dark"]) .detailPanel header,:global(:root[data-theme="dark"]) .agentPanel header,:global(:root[data-theme="dark"]) .agentResult footer{background:var(--color-bg-surface);border-color:var(--color-border)}
+:global(:root[data-theme="dark"]) .listCard :global(.ant-table-thead > tr > th),:global(:root[data-theme="dark"]) .knowledgeCanvas,:global(:root[data-theme="dark"]) .contextCard,:global(:root[data-theme="dark"]) .agentSuggestions article,:global(:root[data-theme="dark"]) .agentSource,:global(:root[data-theme="dark"]) .agentSection{background:var(--color-interface-panel-bg)}

@@ -22,8 +22,8 @@
 }
 
 .table :global(.ant-table-thead > tr > th) {
-  background: #f3f6fa;
-  color: #111827;
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-primary);
   font-weight: 600;
   white-space: nowrap;
 }

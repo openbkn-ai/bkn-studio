@@ -26,11 +26,11 @@
 }
 
 .itemTitle {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
 }
 
 .itemDesc {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }

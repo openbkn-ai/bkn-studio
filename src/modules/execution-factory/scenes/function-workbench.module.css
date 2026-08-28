@@ -47,7 +47,7 @@
   flex-direction: column;
   height: calc(100vh - 96px);
   min-height: 560px;
-  background: var(--color-bg-layout, #f5f7fa);
+  background: var(--color-bg-page);
 }
 
 /* ---------- 顶部栏 ---------- */
@@ -58,7 +58,7 @@
   gap: 10px;
   height: 60px;
   padding: 0 24px;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   flex: none;
 }
 
@@ -91,7 +91,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   cursor: pointer;
   flex: none;
@@ -129,7 +129,7 @@
   width: auto;
   min-width: 0;
   max-width: 320px;
-  color: #152239;
+  color: var(--color-text-primary);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -151,7 +151,7 @@
 
 .categorySelect :global(.ant-select-selector) {
   border-color: var(--color-border);
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .barActions {
@@ -191,7 +191,7 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 320px;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   border-right: 1px solid var(--color-border);
   min-height: 0;
 }
@@ -244,7 +244,7 @@
   flex-direction: column;
   justify-content: flex-end;
   min-height: var(--entity-rail-head-height);
-  background: #ffffff;
+  background: var(--color-bg-surface);
   flex: none;
 }
 
@@ -379,7 +379,7 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   border-right: 1px solid var(--color-border);
 }
 
@@ -449,7 +449,7 @@
   flex-direction: column;
   flex: 0 1 360px;
   min-width: 260px;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   min-height: 0;
   border-left: 1px solid var(--color-border);
 }
@@ -607,7 +607,7 @@
 /* ---------- 调试台 ---------- */
 .console {
   flex: none;
-  background: #ffffff;
+  background: var(--color-bg-surface);
   border-top: 1px solid var(--color-border);
 }
 
