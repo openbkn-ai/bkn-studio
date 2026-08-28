@@ -65,6 +65,9 @@ type BackendDiscoverTask = {
   last_progress_time?: number;
   message?: string;
   progress?: number;
+  queue_priority?: number;
+  resource_id?: string;
+  resource_name?: string;
   result?: {
     catalog_id?: string;
     failed_count?: number;
@@ -160,7 +163,18 @@ let mockTasks: DataConnectDiscoverTask[] = [
     triggerType: "scheduled",
     status: "completed",
     progress: 100,
+    queuePriority: 10,
     message: discoverMockText("syncCompleted", { count: 48 }),
+    result: {
+      catalogId: "cat-001",
+      newCount: 12,
+      updatedCount: 6,
+      staleCount: 2,
+      restoredCount: 1,
+      unchangedCount: 27,
+      failedCount: 0,
+      message: discoverMockText("syncCompleted", { count: 48 }),
+    },
     startTime: Date.parse("2026-06-03T02:00:11"),
     finishTime: Date.parse("2026-06-03T02:12:04"),
     lastProgressTime: Date.parse("2026-06-03T02:11:50"),
@@ -170,11 +184,12 @@ let mockTasks: DataConnectDiscoverTask[] = [
   {
     id: "discover-task-1002",
     catalogId: "cat-002",
-    scheduleId: "discover-schedule-002",
+    resourceId: "res-002",
     strategy: "create_only",
-    triggerType: "scheduled",
+    triggerType: "manual",
     status: "running",
     progress: 56,
+    queuePriority: 30,
     message: discoverMockText("pullingIndexChanges"),
     startTime: Date.parse("2026-06-03T11:30:08"),
     lastProgressTime: Date.parse("2026-06-03T11:42:20"),
@@ -184,11 +199,11 @@ let mockTasks: DataConnectDiscoverTask[] = [
   {
     id: "discover-task-1003",
     catalogId: "cat-003",
-    scheduleId: "discover-schedule-003",
     strategy: "cleanup_only",
     triggerType: "manual",
     status: "failed",
     progress: 100,
+    queuePriority: 20,
     message: discoverMockText("cleanupTimeout"),
     startTime: Date.parse("2026-06-02T03:00:00"),
     finishTime: Date.parse("2026-06-02T03:03:15"),
@@ -277,11 +292,14 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     id: item.id,
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
-    scheduleId: item.schedule_id ?? "",
+    scheduleId: item.schedule_id || undefined,
     strategy: normalizeStrategy(item.strategy),
     triggerType: normalizeTriggerType(item.trigger_type),
     status: normalizeTaskStatus(item.status),
     progress: item.progress ?? 0,
+    queuePriority: item.queue_priority ?? 20,
+    resourceId: item.resource_id,
+    resourceName: item.resource_name,
     result: item.result
       ? {
           catalogId: item.result.catalog_id ?? item.catalog_id,
@@ -326,6 +344,9 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     id: task.id,
     lastProgressTime: task.lastProgressTime,
     progress: task.progress,
+    queuePriority: task.queuePriority,
+    resourceId: task.resourceId,
+    resourceName: task.resourceName,
     result,
     scheduleId: task.scheduleId,
     startTime: task.startTime,
@@ -361,7 +382,8 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesSchedule =
       !query.scheduleId || item.scheduleId === query.scheduleId;
-    const matchesStatus = !query.status || item.status === query.status;
+    const matchesResource = !query.resourceId || item.resourceId === query.resourceId;
+    const matchesStatus = !query.statuses?.length || query.statuses.includes(item.status);
     const matchesStrategy = !query.strategy || item.strategy === query.strategy;
     const matchesTriggerType =
       !query.triggerType || item.triggerType === query.triggerType;
@@ -369,6 +391,7 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     return (
       matchesCatalog &&
       matchesSchedule &&
+      matchesResource &&
       matchesStatus &&
       matchesStrategy &&
       matchesTriggerType
@@ -663,12 +686,14 @@ export async function listDataConnectDiscoverTasks(
         direction: query.direction ?? "desc",
         limit,
         offset,
+        resource_id: query.resourceId,
         schedule_id: query.scheduleId,
         sort: query.sort ?? "create_time",
-        status: query.status,
+        status: query.statuses?.length ? query.statuses : undefined,
         strategy: query.strategy,
         trigger_type: query.triggerType,
       },
+      paramsSerializer: { indexes: null },
     },
   );
 
@@ -709,11 +734,11 @@ export async function triggerDataConnectDiscover(
     const task: DataConnectDiscoverTask = {
       id: crypto.randomUUID(),
       catalogId,
-      scheduleId: "",
       strategy: strategy ?? "full_sync",
       triggerType: "manual",
       status: "pending",
       progress: 0,
+      queuePriority: 20,
       message: discoverMockText("manualTaskCreated"),
       startTime: now,
       creatorName: "Local Admin",

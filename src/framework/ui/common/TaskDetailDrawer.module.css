@@ -1,0 +1,41 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.drawer :global(.ant-drawer-content),
+.drawer :global(.ant-drawer-header),
+.drawer :global(.ant-drawer-body) { border-radius: 0 !important; }
+.drawer :global(.ant-drawer-header) { border-bottom: 1px solid #e8edf3; }
+.drawer :global(.ant-drawer-title) { color: #111827; font-size: 15px; font-weight: 600; }
+.drawer :global(.ant-drawer-body) { background: #f8fafc; }
+.drawerContent { display: grid; gap: 12px; }
+.sectionCard { padding: 12px 14px; border: 1px solid #e5eaf2; border-radius: 0; background: #fff; }
+.sectionTitle { margin: 0 0 10px; color: #111827; font-size: 13px; font-weight: 600; }
+.statusRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.descriptionBlock :global(.ant-descriptions-view) { border-radius: 0; overflow: hidden; }
+.descriptionBlock :global(.ant-descriptions-item-label),
+.descriptionBlock :global(.ant-descriptions-item-content) { padding: 8px 12px !important; font-size: 13px; line-height: 1.5; }
+.descriptionBlock :global(.ant-descriptions-item-label) { width: 120px; background: #f8fafc; color: #64748b; font-weight: 500; white-space: nowrap; }
+.descriptionBlock :global(.ant-descriptions-item-content) { color: #111827; word-break: break-word; }
+.failureContent { display: grid; gap: 4px; }
+.metaLine { margin-top: 8px; color: #64748b; font-size: 12px; }
+.resultTable { margin: 0; }
+.tag { display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 2px 10px; border: 1px solid #d9e0ea; border-radius: 0; background: #f7f9fc; font-size: 12px; font-weight: 400; line-height: 20px; white-space: nowrap; }
+.taskPending { border-color: rgba(148, 163, 184, 0.22); background: rgba(148, 163, 184, 0.08); color: #64748b; }
+.taskRunning { border-color: rgba(37, 99, 235, 0.2); background: rgba(46, 104, 255, 0.08); color: #1f4fd4; }
+.taskSucceeded { border-color: rgba(101, 192, 65, 0.22); background: rgba(101, 192, 65, 0.08); color: #4f9f22; }
+.taskFailed { border-color: rgba(239, 68, 68, 0.22); background: rgba(239, 68, 68, 0.08); color: #dc2626; }
+.calloutWarn { display: flex; gap: 10px; margin-bottom: 14px; padding: 10px 14px; border: 1px solid #fde68a; border-radius: 0; background: #fffbeb; color: #b45309; font-size: 13px; line-height: 1.7; }
+.calloutWarn :global(.anticon) { margin-top: 3px; flex: none; color: #d97706; }
+
+.progressWrapCompact { display: grid; gap: 4px; min-width: 0; }
+.progressTrack { position: relative; height: 8px; overflow: hidden; border-radius: 0; background: rgba(46, 104, 255, 0.1); }
+.progressFill { position: absolute; inset: 0 auto 0 0; border-radius: 0; background: rgba(46, 104, 255, 0.35); transition: width 0.5s ease; }
+.progressFillVector { background: linear-gradient(90deg, #2e68ff, #4d80ff); }
+.progressFillDone { background: #65c041; }
+.progressFillFailed { background: #ef4444; }
+.progressMetaCompact { display: grid; gap: 1px; color: #8b98ac; font-size: 11px; line-height: 1.35; }
+.progressMetaCompact > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

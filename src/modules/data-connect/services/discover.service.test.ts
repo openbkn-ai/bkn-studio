@@ -37,6 +37,8 @@ describe("discover.service · task status contract", () => {
             last_progress_time: 250,
             start_time: 200,
             status: "cancelled",
+            queue_priority: 30,
+            resource_id: "resource-1",
           },
         ],
         total_count: 1,
@@ -49,7 +51,7 @@ describe("discover.service · task status contract", () => {
     const result = await listDataConnectDiscoverTasks({
       page: 1,
       pageSize: 20,
-      status: "cancelled",
+      statuses: ["cancelled"],
     });
 
     expect(result.items[0]?.status).toBe("cancelled");
@@ -57,12 +59,28 @@ describe("discover.service · task status contract", () => {
     expect(result.items[0]?.startTime).toBe(200);
     expect(result.items[0]?.finishTime).toBe(300);
     expect(result.items[0]?.lastProgressTime).toBe(250);
+    expect(result.items[0]?.queuePriority).toBe(30);
+    expect(result.items[0]?.resourceId).toBe("resource-1");
     expect(result.items[0]).not.toHaveProperty("startTimeValue");
     expect(result.items[0]).not.toHaveProperty("finishTimeValue");
     expect(getMock).toHaveBeenCalledOnce();
     expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/discover-tasks");
     const config = getMock.mock.calls[0]?.[1] as { params: Record<string, unknown> };
-    expect(config.params.status).toBe("cancelled");
+    expect(config.params.status).toEqual(["cancelled"]);
+    expect(config.params.resource_id).toBeUndefined();
+  });
+
+  it("maps a resource task filter without exposing priority as a sort", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    await listDataConnectDiscoverTasks({ page: 1, pageSize: 20, resourceId: "resource-1" });
+
+    const config = getMock.mock.calls[0]?.[1] as { params: Record<string, unknown> };
+    expect(config.params.resource_id).toBe("resource-1");
+    expect(config.params).not.toHaveProperty("queue_priority");
   });
 });
 
@@ -153,6 +171,18 @@ describe("discover.service · mock task sorting", () => {
       "discover-task-1001",
       "discover-task-1002",
     ]);
+  });
+
+  it("does not associate manually triggered mock tasks with a discover schedule", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
+
+    const manualTasks = result.items.filter((item) => item.triggerType === "manual");
+    expect(manualTasks).not.toHaveLength(0);
+    manualTasks.forEach((item) => expect(item.scheduleId).toBeUndefined());
   });
 
   it("rejects a stale discover schedule version", async () => {

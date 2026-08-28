@@ -46,6 +46,8 @@ export const commonEnUS = {
     advancedConfig: "Advanced Configuration",
     enabled: "Enabled",
     disabled: "Disabled",
+    enable: "Enable",
+    disable: "Disable",
     success: "Action completed",
     required: "This field is required",
     notFound: "The requested data was not found",

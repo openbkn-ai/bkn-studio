@@ -78,7 +78,7 @@ describe("ResourcePreviewPanel", () => {
         resource={{
           ...resource,
           lastDiscoverStatus: "missing",
-          status: "disabled",
+          enabled: false,
         }}
       />,
     );

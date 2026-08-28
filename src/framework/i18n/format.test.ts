@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime, formatFileSize, formatNumber, formatPercent } from "@/framework/i18n/format";
+import { formatDateTime, formatDateTimeYmdHms, formatFileSize, formatNumber, formatPercent } from "@/framework/i18n/format";
 
 describe("locale format helpers", () => {
   it("formats numbers with the requested locale", () => {
@@ -43,5 +43,10 @@ describe("locale format helpers", () => {
         year: "numeric",
       }),
     ).not.toThrow();
+  });
+
+  it("formats date time in the fixed task display format", () => {
+    expect(formatDateTimeYmdHms(new Date(2026, 5, 3, 11, 42, 20))).toBe("2026-06-03 11:42:20");
+    expect(formatDateTimeYmdHms(null)).toBe("-");
   });
 });

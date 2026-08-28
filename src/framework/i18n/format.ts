@@ -57,6 +57,16 @@ export function formatDateTime(
   }).format(date);
 }
 
+export function formatDateTimeYmdHms(value: DateTimeInput) {
+  const date = toDate(value);
+  if (!date) {
+    return DEFAULT_EMPTY_VALUE;
+  }
+
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 export function formatNumber(
   value: number | null | undefined,
   options: Intl.NumberFormatOptions & LocaleFormatOptions = {},

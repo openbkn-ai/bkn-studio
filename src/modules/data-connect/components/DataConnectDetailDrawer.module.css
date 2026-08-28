@@ -48,6 +48,14 @@
   font-weight: 600;
 }
 
+.catalogTag {
+  margin-inline-end: 0 !important;
+  border-color: #b9c9ff;
+  border-radius: 0;
+  background: #f8faff;
+  color: #3157d5;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;

@@ -306,9 +306,16 @@ export function CatalogTreePanel({
                     {t("dataCatalog.tree.discovering")}
                   </span>
                 ) : null}
-                {!catalog.enabled ? (
-                  <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
-                ) : null}
+                <span
+                  className={[
+                    styles.treeMiniTag,
+                    catalog.enabled ? styles.treeMiniTagEnabled : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {t(catalog.enabled ? "common.enabled" : "common.disabled")}
+                </span>
               </span>
             ),
           };

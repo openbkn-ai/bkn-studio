@@ -15,7 +15,7 @@ export type ResourceDiscoverStatus =
   | "unchanged"
   | "updated";
 
-export type ResourceStatus = "active" | "deprecated" | "disabled" | "stale";
+export type ResourceStatus = "active" | "deprecated" | "stale";
 
 /** Whether the Resource's local OpenSearch index is currently usable for queries. */
 export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
@@ -62,7 +62,11 @@ export type CatalogResource = {
   category: ResourceCategory;
   /** Field count from a detail schema or list summary; null when the list response omits it. */
   columnCount: number | null;
+  createTime?: string;
+  creatorName?: string;
   description: string;
+  /** Resource access state, independent from discovery lifecycle status. */
+  enabled?: boolean;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
@@ -82,7 +86,9 @@ export type CatalogResource = {
   status?: ResourceStatus;
   /** Resource lifecycle/discovery detail reported by Vega. */
   statusMessage?: string;
+  tags?: string[];
   updateTime: string;
+  updaterName?: string;
   expectedUpdateTime: number;
 };
 
@@ -106,6 +112,8 @@ export type ResourceCreateInput = {
 };
 
 export type ResourceUpdateInput = ResourceCreateInput & {
+  /** Preserved by full PUT; changes use the enable/disable action endpoints. */
+  enabled?: boolean;
   expectedUpdateTime: number;
 };
 
@@ -201,6 +209,7 @@ export type BuildTaskSort =
 
 export type BuildTaskPageQuery = {
   catalogId?: string;
+  executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
   direction?: "asc" | "desc";
   /** Raw window. The caller scans by offset because the backend filters after paging (#977). */

@@ -10,7 +10,7 @@ import type {
   CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
 /**
  * Shared mock storage for data resources, build tasks, and discovery records. It models SDK behavior:
@@ -48,14 +48,7 @@ export function mockSlug(length = 20) {
 }
 
 export function formatMockTimestamp(value: number) {
-  return formatDateTime(value, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    second: "2-digit",
-    year: "numeric",
-  }).replace(/\//g, "-");
+  return formatDateTimeYmdHms(value);
 }
 
 const now = Date.now();
@@ -63,12 +56,13 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "columnCount" | "localIndexStatus" | "updateTime"> &
-    Partial<Pick<CatalogResource, "localIndexStatus">>,
+  input: Omit<CatalogResource, "columnCount" | "enabled" | "localIndexStatus" | "updateTime"> &
+    Partial<Pick<CatalogResource, "enabled" | "localIndexStatus">>,
 ): CatalogResource {
   return {
     ...input,
     columnCount: input.schema.length,
+    enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
@@ -83,6 +77,14 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.customers",
     description: "客户主数据表,含联系方式与生命周期状态。",
+    tags: ["crm", "core"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(28)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "updated",
+    localIndexName: "idx_customers_v3",
+    localIndexStatus: "available",
+    status: "active",
     schema: [
       {
         name: "customer_id",
@@ -133,6 +135,12 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.orders",
     description: "订单事实表。",
+    tags: ["crm", "orders"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(26)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "unchanged",
+    status: "active",
     schema: [
       { name: "order_id", type: "bigint" },
       { name: "customer_id", type: "bigint" },
@@ -348,6 +356,16 @@ export const mockResources: CatalogResource[] = [
   }),
 ];
 
+const mockCatalogNames: Record<string, string> = {
+  "cat-001": "customer_master",
+  "cat-002": "knowledge_index",
+  "cat-003": "finance_dw",
+};
+
+export function mockCatalogName(id?: string) {
+  return id ? mockCatalogNames[id] : undefined;
+}
+
 function makeTask(
   input: Omit<
     BuildTask,
@@ -364,8 +382,14 @@ function makeTask(
     fulltextFields?: string[];
   },
 ): BuildTask {
+  const resource = mockResources.find((item) => item.id === input.resourceId);
+  const catalogId = input.catalogId ?? resource?.catalogId;
   return {
     ...input,
+    catalogId,
+    catalogName: input.catalogName ?? mockCatalogName(catalogId),
+    resourceName: input.resourceName ?? resource?.name,
+    executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
     fulltextAnalyzer: input.fulltextAnalyzer ?? "ik_max_word",
     fulltextFields: input.fulltextFields ?? input.embeddingFields,
     startTime: input.startedAt ?? (input.status === "pending" ? null : input.createTime),
@@ -427,6 +451,7 @@ export const mockBuildTasks: BuildTask[] = [
     id: "bt-chunks-01",
     resourceId: "res-kn-chunks",
     mode: "batch",
+    executeType: "incremental",
     status: "completed",
     embeddingFields: ["content"],
     buildKeyFields: ["updated_at"],

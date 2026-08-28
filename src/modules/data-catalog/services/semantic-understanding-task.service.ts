@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
 
 export type SemanticUnderstandingTaskStatus =
@@ -18,7 +19,6 @@ export type SemanticUnderstandingTaskSummary = {
   agentId: string;
   agentTaskId?: string;
   applied: boolean;
-  appliedTime?: number;
   applyMode: "dry_run" | "fill_empty" | "force";
   catalogId: string;
   catalogName?: string;
@@ -48,7 +48,6 @@ export type BackendSemanticUnderstandingTaskSummary = {
   agent_id: string;
   agent_task_id?: string;
   applied: boolean;
-  applied_time?: number;
   apply_mode: SemanticUnderstandingTaskSummary["applyMode"];
   catalog_id: string;
   catalog_name?: string;
@@ -89,7 +88,6 @@ export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderst
     confidenceThreshold: task.confidence_threshold,
     confidence: task.confidence,
     applied: task.applied,
-    appliedTime: task.applied_time,
     creator: { id: task.creator.id, name: task.creator.name, type: task.creator.type },
     createTime: task.create_time,
     startTime: task.start_time,
@@ -105,7 +103,7 @@ export type SemanticUnderstandingTaskListFilters = {
   resourceId?: string;
   scope?: SemanticUnderstandingTaskSummary["scope"];
   sort?: "create_time" | "start_time" | "finish_time";
-  status?: SemanticUnderstandingTaskSummary["status"];
+  statuses?: SemanticUnderstandingTaskSummary["status"][];
 };
 
 export function buildSemanticUnderstandingTaskListParams(
@@ -123,7 +121,9 @@ export function buildSemanticUnderstandingTaskListParams(
     scope: filters.scope,
     catalog_id: filters.catalogId,
     resource_id: filters.resourceId,
-    status: filters.status === "succeeded" ? "completed" : filters.status,
+    status: filters.statuses?.length
+      ? filters.statuses.map((status) => (status === "succeeded" ? "completed" : status))
+      : undefined,
     apply_mode: filters.applyMode,
     applied: filters.applied,
   };
@@ -149,10 +149,115 @@ export type CreateSemanticUnderstandingTaskPayload = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-let mockTasks: Array<SemanticUnderstandingTask & { resourceId: string }> = [];
+const mockNow = Date.now();
+
+function semanticMockText(key: string) {
+  return i18n.t(`dataCatalog.taskManagement.semantic.mock.${key}`);
+}
+
+let mockTasks: SemanticUnderstandingTask[] = [
+  {
+    id: "semantic-task-001",
+    scope: "resource",
+    catalogId: "cat-001",
+    catalogName: semanticMockText("customerCatalog"),
+    resourceId: "res-001",
+    resourceName: "customers",
+    agentId: "resource-semantic-understanding",
+    agentTaskId: "agent-task-001",
+    status: "succeeded",
+    applyMode: "fill_empty",
+    confidenceThreshold: 0.75,
+    confidence: 0.94,
+    applied: true,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 45,
+    startTime: mockNow - 1000 * 60 * 44,
+    finishTime: mockNow - 1000 * 60 * 40,
+    confidenceDetailJson: JSON.stringify({
+      quality: { resource_effective: true, field_effective: 3, field_total: 5 },
+      warnings: [semanticMockText("phoneInsufficientSamplesWarning")],
+    }),
+    applyDetailJson: JSON.stringify({
+      field_details: [
+        { name: "customer_id", status: "updated", updated: ["description", "semantic_type"] },
+        { name: "email", status: "updated", updated: ["description"] },
+        { name: "phone", status: "skipped", reasons: [semanticMockText("insufficientSamples")] },
+      ],
+    }),
+    input: JSON.stringify({ resource_id: "res-001", include_sample_rows: false }),
+    inputHash: "sha256:5eecaf1d9d8f0a8c",
+    resultJson: JSON.stringify({
+      quality: { resource_effective: true, field_effective: 3, field_total: 5 },
+      summary: semanticMockText("customerSemanticSummary"),
+    }),
+  },
+  {
+    id: "semantic-task-002",
+    scope: "catalog",
+    catalogId: "cat-002",
+    catalogName: "Knowledge Search",
+    agentId: "catalog-semantic-understanding",
+    agentTaskId: "agent-task-002",
+    status: "running",
+    applyMode: "dry_run",
+    confidenceThreshold: 0.75,
+    confidence: 0,
+    applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 8,
+    startTime: mockNow - 1000 * 60 * 7,
+    input: JSON.stringify({ catalog_id: "cat-002", include_sample_rows: false }),
+  },
+];
+
+export async function listSemanticUnderstandingTasks(
+  filters: SemanticUnderstandingTaskListFilters,
+  window: { limit: number; offset: number },
+): Promise<{ items: SemanticUnderstandingTaskSummary[]; total: number }> {
+  if (useMock) {
+    const filtered = mockTasks.filter(
+      (task) =>
+        (filters.scope === undefined || task.scope === filters.scope) &&
+        (filters.catalogId === undefined || task.catalogId === filters.catalogId) &&
+        (filters.resourceId === undefined || task.resourceId === filters.resourceId) &&
+        (!filters.statuses?.length || filters.statuses.includes(task.status)) &&
+        (filters.applyMode === undefined || task.applyMode === filters.applyMode) &&
+        (filters.applied === undefined || task.applied === filters.applied),
+    );
+    const timeOf = (task: SemanticUnderstandingTask) =>
+      filters.sort === "start_time"
+        ? task.startTime ?? 0
+        : filters.sort === "finish_time"
+          ? task.finishTime ?? 0
+          : task.createTime;
+    const direction = filters.direction === "asc" ? 1 : -1;
+    const sorted = [...filtered].sort((left, right) => (timeOf(left) - timeOf(right)) * direction);
+    return {
+      items: sorted.slice(window.offset, window.offset + window.limit),
+      total: sorted.length,
+    };
+  }
+
+  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>(
+    "/vega-backend/v1/semantic-understanding-tasks",
+    {
+      params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window),
+      paramsSerializer: { indexes: null },
+    },
+  );
+  return {
+    items: response.data.entries.map(mapSemanticUnderstandingTaskSummary),
+    total: response.data.total_count,
+  };
+}
 
 export async function listResourceSemanticUnderstandingTasks(resourceId: string): Promise<SemanticUnderstandingTaskSummary[]> {
-  if (useMock) return mockTasks.filter((task) => task.resourceId === resourceId).sort((left, right) => right.createTime - left.createTime);
+  if (useMock) {
+    return [...mockTasks]
+      .filter((task) => task.resourceId === resourceId)
+      .sort((left, right) => right.createTime - left.createTime);
+  }
   const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[] }>("/vega-backend/v1/semantic-understanding-tasks", { params: { resource_id: resourceId, scope: "resource", limit: 100, offset: 0, sort: "create_time", direction: "desc" } });
   return response.data.entries.map(mapSemanticUnderstandingTaskSummary);
 }

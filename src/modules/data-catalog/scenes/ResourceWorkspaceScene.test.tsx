@@ -17,6 +17,7 @@ const subscribeMockDbMock = vi.hoisted(() => vi.fn());
 
 vi.mock("antd", () => ({
   Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
+  Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
   Tabs: ({ activeKey, items }: { activeKey: string; items: Array<{ children: React.ReactNode; key: string }> }) => (
     <>{items.find((item) => item.key === activeKey)?.children}</>
@@ -35,10 +36,14 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn() },
+    message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
     runtimeConfig: { currentUser: { permissions: [] } },
   }),
+}));
+
+vi.mock("@/framework/permission/PermissionGate", () => ({
+  PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
@@ -70,7 +75,9 @@ vi.mock("@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel", 
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
+  discoverCatalogResource: vi.fn(),
   getCatalogResource: getCatalogResourceMock,
+  setCatalogResourceEnabled: vi.fn(),
 }));
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   listBuildTasks: listBuildTasksMock,

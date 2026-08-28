@@ -145,6 +145,11 @@
   white-space: nowrap;
 }
 
+.statusTagSuccess { border-color: #bbf7d0 !important; background: #f0fdf4 !important; color: #15803d !important; }
+.statusTagProcessing { border-color: #bfdbfe !important; background: #eff6ff !important; color: #1d4ed8 !important; }
+.statusTagError { border-color: #fecaca !important; background: #fef2f2 !important; color: #dc2626 !important; }
+.statusTagNeutral { border-color: #e2e8f0 !important; background: #f8fafc !important; color: #64748b !important; }
+
 .ellipsisLink {
   display: inline-flex !important;
   align-items: center;

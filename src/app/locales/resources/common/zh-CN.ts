@@ -46,6 +46,8 @@ export const commonZhCN = {
     advancedConfig: "高级配置",
     enabled: "启用",
     disabled: "停用",
+    enable: "启用",
+    disable: "停用",
     success: "操作成功",
     required: "该字段不能为空",
     notFound: "未找到对应数据",

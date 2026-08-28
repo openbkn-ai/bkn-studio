@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,6 +44,14 @@ import {
 } from "@/shared/catalog";
 
 import styles from "./DataConnectListScene.module.css";
+
+const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
+  degraded: "orange",
+  healthy: "success",
+  offline: "error",
+  unchecked: "default",
+  unhealthy: "error",
+};
 
 function hasCascadeImpact(impact: CatalogDeletionImpact) {
   return (
@@ -106,7 +114,7 @@ export function DataConnectListScene({
   onOpenDetail,
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
@@ -380,42 +388,55 @@ export function DataConnectListScene({
     {
       dataIndex: "name",
       title: t("dataConnect.name"),
+      width: 200,
       render: (_, record) => <span className={styles.nameTitle}>{record.name}</span>,
     },
     {
       dataIndex: "connectorType",
       title: t("dataConnect.connectorType"),
+      width: 150,
       render: (value: string) => <span>{connectorTypeMap.get(value) ?? value}</span>,
     },
     {
       dataIndex: "mode",
       title: t("common.mode"),
+      width: 96,
       render: (value: string) => <span className={styles.modeText}>{t(`dataConnect.modes.${value}`)}</span>,
     },
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (_, record) => <span>{record.enabled ? t("common.enabled") : t("common.disabled")}</span>,
+      width: 96,
+      render: (_, record) => (
+        <Tag color={record.enabled ? "success" : "default"}>
+          {record.enabled ? t("common.enabled") : t("common.disabled")}
+        </Tag>
+      ),
     },
     {
       dataIndex: "healthStatus",
       title: t("common.healthStatus"),
-      render: (value: DataConnectRecord["healthStatus"]) => <span>{t(`dataConnect.healthStatuses.${value}`)}</span>,
+      width: 112,
+      render: (value: DataConnectRecord["healthStatus"]) => (
+        <Tag color={HEALTH_STATUS_COLORS[value]}>{t(`dataConnect.healthStatuses.${value}`)}</Tag>
+      ),
     },
     {
       dataIndex: "updaterName",
       title: t("dataConnect.updater"),
+      width: 120,
     },
     {
       dataIndex: "updateTime",
       title: t("dataConnect.updateTime"),
-      render: (value: DataConnectRecord["updateTime"]) =>
-        formatCatalogTime(value, i18n.resolvedLanguage ?? i18n.language),
+      width: 176,
+      render: (value: DataConnectRecord["updateTime"]) => formatCatalogTime(value),
     },
     {
       key: "actions",
       title: t("common.actions"),
       align: "center",
+      fixed: "right",
       width: 84,
       render: (_, record) => {
         const moreMenu = buildActionMoreMenu(record);
@@ -541,6 +562,7 @@ export function DataConnectListScene({
               locale={{ emptyText: t("dataConnect.empty") }}
               pagination={false}
               rowKey="id"
+              scroll={{ x: 1034 }}
             />
           )}
         </TableSurface>

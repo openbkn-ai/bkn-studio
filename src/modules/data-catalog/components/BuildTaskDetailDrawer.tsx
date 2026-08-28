@@ -10,10 +10,10 @@ import { Alert, Descriptions, Drawer, Empty } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
-import { formatCount } from "@/modules/data-catalog/lib/format";
+import { formatCount, formatTaskDateTime } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -21,6 +21,8 @@ import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/da
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import sharedStyles from "./shared.module.css";
+
+const EMPTY_VALUE = "-";
 
 type BuildTaskDetailDrawerProps = {
   onClose: () => void;
@@ -31,7 +33,7 @@ type BuildTaskDetailDrawerProps = {
 
 function renderFieldList(fields: string[]) {
   if (fields.length === 0) {
-    return "—";
+    return EMPTY_VALUE;
   }
   return (
     <span className={sharedStyles.chipRow}>
@@ -46,7 +48,7 @@ function renderFieldList(fields: string[]) {
 
 function renderFieldTags(fields: string[]) {
   if (fields.length === 0) {
-    return "—";
+    return EMPTY_VALUE;
   }
   return (
     <span className={sharedStyles.chipRow}>
@@ -62,13 +64,13 @@ function renderFieldTags(fields: string[]) {
 function renderFulltextAnalyzers(analyzers: Record<string, string>) {
   const entries = Object.entries(analyzers);
   if (entries.length === 0) {
-    return "—";
+    return EMPTY_VALUE;
   }
   return (
     <span className={sharedStyles.chipRow}>
       {entries.map(([field, analyzer]) => (
         <span className={sharedStyles.slugChip} key={field}>
-          {field}: {analyzer}
+          {field}: {analyzer || EMPTY_VALUE}
         </span>
       ))}
     </span>
@@ -78,13 +80,13 @@ function renderFulltextAnalyzers(analyzers: Record<string, string>) {
 function renderEmbeddingConfigs(task: BuildTask) {
   const entries = Object.entries(task.embeddingConfigs ?? {});
   if (entries.length === 0) {
-    return "—";
+    return EMPTY_VALUE;
   }
   return (
-    <span className={styles.fieldList}>
+    <span className={sharedStyles.chipRow}>
       {entries.map(([field, config]) => (
-        <span className={styles.fieldText} key={field}>
-          {field}: {config.modelId || "—"}
+        <span className={sharedStyles.slugChip} key={field}>
+          {field}: {config.modelId || EMPTY_VALUE}
           {config.modelName ? ` (${config.modelName})` : ""}
           {config.dimensions > 0 ? ` · ${config.dimensions}d` : ""}
         </span>
@@ -95,10 +97,10 @@ function renderEmbeddingConfigs(task: BuildTask) {
 
 function formatSyncedMarkValue(value: unknown) {
   if (typeof value === "string") {
-    return value;
+    return value || EMPTY_VALUE;
   }
   if (value === null) {
-    return "null";
+    return EMPTY_VALUE;
   }
   if (typeof value === "object") {
     return JSON.stringify(value);
@@ -109,12 +111,12 @@ function formatSyncedMarkValue(value: unknown) {
   if (typeof value === "symbol") {
     return value.description ?? "symbol";
   }
-  return "undefined";
+  return EMPTY_VALUE;
 }
 
 function renderSyncedMark(mark?: string) {
-  if (!mark) {
-    return "—";
+  if (!mark?.trim()) {
+    return EMPTY_VALUE;
   }
 
   try {
@@ -190,10 +192,18 @@ export function BuildTaskDetailDrawer({
   }, [open, taskId]);
 
   if (!task) {
-    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.detail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
+    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.buildDetail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
   }
 
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
+  const executeTypeLabel =
+    task.mode === "batch"
+      ? task.executeType === "incremental"
+        ? t("dataCatalog.build.executeIncremental")
+        : task.executeType === "full"
+          ? t("dataCatalog.build.executeFull")
+          : null
+      : null;
   const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
 
   return (
@@ -206,21 +216,31 @@ export function BuildTaskDetailDrawer({
         body: { padding: 16 },
         header: { padding: "12px 16px" },
       }}
-      title={`${t("dataCatalog.task.detail")} · ${task.id}`}
+      title={`${t("dataCatalog.task.buildDetail")} · ${task.id}`}
       width={560}
     >
       <div className={styles.drawerContent}>
         <section className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("common.status")}</h3>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
           <div className={styles.statusRow}>
             <span
               className={[
                 sharedStyles.tag,
-                task.mode === "batch" ? sharedStyles.modeBatch : sharedStyles.modeStreaming,
+                sharedStyles.taskRunning,
               ].join(" ")}
             >
               {t(`dataCatalog.modes.${task.mode}`)}
             </span>
+            {executeTypeLabel ? (
+              <span
+                className={[
+                  sharedStyles.tag,
+                  sharedStyles.taskRunning,
+                ].join(" ")}
+              >
+                {executeTypeLabel}
+              </span>
+            ) : null}
             <span
               className={[
                 sharedStyles.tag,
@@ -267,43 +287,41 @@ export function BuildTaskDetailDrawer({
         </section>
 
         <section className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.modalTitle")}</h3>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-            <Descriptions.Item label={t("dataCatalog.build.resource")}>
-              {resource?.name ?? task.resourceName ?? task.resourceId}
+            <Descriptions.Item label="ID">{task.id || EMPTY_VALUE}</Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
+              {task.catalogName || task.catalogId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.catalogId")}>
+              {task.catalogId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.resource")}>
+              {resource?.name || task.resourceName || task.resourceId || EMPTY_VALUE}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.resourceId")}>
-              {task.resourceId}
+              {task.resourceId || EMPTY_VALUE}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.resource.catalog")}>
-              {task.catalogName ?? task.catalogId ?? "—"}
+            <Descriptions.Item label={t("dataCatalog.build.mode")}>
+              {t(`dataCatalog.modes.${task.mode}`)}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
-              {task.creator?.name || task.creator?.id || "—"}
+            <Descriptions.Item label={t("dataCatalog.build.executeType")}>
+              {executeTypeLabel ?? EMPTY_VALUE}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.buildKeyFields")}>
               {renderFieldTags(task.buildKeyFields)}
             </Descriptions.Item>
-            {task.executeType ? (
-              <Descriptions.Item label={t("dataCatalog.build.executeType")}>
-                {task.executeType === "incremental"
-                  ? t("dataCatalog.build.executeIncremental")
-                  : t("dataCatalog.build.executeFull")}
-              </Descriptions.Item>
-            ) : null}
             <Descriptions.Item label={t("dataCatalog.task.fields.fulltextFields")}>
               {renderFieldList(task.fulltextFields)}
             </Descriptions.Item>
-            {task.fulltextFields.length > 0 ? (
-              <Descriptions.Item label={t("dataCatalog.task.fields.fulltextAnalyzer")}>
-                {renderFulltextAnalyzers(
-                  task.fulltextAnalyzers ??
-                    Object.fromEntries(
-                      task.fulltextFields.map((field) => [field, task.fulltextAnalyzer || "standard"]),
-                    ),
-                )}
-              </Descriptions.Item>
-            ) : null}
+            <Descriptions.Item label={t("dataCatalog.task.fields.fulltextAnalyzer")}>
+              {renderFulltextAnalyzers(
+                task.fulltextAnalyzers ??
+                  Object.fromEntries(
+                    task.fulltextFields.map((field) => [field, task.fulltextAnalyzer || "standard"]),
+                  ),
+              )}
+            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.embeddingFields")}>
               {renderFieldList(task.embeddingFields)}
             </Descriptions.Item>
@@ -320,20 +338,35 @@ export function BuildTaskDetailDrawer({
                   ),
               })}
             </Descriptions.Item>
+          </Descriptions>
+        </section>
+
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.execution")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
             <Descriptions.Item label={t("dataCatalog.task.fields.syncedMark")}>
               {renderSyncedMark(task.syncedMark)}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataConnect.createTime")}>
-              {task.createTime ? formatDateTime(task.createTime) : "-"}
-            </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>
-              {task.startTime ? formatDateTime(task.startTime) : "—"}
+              {formatDateTimeYmdHms(task.startTime)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.fields.lastProgressTime")}>
-              {task.lastProgressTime ? formatDateTime(task.lastProgressTime) : "—"}
+              {formatDateTimeYmdHms(task.lastProgressTime)}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
-              {task.finishTime ? formatDateTime(task.finishTime) : "—"}
+              {formatDateTimeYmdHms(task.finishTime)}
+            </Descriptions.Item>
+          </Descriptions>
+        </section>
+
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.audit")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
+              {task.creator?.name || task.creator?.id || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataConnect.createTime")}>
+              {formatTaskDateTime(task.createTime)}
             </Descriptions.Item>
           </Descriptions>
         </section>
