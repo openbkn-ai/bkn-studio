@@ -161,7 +161,7 @@
 
 /* Color overrides for dark containers, such as AntD's black tooltip. */
 .dark a {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-link-inverse);
 }
 .dark code {
   background: color-mix(in srgb, var(--color-text-inverse) 18%, transparent);

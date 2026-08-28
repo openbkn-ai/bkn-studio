@@ -32,6 +32,7 @@
   --color-text-faint: #b4bed0;
   --color-text-link: #1d4ed8;
   --color-text-link-hover: #1e40af;
+  --color-text-link-inverse: #93c5fd;
   --color-text-disabled: #94a3b8;
   --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgba(255, 255, 255, 0.75);
@@ -113,6 +114,7 @@
   --color-text-faint: #64748b;
   --color-text-link: #93c5fd;
   --color-text-link-hover: #bfdbfe;
+  --color-text-link-inverse: #93c5fd;
   --color-text-disabled: #64748b;
   --color-text-inverse: #ffffff;
   --color-text-inverse-muted: rgba(255, 255, 255, 0.75);
