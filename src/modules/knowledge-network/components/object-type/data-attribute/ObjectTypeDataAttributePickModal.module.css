@@ -10,7 +10,7 @@
 }
 
 .clearButton {
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font-size: 14px;
 }

@@ -59,7 +59,7 @@
 }
 
 .technicalId {
-  color: #8a97aa;
+  color: var(--color-text-tertiary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
@@ -98,7 +98,7 @@
 }
 
 .clampedCell .technicalId {
-  color: #8a97aa;
+  color: var(--color-text-tertiary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
@@ -224,8 +224,8 @@
 
 .archivePanel {
   align-items: center;
-  background: #fafbfc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: flex;
   gap: 24px;
   justify-content: space-between;

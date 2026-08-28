@@ -147,7 +147,7 @@
 
 .requiredMark {
   margin-right: 2px;
-  color: #ef4444;
+  color: var(--color-error-text);
   font-family: SimSun, sans-serif;
   line-height: 1;
 }

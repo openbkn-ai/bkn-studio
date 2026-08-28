@@ -46,7 +46,7 @@
 
 .detailSubsectionTitle {
   margin: 14px 0 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -66,7 +66,7 @@
 
 .failureContent b,
 .failureSuggestion {
-  color: #92400e;
+  color: var(--color-warning-text);
 }
 
 .failureContent b {
@@ -75,7 +75,7 @@
 
 .failureRaw {
   margin-top: 2px;
-  color: #9a6a15;
+  color: var(--color-warning-text);
 }
 
 .failureRaw summary {
@@ -147,7 +147,7 @@
 
 .rawDetail summary {
   cursor: pointer;
-  color: #2563eb;
+  color: var(--color-text-link);
 }
 
 .rawDetail pre {

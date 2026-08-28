@@ -39,7 +39,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #99a2b2;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 

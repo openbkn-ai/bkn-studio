@@ -7,8 +7,8 @@
 
 .instantCard {
   align-items: center;
-  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
-  border: 1px solid #d6e4ff;
+  background: linear-gradient(135deg, var(--color-primary-100) 0%, var(--color-bg-surface) 100%);
+  border: 1px solid var(--color-primary-border);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -19,7 +19,7 @@
 }
 
 .instantValue {
-  color: #1677ff;
+  color: var(--color-text-link);
   font-size: 36px;
   font-weight: 600;
   line-height: 1.2;

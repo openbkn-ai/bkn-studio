@@ -36,7 +36,7 @@
   width: 48px;
   height: 48px;
   border: 1px solid var(--color-border);
-  background: var(--admin-color-surface, #fff);
+  background: var(--admin-color-surface);
   color: var(--admin-color-primary, #1e3a8a);
   font-size: 18px;
   font-weight: 600;
@@ -94,7 +94,7 @@
 
 .formSectionCard {
   padding: 12px 14px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 0;
   background: var(--color-bg-surface);
 }
@@ -121,7 +121,7 @@
 .fieldGroup + .fieldGroup {
   margin-top: 4px;
   padding-top: 16px;
-  border-top: 1px dashed #e8edf3;
+  border-top: 1px dashed var(--color-divider);
 }
 
 .fieldGroup {
@@ -198,8 +198,8 @@
 
 .controlledRolePanel {
   padding: 12px;
-  border: 1px solid #dbe7f5;
-  background: #f8fbff;
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-50);
 }
 
 .controlledRolePanel + .rolePanel,
@@ -267,9 +267,9 @@
 }
 
 .roleOptionSelected {
-  border-color: var(--admin-color-link, #1d4ed8);
-  background: var(--admin-color-link-bg, #eff6ff);
-  box-shadow: inset 3px 0 0 var(--admin-color-link, #1d4ed8);
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-100);
+  box-shadow: inset 3px 0 0 var(--color-primary-600);
 }
 
 .roleOptionCheck {

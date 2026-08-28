@@ -206,7 +206,7 @@
 }
 
 .quickStatArrow {
-  color: #126ee3;
+  color: var(--color-text-link);
   flex-shrink: 0;
   font-size: 12px;
   opacity: 0;
@@ -216,7 +216,7 @@
 }
 
 .quickStatError {
-  color: #cf1322;
+  color: var(--color-error-text);
   font-size: 14px;
   font-weight: 500;
 }
@@ -305,7 +305,7 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 18px;
   flex-shrink: 0;
 }
@@ -370,7 +370,7 @@
   align-items: center;
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   display: inline-flex;
   flex-shrink: 0;
@@ -380,7 +380,7 @@
 }
 
 .cardHeaderLink:hover {
-  color: #0958d9;
+  color: var(--color-text-link);
 }
 
 .dataViewFields {
@@ -403,7 +403,7 @@
 }
 
 .dataViewValue {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
@@ -411,10 +411,10 @@
 }
 
 .dataViewCode {
-  background: #f7f8fa;
-  border: 1px solid #eef0f3;
+  background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: inline-block;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 13px;
@@ -426,10 +426,10 @@
 
 .dataViewStatus {
   align-self: flex-start;
-  background: #f7f8fa;
-  border: 1px solid #eef0f3;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: inline-block;
   font-size: 13px;
   line-height: 1.5;
@@ -474,7 +474,7 @@
 .tableLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   max-width: 100%;
@@ -486,20 +486,20 @@
 }
 
 .tableLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .conceptGroupLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   padding: 0;
 }
 
 .conceptGroupLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .rowActions {
@@ -531,9 +531,9 @@
 
 .resourceIconMetric {
   align-items: center;
-  background: #eef4ff;
+  background: var(--color-primary-100);
   border-radius: 4px;
-  color: #126ee3;
+  color: var(--color-text-link);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 12px;
@@ -545,9 +545,9 @@
 
 .resourceIconOperator {
   align-items: center;
-  background: #fff7e6;
+  background: var(--color-warning-bg);
   border-radius: 4px;
-  color: #fa8c16;
+  color: var(--color-warning-text);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 12px;
@@ -569,11 +569,11 @@
 
 .keyBadge {
   border-radius: 4px;
-  color: #126ee3;
+  color: var(--color-text-link);
   font-size: 12px;
   line-height: 1;
   padding: 2px 6px;
-  background: #f1f6fd;
+  background: var(--color-primary-50);
 }
 
 .loadingState {

@@ -174,17 +174,17 @@
 
 .resourceTag {
   margin-inline-end: 0 !important;
-  border-color: #b9c9ff;
+  border-color: var(--color-primary-border);
   border-radius: 0;
-  background: #f8faff;
-  color: #3157d5;
+  background: var(--color-primary-50);
+  color: var(--color-text-link);
 }
 
-.statusTagSuccess { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
-.statusTagWarning { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
-.statusTagNeutral { border-color: #e2e8f0; background: #f8fafc; color: #64748b; }
-.statusTagProcessing { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
-.statusTagError { border-color: #fecaca; background: #fef2f2; color: #dc2626; }
+.statusTagSuccess { border-color: var(--color-success-border); background: var(--color-success-bg); color: var(--color-success-text); }
+.statusTagWarning { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning-text); }
+.statusTagNeutral { border-color: var(--color-border); background: var(--color-interface-panel-bg); color: var(--color-text-secondary); }
+.statusTagProcessing { border-color: var(--color-info-border); background: var(--color-info-bg); color: var(--color-text-link); }
+.statusTagError { border-color: var(--color-error-border); background: var(--color-error-bg); color: var(--color-error-text); }
 
 .descriptionInput {
   display: inline-flex;
@@ -230,7 +230,7 @@
 }
 
 .detailLabel {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
 }

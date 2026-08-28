@@ -78,10 +78,10 @@
 
 .sectionMeta {
   padding: 2px 8px;
-  border: 1px solid #d8e6ff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 3px;
-  background: #f3f7ff;
-  color: #3d5f96;
+  background: var(--color-primary-100);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
@@ -164,7 +164,7 @@
 }
 
 .errorText {
-  color: #d4380d;
+  color: var(--color-error-text);
   font-size: 12px;
   line-height: 16px;
 }
@@ -173,7 +173,7 @@
   margin-top: 10px;
   border-color: #99c5ff;
   border-radius: 4px;
-  background: #edf6ff;
+  background: var(--color-info-bg);
 }
 
 .summary :global(.ant-alert-message) {

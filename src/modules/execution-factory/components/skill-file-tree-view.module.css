@@ -124,7 +124,7 @@
   flex: none;
   padding: 0 6px;
   border: 1px solid var(--color-border);
-  background: var(--color-fill-quaternary, #f5f5f5);
+  background: var(--color-fill-quaternary);
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;

@@ -407,7 +407,7 @@
 }
 
 .frtReq {
-  color: #ef4444;
+  color: var(--color-error-text);
 }
 
 .frtRoleHint {
@@ -418,7 +418,7 @@
 }
 
 .frtRoleHint:hover {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtAll {
@@ -428,7 +428,7 @@
 }
 
 .frtAllOn {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtTable tbody tr {
@@ -519,7 +519,7 @@
 .frtConfigDash {
   display: block;
   padding: 0 8px;
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
   text-align: center;
 }
 
@@ -544,7 +544,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--color-text-inverse);
   transition: background-color 0.15s, border-color 0.15s;
 }
 
@@ -560,15 +560,15 @@
 }
 
 .frtBoxEmb:not(.frtBoxDisabled):hover .frtMark {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtBoxKey:not(.frtBoxDisabled):hover .frtMark {
-  color: #e8973a;
+  color: var(--color-warning-text);
 }
 
 .frtBoxFt:not(.frtBoxDisabled):hover .frtMark {
-  color: #16a394;
+  color: var(--color-success-text);
 }
 
 .frtBoxChecked .frtMark svg {
@@ -593,7 +593,7 @@
 .frtEmpty {
   padding: 22px 14px;
   text-align: center;
-  color: #8b98ac;
+  color: var(--color-text-tertiary);
   font-size: 12.5px;
 }
 
@@ -603,7 +603,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 6px;
-  color: #8b98ac;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.7;
 }

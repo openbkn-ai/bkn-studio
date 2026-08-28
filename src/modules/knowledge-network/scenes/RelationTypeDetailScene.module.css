@@ -35,7 +35,7 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 18px;
   flex-shrink: 0;
 }

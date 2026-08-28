@@ -239,18 +239,18 @@
 
 .catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) .switcherIcon {
   font-size: 10px;
-  color: #a3afc2;
+  color: var(--color-text-tertiary);
 }
 
 .catalogTree :global(.ant-tree-treenode:has(.catalogNodeTitle)) .switcherIcon {
   font-size: 10px;
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
 }
 
 .catalogTree :global(.ant-tree-node-selected) .rootIcon,
 .catalogTree :global(.ant-tree-node-selected) .catalogIcon,
 .catalogTree :global(.ant-tree-node-selected) .logicalIcon {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .treeActionBtn:global(.ant-btn) {
@@ -277,14 +277,14 @@
 }
 
 .scopeGroupName {
-  color: #334155;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
 }
 
 .scopeLeafName {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 11px;
   font-weight: 400;
   line-height: 1.2;
@@ -292,12 +292,12 @@
 
 .catalogTree :global(.ant-tree-treenode:has(.scopeGroupTitle)) .switcherIcon {
   font-size: 9px;
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
 }
 
 .treeMiniTag {
   padding: 0 6px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;
@@ -310,15 +310,15 @@
 }
 
 .treeMiniTagScan {
-  color: #1d4ed8;
-  border-color: #bfd2ff;
-  background: #f5f8ff;
+  color: var(--color-text-link);
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-50);
 }
 
 .treeMiniTagEnabled {
-  color: #15803d;
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
 }
 
 .treeActionBtnVisible {
@@ -328,7 +328,7 @@
   width: 18px;
   height: 18px;
   margin-left: auto;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
   color: var(--color-text-secondary);
   font-size: 11px;
@@ -337,9 +337,9 @@
 }
 
 .treeActionBtnVisible:hover {
-  border-color: #fecaca;
-  color: #dc2626;
-  background: #fef2f2;
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .logicalModalRoot :global(.ant-modal-content),

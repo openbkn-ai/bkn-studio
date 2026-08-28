@@ -83,14 +83,14 @@
 }
 
 .tab:hover {
-  color: #1d4ed8;
+  color: var(--color-text-link);
   background: var(--color-hover);
 }
 
 .tabActive {
   border-bottom-color: #2e68ff;
   background: var(--color-bg-surface);
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .tabIcon {
@@ -186,9 +186,9 @@
   width: 20px;
   height: 20px;
   place-items: center;
-  border: 1px solid #bfd0ea;
-  background: #eef4ff;
-  color: #1d4ed8;
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
   font-size: 11px;
   font-weight: 700;
 }
@@ -207,18 +207,18 @@
 }
 
 .sdkKeyNote > :first-child {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkKeyNote a,
 .sdkPackageLink {
-  color: #1d4ed8;
+  color: var(--color-text-link);
   text-decoration: none;
 }
 
 .sdkKeyNote a:hover,
 .sdkPackageLink:hover {
-  color: #1742b4;
+  color: var(--color-text-link);
 }
 
 .sdkContent {
@@ -320,13 +320,13 @@
 
 .sdkExampleTab:hover {
   background: var(--color-hover);
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkExampleTabActive {
   border-color: #bcd0f7;
   background: var(--color-primary-100);
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkCodeBlock {
@@ -375,7 +375,7 @@
 
 .sdkCopyButton:hover {
   border-color: #9bb9ff;
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkCode {

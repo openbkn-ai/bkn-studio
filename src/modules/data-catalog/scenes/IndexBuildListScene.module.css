@@ -318,7 +318,7 @@
 
   border-bottom: 1px solid #e8edf3;
 
-  color: #172033;
+  color: var(--color-text-primary);
 
   font-size: 14px;
 
@@ -372,7 +372,7 @@
 
   background: transparent;
 
-  color: #1d4ed8;
+  color: var(--color-text-link);
 
   font-size: 14px;
 
@@ -386,7 +386,7 @@
 
 .textLink:hover {
 
-  color: #1e40af;
+  color: var(--color-text-link);
 
   text-decoration: underline;
 
@@ -418,7 +418,7 @@
 
 .tableSurface :global(.ant-table-tbody > tr:hover > td) {
 
-  background: #f7faff;
+  background: var(--color-hover);
 
 }
 

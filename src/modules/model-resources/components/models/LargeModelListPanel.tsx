@@ -224,7 +224,7 @@ export function LargeModelListPanel() {
   const handleSetDefault = (record: LlmModel) => {
     void modal.confirm({
       title: t("modelResources.models.setDefaultLlmConfirmTitle"),
-      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      icon: <ExclamationCircleFilled style={{ color: "var(--color-error-text)" }} />,
       content: t("modelResources.models.setDefaultLlmConfirmContent", { name: record.modelName }),
       okText: t("modelResources.models.setDefaultConfirmOk"),
       okButtonProps: { danger: true },
@@ -243,7 +243,7 @@ export function LargeModelListPanel() {
   const handleUnsetDefault = (record: LlmModel) => {
     void modal.confirm({
       title: t("modelResources.models.unsetDefaultLlmConfirmTitle"),
-      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      icon: <ExclamationCircleFilled style={{ color: "var(--color-error-text)" }} />,
       content: t("modelResources.models.unsetDefaultLlmConfirmContent", { name: record.modelName }),
       okText: t("modelResources.models.unsetDefaultConfirmOk"),
       okButtonProps: { danger: true },

@@ -65,19 +65,19 @@
 }
 
 .contextMeta {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .contextDivider {
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
 }
 
 .textLink {
   padding: 0;
   border: 0;
   background: none;
-  color: #1d4ed8;
+  color: var(--color-text-link);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -155,7 +155,7 @@
 }
 
 .pageTabs :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .tabPanel {

@@ -81,7 +81,7 @@
 
 .requiredMark {
   margin-right: 2px;
-  color: #ef4444;
+  color: var(--color-error-text);
   font-family: SimSun, sans-serif;
   line-height: 1;
 }
@@ -135,7 +135,7 @@
 
 .cronPresetsLabel {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -159,13 +159,13 @@
 
 .cronPreset:hover {
   border-color: #2e68ff;
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .cronPresetActive {
   border-color: #2e68ff;
   background: var(--color-primary-100);
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .strategyOption {
@@ -181,7 +181,7 @@
 }
 
 .strategyHint {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
   white-space: normal;

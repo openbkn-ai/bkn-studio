@@ -41,6 +41,6 @@
 
 .primaryKeyIcon,
 .titleIcon {
-  color: #2e68ff;
+  color: var(--color-text-link);
   font-size: 14px;
 }

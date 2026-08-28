@@ -188,7 +188,7 @@ export function McpToolImportedSection({ value = [], onChange }: McpToolImported
           size="small"
         />
       </Spin>
-      <div style={{ color: "rgba(0,0,0,0.45)", fontSize: 13, marginTop: 8 }}>
+      <div style={{ color: "var(--color-text-tertiary)", fontSize: 13, marginTop: 8 }}>
         {t("executionFactory.mcpToolImportedSelectedCount", { count: value.length })}
       </div>
     </>

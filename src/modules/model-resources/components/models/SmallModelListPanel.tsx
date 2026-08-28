@@ -188,7 +188,7 @@ export function SmallModelListPanel() {
   const handleSetDefault = (record: SmallModel) => {
     void modal.confirm({
       title: t("modelResources.models.setDefaultConfirmTitle"),
-      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      icon: <ExclamationCircleFilled style={{ color: "var(--color-error-text)" }} />,
       content: t("modelResources.models.setDefaultConfirmContent", {
         name: record.modelName,
         type: record.modelType,
@@ -210,7 +210,7 @@ export function SmallModelListPanel() {
   const handleUnsetDefault = (record: SmallModel) => {
     void modal.confirm({
       title: t("modelResources.models.unsetDefaultConfirmTitle"),
-      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
+      icon: <ExclamationCircleFilled style={{ color: "var(--color-error-text)" }} />,
       content: t("modelResources.models.unsetDefaultConfirmContent", {
         name: record.modelName,
         type: record.modelType,

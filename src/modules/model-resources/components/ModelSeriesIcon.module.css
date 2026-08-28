@@ -14,7 +14,7 @@
   height: 24px;
   border-radius: 2px;
   background: rgba(22, 119, 255, 0.12);
-  color: #1677ff;
+  color: var(--color-text-link);
   font-size: 12px;
   font-weight: 600;
 }

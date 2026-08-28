@@ -161,23 +161,23 @@
 
 /* Color overrides for dark containers, such as AntD's black tooltip. */
 .dark a {
-  color: #91caff;
+  color: var(--color-text-tertiary);
 }
 .dark code {
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--color-text-inverse) 18%, transparent);
 }
 .dark pre {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 16%, transparent);
 }
 .dark blockquote {
-  border-left-color: rgba(255, 255, 255, 0.35);
-  color: rgba(255, 255, 255, 0.75);
+  border-left-color: color-mix(in srgb, var(--color-text-inverse) 35%, transparent);
+  color: var(--color-text-inverse-muted);
 }
 .dark th,
 .dark td {
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: color-mix(in srgb, var(--color-text-inverse) 30%, transparent);
 }
 .dark th {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
 }

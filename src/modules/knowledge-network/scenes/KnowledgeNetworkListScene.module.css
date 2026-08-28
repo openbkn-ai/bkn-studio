@@ -212,7 +212,7 @@
 }
 
 .deleteModalRoot :global(.ant-modal-title) {
-  color: #1f2937;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 700;
   line-height: 32px;
@@ -227,7 +227,7 @@
   top: 18px;
   width: 36px;
   height: 36px;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
 }
 
 .deleteModalRoot :global(.ant-modal-close):hover {
@@ -249,17 +249,17 @@
   padding: 14px 18px;
   border: 1px solid #91caff;
   border-radius: 18px;
-  background: #eff6ff;
+  background: var(--color-info-bg);
   margin-bottom: 28px;
 }
 
 .deleteAlert :global(.ant-alert-icon) {
   margin-top: 3px;
-  color: #2563eb;
+  color: var(--color-text-link);
 }
 
 .deleteAlert :global(.ant-alert-message) {
-  color: #334155;
+  color: var(--color-text-secondary);
   font-size: 15px;
   line-height: 32px;
 }
@@ -280,8 +280,8 @@
 }
 
 .deleteModalFooter :global(.ant-btn-default) {
-  border-color: #dbe3ef;
-  color: #334155;
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
 }
 

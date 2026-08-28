@@ -33,7 +33,7 @@
 .previewNodeIcon {
   align-items: center;
   border-radius: 2px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   font-size: 18px;
   height: 36px;
@@ -73,10 +73,10 @@
 
 .previewBridge {
   align-items: center;
-  background: #eaf3ff;
-  border: 1px solid #bfdbff;
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-border);
   border-radius: 2px;
-  color: #1d6fe8;
+  color: var(--color-text-link);
   display: inline-flex;
   font-size: 18px;
   height: 36px;
@@ -104,7 +104,7 @@
 }
 
 .previewBridgeResource {
-  background: #ecfdf3;
-  border-color: #b7ebc6;
-  color: #16a34a;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
 }

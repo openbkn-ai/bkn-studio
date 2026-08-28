@@ -62,7 +62,7 @@
   align-items: center;
   background: #1677ff;
   border-radius: 50%;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex: 0 0 22px;
   font-size: 12px;
@@ -112,7 +112,7 @@
 }
 
 .helpIcon:hover {
-  color: #1677ff;
+  color: var(--color-text-link);
 }
 
 .loadError {

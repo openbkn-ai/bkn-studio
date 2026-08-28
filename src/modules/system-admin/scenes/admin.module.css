@@ -6,29 +6,29 @@
  */
 
 :global(:root) {
-  --admin-color-text: #111827;
-  --admin-color-heading: #172033;
-  --admin-color-secondary: #4b5563;
-  --admin-color-muted: #6b7280;
-  --admin-color-placeholder: #94a3b8;
-  --admin-color-border: #d9e0ea;
-  --admin-color-border-soft: #e8edf3;
-  --admin-color-surface: #ffffff;
-  --admin-color-surface-muted: #f3f6fa;
-  --admin-color-surface-hover: #f7faff;
-  --admin-color-surface-subtle: #f7f9fc;
-  --admin-color-primary: #1e3a8a;
-  --admin-color-link: #1d4ed8;
-  --admin-color-link-hover: #1e40af;
-  --admin-color-link-bg: #eff6ff;
-  --admin-color-link-border: #bfdbfe;
-  --admin-color-danger: #dc2626;
-  --admin-color-success: #15803d;
-  --admin-color-success-bg: #ecfdf3;
-  --admin-color-success-border: #bbf7d0;
-  --admin-color-warning: #b45309;
-  --admin-color-warning-bg: #fffbeb;
-  --admin-color-warning-border: #fde68a;
+  --admin-color-text: var(--color-text-primary);
+  --admin-color-heading: var(--color-text-primary);
+  --admin-color-secondary: var(--color-text-secondary);
+  --admin-color-muted: var(--color-text-muted);
+  --admin-color-placeholder: var(--color-text-muted);
+  --admin-color-border: var(--color-border);
+  --admin-color-border-soft: var(--color-divider);
+  --admin-color-surface: var(--color-bg-surface);
+  --admin-color-surface-muted: var(--color-interface-panel-bg);
+  --admin-color-surface-hover: var(--color-hover);
+  --admin-color-surface-subtle: var(--color-interface-panel-bg);
+  --admin-color-primary: var(--color-primary-700);
+  --admin-color-link: var(--color-text-link);
+  --admin-color-link-hover: var(--color-text-link-hover);
+  --admin-color-link-bg: var(--color-primary-100);
+  --admin-color-link-border: var(--color-primary-border);
+  --admin-color-danger: var(--color-error-text);
+  --admin-color-success: var(--color-success-text);
+  --admin-color-success-bg: var(--color-success-bg);
+  --admin-color-success-border: var(--color-success-border);
+  --admin-color-warning: var(--color-warning-text);
+  --admin-color-warning-bg: var(--color-warning-bg);
+  --admin-color-warning-border: var(--color-warning-border);
   --admin-font-size-body: 14px;
   --admin-font-size-meta: 13px;
   --admin-font-size-tag: 12px;
@@ -158,13 +158,13 @@
 .adminOverlay :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
   border-color: var(--admin-color-primary);
   background: var(--admin-color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .adminOverlay :global(.ant-btn-primary:not(:disabled):hover) {
   border-color: var(--admin-color-link-hover);
   background: var(--admin-color-link-hover);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .adminOverlay :global(.ant-btn-primary:disabled),
@@ -289,9 +289,7 @@
   align-items: flex-start;
   padding: 16px;
   border: 1px solid var(--admin-color-border);
-  background:
-    linear-gradient(180deg, rgb(248 251 255 / 92%) 0%, #ffffff 74%),
-    linear-gradient(90deg, rgb(25 80 161 / 8%), transparent 48%);
+  background: var(--admin-color-surface);
 }
 
 .licenseHeroIcon {
@@ -339,7 +337,7 @@
   margin-top: 12px;
   padding: 8px 10px;
   border: 1px dashed var(--admin-color-link-border);
-  background: rgb(239 246 255 / 66%);
+  background: var(--admin-color-link-bg);
 }
 
 .licenseFingerprintInline span {
@@ -372,7 +370,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--admin-color-border-soft);
-  background: #ffffff;
+  background: var(--admin-color-surface);
 }
 
 .licenseIdentityItem {
@@ -433,7 +431,7 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--admin-color-border-soft);
-  background: rgb(255 255 255 / 86%);
+  background: var(--admin-color-surface);
 }
 
 .licenseMetricItem span {
@@ -462,7 +460,7 @@
   min-width: 0;
   padding: 14px;
   border: 1px solid var(--admin-color-border);
-  background: #ffffff;
+  background: var(--admin-color-surface);
 }
 
 .licenseSectionHead {
@@ -524,7 +522,7 @@
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--admin-color-border);
-  background: #ffffff;
+  background: var(--admin-color-surface);
 }
 
 .licenseModeHead {
@@ -677,8 +675,8 @@
   min-height: 40px;
   padding: 8px;
   border: 1px dashed var(--admin-color-border);
-  background: #ffffff;
-  color: var(--admin-color-heading);
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-size: 12px;
   line-height: 1.6;
   overflow-wrap: anywhere;

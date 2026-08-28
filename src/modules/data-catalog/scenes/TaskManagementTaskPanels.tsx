@@ -93,10 +93,10 @@ function DiscoverTaskPriority({ priority }: { priority: number }) {
 
 function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStatus }) {
   const { t } = useTranslation();
-  const style = status === "completed" ? { background: "#f0fdf4", borderColor: "#bbf7d0", color: "#15803d" }
-    : status === "failed" ? { background: "#fef2f2", borderColor: "#fecaca", color: "#dc2626" }
-      : status === "cancelled" ? { background: "#f8fafc", borderColor: "#e2e8f0", color: "#64748b" }
-        : { background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" };
+  const style = status === "completed" ? { background: "var(--color-success-bg)", borderColor: "var(--color-success-border)", color: "var(--color-success-text)" }
+    : status === "failed" ? { background: "var(--color-error-bg)", borderColor: "var(--color-error-border)", color: "var(--color-error-text)" }
+      : status === "cancelled" ? { background: "var(--color-interface-panel-bg)", borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }
+        : { background: "var(--color-info-bg)", borderColor: "var(--color-info-border)", color: "var(--color-text-link)" };
   return <Tag style={style}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</Tag>;
 }
 

@@ -51,7 +51,7 @@
   margin-bottom: 10px;
   border-color: #99c5ff;
   border-radius: 4px;
-  background: #edf6ff;
+  background: var(--color-info-bg);
 }
 
 .remainAlert :global(.ant-alert-message) {

@@ -159,7 +159,7 @@
 .objectIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   height: 24px;
   justify-content: center;

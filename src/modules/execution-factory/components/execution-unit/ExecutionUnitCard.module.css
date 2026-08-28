@@ -59,7 +59,7 @@
 }
 
 .cardMenuButton:hover {
-  color: #2e68ff;
+  color: var(--color-text-link);
   background: rgba(46, 104, 255, 0.08);
 }
 
@@ -110,9 +110,9 @@
 
 /* 代码函数与 OpenAPI 同处「工具集」，用紫色区分。 */
 .iconBoxFunction {
-  border-color: #ece3ff;
-  background: #f3eeff;
-  color: #7c3aed;
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-bg);
+  color: var(--color-text-accent);
 }
 
 .titleContent {
@@ -173,7 +173,7 @@
   padding: 0 6px;
   border-radius: 0;
   background: var(--color-primary-700);
-  color: #ffffff;
+  color: var(--color-text-inverse);
   font-size: 11px;
   line-height: 18px;
 }
@@ -184,7 +184,7 @@
 
 .metaDivider {
   flex-shrink: 0;
-  color: #d0d5dd;
+  color: var(--color-text-tertiary);
 }
 
 .description {
@@ -193,7 +193,7 @@
   margin-top: 4px;
   margin-bottom: 0 !important;
   overflow: hidden;
-  color: #4b5563;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 19px;
 }
@@ -218,7 +218,7 @@
   gap: 12px;
   margin: auto 0 0;
   padding-top: 9px;
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 19px;
   border-top: 1px solid #e8edf3;

@@ -63,7 +63,7 @@
 
 .resourceDeleteConfirmModal :global(.ant-modal-confirm-body > .anticon) {
   margin-inline-end: 14px;
-  color: #f5a623;
+  color: var(--color-warning-text);
   font-size: 24px;
   line-height: 28px;
 }
@@ -104,13 +104,13 @@
 }
 
 .resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous) {
-  border-color: #ff4d5a;
-  background: #ff4d5a;
+  border-color: var(--color-error-text);
+  background: var(--color-error-text);
 }
 
 .resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous:hover) {
-  border-color: #f03d4a;
-  background: #f03d4a;
+  border-color: var(--color-error-border);
+  background: var(--color-error-border);
 }
 
 .form {

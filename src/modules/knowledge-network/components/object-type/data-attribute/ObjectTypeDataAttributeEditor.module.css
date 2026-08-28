@@ -36,7 +36,7 @@
 .infoIcon {
   align-items: center;
   border-radius: 0;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;
@@ -129,7 +129,7 @@
 }
 
 .infoKeyIconTitle {
-  color: #faad14;
+  color: var(--color-warning-text);
   font-size: 14px;
 }
 
@@ -185,7 +185,7 @@
 .keyPanelClear {
   background: none;
   border: 0;
-  color: #1677ff;
+  color: var(--color-text-link);
   cursor: pointer;
   font-size: 14px;
   margin-top: 8px;
@@ -322,7 +322,7 @@
 }
 
 .panelActionIcon {
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font-size: 16px;
 }
@@ -352,7 +352,7 @@
 }
 
 .invalidNameIcon {
-  color: #ff4d4f;
+  color: var(--color-error-text);
   flex-shrink: 0;
   font-size: 12px;
   margin-left: 4px;
@@ -389,12 +389,12 @@
 }
 
 .panelItemHighlighted {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemHighlighted:hover {
-  background: #d6ebff;
+  background: var(--color-hover);
 }
 
 .panelItemMapped {
@@ -404,17 +404,17 @@
 /* Pending selection must stay visible even when the field is already mapped. */
 .panelItemMapped.panelItemHighlighted,
 .panelItemMapped.panelItemHighlighted:hover {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemSelected {
-  background: #e6f4ff;
+  background: var(--color-primary-100);
   box-shadow: inset 3px 0 0 #1677ff;
 }
 
 .panelItemSelected:hover {
-  background: #d6ebff;
+  background: var(--color-hover);
 }
 
 .panelItemDimmed {
@@ -515,7 +515,7 @@
 }
 
 .rowActionIconActiveTitle {
-  color: #faad14;
+  color: var(--color-warning-text);
 }
 
 .canvasControls {
@@ -550,7 +550,7 @@
 }
 
 .canvasControlButton:hover {
-  color: #1677ff;
+  color: var(--color-text-link);
 }
 
 .attrDrawer {

@@ -41,8 +41,8 @@ export function getCapabilityStatusTagStyle(status: string): CSSProperties {
   }
   // Unpublished, like draft, is currently not callable rather than an error state, so use a neutral background.
   return {
-    background: "#f1f5f9",
-    borderColor: "#cbd5e1",
+    background: "var(--color-fill-secondary)",
+    borderColor: "var(--color-border)",
     color: "var(--color-text-secondary)",
   };
 }

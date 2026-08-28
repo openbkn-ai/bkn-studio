@@ -324,7 +324,7 @@ export function SmallModelFormModal({
               <span>
                 {t("modelResources.models.modal.defaultModel")}
                 <Tooltip title={t("modelResources.models.modal.smallDefaultModelHint")}>
-                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
                 </Tooltip>
               </span>
             }

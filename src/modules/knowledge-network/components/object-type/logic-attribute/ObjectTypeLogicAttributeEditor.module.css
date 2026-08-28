@@ -26,7 +26,7 @@
 .infoIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;
@@ -108,7 +108,7 @@
 }
 
 .rowError {
-  color: #ff4d4f;
+  color: var(--color-error-text);
   font-size: 12px;
   line-height: 18px;
   margin-top: 4px;
@@ -131,9 +131,9 @@
 
 .resourceIconMetric {
   align-items: center;
-  background: #eef4ff;
+  background: var(--color-primary-100);
   border-radius: 4px;
-  color: #126ee3;
+  color: var(--color-text-link);
   display: inline-flex;
   font-size: 12px;
   font-weight: 600;
@@ -144,9 +144,9 @@
 
 .resourceIconOperator {
   align-items: center;
-  background: #fff7e6;
+  background: var(--color-warning-bg);
   border-radius: 4px;
-  color: #fa8c16;
+  color: var(--color-warning-text);
   display: inline-flex;
   font-size: 12px;
   font-weight: 600;
@@ -184,5 +184,5 @@
 }
 
 .propertyTable :global(.ant-table-row).errorRow > td {
-  background: #fff2f0;
+  background: var(--color-error-bg);
 }

@@ -32,7 +32,7 @@
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--network-accent) 42%, #d8e2ee);
+  border-color: color-mix(in srgb, var(--network-accent) 42%, var(--color-border));
   background: var(--color-bg-surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
@@ -60,9 +60,9 @@
   justify-content: center;
   width: 42px;
   height: 42px;
-  border: 1px solid color-mix(in srgb, var(--network-accent) 18%, #e1e8f0);
+  border: 1px solid color-mix(in srgb, var(--network-accent) 18%, var(--color-border));
   border-radius: 6px;
-  background: color-mix(in srgb, var(--network-accent) 7%, #f7f9fc);
+  background: color-mix(in srgb, var(--network-accent) 7%, var(--color-hover));
   font-size: 18px;
   font-weight: 500;
 }
@@ -137,7 +137,7 @@
 }
 
 .moreButton:hover {
-  color: #2e68ff;
+  color: var(--color-text-link);
   background: rgba(46, 104, 255, 0.08);
 }
 
@@ -180,6 +180,6 @@
 
 .metaItem :global(.anticon) {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }

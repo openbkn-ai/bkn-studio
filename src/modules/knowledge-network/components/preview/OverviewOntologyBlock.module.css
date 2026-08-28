@@ -127,8 +127,8 @@
 .badge {
   padding: 0 7px;
   border-radius: 0;
-  background: #eef2f9;
-  color: #5b6472;
+  background: var(--color-fill-secondary);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -142,8 +142,8 @@
 .hubTag {
   padding: 0 6px;
   border-radius: 0;
-  background: #fff4e0;
-  color: #d97706;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 10px;
   font-weight: 600;
 }
@@ -156,7 +156,7 @@
 }
 
 .muted {
-  color: #b0b7c3;
+  color: var(--color-text-tertiary);
 }
 
 .relPath {
@@ -168,19 +168,19 @@
 .chip {
   padding: 1px 9px;
   border-radius: 0;
-  border: 1px solid color-mix(in srgb, var(--nc) 35%, #ffffff);
-  background: color-mix(in srgb, var(--nc) 12%, #ffffff);
-  color: color-mix(in srgb, var(--nc) 70%, #1f2329);
+  border: 1px solid color-mix(in srgb, var(--nc) 35%, var(--color-bg-raised));
+  background: color-mix(in srgb, var(--nc) 12%, var(--color-bg-raised));
+  color: color-mix(in srgb, var(--nc) 70%, var(--color-text-primary));
   font-size: 12px;
   white-space: nowrap;
 }
 
 .relArrow {
-  color: #b0b7c3;
+  color: var(--color-text-tertiary);
 }
 
 .resourceName {
-  color: #2e68ff;
+  color: var(--color-text-link);
   font-family: var(--code-font, monospace);
   font-size: 12.5px;
 }
@@ -190,10 +190,10 @@
     grid-template-columns: 1fr;
   }
 
-  .sectionCardSecondary {
+.sectionCardSecondary {
     padding-top: 20px;
     padding-left: 2px;
     border-left: 0;
-    border-top: 1px solid #e5eaf2;
+    border-top: 1px solid var(--color-border);
   }
 }

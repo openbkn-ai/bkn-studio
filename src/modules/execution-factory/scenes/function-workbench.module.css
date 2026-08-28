@@ -98,7 +98,7 @@
 }
 
 .backButton:hover {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
 }
 
 .titleIcon {
@@ -220,7 +220,7 @@
 .langBadge {
   padding: 0 6px;
   border: 1px solid var(--color-border);
-  background: var(--color-fill-quaternary, #f5f5f5);
+  background: var(--color-fill-quaternary);
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;
@@ -286,8 +286,7 @@
   color: var(--color-text-primary);
 }
 
-/* --color-primary-bg / --color-primary 在 global.css 里没有定义，一直靠字面量兜底；
-   改指真 token，工具详情的 api 徽标才能跟这里保持同一档色。 */
+/* Use the shared primary tokens so API badges match the selected-control color scale. */
 .fxBadge {
   display: inline-flex;
   align-items: center;
@@ -398,13 +397,13 @@
 
 .editorIcon {
   display: inline-flex;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
 }
 
 .editorTitle {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 
@@ -430,7 +429,7 @@
 
 .templateOptionTitle {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .templateOptionDesc {
@@ -484,12 +483,12 @@
 }
 
 .tab:hover {
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
 }
 
 .tabActive {
-  color: var(--color-primary, #2563eb);
-  border-bottom-color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-600);
   font-weight: 600;
 }
 
@@ -531,15 +530,15 @@
 }
 
 .segmentActive {
-  background: var(--color-primary-bg, #eef2ff);
-  color: var(--color-primary, #2563eb);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-600);
   font-weight: 600;
 }
 
 .dockHint {
   margin-top: 12px;
   padding: 8px 10px;
-  background: var(--color-info-bg, #eff6ff);
+  background: var(--color-info-bg);
   color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.7;
@@ -582,8 +581,8 @@
 }
 
 .depRemove:hover {
-  color: var(--color-error-text, #dc2626);
-  background: var(--color-error-bg, #fef2f2);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .depAdd {
@@ -622,7 +621,7 @@
 .consoleTitle {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .consoleNote {
@@ -712,7 +711,7 @@
 .metricValue {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
   white-space: nowrap;
@@ -787,13 +786,13 @@
 
 .railAdd.railAdd:hover {
   border-style: solid;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
 }
 
 .dirtyBadge {
   padding: 2px 8px;
-  background: var(--color-warning-bg, #fffbeb);
-  color: var(--color-warning-text, #b45309);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 12px;
   white-space: nowrap;
 }

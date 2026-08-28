@@ -11,7 +11,10 @@
   --color-primary-700: #1e3a8a;
   --color-primary-600: #2563eb;
   --color-primary-500: #3b82f6;
+  --color-primary-300: #93b4ff;
   --color-primary-100: #eaf1ff;
+  --color-primary-50: #f5f8ff;
+  --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #bfd2ff;
 
   /* Neutral */
@@ -19,18 +22,32 @@
   --color-bg-layout: var(--color-bg-page);
   --color-bg-sidebar: var(--color-bg-surface);
   --color-bg-surface: #ffffff;
+  --color-bg-raised: #ffffff;
   --color-fill-secondary: #eef2f7;
+  --color-fill-quaternary: #f5f5f5;
   --color-text-primary: #111827;
   --color-text-secondary: #475569;
   --color-text-tertiary: #94a3b8;
   --color-text-muted: #94a3b8;
   --color-text-faint: #b4bed0;
+  --color-text-link: #1d4ed8;
+  --color-text-link-hover: #1e40af;
+  --color-text-disabled: #94a3b8;
+  --color-text-inverse: #ffffff;
+  --color-text-inverse-muted: rgba(255, 255, 255, 0.75);
+  --color-text-accent: #6d28d9;
+  --color-text-teal: #0f766e;
   --color-border: #e5eaf2;
   --color-divider: #eef2f7;
+  --color-border-secondary: var(--color-divider);
   --color-hover: #f2f6fc;
+  --color-accent-bg: #f5f2ff;
+  --color-accent-border: #b9a7ec;
+  --color-accent-solid: #7c3aed;
 
   /* Semantic */
   --color-success-bg: #ecfdf3;
+  --color-success-bg-hover: #dcfce7;
   --color-success-text: #15803d;
   --color-success-border: #bbf7d0;
   --color-info-bg: #eff6ff;
@@ -76,24 +93,41 @@
   --color-primary-700: #60a5fa;
   --color-primary-600: #3b82f6;
   --color-primary-500: #60a5fa;
+  --color-primary-300: #3b5f8c;
   --color-primary-100: #1e3a5f;
+  --color-primary-50: #15233b;
+  --color-primary-bg: var(--color-primary-100);
   --color-primary-border: #3b5f8c;
 
   --color-bg-page: #0f172a;
   --color-bg-layout: var(--color-bg-page);
   --color-bg-sidebar: #121c2e;
   --color-bg-surface: #172033;
+  --color-bg-raised: #1b2638;
   --color-fill-secondary: #243047;
+  --color-fill-quaternary: #202c40;
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #cbd5e1;
   --color-text-tertiary: #94a3b8;
   --color-text-muted: #94a3b8;
   --color-text-faint: #64748b;
+  --color-text-link: #93c5fd;
+  --color-text-link-hover: #bfdbfe;
+  --color-text-disabled: #64748b;
+  --color-text-inverse: #ffffff;
+  --color-text-inverse-muted: rgba(255, 255, 255, 0.75);
+  --color-text-accent: #c4b5fd;
+  --color-text-teal: #5eead4;
   --color-border: #334155;
   --color-divider: #273548;
+  --color-border-secondary: var(--color-divider);
   --color-hover: #243047;
+  --color-accent-bg: #30214d;
+  --color-accent-border: #7c5bc0;
+  --color-accent-solid: #8b5cf6;
 
   --color-success-bg: #123527;
+  --color-success-bg-hover: #164a32;
   --color-success-text: #86efac;
   --color-success-border: #226340;
   --color-info-bg: #172f57;
@@ -199,6 +233,10 @@ select {
   flex: 0 0 auto;
   object-fit: contain;
   object-position: left center;
+}
+
+:root[data-theme="dark"] .console-brand-logo {
+  filter: brightness(0) invert(1);
 }
 
 .console-brand-row {
@@ -350,7 +388,7 @@ select {
   height: 34px;
   border-radius: 12px;
   background: linear-gradient(145deg, #2563eb, #1d4ed8);
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .console-user-copy {
@@ -596,16 +634,16 @@ select {
 }
 
 .console-edition-badge-professional {
-  border-color: #b9a7ec;
-  background: #f5f2ff;
-  color: #4c35a0;
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-bg);
+  color: var(--color-text-accent);
 }
 
 .console-edition-badge-enterprise,
 .console-edition-badge-industry {
-  border-color: #f0c674;
-  background: #fffaed;
-  color: #96701a;
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .console-edition-badge-community {
@@ -617,24 +655,24 @@ select {
 /* 企业档的升级面走紫,与版本页那张企业卡同源;专业档保持暖金。两处颜色对不上,客户会
    以为看的是两种东西。 */
 .console-upgrade-hero.is-enterprise {
-  border-color: #f0c674;
-  background: linear-gradient(180deg, #fffaed 0%, #fff 100%);
+  border-color: var(--color-warning-border);
+  background: linear-gradient(180deg, var(--color-warning-bg) 0%, var(--color-bg-surface) 100%);
 }
 
 .console-upgrade-hero.is-enterprise .console-upgrade-hero-icon {
-  color: #d99b1c;
+  color: var(--color-warning-text);
 }
 
 .console-upgrade-enterprise .ant-btn-primary {
   border-color: #d99b1c;
   background: #d99b1c;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .console-upgrade-enterprise .ant-btn-primary:hover {
   border-color: #b8830f;
   background: #b8830f;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 /* 整页锁:真实页面照常渲染在底下,盖一层蒙版。看得见这块功能长什么样,才知道在买什么。 */
@@ -690,9 +728,9 @@ select {
   display: flex;
   gap: 14px;
   padding: 16px;
-  border: 1px solid #b9a7ec;
+  border: 1px solid var(--color-accent-border);
   border-radius: 0;
-  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
+  background: linear-gradient(180deg, var(--color-accent-bg) 0%, var(--color-bg-surface) 100%);
 }
 
 .console-upgrade-hero-icon {
@@ -703,8 +741,8 @@ select {
   height: 40px;
   flex: 0 0 auto;
   border-radius: 0;
-  background: #fff;
-  color: #6d4fd0;
+  background: var(--color-bg-raised);
+  color: var(--color-text-accent);
   font-size: 18px;
 }
 
@@ -793,13 +831,13 @@ select {
 
 /* 菜单里的档位名也带档位色,和徽标、版本页卡片是同一套认知。 */
 .console-user-menu-edition-professional {
-  color: #4c35a0;
+  color: var(--color-text-accent);
   font-weight: 600;
 }
 
 .console-user-menu-edition-enterprise,
 .console-user-menu-edition-industry {
-  color: #96701a;
+  color: var(--color-warning-text);
   font-weight: 600;
 }
 
@@ -915,7 +953,7 @@ select {
 }
 
 .knowledge-workspace-brand-title {
-  color: #4a4a4a;
+  color: var(--color-text-primary);
   font-size: 22px;
   font-weight: 700;
   line-height: 1;
@@ -925,13 +963,13 @@ select {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 1;
 }
 
 .knowledge-workspace-breadcrumb-home {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
 }
 
@@ -939,16 +977,16 @@ select {
   border: 0;
   padding: 0;
   background: transparent;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .knowledge-workspace-breadcrumb-separator {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
 }
 
 .knowledge-workspace-breadcrumb-current {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
@@ -959,7 +997,7 @@ select {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #1f2329;
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 
@@ -971,7 +1009,7 @@ select {
   height: 36px;
   border-radius: 999px;
   background: #8a94a8;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .knowledge-workspace-user-name {
@@ -980,7 +1018,7 @@ select {
 }
 
 .knowledge-workspace-user-caret {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -1127,13 +1165,13 @@ select {
 .status-button-primary {
   border-color: var(--color-primary-700);
   background: var(--color-primary-700);
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .status-button-primary:hover {
   border-color: #17306f;
   background: #17306f;
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .page-container {
@@ -1200,13 +1238,13 @@ select {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.88),
     0 18px 40px rgba(54, 102, 227, 0.14);
-  color: #4d7eff;
+  color: var(--color-text-link);
   font-size: 42px;
 }
 
 .empty-state-title {
   margin: 0;
-  color: #1d2942;
+  color: var(--color-text-primary);
   font-size: 24px;
   font-weight: 700;
 }
@@ -1214,7 +1252,7 @@ select {
 .empty-state-description {
   max-width: 460px;
   margin: 0;
-  color: #64748d;
+  color: var(--color-text-secondary);
   line-height: 1.7;
 }
 

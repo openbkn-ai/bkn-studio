@@ -24,13 +24,13 @@
 }
 
 .objectLink:hover .objectName {
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .objectIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;
@@ -80,7 +80,7 @@
 .resourceFieldLabel {
   background: #5381df;
   border-radius: 2px;
-  color: #fff;
+  color: var(--color-text-inverse);
   flex-shrink: 0;
   font-size: 12px;
   line-height: 20px;

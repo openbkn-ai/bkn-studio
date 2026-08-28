@@ -50,10 +50,10 @@
 
 .catalogTag {
   margin-inline-end: 0 !important;
-  border-color: #b9c9ff;
+  border-color: var(--color-primary-border);
   border-radius: 0;
-  background: #f8faff;
-  color: #3157d5;
+  background: var(--color-primary-50);
+  color: var(--color-text-link);
 }
 
 .sectionHeader {
@@ -109,14 +109,14 @@
 }
 
 .configLabel {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
 }
 
 .configHint {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.5;
 }

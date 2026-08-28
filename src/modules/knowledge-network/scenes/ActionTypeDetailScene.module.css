@@ -43,7 +43,7 @@
 .sideNavItemActive {
   background: var(--color-primary-100);
   border-color: #1677ff;
-  color: #1677ff;
+  color: var(--color-text-link);
   font-weight: 500;
 }
 

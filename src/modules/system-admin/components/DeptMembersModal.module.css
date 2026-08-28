@@ -25,7 +25,7 @@
 
 .memberPanel {
   border: 1px solid var(--admin-color-border, #d9e0ea);
-  background: var(--admin-color-surface, #fff);
+  background: var(--color-bg-raised);
   overflow: hidden;
 }
 
@@ -34,11 +34,11 @@
 }
 
 .memberTable :global(.ant-table) {
-  background: var(--admin-color-surface, #fff);
+  background: var(--color-bg-raised);
 }
 
 .memberTable :global(.ant-table-thead > tr > th) {
-  background: var(--admin-color-surface-muted, #f3f6fa);
+  background: var(--color-fill-secondary);
 }
 
 .addButton {

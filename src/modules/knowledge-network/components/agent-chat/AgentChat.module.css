@@ -87,11 +87,11 @@
 /* Comparison report modal (portals cannot access .page's cascaded variables, so define them locally). */
 .rptRoot {
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --accent: #2e68ff;
+  --accent: var(--color-primary-500);
   --line: rgba(15, 30, 54, 0.1);
-  --txt: #1e293b;
-  --txt2: #5b6678;
-  --faint: #9aa6bd;
+  --txt: var(--color-text-primary);
+  --txt2: var(--color-text-secondary);
+  --faint: var(--color-text-tertiary);
   --code: #f4f7fd;
   --chip: #eef2f9;
   font-size: 13px;
@@ -179,14 +179,14 @@
   color: var(--txt2);
 }
 .rptBest {
-  color: #15803d;
+  color: var(--color-success-text);
   font-weight: 700;
 }
 .rptOkTxt {
-  color: #15803d;
+  color: var(--color-success-text);
 }
 .rptErrTxt {
-  color: #d63a3a;
+  color: var(--color-error-text);
   font-weight: 600;
 }
 .rptToolTags {
@@ -204,7 +204,7 @@
   padding: 2px 7px;
 }
 .rptToolErr {
-  color: #d63a3a;
+  color: var(--color-error-text);
   background: rgba(214, 58, 58, 0.09);
 }
 
@@ -272,7 +272,7 @@
   border: 0;
   border-radius: 7px;
   background: var(--accent);
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
@@ -335,7 +335,7 @@
 .paneTitleHl {
   background: linear-gradient(135deg, #2762ff, #7b5cff);
   border-color: transparent;
-  color: #fff;
+  color: var(--color-text-inverse);
   box-shadow: 0 3px 10px rgba(91, 90, 255, 0.35);
 }
 
@@ -431,11 +431,11 @@
 /* The default white selected state is too subtle; use a solid primary color with white text. The switch thumb uses the same color. */
 .targetSeg :global(.ant-segmented-item-selected) {
   background: var(--accent);
-  color: #fff;
+  color: var(--color-text-inverse);
   font-weight: 600;
 }
 .targetSeg :global(.ant-segmented-item-selected:hover) {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .targetSeg :global(.ant-segmented-thumb) {
   background: var(--accent);
@@ -581,10 +581,10 @@
 }
 .configDrawer {
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  --txt: #12213b;
-  --txt2: #526076;
-  --faint: #8b97aa;
-  --accent: #2e68ff;
+  --txt: var(--color-text-primary);
+  --txt2: var(--color-text-secondary);
+  --faint: var(--color-text-tertiary);
+  --accent: var(--color-primary-500);
   --line: #e4eaf3;
   --chip: #eef3ff;
   --code: #f3f6fb;
@@ -792,7 +792,7 @@
 }
 .msgBot .avatar {
   background: linear-gradient(135deg, #2762ff, #7b5cff);
-  color: #fff;
+  color: var(--color-text-inverse);
   box-shadow: 0 4px 12px rgba(91, 90, 255, 0.3);
 }
 .bubble {
@@ -848,7 +848,7 @@
   flex: 0 0 auto;
   font-size: 8.5px;
   font-weight: 700;
-  color: #1f4fd4;
+  color: var(--color-text-link);
   background: rgba(46, 104, 255, 0.13);
   border-radius: 3px;
   padding: 2px 5px;
@@ -993,7 +993,7 @@
 }
 .sendBtn {
   background: var(--accent);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .sendBtn:disabled {
   opacity: 0.5;
@@ -1106,7 +1106,7 @@
   min-width: 0;
   font-size: 12.5px;
   line-height: 1.6;
-  color: #a32626;
+  color: var(--color-error-text);
   word-break: break-word;
 }
 .errBtn {
@@ -1116,7 +1116,7 @@
   border-radius: 5px;
   padding: 1px 7px;
   font-size: 11.5px;
-  color: #a32626;
+  color: var(--color-error-text);
   cursor: pointer;
 }
 .errBtn:hover {
@@ -1350,7 +1350,7 @@
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;

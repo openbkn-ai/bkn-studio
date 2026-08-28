@@ -88,11 +88,11 @@
 }
 
 .metric.warn .metricValue {
-  color: #ad6800;
+  color: var(--color-warning-text);
 }
 
 .metric.bad .metricValue {
-  color: #cf1322;
+  color: var(--color-error-text);
 }
 
 .toolbar {
@@ -101,7 +101,7 @@
   align-items: center;
   gap: 12px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .filter {
@@ -142,39 +142,39 @@
 .page .tag,
 .drawerBody .tag {
   margin: 0;
-  border: 1px solid #d9e0ea;
-  background: #f7f9fc;
-  color: #4b5563;
+  border: 1px solid var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 20px;
 }
 
 .page .tagGood,
 .drawerBody .tagGood {
-  border-color: #cfe6d6;
-  background: #f4faf6;
-  color: #2f7d4f;
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .page .tagWarn,
 .drawerBody .tagWarn {
-  border-color: #f0dcb4;
-  background: #fdf8ee;
-  color: #9a6614;
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .page .tagBad,
 .drawerBody .tagBad {
-  border-color: #f1cfcc;
-  background: #fdf4f3;
-  color: #b23c34;
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
 }
 
 .page .tagBusy,
 .drawerBody .tagBusy {
-  border-color: #c9d9f0;
-  background: #f4f8fd;
-  color: #2a5aa8;
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-text-link);
 }
 
 .sessionRow {

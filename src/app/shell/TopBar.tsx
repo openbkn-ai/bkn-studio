@@ -20,7 +20,7 @@ import { useTranslation } from "react-i18next";
 import { useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
-import openBknLogo from "@/assets/brand/openbkn-logo.png";
+import openBknLogo from "@/assets/brand/openbkn-logo-compact.webp";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";

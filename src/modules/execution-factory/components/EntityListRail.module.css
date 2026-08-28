@@ -76,7 +76,7 @@
   padding: 14px 16px;
   border: 1px solid var(--color-border);
   border-radius: 0;
-  background: var(--color-bg-surface);
+  background: var(--color-bg-raised);
   cursor: pointer;
 }
 
@@ -148,7 +148,7 @@
 .tag {
   padding: 0 6px;
   border: 1px solid var(--color-border);
-  background: var(--color-fill-quaternary, #f5f5f5);
+  background: var(--color-fill-quaternary);
   color: var(--color-text-secondary);
   font-size: 11px;
   line-height: 18px;
@@ -156,9 +156,9 @@
 }
 
 .tagWarning {
-  border-color: var(--color-warning-border, #ffd591);
-  background: var(--color-warning-bg, #fffbe6);
-  color: var(--color-warning-text, #b45309);
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .footer {

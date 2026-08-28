@@ -136,12 +136,12 @@
 
 .iconButtonActive {
   background: rgba(18, 110, 227, 0.08);
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .iconButtonActive:hover {
   background: rgba(18, 110, 227, 0.12);
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .tableCard {
@@ -179,7 +179,7 @@
   width: 24px;
   height: 24px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 14px;
   flex-shrink: 0;
 }
@@ -204,15 +204,15 @@
 }
 
 .relatedIconObject {
-  color: #126ee3;
+  color: var(--color-text-link);
 }
 
 .relatedIconRelation {
-  color: #08979c;
+  color: var(--color-text-teal);
 }
 
 .relatedIconAction {
-  color: #90c06b;
+  color: var(--color-success-text);
 }
 
 .tableTags {
@@ -262,7 +262,7 @@
 .tableLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   max-width: 100%;
@@ -274,7 +274,7 @@
 }
 
 .tableLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .emptyPanel {
@@ -480,7 +480,7 @@
   height: 28px;
   border: 1px solid var(--color-border);
   border-radius: 0;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 14px;
 }
 
@@ -530,15 +530,15 @@
 }
 
 .relationTypePage .objectIconSquare {
-  color: #08979c;
+  color: var(--color-text-teal);
 }
 
 .actionTypePage .objectIconSquare {
-  color: #90c06b;
+  color: var(--color-success-text);
 }
 
 .metricPage .objectIconSquare {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .metricPage .noticeBanner {

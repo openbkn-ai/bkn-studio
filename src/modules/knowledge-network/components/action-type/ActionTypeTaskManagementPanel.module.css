@@ -37,12 +37,12 @@
 }
 
 .successIcon {
-  color: #52c41a;
+  color: var(--color-success-text);
   margin-right: 4px;
 }
 
 .failedIcon {
-  color: #ff4d4f;
+  color: var(--color-error-text);
   margin-right: 4px;
 }
 

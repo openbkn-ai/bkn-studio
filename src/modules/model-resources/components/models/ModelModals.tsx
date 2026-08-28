@@ -316,7 +316,7 @@ export function LlmModelFormModal({
               <span>
                 {t("modelResources.models.modal.defaultModel")}
                 <Tooltip title={t("modelResources.models.modal.llmDefaultModelHint")}>
-                  <QuestionCircleOutlined style={{ color: "rgba(0, 0, 0, 0.45)", marginLeft: 6 }} />
+                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
                 </Tooltip>
               </span>
             }
@@ -397,7 +397,7 @@ export function LlmMonitorDrawer({
           return (
             <div key={section.key} style={{ marginBottom: 24 }}>
               <h4 style={{ marginBottom: 4 }}>{section.title}</h4>
-              <p style={{ color: "rgba(15, 30, 54, 0.62)", marginBottom: 12 }}>{section.description}</p>
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: 12 }}>{section.description}</p>
               <div style={{ display: "grid", gap: 8 }}>
                 {points.length === 0 ? (
                   <span>--</span>

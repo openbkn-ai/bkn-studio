@@ -73,7 +73,7 @@
 }
 
 .allItemActive {
-  background: #ecf5ff !important;
+  background: var(--color-primary-100) !important;
 }
 
 .groupTree :global(.ant-tree-treenode) {
@@ -93,7 +93,7 @@
 }
 
 .groupTree :global(.ant-tree-treenode-selected) {
-  background: #ecf5ff !important;
+  background: var(--color-primary-100) !important;
 }
 
 .groupTree :global(.ant-tree-node-selected) {
@@ -153,7 +153,7 @@
 }
 
 .groupIconLogical {
-  color: #722ed1;
+  color: var(--color-text-accent);
   font-size: 16px;
   line-height: 1;
 }
@@ -173,7 +173,7 @@
 
 .groupBadgeMysql {
   background: linear-gradient(135deg, #6f86ff 0%, #39d0f2 100%);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .groupBadgeDefault {
@@ -217,7 +217,7 @@
 }
 
 .listItemActive {
-  background: #ecf5ff;
+  background: var(--color-primary-100);
 }
 
 .listItemContent {
@@ -255,7 +255,7 @@
 }
 
 .listItemIconGrid span {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--color-text-inverse);
   border-radius: 1px;
 }
 
@@ -309,7 +309,7 @@
 
 .footerTextActive {
   align-items: center;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   display: flex;
   gap: 8px;
@@ -329,7 +329,7 @@
 }
 
 .checkedBoxClear {
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
 }
 
