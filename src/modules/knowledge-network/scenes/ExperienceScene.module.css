@@ -2712,9 +2712,9 @@
   --txt: var(--color-text-primary);
   --txt2: var(--color-text-secondary);
   --faint: var(--color-text-tertiary);
-  --code: #f4f7fd;
-  --chip: #eef2f9;
-  --field-bd: #d8e0ea;
+  --code: var(--color-interface-code-bg);
+  --chip: var(--color-fill-secondary);
+  --field-bd: var(--color-border);
 }
 
 .dbWrap {

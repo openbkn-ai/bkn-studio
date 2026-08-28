@@ -40,8 +40,10 @@ function scanCss(filePath, source) {
   // Preserve line offsets while ignoring comments so a finding always points to the rendered rule,
   // not to a later line after a long Chinese or English comment block.
   const sanitized = source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
-  const surfaces = [...sanitized.matchAll(/\b(?:background|background-color)\s*:\s*([^;}\n]+)/gi)]
-    .filter((match) => isLightSurface(match[1]));
+  const surfaces = [
+    ...sanitized.matchAll(/\b(?:background|background-color)\s*:\s*([^;}\n]+)/gi),
+    ...sanitized.matchAll(/\b--(?:code|chip|field-bd)\s*:\s*([^;}\n]+)/gi),
+  ].filter((match) => isLightSurface(match[1]));
   if (surfaces.length === 0) return;
 
   const themeAware = /data-theme\s*=\s*["']dark["']/.test(sanitized)
