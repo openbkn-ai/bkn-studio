@@ -54,10 +54,10 @@ describe("capabilities-lab.service", () => {
         user_id: "266c6a42-6131-4d62-8f39-853e7093701c",
         user_name: "Local Admin",
       },
-      expect.objectContaining({
+      {
         skipErrorToast: true,
         timeout: 60_000,
-      }),
+      },
     );
   });
 });
