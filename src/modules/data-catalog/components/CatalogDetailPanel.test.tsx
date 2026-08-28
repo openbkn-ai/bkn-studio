@@ -142,4 +142,30 @@ describe("CatalogDetailPanel authorize entry", () => {
 
     expect(screen.queryByText("dataCatalog.catalog.authorize")).toBeNull();
   });
+
+  it("shows the independent resource enabled state in the list", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          enabled: false,
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "none",
+          name: "customers",
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+
+    expect(await screen.findByText("common.disabled")).toBeTruthy();
+  });
 });

@@ -10,19 +10,18 @@ import { describe, expect, it } from "vitest";
 import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 
 describe("formatCatalogTime", () => {
-  it("formats the same timestamp with the active locale", () => {
-    const timestamp = Date.UTC(2026, 7, 19, 10, 20, 30);
+  it("uses the fixed catalog display format regardless of locale", () => {
+    const timestamp = new Date(2026, 5, 3, 11, 42, 20).getTime();
 
-    const english = formatCatalogTime(timestamp, "en-US");
-    const chinese = formatCatalogTime(timestamp, "zh-CN");
+    const english = formatCatalogTime(timestamp);
+    const chinese = formatCatalogTime(timestamp);
 
-    expect(english).not.toBe(chinese);
-    expect(english).toContain("08");
-    expect(chinese).toContain("2026");
+    expect(english).toBe("2026-06-03 11:42:20");
+    expect(chinese).toBe(english);
   });
 
   it("keeps the empty display value stable", () => {
-    expect(formatCatalogTime(null, "en-US")).toBe("-");
-    expect(formatCatalogTime(0, "en-US")).toBe("-");
+    expect(formatCatalogTime(null)).toBe("-");
+    expect(formatCatalogTime(0)).toBe("-");
   });
 });

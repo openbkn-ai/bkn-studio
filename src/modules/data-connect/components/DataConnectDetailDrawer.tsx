@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Descriptions, Drawer, Empty, Spin } from "antd";
+import { Alert, Descriptions, Drawer, Empty, Space, Spin, Tag } from "antd";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -40,13 +40,21 @@ type DataConnectDetailDrawerProps = {
   recordId: string;
 };
 
+const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
+  degraded: "orange",
+  healthy: "success",
+  offline: "error",
+  unchecked: "default",
+  unhealthy: "error",
+};
+
 export function DataConnectDetailDrawer({
   connectorTypes,
   onClose,
   open,
   recordId,
 }: DataConnectDetailDrawerProps) {
-  const { i18n, t } = useTranslation();
+  const { t } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [schedule, setSchedule] =
@@ -120,6 +128,9 @@ export function DataConnectDetailDrawer({
     () => connectorTypes.find((item) => item.type === record?.connectorType),
     [connectorTypes, record?.connectorType],
   );
+  const configEntries = record
+    ? buildConfigEntries(record, t, selectedConnectorType)
+    : [];
 
   return (
     <Drawer
@@ -149,12 +160,31 @@ export function DataConnectDetailDrawer({
             <Descriptions
               bordered
               className={styles.descriptionBlock}
-              column={2}
+              column={1}
               items={[
+                {
+                  key: "id",
+                  label: t("common.id"),
+                  children: record.id,
+                },
                 {
                   key: "name",
                   label: t("dataConnect.name"),
                   children: record.name,
+                },
+                {
+                  key: "tags",
+                  label: t("dataConnect.tags"),
+                  children:
+                    record.tags.length > 0 ? (
+                      <Space size={[4, 4]} wrap>
+                        {record.tags.map((tag) => (
+                          <Tag className={styles.catalogTag} key={tag}>{tag}</Tag>
+                        ))}
+                      </Space>
+                    ) : (
+                      "-"
+                    ),
                 },
                 {
                   key: "description",
@@ -162,14 +192,14 @@ export function DataConnectDetailDrawer({
                   children: record.description || "-",
                 },
                 {
-                  key: "connectorType",
-                  label: t("dataConnect.connectorType"),
-                  children: connectorTypeName,
-                },
-                {
                   key: "category",
                   label: t("common.category"),
                   children: t(`dataConnect.categories.${record.category}`),
+                },
+                {
+                  key: "connectorType",
+                  label: t("dataConnect.connectorType"),
+                  children: connectorTypeName,
                 },
                 {
                   key: "mode",
@@ -179,17 +209,20 @@ export function DataConnectDetailDrawer({
                 {
                   key: "status",
                   label: t("common.status"),
-                  children: record.enabled ? t("common.enabled") : t("common.disabled"),
+                  children: (
+                    <Tag color={record.enabled ? "success" : "default"}>
+                      {record.enabled ? t("common.enabled") : t("common.disabled")}
+                    </Tag>
+                  ),
                 },
                 {
                   key: "health",
                   label: t("common.healthStatus"),
-                  children: t(`dataConnect.healthStatuses.${record.healthStatus}`),
-                },
-                {
-                  key: "tags",
-                  label: t("dataConnect.tags"),
-                  children: record.tags.length > 0 ? record.tags.join(" / ") : "-",
+                  children: (
+                    <Tag color={HEALTH_STATUS_COLORS[record.healthStatus]}>
+                      {t(`dataConnect.healthStatuses.${record.healthStatus}`)}
+                    </Tag>
+                  ),
                 },
                 {
                   key: "creator",
@@ -199,10 +232,7 @@ export function DataConnectDetailDrawer({
                 {
                   key: "createTime",
                   label: t("dataConnect.createTime"),
-                  children: formatCatalogTime(
-                    record.createTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
+                  children: formatCatalogTime(record.createTime),
                 },
                 {
                   key: "updater",
@@ -212,10 +242,48 @@ export function DataConnectDetailDrawer({
                 {
                   key: "updateTime",
                   label: t("dataConnect.updateTime"),
-                  children: formatCatalogTime(
-                    record.updateTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
+                  children: formatCatalogTime(record.updateTime),
+                },
+              ]}
+            />
+          </section>
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
+            {configEntries.length > 0 ? (
+              <div className={styles.configGrid}>
+                {configEntries.map((item) => (
+                  <div className={styles.configItem} key={item.key}>
+                    <span className={styles.configLabel}>{item.label}</span>
+                    {item.description ? (
+                      <span className={styles.configHint}>{item.description}</span>
+                    ) : null}
+                    <span className={styles.configValue}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty
+                description={t("dataConnect.noConnectorConfig")}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
+          </section>
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("dataConnect.healthResult")}</h3>
+            <Descriptions
+              bordered
+              className={styles.descriptionBlock}
+              column={1}
+              items={[
+                {
+                  key: "lastCheckTime",
+                  label: t("dataConnect.lastCheckTime"),
+                  children: formatCatalogTime(record.lastCheckTime),
+                },
+                {
+                  key: "healthResult",
+                  label: t("dataConnect.healthResult"),
+                  children: record.healthCheckResult || "-",
                 },
               ]}
             />
@@ -265,75 +333,22 @@ export function DataConnectDetailDrawer({
                   {
                     key: "lastRun",
                     label: t("dataConnect.healthCheckSchedule.lastRun"),
-                    children: formatCatalogTime(
-                      schedule.lastRun,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.lastRun),
                   },
                   {
                     key: "nextRun",
                     label: t("dataConnect.healthCheckSchedule.nextRun"),
-                    children: formatCatalogTime(
-                      schedule.nextRun,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.nextRun),
                   },
                   {
                     key: "updateTime",
                     label: t("dataConnect.updateTime"),
-                    children: formatCatalogTime(
-                      schedule.updateTime,
-                      i18n.resolvedLanguage ?? i18n.language,
-                    ),
+                    children: formatCatalogTime(schedule.updateTime),
                   },
                 ]}
               />
             ) : (
               <Spin size="small" />
-            )}
-          </section>
-          <section className={styles.sectionCard}>
-            <h3 className={styles.sectionTitle}>{t("dataConnect.healthResult")}</h3>
-            <Descriptions
-              bordered
-              className={styles.descriptionBlock}
-              column={1}
-              items={[
-                {
-                  key: "lastCheckTime",
-                  label: t("dataConnect.lastCheckTime"),
-                  children: formatCatalogTime(
-                    record.lastCheckTime,
-                    i18n.resolvedLanguage ?? i18n.language,
-                  ),
-                },
-                {
-                  key: "healthResult",
-                  label: t("dataConnect.healthResult"),
-                  children: record.healthCheckResult || "-",
-                },
-              ]}
-            />
-          </section>
-          <section className={styles.sectionCard}>
-            <h3 className={styles.sectionTitle}>{t("dataConnect.connectorConfig")}</h3>
-            {Object.entries(record.connectorConfig).length > 0 ? (
-              <div className={styles.configGrid}>
-                {buildConfigEntries(record, t, selectedConnectorType).map((item) => (
-                  <div className={styles.configItem} key={item.key}>
-                    <span className={styles.configLabel}>{item.label}</span>
-                    {item.description ? (
-                      <span className={styles.configHint}>{item.description}</span>
-                    ) : null}
-                    <span className={styles.configValue}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Empty
-                description={t("dataConnect.noConnectorConfig")}
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
             )}
           </section>
         </div>
@@ -409,7 +424,49 @@ function formatConfigValue(value: unknown, t: TFunction) {
     return String(value);
   }
 
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return <ConfigObjectValue value={value as Record<string, unknown>} t={t} />;
+  }
+
   return JSON.stringify(value, null, 2);
+}
+
+function DatabaseListValue({ values }: { values: unknown[] }) {
+  return (
+    <Space size={[4, 4]} wrap>
+      {values.map((value, index) => (
+        <Tag key={`${String(value)}-${index}`}>{String(value)}</Tag>
+      ))}
+    </Space>
+  );
+}
+
+function ConfigObjectValue({ t, value }: { t: TFunction; value: Record<string, unknown> }) {
+  return (
+    <Space size={[4, 4]} wrap>
+      {Object.entries(value).map(([key, item]) => (
+        <Tag key={key}>
+          {key}: {formatConfigTagValue(item, t)}
+        </Tag>
+      ))}
+    </Space>
+  );
+}
+
+function formatConfigTagValue(value: unknown, t: TFunction) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? t("dataConnect.booleanTrue") : t("dataConnect.booleanFalse");
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
 }
 
 function buildConfigEntries(
@@ -419,7 +476,8 @@ function buildConfigEntries(
 ) {
   const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
-  const keys = Object.keys(config).sort((left, right) => {
+  const templateKeys = Object.keys(fieldConfig);
+  const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort((left, right) => {
     const leftRank = configFieldOrderRank(left);
     const rightRank = configFieldOrderRank(right);
 
@@ -434,13 +492,25 @@ function buildConfigEntries(
 
   return keys.map((key) => {
     const configItem = fieldConfig[key];
+    const hasValue = Object.prototype.hasOwnProperty.call(config, key);
     return {
       description: "",
       key,
       label: humanizeConnectorFieldLabel(key, connectorType?.type),
-      value: configItem?.encrypted ? "******" : formatConfigValue(config[key], t),
+      value: configItem?.encrypted
+        ? t("dataConnect.sensitiveValueHidden")
+        : hasValue
+          ? isDatabaseListField(key) && Array.isArray(config[key])
+            ? <DatabaseListValue values={config[key]} />
+            : formatConfigValue(config[key], t)
+          : "-",
     };
   });
+}
+
+function isDatabaseListField(key: string) {
+  const normalized = key.trim().toLowerCase();
+  return normalized === "database_list" || normalized === "databases";
 }
 
 function configFieldOrderRank(key: string) {
@@ -449,16 +519,17 @@ function configFieldOrderRank(key: string) {
     host: 1,
     hostname: 1,
     server: 1,
-    user: 2,
-    username: 2,
-    account: 2,
-    port: 3,
-    database: 4,
-    db: 4,
-    database_list: 4,
-    databases: 4,
-    schema: 4,
-    schema_list: 4,
+    port: 2,
+    user: 3,
+    username: 3,
+    account: 3,
+    password: 4,
+    database: 5,
+    db: 5,
+    database_list: 5,
+    databases: 5,
+    schema: 5,
+    schema_list: 5,
   };
 
   return rankMap[normalized] ?? 100;

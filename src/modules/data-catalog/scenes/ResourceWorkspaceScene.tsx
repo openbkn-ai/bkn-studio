@@ -5,13 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, KeyOutlined } from "@ant-design/icons";
-import { Alert, Spin, Tabs } from "antd";
+import { DatabaseOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Space, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -35,7 +36,11 @@ import {
 } from "@/modules/data-catalog/lib/index-state";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
-import { getCatalogResource } from "@/modules/data-catalog/services/resource.service";
+import {
+  discoverCatalogResource,
+  getCatalogResource,
+  setCatalogResourceEnabled,
+} from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { getCatalog } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
@@ -77,6 +82,7 @@ export function ResourceWorkspaceScene({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailEditing, setDetailEditing] = useState(false);
+  const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
   const previousTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
   const loadRequestIdRef = useRef(0);
@@ -190,6 +196,33 @@ export function ResourceWorkspaceScene({
     setResource(latestResource);
   }, []);
 
+  const triggerResourceDiscovery = useCallback(async () => {
+    setResourceAction("discover");
+    try {
+      await discoverCatalogResource(resourceId);
+      void message.success(t("dataCatalog.resourceWorkspace.discoveryQueued"));
+    } catch (error) {
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setResourceAction(null);
+    }
+  }, [message, resourceId, t]);
+
+  const updateResourceEnabled = useCallback(async (enabled: boolean) => {
+    setResourceAction("enabled");
+    try {
+      const latest = await setCatalogResourceEnabled(resourceId, enabled);
+      if (latest) {
+        setResource(latest);
+      }
+      void message.success(t(enabled ? "dataCatalog.resourceWorkspace.enableSuccess" : "dataCatalog.resourceWorkspace.disableSuccess"));
+    } catch (error) {
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setResourceAction(null);
+    }
+  }, [message, resourceId, t]);
+
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
     if (tab === "detail" && nextTab !== "detail" && detailEditing) {
@@ -299,19 +332,44 @@ export function ResourceWorkspaceScene({
               ) : null}
             </div>
           </div>
-          {canAuthorizeGrants && !catalog?.internal ? (
-            <AppButton
-              icon={<KeyOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/system/authorizations/new?object=${encodeURIComponent(`resource::${resource.id}`)}`,
-                  { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
-                );
-              }}
-            >
-              {t("dataCatalog.catalog.authorize")}
-            </AppButton>
-          ) : null}
+          <Space>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                disabled={detailEditing}
+                icon={<ReloadOutlined />}
+                loading={resourceAction === "discover"}
+                onClick={() => void triggerResourceDiscovery()}
+              >
+                {t("dataCatalog.resourceWorkspace.refreshMetadata")}
+              </AppButton>
+            </PermissionGate>
+            <PermissionGate permissions="catalog:resource_manage">
+              <AppButton
+                color={resource.enabled === false ? "green" : undefined}
+                danger={resource.enabled !== false}
+                disabled={detailEditing}
+                loading={resourceAction === "enabled"}
+                onClick={() => void updateResourceEnabled(resource.enabled === false)}
+                type={resource.enabled === false ? "primary" : "default"}
+                variant={resource.enabled === false ? "solid" : undefined}
+              >
+                {t(resource.enabled === false ? "common.enable" : "common.disable")}
+              </AppButton>
+            </PermissionGate>
+            {canAuthorizeGrants && !catalog?.internal ? (
+              <AppButton
+                icon={<KeyOutlined />}
+                onClick={() => {
+                  void navigate(
+                    `/system/authorizations/new?object=${encodeURIComponent(`resource::${resource.id}`)}`,
+                    { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
+                  );
+                }}
+              >
+                {t("dataCatalog.catalog.authorize")}
+              </AppButton>
+            ) : null}
+          </Space>
         </div>
 
         {discoveryFailed || queryBlockReason ? (

@@ -196,4 +196,157 @@ describe("DataConnectDetailDrawer", () => {
     expect(screen.queryByRole("button", { name: "submit schedule 200" })).toBeNull();
     expect(screen.getByRole("button", { name: "submit schedule 300" })).toBeTruthy();
   });
+
+  it("shows fields from the connector template when the detail response omits them", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: {
+        host: "db.example.com",
+        port: 5432,
+        username: "readonly_user",
+      },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              host: { encrypted: false, required: true, type: "string" },
+              password: { encrypted: true, required: true, type: "string" },
+              port: { encrypted: false, required: true, type: "number" },
+              username: { encrypted: false, required: true, type: "string" },
+            },
+            mode: "local",
+            name: "PostgreSQL",
+            type: "postgresql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    expect(await screen.findByText("db.example.com")).toBeTruthy();
+    expect(screen.getByText("dataConnect.sensitiveValueHidden")).toBeTruthy();
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection).not.toBeNull();
+    const values = [...configSection!.querySelectorAll('[class*="configItem"]')]
+      .map((item) => item.textContent);
+    expect(values).toEqual([
+      expect.stringContaining("db.example.com"),
+      expect.stringContaining("5432"),
+      expect.stringContaining("readonly_user"),
+      expect.stringContaining("dataConnect.sensitiveValueHidden"),
+    ]);
+  });
+
+  it("uses the connector template as the configuration schema", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { database: "legacy_database" },
+      connectorType: "mysql",
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              databases: { encrypted: false, required: false, type: "array" },
+            },
+            mode: "local",
+            name: "MySQL",
+            type: "mysql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("dataConnect.connectorConfig");
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection).not.toBeNull();
+    expect(configSection!.querySelectorAll('[class*="configItem"]')).toHaveLength(1);
+    expect(configSection!.textContent).not.toContain("legacy_database");
+  });
+
+  it("renders database lists as tags", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { databases: ["sales", "reporting"] },
+      connectorType: "mysql",
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              databases: { encrypted: false, required: false, type: "array" },
+            },
+            mode: "local",
+            name: "MySQL",
+            type: "mysql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("sales");
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection).not.toBeNull();
+    expect(configSection!.querySelectorAll(".ant-tag")).toHaveLength(2);
+    expect(screen.getByText("reporting")).toBeTruthy();
+  });
+
+  it("renders object configuration values as key-value tags", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { options: { connect_timeout: 10, sslmode: "require" } },
+      connectorType: "postgresql",
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              options: { encrypted: false, required: false, type: "object" },
+            },
+            mode: "local",
+            name: "PostgreSQL",
+            type: "postgresql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    expect(await screen.findByText("sslmode: require")).toBeTruthy();
+    expect(screen.getByText("connect_timeout: 10")).toBeTruthy();
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection).not.toBeNull();
+    expect(configSection!.querySelectorAll(".ant-tag")).toHaveLength(2);
+  });
 });

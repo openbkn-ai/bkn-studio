@@ -10,6 +10,17 @@ import { describe, expect, it, vi } from "vitest";
 import { ensureMockTicker, mockBuildTasks, mockResources } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("completes build-task catalog and resource references", () => {
+    expect(mockBuildTasks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        catalogId: "cat-001",
+        catalogName: "customer_master",
+        resourceId: "res-customers",
+        resourceName: "customers",
+      }),
+    ]));
+  });
+
   it("provides one resource for every discover status in customer_master", () => {
     const expectedStatuses = [
       "error",

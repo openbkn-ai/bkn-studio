@@ -5,18 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { formatDateTime } from "@/framework/i18n/format";
-import { normalizeSupportedLocale } from "@/framework/i18n/locale";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import type { CatalogTimestamp } from "@/shared/catalog/types";
 
-export function formatCatalogTime(value: CatalogTimestamp, locale?: string) {
-  return formatDateTime(value === 0 ? null : value, {
-    locale: normalizeSupportedLocale(locale) ?? undefined,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+export function formatCatalogTime(value: CatalogTimestamp) {
+  return formatDateTimeYmdHms(value === 0 ? null : value);
 }

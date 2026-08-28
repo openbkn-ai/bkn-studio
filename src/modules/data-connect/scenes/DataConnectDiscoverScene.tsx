@@ -53,7 +53,7 @@ import {
 import { DiscoverRunNowModal } from "@/modules/data-connect/components/DiscoverRunNowModal";
 import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components/DataConnectDiscoverTaskDrawer";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
-import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
+import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 
 import styles from "./DataConnectDiscoverScene.module.css";
 
@@ -73,8 +73,15 @@ function renderTableTime(value?: number) {
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
-  const fillClass = task.status === "completed" ? sharedStyles.progressFillDone : task.status === "failed" ? sharedStyles.progressFillFailed : sharedStyles.progressFillVector;
-  return <div className={sharedStyles.progressWrapCompact}><div className={sharedStyles.progressTrack}><span className={[sharedStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={sharedStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
+  const fillClass = task.status === "completed" ? taskStyles.progressFillDone : task.status === "failed" ? taskStyles.progressFillFailed : taskStyles.progressFillVector;
+  return <div className={taskStyles.progressWrapCompact}><div className={taskStyles.progressTrack}><span className={[taskStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={taskStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
+}
+
+function DiscoverTaskPriority({ priority }: { priority: number }) {
+  const { t } = useTranslation();
+  const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
+  const color = level === "high" ? "error" : level === "low" ? "default" : "processing";
+  return <Tag color={color}>{t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}</Tag>;
 }
 
 export function DataConnectDiscoverScene({
@@ -157,11 +164,6 @@ export function DataConnectDiscoverScene({
         .length,
     [tasks],
   );
-  const scheduleNameMap = useMemo(
-    () => new Map(schedules.map((item) => [item.id, item.name])),
-    [schedules],
-  );
-
   const loadCatalogs = useCallback(async () => {
     setLoadingCatalogs(true);
     setCatalogError(null);
@@ -214,7 +216,7 @@ export function DataConnectDiscoverScene({
         catalogId: selectedCatalogId,
         page: taskPage,
         pageSize: taskPageSize,
-        status: taskStatusFilter === "all" ? undefined : taskStatusFilter,
+        statuses: taskStatusFilter === "all" ? undefined : [taskStatusFilter],
         triggerType:
           taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
       });
@@ -439,10 +441,18 @@ export function DataConnectDiscoverScene({
   const taskColumns: ColumnsType<DataConnectDiscoverTaskSummary> = [
     { dataIndex: "id", title: "ID", width: 160, ellipsis: true },
     {
-      dataIndex: "scheduleId",
-      title: t("dataConnect.discoverScheduleName"),
+      dataIndex: "resourceId",
+      title: t("dataCatalog.taskManagement.columns.resource"),
       width: 160,
-      render: (value: string) => value ? scheduleNameMap.get(value) ?? value : t("dataConnect.discoverManualTask"),
+      ellipsis: true,
+      render: (value: string | undefined, record: DataConnectDiscoverTaskSummary) =>
+        value ? (
+          <AppButton onClick={() => void navigate(`/data-directory/resource/${value}`)} type="link">
+            {record.resourceName ?? value}
+          </AppButton>
+        ) : (
+          "-"
+        ),
     },
     {
       dataIndex: "strategy",
@@ -457,6 +467,12 @@ export function DataConnectDiscoverScene({
       render: (value: DataConnectDiscoverTaskSummary["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
     },
     {
+      dataIndex: "queuePriority",
+      title: t("dataConnect.discoverQueuePriority"),
+      width: 120,
+      render: (value: number) => <DiscoverTaskPriority priority={value} />,
+    },
+    {
       dataIndex: "status",
       title: t("dataConnect.discoverTaskStatus"),
       width: 120,
@@ -469,22 +485,16 @@ export function DataConnectDiscoverScene({
       render: (_value, record) => <DiscoverTaskProgress task={record} />,
     },
     {
-      dataIndex: "startTime",
-      key: "start_time",
-      title: t("dataConnect.discoverStartTime"),
+      dataIndex: "lastProgressTime",
+      key: "last_progress_time",
+      title: t("dataConnect.discoverLastProgressTime"),
       width: 180,
       render: renderTableTime,
     },
     {
       dataIndex: "finishTime",
       key: "finish_time",
-      title: t("dataConnect.discoverFinishTime"),
-      width: 180,
-      render: renderTableTime,
-    },
-    {
-      dataIndex: "createTime",
-      title: t("dataConnect.createTime"),
+      title: t("dataCatalog.task.finishedAt"),
       width: 180,
       render: renderTableTime,
     },

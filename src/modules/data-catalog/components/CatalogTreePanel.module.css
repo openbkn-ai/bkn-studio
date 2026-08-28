@@ -315,6 +315,12 @@
   background: #f5f8ff;
 }
 
+.treeMiniTagEnabled {
+  color: #15803d;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
 .treeActionBtnVisible {
   display: inline-flex;
   align-items: center;

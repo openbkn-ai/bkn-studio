@@ -11,6 +11,7 @@ import { http } from "@/framework/request/http";
 import {
   emitMockChange,
   ensureMockTicker,
+  mockCatalogName,
   mockBuildTasks,
   mockResources,
   mockSlug,
@@ -236,12 +237,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     resourceId: item.resource_id ?? "",
     resourceName: item.resource_name,
     mode,
-    executeType:
-      mode === "batch"
-        ? item.execute_type === "incremental"
-          ? "incremental"
-          : "full"
-        : undefined,
+    executeType: mode === "batch" ? item.execute_type : undefined,
     status,
     embeddingFields: snapshot.embeddingFields,
     embeddingConfigs: snapshot.embeddingConfigs,
@@ -402,6 +398,9 @@ export async function listBuildTaskPage(
     if (query.mode) {
       items = items.filter((task) => task.mode === query.mode);
     }
+    if (query.executeType) {
+      items = items.filter((task) => task.executeType === query.executeType);
+    }
     if (query.statuses?.length) {
       const set = new Set(query.statuses);
       items = items.filter((task) => set.has(task.status));
@@ -417,6 +416,7 @@ export async function listBuildTaskPage(
     offset,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
+    execute_type: query.executeType || undefined,
     mode: query.mode || undefined,
     sort: query.sort ?? "create_time",
   };
@@ -479,7 +479,10 @@ export async function createBuildTask(
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
+      catalogId: resource?.catalogId,
+      catalogName: mockCatalogName(resource?.catalogId),
       resourceId: input.resourceId,
+      resourceName: resource?.name,
       mode: input.mode,
       executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
       status: "pending",
