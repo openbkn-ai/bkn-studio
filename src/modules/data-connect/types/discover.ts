@@ -114,7 +114,7 @@ export type DataConnectDiscoverTaskListQuery = {
   scheduleId?: string;
   direction?: "asc" | "desc";
   sort?: DataConnectDiscoverTaskSort;
-  status?: DataConnectDiscoverTaskStatus;
+  statuses?: DataConnectDiscoverTaskStatus[];
   strategy?: DataConnectDiscoverStrategy;
   triggerType?: DataConnectDiscoverTaskTriggerType;
 };

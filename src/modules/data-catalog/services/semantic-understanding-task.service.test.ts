@@ -68,7 +68,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       direction: "asc",
       resourceId: "resource-1",
       scope: "resource",
-      status: "succeeded",
+      statuses: ["succeeded", "failed"],
     })).toEqual({
       applied: true,
       apply_mode: "force",
@@ -79,7 +79,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       resource_id: "resource-1",
       scope: "resource",
       sort: "create_time",
-      status: "completed",
+      status: ["completed", "failed"],
     });
   });
 

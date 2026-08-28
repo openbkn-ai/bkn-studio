@@ -216,7 +216,7 @@ export function DataConnectDiscoverScene({
         catalogId: selectedCatalogId,
         page: taskPage,
         pageSize: taskPageSize,
-        status: taskStatusFilter === "all" ? undefined : taskStatusFilter,
+        statuses: taskStatusFilter === "all" ? undefined : [taskStatusFilter],
         triggerType:
           taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
       });
@@ -442,7 +442,7 @@ export function DataConnectDiscoverScene({
     { dataIndex: "id", title: "ID", width: 160, ellipsis: true },
     {
       dataIndex: "resourceId",
-      title: t("dataCatalog.build.resource"),
+      title: t("dataCatalog.taskManagement.columns.resource"),
       width: 160,
       ellipsis: true,
       render: (value: string | undefined, record: DataConnectDiscoverTaskSummary) =>

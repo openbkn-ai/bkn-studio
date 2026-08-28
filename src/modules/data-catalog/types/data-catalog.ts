@@ -209,6 +209,7 @@ export type BuildTaskSort =
 
 export type BuildTaskPageQuery = {
   catalogId?: string;
+  executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
   direction?: "asc" | "desc";
   /** Raw window. The caller scans by offset because the backend filters after paging (#977). */

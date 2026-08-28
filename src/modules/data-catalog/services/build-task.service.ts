@@ -403,6 +403,9 @@ export async function listBuildTaskPage(
     if (query.mode) {
       items = items.filter((task) => task.mode === query.mode);
     }
+    if (query.executeType) {
+      items = items.filter((task) => task.executeType === query.executeType);
+    }
     if (query.statuses?.length) {
       const set = new Set(query.statuses);
       items = items.filter((task) => set.has(task.status));
@@ -418,6 +421,7 @@ export async function listBuildTaskPage(
     offset,
     resource_id: query.resourceId || undefined,
     catalog_id: query.catalogId || undefined,
+    execute_type: query.executeType || undefined,
     mode: query.mode || undefined,
     sort: query.sort ?? "create_time",
   };

@@ -18,7 +18,6 @@ export type SemanticUnderstandingTaskSummary = {
   agentId: string;
   agentTaskId?: string;
   applied: boolean;
-  appliedTime?: number;
   applyMode: "dry_run" | "fill_empty" | "force";
   catalogId: string;
   catalogName?: string;
@@ -48,7 +47,6 @@ export type BackendSemanticUnderstandingTaskSummary = {
   agent_id: string;
   agent_task_id?: string;
   applied: boolean;
-  applied_time?: number;
   apply_mode: SemanticUnderstandingTaskSummary["applyMode"];
   catalog_id: string;
   catalog_name?: string;
@@ -89,7 +87,6 @@ export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderst
     confidenceThreshold: task.confidence_threshold,
     confidence: task.confidence,
     applied: task.applied,
-    appliedTime: task.applied_time,
     creator: { id: task.creator.id, name: task.creator.name, type: task.creator.type },
     createTime: task.create_time,
     startTime: task.start_time,
@@ -105,7 +102,7 @@ export type SemanticUnderstandingTaskListFilters = {
   resourceId?: string;
   scope?: SemanticUnderstandingTaskSummary["scope"];
   sort?: "create_time" | "start_time" | "finish_time";
-  status?: SemanticUnderstandingTaskSummary["status"];
+  statuses?: SemanticUnderstandingTaskSummary["status"][];
 };
 
 export function buildSemanticUnderstandingTaskListParams(
@@ -123,7 +120,9 @@ export function buildSemanticUnderstandingTaskListParams(
     scope: filters.scope,
     catalog_id: filters.catalogId,
     resource_id: filters.resourceId,
-    status: filters.status === "succeeded" ? "completed" : filters.status,
+    status: filters.statuses?.length
+      ? filters.statuses.map((status) => (status === "succeeded" ? "completed" : status))
+      : undefined,
     apply_mode: filters.applyMode,
     applied: filters.applied,
   };
@@ -165,7 +164,6 @@ let mockTasks: SemanticUnderstandingTask[] = [
     confidenceThreshold: 0.75,
     confidence: 0.94,
     applied: true,
-    appliedTime: mockNow - 1000 * 60 * 40,
     creator: { id: "mock-user", name: "Mock User", type: "user" },
     createTime: mockNow - 1000 * 60 * 45,
     startTime: mockNow - 1000 * 60 * 44,
@@ -217,7 +215,7 @@ export async function listSemanticUnderstandingTasks(
         (filters.scope === undefined || task.scope === filters.scope) &&
         (filters.catalogId === undefined || task.catalogId === filters.catalogId) &&
         (filters.resourceId === undefined || task.resourceId === filters.resourceId) &&
-        (filters.status === undefined || task.status === filters.status) &&
+        (!filters.statuses?.length || filters.statuses.includes(task.status)) &&
         (filters.applyMode === undefined || task.applyMode === filters.applyMode) &&
         (filters.applied === undefined || task.applied === filters.applied),
     );
@@ -237,7 +235,10 @@ export async function listSemanticUnderstandingTasks(
 
   const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>(
     "/vega-backend/v1/semantic-understanding-tasks",
-    { params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window) },
+    {
+      params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window),
+      paramsSerializer: { indexes: null },
+    },
   );
   return {
     items: response.data.entries.map(mapSemanticUnderstandingTaskSummary),

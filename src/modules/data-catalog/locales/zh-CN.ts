@@ -73,8 +73,8 @@ export const dataCatalogZhCN = {
     indexBuildDescription: "管理数据资源相关任务，支持任务查看，暂停，重启，删除等操作。",
     taskManagement: {
       tabs: { indexBuild: "索引构建任务", discover: "探查任务", semanticUnderstanding: "语义理解任务" },
-      columns: { task: "任务 ID", catalog: "所属目录", strategy: "探查策略", trigger: "触发方式", scope: "任务范围", applyMode: "应用方式", confidence: "置信度", applied: "应用状态" },
-      scope: { catalog: "数据连接", resource: "数据资源" },
+      columns: { task: "任务 ID", catalog: "所属目录", resource: "所属资源", strategy: "探查策略", trigger: "触发方式", scope: "任务范围", applyMode: "应用方式", confidence: "置信度", applied: "应用状态" },
+      scope: { catalog: "数据目录", resource: "数据资源" },
       applyMode: { dryRun: "仅预览", fillEmpty: "填充空值", force: "强制覆盖" },
       applied: { applied: "已应用", notApplied: "未应用" },
       moreFilters: "更多筛选",
@@ -83,7 +83,7 @@ export const dataCatalogZhCN = {
       semanticStatus: { pending: "等待中", running: "执行中", succeeded: "已完成", failed: "失败", cancelled: "已取消" },
       details: { taskInformation: "任务信息", taskScope: "任务范围", scheduleId: "计划 ID", startTime: "开始时间", message: "执行信息", agentId: "Agent ID", failureReason: "失败原因" },
       discover: { empty: "暂无探查任务" },
-      semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？", detailSections: { task: "任务信息", execution: "执行与应用", quality: "质量与字段应用", payload: "输入与结果", audit: "审计信息" }, fields: { catalogId: "目录 ID", resourceId: "资源 ID", agentTaskId: "Agent 任务 ID", confidenceThreshold: "置信度阈值", confidenceDetail: "置信度明细", appliedTime: "应用时间", applyDetail: "应用明细", inputHash: "输入哈希", input: "输入快照", result: "理解结果", resourceEffective: "资源语义增强", fieldEffective: "有效字段增强", warnings: "处理提示", field: "字段", updated: "已更新属性", reason: "原因" }, values: { effective: "有效", notEffective: "无有效更新", fieldEffective: "{{effective}} / {{total}} 个字段" }, fieldStatus: { updated: "已更新", partial: "部分更新", unchanged: "无变更", skipped: "已跳过" } },
+      semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？", detailSections: { task: "任务信息", execution: "执行与应用", quality: "质量与字段应用", payload: "输入与结果", audit: "审计信息" }, fields: { catalogId: "目录 ID", resourceId: "资源 ID", agentTaskId: "Agent 任务 ID", confidenceThreshold: "置信度阈值", confidenceDetail: "置信度明细", applyDetail: "应用明细", inputHash: "输入哈希", input: "输入快照", result: "理解结果", resourceEffective: "资源语义增强", fieldEffective: "有效字段增强", warnings: "处理提示", field: "字段", updated: "已更新属性", reason: "原因" }, values: { effective: "有效", notEffective: "无有效更新", fieldEffective: "{{effective}} / {{total}} 个字段" }, fieldStatus: { updated: "已更新", partial: "部分更新", unchanged: "无变更", skipped: "已跳过" } },
     },
     semanticWorkspace: { summary: "语义理解结果", applied: "已加载语义理解结果", notApplied: "尚未加载语义理解结果", processing: "语义理解任务进行中", create: "新建任务", createTitle: "新建语义理解任务", start: "开始语义理解", started: "已开始语义理解任务", empty: "暂无语义理解任务", confidenceThreshold: "置信度阈值", includeSamples: "包含样本数据", includeSamplesHint: "样本数据将以未脱敏形式发送给语义理解服务。" },
     emptyDescription:

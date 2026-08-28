@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { BuildMode, BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
+import type { BuildMode, BuildTaskExecuteType, BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
 
 const STATUS_SET = new Set<BuildTaskStatus>([
   "cancelled",
@@ -35,6 +35,7 @@ export function writeIndexBuildStatusParam(statuses: BuildTaskStatus[]): string 
 }
 
 export type IndexBuildListFilters = {
+  executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
   statuses: BuildTaskStatus[];
 };
@@ -42,8 +43,12 @@ export type IndexBuildListFilters = {
 export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildListFilters {
   const rawMode = params.get("mode");
   const mode = rawMode === "batch" || rawMode === "streaming" ? rawMode : undefined;
+  const rawExecuteType = params.get("execute_type");
+  const executeType = rawExecuteType === "full" || rawExecuteType === "incremental"
+    ? rawExecuteType
+    : undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
-  return { mode, statuses };
+  return { executeType, mode, statuses };
 }
 
 export function applyIndexBuildListFilters(
@@ -56,6 +61,11 @@ export function applyIndexBuildListFilters(
     next.set("mode", filters.mode);
   } else {
     next.delete("mode");
+  }
+  if (filters.executeType) {
+    next.set("execute_type", filters.executeType);
+  } else {
+    next.delete("execute_type");
   }
   next.delete("resourceId");
   const statusValue = writeIndexBuildStatusParam(filters.statuses);

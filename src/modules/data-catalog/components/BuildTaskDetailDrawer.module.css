@@ -123,20 +123,6 @@
   word-break: break-word;
 }
 
-.fieldList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-}
-
-.fieldText {
-  color: #111827;
-  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  word-break: break-all;
-}
-
 .semanticWarning {
   margin-top: 10px;
 }

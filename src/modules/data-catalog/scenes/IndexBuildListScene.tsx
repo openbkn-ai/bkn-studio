@@ -44,6 +44,7 @@ import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import type {
   BuildMode,
   BuildTask,
+  BuildTaskExecuteType,
   BuildTaskPageQuery,
   BuildTaskSort,
   BuildTaskStatus,
@@ -76,28 +77,6 @@ export function IndexBuildListScene() {
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [taskColumnWidth, setTaskColumnWidth] = useState(() => {
-    try {
-      const value = window.localStorage.getItem("index-builds.colWidth.task");
-      const parsed = value ? Number(value) : NaN;
-      return Number.isFinite(parsed) && parsed >= 120 ? parsed : 152;
-    } catch {
-      return 152;
-    }
-  });
-  const [resourceColumnWidth, setResourceColumnWidth] = useState(() => {
-    try {
-      const value = window.localStorage.getItem("index-builds.colWidth.resource");
-      const parsed = value ? Number(value) : NaN;
-      return Number.isFinite(parsed) && parsed >= 160 ? parsed : 240;
-    } catch {
-      return 240;
-    }
-  });
-  const resizingRef = useRef<{ key: "task" | "resource"; startX: number; startWidth: number } | null>(
-    null,
-  );
-
   const listFilters = useMemo(
     () => readIndexBuildListFilters(searchParams),
     [searchParams],
@@ -131,11 +110,13 @@ export function IndexBuildListScene() {
       pageSize,
       sort,
       direction,
+      executeType: listFilters.executeType,
       mode: listFilters.mode,
       statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
     [
       direction,
+      listFilters.executeType,
       listFilters.mode,
       listFilters.statuses,
       page,
@@ -147,6 +128,7 @@ export function IndexBuildListScene() {
   const updateListFilters = useCallback(
     (patch: Partial<typeof listFilters>) => {
       const next = applyIndexBuildListFilters(searchParams, {
+        executeType: "executeType" in patch ? patch.executeType : listFilters.executeType,
         mode: "mode" in patch ? patch.mode : listFilters.mode,
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
@@ -262,42 +244,6 @@ export function IndexBuildListScene() {
   const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
     sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
 
-  useEffect(() => {
-    const handleMove = (event: MouseEvent) => {
-      if (!resizingRef.current) {
-        return;
-      }
-      const delta = event.clientX - resizingRef.current.startX;
-      const next = Math.max(120, resizingRef.current.startWidth + delta);
-      if (resizingRef.current.key === "task") {
-        setTaskColumnWidth(next);
-      } else {
-        setResourceColumnWidth(Math.max(160, next));
-      }
-    };
-
-    const handleUp = () => {
-      if (!resizingRef.current) {
-        return;
-      }
-      const current = resizingRef.current;
-      resizingRef.current = null;
-      try {
-        const width = current.key === "task" ? taskColumnWidth : resourceColumnWidth;
-        window.localStorage.setItem(`index-builds.colWidth.${current.key}`, String(width));
-      } catch {
-        // ignore
-      }
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-  }, [resourceColumnWidth, taskColumnWidth]);
-
   // Header sorting follows the shared task-list sort/direction contract.
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
     _pagination,
@@ -322,28 +268,14 @@ export function IndexBuildListScene() {
   const columns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
-      width: taskColumnWidth,
-      onHeaderCell: () => ({ style: { position: "relative" } }),
-      title: (
-        <div className={sceneStyles.resizableHeader}>
-          <span>{t("dataCatalog.taskManagement.columns.task")}</span>
-          <span
-            className={sceneStyles.resizeHandle}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              resizingRef.current = { key: "task", startX: event.clientX, startWidth: taskColumnWidth };
-            }}
-            role="separator"
-          />
-        </div>
-      ),
+      width: 160,
+      title: t("dataCatalog.taskManagement.columns.task"),
       render: (value: string) => <EllipsisText text={value} />,
     },
     {
       dataIndex: "catalogId",
       title: t("dataCatalog.taskManagement.columns.catalog"),
-      width: 180,
+      width: 160,
       render: (value: string | undefined, record) => {
         const catalogId = value ?? record.catalogId;
         if (!catalogId) {
@@ -365,26 +297,8 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "resourceId",
-      width: resourceColumnWidth,
-      onHeaderCell: () => ({ style: { position: "relative" } }),
-      title: (
-        <div className={sceneStyles.resizableHeader}>
-          <span>{t("dataCatalog.build.resource")}</span>
-          <span
-            className={sceneStyles.resizeHandle}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              resizingRef.current = {
-                key: "resource",
-                startX: event.clientX,
-                startWidth: resourceColumnWidth,
-              };
-            }}
-            role="separator"
-          />
-        </div>
-      ),
+      width: 160,
+      title: t("dataCatalog.taskManagement.columns.resource"),
       render: (value: string, record) => {
         const label = record.resourceName ?? value;
         return value ? (
@@ -407,22 +321,39 @@ export function IndexBuildListScene() {
     {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
-      width: 108,
+      width: 100,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
       render: (value: BuildTask["mode"]) => (
         <EllipsisText text={t(`dataCatalog.modes.${value}`)} />
       ),
     },
     {
+      dataIndex: "executeType",
+      title: t("dataCatalog.build.executeType"),
+      width: 100,
+      onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
+      render: (_value: BuildTask["executeType"], record) => (
+        <EllipsisText
+          text={
+            record.mode === "batch"
+              ? record.executeType === "incremental"
+                ? t("dataCatalog.build.executeIncremental")
+                : t("dataCatalog.build.executeFull")
+              : "-"
+          }
+        />
+      ),
+    },
+    {
       dataIndex: "status",
       title: t("dataCatalog.task.detailSections.status"),
-      width: 116,
+      width: 120,
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 196,
+      width: 200,
       onCell: () => ({ className: sceneStyles.progressCell }),
       render: (_, record) => <BuildProgress compact task={record} />,
     },
@@ -549,6 +480,21 @@ export function IndexBuildListScene() {
             <Select
               allowClear
               className={taskPanelStyles.select}
+              onChange={(value: BuildTaskExecuteType | undefined) => {
+                updateListFilters({ executeType: value });
+              }}
+              options={["full", "incremental"].map((value) => ({
+                label: t(value === "incremental"
+                  ? "dataCatalog.build.executeIncremental"
+                  : "dataCatalog.build.executeFull"),
+                value,
+              }))}
+              placeholder={t("dataCatalog.build.executeType")}
+              value={listFilters.executeType ?? null}
+            />
+            <Select
+              allowClear
+              className={taskPanelStyles.select}
               maxTagCount="responsive"
               mode="multiple"
               onChange={(value: BuildTaskStatus[]) => {
@@ -558,7 +504,7 @@ export function IndexBuildListScene() {
                 label: t(`dataCatalog.task.statuses.${status}`),
                 value: status,
               }))}
-              placeholder={t("common.status")}
+              placeholder={t("dataCatalog.task.detailSections.status")}
               value={listFilters.statuses}
             />
         </Space>

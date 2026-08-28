@@ -51,7 +51,7 @@ describe("discover.service · task status contract", () => {
     const result = await listDataConnectDiscoverTasks({
       page: 1,
       pageSize: 20,
-      status: "cancelled",
+      statuses: ["cancelled"],
     });
 
     expect(result.items[0]?.status).toBe("cancelled");
@@ -66,7 +66,7 @@ describe("discover.service · task status contract", () => {
     expect(getMock).toHaveBeenCalledOnce();
     expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/discover-tasks");
     const config = getMock.mock.calls[0]?.[1] as { params: Record<string, unknown> };
-    expect(config.params.status).toBe("cancelled");
+    expect(config.params.status).toEqual(["cancelled"]);
     expect(config.params.resource_id).toBeUndefined();
   });
 

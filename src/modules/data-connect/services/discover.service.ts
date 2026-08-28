@@ -383,7 +383,7 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     const matchesSchedule =
       !query.scheduleId || item.scheduleId === query.scheduleId;
     const matchesResource = !query.resourceId || item.resourceId === query.resourceId;
-    const matchesStatus = !query.status || item.status === query.status;
+    const matchesStatus = !query.statuses?.length || query.statuses.includes(item.status);
     const matchesStrategy = !query.strategy || item.strategy === query.strategy;
     const matchesTriggerType =
       !query.triggerType || item.triggerType === query.triggerType;
@@ -689,10 +689,11 @@ export async function listDataConnectDiscoverTasks(
         resource_id: query.resourceId,
         schedule_id: query.scheduleId,
         sort: query.sort ?? "create_time",
-        status: query.status,
+        status: query.statuses?.length ? query.statuses : undefined,
         strategy: query.strategy,
         trigger_type: query.triggerType,
       },
+      paramsSerializer: { indexes: null },
     },
   );
 
