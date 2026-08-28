@@ -2712,7 +2712,7 @@
   --txt: var(--color-text-primary);
   --txt2: var(--color-text-secondary);
   --faint: var(--color-text-tertiary);
-  --code: var(--color-interface-code-bg);
+  --code: var(--color-fill-quaternary);
   --chip: var(--color-fill-secondary);
   --field-bd: var(--color-border);
 }

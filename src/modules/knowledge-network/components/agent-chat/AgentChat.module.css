@@ -92,7 +92,7 @@
   --txt: var(--color-text-primary);
   --txt2: var(--color-text-secondary);
   --faint: var(--color-text-tertiary);
-  --code: var(--color-interface-code-bg);
+  --code: var(--color-fill-quaternary);
   --chip: var(--color-fill-secondary);
   font-size: 13px;
   color: var(--txt);
@@ -587,7 +587,7 @@
   --accent: var(--color-primary-500);
   --line: var(--color-border);
   --chip: var(--color-primary-100);
-  --code: var(--color-interface-code-bg);
+  --code: var(--color-fill-quaternary);
   --field-bd: var(--color-border);
 }
 .configDrawer :global(.ant-drawer-body) {
