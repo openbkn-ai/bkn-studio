@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
 
 export type SemanticUnderstandingTaskStatus =
@@ -149,12 +150,17 @@ export type CreateSemanticUnderstandingTaskPayload = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const mockNow = Date.now();
+
+function semanticMockText(key: string) {
+  return i18n.t(`dataCatalog.taskManagement.semantic.mock.${key}`);
+}
+
 let mockTasks: SemanticUnderstandingTask[] = [
   {
     id: "semantic-task-001",
     scope: "resource",
     catalogId: "cat-001",
-    catalogName: "CRM 主数据",
+    catalogName: semanticMockText("customerCatalog"),
     resourceId: "res-001",
     resourceName: "customers",
     agentId: "resource-semantic-understanding",
@@ -170,20 +176,20 @@ let mockTasks: SemanticUnderstandingTask[] = [
     finishTime: mockNow - 1000 * 60 * 40,
     confidenceDetailJson: JSON.stringify({
       quality: { resource_effective: true, field_effective: 3, field_total: 5 },
-      warnings: ["字段 phone 的样本值不足，未生成语义建议。"],
+      warnings: [semanticMockText("phoneInsufficientSamplesWarning")],
     }),
     applyDetailJson: JSON.stringify({
       field_details: [
         { name: "customer_id", status: "updated", updated: ["description", "semantic_type"] },
         { name: "email", status: "updated", updated: ["description"] },
-        { name: "phone", status: "skipped", reasons: ["样本值不足"] },
+        { name: "phone", status: "skipped", reasons: [semanticMockText("insufficientSamples")] },
       ],
     }),
     input: JSON.stringify({ resource_id: "res-001", include_sample_rows: false }),
     inputHash: "sha256:5eecaf1d9d8f0a8c",
     resultJson: JSON.stringify({
       quality: { resource_effective: true, field_effective: 3, field_total: 5 },
-      summary: "已为客户主数据补充字段语义。",
+      summary: semanticMockText("customerSemanticSummary"),
     }),
   },
   {
