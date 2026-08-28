@@ -15,12 +15,13 @@ import {
   getSystemTheme,
   resolveTheme,
   subscribeToSystemTheme,
+  type ResolvedTheme,
   type ThemePreference,
 } from "./theme-mode";
 
 const DEFAULT_THEME_PREFERENCE: ThemePreference = "system";
 
-function getServerTheme() {
+function getServerTheme(): ResolvedTheme {
   return "light";
 }
 

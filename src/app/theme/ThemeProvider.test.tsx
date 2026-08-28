@@ -36,7 +36,7 @@ function installMatchMedia(initiallyDark: boolean) {
     addListener: (listener: MediaChangeListener) => listeners.add(listener),
     removeListener: (listener: MediaChangeListener) => listeners.delete(listener),
     dispatchEvent: () => true,
-  } satisfies MediaQueryList;
+  } as unknown as MediaQueryList;
 
   vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
 
