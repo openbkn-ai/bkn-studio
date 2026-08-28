@@ -12,15 +12,13 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import styles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
 import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverTask,
 } from "@/modules/data-connect/types/discover";
 import { formatDiscoverTaskTime } from "@/modules/data-connect/utils/discover-task-time";
-
-import styles from "@/modules/data-catalog/components/BuildTaskDetailDrawer.module.css";
-import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 
 const EMPTY_VALUE = "-";
 
@@ -44,13 +42,13 @@ function statusTag(
 ) {
   const statusClass =
     status === "completed"
-      ? sharedStyles.taskSucceeded
+      ? styles.taskSucceeded
       : status === "failed"
-        ? sharedStyles.taskFailed
+        ? styles.taskFailed
         : status === "cancelled"
-          ? sharedStyles.taskPending
-          : sharedStyles.taskRunning;
-  return <span className={[sharedStyles.tag, statusClass].join(" ")}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</span>;
+          ? styles.taskPending
+          : styles.taskRunning;
+  return <span className={[styles.tag, statusClass].join(" ")}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</span>;
 }
 
 type DataConnectDiscoverTaskDrawerProps = {
@@ -158,7 +156,7 @@ export function DataConnectDiscoverTaskDrawer({
               status={task.status === "failed" ? "exception" : undefined}
             />
             {task.status === "failed" ? (
-              <div className={sharedStyles.calloutWarn} style={{ marginTop: 12 }}>
+              <div className={styles.calloutWarn} style={{ marginTop: 12 }}>
                 <ExclamationCircleOutlined />
                 <span className={styles.failureContent}>
                   <b>{t("dataConnect.discoverMessage")}</b>

@@ -338,7 +338,9 @@ export function IndexBuildListScene() {
             record.mode === "batch"
               ? record.executeType === "incremental"
                 ? t("dataCatalog.build.executeIncremental")
-                : t("dataCatalog.build.executeFull")
+                : record.executeType === "full"
+                  ? t("dataCatalog.build.executeFull")
+                  : "-"
               : "-"
           }
         />

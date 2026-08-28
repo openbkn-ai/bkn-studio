@@ -128,6 +128,12 @@ describe("mapBuildTask", () => {
     expect(task.executeType).toBe("incremental");
   });
 
+  it("does not invent an execution type when the backend response is incomplete", () => {
+    const task = mapBuildTask({ id: "task-1", mode: "batch" });
+
+    expect(task.executeType).toBeUndefined();
+  });
+
   it("does not assign an execution type to streaming tasks", () => {
     const task = mapBuildTask({ id: "task-1", mode: "streaming" });
 

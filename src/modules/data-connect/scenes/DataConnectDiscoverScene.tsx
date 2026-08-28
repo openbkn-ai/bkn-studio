@@ -53,7 +53,7 @@ import {
 import { DiscoverRunNowModal } from "@/modules/data-connect/components/DiscoverRunNowModal";
 import { DataConnectDiscoverTaskDrawer } from "@/modules/data-connect/components/DataConnectDiscoverTaskDrawer";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
-import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
+import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 
 import styles from "./DataConnectDiscoverScene.module.css";
 
@@ -73,8 +73,8 @@ function renderTableTime(value?: number) {
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
-  const fillClass = task.status === "completed" ? sharedStyles.progressFillDone : task.status === "failed" ? sharedStyles.progressFillFailed : sharedStyles.progressFillVector;
-  return <div className={sharedStyles.progressWrapCompact}><div className={sharedStyles.progressTrack}><span className={[sharedStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={sharedStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
+  const fillClass = task.status === "completed" ? taskStyles.progressFillDone : task.status === "failed" ? taskStyles.progressFillFailed : taskStyles.progressFillVector;
+  return <div className={taskStyles.progressWrapCompact}><div className={taskStyles.progressTrack}><span className={[taskStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={taskStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
 }
 
 function DiscoverTaskPriority({ priority }: { priority: number }) {

@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import { formatCount, formatRowCount, timeAgo } from "@/modules/data-catalog/lib/format";
+import { formatCount, formatRowCount, formatTaskDateTime, timeAgo } from "@/modules/data-catalog/lib/format";
 
 describe("data-catalog format", () => {
   beforeEach(() => {
@@ -37,5 +37,9 @@ describe("data-catalog format", () => {
     expect(timeAgo(Date.now() - 5 * 60_000, "en-US")).toBe("5m ago");
     expect(timeAgo(Date.now() - 3 * 60 * 60_000, "en-US")).toBe("3h ago");
     expect(timeAgo(Date.now() - 2 * 24 * 60 * 60_000, "en-US")).toBe("2d ago");
+  });
+
+  it("renders missing task timestamps as a placeholder", () => {
+    expect(formatTaskDateTime(0)).toBe("-");
   });
 });

@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
-import { formatCount } from "@/modules/data-catalog/lib/format";
+import { formatCount, formatTaskDateTime } from "@/modules/data-catalog/lib/format";
 import { buildTaskStatusLabelKey } from "@/modules/data-catalog/services/build-task.service";
 import { getBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -198,9 +198,11 @@ export function BuildTaskDetailDrawer({
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
   const executeTypeLabel =
     task.mode === "batch"
-      ? (task.executeType ?? "full") === "incremental"
+      ? task.executeType === "incremental"
         ? t("dataCatalog.build.executeIncremental")
-        : t("dataCatalog.build.executeFull")
+        : task.executeType === "full"
+          ? t("dataCatalog.build.executeFull")
+          : null
       : null;
   const failureSummary = summarizeBuildTaskError(task.error, i18n.language);
 
@@ -364,7 +366,7 @@ export function BuildTaskDetailDrawer({
               {task.creator?.name || task.creator?.id || EMPTY_VALUE}
             </Descriptions.Item>
             <Descriptions.Item label={t("dataConnect.createTime")}>
-              {formatDateTimeYmdHms(task.createTime)}
+              {formatTaskDateTime(task.createTime)}
             </Descriptions.Item>
           </Descriptions>
         </section>

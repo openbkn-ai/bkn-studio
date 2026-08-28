@@ -118,6 +118,7 @@ describe("IndexConfigFormPanel", () => {
     const semanticResource: CatalogResource = {
       ...configuredResource,
       description: "Monthly parking pass records",
+      enabled: false,
       expectedUpdateTime: 200,
       name: "Monthly passes",
       schema: [{
@@ -143,6 +144,7 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => {
       expect(updateCatalogResourceMock).toHaveBeenCalledWith("resource-1", expect.objectContaining({
         description: semanticResource.description,
+        enabled: false,
         expectedUpdateTime: semanticResource.expectedUpdateTime,
         name: semanticResource.name,
         schema: [expect.objectContaining({

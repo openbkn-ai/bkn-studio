@@ -237,12 +237,7 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     resourceId: item.resource_id ?? "",
     resourceName: item.resource_name,
     mode,
-    executeType:
-      mode === "batch"
-        ? item.execute_type === "incremental"
-          ? "incremental"
-          : "full"
-        : undefined,
+    executeType: mode === "batch" ? item.execute_type : undefined,
     status,
     embeddingFields: snapshot.embeddingFields,
     embeddingConfigs: snapshot.embeddingConfigs,
