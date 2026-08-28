@@ -14,7 +14,6 @@ vi.mock("@/framework/runtime/config", () => ({
   getRuntimeConfig: () => ({
     apiBaseUrl: "/api",
     locale: "en-US",
-    currentUser: { businessDomainId: "bd_demo" },
     auth: { tokenManager: { getAccessToken: () => "token", refreshAccessToken: vi.fn() } },
   }),
 }));
@@ -31,7 +30,6 @@ describe("EE business provenance service", () => {
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/conversations",
       {
-        headers: { "x-business-domain": "bd_demo" },
         params: { page: 2, page_size: 20, keyword: "采购" },
         skipErrorToast: true,
       },
@@ -56,11 +54,10 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1",
-      { headers: { "x-business-domain": "bd_demo" } },
     );
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1/markdown",
-      { headers: { "x-business-domain": "bd_demo" }, responseType: "text" },
+      { responseType: "text" },
     );
     expect(projection.operations[0]?.operationId).toBe("op-1");
     expect(projection.operations[0]?.elements[0]).toMatchObject({ parentId: "inventory", field: "available_qty" });
@@ -77,7 +74,7 @@ describe("EE business provenance service", () => {
     const page = await getBusinessProvenanceInteractions({ conversationId: "conv-1", page: 1, pageSize: 20 });
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions",
-      { headers: { "x-business-domain": "bd_demo" }, params: { conversation_id: "conv-1", page: 1, page_size: 20 } },
+      { params: { conversation_id: "conv-1", page: 1, page_size: 20 } },
     );
     expect(page.entries[0]).toMatchObject({ interactionId: "int-1", roundNumber: 3 });
   });

@@ -20,11 +20,10 @@ function readEnvMarketCatalog(): boolean | undefined {
 }
 
 /**
- * Cross-domain market catalog (browse + install resources from outside the
- * current business domain). Off by default: single-domain deployments see the
- * same records as the management list, so the extra nav entry only adds
- * confusion. The route and marketMode code paths stay in place so this can be
- * flipped back on when cross-domain sharing ships.
+ * Market catalog for browsing and installing shared resources. Off by default:
+ * tenant-scoped deployments see the same records as the management list, so the
+ * extra nav entry only adds confusion. The route and marketMode code paths stay
+ * in place so this can be enabled when cross-tenant sharing ships.
  */
 export function isMarketCatalogEnabled(): boolean {
   const runtimeFlag = getRuntimeConfig().features?.marketCatalog;

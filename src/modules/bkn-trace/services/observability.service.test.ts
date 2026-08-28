@@ -8,16 +8,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
-const runtimeConfigMock = vi.hoisted(() => ({
-  currentUser: { businessDomainId: "bd_demo" },
-}));
 
 vi.mock("@/framework/request/http", () => ({
   http: { get: getMock },
-}));
-
-vi.mock("@/framework/runtime/config", () => ({
-  getRuntimeConfig: () => runtimeConfigMock,
 }));
 
 describe("observability service", () => {
@@ -77,7 +70,6 @@ describe("observability service", () => {
     });
 
     expect(getMock).toHaveBeenCalledWith("/observability/v1/logs", {
-      headers: { "x-business-domain": "bd_demo" },
       params: {
         categories: ["audit.admin"],
         business_module: "domain_knowledge_network",
@@ -121,11 +113,9 @@ describe("observability service", () => {
     const policies = await listLogPolicies();
 
     expect(getMock).toHaveBeenNthCalledWith(1, "/observability/v1/log-sources", {
-      headers: { "x-business-domain": "bd_demo" },
       skipErrorToast: true,
     });
     expect(getMock).toHaveBeenNthCalledWith(2, "/observability/v1/log-policies", {
-      headers: { "x-business-domain": "bd_demo" },
       skipErrorToast: true,
     });
     expect(sources[0]).toMatchObject({ sourceId: "otel", status: "available" });
@@ -154,7 +144,6 @@ describe("observability service", () => {
     const data = await downloadArchive("arc-log-1");
 
     expect(getMock).toHaveBeenCalledWith("/observability/v1/archive-jobs/arc-log-1/download", {
-      headers: { "x-business-domain": "bd_demo" },
       responseType: "blob",
       skipErrorToast: true,
     });
@@ -180,7 +169,7 @@ describe("observability service", () => {
 		 const detail = await getLogDetail("log-a");
 
 		 expect(getMock).toHaveBeenCalledWith("/observability/v1/logs/log-a", {
-			 headers: { "x-business-domain": "bd_demo" }, skipErrorToast: true,
+			 skipErrorToast: true,
 		 });
 		 expect(detail).toMatchObject({
 			 data: { eventId: "audit-a", businessModule: "system_management", action: "grant", target: { id: "supplychain_hd0202" } },

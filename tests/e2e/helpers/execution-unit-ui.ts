@@ -37,10 +37,6 @@ export async function ensureE2eRuntime(
         capabilityUxV2: runtimeConfig.capabilityUxV2,
         marketCatalog: runtimeConfig.marketCatalog,
       },
-      currentUser: {
-        businessDomainId: "bd_public",
-        ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
-      },
     };
   }, {
     baseUrl: STUDIO_API_BASE_URL,
@@ -256,7 +252,7 @@ export async function clickMarketCardInstallButton(card: Locator) {
 export async function openCatalogInstallDialog(page: Page, card: Locator) {
   await clickMarketCardInstallButton(card);
   return page.locator(".ant-modal-content").filter({
-    hasText: /引入到本业务域|从市场同步|Introduce|Sync from market/i,
+    hasText: /引入到当前租户|从市场同步|Introduce|Sync from market/i,
   });
 }
 

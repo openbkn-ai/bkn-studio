@@ -30,7 +30,7 @@ export const agentChatPart = {
     },
     suggestPrompt:
       "You are writing recommended questions for the empty chat page of an intelligent data-questioning product. The user is a non-technical business user.\n" +
-      "Below is a JSON structure definition for a business domain. name/comment describe business meaning, object_types are business entities, and relation_types are business relationships.\n" +
+      "Below is a JSON structure definition for a business model. name/comment describe business meaning, object_types are business entities, and relation_types are business relationships.\n" +
       "Write 3 questions that a real business user in this domain would ask. Requirements:\n" +
       "1. Only use business terms that appear in the JSON. Do not invent entities or concepts that are not present, because invented questions will not find data.\n" +
       "2. Do not mention technical terms such as object type, relation type, knowledge network, graph, schema, table, or field. Do not mention English JSON field names. Write like a business user.\n" +

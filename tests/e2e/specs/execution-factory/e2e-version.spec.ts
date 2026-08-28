@@ -189,9 +189,7 @@ test.describe("Execution Factory — Version & status E2E flows", () => {
     await publishMcpViaApi(request, mcp.mcpId);
     await offlineMcpViaApi(request, mcp.mcpId);
 
-    const mcpDetail = await request.get(apiUrl(`/mcp/${mcp.mcpId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const mcpDetail = await request.get(apiUrl(`/mcp/${mcp.mcpId}`));
     expect(mcpDetail.ok()).toBeTruthy();
   });
 

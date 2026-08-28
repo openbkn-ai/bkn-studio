@@ -45,7 +45,7 @@ export const bknTraceZhCN = {
         element: { action: "行动", logic: "逻辑/函数", metric: "指标", object: "对象", property: "属性", relation: "关系" },
         errors: { factsLoad: "调用事实加载失败", interactionsLoad: "交互轮次加载失败", markdownLoad: "过程事实 Markdown 加载失败" },
         evidence: { byRound: "按轮次查看", complete: "完整可溯源", partial: "部分可溯源" },
-        filters: { agent: "Agent / 应用", businessDomain: "业务域", endedAt: "结束时间", evidence: "证据完整性", keyword: "搜索问题、结果或会话 ID", network: "知识网络", startedAt: "开始时间", status: "运行状态" },
+        filters: { agent: "Agent / 应用", endedAt: "结束时间", evidence: "证据完整性", keyword: "搜索问题、结果或会话 ID", network: "知识网络", startedAt: "开始时间", status: "运行状态" },
         inputNotRecorded: "用户输入未记录", interactionCount: "{{count}} 轮交互", interactionCount_one: "{{count}} 轮交互", interactionCount_other: "{{count}} 轮交互", interfaceNotRecorded: "接口未记录",
         knowledge: {
           closeDetail: "关闭知识网络详情", contextOnly: "知识网络上下文，非本轮调用", deterministicCalls: "{{count}} 次确定性调用", deterministicCalls_one: "{{count}} 次确定性调用", deterministicCalls_other: "{{count}} 次确定性调用", empty: "本轮尚未记录能够确定性定位到 BKN 元素的调用",
@@ -263,7 +263,6 @@ export const bknTraceZhCN = {
 	  applicationPrincipalId: "应用凭据 ID",
 	  effectiveSubjectId: "实际账号",
 	  inputSummary: "查询对象 / 输入摘要",
-      businessDomain: "业务域",
       businessPath: "业务路径",
       claimId: "结论 ID",
       complianceStatus: "合规状态",
@@ -322,7 +321,6 @@ export const bknTraceZhCN = {
     partial: "当前结果不完整",
     placeholders: {
       agentOrApp: "Agent / 应用",
-      businessDomain: "业务域",
       evidenceCompleteness: "证据完整性",
       keyword: "搜索问题、结果、业务对象或 ID",
       knowledgeNetwork: "知识网络",

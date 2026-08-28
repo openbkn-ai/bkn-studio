@@ -57,7 +57,7 @@ docker compose -f docker-compose.sandbox.yml up -d   # 函数沙箱 + docker.soc
 
 ```powershell
 # 列表 API 返回 total=0（或仅剩 internal 内置资源）
-curl "http://127.0.0.1:9000/api/agent-operator-integration/v1/tool-box/list?page=1&page_size=5" -H "x-business-domain: bd_public"
+curl "http://127.0.0.1:9000/api/agent-operator-integration/v1/tool-box/list?page=1&page_size=5"
 ```
 
 ---

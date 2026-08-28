@@ -54,9 +54,7 @@ test.describe("Execution Factory — Toolbox E2E flows", () => {
     const toolbox = await createToolboxViaApi(request, name);
     createdBoxIds.push(toolbox.boxId);
 
-    const detail = await request.get(apiUrl(`/tool-box/${toolbox.boxId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const detail = await request.get(apiUrl(`/tool-box/${toolbox.boxId}`));
     expect(detail.ok()).toBeTruthy();
   });
 
@@ -69,7 +67,6 @@ test.describe("Execution Factory — Toolbox E2E flows", () => {
 
     const list = await request.get(
       apiUrl(`/tool-box/${toolbox.boxId}/tools/list?page=1&page_size=20`),
-      { headers: { "x-business-domain": "bd_public" } },
     );
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
@@ -87,9 +84,7 @@ test.describe("Execution Factory — Toolbox E2E flows", () => {
 
     await publishToolboxViaApi(request, toolbox.boxId);
 
-    const market = await request.get(apiUrl("/tool-box/market?page=1&page_size=20"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const market = await request.get(apiUrl("/tool-box/market?page=1&page_size=20"));
     expect(market.ok()).toBeTruthy();
     const body = (await market.json()) as { data?: Array<{ box_id: string }> };
     expect(body.data?.some((item) => item.box_id === toolbox.boxId)).toBeTruthy();

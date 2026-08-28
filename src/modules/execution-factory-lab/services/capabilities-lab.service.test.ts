@@ -34,7 +34,7 @@ describe("capabilities-lab.service", () => {
     vi.restoreAllMocks();
   });
 
-  it("does not add business domain context to the sandbox execution API", async () => {
+  it("does not add legacy scope context to the sandbox execution API", async () => {
     await executePython({
       code: "def handler(event):\n    return event",
       event: { city: "beijing" },

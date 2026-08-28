@@ -44,7 +44,7 @@ $env:OPENBKN_TOKEN = "<token>"
 HTTP files also live at `operator-integration/server/tests/http/` in foundry.
 
 1. Start `agent-operator-integration` (e.g. `http://127.0.0.1:9000`)
-2. Edit `http/env.http` with Bearer token + `x-business-domain`
+2. Edit `http/env.http` with a Bearer token
 3. Run requests in `operator.http`, `toolbox.http`, `mcp.http`, `skill.http`, `function-ai.http`
 
 ## 4. Python operator CLI
@@ -107,4 +107,3 @@ Environment overrides:
 |----------|---------|
 | `E2E_BASE_URL` | `http://127.0.0.1:5173` |
 | `E2E_API_BASE_URL` | `http://127.0.0.1:9000/api` |
-| `E2E_BUSINESS_DOMAIN` | `bd_public` |

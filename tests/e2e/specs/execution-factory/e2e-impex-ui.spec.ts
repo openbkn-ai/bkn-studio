@@ -115,9 +115,7 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
 
     await importBackupFileViaUi(page, "operator", filePath);
 
-    const list = await request.get(apiUrl("/operator/info/list?page=1&page_size=50"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const list = await request.get(apiUrl("/operator/info/list?page=1&page_size=50"));
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
       data?: Array<{ operator_id: string; name?: string; version: string }>;
@@ -204,9 +202,7 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
 
     await importBackupFileViaUi(page, "toolbox", filePath);
 
-    const list = await request.get(apiUrl("/tool-box/list?page=1&page_size=50"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const list = await request.get(apiUrl("/tool-box/list?page=1&page_size=50"));
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
       data?: Array<{ box_id: string; box_name?: string; name?: string }>;
@@ -219,7 +215,6 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
       createdBoxIds.push(imported.box_id);
       const tools = await request.get(
         apiUrl(`/tool-box/${imported.box_id}/tools/list?page=1&page_size=20`),
-        { headers: { "x-business-domain": "bd_public" } },
       );
       expect(tools.ok()).toBeTruthy();
       const toolsBody = (await tools.json()) as {
