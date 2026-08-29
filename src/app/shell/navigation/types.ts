@@ -65,6 +65,8 @@ export type ConsoleNavItem = {
 };
 
 export type ConsoleNavContribution = {
+  /** Insert this top-level contribution after the matching base navigation item. */
+  afterKey?: string;
   items: ConsoleNavItem[];
   parentKey?: string;
 };

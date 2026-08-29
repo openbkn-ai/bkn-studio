@@ -16,6 +16,7 @@ import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 
 export const bknTraceNavigation: ConsoleNavContribution = {
+  afterKey: "model-resources",
   items: [
     {
       key: "observability",
