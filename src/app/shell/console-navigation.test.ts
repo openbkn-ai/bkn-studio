@@ -17,6 +17,19 @@ const keys = (items: { key: string }[]) => items.map((item) => item.key);
 const systemGroup = (items: ReturnType<typeof filterNavByPermission>) =>
   items.find((item) => item.key === "system-management");
 
+describe("consoleNavigation — 主线菜单顺序", () => {
+  it("将可观测性置于模型管理之后、系统管理之前", () => {
+    const navigationKeys = keys(consoleNavigation);
+
+    expect(navigationKeys.indexOf("model-resources")).toBeLessThan(
+      navigationKeys.indexOf("observability"),
+    );
+    expect(navigationKeys.indexOf("observability")).toBeLessThan(
+      navigationKeys.indexOf("system-management"),
+    );
+  });
+});
+
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
   it("仅持有系统管理权限的用户只显示首页和获授权的系统管理菜单", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));

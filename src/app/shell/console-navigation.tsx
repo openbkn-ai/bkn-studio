@@ -30,8 +30,8 @@ const navigationContributions: ConsoleNavContribution[] = [
   dataCatalogNavigation,
   executionFactoryNavigation,
   modelResourcesNavigation,
-  executionFactoryLabNavigation,
   bknTraceNavigation,
+  executionFactoryLabNavigation,
 ];
 
 export type { ConsoleNavItem } from "@/app/shell/navigation/types";
@@ -176,35 +176,40 @@ function buildConsoleNavigation(
   baseItems: ConsoleNavItem[],
   contributions: ConsoleNavContribution[],
 ) {
-  const topLevelItems = contributions.flatMap((contribution) =>
-    contribution.parentKey ? [] : contribution.items,
-  );
+  const topLevelItems: ConsoleNavItem[] = [];
+  const anchoredItems = new Map<string, ConsoleNavItem[]>();
   const groupedItems = new Map<string, ConsoleNavItem[]>();
 
   for (const contribution of contributions) {
-    if (!contribution.parentKey) {
+    if (contribution.parentKey) {
+      groupedItems.set(contribution.parentKey, [
+        ...(groupedItems.get(contribution.parentKey) ?? []),
+        ...contribution.items,
+      ]);
       continue;
     }
 
-    groupedItems.set(contribution.parentKey, [
-      ...(groupedItems.get(contribution.parentKey) ?? []),
-      ...contribution.items,
-    ]);
+    if (contribution.afterKey) {
+      anchoredItems.set(contribution.afterKey, [
+        ...(anchoredItems.get(contribution.afterKey) ?? []),
+        ...contribution.items,
+      ]);
+      continue;
+    }
+
+    topLevelItems.push(...contribution.items);
   }
 
   return [
     ...topLevelItems,
-    ...baseItems.map((item) => {
+    ...baseItems.flatMap((item) => {
       const extraChildren = groupedItems.get(item.key) ?? [];
 
-      if (extraChildren.length === 0) {
-        return item;
-      }
+      const baseItem = extraChildren.length === 0
+        ? item
+        : { ...item, children: [...extraChildren, ...(item.children ?? [])] };
 
-      return {
-        ...item,
-        children: [...extraChildren, ...(item.children ?? [])],
-      };
+      return [baseItem, ...(anchoredItems.get(item.key) ?? [])];
     }),
   ];
 }
