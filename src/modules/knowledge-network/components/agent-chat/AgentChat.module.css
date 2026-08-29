@@ -814,6 +814,22 @@
   word-break: break-word;
 }
 
+/* Collapsed run of consecutive tool calls */
+.group {
+  margin: 4px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--code);
+}
+.groupBody {
+  border-top: 1px solid var(--line);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Tool invocation card */
 .calls {
   margin: 4px 0 8px;
@@ -871,6 +887,39 @@
 .dotRunning {
   background: #c9821a;
   box-shadow: 0 0 5px rgba(201, 130, 26, 0.6);
+  animation: breathe 1.4s ease-in-out infinite;
+}
+/* A closed group is the only progress signal while calls are in flight, so it breathes. */
+.callLive .callName,
+.callLive .callMeta {
+  animation: breatheText 1.8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+@keyframes breatheText {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dotRunning,
+  .callLive .callName,
+  .callLive .callMeta {
+    animation: none;
+  }
 }
 .dotError {
   background: #d63a3a;

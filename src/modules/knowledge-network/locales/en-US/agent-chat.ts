@@ -197,6 +197,14 @@ export const agentChatPart = {
         error: "Error",
         response: "Response",
       },
+      toolGroup: {
+        summary: "Called {{count}} tools",
+        summary_one: "Called {{count}} tool",
+        summary_other: "Called {{count}} tools",
+        failed: "{{count}} failed",
+        failed_one: "{{count}} failed",
+        failed_other: "{{count}} failed",
+      },
       error: {
         retry: "Retry Round",
         detail: "Details",
