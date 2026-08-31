@@ -6,7 +6,7 @@
  */
 
 import { Form } from "antd";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -78,4 +78,76 @@ describe("DataConnectConfigForm", () => {
     expect(hasGroupTitle("连接参数")).toBe(false);
     expect(screen.queryByText("主机地址")).toBeNull();
   });
+
+  it("keeps database discovery automatic when empty and adds database names individually", async () => {
+    const onFinish = vi.fn();
+
+    render(
+      <Form
+        initialValues={{
+          connectorConfig: {
+            host: "db.example.internal",
+            password: "secret",
+            port: 3306,
+            username: "readonly_user",
+          },
+          enabled: true,
+          healthCheckSchedule: { mode: "inherit" },
+          name: "MariaDB connection",
+        }}
+        onFinish={onFinish}
+      >
+        <DataConnectConfigForm selectedConnectorType={mariaDbConnector} />
+        <button type="submit">Submit</button>
+      </Form>,
+    );
+
+    const databaseInput = screen
+      .getByText(
+        "留空自动发现全部数据库；输入名称后按回车逐个添加",
+      )
+      .closest(".ant-select")
+      ?.querySelector("input");
+
+    expect(databaseInput).not.toBeNull();
+    if (!databaseInput) {
+      return;
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    await waitFor(() => expect(onFinish).toHaveBeenCalled());
+    expect(getLastConnectorConfig(onFinish).databases).toBeUndefined();
+
+    fireEvent.change(databaseInput, { target: { value: "sales" } });
+    fireEvent.keyDown(databaseInput, {
+      code: "Enter",
+      key: "Enter",
+      keyCode: 13,
+      which: 13,
+    });
+    fireEvent.change(databaseInput, { target: { value: "reporting" } });
+    fireEvent.keyDown(databaseInput, {
+      code: "Enter",
+      key: "Enter",
+      keyCode: 13,
+      which: 13,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    await waitFor(() =>
+      expect(getLastConnectorConfig(onFinish).databases).toEqual(["sales", "reporting"]),
+    );
+  });
 });
+
+function getLastConnectorConfig(onFinish: ReturnType<typeof vi.fn>) {
+  const payload = onFinish.mock.lastCall?.[0] as
+    | { connectorConfig: { databases?: string[] } }
+    | undefined;
+
+  if (!payload) {
+    throw new Error("Expected the form submission handler to be called");
+  }
+
+  return payload.connectorConfig;
+}
