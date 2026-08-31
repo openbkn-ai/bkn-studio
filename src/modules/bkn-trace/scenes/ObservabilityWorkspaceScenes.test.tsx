@@ -17,17 +17,17 @@ import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
 const translate = (key: string, options?: Record<string, unknown>) => {
   const value = ({
-  "bknTrace.logs.authenticatedUser": "已认证用户",
-  "bknTrace.logs.authMethods.api_key": "通过 API Key",
-  "bknTrace.logs.businessConversationSuffix": " 的业务会话",
-  "bknTrace.logs.conversationId": "Conversation ID",
-  "bknTrace.logs.unnamedAgent": "未命名 Agent",
-  "bknTrace.logs.modules.openbkn": "技术运行日志（非操作日志）",
-  "bknTrace.logs.domainAction": "{{action}}{{target}}",
-  "bknTrace.logs.domainAuditActions.create": "创建",
-  "bknTrace.logs.targetTypes.object_type": "对象类",
-  "bknTrace.settings.status.healthy": "已接入",
-  "bknTrace.settings.sourceState.partial_management_audit_coverage": "已接入部分管理操作；其余操作尚未纳入审计。",
+    "bknTrace.logs.authenticatedUser": "已认证用户",
+    "bknTrace.logs.authMethods.api_key": "通过 API Key",
+    "bknTrace.logs.businessConversationSuffix": " 的业务会话",
+    "bknTrace.logs.conversationId": "Conversation ID",
+    "bknTrace.logs.unnamedAgent": "未命名 Agent",
+    "bknTrace.logs.modules.openbkn": "技术运行日志（非操作日志）",
+    "bknTrace.logs.domainAction": "{{action}}{{target}}",
+    "bknTrace.logs.domainAuditActions.create": "创建",
+    "bknTrace.logs.targetTypes.object_type": "对象类",
+    "bknTrace.settings.status.healthy": "已接入",
+    "bknTrace.settings.sourceState.partial_management_audit_coverage": "已接入部分管理操作；其余操作尚未纳入审计。",
   }[key] ?? key);
   return value.replace(/{{(\w+)}}/g, (_match, name: string) => typeof options?.[name] === "string" ? options[name] : "");
 };
@@ -79,12 +79,12 @@ describe("observability workspace scenes", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-		vi.mocked(createArchive).mockReset();
-		vi.mocked(getArchiveOverview).mockReset();
-		vi.mocked(listArchiveJobs).mockReset();
-		vi.mocked(getArchiveOverview).mockImplementation((kind) => Promise.resolve({ candidateCount: 0, cutoffAt: "2026-08-07T00:00:00Z", kind, retentionDays: kind === "log" ? 30 : 7, storageStatus: "unavailable" }));
-		vi.mocked(listArchiveJobs).mockResolvedValue([]);
-		window.history.replaceState({}, "", "/observability/logs");
+    vi.mocked(createArchive).mockReset();
+    vi.mocked(getArchiveOverview).mockReset();
+    vi.mocked(listArchiveJobs).mockReset();
+    vi.mocked(getArchiveOverview).mockImplementation((kind) => Promise.resolve({ candidateCount: 0, cutoffAt: "2026-08-07T00:00:00Z", kind, retentionDays: kind === "log" ? 30 : 7, storageStatus: "unavailable" }));
+    vi.mocked(listArchiveJobs).mockResolvedValue([]);
+    window.history.replaceState({}, "", "/observability/logs");
     vi.mocked(getAccessProfile).mockResolvedValue(profile);
     vi.mocked(listLogs).mockResolvedValue({
       count: { accuracy: "partial", value: 1 },
@@ -103,19 +103,19 @@ describe("observability workspace scenes", () => {
     });
     vi.mocked(listLogSources).mockResolvedValue([{ coveredModules: ["openbkn"], collectionMethod: "direct_otlp", reliability: "best_effort", sourceId: "otel-ss4o", status: "healthy" }]);
     vi.mocked(listLogPolicies).mockResolvedValue([{ category: "runtime.system", legalHold: false, policyKind: "runtime", policyRevision: "r6.2-default", readOnly: true, retentionDays: 7, scope: {} }]);
-		vi.mocked(getLogDetail).mockResolvedValue({
-			data: {
-				action: "create", actor: { id: "user-a", name: "供应链管理员", type: "user" }, authMethod: "api_key",
-				facts: { action: "create", operationType: "conversation.create", operationStatus: "completed", businessContext: "managed", targetId: "conv-a", targetNameSnapshot: "供应链分析助手", targetType: "conversation" },
-				conversationId: "conv-a", eventId: "audit-a", eventName: "conversation.created", eventTime: "2026-08-01T10:00:00Z",
-				logCategory: "runtime.business", attributes: { agent_name: "供应链分析助手", external_conversation_key: "cursor-thread-a" },
-				businessModule: "domain_knowledge_network", outcome: "success", recordedAt: "2026-08-01T10:00:01Z",
-				requestId: "req-a", sourceChannel: "api", sourceId: "bkn-trace-core",
-				target: { id: "conv-a", name: "供应链分析助手", type: "conversation" },
-				traceId: "4b3d59daeff5bfbb23d46c47a5051ec9",
-			},
-			policyRevision: "r6.2-default", redactedFields: [], relatedTraceIds: ["trace-a"],
-		});
+    vi.mocked(getLogDetail).mockResolvedValue({
+      data: {
+        action: "create", actor: { id: "user-a", name: "供应链管理员", type: "user" }, authMethod: "api_key",
+        facts: { action: "create", operationType: "conversation.create", operationStatus: "completed", businessContext: "managed", targetId: "conv-a", targetNameSnapshot: "供应链分析助手", targetType: "conversation" },
+        conversationId: "conv-a", eventId: "audit-a", eventName: "conversation.created", eventTime: "2026-08-01T10:00:00Z",
+        logCategory: "runtime.business", attributes: { agent_name: "供应链分析助手", external_conversation_key: "cursor-thread-a" },
+        businessModule: "domain_knowledge_network", outcome: "success", recordedAt: "2026-08-01T10:00:01Z",
+        requestId: "req-a", sourceChannel: "api", sourceId: "bkn-trace-core",
+        target: { id: "conv-a", name: "供应链分析助手", type: "conversation" },
+        traceId: "4b3d59daeff5bfbb23d46c47a5051ec9",
+      },
+      policyRevision: "r6.2-default", redactedFields: [], relatedTraceIds: ["trace-a"],
+    });
   });
 
   afterEach(() => cleanup());
@@ -325,21 +325,21 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("HD供应链业务知识网络_v3")).not.toBeNull();
   });
 
-	 it("点击日志打开受控详情并可下钻 Trace", async () => {
-		 render(<ObservabilityLogsScene />);
-		 const summary = await screen.findByText("供应链分析助手 的业务会话");
-		 fireEvent.click(summary);
-		 await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("audit-a"));
-		 expect(await screen.findByText("bknTrace.logs.detail.title")).not.toBeNull();
-		 expect(screen.getAllByText("bknTrace.logs.auditActions.startAgentConversation").length).toBeGreaterThan(0);
-		 expect(screen.getByText("bknTrace.logs.detail.businessObject")).not.toBeNull();
-		 expect(screen.getAllByText("供应链分析助手 的业务会话").length).toBeGreaterThan(0);
-		 expect(screen.getAllByText("通过 API Key").length).toBeGreaterThan(0);
-		 expect(screen.getByText("managed")).not.toBeNull();
-		 expect(screen.getByText("bknTrace.logs.detail.rawFacts")).not.toBeNull();
-		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openBusinessProvenance" }).getAttribute("href")).toBe("/studio/observability/business-provenance?conversation_id=conv-a");
-		 expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openTrace" }).getAttribute("href")).toBe("/studio/observability/traces?trace_id=4b3d59daeff5bfbb23d46c47a5051ec9");
-	 });
+  it("点击日志打开受控详情并可下钻 Trace", async () => {
+    render(<ObservabilityLogsScene />);
+    const summary = await screen.findByText("供应链分析助手 的业务会话");
+    fireEvent.click(summary);
+    await waitFor(() => expect(getLogDetail).toHaveBeenCalledWith("audit-a"));
+    expect(await screen.findByText("bknTrace.logs.detail.title")).not.toBeNull();
+    expect(screen.getAllByText("bknTrace.logs.auditActions.startAgentConversation").length).toBeGreaterThan(0);
+    expect(screen.getByText("bknTrace.logs.detail.businessObject")).not.toBeNull();
+    expect(screen.getAllByText("供应链分析助手 的业务会话").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("通过 API Key").length).toBeGreaterThan(0);
+    expect(screen.getByText("managed")).not.toBeNull();
+    expect(screen.getByText("bknTrace.logs.detail.rawFacts")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openBusinessProvenance" }).getAttribute("href")).toBe("/studio/observability/business-provenance?conversation_id=conv-a");
+    expect(screen.getByRole("link", { name: "bknTrace.logs.detail.openTrace" }).getAttribute("href")).toBe("/studio/observability/traces?trace_id=4b3d59daeff5bfbb23d46c47a5051ec9");
+  });
 
   it("旧会话日志用用户目录把操作者 UUID 解析为用户名", async () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
@@ -435,9 +435,9 @@ describe("observability workspace scenes", () => {
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
     render(<ObservabilitySettingsScene />);
 
-		const [archiveButton] = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
-		if (!archiveButton) throw new Error("archive action button is missing");
-		fireEvent.click(archiveButton);
+    const [archiveButton] = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
+    if (!archiveButton) throw new Error("archive action button is missing");
+    fireEvent.click(archiveButton);
 
     expect(await screen.findByText("bknTrace.settings.archive.confirmTitle")).not.toBeNull();
     expect(createArchive).not.toHaveBeenCalled();
@@ -455,13 +455,13 @@ describe("observability workspace scenes", () => {
     render(<ObservabilitySettingsScene />);
     expect(await screen.findByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.archive.statuses.cleanup_incomplete")).not.toBeNull();
-	const [archiveButton] = screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" });
-	if (!archiveButton) throw new Error("log archive action button is missing");
-	fireEvent.click(archiveButton);
-	const confirmationButtons = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
-	const confirmationButton = confirmationButtons.at(-1);
-	if (!confirmationButton) throw new Error("archive confirmation button is missing");
-	fireEvent.click(confirmationButton);
+    const [archiveButton] = screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" });
+    if (!archiveButton) throw new Error("log archive action button is missing");
+    fireEvent.click(archiveButton);
+    const confirmationButtons = await screen.findAllByRole("button", { name: "bknTrace.settings.archive.action" });
+    const confirmationButton = confirmationButtons.at(-1);
+    if (!confirmationButton) throw new Error("archive confirmation button is missing");
+    fireEvent.click(confirmationButton);
     await waitFor(() => expect(vi.mocked(listArchiveJobs).mock.calls.filter(([kind]) => kind === "log")).toHaveLength(2));
     expect(screen.getByText("bknTrace.settings.archive.kinds.trace")).not.toBeNull();
   });
@@ -477,10 +477,10 @@ describe("observability workspace scenes", () => {
     sections.forEach((section, index) => {
       if (index > 0) expect(sections[index - 1]?.compareDocumentPosition(section)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
-		expect(screen.getByText("bknTrace.settings.archive.logRule")).not.toBeNull();
-		expect(screen.getByText("bknTrace.settings.archive.traceRule")).not.toBeNull();
-		expect(screen.getAllByText("bknTrace.settings.archive.candidates")).toHaveLength(2);
-		expect(screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+    expect(screen.getByText("bknTrace.settings.archive.logRule")).not.toBeNull();
+    expect(screen.getByText("bknTrace.settings.archive.traceRule")).not.toBeNull();
+    expect(screen.getAllByText("bknTrace.settings.archive.candidates")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "bknTrace.settings.archive.action" }).every((button) => button.hasAttribute("disabled"))).toBe(true);
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 
@@ -491,18 +491,18 @@ describe("observability workspace scenes", () => {
     expect(listLogs).not.toHaveBeenCalled();
   });
 
-	 it("普通用户可从本人 Trace 关联下钻日志但不能发起全局检索", async () => {
-		 window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
-		 vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
-		 render(<ObservabilityLogsScene />);
-		 await waitFor(() => expect(listLogs).toHaveBeenCalled());
-		 const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
-		 expect(query).toMatchObject({ page: 1, pageSize: 20, traceId: "trace-a" });
-		 expect(query?.timeFrom).toEqual(expect.any(String));
-		 expect(query?.timeTo).toEqual(expect.any(String));
-		 expect(await screen.findByText("trace-a")).not.toBeNull();
-		 expect(screen.queryByPlaceholderText("bknTrace.logs.searchPlaceholder")).toBeNull();
-	 });
+  it("普通用户可从本人 Trace 关联下钻日志但不能发起全局检索", async () => {
+    window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
+    vi.mocked(getAccessProfile).mockResolvedValue({ ...profile, globalLogSearch: false });
+    render(<ObservabilityLogsScene />);
+    await waitFor(() => expect(listLogs).toHaveBeenCalled());
+    const [query] = vi.mocked(listLogs).mock.calls[0] ?? [];
+    expect(query).toMatchObject({ page: 1, pageSize: 20, traceId: "trace-a" });
+    expect(query?.timeFrom).toEqual(expect.any(String));
+    expect(query?.timeTo).toEqual(expect.any(String));
+    expect(await screen.findByText("trace-a")).not.toBeNull();
+    expect(screen.queryByPlaceholderText("bknTrace.logs.searchPlaceholder")).toBeNull();
+  });
 
   it("关联 Trace 无日志时说明所选时间范围内没有匹配事件", async () => {
     window.history.replaceState({}, "", "/observability/logs?trace_id=trace-a");
