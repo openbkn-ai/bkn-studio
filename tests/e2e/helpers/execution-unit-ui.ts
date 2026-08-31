@@ -252,7 +252,7 @@ export async function clickMarketCardInstallButton(card: Locator) {
 export async function openCatalogInstallDialog(page: Page, card: Locator) {
   await clickMarketCardInstallButton(card);
   return page.locator(".ant-modal-content").filter({
-    hasText: /引入到当前租户|从市场同步|Introduce|Sync from market/i,
+    hasText: /引入到当前平台|从市场同步|Introduce|Sync from market/i,
   });
 }
 

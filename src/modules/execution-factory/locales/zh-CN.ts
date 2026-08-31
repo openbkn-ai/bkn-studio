@@ -9,10 +9,10 @@ export const executionFactoryZhCN = {
   executionFactory: {
     unitManagementTitle: "能力管理",
     unitManagementDescription:
-      "在当前租户注册和管理 MCP、工具箱、算子与 SKILL，供智能体调用。",
+      "在当前平台注册和管理 MCP、工具箱、算子与 SKILL，供智能体调用。",
     catalogTitle: "能力市场",
     catalogDescription:
-      "浏览市场中已发布的能力包：工具集、MCP 服务与 SKILL 包。布局与「能力管理」一致；可将资源引入当前租户，或同步已引入副本的最新版本。",
+      "浏览市场中已发布的能力包：工具集、MCP 服务与 SKILL 包。布局与「能力管理」一致；可将资源引入当前平台，或同步已引入副本的最新版本。",
     searchNamePlaceholder: "搜索名称",
     typeFilter: "分类",
     functionToolboxTab: "函数集",
@@ -69,11 +69,11 @@ export const executionFactoryZhCN = {
       functionToolboxTop:
         "创建函数型工具集，用于编写自定义逻辑（非 HTTP 接口）。保存后进入工具列表，为每个函数添加实现代码，再发布供智能体调用。",
       mcpCreateTop:
-        "注册 MCP Server，使智能体通过 MCP 协议发现并调用其工具。保存后可测试连接、发布到当前租户，并在 Agent 配置中选用。",
+        "注册 MCP Server，使智能体通过 MCP 协议发现并调用其工具。保存后可测试连接、发布到当前平台，并在 Agent 配置中选用。",
       mcpEditTop:
         "修改 MCP 服务的基础信息与连接配置。已发布服务更新后，需重新发布方可被智能体使用最新配置。",
       skillImportTop:
-        "上传 SKILL 包（ZIP 或 SKILL.md），将技能说明与脚本纳入当前租户。发布后可被 Agent 加载，在运行时按需执行包内能力。",
+        "上传 SKILL 包（ZIP 或 SKILL.md），将技能说明与脚本纳入当前平台。发布后可被 Agent 加载，在运行时按需执行包内能力。",
       importOpenApiToolsTop:
         "向当前工具集批量导入 OpenAPI 接口。文档中每个 path 生成一个独立工具；导入后可单独启用、调试，并与工具集一并发布。",
       impexOpenApiOperator:
@@ -83,9 +83,9 @@ export const executionFactoryZhCN = {
       impexAdpOperator:
         "上传此前在列表中「导出」下载的备份文件，可恢复算子及其配置，用于备份还原或从其他环境迁入。",
       impexAdpToolbox:
-        "上传此前在列表中「导出」下载的备份文件，可一次性恢复工具集及全部工具，也适用于从其他环境迁入。若当前租户已有同名资源，请选择下方导入模式。",
+        "上传此前在列表中「导出」下载的备份文件，可一次性恢复工具集及全部工具，也适用于从其他环境迁入。若当前平台已有同名资源，请选择下方导入模式。",
       impexAdpMcp:
-        "上传此前在列表中「导出」下载的备份文件，可恢复 MCP 服务配置；导入后可继续调试并发布到当前租户。",
+        "上传此前在列表中「导出」下载的备份文件，可恢复 MCP 服务配置；导入后可继续调试并发布到当前平台。",
       addCapabilityWizard:
         "选择接入方式：日常 HTTP 接口优先「添加 API」；已有 OpenAPI 文档可选「导入 OpenAPI」。",
       operatorCreateTop:
@@ -209,9 +209,9 @@ export const executionFactoryZhCN = {
     toolboxSearchPlaceholder: "按工具箱名称或 ID 搜索",
     statusFilterPlaceholder: "按状态筛选",
     toolbarHint:
-      "管理当前租户已注册的执行资源，可创建、发布、调试与导入导出。",
+      "管理当前平台已注册的执行资源，可创建、发布、调试与导入导出。",
     catalogToolbarHint:
-      "与能力管理相同的列表视图；数据来自市场目录。可按分类筛选，已引入当前租户的会标记「已引入」，可引入或同步最新版本。",
+      "与能力管理相同的列表视图；数据来自市场目录。可按分类筛选，已引入当前平台的会标记「已引入」，可引入或同步最新版本。",
     empty: "暂无执行单元",
     emptyDescription: "当前还没有可展示的执行算子。",
     catalogEmpty: "暂无市场执行单元",
@@ -519,33 +519,33 @@ export const executionFactoryZhCN = {
     marketIntroduce: "引入",
     marketSync: "同步",
     marketIntroducedTag: "已引入",
-    introduceTitle: "引入到当前租户",
+    introduceTitle: "引入到当前平台",
     introduceDescription:
-      "将市场中的「{{name}}」引入到当前租户。引入后可在「能力管理」中查看和使用。",
+      "将市场中的「{{name}}」引入到当前平台。引入后可在「能力管理」中查看和使用。",
     introduceConfirm: "确认引入",
     introduceSuccess: "引入成功",
     syncTitle: "从市场同步",
     syncDescription:
-      "「{{name}}」已在当前租户中。可将市场最新版本同步到本地副本。",
+      "「{{name}}」已在当前平台中。可将市场最新版本同步到本地副本。",
     syncConfirm: "开始同步",
     syncSuccess: "同步成功",
-    syncModeHint: "将用市场版本覆盖或更新当前租户中的已有副本。",
+    syncModeHint: "将用市场版本覆盖或更新当前平台中的已有副本。",
     install: "安装",
     installTitle: "从市场安装",
-    installDescription: '确认将“{{name}}”安装到当前租户吗？',
+    installDescription: '确认将“{{name}}”安装到当前平台吗？',
     importMode: "导入模式",
     importModeCreate: "新建",
-    importModeCreateHint: "仅当当前租户中尚不存在该资源时使用。",
+    importModeCreateHint: "仅当当前平台中尚不存在该资源时使用。",
     importModeUpsert: "新建或更新",
-    importModeUpsertHint: "当前租户已有同名资源时，用市场版本覆盖或更新。",
+    importModeUpsertHint: "当前平台已有同名资源时，用市场版本覆盖或更新。",
     installError: {
       generic: "操作失败，请稍后重试或联系管理员。",
       alreadyExistsHint:
-        "该资源已在当前租户中。请改用「同步」，或前往「能力管理」直接使用。",
+        "该资源已在当前平台中。请改用「同步」，或前往「能力管理」直接使用。",
       alreadyExists: {
-        toolbox: "该工具箱已在当前租户中，无法再次以「新建」方式引入。",
-        operator: "该算子已在当前租户中，无法再次以「新建」方式引入。",
-        mcp: "该 MCP 已在当前租户中，无法再次以「新建」方式引入。",
+        toolbox: "该工具箱已在当前平台中，无法再次以「新建」方式引入。",
+        operator: "该算子已在当前平台中，无法再次以「新建」方式引入。",
+        mcp: "该 MCP 已在当前平台中，无法再次以「新建」方式引入。",
       },
     },
     importButton: "导入",
@@ -697,7 +697,7 @@ export const executionFactoryZhCN = {
     mcpDeleteConfirmTitle: "删除 MCP 服务器",
     mcpDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
     skillListTitle: "SKILL 管理",
-    skillListDescription: "管理当前租户中的 Agent SKILL。",
+    skillListDescription: "管理当前平台中的 Agent SKILL。",
     skillName: "SKILL 名称",
     skillSearchPlaceholder: "按 SKILL 名称或 ID 搜索",
     skillToolbarHint: "浏览并发布 Agent SKILL。",
@@ -728,7 +728,7 @@ export const executionFactoryZhCN = {
     skillDetailEnterEdit: "编辑 SKILL",
     skillDetailViewHint: "可查看 SKILL 正文与包内文件；具备编辑权限的用户可点击「编辑 SKILL」修改元数据或替换包。",
     skillDetailEditHint: "编辑模式下可修改元数据、下载包或查看发布历史。",
-    skillDetailCatalogContentHint: "目录模式下完整正文需在引入到当前租户后查看；若已引入仍无法加载，请从能力管理进入。",
+    skillDetailCatalogContentHint: "目录模式下完整正文需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
     skillFileCountLabel: "{{count}} 个文件",
     skillFileCountLabel_one: "{{count}} 个文件",
     skillFileCountLabel_other: "{{count}} 个文件",
@@ -753,7 +753,7 @@ export const executionFactoryZhCN = {
     mcpDetailEnterEdit: "编辑 MCP",
     mcpDetailViewHint: "可查看每个 MCP 工具的参数说明并调试；具备编辑权限的用户可点击「编辑 MCP」修改配置。",
     mcpDetailEditHint: "编辑模式下可修改 MCP 配置或导出备份。",
-    mcpDetailCatalogToolsHint: "目录模式下工具列表需在引入到当前租户后查看；若已引入仍无法加载，请从能力管理进入。",
+    mcpDetailCatalogToolsHint: "目录模式下工具列表需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
     mcpToolCountLabel: "{{count}} 个 MCP 工具",
     mcpToolCountLabel_one: "{{count}} 个 MCP 工具",
     mcpToolCountLabel_other: "{{count}} 个 MCP 工具",
@@ -1026,7 +1026,7 @@ export const executionFactoryZhCN = {
     sandboxRuntimeTitle: "沙箱运行时管理",
     sandboxRuntimeDescription:
       "查看可调用能力使用的沙箱健康状态、会话池压力、依赖安装与任务会话。",
-    navExecutionUnitManagementTooltip: "管理当前租户内的算子、工具箱、MCP 与 SKILL。",
-    navAllExecutionUnitsTooltip: "浏览市场目录并将资源引入当前租户。",
+    navExecutionUnitManagementTooltip: "管理当前平台内的算子、工具箱、MCP 与 SKILL。",
+    navAllExecutionUnitsTooltip: "浏览市场目录并将资源引入当前平台。",
   },
 } as const;

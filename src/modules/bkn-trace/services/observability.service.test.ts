@@ -34,7 +34,6 @@ describe("observability service", () => {
           actor_type: "user",
           auth_method: "api_key",
           credential_id: "key-a",
-          tenant_id: "tenant-a",
           source_channel: "api",
           source_id: "bkn-trace-core",
           business_module: "domain_knowledge_network",
@@ -106,7 +105,7 @@ describe("observability service", () => {
   it("loads source coverage and read-only policies from the gateway", async () => {
     getMock
       .mockResolvedValueOnce({ data: { data: [{ source_id: "otel", status: "available", reliability: "best_effort" }] } })
-      .mockResolvedValueOnce({ data: { data: [{ category: "runtime.system", retention_days: 7, policy_kind: "runtime", policy_revision: "r1", scope: { tenant_id: "tenant-a" } }] } });
+      .mockResolvedValueOnce({ data: { data: [{ category: "runtime.system", retention_days: 7, policy_kind: "runtime", policy_revision: "r1", scope: {} }] } });
     const { listLogPolicies, listLogSources } = await import("@/modules/bkn-trace/services/observability.service");
 
     const sources = await listLogSources();
@@ -156,7 +155,7 @@ describe("observability service", () => {
 				 event_id: "audit-a", log_category: "audit.admin", event_name: "role.updated",
 				 event_time: "2026-08-01T10:00:00Z", recorded_at: "2026-08-01T10:00:01Z",
 					 actor_id: "user-a", actor_name_snapshot: "Administrator", actor_type: "user", auth_method: "session",
-					 tenant_id: "tenant-a", source_channel: "studio", source_id: "bkn-safe-admin",
+					 source_channel: "studio", source_id: "bkn-safe-admin",
 					 business_module: "system_management", outcome: "success",
 					 facts: { action: "grant", target_type: "knowledge_network", target_id: "supplychain_hd0202", target_name_snapshot: "HD供应链业务知识网络_v3" },
 					 correlation: { request_id: "req-a", trace_id: "4b3d59daeff5bfbb23d46c47a5051ec9" }, attributes: {},

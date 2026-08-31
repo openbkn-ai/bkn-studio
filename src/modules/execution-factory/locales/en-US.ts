@@ -9,10 +9,10 @@ export const executionFactoryEnUS = {
   executionFactory: {
     unitManagementTitle: "Capability Management",
     unitManagementDescription:
-      "Register and manage MCP servers, toolboxes, operators, and SKILLs in your tenant for agent execution.",
+      "Register and manage MCP servers, toolboxes, operators, and SKILLs on this platform for agent execution.",
     catalogTitle: "Capability Market",
     catalogDescription:
-      "Browse published capability packs: toolsets, MCP services, and SKILL packs. The layout matches Capability Management; introduce them into your tenant or sync updates for copies you already have.",
+      "Browse published capability packs: toolsets, MCP services, and SKILL packs. The layout matches Capability Management; introduce them to this platform or sync updates for copies you already have.",
     searchNamePlaceholder: "Search name",
     typeFilter: "Category",
     functionToolboxTab: "Function Sets",
@@ -73,7 +73,7 @@ export const executionFactoryEnUS = {
       mcpEditTop:
         "Update MCP service metadata and connection settings. Republish after changes so agents pick up the latest config.",
       skillImportTop:
-        "Upload a SKILL pack (ZIP or SKILL.md) into this tenant. After publish, agents can load and run the packaged capabilities at runtime.",
+        "Upload a SKILL pack (ZIP or SKILL.md) to this platform. After publish, agents can load and run the packaged capabilities at runtime.",
       importOpenApiToolsTop:
         "Batch-import OpenAPI paths into this toolset. Each path becomes a tool you can enable, debug, and publish with the set.",
       impexOpenApiOperator:
@@ -83,7 +83,7 @@ export const executionFactoryEnUS = {
       impexAdpOperator:
         "Upload a backup file you downloaded earlier via Export on the list. Restores the operator and its settings—for recovery or migration from another environment.",
       impexAdpToolbox:
-        "Upload a backup file you downloaded earlier via Export on the list. Restores the toolset and all its tools. Choose import mode if the same name already exists in this tenant.",
+        "Upload a backup file you downloaded earlier via Export on the list. Restores the toolset and all its tools. Choose import mode if the same name already exists on this platform.",
       impexAdpMcp:
         "Upload a backup file you downloaded earlier via Export on the list. Restores MCP service settings; you can debug and publish afterward.",
       addCapabilityWizard:
@@ -213,9 +213,9 @@ export const executionFactoryEnUS = {
     toolboxSearchPlaceholder: "Search by toolbox name or ID",
     statusFilterPlaceholder: "Filter by status",
     toolbarHint:
-      "Manage execution resources in your tenant—create, publish, debug, import, and export.",
+      "Manage execution resources on this platform—create, publish, debug, import, and export.",
     catalogToolbarHint:
-      "Same list view as Capability Management; data comes from the market catalog. Filter by category; items already in your tenant are marked so you can introduce or sync.",
+      "Same list view as Capability Management; data comes from the market catalog. Filter by category; items already on this platform are marked so you can introduce or sync.",
     empty: "No execution units",
     emptyDescription: "There are no execution operators to display yet.",
     catalogEmpty: "No market execution units",
@@ -525,35 +525,35 @@ export const executionFactoryEnUS = {
     marketIntroduce: "Introduce",
     marketSync: "Sync",
     marketIntroducedTag: "Introduced",
-    introduceTitle: "Introduce to Tenant",
+    introduceTitle: "Introduce to Platform",
     introduceDescription:
-      'Introduce "{{name}}" from the market into your current tenant. You can manage and use it under Capability Management afterward.',
+      'Introduce "{{name}}" from the market to this platform. You can manage and use it under Capability Management afterward.',
     introduceConfirm: "Introduce",
     introduceSuccess: "Introduced successfully",
     syncTitle: "Sync from Market",
     syncDescription:
-      '"{{name}}" is already in your tenant. Sync the latest market version to your local copy.',
+      '"{{name}}" is already on this platform. Sync the latest market version to your local copy.',
     syncConfirm: "Start sync",
     syncSuccess: "Synced successfully",
-    syncModeHint: "The market version will update or overwrite the existing copy in your tenant.",
+    syncModeHint: "The market version will update or overwrite the existing copy on this platform.",
     install: "Install",
     installTitle: "Install from Market",
-    installDescription: 'Install "{{name}}" into the current tenant?',
+    installDescription: 'Install "{{name}}" on this platform?',
     importMode: "Import Mode",
     importModeCreate: "Create new",
-    importModeCreateHint: "Use only when this resource does not exist in your tenant yet.",
+    importModeCreateHint: "Use only when this resource does not exist on this platform yet.",
     importModeUpsert: "Create or update",
-    importModeUpsertHint: "Use when the resource already exists in your tenant to overwrite or update it.",
+    importModeUpsertHint: "Use when the resource already exists on this platform to overwrite or update it.",
     installError: {
       generic: "Operation failed. Please try again or contact your administrator.",
       alreadyExistsHint:
-        "This resource is already in your tenant. Choose Sync, or open Capability Management to use it directly.",
+        "This resource is already on this platform. Choose Sync, or open Capability Management to use it directly.",
       alreadyExists: {
         toolbox:
-          "This toolbox is already in your tenant and cannot be introduced again as new.",
+          "This toolbox is already on this platform and cannot be introduced again as new.",
         operator:
-          "This operator is already in your tenant and cannot be introduced again as new.",
-        mcp: "This MCP is already in your tenant and cannot be introduced again as new.",
+          "This operator is already on this platform and cannot be introduced again as new.",
+        mcp: "This MCP is already on this platform and cannot be introduced again as new.",
       },
     },
     importButton: "Import",
@@ -707,7 +707,7 @@ export const executionFactoryEnUS = {
     mcpDeleteConfirmTitle: "Delete MCP server",
     mcpDeleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     skillListTitle: "SKILL Management",
-    skillListDescription: "Manage Agent SKILLs in the current tenant.",
+    skillListDescription: "Manage Agent SKILLs on this platform.",
     skillName: "SKILL Name",
     skillSearchPlaceholder: "Search by SKILL name or ID",
     skillToolbarHint: "Browse and publish Agent SKILLs.",
@@ -738,7 +738,7 @@ export const executionFactoryEnUS = {
       "Review SKILL content and package files. Users with edit permission can click Edit SKILL to update metadata or replace the package.",
     skillDetailEditHint: "Edit mode allows updating metadata, downloading the package, or viewing release history.",
     skillDetailCatalogContentHint:
-      "Full content in catalog mode is available after introducing to this tenant. If already introduced, open from unit management.",
+      "Full content in catalog mode is available after introducing it to this platform. If already introduced, open it from unit management.",
     skillFileCountLabel: "{{count}} files",
     skillFileCountLabel_one: "{{count}} file",
     skillFileCountLabel_other: "{{count}} files",
@@ -765,7 +765,7 @@ export const executionFactoryEnUS = {
       "Review each MCP tool's parameter schema and run debug. Users with edit permission can click Edit MCP to change configuration.",
     mcpDetailEditHint: "Edit mode allows updating MCP configuration or exporting a backup.",
     mcpDetailCatalogToolsHint:
-      "Tool lists in catalog mode are available after introducing to this tenant. If already introduced, open from unit management.",
+      "Tool lists in catalog mode are available after introducing the MCP to this platform. If already introduced, open it from unit management.",
     mcpToolCountLabel: "{{count}} MCP tools",
     mcpToolCountLabel_one: "{{count}} MCP tool",
     mcpToolCountLabel_other: "{{count}} MCP tools",
@@ -1054,7 +1054,7 @@ export const executionFactoryEnUS = {
     sandboxRuntimeTitle: "Sandbox Runtime Management",
     sandboxRuntimeDescription:
       "Observe sandbox health, session pool pressure, dependency installation, and task sessions used by callable capabilities.",
-    navExecutionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and SKILLs in your tenant.",
-    navAllExecutionUnitsTooltip: "Browse the market catalog and introduce resources into your tenant.",
+    navExecutionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and SKILLs on this platform.",
+    navAllExecutionUnitsTooltip: "Browse the market catalog and introduce resources to this platform.",
   },
 } as const;

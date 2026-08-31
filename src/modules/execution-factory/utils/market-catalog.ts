@@ -21,9 +21,9 @@ function readEnvMarketCatalog(): boolean | undefined {
 
 /**
  * Market catalog for browsing and installing shared resources. Off by default:
- * tenant-scoped deployments see the same records as the management list, so the
+ * the current deployment exposes the same records as the management list, so the
  * extra nav entry only adds confusion. The route and marketMode code paths stay
- * in place so this can be enabled when cross-tenant sharing ships.
+ * in place for a future shared catalog with records distinct from local management.
  */
 export function isMarketCatalogEnabled(): boolean {
   const runtimeFlag = getRuntimeConfig().features?.marketCatalog;

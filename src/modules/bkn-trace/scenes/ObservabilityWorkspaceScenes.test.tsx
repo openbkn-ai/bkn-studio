@@ -102,7 +102,7 @@ describe("observability workspace scenes", () => {
       sourceStatus: [{ coveredModules: ["openbkn"], reason: "source_query_failed", reliability: "best_effort", sourceId: "safe-audit", status: "unavailable" }],
     });
     vi.mocked(listLogSources).mockResolvedValue([{ coveredModules: ["openbkn"], collectionMethod: "direct_otlp", reliability: "best_effort", sourceId: "otel-ss4o", status: "healthy" }]);
-    vi.mocked(listLogPolicies).mockResolvedValue([{ category: "runtime.system", legalHold: false, policyKind: "runtime", policyRevision: "r6.2-default", readOnly: true, retentionDays: 7, scope: { tenant_id: "tenant-a" } }]);
+    vi.mocked(listLogPolicies).mockResolvedValue([{ category: "runtime.system", legalHold: false, policyKind: "runtime", policyRevision: "r6.2-default", readOnly: true, retentionDays: 7, scope: {} }]);
 		vi.mocked(getLogDetail).mockResolvedValue({
 			data: {
 				action: "create", actor: { id: "user-a", name: "供应链管理员", type: "user" }, authMethod: "api_key",
