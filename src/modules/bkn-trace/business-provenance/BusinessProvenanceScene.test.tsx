@@ -148,7 +148,6 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
       knowledgeNetwork: "supply",
       status: "active",
     })));
-    expect(screen.queryByPlaceholderText("业务域")).toBeNull();
     expect(screen.queryByLabelText("开始时间")).toBeNull();
     expect(screen.queryByLabelText("结束时间")).toBeNull();
   });

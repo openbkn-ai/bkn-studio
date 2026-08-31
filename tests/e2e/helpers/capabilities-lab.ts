@@ -7,7 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-import { BUSINESS_DOMAIN, expectOk } from "./common";
+import { expectOk } from "./common";
 import { OSS_MOCK_DOCKER_URL } from "./oss-mock";
 
 export const LAB_API_BASE_URL =
@@ -15,7 +15,6 @@ export const LAB_API_BASE_URL =
 
 export function labApiHeaders(contentType = "application/json") {
   const headers: Record<string, string> = {
-    "x-business-domain": BUSINESS_DOMAIN,
     Accept: "application/json",
   };
   if (contentType) {

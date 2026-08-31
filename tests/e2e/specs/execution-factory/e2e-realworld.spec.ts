@@ -224,9 +224,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     const payload = cloneToolboxImpexForCreate(exported, importName);
     await importToolboxViaApi(request, payload, "create");
 
-    const list = await request.get(apiUrl(`/tool-box/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const list = await request.get(apiUrl(`/tool-box/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`));
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
       data?: Array<{ box_id: string; box_name?: string; name?: string }>;
@@ -240,7 +238,6 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
 
     const tools = await request.get(
       apiUrl(`/tool-box/${imported.box_id}/tools/list?page=1&page_size=20`),
-      { headers: { "x-business-domain": "bd_public" } },
     );
     expect(tools.ok()).toBeTruthy();
     const toolsBody = (await tools.json()) as {
@@ -415,9 +412,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     }
     createdBoxIds.push(boxId);
 
-    const operatorDetail = await request.get(apiUrl(`/operator/info/${operatorId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const operatorDetail = await request.get(apiUrl(`/operator/info/${operatorId}`));
     expect(operatorDetail.ok()).toBeTruthy();
     const operatorBody = (await operatorDetail.json()) as {
       name?: string;
@@ -443,15 +438,13 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("rwx_tool"));
 
     await request.put(apiUrl(`/tool-box/${toolbox.boxId}`), {
-      headers: { "x-business-domain": "bd_public", "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       data: { box_desc: "RW-X updated description" },
     });
 
     await publishToolboxViaApi(request, toolbox.boxId);
 
-    const detail = await request.get(apiUrl(`/tool-box/${toolbox.boxId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const detail = await request.get(apiUrl(`/tool-box/${toolbox.boxId}`));
     expect(detail.ok()).toBeTruthy();
     const detailBody = (await detail.json()) as { status?: string; box_desc?: string };
     expect(detailBody.status).toBe("published");
@@ -472,12 +465,12 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     createdMcpIds.push(mcp.mcpId);
 
     await request.put(apiUrl(`/mcp/${mcp.mcpId}`), {
-      headers: { "x-business-domain": "bd_public", "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       data: { description: "RW-X updated MCP" },
     });
 
     const publish = await request.post(apiUrl(`/mcp/${mcp.mcpId}/status`), {
-      headers: { "x-business-domain": "bd_public", "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       data: { status: "published" },
     });
     expect(publish.ok()).toBeTruthy();

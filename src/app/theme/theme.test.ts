@@ -19,7 +19,6 @@ const runtimeConfig: RuntimeConfig = {
     },
   },
   currentUser: {
-    businessDomainId: null,
     id: null,
     isAdmin: false,
     name: null,

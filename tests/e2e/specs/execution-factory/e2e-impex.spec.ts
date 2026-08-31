@@ -105,7 +105,6 @@ test.describe("Execution Factory — Impex E2E flows", () => {
 
     const list = await request.get(
       apiUrl(`/operator/info/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`),
-      { headers: { "x-business-domain": "bd_public" } },
     );
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
@@ -163,9 +162,7 @@ test.describe("Execution Factory — Impex E2E flows", () => {
     expect(newBoxId).toBeTruthy();
     if (newBoxId) {
       createdBoxIds.push(newBoxId);
-      const detail = await request.get(apiUrl(`/tool-box/${newBoxId}`), {
-        headers: { "x-business-domain": "bd_public" },
-      });
+      const detail = await request.get(apiUrl(`/tool-box/${newBoxId}`));
       expect(detail.ok()).toBeTruthy();
     }
   });

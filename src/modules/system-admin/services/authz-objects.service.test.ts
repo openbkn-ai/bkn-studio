@@ -14,10 +14,6 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
-vi.mock("@/framework/runtime/config", () => ({
-  getRuntimeConfig: () => ({ currentUser: { businessDomainId: "bd_public" } }),
-}));
-
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
 

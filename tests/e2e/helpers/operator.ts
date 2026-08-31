@@ -18,7 +18,6 @@ export {
   assertBackendReady,
   apiUrl,
   buildUniqueName,
-  BUSINESS_DOMAIN,
   API_BASE_URL,
   API_PREFIX,
   defaultApiHeaders,

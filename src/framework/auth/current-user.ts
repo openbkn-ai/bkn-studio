@@ -44,7 +44,6 @@ type MePermissionsResponse = {
  * failures would expose all system-admin entries to regular users (#176).
  */
 export const anonymousRuntimeUser: RuntimeUser = {
-  businessDomainId: null,
   id: null,
   isAdmin: false,
   name: null,
@@ -95,7 +94,6 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const hasResourceWildcard = safeGrants.has("*:*");
 
   return {
-    businessDomainId: null,
     id: me.id ?? null,
     isAdmin,
     name: me.name || me.account || me.id || null,

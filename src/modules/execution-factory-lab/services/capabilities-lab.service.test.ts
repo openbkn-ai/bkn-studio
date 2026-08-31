@@ -34,7 +34,7 @@ describe("capabilities-lab.service", () => {
     vi.restoreAllMocks();
   });
 
-  it("passes function debug business context to the real sandbox execution API", async () => {
+  it("does not add legacy scope context to the sandbox execution API", async () => {
     await executePython({
       code: "def handler(event):\n    return event",
       event: { city: "beijing" },
@@ -54,11 +54,10 @@ describe("capabilities-lab.service", () => {
         user_id: "266c6a42-6131-4d62-8f39-853e7093701c",
         user_name: "Local Admin",
       },
-      expect.objectContaining({
-        headers: { "x-business-domain": "bd_public" },
+      {
         skipErrorToast: true,
         timeout: 60_000,
-      }),
+      },
     );
   });
 });

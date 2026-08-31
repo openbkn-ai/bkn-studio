@@ -6,16 +6,13 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 /** Backend validates page_size with max=100. */
 const ID_PAGE_SIZE = 100;
 const CACHE_TTL_MS = 2 * 60 * 1000;
 const OPERATOR_CACHE_TTL_MS = 10 * 60 * 1000;
-const CACHE_KEY_PREFIX = "ef-local-ids:";
 const inflightRequests = new Map<string, Promise<Set<string>>>();
 
 type PagedListResponse = {
@@ -38,18 +35,8 @@ export type CollectLocalResourceIdsOptions = {
   useCache?: boolean;
 };
 
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
-
 function cacheKey(activeTab: ExecutionUnitTab) {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return `${CACHE_KEY_PREFIX}${businessDomainId}:${activeTab}`;
+  return `ef-local-ids:${activeTab}`;
 }
 
 function readCachedIds(activeTab: ExecutionUnitTab): Set<string> | null {
@@ -100,7 +87,6 @@ async function fetchIdPage(
   signal?: AbortSignal,
 ): Promise<PagedListResponse> {
   const response = await http.get<PagedListResponse>(path, {
-    headers: getBusinessDomainHeaders(),
     params: {
       page,
       page_size: ID_PAGE_SIZE,

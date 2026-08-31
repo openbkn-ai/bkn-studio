@@ -45,7 +45,7 @@ export const bknTraceEnUS = {
         element: { action: "Action", logic: "Logic / function", metric: "Metric", object: "Object", property: "Property", relation: "Relation" },
         errors: { factsLoad: "Failed to load call facts", interactionsLoad: "Failed to load interactions", markdownLoad: "Failed to load process-fact Markdown" },
         evidence: { byRound: "View by interaction", complete: "Fully traceable", partial: "Partially traceable" },
-        filters: { agent: "Agent / application", businessDomain: "Business domain", endedAt: "End time", evidence: "Evidence completeness", keyword: "Search question, result, or conversation ID", network: "Knowledge network", startedAt: "Start time", status: "Run status" },
+        filters: { agent: "Agent / application", endedAt: "End time", evidence: "Evidence completeness", keyword: "Search question, result, or conversation ID", network: "Knowledge network", startedAt: "Start time", status: "Run status" },
         inputNotRecorded: "User input not recorded", interactionCount: "{{count}} interactions", interactionCount_one: "{{count}} interaction", interactionCount_other: "{{count}} interactions", interfaceNotRecorded: "API not recorded",
         knowledge: {
           closeDetail: "Close knowledge network details", contextOnly: "Knowledge network context, not called in this interaction", deterministicCalls: "{{count}} deterministic calls", deterministicCalls_one: "{{count}} deterministic call", deterministicCalls_other: "{{count}} deterministic calls", empty: "No call in this interaction was deterministically resolved to a BKN element",
@@ -264,7 +264,6 @@ export const bknTraceEnUS = {
 	  applicationPrincipalId: "Application principal ID",
 	  effectiveSubjectId: "Effective account",
 	  inputSummary: "Business target / input summary",
-      businessDomain: "Business domain",
       businessPath: "Business path",
       claimId: "Claim ID",
       complianceStatus: "Compliance status",
@@ -323,7 +322,6 @@ export const bknTraceEnUS = {
     partial: "The current result is partial",
     placeholders: {
       agentOrApp: "Agent / application",
-      businessDomain: "Business domain",
       evidenceCompleteness: "Evidence completeness",
       keyword: "Search question, result, business object, or ID",
       knowledgeNetwork: "Knowledge network",

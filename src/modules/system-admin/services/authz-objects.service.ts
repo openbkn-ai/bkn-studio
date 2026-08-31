@@ -12,7 +12,6 @@
 // Domain APIs use different field names, envelopes, and paging parameters, so normalize them to {id, name} here.
 // Used only in real mode; authz.service includes seed data for mock mode.
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
 import { AUTHZ_OBJECT_TYPES } from "@/modules/system-admin/utils/authz-catalog";
 
@@ -37,14 +36,9 @@ const str = (value: unknown): string =>
       ? String(value)
       : "";
 
-const domainHeaders = (): Record<string, string> => ({
-  "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public",
-});
-
 type Paging = "offset" | "page-size" | "page-page_size";
 
 type ListConfig = {
-  domain: boolean;
   envelope: "entries" | "data";
   idField: string;
   nameField: string;
@@ -55,15 +49,15 @@ type ListConfig = {
 
 // 7.1 List instances.
 const LIST_CONFIG: Record<string, ListConfig> = {
-  catalog: { path: "/vega-backend/v1/catalogs", domain: false, envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
-  resource: { path: "/vega-backend/v1/resources", domain: false, envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
-  knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", domain: true, envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
-  small_model: { path: "/mf-model-manager/v1/small-model/list", domain: false, envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
-  large_model: { path: "/mf-model-manager/v1/llm/list", domain: false, envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
-  operator: { path: "/agent-operator-integration/v1/operator/info/list", domain: true, envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-  tool_box: { path: "/agent-operator-integration/v1/tool-box/list", domain: true, envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size" },
-  mcp: { path: "/agent-operator-integration/v1/mcp/list", domain: true, envelope: "data", idField: "mcp_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-  skill: { path: "/agent-operator-integration/v1/skills", domain: true, envelope: "data", idField: "skill_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
+  catalog: { path: "/vega-backend/v1/catalogs", envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
+  resource: { path: "/vega-backend/v1/resources", envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
+  knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
+  small_model: { path: "/mf-model-manager/v1/small-model/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
+  large_model: { path: "/mf-model-manager/v1/llm/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
+  operator: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
+  tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size" },
+  mcp: { path: "/agent-operator-integration/v1/mcp/list", envelope: "data", idField: "mcp_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
+  skill: { path: "/agent-operator-integration/v1/skills", envelope: "data", idField: "skill_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
 };
 
 function pagingParams(paging: Paging): Record<string, number> {
@@ -84,7 +78,6 @@ async function listOne(type: string, keyword: string): Promise<AuthorizableObjec
   }
   const response = await http.get<Record<string, unknown>>(cfg.path, {
     params: { ...pagingParams(cfg.paging), [cfg.nameParam]: keyword || undefined },
-    headers: cfg.domain ? domainHeaders() : undefined,
     skipErrorToast: true,
   });
   return arrayFrom(response.data, cfg.envelope)
@@ -100,17 +93,17 @@ export async function listDomainObjects(keyword = ""): Promise<AuthorizableObjec
 
 // 7.2 Resolve names by ID in batches.
 type NamesConfig =
-  | { kind: "post"; domain: boolean; path: string }
+  | { kind: "post"; path: string }
   | { kind: "vega"; path: string }
   | { kind: "mcp" };
 
 const NAMES_CONFIG: Record<string, NamesConfig> = {
-  small_model: { kind: "post", domain: false, path: "/mf-model-manager/v1/small-model/names" },
-  large_model: { kind: "post", domain: false, path: "/mf-model-manager/v1/llm/names" },
-  operator: { kind: "post", domain: true, path: "/agent-operator-integration/v1/operator/names" },
-  tool_box: { kind: "post", domain: true, path: "/agent-operator-integration/v1/tool-box/names" },
-  skill: { kind: "post", domain: true, path: "/agent-operator-integration/v1/skills/names" },
-  knowledge_network: { kind: "post", domain: true, path: "/bkn-backend/v1/knowledge-networks/names" },
+  small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
+  large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
+  operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
+  tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
+  skill: { kind: "post", path: "/agent-operator-integration/v1/skills/names" },
+  knowledge_network: { kind: "post", path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },
   // A single table can be granted on its own — reading rows is judged there, while its management
   // verbs live on the owning catalog. Same batch API as catalog for name display.
@@ -142,7 +135,7 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
     const response = await http.post<Record<string, unknown>>(
       cfg.path,
       { ids },
-      { headers: cfg.domain ? domainHeaders() : undefined, skipErrorToast: true },
+      { skipErrorToast: true },
     );
     for (const [id, name] of collectNamePairs(response.data, "id", "name")) {
       map.set(id, name);
@@ -178,7 +171,7 @@ async function namesFor(type: string, ids: string[]): Promise<Map<string, string
       try {
         const response = await http.get<unknown>(
           `/agent-operator-integration/v1/mcp/market/batch/${batch.map(encodeURIComponent).join(",")}/mcp_id,name`,
-          { headers: domainHeaders(), skipErrorToast: true },
+          { skipErrorToast: true },
         );
         for (const [id, name] of collectNamePairs(response.data, "mcp_id", "name")) {
           map.set(id, name);

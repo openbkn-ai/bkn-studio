@@ -12,7 +12,7 @@
 
 - 项目需要被外部主壳挂载
 - 需要复用主壳提供的鉴权与导航能力
-- 需要共享主壳主题、容器或业务域参数
+- 需要共享主壳主题或容器参数
 
 如果当前只是普通独立项目开发，可以只了解本文档，不必提前实现全部宿主能力。
 
@@ -45,7 +45,6 @@
 - `userid`
 - `roles`
 - `permissions`
-- `businessDomainID`
 - `navigate`
 - `history`
 - `basename`
@@ -101,14 +100,6 @@ token 能力至少应支持：
 - runtime 使用本地默认配置
 - 可以从 Cookie 读取本地 token（`bkn_access_token` / `bkn_refresh_token` / `bkn_id_token`；同域 tab 共享。OAuth PKCE 临时态仍在 `sessionStorage`）
 - 应用仍需完整可启动、可调试、可构建
-
-## 业务域参数约束
-
-如果宿主注入业务域参数：
-
-- runtime 层应转换成稳定的 app context 能力
-- service 层可以通过共享上下文或 helper 获取
-- 页面禁止直接读取宿主 props
 
 ## 非目标
 

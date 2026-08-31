@@ -155,9 +155,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
 
     await publishToolboxViaApi(request, boxId);
 
-    const detail = await request.get(apiUrl(`/tool-box/${boxId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const detail = await request.get(apiUrl(`/tool-box/${boxId}`));
     expect(detail.ok()).toBeTruthy();
     const body = (await detail.json()) as { status?: string; data?: { status?: string } };
     expect(body.status ?? body.data?.status).toBe("published");

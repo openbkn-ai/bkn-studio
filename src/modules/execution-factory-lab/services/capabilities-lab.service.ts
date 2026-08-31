@@ -44,17 +44,9 @@ import type {
 import type { LabMeta } from "@/modules/execution-factory-lab/types/lab-meta";
 
 const API_PREFIX = "/capabilities-lab/v1";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 function labServiceError(key: string) {
   return i18n.t(`executionFactoryLab.serviceErrors.${key}`);
-}
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
 }
 
 type BackendCapability = {
@@ -173,7 +165,6 @@ export async function listCapabilities(query: {
     page?: number;
     page_size?: number;
   }>(`${API_PREFIX}/capabilities`, {
-    headers: getBusinessDomainHeaders(),
     params: {
       kind: query.kind ?? "all",
       keyword: query.keyword || undefined,
@@ -198,7 +189,7 @@ export async function listCapabilities(query: {
 export async function getCapability(capabilityId: string): Promise<CapabilityRecord> {
   const response = await http.get<BackendCapability>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return mapCapability(response.data);
@@ -217,7 +208,7 @@ export async function createHttpCapability(
       orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   if (!response.data.capability) {
@@ -240,7 +231,7 @@ export async function importOpenApiCapabilities(input: ImportOpenApiInput) {
       orchestration_enabled: input.orchestrationEnabled ?? false,
       group: { mode: "auto" },
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return {
@@ -262,7 +253,7 @@ export async function debugCapability(
       header: input.header,
       tool_name: input.toolName,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return response.data;
@@ -271,7 +262,7 @@ export async function debugCapability(
 export async function listCapabilityVersions(capabilityId: string): Promise<VersionEntry[]> {
   const response = await http.get<{ versions?: VersionEntry[] }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/versions`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return (response.data.versions ?? []).map((item) => ({
@@ -293,7 +284,7 @@ export async function republishCapabilityVersion(
   await http.post(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/versions/republish`,
     { version, mode },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 }
 
@@ -301,7 +292,7 @@ export async function publishCapability(capabilityId: string, status = "publishe
   await http.post(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/publish`,
     { status },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -334,7 +325,7 @@ export async function enableOrchestration(
   const response = await http.post<{ operator_id?: string; audit?: BackendAudit }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/enable`,
     serializeOrchestrationRuntimeConfig(config),
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return {
@@ -357,7 +348,7 @@ export async function updateOrchestrationConfig(
   }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/config`,
     serializeOrchestrationRuntimeConfig(config),
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return {
@@ -373,7 +364,7 @@ export async function disableOrchestration(capabilityId: string): Promise<Orches
   const response = await http.post<{ enabled?: boolean; operator_id?: string }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/disable`,
     {},
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return { enabled: Boolean(response.data.enabled), operatorId: response.data.operator_id };
@@ -387,7 +378,6 @@ export async function getOrchestrationDetail(capabilityId: string): Promise<Orch
     box_id?: string;
     audit?: BackendAudit;
   }>(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   return {
@@ -409,7 +399,6 @@ export async function listGroups(query?: { keyword?: string; page?: number; page
       tool_count?: number;
     }>;
   }>(`${API_PREFIX}/groups`, {
-    headers: getBusinessDomainHeaders(),
     params: {
       keyword: query?.keyword || undefined,
       page: query?.page ?? 1,
@@ -451,7 +440,7 @@ export async function updateCapability(
       inputs: input.inputs,
       outputs: input.outputs,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return mapCapability(response.data);
@@ -460,7 +449,7 @@ export async function updateCapability(
 export async function listCategories(): Promise<CategoryEntry[]> {
   const response = await http.get<{ data?: Array<{ category_type?: string; name?: string }> }>(
     `${API_PREFIX}/categories`,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return (response.data.data ?? []).map((item) => ({
@@ -472,7 +461,7 @@ export async function listCategories(): Promise<CategoryEntry[]> {
 export async function listMcpTools(capabilityId: string): Promise<McpToolEntry[]> {
   const response = await http.get<{ tools?: McpToolEntry[] }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/mcp/tools`,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return response.data.tools ?? [];
@@ -485,7 +474,6 @@ export async function downloadSkillPackage(
   const response = await http.get<Blob>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/skill/download`,
     {
-      headers: getBusinessDomainHeaders(),
       responseType: "blob",
       timeout: 60_000,
       skipErrorToast: true,
@@ -511,7 +499,7 @@ export async function updateSkillPackage(capabilityId: string, file: File): Prom
   const response = await http.put<{ capability?: BackendCapability }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/skill/package`,
     formData,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true, timeout: 120_000 },
+    { skipErrorToast: true, timeout: 120_000 },
   );
 
   if (!response.data.capability) {
@@ -523,7 +511,6 @@ export async function updateSkillPackage(capabilityId: string, file: File): Prom
 
 export async function deleteCapability(capabilityId: string) {
   await http.delete(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}`, {
-    headers: getBusinessDomainHeaders(),
   });
 }
 
@@ -541,7 +528,7 @@ export async function registerMcpCapability(
       creation_type: "custom",
       category: input.category ?? "other_category",
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   if (!response.data.capability) {
@@ -574,7 +561,6 @@ export async function registerSkillCapability(
     `${API_PREFIX}/capabilities/skill`,
     formData,
     {
-      headers: getBusinessDomainHeaders(),
       skipErrorToast: true,
     },
   );
@@ -595,7 +581,6 @@ export async function exportCapabilityPackage(
   const response = await http.get<Blob>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/export`,
     {
-      headers: getBusinessDomainHeaders(),
       responseType: "blob",
       timeout: 60_000,
       skipErrorToast: true,
@@ -629,7 +614,6 @@ export async function importCapabilityPackage(
     `${API_PREFIX}/capabilities/import`,
     formData,
     {
-      headers: getBusinessDomainHeaders(),
       timeout: 60_000,
       skipErrorToast: true,
     },
@@ -673,7 +657,6 @@ export async function listCatalog(query?: {
     page?: number;
     page_size?: number;
   }>(`${API_PREFIX}/catalog?${params.toString()}`, {
-    headers: getBusinessDomainHeaders(),
     skipErrorToast: true,
   });
 
@@ -715,7 +698,6 @@ export async function installFromCatalog(input: InstallCatalogInput): Promise<In
       name: input.name,
     },
     {
-      headers: getBusinessDomainHeaders(),
       timeout: 120_000,
       skipErrorToast: true,
     },
@@ -746,7 +728,7 @@ export async function createFunctionCapability(input: CreateFunctionCapabilityIn
       outputs: input.outputs,
       group: { mode: "auto" },
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   if (!response.data.capability) {
@@ -778,7 +760,6 @@ export async function executePython(input: ExecutePythonInput): Promise<ExecuteP
       user_name: currentUser.name,
     },
     {
-      headers: getBusinessDomainHeaders(),
       skipErrorToast: true,
       timeout: 60_000,
     },
@@ -795,7 +776,6 @@ export async function executePython(input: ExecutePythonInput): Promise<ExecuteP
 
 export async function getPythonTemplate() {
   const response = await http.get<{ template?: string }>(`${API_PREFIX}/template/python`, {
-    headers: getBusinessDomainHeaders(),
     skipErrorToast: true,
   });
 
@@ -810,7 +790,7 @@ export async function parseMcpSse(input: ParseMcpSseInput): Promise<McpParsedToo
       mode: input.mode ?? "sse",
       headers: input.headers,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true, timeout: 60_000 },
+    { skipErrorToast: true, timeout: 60_000 },
   );
 
   return response.data.tools ?? [];
@@ -828,7 +808,6 @@ export async function getSkillContent(capabilityId: string): Promise<SkillConten
     }>;
     download_url?: string;
   }>(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/skill/content`, {
-    headers: getBusinessDomainHeaders(),
     skipErrorToast: true,
   });
 
@@ -860,7 +839,7 @@ export async function readSkillFile(capabilityId: string, relPath: string) {
   }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/skill/files/read`,
     { rel_path: relPath, response_mode: "content" },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   return {
@@ -875,7 +854,6 @@ export async function readSkillFile(capabilityId: string, relPath: string) {
 
 export async function getLabMeta(): Promise<LabMeta> {
   const response = await http.get<LabMeta>(`${API_PREFIX}/meta`, {
-    headers: getBusinessDomainHeaders(),
     skipErrorToast: true,
   });
 

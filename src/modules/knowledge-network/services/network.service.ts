@@ -7,7 +7,6 @@
 
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
@@ -53,7 +52,6 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-const DEFAULT_BUSINESS_DOMAIN_ID = "bd_public";
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
   "data_query",
@@ -62,16 +60,6 @@ const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "authorize",
   "task_manage",
 ];
-
-function getKnowledgeNetworkDomainHeaders() {
-  const runtimeConfig = getRuntimeConfig();
-  const businessDomainId =
-    runtimeConfig.currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN_ID;
-
-  return {
-    "x-business-domain": businessDomainId,
-  };
-}
 
 export async function listKnowledgeNetworks(
   query: KnowledgeNetworkListQuery,
@@ -89,7 +77,6 @@ export async function listKnowledgeNetworks(
   const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
     "/bkn-backend/v1/knowledge-networks",
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         direction: query.direction === "asc" ? "asc" : "desc",
         limit: query.pageSize,
@@ -115,7 +102,6 @@ export async function listKnowledgeNetworkTags() {
   const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
     "/bkn-backend/v1/knowledge-networks",
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         limit: 200,
         offset: 0,
@@ -142,7 +128,6 @@ export async function getKnowledgeNetwork(networkId: string) {
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
       {
-        headers: getKnowledgeNetworkDomainHeaders(),
         params: { include_statistics: true },
       },
     );
@@ -157,9 +142,7 @@ export async function getKnowledgeNetwork(networkId: string) {
     );
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
-      {
-        headers: getKnowledgeNetworkDomainHeaders(),
-      },
+      {},
     );
 
     const record = unwrapSingleEntryResponse(response.data);
@@ -200,7 +183,6 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
     "/bkn-backend/v1/knowledge-networks",
     toBackendKnowledgeNetworkCreatePayload(input),
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         validate_dependency: false,
       },
@@ -240,7 +222,6 @@ export async function updateKnowledgeNetwork(
     `/bkn-backend/v1/knowledge-networks/${networkId}`,
     toBackendKnowledgeNetworkUpdatePayload(input),
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         validate_dependency: false,
       },
@@ -264,9 +245,7 @@ export async function deleteKnowledgeNetwork(networkId: string) {
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}`, {
-    headers: getKnowledgeNetworkDomainHeaders(),
-  });
+  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}`);
 }
 
 export async function listKnowledgeNetworkRecentObjects(networkId: string) {
@@ -378,7 +357,6 @@ export async function importKnowledgeNetwork(
 
   try {
     await http.post("/bkn-backend/v1/knowledge-networks", requestBody, {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         import_mode: importMode,
         validate_dependency: false,

@@ -77,9 +77,7 @@ test.describe("Execution Factory — MCP E2E flows", () => {
     );
     createdMcpIds.push(mcp.mcpId);
 
-    const detail = await request.get(apiUrl(`/mcp/${mcp.mcpId}`), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const detail = await request.get(apiUrl(`/mcp/${mcp.mcpId}`));
     expect(detail.ok()).toBeTruthy();
   });
 
@@ -98,9 +96,7 @@ test.describe("Execution Factory — MCP E2E flows", () => {
 
     await publishMcpViaApi(request, mcp.mcpId);
 
-    const market = await request.get(apiUrl("/mcp/market/list?page=1&page_size=20"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const market = await request.get(apiUrl("/mcp/market/list?page=1&page_size=20"));
     expect(market.ok()).toBeTruthy();
     const body = (await market.json()) as { data?: Array<{ mcp_id: string | number }> };
     expect(

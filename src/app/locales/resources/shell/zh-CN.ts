@@ -43,8 +43,8 @@ export const shellZhCN = {
       allExecutionUnits: "全部执行单元",
       executionFactorySandboxRuntime: "沙箱运行时管理",
       executionUnitManagementTooltip:
-        "管理本业务域内的算子、工具箱、MCP 与 Skill",
-      allExecutionUnitsTooltip: "浏览市场目录并将资源引入到本业务域",
+        "管理当前平台内的算子、工具箱、MCP 与 Skill",
+      allExecutionUnitsTooltip: "浏览市场目录并将资源引入当前平台",
       modelResources: "模型管理",
       quotaManagement: "配额管理",
       modelStatistics: "模型统计",

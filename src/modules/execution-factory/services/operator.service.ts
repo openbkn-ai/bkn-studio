@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   OperatorDebugInput,
   OperatorDebugResult,
@@ -98,7 +97,6 @@ type BackendOperatorRegisterResult = {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 let mockOperators: OperatorRecord[] = [
   {
@@ -128,13 +126,6 @@ let mockOperators: OperatorRecord[] = [
     isInternal: false,
   },
 ];
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 function mapOperatorExecuteControl(
   raw?: BackendOperatorExecuteControl,
@@ -308,7 +299,6 @@ async function fetchOperatorList(
   query: OperatorListQuery,
 ): Promise<OperatorListResult> {
   const response = await http.get<BackendOperatorListResponse>(path, {
-    headers: getBusinessDomainHeaders(),
     params: {
       page: query.page,
       page_size: query.pageSize,
@@ -363,7 +353,7 @@ export async function getOperator(operatorId: string): Promise<OperatorRecord> {
 
   const response = await http.get<BackendOperatorDataInfo>(
     `${API_PREFIX}/operator/info/${operatorId}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return mapOperator(response.data);
@@ -390,7 +380,7 @@ export async function getOperatorDetail(operatorId: string): Promise<OperatorDet
 
   const response = await http.get<BackendOperatorDataInfo>(
     `${API_PREFIX}/operator/info/${operatorId}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   const detail = mapOperatorDetail(response.data);
@@ -441,7 +431,7 @@ export async function registerOperator(
       direct_publish: input.directPublish ?? false,
       operator_metadata_type: input.metadataType,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   const result = response.data[0];
@@ -476,7 +466,7 @@ export async function updateOperator(input: OperatorEditInput): Promise<void> {
       ...buildOperatorMutationBody(input, { openApiAsObject: true }),
       operator_id: input.operatorId,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 }
 
@@ -501,7 +491,7 @@ export async function updateOperatorStatus(
   await http.post(
     `${API_PREFIX}/operator/status`,
     [{ operator_id: operatorId, version, status }],
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -516,7 +506,6 @@ export async function deleteOperator(
 
   await http.delete(`${API_PREFIX}/operator/delete`, {
     data: [{ operator_id: operatorId, version }],
-    headers: getBusinessDomainHeaders(),
   });
 }
 
@@ -535,7 +524,7 @@ export async function getOperatorMarket(
 
   const response = await http.get<BackendOperatorDataInfo>(
     `${API_PREFIX}/operator/market/${operatorId}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return mapOperator(response.data);
@@ -571,7 +560,7 @@ export async function debugOperator(
       query: input.query,
       version: input.version,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {
@@ -606,7 +595,7 @@ export async function listOperatorHistory(
 
   const response = await http.get<BackendOperatorHistoryItem[]>(
     `${API_PREFIX}/operator/history/${operatorId}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   const history = Array.isArray(response.data) ? response.data : [];

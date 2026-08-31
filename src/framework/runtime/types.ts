@@ -14,7 +14,6 @@ export type TokenManager = {
 };
 
 export type RuntimeUser = {
-  businessDomainId: string | null;
   id: string | null;
   /** `/me/permissions`.is_admin — super_admin without literal role `"admin"`. */
   isAdmin: boolean;

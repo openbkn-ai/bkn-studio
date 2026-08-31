@@ -9,10 +9,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $apiBase = if ($env:E2E_API_BASE_URL) { $env:E2E_API_BASE_URL } else { "http://127.0.0.1:9000/api" }
-$domain = if ($env:E2E_BUSINESS_DOMAIN) { $env:E2E_BUSINESS_DOMAIN } else { "bd_public" }
 $headers = @{
-    "x-business-domain" = $domain
-    Accept              = "application/json"
+    Accept = "application/json"
 }
 
 $patterns = @('^at_e2e_', '^e2e_', '^demo_', '^quick_api_')

@@ -38,7 +38,7 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
             // Keep the execution-factory menu visible; it no longer follows the capabilities-lab
             // hide_legacy_execution_factory_menu flag.
             hideLegacyExecutionFactory: false,
-            // The cross-business-domain marketplace is not enabled yet and overlaps with Execution Unit Management.
+            // The market catalog is not enabled yet and overlaps with Execution Unit Management.
             hideMarketCatalog: !isMarketCatalogEnabled(),
           }),
           runtimeConfig.currentUser.permissions,
