@@ -249,8 +249,8 @@ export const modelResourcesZhCN = {
         secondsHint: "（单位：秒）",
       },
       charts: {
-        inputTokens: "Input Tokens",
-        outputTokens: "Output Tokens",
+        inputTokens: "输入 Tokens",
+        outputTokens: "输出 Tokens",
         timeAndFirstToken: "模型调用耗时与模型首Tokens耗时",
         tokenRate: "模型Token速率",
         qps: "模型 QPS",
