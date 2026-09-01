@@ -269,6 +269,24 @@
   margin-bottom: 12px;
 }
 
+.historyControls {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.taskFilters {
+  flex-wrap: nowrap;
+}
+
+.taskFilterSelect {
+  width: 160px;
+}
+
 .historyTitle {
   margin: 0;
   color: var(--color-text-primary);
@@ -335,6 +353,17 @@
   .statusStrip {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .historyHead,
+  .historyControls,
+  .taskFilters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .taskFilterSelect {
+    width: 100%;
   }
 
   .metaGrid {

@@ -11,7 +11,8 @@ import {
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { Alert, Checkbox, Dropdown, Form, InputNumber, Modal, Select, Space, Tag, type MenuProps } from "antd";
+import { Alert, Checkbox, Dropdown, Form, InputNumber, Modal, Select, Space, type MenuProps } from "antd";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,8 +26,10 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
+import { SemanticTaskAppliedTag, SemanticTaskStatusTag } from "@/modules/data-catalog/components/SemanticTaskPresentation";
 import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
@@ -50,6 +53,13 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [creating, setCreating] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [applyModeFilter, setApplyModeFilter] = useState<string>();
+  const [statusFilter, setStatusFilter] = useState<SemanticUnderstandingTaskSummary["status"][]>([]);
+  const [appliedFilter, setAppliedFilter] = useState<boolean>();
+  const [sort, setSort] = useState<"create_time" | "finish_time">("create_time");
+  const [direction, setDirection] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const canManageTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
@@ -65,6 +75,18 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     } finally {
       setLoading(false);
     }
+  }, [resource.id]);
+
+  useEffect(() => {
+    setTasks([]);
+    setSelectedKeys([]);
+    setApplyModeFilter(undefined);
+    setStatusFilter([]);
+    setAppliedFilter(undefined);
+    setSort("create_time");
+    setDirection("desc");
+    setPage(1);
+    setDetailTaskId(null);
   }, [resource.id]);
 
   useEffect(() => {
@@ -116,12 +138,33 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     }
   };
 
-  const batchDeleteTargets = tasks.filter(
+  const filteredTasks = useMemo(() => tasks
+    .filter((task) =>
+      (!applyModeFilter || task.applyMode === applyModeFilter) &&
+      (statusFilter.length === 0 || statusFilter.includes(task.status)) &&
+      (appliedFilter === undefined || task.applied === appliedFilter),
+    )
+    .sort((left, right) => {
+      const leftTime = sort === "finish_time" ? left.finishTime ?? 0 : left.createTime;
+      const rightTime = sort === "finish_time" ? right.finishTime ?? 0 : right.createTime;
+      return (leftTime - rightTime) * (direction === "asc" ? 1 : -1);
+    }), [appliedFilter, applyModeFilter, direction, sort, statusFilter, tasks]);
+
+  const batchDeleteTargets = filteredTasks.filter(
     (task) =>
       selectedKeys.includes(task.id) &&
       task.status !== "pending" &&
       task.status !== "running",
   );
+  const pagedTasks = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredTasks.slice(start, start + pageSize);
+  }, [filteredTasks, page, pageSize]);
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
+    if (page > lastPage) setPage(lastPage);
+  }, [filteredTasks.length, page, pageSize]);
 
   const handleBatchDelete = () => {
     if (!batchDeleteTargets.length) return;
@@ -152,14 +195,36 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     });
   };
 
-  const columns = [
-    { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), ellipsis: true },
-    { dataIndex: "applyMode", title: t("dataCatalog.taskManagement.columns.applyMode"), render: (value: string) => t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`) },
-    { dataIndex: "status", title: t("common.status"), render: (value: string) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" || value === "pending" ? "default" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
-    { dataIndex: "applied", title: t("dataCatalog.taskManagement.columns.applied"), render: (value: boolean) => <Tag color={value ? "success" : "default"}>{t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}</Tag> },
-    { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), render: (value: number) => `${Math.round(value * 100)}%` },
-    { dataIndex: "createTime", title: t("dataCatalog.task.createTime"), render: formatTime },
-    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), render: formatTime },
+  const sortOrderOf = (key: "create_time" | "finish_time") =>
+    sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
+  const handleTableChange: TableProps<SemanticUnderstandingTaskSummary>["onChange"] = (_pagination, filters, sorter, extra) => {
+    if (extra.action === "filter") {
+      setApplyModeFilter(filters.applyMode?.[0] as string | undefined);
+      setStatusFilter((filters.status ?? []).map(String) as SemanticUnderstandingTaskSummary["status"][]);
+      setAppliedFilter(filters.applied?.[0] === undefined ? undefined : filters.applied[0] === "true");
+      setPage(1);
+      return;
+    }
+    if (extra.action !== "sort") return;
+    const single = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (!single?.columnKey || !single.order) {
+      setSort("create_time");
+      setDirection("desc");
+    } else {
+      setSort(single.columnKey as "create_time" | "finish_time");
+      setDirection(single.order === "ascend" ? "asc" : "desc");
+    }
+    setPage(1);
+  };
+
+  const columns: ColumnsType<SemanticUnderstandingTaskSummary> = [
+    { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true, render: (value: string) => <button className={styles.textLink} onClick={() => setDetailTaskId(value)} type="button">{value}</button> },
+    { dataIndex: "applyMode", title: t("dataCatalog.taskManagement.columns.applyMode"), width: 100, filters: ["dry_run", "fill_empty", "force"].map((value) => ({ text: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value })), filterMultiple: false, filteredValue: applyModeFilter ? [applyModeFilter] : null, render: (value: string) => t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`) },
+    { dataIndex: "status", title: t("dataCatalog.task.detailSections.status"), width: 120, filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ text: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value })), filteredValue: statusFilter.length ? statusFilter : null, render: (value: SemanticUnderstandingTaskSummary["status"]) => <SemanticTaskStatusTag status={value} /> },
+    { dataIndex: "applied", title: t("dataCatalog.taskManagement.columns.applied"), width: 100, filters: [true, false].map((value) => ({ text: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value: String(value) })), filterMultiple: false, filteredValue: appliedFilter === undefined ? null : [String(appliedFilter)], render: (value: boolean) => <SemanticTaskAppliedTag applied={value} /> },
+    { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), width: 100, render: (value: number) => `${Math.round(value * 100)}%` },
+    { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
+    { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center" as const, key: "actions", title: t("common.actions"), width: 84, fixed: "right" as const,
       render: (_: unknown, task: SemanticUnderstandingTaskSummary) => {
@@ -190,12 +255,6 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
         </strong>
       </div>
       <Space>
-        <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
-        <PermissionGate permissions="catalog:task_manage">
-          <AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>
-            {batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}
-          </AppButton>
-        </PermissionGate>
         <PermissionGate permissions="catalog:task_manage">
           {/*
             语义理解任务是专业档能力,拦在页面层(ResourceWorkspaceScene 的 RequireEdition):
@@ -208,11 +267,18 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
             <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
           </AppButton>
         </PermissionGate>
+        <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
+        <PermissionGate permissions="catalog:task_manage">
+          <AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+            {batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}
+          </AppButton>
+        </PermissionGate>
       </Space>
     </section>
     {error ? <Alert message={error} showIcon type="error" /> : <TableSurface>
-      {!loading && tasks.length === 0 ? <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> : <AppTable columns={columns} dataSource={tasks} loading={loading} pagination={false} rowKey="id" rowSelection={{ selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)) }} />}
+      {!loading && filteredTasks.length === 0 ? <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> : <AppTable columns={columns} dataSource={pagedTasks} loading={loading} onChange={handleTableChange} pagination={false} rowKey="id" rowSelection={canManageTasks ? { selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)), getCheckboxProps: (task) => ({ disabled: task.status === "pending" || task.status === "running" }) } : undefined} />}
     </TableSurface>}
+    {filteredTasks.length > 0 ? <TablePaginationBar current={page} onChange={(nextPage, nextPageSize) => { setPage(nextPageSize === pageSize ? nextPage : 1); setPageSize(nextPageSize); }} pageSize={pageSize} showSizeChanger showTotal={(count) => t("common.total", { total: count })} total={filteredTasks.length} /> : null}
     <Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("dataCatalog.semanticWorkspace.start")} onCancel={() => setOpen(false)} onOk={() => void start()} open={open} title={t("dataCatalog.semanticWorkspace.createTitle")}>
       <Form form={form} layout="vertical">
         <Form.Item label={t("dataCatalog.taskManagement.columns.applyMode")} name="applyMode" rules={[{ required: true }]}>

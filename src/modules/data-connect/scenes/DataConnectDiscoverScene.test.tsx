@@ -9,11 +9,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
+
 import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 
 const {
   appServicesMock,
   getScheduleMock,
+  listTasksMock,
   listSchedulesMock,
   updateScheduleMock,
 } = vi.hoisted(() => ({
@@ -23,6 +26,7 @@ const {
     runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
   },
   getScheduleMock: vi.fn(),
+  listTasksMock: vi.fn(),
   listSchedulesMock: vi.fn(),
   updateScheduleMock: vi.fn(),
 }));
@@ -63,7 +67,7 @@ vi.mock("antd", () => ({
       {items.find((item) => item.key === activeKey)?.children}
     </div>
   ),
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  Tag: ({ children, color }: { children?: ReactNode; color?: string }) => <span data-color={color}>{children}</span>,
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -75,16 +79,37 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
-  AppTable: ({ columns, dataSource }: {
+  AppTable: ({ columns, dataSource, rowSelection }: {
     columns: Array<{
-      render?: (_value: unknown, record: { id: string }, index: number) => ReactNode;
+      dataIndex?: string;
+      render?: (_value: unknown, record: { id: string; progress?: number; status?: string }, index: number) => ReactNode;
     }>;
-    dataSource: Array<{ id: string }>;
+    dataSource: Array<{ id: string; progress?: number; status?: string }>;
+    rowSelection?: {
+      onChange: (keys: string[]) => void;
+      selectedRowKeys: string[];
+    };
   }) => (
     <div>
+      {rowSelection ? (
+        <>
+          <output data-testid="selected-task-keys">{rowSelection.selectedRowKeys.join(",")}</output>
+          <button onClick={() => rowSelection.onChange(dataSource[0] ? [dataSource[0].id] : [])} type="button">
+            select first task
+          </button>
+        </>
+      ) : null}
       {dataSource.map((record, index) => (
         <div key={record.id}>
-          {columns.at(-1)?.render?.(undefined, record, index)}
+          {record.status !== undefined
+            ? columns
+              .filter((column) => column.dataIndex === "id" || column.dataIndex === "status" || column.dataIndex === "progress")
+              .map((column) => (
+                <div key={column.dataIndex}>
+                  {column.render?.(record[column.dataIndex as "id" | "progress" | "status"], record, index)}
+                </div>
+              ))
+            : columns.at(-1)?.render?.(undefined, record, index)}
         </div>
       ))}
     </div>
@@ -120,7 +145,7 @@ vi.mock("@/modules/data-connect/components/DataConnectPageHeader", () => ({
 }));
 
 vi.mock("@/modules/data-connect/components/DataConnectDiscoverTaskDrawer", () => ({
-  DataConnectDiscoverTaskDrawer: () => null,
+  DataConnectDiscoverTaskDrawer: ({ taskId }: { taskId: string }) => <output>drawer:{taskId}</output>,
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverRunNowModal", () => ({
@@ -173,7 +198,7 @@ vi.mock("@/modules/data-connect/services/discover.service", () => ({
   deleteDataConnectDiscoverTask: vi.fn(),
   getDataConnectDiscoverSchedule: getScheduleMock,
   listDataConnectDiscoverSchedules: listSchedulesMock,
-  listDataConnectDiscoverTasks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  listDataConnectDiscoverTasks: listTasksMock,
   setDataConnectDiscoverScheduleEnabled: vi.fn(),
   triggerDataConnectDiscover: vi.fn(),
   updateDataConnectDiscoverSchedule: updateScheduleMock,
@@ -210,6 +235,7 @@ describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listSchedulesMock.mockResolvedValue({ items: [schedule(100)], total: 1 });
+    listTasksMock.mockResolvedValue({ items: [], total: 0 });
     getScheduleMock
       .mockResolvedValueOnce(schedule(100))
       .mockResolvedValue(schedule(200));
@@ -282,5 +308,58 @@ describe("DataConnectDiscoverScene", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByTestId("schedule-submitting").textContent).toBe("false"));
+  });
+
+  it("renders pending task status and progress with the neutral color", async () => {
+    listTasksMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        createTime: 100,
+        id: "discover-task-pending",
+        progress: 0,
+        queuePriority: 10,
+        status: "pending",
+        strategy: "full_sync",
+        triggerType: "manual",
+      }],
+      total: 1,
+    });
+
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    const status = await screen.findByText("dataConnect.discoverTaskStatuses.pending");
+    expect(status.getAttribute("data-color")).toBe("default");
+    expect(document.querySelector(`.${taskStyles.progressFillMuted}`)).not.toBeNull();
+  });
+
+  it("clears selected tasks and task details when the catalog changes", async () => {
+    listTasksMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        createTime: 100,
+        id: "discover-task-1",
+        progress: 100,
+        queuePriority: 10,
+        status: "completed",
+        strategy: "full_sync",
+        triggerType: "manual",
+      }],
+      total: 1,
+    });
+
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await screen.findByText("discover-task-1");
+    fireEvent.click(screen.getByRole("button", { name: "select first task" }));
+    fireEvent.click(screen.getByRole("button", { name: "discover-task-1" }));
+    expect(screen.getByTestId("selected-task-keys").textContent).toBe("discover-task-1");
+    expect(screen.getByText("drawer:discover-task-1")).toBeTruthy();
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selected-task-keys").textContent).toBe("");
+      expect(screen.queryByText("drawer:discover-task-1")).toBeNull();
+    });
   });
 });

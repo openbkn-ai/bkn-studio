@@ -17,7 +17,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import type { DataConnectDiscoverSceneProps } from "@/modules/data-connect/contracts/scenes";
+import type {
+  DataConnectDiscoverSceneProps,
+  DataConnectDiscoverTab,
+} from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -74,7 +77,6 @@ type ScheduleModalState =
   | null;
 
 type EnabledFilterValue = "all" | "disabled" | "enabled";
-type DiscoverPageTab = "schedules" | "tasks";
 type TaskStatusFilterValue = DataConnectDiscoverTaskStatus[];
 type TaskTriggerTypeFilterValue = "all" | DataConnectDiscoverTask["triggerType"];
 
@@ -84,7 +86,7 @@ function renderTableTime(value?: number) {
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
-  const fillClass = task.status === "completed" ? taskStyles.progressFillDone : task.status === "failed" ? taskStyles.progressFillFailed : taskStyles.progressFillVector;
+  const fillClass = task.status === "completed" ? taskStyles.progressFillDone : task.status === "failed" ? taskStyles.progressFillFailed : task.status === "cancelled" || task.status === "pending" ? taskStyles.progressFillMuted : taskStyles.progressFillVector;
   return <div className={taskStyles.progressWrapCompact}><div className={taskStyles.progressTrack}><span className={[taskStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={taskStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
 }
 
@@ -96,15 +98,22 @@ function DiscoverTaskPriority({ priority }: { priority: number }) {
 }
 
 export function DataConnectDiscoverScene({
+  activeTab: controlledActiveTab,
   catalogId,
   onBackToConnections,
   onCatalogIdChange,
+  onTabChange,
 }: DataConnectDiscoverSceneProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [catalogLocked] = useState(() => Boolean(catalogId));
-  const [activeTab, setActiveTab] = useState<DiscoverPageTab>("tasks");
+  const [internalActiveTab, setInternalActiveTab] = useState<DataConnectDiscoverTab>("tasks");
+  const activeTab = controlledActiveTab ?? internalActiveTab;
+  const changeActiveTab = useCallback((nextTab: DataConnectDiscoverTab) => {
+    setInternalActiveTab(nextTab);
+    onTabChange?.(nextTab);
+  }, [onTabChange]);
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim());
   const [catalogKeyword, setCatalogKeyword] = useState("");
@@ -302,14 +311,26 @@ export function DataConnectDiscoverScene({
     taskSort === key ? (taskDirection === "asc" ? "ascend" : "descend") : null;
   const handleTaskTableChange: TableProps<DataConnectDiscoverTaskSummary>["onChange"] = (
     _pagination,
-    _filters,
+    filters,
     sorter,
     extra,
   ) => {
+    if (extra.action === "filter") {
+      setTaskStrategyFilter(filters.strategy?.[0] as DataConnectDiscoverStrategy | undefined);
+      setTaskTriggerTypeFilter((filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined) ?? "all");
+      setTaskStatusFilter((filters.status ?? []).map(String) as TaskStatusFilterValue);
+      setTaskPage(1);
+      return;
+    }
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setTaskSort((single?.columnKey as DataConnectDiscoverTaskSort) || "create_time");
-    setTaskDirection(single?.order === "ascend" ? "asc" : "desc");
+    if (!single?.columnKey || !single.order) {
+      setTaskSort("create_time");
+      setTaskDirection("desc");
+    } else {
+      setTaskSort(single.columnKey as DataConnectDiscoverTaskSort);
+      setTaskDirection(single.order === "ascend" ? "asc" : "desc");
+    }
     setTaskPage(1);
   };
 
@@ -320,19 +341,19 @@ export function DataConnectDiscoverScene({
     setTaskStrategyFilter(undefined);
     setTaskTriggerTypeFilter("all");
     setTaskPage(1);
-    setActiveTab("tasks");
-  }, []);
+    changeActiveTab("tasks");
+  }, [changeActiveTab]);
 
   const runDiscover = useCallback(
     async (targetCatalogId: string, strategy?: DataConnectDiscoverSchedule["strategy"]) => {
       const result = await triggerDataConnectDiscover(targetCatalogId, strategy);
       void message.success(t("dataConnect.discoverTriggerSuccess"));
       setDetailTaskId(result.id);
-      setActiveTab("tasks");
+      changeActiveTab("tasks");
       await Promise.all([loadSchedules(), loadTasks()]);
       return result;
     },
-    [loadSchedules, loadTasks, message, t],
+    [changeActiveTab, loadSchedules, loadTasks, message, t],
   );
 
   useEffect(() => {
@@ -354,6 +375,15 @@ export function DataConnectDiscoverScene({
   useEffect(() => {
     onCatalogIdChange?.(selectedCatalogId);
   }, [onCatalogIdChange, selectedCatalogId]);
+
+  useEffect(() => {
+    setSelectedTaskKeys([]);
+    setDetailTaskId(null);
+    setTaskStatusFilter([]);
+    setTaskStrategyFilter(undefined);
+    setTaskTriggerTypeFilter("all");
+    setTaskPage(1);
+  }, [selectedCatalogId]);
 
   useEffect(() => {
     if (useMock || !hasActiveTasks) {
@@ -545,12 +575,18 @@ export function DataConnectDiscoverScene({
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
       width: 110,
+      filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({ text: t(`dataConnect.discoverStrategies.${value}`), value })),
+      filterMultiple: false,
+      filteredValue: taskStrategyFilter ? [taskStrategyFilter] : null,
       render: (value: DataConnectDiscoverTaskSummary["strategy"]) => t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "triggerType",
       title: t("dataConnect.discoverTriggerType"),
       width: 100,
+      filters: ["manual", "scheduled"].map((value) => ({ text: t(`dataConnect.discoverTriggerTypes.${value}`), value })),
+      filterMultiple: false,
+      filteredValue: taskTriggerTypeFilter === "all" ? null : [taskTriggerTypeFilter],
       render: (value: DataConnectDiscoverTaskSummary["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
     },
     {
@@ -563,7 +599,9 @@ export function DataConnectDiscoverScene({
       dataIndex: "status",
       title: t("dataConnect.discoverTaskStatus"),
       width: 120,
-      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" ? "default" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
+      filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ text: t(`dataConnect.discoverTaskStatuses.${value}`), value })),
+      filteredValue: taskStatusFilter.length ? taskStatusFilter : null,
+      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" || value === "pending" ? "default" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
     },
     {
       dataIndex: "progress",
@@ -880,7 +918,7 @@ export function DataConnectDiscoverScene({
     <div className={styles.tabPanel}>
       <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
+          <div className={`${styles.toolbarActions} ${styles.taskActionsRight}`}>
             <PermissionGate permissions="catalog:task_manage">
               <AppButton
                 disabled={!selectedCatalogId}
@@ -920,55 +958,6 @@ export function DataConnectDiscoverScene({
             <span className={styles.inlineHint}>{t("dataConnect.discoverAutoRefreshHint")}</span>
           ) : null}
         </div>
-        <Space className={styles.taskToolbarFilters}>
-          <Select
-            allowClear
-            className={styles.taskFilterSelect}
-            onChange={(value: DataConnectDiscoverStrategy | undefined) => {
-              setTaskStrategyFilter(value);
-              setTaskPage(1);
-            }}
-            options={["full_sync", "create_only", "cleanup_only"].map((value) => ({
-              label: t(`dataConnect.discoverStrategies.${value}`),
-              value,
-            }))}
-            placeholder={t("dataCatalog.taskManagement.columns.strategy")}
-            value={taskStrategyFilter}
-          />
-          <Select
-            allowClear
-            className={styles.taskFilterSelect}
-            maxTagCount="responsive"
-            mode="multiple"
-            onChange={(value: TaskStatusFilterValue) => {
-              setTaskStatusFilter(value);
-              setTaskPage(1);
-            }}
-            options={[
-              { label: t("dataConnect.discoverTaskStatuses.pending"), value: "pending" },
-              { label: t("dataConnect.discoverTaskStatuses.running"), value: "running" },
-              { label: t("dataConnect.discoverTaskStatuses.completed"), value: "completed" },
-              { label: t("dataConnect.discoverTaskStatuses.failed"), value: "failed" },
-              { label: t("dataConnect.discoverTaskStatuses.cancelled"), value: "cancelled" },
-            ]}
-            placeholder={t("dataCatalog.task.detailSections.status")}
-            value={taskStatusFilter}
-          />
-          <Select
-            allowClear
-            className={styles.taskFilterSelect}
-            onChange={(value: DataConnectDiscoverTaskTriggerType | undefined) => {
-              setTaskTriggerTypeFilter(value ?? "all");
-              setTaskPage(1);
-            }}
-            options={["manual", "scheduled"].map((value) => ({
-              label: t(`dataConnect.discoverTriggerTypes.${value}`),
-              value,
-            }))}
-            placeholder={t("dataCatalog.taskManagement.columns.trigger")}
-            value={taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter}
-          />
-        </Space>
       </div>
       <TableSurface className={styles.panelSection}>
         {taskError ? (
@@ -1000,10 +989,13 @@ export function DataConnectDiscoverScene({
             onChange={handleTaskTableChange}
             pagination={false}
             rowKey="id"
-            rowSelection={{
+            rowSelection={canManageCatalogTasks ? {
               selectedRowKeys: selectedTaskKeys,
               onChange: (keys) => setSelectedTaskKeys(keys.map(String)),
-            }}
+              getCheckboxProps: (task) => ({
+                disabled: task.status === "pending" || task.status === "running",
+              }),
+            } : undefined}
           />
         )}
       </TableSurface>
@@ -1065,7 +1057,7 @@ export function DataConnectDiscoverScene({
             },
           ]}
           onChange={(key) => {
-            setActiveTab(key as DiscoverPageTab);
+            changeActiveTab(key as DataConnectDiscoverTab);
           }}
         />
       </section>

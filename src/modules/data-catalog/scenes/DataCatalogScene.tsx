@@ -244,9 +244,7 @@ export function DataCatalogScene({
       indexView?: "config",
     ) => {
       const params = new URLSearchParams();
-      if (tab !== "detail") {
-        params.set("tab", tab);
-      }
+      params.set("tab", tab);
       if (tab === "index" && indexView === "config") {
         params.set("view", "config");
       }

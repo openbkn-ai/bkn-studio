@@ -156,6 +156,7 @@ describe("createBuildTask", () => {
     });
 
     expect(task.executeType).toBe("incremental");
+    expect(task.status).toBe("completed");
   });
 
   describe("when using the API", () => {
@@ -255,5 +256,32 @@ describe("pauseBuildTask", () => {
 
     Object.assign(task, original);
     vi.useRealTimers();
+  });
+
+  it("stops a pending task", async () => {
+    const task = mockBuildTasks.find((item) => item.id === "bt-pending-01");
+    expect(task).toBeDefined();
+    if (!task) return;
+
+    const original = { ...task };
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(600));
+
+    try {
+      task.status = "pending";
+      task.finishTime = null;
+      task.lastProgressTime = null;
+
+      const paused = pauseBuildTask(task.id);
+      await vi.advanceTimersByTimeAsync(120);
+      await paused;
+
+      expect(task.status).toBe("stopped");
+      expect(task.finishTime).toBeNull();
+      expect(task.lastProgressTime).toBe(600);
+    } finally {
+      Object.assign(task, original);
+      vi.useRealTimers();
+    }
   });
 });

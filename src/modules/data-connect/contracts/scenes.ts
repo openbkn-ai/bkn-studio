@@ -21,8 +21,12 @@ export type DataConnectFormSceneProps = {
   onSubmitSuccess?: () => void;
 };
 
+export type DataConnectDiscoverTab = "schedules" | "tasks";
+
 export type DataConnectDiscoverSceneProps = {
+  activeTab?: DataConnectDiscoverTab;
   catalogId?: string;
   onBackToConnections?: () => void;
   onCatalogIdChange?: (catalogId?: string) => void;
+  onTabChange?: (tab: DataConnectDiscoverTab) => void;
 };

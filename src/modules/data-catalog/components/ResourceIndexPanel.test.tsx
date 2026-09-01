@@ -19,6 +19,22 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ i18n: { language: "zh-CN" }, t: (key: string) => key }),
 }));
 
+vi.mock("antd", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("antd")>();
+  return {
+    ...actual,
+    Dropdown: ({ children, menu }: {
+      children: ReactNode;
+      menu: { items?: Array<{ key?: string | number; label?: ReactNode } | null> };
+    }) => (
+      <div>
+        {children}
+        {menu.items?.map((item) => item ? <span key={item.key}>{item.label}</span> : null)}
+      </div>
+    ),
+  };
+});
+
 vi.mock("@/framework/permission/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: ReactNode }) => children,
 }));
@@ -30,7 +46,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
-  AppTable: ({ columns, dataSource }: {
+  AppTable: ({ columns, dataSource, rowSelection }: {
     columns: Array<{
       dataIndex?: string;
       key?: string;
@@ -38,16 +54,20 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
       title?: ReactNode;
     }>;
     dataSource: BuildTask[];
+    rowSelection?: { getCheckboxProps?: (task: BuildTask) => { disabled?: boolean } };
   }) => (
     <div>
       <div>{columns.map((column) => <span key={column.key ?? column.dataIndex}>{column.title}</span>)}</div>
-      {dataSource.flatMap((record) =>
-        columns.map((column) => (
+      {dataSource.flatMap((record) => [
+        <output data-testid={`selection-${record.id}`} key={`${record.id}-selection`}>
+          {String(rowSelection?.getCheckboxProps?.(record).disabled ?? false)}
+        </output>,
+        ...columns.map((column) => (
           <div key={`${record.id}-${column.key ?? column.dataIndex}`}>
             {column.render ? column.render(column.dataIndex ? record[column.dataIndex as keyof BuildTask] : undefined, record) : null}
           </div>
         )),
-      )}
+      ])}
     </div>
   ),
 }));
@@ -117,6 +137,7 @@ describe("ResourceIndexPanel", () => {
           tasks={[
             buildTask({ id: "completed-task", status: "completed" }),
             buildTask({ id: "stopping-task", status: "stopping" }),
+            buildTask({ id: "stopped-task", status: "stopped" }),
           ]}
         />
       </MemoryRouter>,
@@ -128,6 +149,9 @@ describe("ResourceIndexPanel", () => {
     expect(screen.getByText("dataCatalog.build.executeType")).toBeTruthy();
     expect(screen.getByText("dataCatalog.task.fields.lastProgressTime")).toBeTruthy();
     expect(screen.getByText("dataCatalog.task.finishedAt")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "dataConnect.moreActions" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "dataConnect.moreActions" })).toHaveLength(3);
+    expect(screen.getAllByText("common.delete")).toHaveLength(2);
+    expect(screen.getByTestId("selection-stopping-task").textContent).toBe("true");
+    expect(screen.getByTestId("selection-completed-task").textContent).toBe("false");
   });
 });

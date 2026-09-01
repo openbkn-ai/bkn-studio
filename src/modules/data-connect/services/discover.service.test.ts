@@ -223,6 +223,25 @@ describe("discover.service · mock task sorting", () => {
     manualTasks.forEach((item) => expect(item.scheduleId).toBeUndefined());
   });
 
+  it("settles an interactively triggered mock task without polling", async () => {
+    const {
+      getDataConnectDiscoverTask,
+      triggerDataConnectDiscover,
+    } = await import("@/modules/data-connect/services/discover.service");
+
+    const created = await triggerDataConnectDiscover("cat-001", "create_only");
+    const task = await getDataConnectDiscoverTask(created.id);
+
+    expect(task).toMatchObject({
+      catalogId: "cat-001",
+      finishTime: expect.any(Number),
+      lastProgressTime: expect.any(Number),
+      progress: 100,
+      status: "completed",
+      strategy: "create_only",
+    });
+  });
+
   it("rejects a stale discover schedule version", async () => {
     const {
       getDataConnectDiscoverSchedule,

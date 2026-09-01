@@ -12,7 +12,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import { Alert, Dropdown, Space, type MenuProps } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -38,13 +38,20 @@ import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-f
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
-import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import {
   canManageResourceBuildTasks,
   canViewResourceIndexTasks,
   isResourceIndexReadOnly,
 } from "@/modules/data-catalog/lib/resource-index-access";
-import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  BuildMode,
+  BuildTask,
+  BuildTaskExecuteType,
+  BuildTaskSort,
+  BuildTaskStatus,
+  CatalogResource,
+} from "@/modules/data-catalog/types/data-catalog";
+import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
@@ -63,12 +70,21 @@ type ResourceIndexPanelProps = {
   tasks: BuildTask[];
 };
 
-const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
+const CONTROLLABLE_TASK_STATUSES = new Set<BuildTask["status"]>([
   "pending",
-  "running",
   "running",
   "stopped",
 ]);
+
+const STATUS_OPTIONS: BuildTaskStatus[] = [
+  "pending",
+  "running",
+  "stopping",
+  "stopped",
+  "completed",
+  "failed",
+  "cancelled",
+];
 
 function formatEffectiveState(task: BuildTask, t: TFunction) {
   if (task.mode === "streaming" && task.status === "running") {
@@ -117,7 +133,7 @@ function buildStatusSummary(
 }
 
 function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
-  if (latest && ACTIVE_TASK_STATUSES.has(latest.status)) {
+  if (latest && CONTROLLABLE_TASK_STATUSES.has(latest.status)) {
     if (
       effective &&
       effective.id === latest.id &&
@@ -177,6 +193,11 @@ export function ResourceIndexPanel({
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [modeFilter, setModeFilter] = useState<BuildMode>();
+  const [executeTypeFilter, setExecuteTypeFilter] = useState<BuildTaskExecuteType>();
+  const [statusFilter, setStatusFilter] = useState<BuildTaskStatus[]>([]);
+  const [sort, setSort] = useState<BuildTaskSort>("create_time");
+  const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const autoPickedRef = useRef(false);
 
@@ -203,10 +224,24 @@ export function ResourceIndexPanel({
   const canViewTasks = canViewResourceIndexTasks(resource);
   const effective = state.effective;
   const latest = state.latest;
-  const activeTask = latest && ACTIVE_TASK_STATUSES.has(latest.status) ? latest : null;
+  const activeTask = latest && CONTROLLABLE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(effective, latest);
-  const batchDeleteTargets = sortedTasks.filter(
-    (task) => selectedKeys.includes(task.id) && task.status !== "stopping",
+  const filteredTasks = useMemo(() => {
+    const timestampOf = (task: BuildTask) => {
+      if (sort === "last_progress_time") return task.lastProgressTime ?? 0;
+      if (sort === "finish_time") return task.finishTime ?? 0;
+      return task.createTime;
+    };
+    return sortedTasks
+      .filter((task) =>
+        (!modeFilter || task.mode === modeFilter) &&
+        (!executeTypeFilter || task.executeType === executeTypeFilter) &&
+        (statusFilter.length === 0 || statusFilter.includes(task.status)),
+      )
+      .sort((left, right) => (timestampOf(left) - timestampOf(right)) * (direction === "asc" ? 1 : -1));
+  }, [direction, executeTypeFilter, modeFilter, sort, sortedTasks, statusFilter]);
+  const batchDeleteTargets = filteredTasks.filter(
+    (task) => selectedKeys.includes(task.id) && !isActiveBuildTask(task),
   );
 
   const handleBatchDelete = () => {
@@ -219,9 +254,7 @@ export function ResourceIndexPanel({
       okButtonProps: { danger: true },
       onOk: async () => {
         const results = await Promise.allSettled(
-          batchDeleteTargets.map((task) =>
-            deleteBuildTask(task.id, { stopFirst: isActiveBuildTask(task) }),
-          ),
+          batchDeleteTargets.map((task) => deleteBuildTask(task.id)),
         );
         const failed = results.filter((result) => result.status === "rejected").length;
         if (failed) {
@@ -263,12 +296,49 @@ export function ResourceIndexPanel({
 
   useEffect(() => {
     setTaskPage(1);
+    setSelectedKeys([]);
+    setModeFilter(undefined);
+    setExecuteTypeFilter(undefined);
+    setStatusFilter([]);
+    setSort("create_time");
+    setDirection("desc");
+    setDetailTaskId(null);
   }, [resource.id]);
 
   const pagedTasks = useMemo(() => {
     const start = (taskPage - 1) * taskPageSize;
-    return sortedTasks.slice(start, start + taskPageSize);
-  }, [sortedTasks, taskPage, taskPageSize]);
+    return filteredTasks.slice(start, start + taskPageSize);
+  }, [filteredTasks, taskPage, taskPageSize]);
+
+  const updateTaskFilters = (patch: {
+    executeType?: BuildTaskExecuteType;
+    mode?: BuildMode;
+    statuses?: BuildTaskStatus[];
+  }) => {
+    if ("mode" in patch) setModeFilter(patch.mode);
+    if ("executeType" in patch) setExecuteTypeFilter(patch.executeType);
+    if ("statuses" in patch) setStatusFilter(patch.statuses ?? []);
+    setTaskPage(1);
+  };
+  const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
+    sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
+  const handleTaskTableChange: TableProps<BuildTask>["onChange"] = (
+    _pagination,
+    _filters,
+    sorter,
+    extra,
+  ) => {
+    if (extra.action !== "sort") return;
+    const single = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (!single?.order || !single.columnKey) {
+      setSort("create_time");
+      setDirection("desc");
+    } else {
+      setSort(single.columnKey as BuildTaskSort);
+      setDirection(single.order === "ascend" ? "asc" : "desc");
+    }
+    setTaskPage(1);
+  };
 
   const pauseResumeLabel =
     activeTask?.status === "stopped"
@@ -301,23 +371,24 @@ export function ResourceIndexPanel({
       dataIndex: "id",
       title: t("dataCatalog.taskManagement.columns.task"),
       width: 160,
-    },
-    {
-      dataIndex: "status",
-      title: t("common.status"),
-      width: 108,
-      render: (_value, record) => <BuildStatusTag task={record} />,
+      render: (value: string) => <button className={panelStyles.textLink} onClick={() => setDetailTaskId(value)} type="button">{value}</button>,
     },
     {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
       width: 100,
+      filters: ["batch", "streaming"].map((value) => ({ text: t(`dataCatalog.modes.${value}`), value })),
+      filterMultiple: false,
+      filteredValue: modeFilter ? [modeFilter] : null,
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
     },
     {
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
       width: 100,
+      filters: ["full", "incremental"].map((value) => ({ text: t(value === "incremental" ? "dataCatalog.build.executeIncremental" : "dataCatalog.build.executeFull"), value })),
+      filterMultiple: false,
+      filteredValue: executeTypeFilter ? [executeTypeFilter] : null,
       render: (_value, record) =>
         record.mode === "batch"
           ? record.executeType === "incremental"
@@ -328,28 +399,45 @@ export function ResourceIndexPanel({
           : "-",
     },
     {
+      dataIndex: "status",
+      title: t("dataCatalog.task.detailSections.status"),
+      width: 120,
+      filters: STATUS_OPTIONS.map((value) => ({ text: t(`dataCatalog.task.statuses.${value}`), value })),
+      filteredValue: statusFilter.length ? statusFilter : null,
+      render: (_value, record) => <BuildStatusTag task={record} />,
+    },
+    {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 196,
+      width: 200,
       render: (_value, record) => <BuildProgress compact task={record} />,
     },
     {
-      dataIndex: "createTime",
-      title: t("dataConnect.createTime"),
-      width: 180,
-      render: (value: number) => formatDateTimeYmdHms(value || undefined),
-    },
-    {
       dataIndex: "lastProgressTime",
+      key: "last_progress_time",
       title: t("dataCatalog.task.fields.lastProgressTime"),
       width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("last_progress_time"),
       render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
     },
     {
       dataIndex: "finishTime",
+      key: "finish_time",
       title: t("dataCatalog.task.finishedAt"),
       width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("finish_time"),
       render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
+    },
+    {
+      dataIndex: "createTime",
+      key: "create_time",
+      title: t("dataConnect.createTime"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("create_time"),
+      render: (value: number) => formatDateTimeYmdHms(value || undefined),
     },
     {
       key: "actions",
@@ -361,13 +449,13 @@ export function ResourceIndexPanel({
         const menuItems: NonNullable<MenuProps["items"]> = [
           { key: "detail", label: t("common.detail") },
         ];
-        if (canManageTaskActions && ACTIVE_TASK_STATUSES.has(record.status)) {
+        if (canManageTaskActions && CONTROLLABLE_TASK_STATUSES.has(record.status)) {
           menuItems.push({ key: "pauseResume", label: pauseResumeLabelOf(record) });
         }
         if (canManageTaskActions && record.status === "failed") {
           menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
         }
-        if (canManageTaskActions && record.status !== "stopping") {
+        if (canManageTaskActions && !isActiveBuildTask(record)) {
           menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
         }
         return (
@@ -548,38 +636,52 @@ export function ResourceIndexPanel({
               <span className={panelStyles.historyCount}> ({sortedTasks.length})</span>
             ) : null}
           </h3>
-          <Space>
-            <AppButton icon={<ReloadOutlined />} onClick={() => void onRefresh()}>
-              {t("common.refresh")}
-            </AppButton>
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton
-                danger
-                disabled={batchDeleteTargets.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={handleBatchDelete}
-              >
-                {batchDeleteTargets.length > 0
-                  ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})`
-                  : t("dataCatalog.task.batchDelete")}
+          <div className={panelStyles.historyControls}>
+            <Space>
+              <AppButton icon={<ReloadOutlined />} onClick={() => void onRefresh()}>
+                {t("common.refresh")}
               </AppButton>
-            </PermissionGate>
-          </Space>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  danger
+                  disabled={batchDeleteTargets.length === 0}
+                  icon={<DeleteOutlined />}
+                  onClick={handleBatchDelete}
+                >
+                  {batchDeleteTargets.length > 0
+                    ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})`
+                    : t("dataCatalog.task.batchDelete")}
+                </AppButton>
+              </PermissionGate>
+            </Space>
+          </div>
         </div>
         <TableSurface className={panelStyles.tableSurface}>
           <AppTable<BuildTask>
             columns={taskColumns}
             dataSource={pagedTasks}
             locale={{ emptyText: t("dataCatalog.resource.historyEmpty") }}
+            onChange={(pagination, filters, sorter, extra) => {
+              if (extra.action === "filter") {
+                updateTaskFilters({
+                  executeType: (filters.executeType?.[0] as BuildTaskExecuteType | undefined),
+                  mode: filters.mode?.[0] as BuildMode | undefined,
+                  statuses: (filters.status ?? []).map(String) as BuildTaskStatus[],
+                });
+                return;
+              }
+              handleTaskTableChange(pagination, filters, sorter, extra);
+            }}
             pagination={false}
             rowKey="id"
-            rowSelection={{
+            rowSelection={canManageTaskActions ? {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
-            }}
+              getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
+            } : undefined}
           />
         </TableSurface>
-        {sortedTasks.length > 0 ? (
+        {filteredTasks.length > 0 ? (
           <TablePaginationBar
             current={taskPage}
             onChange={(nextPage, nextPageSize) => {
@@ -589,7 +691,7 @@ export function ResourceIndexPanel({
             pageSize={taskPageSize}
             showSizeChanger
             showTotal={(count) => t("common.total", { total: count })}
-            total={sortedTasks.length}
+            total={filteredTasks.length}
           />
         ) : null}
       </div>

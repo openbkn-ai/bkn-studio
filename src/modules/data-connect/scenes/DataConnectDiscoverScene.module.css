@@ -103,6 +103,10 @@
   composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
 
+.taskActionsRight {
+  margin-left: auto;
+}
+
 .toolbarFilters {
   display: flex;
   align-items: center;

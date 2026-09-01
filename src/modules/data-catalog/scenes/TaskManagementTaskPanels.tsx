@@ -6,7 +6,7 @@
  */
 
 import { DeleteOutlined, EllipsisOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Select, Space, Tag, type MenuProps } from "antd";
+import { Alert, Dropdown, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,7 @@ import { collectVisiblePage, pagerTotal } from "@/modules/data-catalog/lib/visib
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
+import { SemanticTaskAppliedTag, SemanticTaskStatusTag } from "@/modules/data-catalog/components/SemanticTaskPresentation";
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
 import {
   deleteDataConnectDiscoverTask,
@@ -102,28 +103,6 @@ function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStat
       : status === "cancelled" || status === "pending" ? { background: "var(--color-interface-panel-bg)", borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }
         : { background: "var(--color-info-bg)", borderColor: "var(--color-info-border)", color: "var(--color-text-link)" };
   return <Tag style={style}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</Tag>;
-}
-
-function SemanticTaskStatusTag({ status }: { status: SemanticTaskStatus }) {
-  const { t } = useTranslation();
-  const statusClass =
-    status === "completed"
-      ? sharedStyles.taskSucceeded
-      : status === "failed"
-        ? sharedStyles.taskFailed
-        : status === "cancelled" || status === "pending"
-          ? sharedStyles.taskPending
-          : sharedStyles.taskRunning;
-  return <span className={[sharedStyles.tag, statusClass].join(" ")}>{t(`dataCatalog.taskManagement.semanticStatus.${status}`)}</span>;
-}
-
-function SemanticTaskAppliedTag({ applied }: { applied: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <span className={[sharedStyles.tag, applied ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
-      {t(applied ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}
-    </span>
-  );
 }
 
 export function DiscoverTaskListPanel() {
@@ -227,11 +206,23 @@ export function DiscoverTaskListPanel() {
     });
   };
   const sortOrderOf = (key: DataConnectDiscoverTaskSort) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-  const handleTableChange: TableProps<DataConnectDiscoverTaskSummary>["onChange"] = (_pagination, _filters, sorter, extra) => {
+  const handleTableChange: TableProps<DataConnectDiscoverTaskSummary>["onChange"] = (_pagination, filters, sorter, extra) => {
+    if (extra.action === "filter") {
+      setStrategy(filters.strategy?.[0] as DataConnectDiscoverStrategy | undefined);
+      setTriggerType(filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined);
+      setStatuses((filters.status ?? []).map(String) as DataConnectDiscoverTaskStatus[]);
+      setPage(1);
+      return;
+    }
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as DataConnectDiscoverTaskSort || "create_time");
-    setDirection(single?.order === "ascend" ? "asc" : "desc");
+    if (!single?.columnKey || !single.order) {
+      setSort("create_time");
+      setDirection("desc");
+    } else {
+      setSort(single.columnKey as DataConnectDiscoverTaskSort);
+      setDirection(single.order === "ascend" ? "asc" : "desc");
+    }
     setPage(1);
   };
 
@@ -280,10 +271,10 @@ export function DiscoverTaskListPanel() {
           "-"
         ),
     },
-    { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 110, render: (value) => t(`dataConnect.discoverStrategies.${value}`) },
-    { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 100, render: (value) => t(`dataConnect.discoverTriggerTypes.${value}`) },
+    { dataIndex: "strategy", title: t("dataCatalog.taskManagement.columns.strategy"), width: 110, filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({ text: t(`dataConnect.discoverStrategies.${value}`), value })), filterMultiple: false, filteredValue: strategy ? [strategy] : null, render: (value) => t(`dataConnect.discoverStrategies.${value}`) },
+    { dataIndex: "triggerType", title: t("dataCatalog.taskManagement.columns.trigger"), width: 100, filters: ["manual", "scheduled"].map((value) => ({ text: t(`dataConnect.discoverTriggerTypes.${value}`), value })), filterMultiple: false, filteredValue: triggerType ? [triggerType] : null, render: (value) => t(`dataConnect.discoverTriggerTypes.${value}`) },
     { dataIndex: "queuePriority", title: t("dataConnect.discoverQueuePriority"), width: 100, render: (value: number) => <DiscoverTaskPriority priority={value} /> },
-    { dataIndex: "status", title: t("dataCatalog.task.detailSections.status"), width: 120, render: (value: DataConnectDiscoverTaskStatus) => <DiscoverTaskStatusTag status={value} /> },
+    { dataIndex: "status", title: t("dataCatalog.task.detailSections.status"), width: 120, filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ text: t(`dataConnect.discoverTaskStatuses.${value}`), value })), filteredValue: statuses.length ? statuses : null, render: (value: DataConnectDiscoverTaskStatus) => <DiscoverTaskStatusTag status={value} /> },
     {
       dataIndex: "progress",
       title: t("dataCatalog.task.progress"),
@@ -334,12 +325,8 @@ export function DiscoverTaskListPanel() {
   ];
 
   return <TaskPanel>
-    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
-      <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.discoverStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
-      <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.discoverTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
-      <Select allowClear className={styles.select} maxTagCount="responsive" mode="multiple" options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("dataCatalog.task.detailSections.status")} value={statuses} onChange={(value: DataConnectDiscoverTaskStatus[]) => { setStatuses(value); setPage(1); }} />
-    </Space></div>
-    <TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
+    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div>
+    <TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
     <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />
     {detailTaskId ? <DataConnectDiscoverTaskDrawer catalogs={catalogs} onClose={() => setDetailTaskId(null)} open schedules={schedules} taskId={detailTaskId} /> : null}
   </TaskPanel>;
@@ -413,15 +400,23 @@ export function SemanticUnderstandingTaskListPanel() {
     });
   };
   const sortOrderOf = (key: NonNullable<SemanticTaskFilters["sort"]>) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-  const handleTableChange: TableProps<SemanticTask>["onChange"] = (_pagination, _filters, sorter, extra) => {
+  const handleTableChange: TableProps<SemanticTask>["onChange"] = (_pagination, filters, sorter, extra) => {
+    if (extra.action === "filter") {
+      setScope(filters.scope?.[0] as SemanticTask["scope"] | undefined); setApplyMode(filters.applyMode?.[0] as string | undefined); setStatuses((filters.status ?? []).map(String) as SemanticTaskStatus[]); setApplied(filters.applied?.[0] === undefined ? undefined : filters.applied[0] === "true"); setPage(1); return;
+    }
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
-    setSort(single?.columnKey as NonNullable<SemanticTaskFilters["sort"]> || "create_time");
-    setDirection(single?.order === "ascend" ? "asc" : "desc");
+    if (!single?.columnKey || !single.order) {
+      setSort("create_time");
+      setDirection("desc");
+    } else {
+      setSort(single.columnKey as NonNullable<SemanticTaskFilters["sort"]>);
+      setDirection(single.order === "ascend" ? "asc" : "desc");
+    }
     setPage(1);
   };
   const columns: ColumnsType<SemanticTask> = [
-    { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true },
+    { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true, render: (value: string) => <button className={styles.textLink} onClick={() => setDetailTaskId(value)} type="button">{value}</button> },
     {
       dataIndex: "catalogId",
       title: t("dataCatalog.taskManagement.columns.catalog"),
@@ -455,11 +450,12 @@ export function SemanticUnderstandingTaskListPanel() {
           "-"
         ),
     },
-    { dataIndex: "scope", title: t("dataCatalog.taskManagement.columns.scope"), width: 100, render: (value) => t(`dataCatalog.taskManagement.scope.${value}`) },
+    { dataIndex: "scope", title: t("dataCatalog.taskManagement.columns.scope"), width: 100, filters: ["catalog", "resource"].map((value) => ({ text: t(`dataCatalog.taskManagement.scope.${value}`), value })), filterMultiple: false, filteredValue: scope ? [scope] : null, render: (value) => t(`dataCatalog.taskManagement.scope.${value}`) },
     {
       dataIndex: "applyMode",
       title: t("dataCatalog.taskManagement.columns.applyMode"),
       width: 100,
+      filters: ["dry_run", "fill_empty", "force"].map((value) => ({ text: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value })), filterMultiple: false, filteredValue: applyMode ? [applyMode] : null,
       render: (value: string) =>
         value === "dry_run"
           ? t("dataCatalog.taskManagement.applyMode.dryRun")
@@ -469,11 +465,12 @@ export function SemanticUnderstandingTaskListPanel() {
               ? t("dataCatalog.taskManagement.applyMode.fillEmpty")
               : value,
     },
-    { dataIndex: "status", title: t("dataCatalog.task.detailSections.status"), width: 120, render: (value: SemanticTaskStatus) => <SemanticTaskStatusTag status={value} /> },
+    { dataIndex: "status", title: t("dataCatalog.task.detailSections.status"), width: 120, filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ text: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value })), filteredValue: statuses.length ? statuses : null, render: (value: SemanticTaskStatus) => <SemanticTaskStatusTag status={value} /> },
     {
       dataIndex: "applied",
       title: t("dataCatalog.taskManagement.columns.applied"),
       width: 100,
+      filters: [true, false].map((value) => ({ text: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value: String(value) })), filterMultiple: false, filteredValue: applied === undefined ? null : [String(applied)],
       render: (value: boolean) => <SemanticTaskAppliedTag applied={value} />,
     },
     { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), width: 100, render: (value) => `${Math.round(value * 100)}%` },
@@ -517,22 +514,17 @@ export function SemanticUnderstandingTaskListPanel() {
       },
     },
   ];
-  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
-    <Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); setPage(1); }} />
-    <Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} />
-    <Select allowClear className={styles.select} maxTagCount="responsive" mode="multiple" options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("dataCatalog.task.detailSections.status")} value={statuses} onChange={(value: SemanticTaskStatus[]) => { setStatuses(value); setPage(1); }} />
-    <Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} />
-  </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div><TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }
 
-function TaskTable<T extends { id: string }>({ error, loading, data, columns, emptyTitle, rawTotal = 0, onRetry, onTableChange, selectedKeys, onSelectionChange }: { error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; rawTotal?: number; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
+function TaskTable<T extends { id: string; status: string }>({ canSelect, error, loading, data, columns, emptyTitle, isSelectionDisabled, rawTotal = 0, onRetry, onTableChange, selectedKeys, onSelectionChange }: { canSelect: boolean; error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; isSelectionDisabled: (task: T) => boolean; rawTotal?: number; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
   const { t } = useTranslation();
   // Tasks exist but none of them are visible: that is an authorization boundary, not an empty
   // platform, and the two read identically unless the copy says so (#977).
   const hidden = rawTotal > 0;
   const title = hidden ? t("dataCatalog.task.emptyVisible") : emptyTitle;
   const description = hidden ? t("dataCatalog.task.emptyUnauthorizedDescription") : emptyTitle;
-  return <TableSurface className={styles.tableSurface}>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={description} icon={<UnorderedListOutlined />} title={title} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)) } : undefined} tableLayout="fixed" />}</TableSurface>;
+  return <TableSurface className={styles.tableSurface}>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : !loading && data.length === 0 ? <EmptyStatePanel description={description} icon={<UnorderedListOutlined />} title={title} /> : <AppTable columns={columns} dataSource={data} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={canSelect && selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)), getCheckboxProps: (task) => ({ disabled: isSelectionDisabled(task) }) } : undefined} tableLayout="fixed" />}</TableSurface>;
 }
 
 function Pagination({ page, pageSize, loaded, hasMore, onChange }: { page: number; pageSize: number; loaded: number; hasMore: boolean; onChange: (page: number, pageSize: number) => void }) {

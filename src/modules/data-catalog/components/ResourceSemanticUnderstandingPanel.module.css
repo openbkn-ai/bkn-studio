@@ -52,3 +52,20 @@
 .summaryValueMuted {
     color: var(--color-text-secondary);
 }
+
+.textLink {
+    max-width: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-link);
+    cursor: pointer;
+    font: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.textLink:hover {
+    text-decoration: underline;
+}

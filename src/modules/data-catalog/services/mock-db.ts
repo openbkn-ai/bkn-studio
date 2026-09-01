@@ -597,18 +597,21 @@ export function mockStartScan(catalogId: string) {
   }
 
   mockDiscoveringCatalogs.add(catalogId);
+  const startedAt = Date.now();
+  const foundResources = mockResources.filter((item) => item.catalogId === catalogId).length;
   const record: CatalogDiscoverRecord = {
     id: mockSlug(12),
-    status: "running",
+    status: "succeeded",
     trigger: "manual",
-    startedAt: Date.now(),
-    startTime: formatMockTimestamp(Date.now()),
-    durationSec: null,
-    foundResources: null,
-    newResources: null,
+    startedAt,
+    startTime: formatMockTimestamp(startedAt),
+    durationSec: 0,
+    foundResources,
+    newResources: 0,
   };
   const records = mockDiscoverRecords.get(catalogId) ?? [];
   mockDiscoverRecords.set(catalogId, [record, ...records]);
+  mockDiscoveringCatalogs.delete(catalogId);
   emit();
 }
 

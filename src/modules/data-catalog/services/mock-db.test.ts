@@ -7,7 +7,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { mockBuildTasks, mockResources } from "./mock-db";
+import {
+  mockBuildTasks,
+  mockDiscoveringCatalogs,
+  mockDiscoverRecords,
+  mockResources,
+  mockStartScan,
+} from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
   it("completes build-task catalog and resource references", () => {
@@ -107,6 +113,24 @@ describe("data catalog discover-status mocks", () => {
     } finally {
       Object.assign(task, originalTask);
       vi.useRealTimers();
+    }
+  });
+
+  it("finishes an interactively triggered catalog scan without leaving the catalog locked", () => {
+    const catalogId = "catalog-interactive-scan-test";
+
+    try {
+      mockStartScan(catalogId);
+
+      expect(mockDiscoveringCatalogs.has(catalogId)).toBe(false);
+      expect(mockDiscoverRecords.get(catalogId)?.[0]).toMatchObject({
+        foundResources: 0,
+        newResources: 0,
+        status: "succeeded",
+      });
+    } finally {
+      mockDiscoverRecords.delete(catalogId);
+      mockDiscoveringCatalogs.delete(catalogId);
     }
   });
 });

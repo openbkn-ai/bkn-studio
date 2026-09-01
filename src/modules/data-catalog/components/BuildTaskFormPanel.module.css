@@ -820,6 +820,18 @@
   border-radius: 0 !important;
 }
 
+.launchActionBar :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
+  border-color: var(--color-primary-600);
+  background: var(--color-primary-600);
+  color: #fff;
+}
+
+.launchActionBar :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover) {
+  border-color: var(--color-primary-700);
+  background: var(--color-primary-700);
+  color: #fff;
+}
+
 .launchActionBar :global(.ant-btn-primary:disabled),
 .launchActionBar :global(.ant-btn-primary.ant-btn-disabled) {
   border-color: var(--color-border) !important;

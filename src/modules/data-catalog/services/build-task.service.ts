@@ -453,6 +453,20 @@ function hasActiveTaskForResource(resourceId: string) {
   );
 }
 
+function settleInteractiveMockBuildTask(task: BuildTask) {
+  const now = Date.now();
+  task.startTime = task.startTime ?? now;
+  task.lastProgressTime = now;
+  if (task.mode === "streaming") {
+    task.status = "running";
+    task.finishTime = null;
+    return;
+  }
+  task.status = "completed";
+  task.syncedCount = task.totalCount;
+  task.finishTime = now;
+}
+
 export class BuildTaskConflictError extends Error { }
 
 export async function createBuildTask(
@@ -497,6 +511,7 @@ export async function createBuildTask(
       startTime: null,
       error: null,
     };
+    settleInteractiveMockBuildTask(task);
     mockBuildTasks.unshift(task);
     emitMockChange();
     return wait(task);
@@ -525,7 +540,7 @@ export async function createBuildTask(
 export async function pauseBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
-    if (task && task.status === "running") {
+    if (task && (task.status === "pending" || task.status === "running")) {
       task.status = "stopped";
       task.lastProgressTime = Date.now();
       emitMockChange();
@@ -542,10 +557,10 @@ export async function resumeBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && task.status === "stopped") {
-      task.status = "pending";
       task.startTime = null;
       task.finishTime = null;
       task.lastProgressTime = null;
+      settleInteractiveMockBuildTask(task);
       emitMockChange();
     }
     await wait(undefined, 120);
@@ -611,11 +626,11 @@ export async function retryBuildTask(
     if (reset && source.executeType === "full") {
       source.syncedCount = 0;
     }
-    source.status = "pending";
     source.error = null;
     source.startTime = null;
     source.finishTime = null;
     source.lastProgressTime = null;
+    settleInteractiveMockBuildTask(source);
     emitMockChange();
     return wait(source);
   }
