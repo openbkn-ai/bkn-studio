@@ -79,11 +79,7 @@ export const modelResourcesRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(
-      [
-        "model-resources:large-model:view",
-        "model-resources:small-model:view",
-        "model-resources:statistics:view",
-      ],
+      "model-resources:statistics:view",
       <ModelStatisticsPage />,
     ),
   },

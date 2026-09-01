@@ -31,11 +31,7 @@ export const modelResourcesNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.modelStatistics",
       icon: <BarChartOutlined />,
       path: "/model-resources/statistics",
-      permission: [
-        "model-resources:large-model:view",
-        "model-resources:small-model:view",
-      ],
-      permissionMode: "any",
+      permission: "model-resources:statistics:view",
     },
   ],
 };
