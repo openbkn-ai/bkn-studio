@@ -46,7 +46,7 @@ export function SmallModelFormModal({
   record,
 }: SmallModelFormModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [form] = Form.useForm<SmallModelFormValues>();
   const [modalMode, setModalMode] = useState(mode);
   const [submitting, setSubmitting] = useState(false);
@@ -174,8 +174,8 @@ export function SmallModelFormModal({
       onClose(true);
     } catch (error) {
       const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
-      if (conflict && payload.default && conflict.canSetDefault) {
-        Modal.confirm({
+      if (conflict && payload.default && conflict.canSetDefault && conflict.existingModel) {
+        modal.confirm({
           title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
           content: t("modelResources.models.duplicateConfigSetDefaultContent", {
             name: conflict.existingModel.name,
@@ -194,9 +194,18 @@ export function SmallModelFormModal({
         return;
       }
       if (conflict) {
+        if (!conflict.existingModel) {
+          message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+          return;
+        }
+        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+          ? t("modelResources.models.duplicateConfigAlreadyDefault")
+          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+            : "";
         message.error(t("modelResources.models.duplicateConfigExists", {
           name: conflict.existingModel.name,
-          permission: payload.default ? t("modelResources.models.duplicateConfigNoDefaultPermission") : "",
+          permission: reasonMessage,
         }));
         return;
       }

@@ -35,4 +35,22 @@ describe("getModelConfigConflict", () => {
   it("ignores unrelated conflicts", () => {
     expect(getModelConfigConflict(new Error("Conflict"))).toBeNull();
   });
+
+  it("preserves a non-permission default-switch reason without exposing a model", () => {
+    const error = new AxiosError("Conflict", undefined, undefined, undefined, {
+      status: 409,
+      statusText: "Conflict",
+      headers: {},
+      config: {} as never,
+      data: {
+        error_code: "RESOURCE_EXISTED",
+        details: { can_set_default: false, default_switch_reason: "NO_DISPLAY_PERMISSION" },
+      },
+    });
+
+    expect(getModelConfigConflict(error)).toEqual({
+      canSetDefault: false,
+      defaultSwitchReason: "NO_DISPLAY_PERMISSION",
+    });
+  });
 });

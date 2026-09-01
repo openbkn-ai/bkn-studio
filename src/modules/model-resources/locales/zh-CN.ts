@@ -27,6 +27,8 @@ export const modelResourcesZhCN = {
       saveFailed: "模型保存失败",
       duplicateConfigExists: "模型配置已存在：{{name}}。{{permission}}",
       duplicateConfigNoDefaultPermission: "你无权将该模型切换为默认模型。",
+      duplicateConfigNoDisplayPermission: "模型配置已存在，但你无权查看或切换该模型。",
+      duplicateConfigAlreadyDefault: "该模型已经是默认模型。",
       duplicateConfigSetDefaultTitle: "模型配置已存在",
       duplicateConfigSetDefaultContent: "该模型配置已存在，是否将已有模型“{{name}}”切换为默认模型？",
       duplicateConfigSetDefaultOk: "确认切换默认",
