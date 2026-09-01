@@ -232,10 +232,14 @@ describe("discover.service · mock task sorting", () => {
     const created = await triggerDataConnectDiscover("cat-001", "create_only");
     const task = await getDataConnectDiscoverTask(created.id);
 
+    expect(task).not.toBeNull();
+    if (!task) {
+      throw new Error("Expected the triggered discover task to exist");
+    }
+    expect(typeof task.finishTime).toBe("number");
+    expect(typeof task.lastProgressTime).toBe("number");
     expect(task).toMatchObject({
       catalogId: "cat-001",
-      finishTime: expect.any(Number),
-      lastProgressTime: expect.any(Number),
       progress: 100,
       status: "completed",
       strategy: "create_only",

@@ -216,6 +216,10 @@ describe("resource semantic-understanding task history", () => {
 
     expect(tasks.map((task) => task.id)).toEqual(["newer", "older"]);
     expect(getMock).toHaveBeenCalledTimes(2);
-    expect(getMock.mock.calls.map((call) => call[1]?.params.offset)).toEqual([0, 100]);
+    const offsets = getMock.mock.calls.map((call) => {
+      const config = call[1] as { params: { offset: number } };
+      return config.params.offset;
+    });
+    expect(offsets).toEqual([0, 100]);
   });
 });
