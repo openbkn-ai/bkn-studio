@@ -13,6 +13,7 @@ import {
   hasThreeAdminConflict,
   isAssignableRole,
   roleDescription,
+  roleSearchText,
   resolveBuiltinRoleKey,
   threeAdminConflictLabels,
 } from "@/modules/system-admin/utils/role-catalog";
@@ -28,9 +29,10 @@ describe("role-catalog", () => {
   });
 
   it("recognizes old system display names as default role aliases", () => {
-    expect(resolveBuiltinRoleKey({ name: "系统管理员" })).toBe("admin");
-    expect(resolveBuiltinRoleKey({ name: "安全管理员" })).toBe("security");
-    expect(resolveBuiltinRoleKey({ name: "审计管理员" })).toBe("audit");
+    expect(resolveBuiltinRoleKey({ name: "系统管理员", builtin: true })).toBe("admin");
+    expect(resolveBuiltinRoleKey({ name: "安全管理员", builtin: true })).toBe("security");
+    expect(resolveBuiltinRoleKey({ name: "审计管理员", builtin: true })).toBe("audit");
+    expect(resolveBuiltinRoleKey({ name: "系统管理员", builtin: false })).toBeNull();
   });
 
   it("keeps super admin out of normal role assignment", () => {
@@ -40,15 +42,19 @@ describe("role-catalog", () => {
 
   it("localizes built-in descriptions while preserving custom descriptions", async () => {
     await i18n.changeLanguage("en-US");
-    expect(roleDescription({ name: "super_admin", description: "中文后端描述" })).toBe(
+    expect(roleDescription({ name: "super_admin", description: "中文后端描述", builtin: true })).toBe(
       "Built-in hidden and controlled role with full platform permissions.",
     );
-    expect(roleDescription({ name: "custom_role", description: "用户自定义描述" })).toBe("用户自定义描述");
+    expect(roleDescription({ name: "系统管理员", description: "用户自定义描述", builtin: false })).toBe("用户自定义描述");
+    expect(roleSearchText({ name: "admin", description: "backend description", builtin: true })).toContain(
+      "operations",
+    );
 
     await i18n.changeLanguage("zh-CN");
-    expect(roleDescription({ name: "super_admin", description: "中文后端描述" })).toBe(
+    expect(roleDescription({ name: "super_admin", description: "中文后端描述", builtin: true })).toBe(
       "内置隐藏 / 受控角色，拥有平台全量权限。",
     );
+    expect(roleSearchText({ name: "admin", description: "backend description", builtin: true })).toContain("运维");
   });
 
   it("detects multiple three-admin roles on the same account", async () => {

@@ -76,7 +76,7 @@ import {
   WILDCARD,
 
 } from "@/modules/system-admin/utils/resource-catalog";
-import { isSuperAdminRole, roleDescription } from "@/modules/system-admin/utils/role-catalog";
+import { isSuperAdminRole, roleDescription, roleSearchText } from "@/modules/system-admin/utils/role-catalog";
 
 
 
@@ -331,7 +331,7 @@ export function RoleManagementScene() {
 
     return roles.filter((role) =>
 
-      `${role.name} ${role.description}`.toLowerCase().includes(query),
+      roleSearchText(role).toLowerCase().includes(query),
 
     );
 
