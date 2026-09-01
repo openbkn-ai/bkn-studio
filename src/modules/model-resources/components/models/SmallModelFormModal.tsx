@@ -174,16 +174,17 @@ export function SmallModelFormModal({
       onClose(true);
     } catch (error) {
       const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
-      if (conflict && payload.default && conflict.canSetDefault && conflict.existingModel) {
+      const existingModel = conflict?.existingModel;
+      if (conflict && payload.default && conflict.canSetDefault && existingModel) {
         modal.confirm({
           title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
           content: t("modelResources.models.duplicateConfigSetDefaultContent", {
-            name: conflict.existingModel.name,
+            name: existingModel.name,
           }),
           okText: t("modelResources.models.duplicateConfigSetDefaultOk"),
           cancelText: t("common.cancel"),
           onOk: async () => {
-            const result = await setDefaultSmallModel(conflict.existingModel.id);
+            const result = await setDefaultSmallModel(existingModel.id);
             if (result.status !== "ok") {
               throw new Error(t("modelResources.models.setDefaultFailed"));
             }
@@ -194,8 +195,12 @@ export function SmallModelFormModal({
         return;
       }
       if (conflict) {
-        if (!conflict.existingModel) {
-          message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+        if (!existingModel) {
+          if (conflict.defaultSwitchReason === "NO_DISPLAY_PERMISSION") {
+            message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+          } else {
+            message.error(extractRequestErrorMessage(error));
+          }
           return;
         }
         const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
@@ -204,7 +209,7 @@ export function SmallModelFormModal({
             ? t("modelResources.models.duplicateConfigNoDefaultPermission")
             : "";
         message.error(t("modelResources.models.duplicateConfigExists", {
-          name: conflict.existingModel.name,
+          name: existingModel.name,
           permission: reasonMessage,
         }));
         return;
