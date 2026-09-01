@@ -23,6 +23,18 @@ type RoleMeta = {
   label: string;
 };
 
+type RoleIdentity = Pick<AdminRole, "name"> & Partial<Pick<AdminRole, "builtin">>;
+type RoleClassification = RoleIdentity & Pick<AdminRole, "source">;
+
+const BUILTIN_ROLE_FALLBACK_DESCRIPTIONS: Record<BuiltinRoleKey, string> = {
+  admin: "System administrator for operations, users, and departments.",
+  audit: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
+  network_builder: "Business network builder for data, knowledge, models, and execution factory assets.",
+  normal_user: "Regular user for viewing, querying, executing, and invoking module capabilities.",
+  security: "Security administrator for roles, authorization, and account security.",
+  super_admin: "Built-in hidden and controlled role with full platform permissions.",
+};
+
 const BUILTIN_ROLE_FALLBACK_LABELS: Record<BuiltinRoleKey, string> = {
   admin: "System administrator",
   audit: "Audit administrator",
@@ -56,14 +68,29 @@ export function builtinRoleLabel(key: BuiltinRoleKey): string {
   });
 }
 
-export function resolveBuiltinRoleKey(role: Pick<AdminRole, "name">): BuiltinRoleKey | null {
+export function builtinRoleDescription(key: BuiltinRoleKey): string {
+  return i18n.t(`systemAdmin.roleCatalog.builtin.${key}Description`, {
+    defaultValue: BUILTIN_ROLE_FALLBACK_DESCRIPTIONS[key],
+  });
+}
+
+export function resolveBuiltinRoleKey(role: RoleIdentity): BuiltinRoleKey | null {
   if (role.name in BUILTIN_ROLE_META) {
     return role.name as BuiltinRoleKey;
   }
-  return ROLE_NAME_ALIASES[role.name] ?? null;
+  return role.builtin ? (ROLE_NAME_ALIASES[role.name] ?? null) : null;
 }
 
-export function getRoleDutyCategory(role: Pick<AdminRole, "name" | "source">): RoleDutyCategory {
+export function roleDescription(role: RoleIdentity & Pick<AdminRole, "description">): string {
+  const builtinKey = resolveBuiltinRoleKey(role);
+  return builtinKey ? builtinRoleDescription(builtinKey) : role.description;
+}
+
+export function roleSearchText(role: RoleIdentity & Pick<AdminRole, "description">): string {
+  return `${role.name} ${roleDescription(role)}`;
+}
+
+export function getRoleDutyCategory(role: RoleClassification): RoleDutyCategory {
   const builtinKey = resolveBuiltinRoleKey(role);
   if (builtinKey) {
     return BUILTIN_ROLE_META[builtinKey].category;
@@ -71,23 +98,23 @@ export function getRoleDutyCategory(role: Pick<AdminRole, "name" | "source">): R
   return "custom";
 }
 
-export function isSuperAdminRole(role: Pick<AdminRole, "name">): boolean {
+export function isSuperAdminRole(role: RoleIdentity): boolean {
   return resolveBuiltinRoleKey(role) === "super_admin";
 }
 
-export function isThreeAdminRole(role: Pick<AdminRole, "name" | "source">): boolean {
+export function isThreeAdminRole(role: RoleClassification): boolean {
   return getRoleDutyCategory(role) === "three-admin";
 }
 
-export function isAssignableRole(role: Pick<AdminRole, "name">): boolean {
+export function isAssignableRole(role: RoleIdentity): boolean {
   return !isSuperAdminRole(role);
 }
 
-export function hasThreeAdminConflict(roles: Pick<AdminRole, "name" | "source">[]): boolean {
+export function hasThreeAdminConflict(roles: RoleClassification[]): boolean {
   return roles.filter(isThreeAdminRole).length > 1;
 }
 
-export function threeAdminConflictLabels(roles: Pick<AdminRole, "name" | "source">[]): string[] {
+export function threeAdminConflictLabels(roles: RoleClassification[]): string[] {
   return roles
     .filter(isThreeAdminRole)
     .map((role) => {

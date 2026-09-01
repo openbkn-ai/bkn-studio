@@ -78,6 +78,12 @@ export const systemAdminEnUS = {
         normal_user: "Normal user",
         security: "Security administrator",
         super_admin: "Super administrator",
+        adminDescription: "System administrator for operations, users, and departments.",
+        auditDescription: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
+        network_builderDescription: "Business network builder for data, knowledge, models, and execution factory assets.",
+        normal_userDescription: "Regular user for viewing, querying, executing, and invoking module capabilities.",
+        securityDescription: "Security administrator for roles, authorization, and account security.",
+        super_adminDescription: "Built-in hidden and controlled role with full platform permissions.",
       },
     },
     grant: {

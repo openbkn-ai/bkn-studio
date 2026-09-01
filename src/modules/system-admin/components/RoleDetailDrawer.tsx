@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { AdminRole } from "@/modules/system-admin/types/admin";
+import { roleDescription } from "@/modules/system-admin/utils/role-catalog";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   operationLabel,
@@ -142,9 +143,9 @@ export function RoleDetailDrawer({
                 : ""}
             </div>
           ) : null}
-          {role.description ? (
+          {roleDescription(role) ? (
             <p className={styles.muted} style={{ margin: "10px 0 0" }}>
-              {role.description}
+              {roleDescription(role)}
             </p>
           ) : null}
         </section>
@@ -204,4 +205,3 @@ export function RoleDetailDrawer({
     </Drawer>
   );
 }
-
