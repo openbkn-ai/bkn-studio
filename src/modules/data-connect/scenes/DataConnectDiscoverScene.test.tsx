@@ -82,6 +82,7 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
   AppTable: ({ columns, dataSource, rowSelection }: {
     columns: Array<{
       dataIndex?: string;
+      filters?: unknown[];
       render?: (_value: unknown, record: { id: string; progress?: number; status?: string }, index: number) => ReactNode;
     }>;
     dataSource: Array<{ id: string; progress?: number; status?: string }>;
@@ -90,7 +91,7 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
       selectedRowKeys: string[];
     };
   }) => (
-    <div>
+    <div data-filter-columns={columns.filter((column) => column.filters).length} data-testid="app-table">
       {rowSelection ? (
         <>
           <output data-testid="selected-task-keys">{rowSelection.selectedRowKeys.join(",")}</output>
@@ -330,6 +331,13 @@ describe("DataConnectDiscoverScene", () => {
     const status = await screen.findByText("dataConnect.discoverTaskStatuses.pending");
     expect(status.getAttribute("data-color")).toBe("default");
     expect(document.querySelector(`.${taskStyles.progressFillMuted}`)).not.toBeNull();
+  });
+
+  it("keeps task header filters available when no task matches", async () => {
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalled());
+    expect(screen.getByTestId("app-table").getAttribute("data-filter-columns")).not.toBe("0");
   });
 
   it("clears selected tasks and task details when the catalog changes", async () => {

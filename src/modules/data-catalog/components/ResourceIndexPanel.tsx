@@ -310,6 +310,11 @@ export function ResourceIndexPanel({
     return filteredTasks.slice(start, start + taskPageSize);
   }, [filteredTasks, taskPage, taskPageSize]);
 
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(filteredTasks.length / taskPageSize));
+    if (taskPage > lastPage) setTaskPage(lastPage);
+  }, [filteredTasks.length, taskPage, taskPageSize]);
+
   const updateTaskFilters = (patch: {
     executeType?: BuildTaskExecuteType;
     mode?: BuildMode;

@@ -498,20 +498,23 @@ export function IndexBuildListScene() {
             showIcon
             type="error"
           />
-        ) : !loading && tasks.length === 0 ? (
-          <EmptyStatePanel
-            description={
-              rawTotal > 0
-                ? t("dataCatalog.task.emptyUnauthorizedDescription")
-                : t("dataCatalog.task.emptyDescription")
-            }
-            icon={<UnorderedListOutlined />}
-            title={rawTotal > 0 ? t("dataCatalog.task.emptyVisible") : t("dataCatalog.task.empty")}
-          />
         ) : (
           <AppTable<BuildTask>
             columns={columns}
             dataSource={tasks}
+            locale={{
+              emptyText: (
+                <EmptyStatePanel
+                  description={
+                    rawTotal > 0
+                      ? t("dataCatalog.task.emptyUnauthorizedDescription")
+                      : t("dataCatalog.task.emptyDescription")
+                  }
+                  icon={<UnorderedListOutlined />}
+                  title={rawTotal > 0 ? t("dataCatalog.task.emptyVisible") : t("dataCatalog.task.empty")}
+                />
+              ),
+            }}
             loading={loading}
             onChange={(pagination, filters, sorter, extra) => {
               if (extra.action === "filter") {

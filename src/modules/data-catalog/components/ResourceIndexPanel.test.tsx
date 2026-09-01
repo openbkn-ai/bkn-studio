@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -72,7 +72,14 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
   ),
 }));
 
-vi.mock("@/framework/ui/common/TablePaginationBar", () => ({ TablePaginationBar: () => null }));
+vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
+  TablePaginationBar: ({ current, onChange }: { current: number; onChange: (page: number, pageSize: number) => void }) => (
+    <div>
+      <output data-testid="task-page">{current}</output>
+      <button onClick={() => onChange(3, 10)} type="button">page 3</button>
+    </div>
+  ),
+}));
 vi.mock("@/framework/ui/common/TableSurface", () => ({ TableSurface: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
 vi.mock("@/modules/data-catalog/components/BuildProgress", () => ({ BuildProgress: () => null }));
 vi.mock("@/modules/data-catalog/components/BuildTaskDetailDrawer", () => ({ BuildTaskDetailDrawer: () => null }));
@@ -153,5 +160,43 @@ describe("ResourceIndexPanel", () => {
     expect(screen.getAllByText("common.delete")).toHaveLength(2);
     expect(screen.getByTestId("selection-stopping-task").textContent).toBe("true");
     expect(screen.getByTestId("selection-completed-task").textContent).toBe("false");
+  });
+
+  it("returns to the last valid history page when tasks shrink", async () => {
+    const tasks = Array.from({ length: 21 }, (_, index) => buildTask({ id: `task-${index + 1}` }));
+    const view = render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={tasks}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "page 3" }));
+    expect(screen.getByTestId("task-page").textContent).toBe("3");
+
+    view.rerender(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={tasks.slice(0, 20)}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("task-page").textContent).toBe("2"));
   });
 });

@@ -99,6 +99,14 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   });
 
+  it("keeps table header filters available when no task matches", async () => {
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    await waitFor(() => expect(listResourceSemanticUnderstandingTasksMock).toHaveBeenCalled());
+    expect(screen.getByText("dataCatalog.taskManagement.columns.applyMode").closest("th")).not.toBeNull();
+    expect(document.querySelectorAll(".ant-table-filter-trigger").length).toBeGreaterThan(0);
+  });
+
   it("shows finish time before create time", async () => {
     listResourceSemanticUnderstandingTasksMock.mockResolvedValue([{
       agentId: "resource-semantic-understanding",

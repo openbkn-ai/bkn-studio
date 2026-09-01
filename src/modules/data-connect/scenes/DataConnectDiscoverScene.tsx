@@ -978,15 +978,18 @@ export function DataConnectDiscoverScene({
             showIcon
             type="error"
           />
-        ) : !loadingTasks && tasks.length === 0 ? (
-          <EmptyStatePanel
-            description={t("dataConnect.discoverTaskEmptyDescription")}
-            title={t("dataConnect.discoverTaskEmpty")}
-          />
         ) : (
           <AppTable<DataConnectDiscoverTaskSummary>
             columns={taskColumns}
             dataSource={tasks}
+            locale={{
+              emptyText: (
+                <EmptyStatePanel
+                  description={t("dataConnect.discoverTaskEmptyDescription")}
+                  title={t("dataConnect.discoverTaskEmpty")}
+                />
+              ),
+            }}
             loading={loadingTasks}
             onChange={handleTaskTableChange}
             pagination={false}
