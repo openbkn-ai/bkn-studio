@@ -15,6 +15,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createSmallModel,
+  setDefaultSmallModel,
   testSmallModel,
   updateSmallModel,
 } from "@/modules/model-resources/services/small-model.service";
@@ -25,6 +26,7 @@ import {
   smallModelToFormValues,
   type SmallModelFormValues,
 } from "@/modules/model-resources/utils/model-form";
+import { getModelConfigConflict } from "@/modules/model-resources/utils/model-config-conflict";
 
 import { AdaptationCodeEditor } from "./AdaptationCodeEditor";
 
@@ -171,6 +173,33 @@ export function SmallModelFormModal({
       message.success(t("modelResources.models.saveSuccess"));
       onClose(true);
     } catch (error) {
+      const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
+      if (conflict && payload.default && conflict.canSetDefault) {
+        Modal.confirm({
+          title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
+          content: t("modelResources.models.duplicateConfigSetDefaultContent", {
+            name: conflict.existingModel.name,
+          }),
+          okText: t("modelResources.models.duplicateConfigSetDefaultOk"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            const result = await setDefaultSmallModel(conflict.existingModel.id);
+            if (result.status !== "ok") {
+              throw new Error(t("modelResources.models.setDefaultFailed"));
+            }
+            message.success(t("modelResources.models.setDefaultSuccess"));
+            onClose(true);
+          },
+        });
+        return;
+      }
+      if (conflict) {
+        message.error(t("modelResources.models.duplicateConfigExists", {
+          name: conflict.existingModel.name,
+          permission: payload.default ? t("modelResources.models.duplicateConfigNoDefaultPermission") : "",
+        }));
+        return;
+      }
       message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
