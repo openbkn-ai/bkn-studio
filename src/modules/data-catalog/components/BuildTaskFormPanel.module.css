@@ -823,13 +823,13 @@
 .launchActionBar :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled)) {
   border-color: var(--color-primary-600);
   background: var(--color-primary-600);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .launchActionBar :global(.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover) {
   border-color: var(--color-primary-700);
   background: var(--color-primary-700);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .launchActionBar :global(.ant-btn-primary:disabled),
