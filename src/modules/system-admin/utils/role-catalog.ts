@@ -23,6 +23,15 @@ type RoleMeta = {
   label: string;
 };
 
+const BUILTIN_ROLE_FALLBACK_DESCRIPTIONS: Record<BuiltinRoleKey, string> = {
+  admin: "System administrator for operations, users, and departments.",
+  audit: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
+  network_builder: "Business network builder for data, knowledge, models, and execution factory assets.",
+  normal_user: "Regular user for viewing, querying, executing, and invoking module capabilities.",
+  security: "Security administrator for roles, authorization, and account security.",
+  super_admin: "Built-in hidden and controlled role with full platform permissions.",
+};
+
 const BUILTIN_ROLE_FALLBACK_LABELS: Record<BuiltinRoleKey, string> = {
   admin: "System administrator",
   audit: "Audit administrator",
@@ -56,11 +65,22 @@ export function builtinRoleLabel(key: BuiltinRoleKey): string {
   });
 }
 
+export function builtinRoleDescription(key: BuiltinRoleKey): string {
+  return i18n.t(`systemAdmin.roleCatalog.builtin.${key}Description`, {
+    defaultValue: BUILTIN_ROLE_FALLBACK_DESCRIPTIONS[key],
+  });
+}
+
 export function resolveBuiltinRoleKey(role: Pick<AdminRole, "name">): BuiltinRoleKey | null {
   if (role.name in BUILTIN_ROLE_META) {
     return role.name as BuiltinRoleKey;
   }
   return ROLE_NAME_ALIASES[role.name] ?? null;
+}
+
+export function roleDescription(role: Pick<AdminRole, "name" | "description">): string {
+  const builtinKey = resolveBuiltinRoleKey(role);
+  return builtinKey ? builtinRoleDescription(builtinKey) : role.description;
 }
 
 export function getRoleDutyCategory(role: Pick<AdminRole, "name" | "source">): RoleDutyCategory {

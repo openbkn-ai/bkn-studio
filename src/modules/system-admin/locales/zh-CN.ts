@@ -78,6 +78,12 @@ export const systemAdminZhCN = {
         normal_user: "普通用户",
         security: "安全管理员",
         super_admin: "超级管理员",
+        adminDescription: "负责运维、用户和部门管理的系统管理员。",
+        auditDescription: "负责审计日志、权限复核和管理员行为监督的审计管理员。",
+        network_builderDescription: "负责数据、知识、模型和执行工厂资产的业务网络构建者。",
+        normal_userDescription: "用于查看、查询、执行和调用模块能力的普通用户。",
+        securityDescription: "负责角色、授权和账号安全的安全管理员。",
+        super_adminDescription: "内置隐藏 / 受控角色，拥有平台全量权限。",
       },
     },
     grant: {

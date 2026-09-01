@@ -76,7 +76,7 @@ import {
   WILDCARD,
 
 } from "@/modules/system-admin/utils/resource-catalog";
-import { isSuperAdminRole } from "@/modules/system-admin/utils/role-catalog";
+import { isSuperAdminRole, roleDescription } from "@/modules/system-admin/utils/role-catalog";
 
 
 
@@ -473,11 +473,11 @@ export function RoleManagementScene() {
 
             </span>
 
-            {role.description ? (
+            {roleDescription(role) ? (
 
-              <Tooltip title={role.description}>
+              <Tooltip title={roleDescription(role)}>
 
-                <span className={styles.singleLineText}>{role.description}</span>
+                <span className={styles.singleLineText}>{roleDescription(role)}</span>
 
               </Tooltip>
 
