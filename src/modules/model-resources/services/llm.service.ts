@@ -236,6 +236,7 @@ export async function createLlmModel(payload: LlmSavePayload) {
   const response = await http.post<BackendStatusResponse>(
     `${API_PREFIX}/llm/add`,
     mapSavePayload(payload, true),
+    { skipErrorToast: true },
   );
 
   return response.data;

@@ -245,6 +245,7 @@ export async function createSmallModel(payload: SmallModelSavePayload) {
   const response = await http.post<BackendStatusResponse>(
     `${API_PREFIX}/small-model/add`,
     mapSavePayload(payload, true),
+    { skipErrorToast: true },
   );
 
   return response.data;

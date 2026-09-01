@@ -26,6 +26,15 @@ export const modelResourcesEnUS = {
       testFailed: "Connection test failed",
       saveSuccess: "Model saved",
       saveFailed: "Failed to save model",
+      duplicateConfigExists: "Model configuration already exists: {{name}}. {{permission}}",
+      duplicateConfigNoDefaultPermission: "You are not allowed to switch this model to the default.",
+      duplicateConfigNoDisplayPermission:
+        "The model configuration already exists, but you are not allowed to view or switch the model.",
+      duplicateConfigAlreadyDefault: "This model is already the default.",
+      duplicateConfigSetDefaultTitle: "Model configuration already exists",
+      duplicateConfigSetDefaultContent:
+        "This model configuration already exists. Switch the existing model \"{{name}}\" to the default?",
+      duplicateConfigSetDefaultOk: "Confirm switch",
       deleteSuccess: "Model deleted",
       deleteFailed: "Failed to delete model",
       deleteConfirmTitle: "Delete confirmation",

@@ -15,6 +15,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createSmallModel,
+  setDefaultSmallModel,
   testSmallModel,
   updateSmallModel,
 } from "@/modules/model-resources/services/small-model.service";
@@ -25,6 +26,7 @@ import {
   smallModelToFormValues,
   type SmallModelFormValues,
 } from "@/modules/model-resources/utils/model-form";
+import { getModelConfigConflict } from "@/modules/model-resources/utils/model-config-conflict";
 
 import { AdaptationCodeEditor } from "./AdaptationCodeEditor";
 
@@ -44,7 +46,7 @@ export function SmallModelFormModal({
   record,
 }: SmallModelFormModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [form] = Form.useForm<SmallModelFormValues>();
   const [modalMode, setModalMode] = useState(mode);
   const [submitting, setSubmitting] = useState(false);
@@ -171,6 +173,47 @@ export function SmallModelFormModal({
       message.success(t("modelResources.models.saveSuccess"));
       onClose(true);
     } catch (error) {
+      const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
+      const existingModel = conflict?.existingModel;
+      if (conflict && payload.default && conflict.canSetDefault && existingModel) {
+        modal.confirm({
+          title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
+          content: t("modelResources.models.duplicateConfigSetDefaultContent", {
+            name: existingModel.name,
+          }),
+          okText: t("modelResources.models.duplicateConfigSetDefaultOk"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            const result = await setDefaultSmallModel(existingModel.id);
+            if (result.status !== "ok") {
+              throw new Error(t("modelResources.models.setDefaultFailed"));
+            }
+            message.success(t("modelResources.models.setDefaultSuccess"));
+            onClose(true);
+          },
+        });
+        return;
+      }
+      if (conflict) {
+        if (!existingModel) {
+          if (conflict.defaultSwitchReason === "NO_DISPLAY_PERMISSION") {
+            message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+          } else {
+            message.error(extractRequestErrorMessage(error));
+          }
+          return;
+        }
+        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+          ? t("modelResources.models.duplicateConfigAlreadyDefault")
+          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+            : "";
+        message.error(t("modelResources.models.duplicateConfigExists", {
+          name: existingModel.name,
+          permission: reasonMessage,
+        }));
+        return;
+      }
       message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
