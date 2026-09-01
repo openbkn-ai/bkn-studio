@@ -37,5 +37,6 @@
 .progressFillVector { background: linear-gradient(90deg, #2e68ff, #4d80ff); }
 .progressFillDone { background: #65c041; }
 .progressFillFailed { background: #ef4444; }
+.progressFillMuted { background: var(--color-text-muted); }
 .progressMetaCompact { display: grid; gap: 1px; color: var(--color-text-tertiary); font-size: 11px; line-height: 1.35; }
 .progressMetaCompact > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

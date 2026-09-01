@@ -7,13 +7,17 @@
 
 import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
+import {
+  mockCatalogName,
+  mockResources,
+} from "@/modules/data-catalog/services/mock-db";
 
 export type SemanticUnderstandingTaskStatus =
   | "cancelled"
   | "failed"
   | "pending"
   | "running"
-  | "succeeded";
+  | "completed";
 
 export type SemanticUnderstandingTaskSummary = {
   agentId: string;
@@ -83,7 +87,7 @@ export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderst
     resourceName: task.resource_name,
     agentId: task.agent_id,
     agentTaskId: task.agent_task_id,
-    status: task.status === "completed" ? "succeeded" : task.status,
+    status: task.status,
     applyMode: task.apply_mode,
     confidenceThreshold: task.confidence_threshold,
     confidence: task.confidence,
@@ -121,9 +125,7 @@ export function buildSemanticUnderstandingTaskListParams(
     scope: filters.scope,
     catalog_id: filters.catalogId,
     resource_id: filters.resourceId,
-    status: filters.statuses?.length
-      ? filters.statuses.map((status) => (status === "succeeded" ? "completed" : status))
-      : undefined,
+    status: filters.statuses,
     apply_mode: filters.applyMode,
     applied: filters.applied,
   };
@@ -161,11 +163,11 @@ let mockTasks: SemanticUnderstandingTask[] = [
     scope: "resource",
     catalogId: "cat-001",
     catalogName: semanticMockText("customerCatalog"),
-    resourceId: "res-001",
+    resourceId: "res-customers",
     resourceName: "customers",
     agentId: "resource-semantic-understanding",
     agentTaskId: "agent-task-001",
-    status: "succeeded",
+    status: "completed",
     applyMode: "fill_empty",
     confidenceThreshold: 0.75,
     confidence: 0.94,
@@ -185,7 +187,7 @@ let mockTasks: SemanticUnderstandingTask[] = [
         { name: "phone", status: "skipped", reasons: [semanticMockText("insufficientSamples")] },
       ],
     }),
-    input: JSON.stringify({ resource_id: "res-001", include_sample_rows: false }),
+    input: JSON.stringify({ resource_id: "res-customers", include_sample_rows: false }),
     inputHash: "sha256:5eecaf1d9d8f0a8c",
     resultJson: JSON.stringify({
       quality: { resource_effective: true, field_effective: 3, field_total: 5 },
@@ -208,6 +210,80 @@ let mockTasks: SemanticUnderstandingTask[] = [
     createTime: mockNow - 1000 * 60 * 8,
     startTime: mockNow - 1000 * 60 * 7,
     input: JSON.stringify({ catalog_id: "cat-002", include_sample_rows: false }),
+  },
+  {
+    id: "semantic-task-006",
+    scope: "resource",
+    catalogId: "cat-002",
+    catalogName: "Knowledge Search",
+    resourceId: "res-kn-chunks",
+    resourceName: "kn_chunks",
+    agentId: "resource-semantic-understanding",
+    agentTaskId: "agent-task-006",
+    status: "completed",
+    applyMode: "dry_run",
+    confidenceThreshold: 0.75,
+    confidence: 0.88,
+    applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 18,
+    startTime: mockNow - 1000 * 60 * 17,
+    finishTime: mockNow - 1000 * 60 * 13,
+    resultJson: JSON.stringify({
+      quality: { resource_effective: true, field_effective: 2, field_total: 4 },
+      summary: "Semantic suggestions are ready for review.",
+    }),
+  },
+  {
+    id: "semantic-task-003",
+    scope: "resource",
+    catalogId: "cat-001",
+    catalogName: semanticMockText("customerCatalog"),
+    resourceId: "res-customers",
+    resourceName: "customers",
+    agentId: "resource-semantic-understanding",
+    status: "pending",
+    applyMode: "fill_empty",
+    confidenceThreshold: 0.75,
+    confidence: 0,
+    applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 2,
+  },
+  {
+    id: "semantic-task-004",
+    scope: "catalog",
+    catalogId: "cat-003",
+    catalogName: "Finance Warehouse",
+    agentId: "catalog-semantic-understanding",
+    status: "failed",
+    applyMode: "force",
+    confidenceThreshold: 0.8,
+    confidence: 0,
+    applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 24,
+    startTime: mockNow - 1000 * 60 * 23,
+    finishTime: mockNow - 1000 * 60 * 21,
+    failureDetail: "Semantic-understanding agent did not return a valid result.",
+  },
+  {
+    id: "semantic-task-005",
+    scope: "resource",
+    catalogId: "cat-002",
+    catalogName: "Knowledge Search",
+    resourceId: "res-kn-chunks",
+    resourceName: "kn_chunks",
+    agentId: "resource-semantic-understanding",
+    status: "cancelled",
+    applyMode: "dry_run",
+    confidenceThreshold: 0.75,
+    confidence: 0,
+    applied: false,
+    creator: { id: "mock-user", name: "Mock User", type: "user" },
+    createTime: mockNow - 1000 * 60 * 32,
+    startTime: mockNow - 1000 * 60 * 31,
+    finishTime: mockNow - 1000 * 60 * 30,
   },
 ];
 
@@ -258,8 +334,30 @@ export async function listResourceSemanticUnderstandingTasks(resourceId: string)
       .filter((task) => task.resourceId === resourceId)
       .sort((left, right) => right.createTime - left.createTime);
   }
-  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[] }>("/vega-backend/v1/semantic-understanding-tasks", { params: { resource_id: resourceId, scope: "resource", limit: 100, offset: 0, sort: "create_time", direction: "desc" } });
-  return response.data.entries.map(mapSemanticUnderstandingTaskSummary);
+  const pageSize = 100;
+  const tasks: SemanticUnderstandingTaskSummary[] = [];
+  let offset = 0;
+
+  for (; ;) {
+    const response = await http.get<{
+      entries: BackendSemanticUnderstandingTaskSummary[];
+      total_count: number;
+    }>("/vega-backend/v1/semantic-understanding-tasks", {
+      params: {
+        resource_id: resourceId,
+        scope: "resource",
+        limit: pageSize,
+        offset,
+        sort: "create_time",
+        direction: "desc",
+      },
+    });
+    tasks.push(...response.data.entries.map(mapSemanticUnderstandingTaskSummary));
+    offset += pageSize;
+    if (offset >= response.data.total_count) break;
+  }
+
+  return tasks.sort((left, right) => right.createTime - left.createTime);
 }
 
 export async function getSemanticUnderstandingTask(id: string) {
@@ -270,7 +368,30 @@ export async function getSemanticUnderstandingTask(id: string) {
 
 export async function createResourceSemanticUnderstandingTask(payload: CreateSemanticUnderstandingTaskPayload) {
   if (useMock) {
-    const task = { id: `semantic-task-${Date.now()}`, scope: "resource" as const, catalogId: "", resourceId: payload.resourceId, agentId: "resource-semantic-understanding", status: "pending" as const, applyMode: payload.applyMode, confidenceThreshold: payload.confidenceThreshold ?? 0.75, confidence: 0, applied: false, creator: { id: "mock-user", name: "Mock User", type: "user" }, createTime: Date.now() };
+    const resource = mockResources.find((item) => item.id === payload.resourceId);
+    const now = Date.now();
+    const task: SemanticUnderstandingTask = {
+      id: `semantic-task-${now}`,
+      scope: "resource",
+      catalogId: resource?.catalogId ?? "",
+      catalogName: mockCatalogName(resource?.catalogId),
+      resourceId: payload.resourceId,
+      resourceName: resource?.name,
+      agentId: "resource-semantic-understanding",
+      status: "completed",
+      applyMode: payload.applyMode,
+      confidenceThreshold: payload.confidenceThreshold ?? 0.75,
+      confidence: 0.88,
+      applied: payload.applyMode !== "dry_run",
+      creator: { id: "mock-user", name: "Mock User", type: "user" },
+      createTime: now,
+      startTime: now,
+      finishTime: now,
+      resultJson: JSON.stringify({
+        quality: { resource_effective: true, field_effective: 0, field_total: resource?.schema.length ?? 0 },
+        summary: "Mock semantic-understanding task completed.",
+      }),
+    };
     mockTasks = [task, ...mockTasks];
     return task;
   }

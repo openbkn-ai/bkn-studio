@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
@@ -39,6 +39,16 @@ export function ResourceWorkspacePage() {
   const indexView = readResourceIndexView(searchParams.get("tab"), searchParams.get("view"));
   const indexViewExplicit = isExplicitResourceIndexView(searchParams.get("view"));
 
+  useEffect(() => {
+    if (searchParams.get("tab") === tab) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("tab", tab);
+    if (tab !== "index") {
+      nextParams.delete("view");
+    }
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, tab]);
+
   const setIndexView = useCallback(
     (nextView: ResourceIndexView) => {
       const nextParams = applyResourceIndexView(searchParams, nextView);
@@ -54,11 +64,7 @@ export function ResourceWorkspacePage() {
       onIndexViewChange={setIndexView}
       onTabChange={(nextTab) => {
         const nextParams = new URLSearchParams(searchParams);
-        if (nextTab === "detail") {
-          nextParams.delete("tab");
-        } else {
-          nextParams.set("tab", nextTab);
-        }
+        nextParams.set("tab", nextTab);
         if (nextTab !== "index") {
           nextParams.delete("view");
         }

@@ -400,6 +400,38 @@ function makeTask(
 
 export const mockBuildTasks: BuildTask[] = [
   makeTask({
+    id: "bt-pending-01",
+    resourceId: "res-customers",
+    mode: "batch",
+    status: "pending",
+    embeddingFields: ["profile_text"],
+    buildKeyFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 182_340,
+    syncedCount: 0,
+    createTime: minutesAgo(3),
+    finishedAt: null,
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
+    id: "bt-empty-01",
+    resourceId: "res-metadata-unavailable",
+    mode: "batch",
+    status: "completed",
+    embeddingFields: [],
+    buildKeyFields: [],
+    embeddingModel: "",
+    modelDimensions: 0,
+    totalCount: 0,
+    syncedCount: 0,
+    createTime: minutesAgo(18),
+    finishedAt: minutesAgo(17),
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
     id: "bt-cust-01",
     resourceId: "res-customers",
     mode: "batch",
@@ -446,6 +478,54 @@ export const mockBuildTasks: BuildTask[] = [
     finishedAt: minutesAgo(63),
     lastProgressAt: null,
     error: "embedding service timeout: 504 upstream",
+  }),
+  makeTask({
+    id: "bt-cancelled-01",
+    resourceId: "res-orders",
+    mode: "batch",
+    status: "cancelled",
+    embeddingFields: ["item_summary"],
+    buildKeyFields: ["created_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 96_120,
+    syncedCount: 24_030,
+    createTime: minutesAgo(48),
+    finishedAt: minutesAgo(43),
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
+    id: "bt-stopping-01",
+    resourceId: "res-orders",
+    mode: "batch",
+    status: "stopping",
+    embeddingFields: ["item_summary"],
+    buildKeyFields: ["created_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 96_120,
+    syncedCount: 56_340,
+    createTime: minutesAgo(16),
+    finishedAt: null,
+    lastProgressAt: minutesAgo(1),
+    error: null,
+  }),
+  makeTask({
+    id: "bt-stopped-01",
+    resourceId: "res-kn-chunks",
+    mode: "batch",
+    status: "stopped",
+    embeddingFields: ["content"],
+    buildKeyFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 48_206,
+    syncedCount: 21_000,
+    createTime: minutesAgo(35),
+    finishedAt: minutesAgo(29),
+    lastProgressAt: minutesAgo(29),
+    error: null,
   }),
   makeTask({
     id: "bt-chunks-01",
@@ -511,142 +591,28 @@ export const mockDiscoverRecords = new Map<string, CatalogDiscoverRecord[]>([
 
 export const mockDiscoveringCatalogs = new Set<string>();
 
-/** Resources discovered after probing finance_dw (cat-003), used to simulate discovery behavior. */
-const discoverableResources: CatalogResource[] = [
-  makeResource({
-    id: "res-contracts",
-    catalogId: "cat-003",
-    name: "contracts",
-    category: "table",
-    schemaName: "public",
-    sourceIdentifier: "finance_dw.contracts",
-    description: "合同台账，由 discover 探查登记。",
-    schema: [
-      { name: "contract_id", type: "bigint" },
-      { name: "counterparty", type: "varchar(128)" },
-      { name: "summary", type: "text" },
-      { name: "signed_at", type: "datetime" },
-    ],
-    rowCount: 12_840,
-    expectedUpdateTime: now,
-  }),
-  makeResource({
-    id: "res-invoices",
-    catalogId: "cat-003",
-    name: "invoices",
-    category: "table",
-    schemaName: "public",
-    sourceIdentifier: "finance_dw.invoices",
-    description: "发票明细，由 discover 探查登记。",
-    schema: [
-      { name: "invoice_id", type: "bigint" },
-      { name: "contract_id", type: "bigint" },
-      { name: "memo", type: "text" },
-      { name: "issued_at", type: "datetime" },
-    ],
-    rowCount: 30_204,
-    expectedUpdateTime: now,
-  }),
-];
-
 export function mockStartScan(catalogId: string) {
   if (mockDiscoveringCatalogs.has(catalogId)) {
     return;
   }
 
   mockDiscoveringCatalogs.add(catalogId);
+  const startedAt = Date.now();
+  const foundResources = mockResources.filter((item) => item.catalogId === catalogId).length;
   const record: CatalogDiscoverRecord = {
     id: mockSlug(12),
-    status: "running",
+    status: "succeeded",
     trigger: "manual",
-    startedAt: Date.now(),
-    startTime: formatMockTimestamp(Date.now()),
-    durationSec: null,
-    foundResources: null,
-    newResources: null,
+    startedAt,
+    startTime: formatMockTimestamp(startedAt),
+    durationSec: 0,
+    foundResources,
+    newResources: 0,
   };
   const records = mockDiscoverRecords.get(catalogId) ?? [];
   mockDiscoverRecords.set(catalogId, [record, ...records]);
+  mockDiscoveringCatalogs.delete(catalogId);
   emit();
-
-  window.setTimeout(() => {
-    mockDiscoveringCatalogs.delete(catalogId);
-    record.status = "succeeded";
-    record.durationSec = 8 + Math.floor(Math.random() * 14);
-
-    let discovered = 0;
-    discoverableResources.forEach((resource) => {
-      if (
-        resource.catalogId === catalogId &&
-        !mockResources.some((item) => item.id === resource.id)
-      ) {
-        mockResources.push(resource);
-        discovered += 1;
-      }
-    });
-
-    record.foundResources =
-      mockResources.filter((item) => item.catalogId === catalogId).length;
-    record.newResources = discovered;
-    emit();
-  }, 2600);
-}
-
-/* ---------------- Build task progression engine ---------------- */
-
-let tickTimer: number | null = null;
-
-function hasActiveTask() {
-  return mockBuildTasks.some(
-    (task) =>
-      task.status === "pending" ||
-      task.status === "running",
-  );
-}
-
-function tick() {
-  let changed = false;
-
-  mockBuildTasks.forEach((task) => {
-    if (task.status === "pending") {
-      task.status = "running";
-      task.startTime = Date.now();
-      changed = true;
-      return;
-    }
-
-    if (task.status === "running") {
-      task.lastProgressTime = Date.now();
-      const step = Math.max(
-        60,
-        Math.floor(task.totalCount * (0.025 + Math.random() * 0.02)),
-      );
-      task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-      if (task.syncedCount >= task.totalCount) {
-        task.status = "completed";
-        const finishedAt = Date.now();
-        task.finishTime = finishedAt;
-      }
-      changed = true;
-      return;
-    }
-
-  });
-
-  if (changed) {
-    emit();
-  }
-
-  if (!hasActiveTask() && tickTimer !== null) {
-    window.clearInterval(tickTimer);
-    tickTimer = null;
-  }
-}
-
-export function ensureMockTicker() {
-  if (tickTimer === null && hasActiveTask()) {
-    tickTimer = window.setInterval(tick, 1100);
-  }
 }
 
 export function emitMockChange() {

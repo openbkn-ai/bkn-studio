@@ -5,14 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Space } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import {
+  DeleteOutlined,
+  EllipsisOutlined,
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import { Alert, Dropdown, Space, type MenuProps } from "antd";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -20,10 +27,12 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
+import { deleteBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
@@ -34,10 +43,15 @@ import {
   canViewResourceIndexTasks,
   isResourceIndexReadOnly,
 } from "@/modules/data-catalog/lib/resource-index-access";
-import {
-  buildTaskStatusLabelKey,
-} from "@/modules/data-catalog/services/build-task.service";
-import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  BuildMode,
+  BuildTask,
+  BuildTaskExecuteType,
+  BuildTaskSort,
+  BuildTaskStatus,
+  CatalogResource,
+} from "@/modules/data-catalog/types/data-catalog";
+import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
@@ -56,16 +70,21 @@ type ResourceIndexPanelProps = {
   tasks: BuildTask[];
 };
 
-const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
+const CONTROLLABLE_TASK_STATUSES = new Set<BuildTask["status"]>([
   "pending",
-  "running",
   "running",
   "stopped",
 ]);
 
-function formatTaskStatus(task: BuildTask, t: TFunction) {
-  return t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
-}
+const STATUS_OPTIONS: BuildTaskStatus[] = [
+  "pending",
+  "running",
+  "stopping",
+  "stopped",
+  "completed",
+  "failed",
+  "cancelled",
+];
 
 function formatEffectiveState(task: BuildTask, t: TFunction) {
   if (task.mode === "streaming" && task.status === "running") {
@@ -114,7 +133,7 @@ function buildStatusSummary(
 }
 
 function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
-  if (latest && ACTIVE_TASK_STATUSES.has(latest.status)) {
+  if (latest && CONTROLLABLE_TASK_STATUSES.has(latest.status)) {
     if (
       effective &&
       effective.id === latest.id &&
@@ -168,10 +187,17 @@ export function ResourceIndexPanel({
   tasks,
 }: ResourceIndexPanelProps) {
   const { i18n, t } = useTranslation();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [modeFilter, setModeFilter] = useState<BuildMode>();
+  const [executeTypeFilter, setExecuteTypeFilter] = useState<BuildTaskExecuteType>();
+  const [statusFilter, setStatusFilter] = useState<BuildTaskStatus[]>([]);
+  const [sort, setSort] = useState<BuildTaskSort>("create_time");
+  const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const autoPickedRef = useRef(false);
 
@@ -189,11 +215,63 @@ export function ResourceIndexPanel({
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
   const readOnly = isResourceIndexReadOnly(catalog);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
+  const canManageTaskActions =
+    canManageBuildTasks &&
+    hasPermissions({
+      currentPermissions: runtimeConfig.currentUser.permissions,
+      requiredPermissions: "catalog:task_manage",
+    });
   const canViewTasks = canViewResourceIndexTasks(resource);
   const effective = state.effective;
   const latest = state.latest;
-  const activeTask = latest && ACTIVE_TASK_STATUSES.has(latest.status) ? latest : null;
+  const activeTask = latest && CONTROLLABLE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(effective, latest);
+  const filteredTasks = useMemo(() => {
+    const timestampOf = (task: BuildTask) => {
+      if (sort === "last_progress_time") return task.lastProgressTime ?? 0;
+      if (sort === "finish_time") return task.finishTime ?? 0;
+      return task.createTime;
+    };
+    return sortedTasks
+      .filter((task) =>
+        (!modeFilter || task.mode === modeFilter) &&
+        (!executeTypeFilter || task.executeType === executeTypeFilter) &&
+        (statusFilter.length === 0 || statusFilter.includes(task.status)),
+      )
+      .sort((left, right) => (timestampOf(left) - timestampOf(right)) * (direction === "asc" ? 1 : -1));
+  }, [direction, executeTypeFilter, modeFilter, sort, sortedTasks, statusFilter]);
+  const batchDeleteTargets = filteredTasks.filter(
+    (task) => selectedKeys.includes(task.id) && !isActiveBuildTask(task),
+  );
+
+  const handleBatchDelete = () => {
+    if (!batchDeleteTargets.length) return;
+    void modal.confirm({
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
+      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const results = await Promise.allSettled(
+          batchDeleteTargets.map((task) => deleteBuildTask(task.id)),
+        );
+        const failed = results.filter((result) => result.status === "rejected").length;
+        if (failed) {
+          void message.error(
+            t("dataCatalog.task.batchDeletePartial", {
+              failed,
+              total: batchDeleteTargets.length,
+            }),
+          );
+        } else {
+          message.success(t("common.success"));
+        }
+        setSelectedKeys([]);
+        await onRefresh();
+      },
+    });
+  };
 
   useEffect(() => {
     if (!active || indexViewExplicit || autoPickedRef.current) {
@@ -218,102 +296,193 @@ export function ResourceIndexPanel({
 
   useEffect(() => {
     setTaskPage(1);
+    setSelectedKeys([]);
+    setModeFilter(undefined);
+    setExecuteTypeFilter(undefined);
+    setStatusFilter([]);
+    setSort("create_time");
+    setDirection("desc");
+    setDetailTaskId(null);
   }, [resource.id]);
 
   const pagedTasks = useMemo(() => {
     const start = (taskPage - 1) * taskPageSize;
-    return sortedTasks.slice(start, start + taskPageSize);
-  }, [sortedTasks, taskPage, taskPageSize]);
+    return filteredTasks.slice(start, start + taskPageSize);
+  }, [filteredTasks, taskPage, taskPageSize]);
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(filteredTasks.length / taskPageSize));
+    if (taskPage > lastPage) setTaskPage(lastPage);
+  }, [filteredTasks.length, taskPage, taskPageSize]);
+
+  const updateTaskFilters = (patch: {
+    executeType?: BuildTaskExecuteType;
+    mode?: BuildMode;
+    statuses?: BuildTaskStatus[];
+  }) => {
+    if ("mode" in patch) setModeFilter(patch.mode);
+    if ("executeType" in patch) setExecuteTypeFilter(patch.executeType);
+    if ("statuses" in patch) setStatusFilter(patch.statuses ?? []);
+    setSelectedKeys([]);
+    setTaskPage(1);
+  };
+  const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
+    sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
+  const handleTaskTableChange: TableProps<BuildTask>["onChange"] = (
+    _pagination,
+    _filters,
+    sorter,
+    extra,
+  ) => {
+    if (extra.action !== "sort") return;
+    const single = Array.isArray(sorter) ? sorter[0] : sorter;
+    if (!single?.order || !single.columnKey) {
+      setSort("create_time");
+      setDirection("desc");
+    } else {
+      setSort(single.columnKey as BuildTaskSort);
+      setDirection(single.order === "ascend" ? "asc" : "desc");
+    }
+    setSelectedKeys([]);
+    setTaskPage(1);
+  };
 
   const pauseResumeLabel =
     activeTask?.status === "stopped"
       ? t(
-          activeTask.mode === "streaming"
-            ? "dataCatalog.task.resumeListening"
-            : "dataCatalog.task.resumeBuild",
-        )
+        activeTask.mode === "streaming"
+          ? "dataCatalog.task.resumeListening"
+          : "dataCatalog.task.resumeBuild",
+      )
       : t(
-          activeTask?.mode === "streaming" && activeTask.status === "running"
-            ? "dataCatalog.task.pauseListening"
-            : "dataCatalog.task.stopBuild",
-        );
+        activeTask?.mode === "streaming" && activeTask.status === "running"
+          ? "dataCatalog.task.pauseListening"
+          : "dataCatalog.task.stopBuild",
+      );
 
   const pauseResumeLabelOf = (task: BuildTask) =>
     task.status === "stopped"
       ? t(
-          task.mode === "streaming"
-            ? "dataCatalog.task.resumeListening"
-            : "dataCatalog.task.resumeBuild",
-        )
+        task.mode === "streaming"
+          ? "dataCatalog.task.resumeListening"
+          : "dataCatalog.task.resumeBuild",
+      )
       : t(
-          task.mode === "streaming"
-            ? "dataCatalog.task.pauseListening"
-            : "dataCatalog.task.stopBuild",
-        );
+        task.mode === "streaming"
+          ? "dataCatalog.task.pauseListening"
+          : "dataCatalog.task.stopBuild",
+      );
 
   const taskColumns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
       title: t("dataCatalog.taskManagement.columns.task"),
       width: 160,
-    },
-    {
-      dataIndex: "status",
-      title: t("common.status"),
-      width: 108,
-      render: (_value, record) => formatTaskStatus(record, t),
+      render: (value: string) => <button className={panelStyles.textLink} onClick={() => setDetailTaskId(value)} type="button">{value}</button>,
     },
     {
       dataIndex: "mode",
-      title: t("common.mode"),
+      title: t("dataCatalog.build.mode"),
       width: 100,
+      filters: ["batch", "streaming"].map((value) => ({ text: t(`dataCatalog.modes.${value}`), value })),
+      filterMultiple: false,
+      filteredValue: modeFilter ? [modeFilter] : null,
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
+    },
+    {
+      dataIndex: "executeType",
+      title: t("dataCatalog.build.executeType"),
+      width: 100,
+      filters: ["full", "incremental"].map((value) => ({ text: t(value === "incremental" ? "dataCatalog.build.executeIncremental" : "dataCatalog.build.executeFull"), value })),
+      filterMultiple: false,
+      filteredValue: executeTypeFilter ? [executeTypeFilter] : null,
+      render: (_value, record) =>
+        record.mode === "batch"
+          ? record.executeType === "incremental"
+            ? t("dataCatalog.build.executeIncremental")
+            : record.executeType === "full"
+              ? t("dataCatalog.build.executeFull")
+              : "-"
+          : "-",
+    },
+    {
+      dataIndex: "status",
+      title: t("dataCatalog.task.detailSections.status"),
+      width: 120,
+      filters: STATUS_OPTIONS.map((value) => ({ text: t(`dataCatalog.task.statuses.${value}`), value })),
+      filteredValue: statusFilter.length ? statusFilter : null,
+      render: (_value, record) => <BuildStatusTag task={record} />,
     },
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 196,
+      width: 200,
       render: (_value, record) => <BuildProgress compact task={record} />,
     },
     {
+      dataIndex: "lastProgressTime",
+      key: "last_progress_time",
+      title: t("dataCatalog.task.fields.lastProgressTime"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("last_progress_time"),
+      render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
+    },
+    {
+      dataIndex: "finishTime",
+      key: "finish_time",
+      title: t("dataCatalog.task.finishedAt"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("finish_time"),
+      render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
+    },
+    {
       dataIndex: "createTime",
+      key: "create_time",
       title: t("dataConnect.createTime"),
       width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("create_time"),
       render: (value: number) => formatDateTimeYmdHms(value || undefined),
     },
     {
       key: "actions",
       title: t("common.actions"),
-      width: 160,
+      align: "center",
+      width: 84,
       fixed: "right",
-      render: (_value, record) => (
-        <Space className={panelStyles.historyActionGroup} size={4}>
-          <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
-            {t("common.detail")}
-          </AppButton>
-          {canManageBuildTasks && ACTIVE_TASK_STATUSES.has(record.status) ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton onClick={() => void pauseOrResume(record)} type="link">
-                {pauseResumeLabelOf(record)}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-          {canManageBuildTasks && record.status === "failed" ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton onClick={() => void retry(record)} type="link">
-                {t("dataCatalog.task.rerun")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-          {canManageBuildTasks ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton danger onClick={() => remove(record)} type="link">
-                {t("common.delete")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-        </Space>
-      ),
+      render: (_value, record) => {
+        const menuItems: NonNullable<MenuProps["items"]> = [
+          { key: "detail", label: t("common.detail") },
+        ];
+        if (canManageTaskActions && CONTROLLABLE_TASK_STATUSES.has(record.status)) {
+          menuItems.push({ key: "pauseResume", label: pauseResumeLabelOf(record) });
+        }
+        if (canManageTaskActions && record.status === "failed") {
+          menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
+        }
+        if (canManageTaskActions && !isActiveBuildTask(record)) {
+          menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
+        }
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") setDetailTaskId(record.id);
+                if (key === "pauseResume") void pauseOrResume(record);
+                if (key === "retry") void retry(record);
+                if (key === "delete") void remove(record);
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -374,8 +543,8 @@ export function ResourceIndexPanel({
           </div>
           <div className={panelStyles.sectionActions}>
             {canManageBuildTasks && activeTask &&
-            (activeTask.status === "running" ||
-              activeTask.status === "pending") ? (
+              (activeTask.status === "running" ||
+                activeTask.status === "pending") ? (
               <PermissionGate permissions="catalog:task_manage">
                 <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
                   {pauseResumeLabel}
@@ -457,6 +626,8 @@ export function ResourceIndexPanel({
                 disabled={buildActionsDisabled}
                 onGoConfigure={() => onIndexViewChange("config")}
                 onStarted={() => {
+                  setSelectedKeys([]);
+                  setTaskPage(1);
                   void onRefresh();
                 }}
                 resource={resource}
@@ -474,27 +645,63 @@ export function ResourceIndexPanel({
               <span className={panelStyles.historyCount}> ({sortedTasks.length})</span>
             ) : null}
           </h3>
+          <div className={panelStyles.historyControls}>
+            <Space>
+              <AppButton icon={<ReloadOutlined />} onClick={() => void onRefresh()}>
+                {t("common.refresh")}
+              </AppButton>
+              <PermissionGate permissions="catalog:task_manage">
+                <AppButton
+                  danger
+                  disabled={batchDeleteTargets.length === 0}
+                  icon={<DeleteOutlined />}
+                  onClick={handleBatchDelete}
+                >
+                  {batchDeleteTargets.length > 0
+                    ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})`
+                    : t("dataCatalog.task.batchDelete")}
+                </AppButton>
+              </PermissionGate>
+            </Space>
+          </div>
         </div>
         <TableSurface className={panelStyles.tableSurface}>
           <AppTable<BuildTask>
             columns={taskColumns}
             dataSource={pagedTasks}
             locale={{ emptyText: t("dataCatalog.resource.historyEmpty") }}
+            onChange={(pagination, filters, sorter, extra) => {
+              if (extra.action === "filter") {
+                updateTaskFilters({
+                  executeType: (filters.executeType?.[0] as BuildTaskExecuteType | undefined),
+                  mode: filters.mode?.[0] as BuildMode | undefined,
+                  statuses: (filters.status ?? []).map(String) as BuildTaskStatus[],
+                });
+                return;
+              }
+              handleTaskTableChange(pagination, filters, sorter, extra);
+            }}
             pagination={false}
             rowKey="id"
+            rowSelection={canManageTaskActions ? {
+              selectedRowKeys: selectedKeys,
+              onChange: (keys) => setSelectedKeys(keys.map(String)),
+              getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
+            } : undefined}
           />
         </TableSurface>
-        {sortedTasks.length > 0 ? (
+        {filteredTasks.length > 0 ? (
           <TablePaginationBar
             current={taskPage}
             onChange={(nextPage, nextPageSize) => {
+              setSelectedKeys([]);
               setTaskPage(nextPage);
               setTaskPageSize(nextPageSize);
             }}
             pageSize={taskPageSize}
             showSizeChanger
             showTotal={(count) => t("common.total", { total: count })}
-            total={sortedTasks.length}
+            total={filteredTasks.length}
           />
         ) : null}
       </div>

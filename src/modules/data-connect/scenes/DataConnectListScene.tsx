@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Tag, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -389,7 +389,17 @@ export function DataConnectListScene({
       dataIndex: "name",
       title: t("dataConnect.name"),
       width: 200,
-      render: (_, record) => <span className={styles.nameTitle}>{record.name}</span>,
+      render: (_, record) => (
+        <Tooltip title={record.description || "-"}>
+          <AppButton
+            className={styles.ellipsisLink}
+            onClick={() => openDetail(record)}
+            type="link"
+          >
+            <span className={styles.cellEllipsis}>{record.name}</span>
+          </AppButton>
+        </Tooltip>
+      ),
     },
     {
       dataIndex: "connectorType",
@@ -465,16 +475,16 @@ export function DataConnectListScene({
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-                <PermissionGate permissions="catalog:create">
-                  <AppButton
-                    onClick={() => {
-                      if (onCreate) {
-                        onCreate();
-                        return;
-                      }
-                      void navigate("/data-connect/new");
-                    }}
-                    type="primary"
+              <PermissionGate permissions="catalog:create">
+                <AppButton
+                  onClick={() => {
+                    if (onCreate) {
+                      onCreate();
+                      return;
+                    }
+                    void navigate("/data-connect/new");
+                  }}
+                  type="primary"
                 >
                   {t("common.create")}
                 </AppButton>

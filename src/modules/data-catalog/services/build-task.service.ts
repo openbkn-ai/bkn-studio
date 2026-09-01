@@ -10,7 +10,6 @@ import axios from "axios";
 import { http } from "@/framework/request/http";
 import {
   emitMockChange,
-  ensureMockTicker,
   mockCatalogName,
   mockBuildTasks,
   mockResources,
@@ -273,7 +272,6 @@ export async function listBuildTasks(
   query: BuildTaskListQuery = {},
 ): Promise<BuildTask[]> {
   if (useMock) {
-    ensureMockTicker();
     let tasks = [...mockBuildTasks];
     if (query.catalogId) {
       // Mocks do not filter by catalog_id, so resolve catalog to resourceIds through mockResources.
@@ -296,7 +294,7 @@ export async function listBuildTasks(
   const tasks: BuildTask[] = [];
   let offset = 0;
 
-  for (;;) {
+  for (; ;) {
     const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
       "/vega-backend/v1/build-tasks",
       {
@@ -382,7 +380,6 @@ export async function listBuildTaskPage(
   const offset = query.offset ?? ((query.page ?? 1) - 1) * pageSize;
 
   if (useMock) {
-    ensureMockTicker();
     let items = [...mockBuildTasks];
     if (query.catalogId) {
       const resourceIds = new Set(
@@ -456,7 +453,21 @@ function hasActiveTaskForResource(resourceId: string) {
   );
 }
 
-export class BuildTaskConflictError extends Error {}
+function settleInteractiveMockBuildTask(task: BuildTask) {
+  const now = Date.now();
+  task.startTime = task.startTime ?? now;
+  task.lastProgressTime = now;
+  if (task.mode === "streaming") {
+    task.status = "running";
+    task.finishTime = null;
+    return;
+  }
+  task.status = "completed";
+  task.syncedCount = task.totalCount;
+  task.finishTime = now;
+}
+
+export class BuildTaskConflictError extends Error { }
 
 export async function createBuildTask(
   input: BuildTaskCreateInput,
@@ -470,12 +481,12 @@ export async function createBuildTask(
     const form = resource
       ? indexFormValuesFromResource(resource)
       : {
-          buildKeyFields: [] as string[],
-          embeddingFields: [] as string[],
-          embeddingModel: "",
-          fulltextFields: [] as string[],
-          fulltextAnalyzer: "",
-        };
+        buildKeyFields: [] as string[],
+        embeddingFields: [] as string[],
+        embeddingModel: "",
+        fulltextFields: [] as string[],
+        fulltextAnalyzer: "",
+      };
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
@@ -500,9 +511,9 @@ export async function createBuildTask(
       startTime: null,
       error: null,
     };
+    settleInteractiveMockBuildTask(task);
     mockBuildTasks.unshift(task);
     emitMockChange();
-    ensureMockTicker();
     return wait(task);
   }
 
@@ -529,7 +540,7 @@ export async function createBuildTask(
 export async function pauseBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
-    if (task && task.status === "running") {
+    if (task && (task.status === "pending" || task.status === "running")) {
       task.status = "stopped";
       task.lastProgressTime = Date.now();
       emitMockChange();
@@ -546,12 +557,11 @@ export async function resumeBuildTask(id: string) {
   if (useMock) {
     const task = mockBuildTasks.find((item) => item.id === id);
     if (task && task.status === "stopped") {
-      task.status = "pending";
       task.startTime = null;
       task.finishTime = null;
       task.lastProgressTime = null;
+      settleInteractiveMockBuildTask(task);
       emitMockChange();
-      ensureMockTicker();
     }
     await wait(undefined, 120);
     return;
@@ -616,13 +626,12 @@ export async function retryBuildTask(
     if (reset && source.executeType === "full") {
       source.syncedCount = 0;
     }
-    source.status = "pending";
     source.error = null;
     source.startTime = null;
     source.finishTime = null;
     source.lastProgressTime = null;
+    settleInteractiveMockBuildTask(source);
     emitMockChange();
-    ensureMockTicker();
     return wait(source);
   }
 

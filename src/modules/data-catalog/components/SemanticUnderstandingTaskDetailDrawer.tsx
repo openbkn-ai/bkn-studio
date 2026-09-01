@@ -152,7 +152,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
   }
 
   const applyModeKey = task.applyMode === "dry_run" ? "dryRun" : task.applyMode === "force" ? "force" : "fillEmpty";
-  const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "succeeded" ? sharedStyles.taskSucceeded : task.status === "cancelled" ? sharedStyles.taskPending : sharedStyles.taskRunning;
+  const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "completed" ? sharedStyles.taskSucceeded : task.status === "cancelled" || task.status === "pending" ? sharedStyles.taskPending : sharedStyles.taskRunning;
   const creator = task.creator.name || task.creator.id || EMPTY_VALUE;
   const quality = getQuality(task.confidenceDetailJson, task.resultJson);
   const warnings = getWarnings(task.confidenceDetailJson, task.resultJson);
@@ -245,41 +245,41 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
           <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>{formatTime(task.finishTime)}</Descriptions.Item>
         </Descriptions>
 
-      <>
-        <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.quality")}</h4>
-        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceEffective")}>
-            {quality ? <span className={[sharedStyles.tag, quality.resource_effective ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
-              {t(quality.resource_effective ? "dataCatalog.taskManagement.semantic.values.effective" : "dataCatalog.taskManagement.semantic.values.notEffective")}
-            </span> : EMPTY_VALUE}
-          </Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.fieldEffective")}>
-            {quality ? t("dataCatalog.taskManagement.semantic.values.fieldEffective", { effective: quality.field_effective ?? 0, total: quality.field_total ?? 0 }) : EMPTY_VALUE}
-          </Descriptions.Item>
-        </Descriptions>
-        {warnings.length > 0 ? <Alert
-          className={styles.semanticWarning}
-          description={<ul>{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-          message={t("dataCatalog.taskManagement.semantic.fields.warnings")}
-          showIcon
-          type="warning"
-        /> : null}
-        {fieldDetails.length > 0 ? <Table<FieldApplyDetail>
-          className={styles.fieldDetailTable}
-          columns={fieldDetailColumns}
-          dataSource={fieldDetails}
-          pagination={false}
-          rowKey="name"
-          size="small"
-        /> : null}
-      </>
+        <>
+          <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.quality")}</h4>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceEffective")}>
+              {quality ? <span className={[sharedStyles.tag, quality.resource_effective ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
+                {t(quality.resource_effective ? "dataCatalog.taskManagement.semantic.values.effective" : "dataCatalog.taskManagement.semantic.values.notEffective")}
+              </span> : EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.fieldEffective")}>
+              {quality ? t("dataCatalog.taskManagement.semantic.values.fieldEffective", { effective: quality.field_effective ?? 0, total: quality.field_total ?? 0 }) : EMPTY_VALUE}
+            </Descriptions.Item>
+          </Descriptions>
+          {warnings.length > 0 ? <Alert
+            className={styles.semanticWarning}
+            description={<ul>{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
+            message={t("dataCatalog.taskManagement.semantic.fields.warnings")}
+            showIcon
+            type="warning"
+          /> : null}
+          {fieldDetails.length > 0 ? <Table<FieldApplyDetail>
+            className={styles.fieldDetailTable}
+            columns={fieldDetailColumns}
+            dataSource={fieldDetails}
+            pagination={false}
+            rowKey="name"
+            size="small"
+          /> : null}
+        </>
 
-      <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.payload")}</h4>
-      <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-        <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.inputHash")}>{task.inputHash || "-"}</Descriptions.Item>
-        <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.input")}>{jsonDetail(task.input)}</Descriptions.Item>
-        <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.result")}>{jsonDetail(task.resultJson)}</Descriptions.Item>
-      </Descriptions>
+        <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.payload")}</h4>
+        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.inputHash")}>{task.inputHash || "-"}</Descriptions.Item>
+          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.input")}>{jsonDetail(task.input)}</Descriptions.Item>
+          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.result")}>{jsonDetail(task.resultJson)}</Descriptions.Item>
+        </Descriptions>
       </section>
 
       <section className={styles.sectionCard}>

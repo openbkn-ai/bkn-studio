@@ -5,9 +5,67 @@
  * Conditions. See LICENSE for the full text.
  */
 
-.root { display: grid; gap: 12px; }
-.summaryCard { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid var(--color-border); background: var(--color-bg-surface); }
-.summaryContent { display: grid; gap: 4px; }
-.summaryLabel { color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
-.actionGroup { flex-wrap: nowrap; white-space: nowrap; }
-.actionGroup :global(.ant-btn-link) { padding-inline: 0; white-space: nowrap; }
+.root {
+    display: grid;
+    gap: 12px;
+}
+
+.summaryCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-surface);
+}
+
+.summaryContent {
+    display: grid;
+    gap: 4px;
+}
+
+.summaryLabel {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.summaryValue {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+}
+
+.summaryValueSuccess {
+    color: var(--color-success-text);
+}
+
+.summaryValueProcessing {
+    color: var(--color-primary-700);
+}
+
+.summaryValueError {
+    color: var(--color-error-text);
+}
+
+.summaryValueMuted {
+    color: var(--color-text-secondary);
+}
+
+.textLink {
+    max-width: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-link);
+    cursor: pointer;
+    font: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.textLink:hover {
+    text-decoration: underline;
+}

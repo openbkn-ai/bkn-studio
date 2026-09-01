@@ -28,7 +28,6 @@ import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/u
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
-import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
 export function TopBar() {
@@ -265,7 +264,6 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
-        <BuildActivityChip />
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"

@@ -119,8 +119,24 @@
   composes: nameCell from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
 
-.nameTitle {
-  composes: nameTitle from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+.ellipsisLink {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: 100%;
+  height: auto !important;
+  padding: 0 !important;
+  font-weight: 400;
+}
+
+.cellEllipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ellipsisLink .cellEllipsis {
+  min-width: 0;
 }
 
 .descriptionText {

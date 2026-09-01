@@ -167,9 +167,47 @@ describe("discover.service · mock task sorting", () => {
     });
 
     expect(result.items.map((item) => item.id)).toEqual([
+      "discover-task-1005",
+      "discover-task-1004",
       "discover-task-1003",
       "discover-task-1001",
       "discover-task-1002",
+    ]);
+  });
+
+  it("covers every Vega discover-task status", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
+
+    expect(new Set(result.items.map((task) => task.status))).toEqual(new Set([
+      "pending",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+    ]));
+  });
+
+  it("includes a partially progressed cancelled mock task", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({
+      page: 1,
+      pageSize: 20,
+      statuses: ["cancelled"],
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        id: "discover-task-1004",
+        progress: 44,
+        status: "cancelled",
+      }),
     ]);
   });
 
@@ -183,6 +221,29 @@ describe("discover.service · mock task sorting", () => {
     const manualTasks = result.items.filter((item) => item.triggerType === "manual");
     expect(manualTasks).not.toHaveLength(0);
     manualTasks.forEach((item) => expect(item.scheduleId).toBeUndefined());
+  });
+
+  it("settles an interactively triggered mock task without polling", async () => {
+    const {
+      getDataConnectDiscoverTask,
+      triggerDataConnectDiscover,
+    } = await import("@/modules/data-connect/services/discover.service");
+
+    const created = await triggerDataConnectDiscover("cat-001", "create_only");
+    const task = await getDataConnectDiscoverTask(created.id);
+
+    expect(task).not.toBeNull();
+    if (!task) {
+      throw new Error("Expected the triggered discover task to exist");
+    }
+    expect(typeof task.finishTime).toBe("number");
+    expect(typeof task.lastProgressTime).toBe("number");
+    expect(task).toMatchObject({
+      catalogId: "cat-001",
+      progress: 100,
+      status: "completed",
+      strategy: "create_only",
+    });
   });
 
   it("rejects a stale discover schedule version", async () => {
