@@ -239,8 +239,8 @@ export const modelResourcesEnUS = {
         unit: "Unit",
       },
       metrics: {
-        usageCount: "Usage count",
-        times: "times",
+        usageCount: "Model calls",
+        times: "calls",
         errorRate: "Model error rate",
         avgResponseTime: "Average response time",
         tokenConsumption: "Token consumption",
@@ -255,7 +255,7 @@ export const modelResourcesEnUS = {
       charts: {
         inputTokens: "Input Tokens",
         outputTokens: "Output Tokens",
-        timeAndFirstToken: "Call time and first-token time",
+        timeAndFirstToken: "Model latency and time to first token",
         tokenRate: "Token rate",
         qps: "Model QPS",
       },
