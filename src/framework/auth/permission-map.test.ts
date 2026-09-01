@@ -238,7 +238,7 @@ describe("折叠通配契约", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
   });
 
-  it("模型资源权限映射到 bkn-safe 的 large_model/small_model 操作", () => {
+  it("大模型查看权限开放模型统计，小模型查看不开放", () => {
     const grants = flattenSafeGrants([
       {
         operations: ["display", "create", "modify"],
@@ -254,6 +254,11 @@ describe("折叠通配契约", () => {
     expect(isStudioPermissionGranted("model-resources:model:delete", grants, false)).toBe(false);
     expect(isStudioPermissionGranted("model-resources:statistics:view", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:quota:edit", grants, false)).toBe(true);
+
+    const smallModelDisplay = flattenSafeGrants([
+      { operations: ["display"], resource: { id: "*", type: "small_model" } },
+    ]);
+    expect(isStudioPermissionGranted("model-resources:statistics:view", smallModelDisplay, false)).toBe(false);
   });
 });
 

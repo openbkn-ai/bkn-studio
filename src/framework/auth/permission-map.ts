@@ -93,7 +93,7 @@ const MODEL_RESOURCE_PERMISSIONS: Record<string, string[]> = {
   "model-resources:model:delete": ["large_model:delete", "small_model:delete"],
   "model-resources:quota:view": ["large_model:display", "small_model:display"],
   "model-resources:quota:edit": ["large_model:modify", "small_model:modify"],
-  "model-resources:statistics:view": ["large_model:display", "small_model:display"],
+  "model-resources:statistics:view": ["large_model:display"],
 };
 
 /**
