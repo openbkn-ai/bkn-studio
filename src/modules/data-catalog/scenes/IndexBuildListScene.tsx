@@ -63,6 +63,7 @@ const STATUS_OPTIONS: BuildTaskStatus[] = [
   "failed",
   "cancelled",
 ];
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 function EllipsisText({ text, title }: { text: string; title?: string }) {
   return (
@@ -193,7 +194,7 @@ export function IndexBuildListScene() {
   const hasActive = useMemo(() => tasks.some(isActiveBuildTask), [tasks]);
 
   useEffect(() => {
-    if (!hasActive) {
+    if (useMock || !hasActive) {
       return;
     }
     const timer = window.setInterval(() => {
@@ -378,6 +379,15 @@ export function IndexBuildListScene() {
       render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
     },
     {
+      dataIndex: "createTime",
+      key: "create_time",
+      title: t("dataConnect.createTime"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("create_time"),
+      render: (value: number) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+    },
+    {
       align: "center",
       key: "actions",
       title: t("common.actions"),
@@ -387,15 +397,15 @@ export function IndexBuildListScene() {
         const pauseResumeLabel =
           record.status === "stopped"
             ? t(
-                record.mode === "streaming"
-                  ? "dataCatalog.task.resumeListening"
-                  : "dataCatalog.task.resumeBuild",
-              )
+              record.mode === "streaming"
+                ? "dataCatalog.task.resumeListening"
+                : "dataCatalog.task.resumeBuild",
+            )
             : t(
-                record.mode === "streaming"
-                  ? "dataCatalog.task.pauseListening"
-                  : "dataCatalog.task.stopBuild",
-              );
+              record.mode === "streaming"
+                ? "dataCatalog.task.pauseListening"
+                : "dataCatalog.task.stopBuild",
+            );
 
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
         if (
@@ -449,66 +459,66 @@ export function IndexBuildListScene() {
     <section className={sceneStyles.contentSurface}>
       <div className={taskPanelStyles.operationBar}>
         <Space>
-            <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
-              {t("common.refresh")}
+          <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
+            {t("common.refresh")}
+          </AppButton>
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              danger
+              disabled={selectedKeys.length === 0}
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+            >
+              {selectedKeys.length > 0
+                ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
+                : t("dataCatalog.task.batchDelete")}
             </AppButton>
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton
-                danger
-                disabled={selectedKeys.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={handleBatchDelete}
-              >
-                {selectedKeys.length > 0
-                  ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
-                  : t("dataCatalog.task.batchDelete")}
-              </AppButton>
-            </PermissionGate>
+          </PermissionGate>
         </Space>
         <Space className={sceneStyles.taskFilters}>
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              onChange={(value: BuildMode | undefined) => {
-                updateListFilters({ mode: value });
-              }}
-              options={["batch", "streaming"].map((value) => ({
-                label: t(`dataCatalog.modes.${value}`),
-                value,
-              }))}
-              placeholder={t("dataCatalog.build.mode")}
-              value={listFilters.mode ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              onChange={(value: BuildTaskExecuteType | undefined) => {
-                updateListFilters({ executeType: value });
-              }}
-              options={["full", "incremental"].map((value) => ({
-                label: t(value === "incremental"
-                  ? "dataCatalog.build.executeIncremental"
-                  : "dataCatalog.build.executeFull"),
-                value,
-              }))}
-              placeholder={t("dataCatalog.build.executeType")}
-              value={listFilters.executeType ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              maxTagCount="responsive"
-              mode="multiple"
-              onChange={(value: BuildTaskStatus[]) => {
-                updateListFilters({ statuses: value });
-              }}
-              options={STATUS_OPTIONS.map((status) => ({
-                label: t(`dataCatalog.task.statuses.${status}`),
-                value: status,
-              }))}
-              placeholder={t("dataCatalog.task.detailSections.status")}
-              value={listFilters.statuses}
-            />
+          <Select
+            allowClear
+            className={taskPanelStyles.select}
+            onChange={(value: BuildMode | undefined) => {
+              updateListFilters({ mode: value });
+            }}
+            options={["batch", "streaming"].map((value) => ({
+              label: t(`dataCatalog.modes.${value}`),
+              value,
+            }))}
+            placeholder={t("dataCatalog.build.mode")}
+            value={listFilters.mode ?? null}
+          />
+          <Select
+            allowClear
+            className={taskPanelStyles.select}
+            onChange={(value: BuildTaskExecuteType | undefined) => {
+              updateListFilters({ executeType: value });
+            }}
+            options={["full", "incremental"].map((value) => ({
+              label: t(value === "incremental"
+                ? "dataCatalog.build.executeIncremental"
+                : "dataCatalog.build.executeFull"),
+              value,
+            }))}
+            placeholder={t("dataCatalog.build.executeType")}
+            value={listFilters.executeType ?? null}
+          />
+          <Select
+            allowClear
+            className={taskPanelStyles.select}
+            maxTagCount="responsive"
+            mode="multiple"
+            onChange={(value: BuildTaskStatus[]) => {
+              updateListFilters({ statuses: value });
+            }}
+            options={STATUS_OPTIONS.map((status) => ({
+              label: t(`dataCatalog.task.statuses.${status}`),
+              value: status,
+            }))}
+            placeholder={t("dataCatalog.task.detailSections.status")}
+            value={listFilters.statuses}
+          />
         </Space>
       </div>
 

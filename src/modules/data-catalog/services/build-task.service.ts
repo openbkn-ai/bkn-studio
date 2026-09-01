@@ -10,7 +10,6 @@ import axios from "axios";
 import { http } from "@/framework/request/http";
 import {
   emitMockChange,
-  ensureMockTicker,
   mockCatalogName,
   mockBuildTasks,
   mockResources,
@@ -273,7 +272,6 @@ export async function listBuildTasks(
   query: BuildTaskListQuery = {},
 ): Promise<BuildTask[]> {
   if (useMock) {
-    ensureMockTicker();
     let tasks = [...mockBuildTasks];
     if (query.catalogId) {
       // Mocks do not filter by catalog_id, so resolve catalog to resourceIds through mockResources.
@@ -296,7 +294,7 @@ export async function listBuildTasks(
   const tasks: BuildTask[] = [];
   let offset = 0;
 
-  for (;;) {
+  for (; ;) {
     const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
       "/vega-backend/v1/build-tasks",
       {
@@ -382,7 +380,6 @@ export async function listBuildTaskPage(
   const offset = query.offset ?? ((query.page ?? 1) - 1) * pageSize;
 
   if (useMock) {
-    ensureMockTicker();
     let items = [...mockBuildTasks];
     if (query.catalogId) {
       const resourceIds = new Set(
@@ -456,7 +453,7 @@ function hasActiveTaskForResource(resourceId: string) {
   );
 }
 
-export class BuildTaskConflictError extends Error {}
+export class BuildTaskConflictError extends Error { }
 
 export async function createBuildTask(
   input: BuildTaskCreateInput,
@@ -470,12 +467,12 @@ export async function createBuildTask(
     const form = resource
       ? indexFormValuesFromResource(resource)
       : {
-          buildKeyFields: [] as string[],
-          embeddingFields: [] as string[],
-          embeddingModel: "",
-          fulltextFields: [] as string[],
-          fulltextAnalyzer: "",
-        };
+        buildKeyFields: [] as string[],
+        embeddingFields: [] as string[],
+        embeddingModel: "",
+        fulltextFields: [] as string[],
+        fulltextAnalyzer: "",
+      };
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
@@ -502,7 +499,6 @@ export async function createBuildTask(
     };
     mockBuildTasks.unshift(task);
     emitMockChange();
-    ensureMockTicker();
     return wait(task);
   }
 
@@ -551,7 +547,6 @@ export async function resumeBuildTask(id: string) {
       task.finishTime = null;
       task.lastProgressTime = null;
       emitMockChange();
-      ensureMockTicker();
     }
     await wait(undefined, 120);
     return;
@@ -622,7 +617,6 @@ export async function retryBuildTask(
     source.finishTime = null;
     source.lastProgressTime = null;
     emitMockChange();
-    ensureMockTicker();
     return wait(source);
   }
 

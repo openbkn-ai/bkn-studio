@@ -32,8 +32,8 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
       task.status === "stopped"
         ? t("dataCatalog.indexState.paused")
         : t("dataCatalog.progress.lastEvent", {
-            time: timeAgo(task.lastProgressTime ?? task.createTime, i18n.language),
-          });
+          time: timeAgo(task.lastProgressTime ?? task.createTime, i18n.language),
+        });
     const content = (
       <div className={wrapClass}>
         <div className={metaClass}>
@@ -56,13 +56,19 @@ export function BuildProgress({ compact = false, task }: BuildProgressProps) {
 
   // Backend total_count may be only the first batch because connectors do not run COUNT(*).
   const total = Math.max(1, task.totalCount, task.syncedCount);
-  const syncedPercent = Math.min(100, (task.syncedCount / total) * 100);
+  const isEmptyCompletedTask =
+    task.status === "completed" && task.totalCount === 0 && task.syncedCount === 0;
+  const syncedPercent = isEmptyCompletedTask
+    ? 100
+    : Math.min(100, (task.syncedCount / total) * 100);
   const fillClass =
     task.status === "completed"
       ? styles.progressFillDone
       : task.status === "failed"
         ? styles.progressFillFailed
-        : styles.progressFillVector;
+        : task.status === "cancelled" || task.status === "pending" || task.status === "stopped"
+          ? styles.progressFillMuted
+          : styles.progressFillVector;
 
   const syncedLabel = t("dataCatalog.progress.synced", {
     synced: formatCount(task.syncedCount) as never,

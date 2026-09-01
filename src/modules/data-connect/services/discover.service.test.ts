@@ -167,9 +167,47 @@ describe("discover.service · mock task sorting", () => {
     });
 
     expect(result.items.map((item) => item.id)).toEqual([
+      "discover-task-1005",
+      "discover-task-1004",
       "discover-task-1003",
       "discover-task-1001",
       "discover-task-1002",
+    ]);
+  });
+
+  it("covers every Vega discover-task status", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
+
+    expect(new Set(result.items.map((task) => task.status))).toEqual(new Set([
+      "pending",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+    ]));
+  });
+
+  it("includes a partially progressed cancelled mock task", async () => {
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    const result = await listDataConnectDiscoverTasks({
+      page: 1,
+      pageSize: 20,
+      statuses: ["cancelled"],
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        id: "discover-task-1004",
+        progress: 44,
+        status: "cancelled",
+      }),
     ]);
   });
 

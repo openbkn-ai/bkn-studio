@@ -36,6 +36,8 @@ import { catalogListAllQuery, getCatalog, listCatalogs, type CatalogRecord } fro
 
 import styles from "./DataCatalogScene.module.css";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
 const CatalogDetailPanel = lazy(
   () => import("@/modules/data-catalog/components/CatalogDetailPanel"),
 );
@@ -193,7 +195,7 @@ export function DataCatalogScene({
   }, [loadDiscovers, selectedCatalogId]);
 
   useEffect(() => {
-    if (!hasActiveWork) {
+    if (useMock || !hasActiveWork) {
       return;
     }
     const timer = window.setInterval(() => {

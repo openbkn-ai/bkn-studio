@@ -5,14 +5,21 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Space } from "antd";
+import {
+  DeleteOutlined,
+  EllipsisOutlined,
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import { Alert, Dropdown, Space, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -20,23 +27,23 @@ import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
+import { BuildStatusTag } from "@/modules/data-catalog/components/BuildStatusTag";
 import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTaskDetailDrawer";
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
+import { deleteBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import {
   canManageResourceBuildTasks,
   canViewResourceIndexTasks,
   isResourceIndexReadOnly,
 } from "@/modules/data-catalog/lib/resource-index-access";
-import {
-  buildTaskStatusLabelKey,
-} from "@/modules/data-catalog/services/build-task.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -62,10 +69,6 @@ const ACTIVE_TASK_STATUSES = new Set<BuildTask["status"]>([
   "running",
   "stopped",
 ]);
-
-function formatTaskStatus(task: BuildTask, t: TFunction) {
-  return t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
-}
 
 function formatEffectiveState(task: BuildTask, t: TFunction) {
   if (task.mode === "streaming" && task.status === "running") {
@@ -168,10 +171,12 @@ export function ResourceIndexPanel({
   tasks,
 }: ResourceIndexPanelProps) {
   const { i18n, t } = useTranslation();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const autoPickedRef = useRef(false);
 
@@ -189,11 +194,51 @@ export function ResourceIndexPanel({
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
   const readOnly = isResourceIndexReadOnly(catalog);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
+  const canManageTaskActions =
+    canManageBuildTasks &&
+    hasPermissions({
+      currentPermissions: runtimeConfig.currentUser.permissions,
+      requiredPermissions: "catalog:task_manage",
+    });
   const canViewTasks = canViewResourceIndexTasks(resource);
   const effective = state.effective;
   const latest = state.latest;
   const activeTask = latest && ACTIVE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(effective, latest);
+  const batchDeleteTargets = sortedTasks.filter(
+    (task) => selectedKeys.includes(task.id) && task.status !== "stopping",
+  );
+
+  const handleBatchDelete = () => {
+    if (!batchDeleteTargets.length) return;
+    void modal.confirm({
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
+      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const results = await Promise.allSettled(
+          batchDeleteTargets.map((task) =>
+            deleteBuildTask(task.id, { stopFirst: isActiveBuildTask(task) }),
+          ),
+        );
+        const failed = results.filter((result) => result.status === "rejected").length;
+        if (failed) {
+          void message.error(
+            t("dataCatalog.task.batchDeletePartial", {
+              failed,
+              total: batchDeleteTargets.length,
+            }),
+          );
+        } else {
+          message.success(t("common.success"));
+        }
+        setSelectedKeys([]);
+        await onRefresh();
+      },
+    });
+  };
 
   useEffect(() => {
     if (!active || indexViewExplicit || autoPickedRef.current) {
@@ -228,28 +273,28 @@ export function ResourceIndexPanel({
   const pauseResumeLabel =
     activeTask?.status === "stopped"
       ? t(
-          activeTask.mode === "streaming"
-            ? "dataCatalog.task.resumeListening"
-            : "dataCatalog.task.resumeBuild",
-        )
+        activeTask.mode === "streaming"
+          ? "dataCatalog.task.resumeListening"
+          : "dataCatalog.task.resumeBuild",
+      )
       : t(
-          activeTask?.mode === "streaming" && activeTask.status === "running"
-            ? "dataCatalog.task.pauseListening"
-            : "dataCatalog.task.stopBuild",
-        );
+        activeTask?.mode === "streaming" && activeTask.status === "running"
+          ? "dataCatalog.task.pauseListening"
+          : "dataCatalog.task.stopBuild",
+      );
 
   const pauseResumeLabelOf = (task: BuildTask) =>
     task.status === "stopped"
       ? t(
-          task.mode === "streaming"
-            ? "dataCatalog.task.resumeListening"
-            : "dataCatalog.task.resumeBuild",
-        )
+        task.mode === "streaming"
+          ? "dataCatalog.task.resumeListening"
+          : "dataCatalog.task.resumeBuild",
+      )
       : t(
-          task.mode === "streaming"
-            ? "dataCatalog.task.pauseListening"
-            : "dataCatalog.task.stopBuild",
-        );
+        task.mode === "streaming"
+          ? "dataCatalog.task.pauseListening"
+          : "dataCatalog.task.stopBuild",
+      );
 
   const taskColumns: ColumnsType<BuildTask> = [
     {
@@ -261,13 +306,26 @@ export function ResourceIndexPanel({
       dataIndex: "status",
       title: t("common.status"),
       width: 108,
-      render: (_value, record) => formatTaskStatus(record, t),
+      render: (_value, record) => <BuildStatusTag task={record} />,
     },
     {
       dataIndex: "mode",
-      title: t("common.mode"),
+      title: t("dataCatalog.build.mode"),
       width: 100,
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
+    },
+    {
+      dataIndex: "executeType",
+      title: t("dataCatalog.build.executeType"),
+      width: 100,
+      render: (_value, record) =>
+        record.mode === "batch"
+          ? record.executeType === "incremental"
+            ? t("dataCatalog.build.executeIncremental")
+            : record.executeType === "full"
+              ? t("dataCatalog.build.executeFull")
+              : "-"
+          : "-",
     },
     {
       key: "progress",
@@ -282,38 +340,54 @@ export function ResourceIndexPanel({
       render: (value: number) => formatDateTimeYmdHms(value || undefined),
     },
     {
+      dataIndex: "lastProgressTime",
+      title: t("dataCatalog.task.fields.lastProgressTime"),
+      width: 180,
+      render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
+    },
+    {
+      dataIndex: "finishTime",
+      title: t("dataCatalog.task.finishedAt"),
+      width: 180,
+      render: (value: number | null) => formatDateTimeYmdHms(value || undefined),
+    },
+    {
       key: "actions",
       title: t("common.actions"),
-      width: 160,
+      align: "center",
+      width: 84,
       fixed: "right",
-      render: (_value, record) => (
-        <Space className={panelStyles.historyActionGroup} size={4}>
-          <AppButton onClick={() => setDetailTaskId(record.id)} type="link">
-            {t("common.detail")}
-          </AppButton>
-          {canManageBuildTasks && ACTIVE_TASK_STATUSES.has(record.status) ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton onClick={() => void pauseOrResume(record)} type="link">
-                {pauseResumeLabelOf(record)}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-          {canManageBuildTasks && record.status === "failed" ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton onClick={() => void retry(record)} type="link">
-                {t("dataCatalog.task.rerun")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-          {canManageBuildTasks ? (
-            <PermissionGate permissions="catalog:task_manage">
-              <AppButton danger onClick={() => remove(record)} type="link">
-                {t("common.delete")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-        </Space>
-      ),
+      render: (_value, record) => {
+        const menuItems: NonNullable<MenuProps["items"]> = [
+          { key: "detail", label: t("common.detail") },
+        ];
+        if (canManageTaskActions && ACTIVE_TASK_STATUSES.has(record.status)) {
+          menuItems.push({ key: "pauseResume", label: pauseResumeLabelOf(record) });
+        }
+        if (canManageTaskActions && record.status === "failed") {
+          menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
+        }
+        if (canManageTaskActions && record.status !== "stopping") {
+          menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
+        }
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") setDetailTaskId(record.id);
+                if (key === "pauseResume") void pauseOrResume(record);
+                if (key === "retry") void retry(record);
+                if (key === "delete") void remove(record);
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -374,8 +448,8 @@ export function ResourceIndexPanel({
           </div>
           <div className={panelStyles.sectionActions}>
             {canManageBuildTasks && activeTask &&
-            (activeTask.status === "running" ||
-              activeTask.status === "pending") ? (
+              (activeTask.status === "running" ||
+                activeTask.status === "pending") ? (
               <PermissionGate permissions="catalog:task_manage">
                 <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
                   {pauseResumeLabel}
@@ -474,6 +548,23 @@ export function ResourceIndexPanel({
               <span className={panelStyles.historyCount}> ({sortedTasks.length})</span>
             ) : null}
           </h3>
+          <Space>
+            <AppButton icon={<ReloadOutlined />} onClick={() => void onRefresh()}>
+              {t("common.refresh")}
+            </AppButton>
+            <PermissionGate permissions="catalog:task_manage">
+              <AppButton
+                danger
+                disabled={batchDeleteTargets.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={handleBatchDelete}
+              >
+                {batchDeleteTargets.length > 0
+                  ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})`
+                  : t("dataCatalog.task.batchDelete")}
+              </AppButton>
+            </PermissionGate>
+          </Space>
         </div>
         <TableSurface className={panelStyles.tableSurface}>
           <AppTable<BuildTask>
@@ -482,6 +573,10 @@ export function ResourceIndexPanel({
             locale={{ emptyText: t("dataCatalog.resource.historyEmpty") }}
             pagination={false}
             rowKey="id"
+            rowSelection={{
+              selectedRowKeys: selectedKeys,
+              onChange: (keys) => setSelectedKeys(keys.map(String)),
+            }}
           />
         </TableSurface>
         {sortedTasks.length > 0 ? (

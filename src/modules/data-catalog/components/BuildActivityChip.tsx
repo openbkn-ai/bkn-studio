@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom";
 import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
 /**
  * Top-bar active-build badge. Counts only running or queued batch tasks; streaming listeners are
  * steady state and excluded. Clicking navigates directly to the index-build page.
@@ -33,15 +35,19 @@ export function BuildActivityChip() {
 
   useEffect(() => {
     void refresh();
-    const timer = window.setInterval(() => {
-      if (document.hidden) {
-        return;
-      }
-      void refresh();
-    }, 30_000);
+    const timer = useMock
+      ? undefined
+      : window.setInterval(() => {
+        if (document.hidden) {
+          return;
+        }
+        void refresh();
+      }, 30_000);
     const unsubscribe = subscribeMockDb(() => void refresh());
     return () => {
-      window.clearInterval(timer);
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+      }
       unsubscribe();
     };
   }, [refresh]);

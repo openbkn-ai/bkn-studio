@@ -29,14 +29,14 @@ export function TaskManagementScene() {
         className={styles.tabs}
         items={[
           {
-            key: "index-build",
-            label: t("dataCatalog.taskManagement.tabs.indexBuild"),
-            children: <IndexBuildListScene />,
-          },
-          {
             key: "discover",
             label: t("dataCatalog.taskManagement.tabs.discover"),
             children: <DiscoverTaskListPanel />,
+          },
+          {
+            key: "index-build",
+            label: t("dataCatalog.taskManagement.tabs.indexBuild"),
+            children: <IndexBuildListScene />,
           },
           {
             key: "semantic-understanding",

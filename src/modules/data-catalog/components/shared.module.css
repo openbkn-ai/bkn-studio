@@ -156,6 +156,10 @@
   background: #ef4444;
 }
 
+.progressFillMuted {
+  background: var(--color-text-muted);
+}
+
 .progressMeta {
   display: flex;
   flex-wrap: wrap;
@@ -173,11 +177,11 @@
   line-height: 1.35;
 }
 
-.progressMeta > span {
+.progressMeta>span {
   white-space: nowrap;
 }
 
-.progressMetaCompact > span {
+.progressMetaCompact>span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

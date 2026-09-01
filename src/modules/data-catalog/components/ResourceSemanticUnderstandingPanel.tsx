@@ -5,12 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, Form, InputNumber, Modal, Select, Space, Tag } from "antd";
+import {
+  DeleteOutlined,
+  EllipsisOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
+import { Alert, Checkbox, Dropdown, Form, InputNumber, Modal, Select, Space, Tag, type MenuProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
@@ -26,6 +32,8 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
 function formatTime(value: number) {
   if (!value) return "-";
   return formatDateTimeYmdHms(value < 100_000_000_000 ? value * 1000 : value);
@@ -33,7 +41,7 @@ function formatTime(value: number) {
 
 export function ResourceSemanticUnderstandingPanel({ active, resource }: { active: boolean; resource: CatalogResource }) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,6 +49,11 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const canManageTasks = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:task_manage",
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,12 +72,26 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   }, [active, load]);
 
   useEffect(() => {
-    if (!active || !tasks.some((task) => task.status === "pending" || task.status === "running")) return;
+    if (useMock || !active || !tasks.some((task) => task.status === "pending" || task.status === "running")) return;
     const timer = window.setInterval(() => void load(), 10_000);
     return () => window.clearInterval(timer);
   }, [active, load, tasks]);
 
-  const summary = useMemo(() => tasks.find((task) => task.status === "succeeded" && task.applied) ?? tasks[0], [tasks]);
+  const summary = useMemo(() => tasks.find((task) => task.status === "completed" && task.applied) ?? tasks[0], [tasks]);
+  const summaryPresentation =
+    !summary
+      ? { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.noResult") }
+      : summary.status === "completed" && summary.applied
+        ? { className: styles.summaryValueSuccess, label: t("dataCatalog.semanticWorkspace.applied") }
+        : summary.status === "completed"
+          ? { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.generatedNotApplied") }
+          : summary.status === "pending"
+            ? { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.pending") }
+            : summary.status === "running"
+              ? { className: styles.summaryValueProcessing, label: t("dataCatalog.semanticWorkspace.running") }
+              : summary.status === "failed"
+                ? { className: styles.summaryValueError, label: t("dataCatalog.semanticWorkspace.failed") }
+                : { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.cancelled") };
 
   useEffect(() => {
     if (!open) return;
@@ -89,26 +116,68 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     }
   };
 
+  const batchDeleteTargets = tasks.filter(
+    (task) =>
+      selectedKeys.includes(task.id) &&
+      task.status !== "pending" &&
+      task.status !== "running",
+  );
+
+  const handleBatchDelete = () => {
+    if (!batchDeleteTargets.length) return;
+    void modal.confirm({
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
+      content: t("dataCatalog.task.batchDeleteConfirmContent"),
+      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        const results = await Promise.allSettled(
+          batchDeleteTargets.map((task) => deleteSemanticUnderstandingTask(task.id)),
+        );
+        const failed = results.filter((result) => result.status === "rejected").length;
+        if (failed) {
+          message.error(
+            t("dataCatalog.task.batchDeletePartial", {
+              failed,
+              total: batchDeleteTargets.length,
+            }),
+          );
+        } else {
+          message.success(t("common.success"));
+        }
+        setSelectedKeys([]);
+        await load();
+      },
+    });
+  };
+
   const columns = [
     { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), ellipsis: true },
-    { dataIndex: "status", title: t("common.status"), render: (value: string) => <Tag color={value === "failed" ? "error" : value === "succeeded" ? "success" : value === "cancelled" ? "default" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
     { dataIndex: "applyMode", title: t("dataCatalog.taskManagement.columns.applyMode"), render: (value: string) => t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`) },
-    { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), render: (value: number) => `${Math.round(value * 100)}%` },
+    { dataIndex: "status", title: t("common.status"), render: (value: string) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" || value === "pending" ? "default" : "processing"}>{t(`dataCatalog.taskManagement.semanticStatus.${value}`)}</Tag> },
     { dataIndex: "applied", title: t("dataCatalog.taskManagement.columns.applied"), render: (value: boolean) => <Tag color={value ? "success" : "default"}>{t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}</Tag> },
+    { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), render: (value: number) => `${Math.round(value * 100)}%` },
     { dataIndex: "createTime", title: t("dataCatalog.task.createTime"), render: formatTime },
+    { dataIndex: "finishTime", title: t("dataCatalog.task.finishedAt"), render: formatTime },
     {
-      key: "actions", title: t("common.actions"), width: 160, fixed: "right" as const,
-      render: (_: unknown, task: SemanticUnderstandingTaskSummary) => <Space className={styles.actionGroup} size={4}>
-        <AppButton type="link" onClick={() => setDetailTaskId(task.id)}>{t("common.detail")}</AppButton>
-        <PermissionGate permissions="catalog:task_manage">
-          <AppButton danger disabled={task.status === "pending" || task.status === "running"} type="link" onClick={() => void modal.confirm({
-            title: t("dataCatalog.taskManagement.semantic.deleteTitle"),
-            content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: task.id }),
-            okButtonProps: { danger: true },
-            onOk: async () => { await deleteSemanticUnderstandingTask(task.id); message.success(t("common.success")); await load(); },
-          })}>{t("common.delete")}</AppButton>
-        </PermissionGate>
-      </Space>,
+      align: "center" as const, key: "actions", title: t("common.actions"), width: 84, fixed: "right" as const,
+      render: (_: unknown, task: SemanticUnderstandingTaskSummary) => {
+        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        if (canManageTasks && task.status !== "pending" && task.status !== "running") {
+          menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
+        }
+        return <Dropdown menu={{
+          items: menuItems, onClick: ({ key, domEvent }) => {
+            domEvent.stopPropagation();
+            if (key === "detail") setDetailTaskId(task.id);
+            if (key === "delete") void modal.confirm({
+              title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: task.id }), okButtonProps: { danger: true },
+              onOk: async () => { await deleteSemanticUnderstandingTask(task.id); message.success(t("common.success")); await load(); },
+            });
+          }
+        }} trigger={["click"]}><AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" /></Dropdown>;
+      },
     },
   ];
 
@@ -116,10 +185,17 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     <section className={styles.summaryCard}>
       <div className={styles.summaryContent}>
         <span className={styles.summaryLabel}>{t("dataCatalog.semanticWorkspace.summary")}</span>
-        <strong>{summary?.status === "succeeded" && summary.applied ? t("dataCatalog.semanticWorkspace.applied") : summary?.status === "pending" || summary?.status === "running" ? t("dataCatalog.semanticWorkspace.processing") : t("dataCatalog.semanticWorkspace.notApplied")}</strong>
+        <strong className={`${styles.summaryValue} ${summaryPresentation.className}`}>
+          {summaryPresentation.label}
+        </strong>
       </div>
       <Space>
         <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
+        <PermissionGate permissions="catalog:task_manage">
+          <AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>
+            {batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}
+          </AppButton>
+        </PermissionGate>
         <PermissionGate permissions="catalog:task_manage">
           {/*
             语义理解任务是专业档能力,拦在页面层(ResourceWorkspaceScene 的 RequireEdition):
@@ -135,7 +211,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       </Space>
     </section>
     {error ? <Alert message={error} showIcon type="error" /> : <TableSurface>
-      {!loading && tasks.length === 0 ? <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> : <AppTable columns={columns} dataSource={tasks} loading={loading} pagination={false} rowKey="id" />}
+      {!loading && tasks.length === 0 ? <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> : <AppTable columns={columns} dataSource={tasks} loading={loading} pagination={false} rowKey="id" rowSelection={{ selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)) }} />}
     </TableSurface>}
     <Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("dataCatalog.semanticWorkspace.start")} onCancel={() => setOpen(false)} onOk={() => void start()} open={open} title={t("dataCatalog.semanticWorkspace.createTitle")}>
       <Form form={form} layout="vertical">

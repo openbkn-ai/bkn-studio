@@ -156,6 +156,18 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
 
 let mockTasks: DataConnectDiscoverTask[] = [
   {
+    id: "discover-task-1005",
+    catalogId: "cat-001",
+    strategy: "full_sync",
+    triggerType: "manual",
+    status: "pending",
+    progress: 0,
+    queuePriority: 10,
+    message: discoverMockText("manualTaskCreated"),
+    creatorName: "Platform Admin",
+    createTime: Date.parse("2026-06-03T12:00:00"),
+  },
+  {
     id: "discover-task-1001",
     catalogId: "cat-001",
     scheduleId: "discover-schedule-001",
@@ -210,6 +222,21 @@ let mockTasks: DataConnectDiscoverTask[] = [
     lastProgressTime: Date.parse("2026-06-02T03:02:55"),
     creatorName: "Data Ops",
     createTime: Date.parse("2026-06-02T03:00:00"),
+  },
+  {
+    id: "discover-task-1004",
+    catalogId: "cat-001",
+    strategy: "full_sync",
+    triggerType: "manual",
+    status: "cancelled",
+    progress: 44,
+    queuePriority: 20,
+    message: discoverMockText("syncCancelled"),
+    startTime: Date.parse("2026-06-01T08:00:00"),
+    finishTime: Date.parse("2026-06-01T08:05:12"),
+    lastProgressTime: Date.parse("2026-06-01T08:04:58"),
+    creatorName: "Platform Admin",
+    createTime: Date.parse("2026-06-01T08:00:00"),
   },
 ];
 
@@ -302,15 +329,15 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     resourceName: item.resource_name,
     result: item.result
       ? {
-          catalogId: item.result.catalog_id ?? item.catalog_id,
-          failedCount: item.result.failed_count ?? 0,
-          message: item.result.message ?? "",
-          newCount: item.result.new_count ?? 0,
-          restoredCount: item.result.restored_count ?? 0,
-          staleCount: item.result.stale_count ?? 0,
-          unchangedCount: item.result.unchanged_count ?? 0,
-          updatedCount: item.result.updated_count ?? 0,
-        }
+        catalogId: item.result.catalog_id ?? item.catalog_id,
+        failedCount: item.result.failed_count ?? 0,
+        message: item.result.message ?? "",
+        newCount: item.result.new_count ?? 0,
+        restoredCount: item.result.restored_count ?? 0,
+        staleCount: item.result.stale_count ?? 0,
+        unchangedCount: item.result.unchanged_count ?? 0,
+        updatedCount: item.result.updated_count ?? 0,
+      }
       : undefined,
     message: item.message ?? "",
     startTime: item.start_time,
@@ -325,14 +352,14 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
   const fullResult = task.result;
   const result = fullResult
     ? {
-        catalogId: fullResult.catalogId,
-        failedCount: fullResult.failedCount,
-        newCount: fullResult.newCount,
-        restoredCount: fullResult.restoredCount,
-        staleCount: fullResult.staleCount,
-        unchangedCount: fullResult.unchangedCount,
-        updatedCount: fullResult.updatedCount,
-      }
+      catalogId: fullResult.catalogId,
+      failedCount: fullResult.failedCount,
+      newCount: fullResult.newCount,
+      restoredCount: fullResult.restoredCount,
+      staleCount: fullResult.staleCount,
+      unchangedCount: fullResult.unchangedCount,
+      updatedCount: fullResult.updatedCount,
+    }
     : undefined;
 
   return {
@@ -555,19 +582,19 @@ export async function updateDataConnectDiscoverSchedule(
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-            ...item,
-            name: input.name,
-            cronExpr: input.cronExpr,
-            startTime: formatTimestamp(input.startTime),
-            startTimeValue: input.startTime,
-            endTime: formatTimestamp(input.endTime),
-            endTimeValue: input.endTime,
-            strategy: input.strategy,
-            nextRun: formatTimestamp(nextRunValue),
-            nextRunValue,
-            expectedUpdateTime: now,
-            updateTime: formatTimestamp(now),
-          }
+          ...item,
+          name: input.name,
+          cronExpr: input.cronExpr,
+          startTime: formatTimestamp(input.startTime),
+          startTimeValue: input.startTime,
+          endTime: formatTimestamp(input.endTime),
+          endTimeValue: input.endTime,
+          strategy: input.strategy,
+          nextRun: formatTimestamp(nextRunValue),
+          nextRunValue,
+          expectedUpdateTime: now,
+          updateTime: formatTimestamp(now),
+        }
         : item,
     );
     await wait(undefined);
@@ -625,21 +652,21 @@ export async function setDataConnectDiscoverScheduleEnabled(
     const now = Date.now();
     const nextRunValue = enabled
       ? calculateNextHourlyCronRun(
-          current.cronExpr,
-          now,
-          current.startTimeValue,
-        )
+        current.cronExpr,
+        now,
+        current.startTimeValue,
+      )
       : current.nextRunValue;
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-            ...item,
-            enabled,
-            nextRun: formatTimestamp(nextRunValue),
-            nextRunValue,
-            expectedUpdateTime: now,
-            updateTime: formatTimestamp(now),
-          }
+          ...item,
+          enabled,
+          nextRun: formatTimestamp(nextRunValue),
+          nextRunValue,
+          expectedUpdateTime: now,
+          updateTime: formatTimestamp(now),
+        }
         : item,
     );
     await wait(undefined);

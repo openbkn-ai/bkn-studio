@@ -140,6 +140,18 @@
   width: 150px;
 }
 
+.taskToolbarFilters {
+  flex: 0 0 auto;
+}
+
+.taskToolbarFilters :global(.ant-space-item) {
+  flex: 0 0 auto;
+}
+
+.taskFilterSelect {
+  width: 160px;
+}
+
 .contentSurface :global(.ant-input-affix-wrapper) {
   height: 32px;
   padding-inline: 11px;
@@ -207,9 +219,25 @@
   white-space: nowrap;
 }
 
-.taskActionGroup {
-  flex-wrap: nowrap;
+.textLink {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  color: var(--business-color-link);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.textLink:hover {
+  color: var(--business-color-link-hover);
+  text-decoration: underline;
 }
 
 .selectedRow :global(td) {
@@ -250,7 +278,8 @@
     flex-direction: column;
   }
 
-  .toolbarFilters {
+  .toolbarFilters,
+  .taskToolbarFilters {
     width: 100%;
     justify-content: flex-start;
   }
@@ -262,14 +291,17 @@
 }
 
 @media (max-width: 768px) {
-  .toolbarFilters {
+
+  .toolbarFilters,
+  .taskToolbarFilters {
     flex-direction: column;
     align-items: stretch;
   }
 
   .searchInput,
   .filterSelect,
-  .filterSelectWide {
+  .filterSelectWide,
+  .taskFilterSelect {
     width: 100%;
   }
 

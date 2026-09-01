@@ -68,7 +68,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       direction: "asc",
       resourceId: "resource-1",
       scope: "resource",
-      statuses: ["succeeded", "failed"],
+      statuses: ["completed", "failed"],
     })).toEqual({
       applied: true,
       apply_mode: "force",
@@ -83,7 +83,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
     });
   });
 
-  it("maps backend completed and cancelled states", () => {
+  it("preserves backend completed and cancelled states", () => {
     const base = {
       agent_id: "semantic-agent",
       applied: false,
@@ -100,7 +100,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
     };
 
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "completed" }).status).toBe(
-      "succeeded",
+      "completed",
     );
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "cancelled" }).status).toBe(
       "cancelled",
@@ -109,12 +109,40 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
 });
 
 describe("semantic-understanding mock tasks", () => {
+  it("covers every Vega semantic-understanding task status", async () => {
+    const list = await listSemanticUnderstandingTasks({}, { limit: 20, offset: 0 });
+
+    expect(new Set(list.items.map((task) => task.status))).toEqual(new Set([
+      "pending",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+    ]));
+  });
+
+  it("includes a completed dry-run task whose result has not been applied", async () => {
+    const list = await listSemanticUnderstandingTasks(
+      { applied: false, statuses: ["completed"] },
+      { limit: 20, offset: 0 },
+    );
+
+    expect(list.items).toEqual([
+      expect.objectContaining({
+        applyMode: "dry_run",
+        applied: false,
+        id: "semantic-task-006",
+        status: "completed",
+      }),
+    ]);
+  });
+
   it("serves the same mock task to the list and detail query", async () => {
     const list = await listSemanticUnderstandingTasks({}, { limit: 20, offset: 0 });
     const task = list.items.find((item) => item.id === "semantic-task-001");
     const detail = await getSemanticUnderstandingTask("semantic-task-001");
 
-    expect(task).toMatchObject({ resourceId: "res-001", status: "succeeded" });
+    expect(task).toMatchObject({ resourceId: "res-customers", status: "completed" });
     expect(detail?.id).toBe("semantic-task-001");
     expect(typeof detail?.resultJson).toBe("string");
     expect(typeof detail?.applyDetailJson).toBe("string");

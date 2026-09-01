@@ -20,6 +20,7 @@ const {
   appServicesMock: {
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
+    runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
   },
   getScheduleMock: vi.fn(),
   listSchedulesMock: vi.fn(),

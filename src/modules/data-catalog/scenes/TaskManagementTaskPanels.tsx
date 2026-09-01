@@ -45,6 +45,8 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./TaskManagementTaskPanels.module.css";
 
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+
 type SemanticTaskStatus = SemanticUnderstandingTaskSummary["status"];
 type SemanticTask = SemanticUnderstandingTaskSummary;
 type SemanticTaskFilters = SemanticUnderstandingTaskListFilters;
@@ -68,7 +70,9 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }
       ? sharedStyles.progressFillDone
       : task.status === "failed"
         ? sharedStyles.progressFillFailed
-        : sharedStyles.progressFillVector;
+        : task.status === "cancelled" || task.status === "pending"
+          ? sharedStyles.progressFillMuted
+          : sharedStyles.progressFillVector;
 
   return (
     <div className={sharedStyles.progressWrapCompact}>
@@ -95,7 +99,7 @@ function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStat
   const { t } = useTranslation();
   const style = status === "completed" ? { background: "var(--color-success-bg)", borderColor: "var(--color-success-border)", color: "var(--color-success-text)" }
     : status === "failed" ? { background: "var(--color-error-bg)", borderColor: "var(--color-error-border)", color: "var(--color-error-text)" }
-      : status === "cancelled" ? { background: "var(--color-interface-panel-bg)", borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }
+      : status === "cancelled" || status === "pending" ? { background: "var(--color-interface-panel-bg)", borderColor: "var(--color-border)", color: "var(--color-text-secondary)" }
         : { background: "var(--color-info-bg)", borderColor: "var(--color-info-border)", color: "var(--color-text-link)" };
   return <Tag style={style}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</Tag>;
 }
@@ -103,11 +107,11 @@ function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStat
 function SemanticTaskStatusTag({ status }: { status: SemanticTaskStatus }) {
   const { t } = useTranslation();
   const statusClass =
-    status === "succeeded"
+    status === "completed"
       ? sharedStyles.taskSucceeded
       : status === "failed"
         ? sharedStyles.taskFailed
-        : status === "cancelled"
+        : status === "cancelled" || status === "pending"
           ? sharedStyles.taskPending
           : sharedStyles.taskRunning;
   return <span className={[sharedStyles.tag, statusClass].join(" ")}>{t(`dataCatalog.taskManagement.semanticStatus.${status}`)}</span>;
@@ -193,24 +197,29 @@ export function DiscoverTaskListPanel() {
   }, []);
   const active = tasks.some((item) => item.status === "pending" || item.status === "running");
   useEffect(() => {
-    if (!active) return;
+    if (useMock || !active) return;
     const timer = window.setInterval(() => !document.hidden && void load(), 10_000);
     return () => window.clearInterval(timer);
   }, [active, load]);
 
+  const batchDeleteTargets = tasks.filter(
+    (task) =>
+      selectedKeys.includes(task.id) &&
+      task.status !== "pending" &&
+      task.status !== "running",
+  );
   const handleBatchDelete = () => {
-    const targets = tasks.filter((task) => selectedKeys.includes(task.id));
-    if (targets.length === 0) return;
+    if (batchDeleteTargets.length === 0) return;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: targets.length }),
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
       content: t("dataCatalog.task.batchDeleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
-        const results = await Promise.allSettled(targets.map((task) => deleteDataConnectDiscoverTask(task.id)));
+        const results = await Promise.allSettled(batchDeleteTargets.map((task) => deleteDataConnectDiscoverTask(task.id)));
         const failed = results.filter((result) => result.status === "rejected").length;
-        if (failed) message.error(t("dataCatalog.task.batchDeletePartial", { failed, total: targets.length }));
+        if (failed) message.error(t("dataCatalog.task.batchDeletePartial", { failed, total: batchDeleteTargets.length }));
         else message.success(t("common.success"));
         setSelectedKeys([]);
         await load();
@@ -227,7 +236,17 @@ export function DiscoverTaskListPanel() {
   };
 
   const columns: ColumnsType<DataConnectDiscoverTaskSummary> = [
-    { dataIndex: "id", title: t("dataCatalog.taskManagement.columns.task"), width: 160, ellipsis: true },
+    {
+      dataIndex: "id",
+      title: t("dataCatalog.taskManagement.columns.task"),
+      width: 160,
+      ellipsis: true,
+      render: (value: string) => (
+        <button className={styles.textLink} onClick={() => setDetailTaskId(value)} type="button">
+          {value}
+        </button>
+      ),
+    },
     {
       dataIndex: "catalogId",
       title: t("dataCatalog.taskManagement.columns.catalog"),
@@ -274,6 +293,7 @@ export function DiscoverTaskListPanel() {
     },
     { dataIndex: "lastProgressTime", key: "last_progress_time", title: t("dataConnect.discoverLastProgressTime"), width: 180, sorter: true, sortOrder: sortOrderOf("last_progress_time"), render: formatTime },
     { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
+    { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",
       fixed: "right",
@@ -282,10 +302,9 @@ export function DiscoverTaskListPanel() {
       width: 84,
       render: (_, record) => {
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
-        if (canManageCatalogTasks) {
+        if (canManageCatalogTasks && record.status !== "pending" && record.status !== "running") {
           menuItems.push({
             danger: true,
-            disabled: record.status === "pending" || record.status === "running",
             key: "delete",
             label: t("common.delete"),
           });
@@ -315,7 +334,7 @@ export function DiscoverTaskListPanel() {
   ];
 
   return <TaskPanel>
-    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
+    <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
       <Select allowClear className={styles.select} options={["full_sync", "create_only", "cleanup_only"].map((value) => ({ label: t(`dataConnect.discoverStrategies.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.strategy")} value={strategy} onChange={(value) => { setStrategy(value); setPage(1); }} />
       <Select allowClear className={styles.select} options={["manual", "scheduled"].map((value) => ({ label: t(`dataConnect.discoverTriggerTypes.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.trigger")} value={triggerType} onChange={(value) => { setTriggerType(value); setPage(1); }} />
       <Select allowClear className={styles.select} maxTagCount="responsive" mode="multiple" options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataConnect.discoverTaskStatuses.${value}`), value }))} placeholder={t("dataCatalog.task.detailSections.status")} value={statuses} onChange={(value: DataConnectDiscoverTaskStatus[]) => { setStatuses(value); setPage(1); }} />
@@ -368,20 +387,25 @@ export function SemanticUnderstandingTaskListPanel() {
   }, [applied, applyMode, direction, page, pageSize, scope, sort, statuses]);
   useEffect(() => void load(), [load]);
   const active = tasks.some((item) => item.status === "pending" || item.status === "running");
-  useEffect(() => { if (!active) return; const timer = window.setInterval(() => !document.hidden && void load(), 10_000); return () => window.clearInterval(timer); }, [active, load]);
+  useEffect(() => { if (useMock || !active) return; const timer = window.setInterval(() => !document.hidden && void load(), 10_000); return () => window.clearInterval(timer); }, [active, load]);
+  const batchDeleteTargets = tasks.filter(
+    (task) =>
+      selectedKeys.includes(task.id) &&
+      task.status !== "pending" &&
+      task.status !== "running",
+  );
   const handleBatchDelete = () => {
-    const targets = tasks.filter((task) => selectedKeys.includes(task.id));
-    if (targets.length === 0) return;
+    if (batchDeleteTargets.length === 0) return;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: targets.length }),
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
       content: t("dataCatalog.task.batchDeleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
-        const results = await Promise.allSettled(targets.map((task) => deleteSemanticTask(task.id)));
+        const results = await Promise.allSettled(batchDeleteTargets.map((task) => deleteSemanticTask(task.id)));
         const failed = results.filter((result) => result.status === "rejected").length;
-        if (failed) message.error(t("dataCatalog.task.batchDeletePartial", { failed, total: targets.length }));
+        if (failed) message.error(t("dataCatalog.task.batchDeletePartial", { failed, total: batchDeleteTargets.length }));
         else message.success(t("common.success"));
         setSelectedKeys([]);
         await load();
@@ -454,6 +478,7 @@ export function SemanticUnderstandingTaskListPanel() {
     },
     { dataIndex: "confidence", title: t("dataCatalog.taskManagement.columns.confidence"), width: 100, render: (value) => `${Math.round(value * 100)}%` },
     { dataIndex: "finishTime", key: "finish_time", title: t("dataCatalog.task.finishedAt"), width: 180, sorter: true, sortOrder: sortOrderOf("finish_time"), render: formatTime },
+    { dataIndex: "createTime", key: "create_time", title: t("dataCatalog.task.createTime"), width: 180, sorter: true, sortOrder: sortOrderOf("create_time"), render: formatTime },
     {
       align: "center",
       fixed: "right",
@@ -462,10 +487,9 @@ export function SemanticUnderstandingTaskListPanel() {
       width: 84,
       render: (_, record) => {
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
-        if (canManageCatalogTasks) {
+        if (canManageCatalogTasks && record.status !== "pending" && record.status !== "running") {
           menuItems.push({
             danger: true,
-            disabled: record.status === "pending" || record.status === "running",
             key: "delete",
             label: t("common.delete"),
           });
@@ -493,10 +517,10 @@ export function SemanticUnderstandingTaskListPanel() {
       },
     },
   ];
-  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={selectedKeys.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{selectedKeys.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space><Space className={styles.toolbarFilters}>
     <Select allowClear className={styles.select} options={["catalog", "resource"].map((value) => ({ label: t(`dataCatalog.taskManagement.scope.${value}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.scope")} value={scope} onChange={(value) => { setScope(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={["dry_run", "fill_empty", "force"].map((value) => ({ label: t(`dataCatalog.taskManagement.applyMode.${value === "dry_run" ? "dryRun" : value === "fill_empty" ? "fillEmpty" : "force"}`), value }))} placeholder={t("dataCatalog.taskManagement.columns.applyMode")} value={applyMode} onChange={(value) => { setApplyMode(value); setPage(1); }} />
-    <Select allowClear className={styles.select} maxTagCount="responsive" mode="multiple" options={["pending", "running", "succeeded", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("dataCatalog.task.detailSections.status")} value={statuses} onChange={(value: SemanticTaskStatus[]) => { setStatuses(value); setPage(1); }} />
+    <Select allowClear className={styles.select} maxTagCount="responsive" mode="multiple" options={["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ label: t(`dataCatalog.taskManagement.semanticStatus.${value}`), value }))} placeholder={t("dataCatalog.task.detailSections.status")} value={statuses} onChange={(value: SemanticTaskStatus[]) => { setStatuses(value); setPage(1); }} />
     <Select allowClear className={styles.select} options={[true, false].map((value) => ({ label: t(value ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied"), value }))} placeholder={t("dataCatalog.taskManagement.columns.applied")} value={applied} onChange={(value) => { setApplied(value); setPage(1); }} />
   </Space></div><TaskTable error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }

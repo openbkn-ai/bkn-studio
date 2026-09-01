@@ -256,6 +256,7 @@ export const dataConnectEnUS = {
       knowledgeIndexSchedule: "Knowledge index incremental discovery",
       manualTaskCreated: "Manual discover task created and waiting to run.",
       pullingIndexChanges: "Pulling incremental index changes.",
+      syncCancelled: "Sync cancelled.",
       syncCompleted: "Sync completed. Processed {{count}} tables.",
       syncCompleted_one: "Sync completed. Processed {{count}} table.",
       syncCompleted_other: "Sync completed. Processed {{count}} tables.",
