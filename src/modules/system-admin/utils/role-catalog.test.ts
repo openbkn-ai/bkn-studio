@@ -42,6 +42,7 @@ describe("role-catalog", () => {
 
   it("localizes built-in descriptions while preserving custom descriptions", async () => {
     await i18n.changeLanguage("en-US");
+    expect(i18n.exists("systemAdmin.roleCatalog.builtin.adminDescription", { lng: "en-US" })).toBe(true);
     expect(roleDescription({ name: "super_admin", description: "中文后端描述", builtin: true })).toBe(
       "Built-in hidden and controlled role with full platform permissions.",
     );
