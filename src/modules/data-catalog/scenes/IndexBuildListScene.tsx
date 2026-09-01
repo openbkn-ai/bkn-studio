@@ -135,6 +135,7 @@ export function IndexBuildListScene() {
       });
       setSearchParams(next, { replace: true });
       offsetsRef.current = [0];
+      setSelectedKeys([]);
       setPage(1);
     },
     [listFilters, searchParams, setSearchParams],
@@ -262,6 +263,7 @@ export function IndexBuildListScene() {
       setSort(single.columnKey as BuildTaskSort);
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setPage(1);
   };
 
@@ -533,6 +535,7 @@ export function IndexBuildListScene() {
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
+            setSelectedKeys([]);
             if (nextPageSize !== pageSize) {
               offsetsRef.current = [0];
               setPage(1);

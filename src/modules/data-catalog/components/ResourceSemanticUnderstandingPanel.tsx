@@ -132,6 +132,8 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       message.success(t("dataCatalog.semanticWorkspace.started"));
       setOpen(false);
       form.resetFields();
+      setSelectedKeys([]);
+      setPage(1);
       await load();
     } finally {
       setCreating(false);
@@ -202,6 +204,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       setApplyModeFilter(filters.applyMode?.[0] as string | undefined);
       setStatusFilter((filters.status ?? []).map(String) as SemanticUnderstandingTaskSummary["status"][]);
       setAppliedFilter(filters.applied?.[0] === undefined ? undefined : filters.applied[0] === "true");
+      setSelectedKeys([]);
       setPage(1);
       return;
     }
@@ -214,6 +217,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       setSort(single.columnKey as "create_time" | "finish_time");
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setPage(1);
   };
 
@@ -278,7 +282,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     {error ? <Alert message={error} showIcon type="error" /> : <TableSurface>
       {!loading && filteredTasks.length === 0 ? <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> : <AppTable columns={columns} dataSource={pagedTasks} loading={loading} onChange={handleTableChange} pagination={false} rowKey="id" rowSelection={canManageTasks ? { selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)), getCheckboxProps: (task) => ({ disabled: task.status === "pending" || task.status === "running" }) } : undefined} />}
     </TableSurface>}
-    {filteredTasks.length > 0 ? <TablePaginationBar current={page} onChange={(nextPage, nextPageSize) => { setPage(nextPageSize === pageSize ? nextPage : 1); setPageSize(nextPageSize); }} pageSize={pageSize} showSizeChanger showTotal={(count) => t("common.total", { total: count })} total={filteredTasks.length} /> : null}
+    {filteredTasks.length > 0 ? <TablePaginationBar current={page} onChange={(nextPage, nextPageSize) => { setSelectedKeys([]); setPage(nextPageSize === pageSize ? nextPage : 1); setPageSize(nextPageSize); }} pageSize={pageSize} showSizeChanger showTotal={(count) => t("common.total", { total: count })} total={filteredTasks.length} /> : null}
     <Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("dataCatalog.semanticWorkspace.start")} onCancel={() => setOpen(false)} onOk={() => void start()} open={open} title={t("dataCatalog.semanticWorkspace.createTitle")}>
       <Form form={form} layout="vertical">
         <Form.Item label={t("dataCatalog.taskManagement.columns.applyMode")} name="applyMode" rules={[{ required: true }]}>

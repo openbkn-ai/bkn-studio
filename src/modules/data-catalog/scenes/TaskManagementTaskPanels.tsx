@@ -211,6 +211,7 @@ export function DiscoverTaskListPanel() {
       setStrategy(filters.strategy?.[0] as DataConnectDiscoverStrategy | undefined);
       setTriggerType(filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined);
       setStatuses((filters.status ?? []).map(String) as DataConnectDiscoverTaskStatus[]);
+      setSelectedKeys([]);
       setPage(1);
       return;
     }
@@ -223,6 +224,7 @@ export function DiscoverTaskListPanel() {
       setSort(single.columnKey as DataConnectDiscoverTaskSort);
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setPage(1);
   };
 
@@ -327,7 +329,7 @@ export function DiscoverTaskListPanel() {
   return <TaskPanel>
     <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div>
     <TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
-    <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />
+    <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />
     {detailTaskId ? <DataConnectDiscoverTaskDrawer catalogs={catalogs} onClose={() => setDetailTaskId(null)} open schedules={schedules} taskId={detailTaskId} /> : null}
   </TaskPanel>;
 }
@@ -402,7 +404,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const sortOrderOf = (key: NonNullable<SemanticTaskFilters["sort"]>) => sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
   const handleTableChange: TableProps<SemanticTask>["onChange"] = (_pagination, filters, sorter, extra) => {
     if (extra.action === "filter") {
-      setScope(filters.scope?.[0] as SemanticTask["scope"] | undefined); setApplyMode(filters.applyMode?.[0] as string | undefined); setStatuses((filters.status ?? []).map(String) as SemanticTaskStatus[]); setApplied(filters.applied?.[0] === undefined ? undefined : filters.applied[0] === "true"); setPage(1); return;
+      setScope(filters.scope?.[0] as SemanticTask["scope"] | undefined); setApplyMode(filters.applyMode?.[0] as string | undefined); setStatuses((filters.status ?? []).map(String) as SemanticTaskStatus[]); setApplied(filters.applied?.[0] === undefined ? undefined : filters.applied[0] === "true"); setSelectedKeys([]); setPage(1); return;
     }
     if (extra.action !== "sort") return;
     const single = Array.isArray(sorter) ? sorter[0] : sorter;
@@ -413,6 +415,7 @@ export function SemanticUnderstandingTaskListPanel() {
       setSort(single.columnKey as NonNullable<SemanticTaskFilters["sort"]>);
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setPage(1);
   };
   const columns: ColumnsType<SemanticTask> = [
@@ -514,7 +517,7 @@ export function SemanticUnderstandingTaskListPanel() {
       },
     },
   ];
-  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div><TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div><TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }
 
 function TaskTable<T extends { id: string; status: string }>({ canSelect, error, loading, data, columns, emptyTitle, isSelectionDisabled, rawTotal = 0, onRetry, onTableChange, selectedKeys, onSelectionChange }: { canSelect: boolean; error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; isSelectionDisabled: (task: T) => boolean; rawTotal?: number; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {

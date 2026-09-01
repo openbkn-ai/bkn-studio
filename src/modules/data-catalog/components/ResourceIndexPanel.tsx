@@ -318,6 +318,7 @@ export function ResourceIndexPanel({
     if ("mode" in patch) setModeFilter(patch.mode);
     if ("executeType" in patch) setExecuteTypeFilter(patch.executeType);
     if ("statuses" in patch) setStatusFilter(patch.statuses ?? []);
+    setSelectedKeys([]);
     setTaskPage(1);
   };
   const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
@@ -337,6 +338,7 @@ export function ResourceIndexPanel({
       setSort(single.columnKey as BuildTaskSort);
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setTaskPage(1);
   };
 
@@ -619,6 +621,8 @@ export function ResourceIndexPanel({
                 disabled={buildActionsDisabled}
                 onGoConfigure={() => onIndexViewChange("config")}
                 onStarted={() => {
+                  setSelectedKeys([]);
+                  setTaskPage(1);
                   void onRefresh();
                 }}
                 resource={resource}
@@ -685,6 +689,7 @@ export function ResourceIndexPanel({
           <TablePaginationBar
             current={taskPage}
             onChange={(nextPage, nextPageSize) => {
+              setSelectedKeys([]);
               setTaskPage(nextPage);
               setTaskPageSize(nextPageSize);
             }}

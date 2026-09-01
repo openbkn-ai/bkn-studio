@@ -319,6 +319,7 @@ export function DataConnectDiscoverScene({
       setTaskStrategyFilter(filters.strategy?.[0] as DataConnectDiscoverStrategy | undefined);
       setTaskTriggerTypeFilter((filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined) ?? "all");
       setTaskStatusFilter((filters.status ?? []).map(String) as TaskStatusFilterValue);
+      setSelectedTaskKeys([]);
       setTaskPage(1);
       return;
     }
@@ -331,6 +332,7 @@ export function DataConnectDiscoverScene({
       setTaskSort(single.columnKey as DataConnectDiscoverTaskSort);
       setTaskDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedTaskKeys([]);
     setTaskPage(1);
   };
 
@@ -1003,6 +1005,7 @@ export function DataConnectDiscoverScene({
         <TablePaginationBar
           current={taskPage}
           onChange={(page, pageSize) => {
+            setSelectedTaskKeys([]);
             setTaskPage(page);
             setTaskPageSize(pageSize);
           }}
