@@ -27,10 +27,10 @@ export function createMenuPermissionForKey(key: string): string | string[] {
 
 export function editPermissionForKind(kind: string): string {
   if (kind === "mcp") {
-    return executionFactoryLabPermissions.capabilityEdit;
+    return executionFactoryLabPermissions.mcpEdit;
   }
   if (kind === "skill") {
-    return executionFactoryLabPermissions.capabilityEdit;
+    return executionFactoryLabPermissions.skillEdit;
   }
   if (kind === "function") {
     return executionFactoryLabPermissions.capabilityEdit;

@@ -8,6 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import { executionFactoryLabRoutes } from "@/modules/execution-factory-lab/routes";
+import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
+import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 import { executionFactoryRoutes } from "@/modules/execution-factory/routes";
 
 function routeByPath(path: string) {
@@ -35,5 +37,15 @@ describe("execution factory routes", () => {
       ),
     ).toBe(true);
   });
-});
 
+  it("uses execution-unit view permissions for sandbox runtime entry", () => {
+    const sandboxItem = executionFactoryNavigation.items.find(
+      (item) => item.key === "execution-factory-sandbox-runtime",
+    );
+
+    expect(sandboxItem).toMatchObject({
+      permission: executionFactoryViewPermissions,
+      permissionMode: "any",
+    });
+  });
+});

@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
+import { filterAccessibleExecutionUnitTabs } from "@/modules/execution-factory/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -275,7 +276,7 @@ export function ExecutionUnitListScene({
   toolbarHintKey,
 }: ExecutionUnitListSceneProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { pageState, reset, setKeyword } = usePageState();
@@ -283,13 +284,23 @@ export function ExecutionUnitListScene({
   const listLoadGenerationRef = useRef(0);
   const installedSyncIdleRef = useRef<IdleTaskHandle | null>(null);
   const [overlaysReady, setOverlaysReady] = useState(false);
-  const resolvableTabs = useMemo(() => {
-    if (!isCapabilityUxV2() || tabs.includes("operator")) {
+  const accessibleTabs = useMemo(() => {
+    if (marketMode) {
       return tabs;
     }
 
-    return [...tabs, "operator" as const];
-  }, [tabs]);
+    return filterAccessibleExecutionUnitTabs(tabs, runtimeConfig.currentUser.permissions ?? []);
+  }, [marketMode, runtimeConfig.currentUser.permissions, tabs]);
+  const resolvableTabs = useMemo(() => {
+    if (!isCapabilityUxV2() || accessibleTabs.includes("operator")) {
+      return accessibleTabs;
+    }
+
+    const operatorViewPermission = "execution-factory:operator:view";
+    return runtimeConfig.currentUser.permissions?.includes(operatorViewPermission)
+      ? [...accessibleTabs, "operator" as const]
+      : accessibleTabs;
+  }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
   );

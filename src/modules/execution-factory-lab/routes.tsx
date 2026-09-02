@@ -10,6 +10,7 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { executionFactoryLabModuleManifest } from "@/modules/execution-factory-lab/module.manifest";
+import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 import { CatalogLabPage } from "@/modules/execution-factory-lab/pages/CatalogLabPage";
 import { CapabilityLabPage } from "@/modules/execution-factory-lab/pages/CapabilityLabPage";
 import { SandboxRuntimePage } from "@/modules/execution-factory-lab/pages/SandboxRuntimePage";
@@ -46,7 +47,7 @@ export const executionFactoryLabRoutes: RouteObject[] = [
         titleKey: "executionFactoryLab.sandboxRuntimeTitle",
       },
     },
-    element: <RequirePermission permissions="execution-factory-lab:sandbox-runtime:view"><SandboxRuntimePage /></RequirePermission>,
+    element: <RequirePermission mode="any" permissions={[...executionFactoryViewPermissions]}><SandboxRuntimePage /></RequirePermission>,
   },
 ];
 

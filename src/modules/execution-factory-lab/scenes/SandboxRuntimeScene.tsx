@@ -28,7 +28,7 @@ import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
+import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 import {
   getSandboxRuntimeHealth,
   getSandboxRuntimePool,
@@ -361,7 +361,8 @@ export function SandboxRuntimeScene() {
           />
         </section>
       }
-      permissions={executionFactoryLabPermissions.sandboxRuntimeView}
+      mode="any"
+      permissions={[...executionFactoryViewPermissions]}
     >
       <section className={styles.page}>
         <div className={styles.intro}>

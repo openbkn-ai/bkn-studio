@@ -95,11 +95,20 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("catalog:task_manage", grants, false)).toBe(true);
   });
 
-  it("能力的增删改查按 operator 判定，且 edit 落到 modify、debug 落到 execute", () => {
+  it("能力的写操作按 operator 判定，且 edit 落到 modify、debug 落到 execute", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:capability:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:edit", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:debug", grants, false)).toBe(true);
+  });
+
+  it("能力列表接受任一执行单元的查看权限", () => {
+    for (const type of ["operator", "tool_box", "mcp", "skill"]) {
+      const viewOnly = flattenSafeGrants([
+        { operations: ["view"], resource: { id: "*", type } },
+      ]);
+      expect(isStudioPermissionGranted("execution-factory-lab:capability:view", viewOnly, false)).toBe(true);
+    }
   });
 
   it("函数归算子，与后端 #345 的门禁同口径", () => {
