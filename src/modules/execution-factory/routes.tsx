@@ -264,7 +264,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <SandboxRuntimePage />,
-      executionFactoryViewPermissions,
+      ["execution-factory-lab:sandbox-runtime:view"],
     ),
   },
 ];

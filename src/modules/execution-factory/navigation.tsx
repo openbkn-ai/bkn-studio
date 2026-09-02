@@ -17,7 +17,7 @@ import { executionFactoryViewPermissions } from "@/modules/execution-factory/per
 // Every item declares required permissions so unauthorized users do not see sidebar entries that open to empty pages.
 // Execution Unit Management hosts functions, toolboxes, MCPs, and Skills, so any corresponding
 // view permission allows entry.
-// Sandbox runtime follows the same entry rule as execution-unit management.
+// Sandbox runtime is limited to super administrators, matching backend #339 guards.
 export const executionFactoryNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory",
   items: [
@@ -26,7 +26,7 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionUnitManagement",
       icon: <ToolOutlined />,
       path: "/execution-factory/units",
-      permission: executionFactoryViewPermissions,
+      permission: [...executionFactoryViewPermissions],
       permissionMode: "any",
     },
     {
@@ -41,8 +41,7 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionFactorySandboxRuntime",
       icon: <CloudServerOutlined />,
       path: "/execution-factory/sandbox-runtime",
-      permission: executionFactoryViewPermissions,
-      permissionMode: "any",
+      permission: "execution-factory-lab:sandbox-runtime:view",
     },
   ],
 };

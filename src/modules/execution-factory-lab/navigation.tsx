@@ -9,10 +9,9 @@ import { AppstoreOutlined, CloudServerOutlined, ExperimentOutlined } from "@ant-
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
-import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 
 // Every item declares required permissions so unauthorized users do not see sidebar entries opening to empty pages.
-// Sandbox runtime follows the same entry rule as execution-unit management.
+// Sandbox runtime is limited to super administrators, matching backend #339 guards.
 export const executionFactoryLabNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory-lab",
   items: [
@@ -35,8 +34,7 @@ export const executionFactoryLabNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionFactoryLabSandboxRuntime",
       icon: <CloudServerOutlined />,
       path: "/execution-factory-lab/sandbox-runtime",
-      permission: executionFactoryViewPermissions,
-      permissionMode: "any",
+      permission: executionFactoryLabPermissions.sandboxRuntimeView,
     },
   ],
 };
