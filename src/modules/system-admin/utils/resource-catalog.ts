@@ -74,7 +74,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   knowledge_network: "Knowledge network",
   large_model: "Large model",
   mcp: "MCP",
-  operator: "Operator",
+  operator: "Function",
   resource: "Data resource",
   safe_admin: "bkn-safe management API",
   skill: "Skill",

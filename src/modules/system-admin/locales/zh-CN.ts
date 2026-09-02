@@ -61,7 +61,7 @@ export const systemAdminZhCN = {
         knowledge_network: "知识网络",
         large_model: "大模型",
         mcp: "MCP",
-        operator: "算子",
+        operator: "函数",
         resource: "数据资源",
         safe_admin: "bkn-safe 管理 API",
         skill: "技能",
@@ -112,7 +112,7 @@ export const systemAdminZhCN = {
     },
     objectGrants: {
       title: "权限管理",
-      description: "在角色权限之上，为用户或部门配置某个具体对象（数据目录 / 模型 / 算子 / 工具箱 等）的可用操作。",
+      description: "在角色权限之上，为用户或部门配置某个具体对象（数据目录 / 模型 / 函数 / 工具箱 等）的可用操作。",
       create: "新建权限配置",
       authorize: "配置权限",
       manage: "管理",

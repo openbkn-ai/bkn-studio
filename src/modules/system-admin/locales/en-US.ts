@@ -61,7 +61,7 @@ export const systemAdminEnUS = {
         knowledge_network: "Knowledge network",
         large_model: "Large model",
         mcp: "MCP",
-        operator: "Operator",
+        operator: "Function",
         resource: "Data resource",
         safe_admin: "bkn-safe management API",
         skill: "Skill",
@@ -112,7 +112,7 @@ export const systemAdminEnUS = {
     },
     objectGrants: {
       title: "Permission Management",
-      description: "On top of role permissions, configure allowed operations on a specific object (catalog / model / operator / toolbox, etc.) for a user or department.",
+      description: "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user or department.",
       create: "New Permission Rule",
       authorize: "Configure Permissions",
       manage: "Manage",
