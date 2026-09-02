@@ -64,6 +64,9 @@ const ENTITY_TO_RESOURCE_TYPE: Record<string, SafeResourceType> = {
  * execution-factory-lab share the same rules.
  */
 const OVERRIDES: Record<string, string[]> = {
+  // The capability list contains all execution-unit kinds. Any resource view grant opens it;
+  // the concrete resource APIs remain responsible for filtering and object-level checks.
+  "capability:view": ALL_RESOURCE_TYPES.map((type) => `${type}:view`),
   // Marketplace browsing: the backend uses public_access for all four resource types; there
   // is no dedicated market resource type. bkn-safe also has a catalog resource type, but that
   // refers to the Vega data catalog, not this capability marketplace, and must not be mapped here.

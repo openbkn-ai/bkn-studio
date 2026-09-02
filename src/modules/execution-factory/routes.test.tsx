@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import { executionFactoryLabRoutes } from "@/modules/execution-factory-lab/routes";
+import { executionFactoryNavigation } from "@/modules/execution-factory/navigation";
 import { executionFactoryRoutes } from "@/modules/execution-factory/routes";
 
 function routeByPath(path: string) {
@@ -35,5 +36,14 @@ describe("execution factory routes", () => {
       ),
     ).toBe(true);
   });
-});
 
+  it("keeps sandbox runtime restricted to its dedicated permission", () => {
+    const sandboxItem = executionFactoryNavigation.items.find(
+      (item) => item.key === "execution-factory-sandbox-runtime",
+    );
+
+    expect(sandboxItem).toMatchObject({
+      permission: "execution-factory-lab:sandbox-runtime:view",
+    });
+  });
+});
