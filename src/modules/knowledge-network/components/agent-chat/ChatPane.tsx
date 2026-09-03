@@ -339,7 +339,9 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
         <span>
-          {live ? t("knowledgeNetwork.agentChat.reasoning.live") : t("knowledgeNetwork.agentChat.reasoning.done")}
+          {live
+            ? t("knowledgeNetwork.agentChat.chatPane.reasoning.live")
+            : t("knowledgeNetwork.agentChat.chatPane.reasoning.done")}
           {live ? (
             <span className={styles.thinkDots}>
               <i />
