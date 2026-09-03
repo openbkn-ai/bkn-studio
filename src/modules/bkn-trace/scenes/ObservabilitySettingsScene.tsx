@@ -11,6 +11,8 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { isSuperAdmin } from "@/framework/auth/super-admin";
+import { useAppServices } from "@/framework/context/use-app-services";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { BUSINESS_MODULES, createArchive, downloadArchive, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type BusinessModule, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
@@ -21,6 +23,8 @@ type ModuleSourceRow = { module: BusinessModule; reason?: string; sourceIds: str
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
+  const superAdmin = isSuperAdmin(runtimeConfig.currentUser.roles);
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
@@ -32,6 +36,11 @@ export function ObservabilitySettingsScene() {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
+    if (!superAdmin) {
+      setDenied(true);
+      setLoading(false);
+      return;
+    }
     let active = true;
     getAccessProfile().then(async (profile) => {
       if (!profile.globalLogSearch && !profile.logPolicyRead) {
@@ -64,7 +73,7 @@ export function ObservabilitySettingsScene() {
       if (active) { setError(t("bknTrace.errors.accessProfileFailed")); setLoading(false); }
     });
     return () => { active = false; };
-  }, [t]);
+  }, [superAdmin, t]);
 
   const moduleSources = useMemo<ModuleSourceRow[]>(() => BUSINESS_MODULES.map((module) => {
     if (sourceLoadState === "not_requested") return { module, reason: "source_not_requested", sourceIds: [], status: "unknown" };
@@ -111,7 +120,7 @@ export function ObservabilitySettingsScene() {
     { dataIndex: "status", key: "status", title: t("bknTrace.settings.columns.status"), render: (value: StorageRow["status"]) => <Tag color={value === "known" ? "green" : "default"}>{t(`bknTrace.settings.status.${value}`)}</Tag> },
   ];
 
-  if (loading) return <Spin />;
+  if (!superAdmin || loading) return superAdmin ? <Spin /> : <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   if (denied) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   return <div className={styles.workspace}>
     <header className={styles.header}><div><Typography.Title level={3}>{t("bknTrace.settings.title")}</Typography.Title><Typography.Text type="secondary">{t("bknTrace.settings.description")}</Typography.Text></div></header>

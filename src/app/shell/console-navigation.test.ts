@@ -109,4 +109,18 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "domain-knowledge-network-integration",
     ]);
   });
+
+  it("可观察性设置仅对超级管理员显示", () => {
+    const regular = filterNavByPermission(consoleNavigation, ["catalog:view_detail"]);
+    const superAdmin = filterNavByPermission(
+      consoleNavigation,
+      ["catalog:view_detail"],
+      ["super_admin"],
+    );
+    const observabilityChildren = (items: ReturnType<typeof filterNavByPermission>) =>
+      items.find((item) => item.key === "observability")?.children ?? [];
+
+    expect(keys(observabilityChildren(regular))).not.toContain("observability-settings");
+    expect(keys(observabilityChildren(superAdmin))).toContain("observability-settings");
+  });
 });
