@@ -18,14 +18,14 @@ const systemGroup = (items: ReturnType<typeof filterNavByPermission>) =>
   items.find((item) => item.key === "system-management");
 
 describe("consoleNavigation — 主线菜单顺序", () => {
-  it("将可观测性置于模型管理之后、系统管理之前", () => {
+  it("将可观测性置于通用业务知识网络之后、模型管理之前", () => {
     const navigationKeys = keys(consoleNavigation);
 
-    expect(navigationKeys.indexOf("model-resources")).toBeLessThan(
+    expect(navigationKeys.indexOf("general-business-knowledge-network")).toBeLessThan(
       navigationKeys.indexOf("observability"),
     );
     expect(navigationKeys.indexOf("observability")).toBeLessThan(
-      navigationKeys.indexOf("system-management"),
+      navigationKeys.indexOf("model-resources"),
     );
   });
 });
