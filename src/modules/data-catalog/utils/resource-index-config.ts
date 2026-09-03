@@ -12,7 +12,8 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 
 export type ResourceIndexFormValues = {
-  buildKeyFields: string[];
+  incrementalFields?: string[];
+  primaryKeyFields?: string[];
   embeddingFields: string[];
   /** Resource-level default embedding model (required when embeddingFields non-empty). */
   embeddingModel: string;
@@ -154,7 +155,8 @@ export function applyIndexFormToSchema(
   return {
     schema: nextSchema,
     indexConfig: {
-      buildKeyFields: values.buildKeyFields,
+      incrementalFields: values.incrementalFields ?? [],
+      primaryKeyFields: values.primaryKeyFields ?? [],
       defaultFulltextAnalyzer: defaultAnalyzer || undefined,
       defaultEmbeddingModel: defaultModel || undefined,
     },
@@ -226,7 +228,8 @@ export function indexFormValuesFromResource(resource: {
   }
 
   return {
-    buildKeyFields: resource.indexConfig?.buildKeyFields ?? [],
+    incrementalFields: resource.indexConfig?.incrementalFields ?? [],
+    primaryKeyFields: resource.indexConfig?.primaryKeyFields ?? [],
     embeddingFields,
     embeddingModel,
     fieldEmbeddingModels,

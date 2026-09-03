@@ -7,25 +7,35 @@
 
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 
-const BUILD_KEY_TYPES = new Set([
+const PRIMARY_KEY_TYPES = new Set([
   "integer",
   "unsigned integer",
   "string",
+]);
+
+const INCREMENTAL_FIELD_TYPES = new Set([
+  ...PRIMARY_KEY_TYPES,
   "date",
+  "time",
   "datetime",
   "timestamp",
 ]);
 
-export function isBuildKeyField(field: ResourceSchemaField): boolean {
-  return BUILD_KEY_TYPES.has(field.type.trim().toLowerCase());
+export function isPrimaryKeyField(field: ResourceSchemaField): boolean {
+  return PRIMARY_KEY_TYPES.has(field.type.trim().toLowerCase());
 }
 
-export function invalidBuildKeyFields(
+export function isIncrementalField(field: ResourceSchemaField): boolean {
+  return INCREMENTAL_FIELD_TYPES.has(field.type.trim().toLowerCase());
+}
+
+export function invalidKeyFields(
   schema: ResourceSchemaField[],
-  buildKeyFields: string[],
+  keyFields: string[],
+  isSupported: (field: ResourceSchemaField) => boolean,
 ): string[] {
   const fieldsByName = new Map(schema.map((field) => [field.name, field]));
-  return buildKeyFields.filter((name) => !fieldsByName.get(name) || !isBuildKeyField(fieldsByName.get(name)!));
+  return keyFields.filter((name) => !fieldsByName.get(name) || !isSupported(fieldsByName.get(name)!));
 }
 
 export function unsupportedSchemaFields(schema: ResourceSchemaField[]): ResourceSchemaField[] {

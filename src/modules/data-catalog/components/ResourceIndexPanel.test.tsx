@@ -108,7 +108,8 @@ const resource: CatalogResource = {
 
 function buildTask(overrides: Partial<BuildTask>): BuildTask {
   return {
-    buildKeyFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
     createTime: 100,
     embeddingFields: [],
     embeddingModel: "",

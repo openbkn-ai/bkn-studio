@@ -238,10 +238,7 @@
 
 /* ===== 字段角色矩阵(BuildTaskFormPanel):一字段一行,三角色列勾选 ===== */
 .fieldRoleCard {
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--color-bg-surface);
+  background: transparent;
 }
 
 .frtBar {
@@ -249,8 +246,9 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-divider);
-  background: var(--color-hover);
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .frtSearch {
@@ -329,38 +327,31 @@
 }
 
 .frtScroll {
-  max-height: 304px;
-  overflow: auto;
-}
-
-.frtScroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.frtScroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-  background-color: rgba(15, 30, 54, 0.18);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .frtTable {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .frtNameCol {
-  width: 32%;
+  width: 22%;
 }
 
 .frtDisplayCol {
-  width: 24%;
+  width: 16%;
 }
 
 .frtTypeCol {
-  width: 18%;
+  width: 12%;
+}
+
+.frtDescriptionCol {
+  width: 28%;
 }
 
 .frtRoleWidthCol {
@@ -368,7 +359,7 @@
 }
 
 .frtActionWidthCol {
-  width: 224px;
+  width: 208px;
 }
 
 .frtTable thead th {
@@ -376,10 +367,11 @@
   top: 0;
   z-index: 1;
   background: var(--color-hover);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+  font-size: 14px;
   font-weight: 600;
   text-align: left;
-  padding: 9px 14px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
@@ -453,16 +445,16 @@
 
 .frtField {
   overflow: hidden;
-  padding: 8px 14px;
+  padding: 13px 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .frtFieldMeta {
   overflow: hidden;
-  padding: 8px 14px;
-  color: var(--color-text-secondary);
-  font-size: 12.5px;
+  padding: 13px 14px;
+  color: var(--color-text-primary);
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -471,7 +463,7 @@
   display: block;
   overflow: hidden;
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--color-text-primary);
   text-overflow: ellipsis;
 }

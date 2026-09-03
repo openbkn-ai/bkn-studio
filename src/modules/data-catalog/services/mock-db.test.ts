@@ -8,6 +8,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  isIncrementalField,
+  isPrimaryKeyField,
+} from "@/modules/data-catalog/lib/build-guards";
+
+import {
   mockBuildTasks,
   mockDiscoveringCatalogs,
   mockDiscoverRecords,
@@ -16,6 +21,61 @@ import {
 } from "./mock-db";
 
 describe("data catalog discover-status mocks", () => {
+  it("populates every Property field required by the resource contract", () => {
+    for (const resource of mockResources) {
+      for (const field of resource.schema) {
+        expect(typeof field.name).toBe("string");
+        expect(typeof field.displayName).toBe("string");
+        expect(typeof field.type).toBe("string");
+        expect(typeof field.description).toBe("string");
+        expect(typeof field.originalName).toBe("string");
+        expect(typeof field.originalType).toBe("string");
+        expect(typeof field.originalDescription).toBe("string");
+      }
+    }
+  });
+
+  it("uses only Vega canonical field types", () => {
+    const canonicalTypes = new Set([
+      "integer", "unsigned integer", "float", "decimal", "string", "text",
+      "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
+      "json", "point", "shape", "vector", "other",
+    ]);
+
+    expect(
+      mockResources.flatMap((resource) =>
+        resource.schema
+          .filter((field) => !canonicalTypes.has(field.type))
+          .map((field) => `${resource.id}.${field.name}: ${field.type}`),
+      ),
+    ).toEqual([]);
+  });
+
+  it("provides a 20-field index configuration demo with representative source types", () => {
+    const resource = mockResources.find((item) => item.id === "res-index-config-demo");
+    expect(resource?.schema).toHaveLength(20);
+    expect(new Set(resource?.schema.map((field) => field.type))).toEqual(new Set([
+      "integer", "unsigned integer", "float", "decimal", "string", "text",
+      "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
+      "json", "point", "shape",
+    ]));
+  });
+
+  it("keeps mock task key fields compatible with their resource schema", () => {
+    const resourcesById = new Map(mockResources.map((resource) => [resource.id, resource]));
+
+    for (const task of mockBuildTasks) {
+      const resource = resourcesById.get(task.resourceId);
+      expect(resource).toBeDefined();
+      if (!resource) {
+        continue;
+      }
+      const fieldsByName = new Map(resource.schema.map((field) => [field.name, field]));
+      expect(task.primaryKeyFields.every((name) => isPrimaryKeyField(fieldsByName.get(name)!))).toBe(true);
+      expect(task.incrementalFields.every((name) => isIncrementalField(fieldsByName.get(name)!))).toBe(true);
+    }
+  });
+
   it("completes build-task catalog and resource references", () => {
     expect(mockBuildTasks).toEqual(expect.arrayContaining([
       expect.objectContaining({

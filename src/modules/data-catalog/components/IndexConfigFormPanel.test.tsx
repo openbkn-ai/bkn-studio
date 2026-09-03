@@ -108,7 +108,7 @@ describe("IndexConfigFormPanel", () => {
   it("preserves freshly generated semantic metadata when saving index config", async () => {
     const configuredResource: CatalogResource = {
       ...resource,
-      indexConfig: { buildKeyFields: ["title"] },
+      indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
       schema: [{
         features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
         name: "title",
@@ -227,29 +227,49 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
   });
 
-  it("allows removing a configured build key that no longer exists in the schema", async () => {
-    const staleBuildKeyResource: CatalogResource = {
+  it("allows removing configured key fields that no longer exist in the schema", async () => {
+    const staleKeyResource: CatalogResource = {
       ...resource,
-      indexConfig: { buildKeyFields: ["removed_order_no"] },
+      indexConfig: { incrementalFields: ["removed_order_no"], primaryKeyFields: ["removed_order_no"] },
     };
-    getCatalogResourceMock.mockResolvedValue(staleBuildKeyResource);
+    getCatalogResourceMock.mockResolvedValue(staleKeyResource);
 
     render(
       <MemoryRouter>
-        <IndexConfigFormPanel active resource={staleBuildKeyResource} />
+        <IndexConfigFormPanel active resource={staleKeyResource} />
       </MemoryRouter>,
     );
 
     const removeButton = await screen.findByRole("button", {
-      name: "dataCatalog.build.removeInvalidBuildKeyFields",
+      name: "dataCatalog.build.removeInvalidKeyFields",
     });
     fireEvent.click(removeButton);
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", { name: "dataCatalog.build.removeInvalidBuildKeyFields" }),
+        screen.queryByRole("button", { name: "dataCatalog.build.removeInvalidKeyFields" }),
       ).toBeNull();
     });
+  });
+
+  it("does not mark a feature-only configuration as buildable", async () => {
+    const featureOnlyResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(featureOnlyResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={featureOnlyResource} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("dataCatalog.build.configCannotBuild")).toBeTruthy();
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
