@@ -52,7 +52,8 @@ export type ResourceSchemaField = {
 
 /** Resource-level defaults and cross-field build strategy, excluding per-field index participation. */
 export type ResourceIndexConfig = {
-  buildKeyFields?: string[];
+  incrementalFields?: string[];
+  primaryKeyFields?: string[];
   defaultEmbeddingModel?: string;
   defaultFulltextAnalyzer?: string;
 };
@@ -155,7 +156,7 @@ export type EmbeddingFieldConfig = {
 };
 
 export type BuildTask = {
-  buildKeyFields: string[];
+  incrementalFields: string[];
   /** Catalog containing the backend task record. Legacy mock data may omit it and derive it from the resource. */
   catalogId?: string;
   /** Catalog display field returned with task lists to avoid loading all catalogs again. */
@@ -177,6 +178,7 @@ export type BuildTask = {
   /** Time at which the task entered a terminal state. */
   finishTime: number | null;
   id: string;
+  primaryKeyFields: string[];
   /** Most recent externally observable progress update. */
   lastProgressTime: number | null;
   mode: BuildMode;
@@ -244,12 +246,13 @@ export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
  * This type remains only for transition-period UI construction of resource write payloads.
  */
 export type BuildTaskUpdateInput = {
-  buildKeyFields: string[];
+  incrementalFields: string[];
   embeddingFields: string[];
   embeddingModel: string;
   fulltextAnalyzer?: string;
   fulltextFields: string[];
   modelDimensions: number;
+  primaryKeyFields: string[];
 };
 
 /** Start or rerun: reset=true reruns only full tasks from scratch, ignoring the checkpoint. */

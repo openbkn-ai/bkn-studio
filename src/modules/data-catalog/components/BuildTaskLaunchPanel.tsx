@@ -28,9 +28,10 @@ import type {
   BuildTaskExecuteType,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { streamingNeedsBuildKey } from "@/modules/data-catalog/lib/build-task-launch-guards";
 import {
-  invalidBuildKeyFields,
+  invalidKeyFields,
+  isIncrementalField,
+  isPrimaryKeyField,
   unsupportedSchemaFields,
 } from "@/modules/data-catalog/lib/build-guards";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
@@ -42,6 +43,7 @@ import formStyles from "./BuildTaskFormPanel.module.css";
 
 // Streaming-build backend support remains available; set this flag to true to restore the entry point when reopening it.
 export const STREAMING_BUILD_ENTRY_ENABLED = false;
+const EMPTY_KEY_FIELDS: string[] = [];
 
 export type BuildTaskLaunchPanelProps = {
   active: boolean;
@@ -91,14 +93,19 @@ export function BuildTaskLaunchPanel({
   const [saving, setSaving] = useState(false);
 
   const config = useMemo(() => indexFormValuesFromResource(resource), [resource]);
+  const primaryKeyFields = config.primaryKeyFields ?? EMPTY_KEY_FIELDS;
+  const incrementalFields = config.incrementalFields ?? EMPTY_KEY_FIELDS;
   const hasResourceConfig =
     config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
-  const batchNeedsBuildKey = mode === "batch" && config.buildKeyFields.length === 0;
-  const streamingBuildKeyRequired = streamingNeedsBuildKey(mode, config.buildKeyFields);
+  const batchNeedsKeyFields =
+    mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
   const otherFields = useMemo(() => unsupportedSchemaFields(resource.schema), [resource.schema]);
-  const invalidConfiguredBuildKeys = useMemo(
-    () => invalidBuildKeyFields(resource.schema, config.buildKeyFields),
-    [config.buildKeyFields, resource.schema],
+  const invalidConfiguredKeyFields = useMemo(
+    () => [
+      ...invalidKeyFields(resource.schema, primaryKeyFields, isPrimaryKeyField),
+      ...invalidKeyFields(resource.schema, incrementalFields, isIncrementalField),
+    ],
+    [incrementalFields, primaryKeyFields, resource.schema],
   );
   const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
     ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
@@ -111,7 +118,8 @@ export function BuildTaskLaunchPanel({
       : "-";
   const configSummary = t("dataCatalog.indexWorkspace.launchConfigSummary", {
     analyzer: analyzerLabel,
-    buildKey: config.buildKeyFields.length,
+    primaryKey: primaryKeyFields.length,
+    incremental: incrementalFields.length,
     embedding: config.embeddingFields.length,
     fulltext: config.fulltextFields.length,
     model: modelLabel,
@@ -160,28 +168,24 @@ export function BuildTaskLaunchPanel({
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || actionsLocked;
   const startDisabled =
-    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingBuildKeyRequired ||
-    otherFields.length > 0 || invalidConfiguredBuildKeys.length > 0;
+    controlsDisabled || !hasResourceConfig || batchNeedsKeyFields ||
+    otherFields.length > 0 || invalidConfiguredKeyFields.length > 0;
 
   const startBuild = async () => {
     if (otherFields.length > 0) {
       setError({ description: t("dataCatalog.build.unsupportedSchemaFields", { fields: otherFields.map((field) => field.name).join(", ") }) });
       return;
     }
-    if (invalidConfiguredBuildKeys.length > 0) {
-      setError({ description: t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidConfiguredBuildKeys.join(", ") }) });
+    if (invalidConfiguredKeyFields.length > 0) {
+      setError({ description: t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") }) });
       return;
     }
     if (!hasResourceConfig) {
       setError({ description: t("dataCatalog.build.needConfigFirst") });
       return;
     }
-    if (mode === "batch" && config.buildKeyFields.length === 0) {
-      setError({ description: t("dataCatalog.build.buildKeyRequired") });
-      return;
-    }
-    if (streamingBuildKeyRequired) {
-      setError({ description: t("dataCatalog.build.streamingBuildKeyRequired") });
+    if (mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0)) {
+      setError({ description: t("dataCatalog.build.keyFieldsRequired") });
       return;
     }
     if (actionsLocked) {
@@ -259,14 +263,14 @@ export function BuildTaskLaunchPanel({
           type="error"
         />
       ) : null}
-      {otherFields.length === 0 && invalidConfiguredBuildKeys.length > 0 ? (
+      {otherFields.length === 0 && invalidConfiguredKeyFields.length > 0 ? (
         <Alert
           action={
             <AppButton onClick={onGoConfigure} size="small" type="link">
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </AppButton>
           }
-          message={t("dataCatalog.build.invalidBuildKeyFields", { fields: invalidConfiguredBuildKeys.join(", ") })}
+          message={t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") })}
           showIcon
           type="warning"
         />
@@ -278,20 +282,17 @@ export function BuildTaskLaunchPanel({
       {!streamingActive && actionsLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
-      {hasResourceConfig && batchNeedsBuildKey ? (
+      {hasResourceConfig && batchNeedsKeyFields ? (
         <Alert
           action={
             <AppButton onClick={onGoConfigure} size="small" type="link">
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </AppButton>
           }
-          message={t("dataCatalog.build.buildKeyRequired")}
+          message={t("dataCatalog.build.keyFieldsRequired")}
           showIcon
           type="warning"
         />
-      ) : null}
-      {hasResourceConfig && streamingBuildKeyRequired ? (
-        <Alert message={t("dataCatalog.build.streamingBuildKeyRequired")} showIcon type="warning" />
       ) : null}
 
       {hasResourceConfig ? (

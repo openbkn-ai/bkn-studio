@@ -8,8 +8,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  invalidBuildKeyFields,
-  isBuildKeyField,
+  invalidKeyFields,
+  isIncrementalField,
+  isPrimaryKeyField,
   unsupportedSchemaFields,
 } from "./build-guards";
 
@@ -21,14 +22,15 @@ const schema = [
 ];
 
 describe("build guards", () => {
-  it("accepts only stable build-key field types", () => {
-    expect(isBuildKeyField(schema[0])).toBe(true);
-    expect(isBuildKeyField(schema[1])).toBe(true);
-    expect(isBuildKeyField(schema[2])).toBe(false);
+  it("distinguishes supported primary and incremental field types", () => {
+    expect(isPrimaryKeyField(schema[0])).toBe(true);
+    expect(isPrimaryKeyField(schema[1])).toBe(false);
+    expect(isIncrementalField(schema[1])).toBe(true);
+    expect(isIncrementalField(schema[2])).toBe(false);
   });
 
-  it("identifies missing and unsupported configured build keys", () => {
-    expect(invalidBuildKeyFields(schema, ["id", "body", "missing"])).toEqual([
+  it("identifies missing and unsupported configured key fields", () => {
+    expect(invalidKeyFields(schema, ["id", "body", "missing"], isPrimaryKeyField)).toEqual([
       "body",
       "missing",
     ]);

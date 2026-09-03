@@ -15,7 +15,8 @@ function buildTask(
   overrides: Partial<BuildTask> = {},
 ): BuildTask {
   return {
-    buildKeyFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
     createTime: 1,
     embeddingFields: [],
     embeddingModel: "",

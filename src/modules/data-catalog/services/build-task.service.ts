@@ -40,12 +40,12 @@ type BackendBuildTaskFieldFeature = {
 };
 
 type BackendBuildTaskIndexConfig = {
-  build_key_fields?: string[];
+  incremental_fields?: string[];
+  primary_key_fields?: string[];
   features?: Record<string, BackendBuildTaskFieldFeature>;
 };
 
 type BackendBuildTask = {
-  build_key_fields?: string | string[];
   catalog_id?: string;
   catalog_name?: string;
   create_time?: number;
@@ -132,7 +132,7 @@ export function buildTaskStatusLabelKey(status: BuildTaskStatus) {
 
 export function snapshotFieldsOf(item: BackendBuildTask) {
   const snapshot = item.index_config;
-  if (snapshot?.features || snapshot?.build_key_fields) {
+  if (snapshot?.features || snapshot?.primary_key_fields || snapshot?.incremental_fields) {
     const embeddingFields: string[] = [];
     const fulltextFields: string[] = [];
     let embeddingModel = "";
@@ -183,7 +183,8 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     }
 
     return {
-      buildKeyFields: snapshot.build_key_fields ?? [],
+      primaryKeyFields: snapshot.primary_key_fields ?? [],
+      incrementalFields: snapshot.incremental_fields ?? [],
       embeddingFields,
       embeddingModel,
       embeddingConfigs,
@@ -202,7 +203,8 @@ export function snapshotFieldsOf(item: BackendBuildTask) {
     fulltextAnalyzers[field] = fulltextAnalyzer;
   }
   return {
-    buildKeyFields: splitFields(item.build_key_fields),
+    primaryKeyFields: [],
+    incrementalFields: [],
     embeddingFields: splitFields(item.embedding_fields),
     embeddingModel: item.embedding_model ?? "",
     embeddingConfigs: Object.fromEntries(
@@ -240,7 +242,8 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     status,
     embeddingFields: snapshot.embeddingFields,
     embeddingConfigs: snapshot.embeddingConfigs,
-    buildKeyFields: snapshot.buildKeyFields,
+    primaryKeyFields: snapshot.primaryKeyFields,
+    incrementalFields: snapshot.incrementalFields,
     embeddingModel: snapshot.embeddingModel,
     modelDimensions: snapshot.modelDimensions,
     fulltextFields: snapshot.fulltextFields,
@@ -481,7 +484,8 @@ export async function createBuildTask(
     const form = resource
       ? indexFormValuesFromResource(resource)
       : {
-        buildKeyFields: [] as string[],
+        incrementalFields: [] as string[],
+        primaryKeyFields: [] as string[],
         embeddingFields: [] as string[],
         embeddingModel: "",
         fulltextFields: [] as string[],
@@ -498,7 +502,8 @@ export async function createBuildTask(
       executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
       status: "pending",
       embeddingFields: form.embeddingFields,
-      buildKeyFields: form.buildKeyFields,
+      primaryKeyFields: form.primaryKeyFields ?? [],
+      incrementalFields: form.incrementalFields ?? [],
       embeddingModel: form.embeddingModel,
       modelDimensions: 0,
       fulltextFields: form.fulltextFields,

@@ -9,11 +9,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
+const listBuildTasksMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -26,7 +27,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
-  listBuildTasks: vi.fn().mockResolvedValue([]),
+  listBuildTasks: listBuildTasksMock,
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
@@ -67,6 +68,7 @@ describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
+    listBuildTasksMock.mockReset().mockResolvedValue([]);
     updateCatalogResourceMock.mockReset();
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
     loadEmbeddingModelOptionsMock.mockResolvedValue({
@@ -105,10 +107,36 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it("keeps vector and full-text metrics visible when build controls are hidden", () => {
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel
+          active
+          hideBuildControls
+          resource={{
+            ...resource,
+            schema: [{
+              features: [
+                { config: { embedding_model: "model-1" }, featureType: "vector" },
+                { config: { analyzer: "standard" }, featureType: "fulltext" },
+              ],
+              name: "title",
+              type: "string",
+            }],
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.build.embeddingFieldCount")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.build.fulltextFieldCount")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
+  });
+
   it("preserves freshly generated semantic metadata when saving index config", async () => {
     const configuredResource: CatalogResource = {
       ...resource,
-      indexConfig: { buildKeyFields: ["title"] },
+      indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
       schema: [{
         features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
         name: "title",
@@ -227,29 +255,91 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
   });
 
-  it("allows removing a configured build key that no longer exists in the schema", async () => {
-    const staleBuildKeyResource: CatalogResource = {
+  it("allows removing configured key fields that no longer exist in the schema", async () => {
+    const staleKeyResource: CatalogResource = {
       ...resource,
-      indexConfig: { buildKeyFields: ["removed_order_no"] },
+      indexConfig: { incrementalFields: ["removed_order_no"], primaryKeyFields: ["removed_order_no"] },
     };
-    getCatalogResourceMock.mockResolvedValue(staleBuildKeyResource);
+    getCatalogResourceMock.mockResolvedValue(staleKeyResource);
 
     render(
       <MemoryRouter>
-        <IndexConfigFormPanel active resource={staleBuildKeyResource} />
+        <IndexConfigFormPanel active resource={staleKeyResource} />
       </MemoryRouter>,
     );
 
     const removeButton = await screen.findByRole("button", {
-      name: "dataCatalog.build.removeInvalidBuildKeyFields",
+      name: "dataCatalog.build.removeInvalidKeyFields",
     });
     fireEvent.click(removeButton);
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", { name: "dataCatalog.build.removeInvalidBuildKeyFields" }),
+        screen.queryByRole("button", { name: "dataCatalog.build.removeInvalidKeyFields" }),
       ).toBeNull();
     });
+  });
+
+  it("does not mark a feature-only configuration as buildable", async () => {
+    const featureOnlyResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(featureOnlyResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={featureOnlyResource} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("dataCatalog.build.configCannotBuild")).toBeTruthy();
+  });
+
+  it("keeps resource key fields when an active task has no configuration snapshot", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
+      schema: [{
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    listBuildTasksMock.mockResolvedValue([{
+      createTime: 1,
+      embeddingFields: [],
+      embeddingModel: "",
+      error: null,
+      finishTime: null,
+      fulltextAnalyzer: "standard",
+      fulltextFields: ["title"],
+      id: "running-task",
+      incrementalFields: [],
+      lastProgressTime: null,
+      mode: "batch",
+      modelDimensions: 0,
+      primaryKeyFields: [],
+      resourceId: configuredResource.id,
+      startTime: 1,
+      status: "running",
+      syncedCount: 0,
+      totalCount: 1,
+    } satisfies BuildTask]);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("dataCatalog.build.activeTaskLocked");
+    expect(screen.getByText("dataCatalog.build.configCanBuild")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCannotBuild")).toBeNull();
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {

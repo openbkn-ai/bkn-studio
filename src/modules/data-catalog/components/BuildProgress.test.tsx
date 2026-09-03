@@ -23,7 +23,8 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 function buildTask(overrides: Partial<BuildTask> = {}): BuildTask {
   return {
-    buildKeyFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
     createTime: 0,
     embeddingFields: [],
     embeddingModel: "",

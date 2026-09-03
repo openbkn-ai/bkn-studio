@@ -11,7 +11,7 @@ import {
   ExclamationCircleOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Space, type MenuProps } from "antd";
+import { Alert, Dropdown, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -734,7 +734,21 @@ export function ResourceIndexPanel({
               >
                 {t("dataCatalog.indexWorkspace.viewTasks")}
               </button>
-            ) : null}
+            ) : (
+              <Tooltip title={t("dataCatalog.indexWorkspace.tasksUnavailableForDataset")}>
+                <span className={panelStyles.viewTabTooltipWrapper}>
+                  <button
+                    aria-disabled
+                    className={panelStyles.viewTabDisabled}
+                    disabled
+                    role="tab"
+                    type="button"
+                  >
+                    {t("dataCatalog.indexWorkspace.viewTasks")}
+                  </button>
+                </span>
+              </Tooltip>
+            )}
           </div>
         </div>
 

@@ -22,7 +22,8 @@ describe("resource-index-config", () => {
         { name: "note", type: "string" },
       ],
       {
-        buildKeyFields: ["id"],
+        primaryKeyFields: ["id"],
+        incrementalFields: ["id"],
         embeddingFields: ["body", "note"],
         embeddingModel: "embed-default",
         fieldEmbeddingModels: { note: "embed-special" },
@@ -33,7 +34,8 @@ describe("resource-index-config", () => {
     );
 
     expect(result.indexConfig).toEqual({
-      buildKeyFields: ["id"],
+      primaryKeyFields: ["id"],
+      incrementalFields: ["id"],
       defaultFulltextAnalyzer: "standard",
       defaultEmbeddingModel: "embed-default",
     });
@@ -81,7 +83,8 @@ describe("resource-index-config", () => {
     const result = applyIndexFormToSchema(
       [{ name: "body", type: "string", displayName: "Body" }],
       {
-        buildKeyFields: [],
+        primaryKeyFields: [],
+        incrementalFields: [],
         embeddingFields: ["body"],
         embeddingModel: "embed-default",
         fieldEmbeddingModels: {},
@@ -120,7 +123,8 @@ describe("resource-index-config", () => {
   it("reads defaults and per-field overrides from resource", () => {
     const values = indexFormValuesFromResource({
       indexConfig: {
-        buildKeyFields: ["id"],
+        primaryKeyFields: ["id"],
+        incrementalFields: ["id"],
         defaultEmbeddingModel: "embed-default",
         defaultFulltextAnalyzer: "standard",
       },
@@ -147,7 +151,8 @@ describe("resource-index-config", () => {
     });
 
     expect(values).toEqual({
-      buildKeyFields: ["id"],
+      primaryKeyFields: ["id"],
+      incrementalFields: ["id"],
       embeddingFields: ["body", "note"],
       embeddingModel: "embed-default",
       fieldEmbeddingModelGroups: {

@@ -27,6 +27,8 @@ describe("snapshotFieldsOf", () => {
     const snapshot = snapshotFieldsOf({
       id: "task-1",
       index_config: {
+        incremental_fields: ["updated_at", "revision"],
+        primary_key_fields: ["tenant_id", "coupon_code"],
         features: {
           coupon_code: { fulltext: { analyzer: "standard" } },
           status: { fulltext: { analyzer: "hanlp_index" } },
@@ -35,6 +37,8 @@ describe("snapshotFieldsOf", () => {
     });
 
     expect(snapshot.fulltextAnalyzer).toBe("standard");
+    expect(snapshot.primaryKeyFields).toEqual(["tenant_id", "coupon_code"]);
+    expect(snapshot.incrementalFields).toEqual(["updated_at", "revision"]);
     expect(snapshot.fulltextAnalyzers).toEqual({
       coupon_code: "standard",
       status: "hanlp_index",

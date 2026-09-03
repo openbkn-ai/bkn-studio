@@ -52,26 +52,24 @@ export const dataCatalogEnUS = {
       embeddingFields: "Embedding Fields",
       finishedAtShort: "Finished at {{time}}",
       fulltextFields: "Fulltext Fields",
-      buildKeyFields: "Build Key Fields",
+      primaryKeyFields: "Primary Key Fields",
+      incrementalFields: "Incremental Fields",
       indexedRowsShort: "{{count}} rows indexed",
       indexedRowsShort_one: "{{count}} row indexed",
       indexedRowsShort_other: "{{count}} rows indexed",
       lastEventShort: "Last event {{time}}",
       startConfigure: "Configure Index",
       statusCardTitle: "Live Index Status",
-      configStatusReady: "Index config saved. Start a build under Task Management.",
-      configStatusIncomplete:
-        "Only build-key fields are configured. Enable at least one embedding or full-text feature before building.",
-      configStatusEmpty: "Not configured yet. Select field roles and save.",
       launchTitle: "Start a Build",
       launchHint: "Create and start a build using the resource's current index config.",
       goConfigure: "Configure Index",
       launchConfigTitle: "Current resource config",
       editConfigLink: "Edit",
       launchConfigSummary:
-        "Embedding {{embedding}} · fulltext {{fulltext}} · build key {{buildKey}} · model {{model}} · analyzer {{analyzer}}",
+        "Primary key {{primaryKey}} · incremental {{incremental}} · embedding {{embedding}} · fulltext {{fulltext}} · model {{model}} · analyzer {{analyzer}}",
       viewConfig: "Configure Index",
       viewTasks: "Index Tasks",
+      tasksUnavailableForDataset: "Dataset resources do not support index tasks yet.",
       embeddingModel: "Embedding Model",
       fulltextAnalyzer: "Analyzer",
     },
@@ -367,7 +365,7 @@ export const dataCatalogEnUS = {
       streamingRecreateHint:
         "Streaming tasks cannot be edited in place. Save resource config first, then create a new streaming build under Task Management.",
       activeTaskLocked:
-        "This resource already has an active build task. Wait for it to finish or stop it before saving config or starting a new build.",
+        "This resource already has an active build task, so the entire configuration page is locked. Wait for it to finish or stop it before changing config or starting a new build.",
       configConflict:
         "An active build task blocks index config updates. Stop the task, then save again.",
       startRejected:
@@ -392,32 +390,33 @@ export const dataCatalogEnUS = {
       schemaLoading: "Loading fields...",
       schemaEmpty: "This resource has no fields yet; run a discover to discover its schema.",
       fulltextTypeHint: "Text-type fields only",
-      fieldRole: "Field Roles",
-      fieldRoleHint:
-        "Check each field's role in the index; multiple allowed. Select embedding and/or full-text.",
+      keyFields: "Primary and Incremental Fields",
+      keyFieldsHint:
+        "The left-to-right tag order determines the field order for composite keys and incremental cursors.",
+      primaryKeyFieldsPlaceholder: "Select primary key",
+      incrementalFieldsPlaceholder: "Select incremental key",
+      primaryKeyFieldsHint:
+        "Choose fields that uniquely identify a source row; composite keys follow tag order.",
+      incrementalFieldsHint:
+        "Choose fields that advance batch-build cursors; ensure they can be stably sorted in tag order.",
+      fieldFeatureConfig: "Field Feature Configuration",
+      fieldFeatureConfigHint:
+        "Configure embedding and full-text features for text fields.",
       roleEmbedding: "Embedding",
-      roleBuildKey: "Build key",
+      primaryKeyFieldCount: "Primary key fields",
+      incrementalFieldCount: "Incremental fields",
+      embeddingFieldCount: "Embedding fields",
+      fulltextFieldCount: "Full-text fields",
+      rolePrimaryKey: "Primary key",
+      roleIncrementalKey: "Incremental key",
+      invalidKeyFields:
+        "Invalid primary-key or incremental-key configuration: {{fields}}. Select schema fields with supported types.",
+      removeInvalidKeyFields: "Remove invalid fields",
       roleFulltext: "Full-text search",
-      roleEmbeddingHint:
-        "Fields vectorized by the embedding model for semantic search; can be used with or without full-text.",
-      roleBuildKeyHintBatch:
-        "Field used to detect incremental data in batch builds (e.g. updated_at, auto-increment ID); required.",
-      roleBuildKeyHintStreaming: "Row ID field for streaming builds; required.",
-      roleBuildKeyHintConfig:
-        "Used for incremental builds; required for both batch and streaming. Supported types are integer, unsigned integer, string, date, datetime, and timestamp.",
-      buildKeyTypeHint: "Build keys support integer, unsigned integer, string, date, datetime, and timestamp fields only.",
-      invalidBuildKeyFields: "Invalid build-key configuration: {{fields}}. Select schema fields with supported types.",
-      removeInvalidBuildKeyFields: "Remove invalid build keys",
       unsupportedSchemaFields: "This resource contains other-type fields unsupported for index builds: {{fields}}. Correct the source field type or its discovery mapping before building.",
-      roleFulltextHint:
-        "Text fields indexed for keyword full-text search; applied immediately during data sync.",
-      selectAll: "Select all",
-      clearAll: "Clear",
       fieldCount: "{{count}} fields",
       fieldCount_one: "{{count}} field",
       fieldCount_other: "{{count}} fields",
-      fieldFilterPlaceholder: "Filter field name...",
-      fieldNoMatch: "No fields match {{keyword}}",
       fulltextAnalyzer: "Analyzer",
       defaultFulltextAnalyzer: "Default Analyzer",
       defaultEmbeddingModel: "Default Embedding Model",
@@ -425,7 +424,7 @@ export const dataCatalogEnUS = {
         "Full-text fields are selected; set the resource default analyzer.",
       configCanBuild: "Buildable",
       configCanBuildYes: "Ready",
-      configCannotBuild: "Missing features",
+      configCannotBuild: "Configuration incomplete",
       resourceDefaultsTitle: "Resource Defaults",
       resourceDefaultsHint:
         "Features use these defaults when no override is selected.",
@@ -454,9 +453,13 @@ export const dataCatalogEnUS = {
         "Only one feature of each type is supported per field. Remove duplicate features: {{features}}.",
       featureSummaryEmpty: "No features",
       featureUnsupported: "Unsupported",
-      defaultModelDimensions: "Default dimensions: {{dimensions}}",
-      fulltextAnalyzerHint:
-        "Available options come from the current environment. standard is for English / general text; if available, english performs English stemming.",
+      defaultEmbeddingModelHint:
+        "Available options are the embedding models connected in the current environment.",
+      defaultEmbeddingModelUsageHint:
+        "Used to convert selected embedding fields into vector representations.",
+      fulltextAnalyzerHint: "Available options come from the current environment.",
+      fulltextAnalyzerEnglishHint:
+        "standard is for English / general text; english performs English stemming.",
       fulltextChineseAnalyzerAvailableHint:
         "Chinese-text analyzer enabled in this environment: {{analyzers}}.",
       fulltextChineseAnalyzerUnavailableHint:
@@ -475,10 +478,8 @@ export const dataCatalogEnUS = {
       noAnalyzers: "No full-text analyzers are available; index configuration cannot be saved.",
       savedAnalyzerUnavailable: "Saved analyzer configuration is unavailable: {{analyzers}}. Choose an available analyzer to continue.",
       fieldsRequired: "Select at least one embedding or full-text field.",
-      buildKeyRequired:
-        "Batch mode requires a build-key field. Select one under Configure Index.",
-      streamingBuildKeyRequired:
-        "Streaming builds require a build-key field. Select one under Configure Index before creating the task.",
+      keyFieldsRequired:
+        "Batch mode requires both primary-key and incremental fields. Select them under Configure Index.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",
       noModels:
@@ -551,7 +552,8 @@ export const dataCatalogEnUS = {
         catalogId: "Catalog ID",
         resourceId: "Resource ID",
         embeddingFields: "Embedding fields",
-        buildKeyFields: "Build key fields",
+        primaryKeyFields: "Primary key fields",
+        incrementalFields: "Incremental fields",
         fulltextFields: "Fulltext fields",
         fulltextAnalyzer: "Fulltext analyzer",
         embeddingModel: "Embedding model",

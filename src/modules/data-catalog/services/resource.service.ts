@@ -64,7 +64,8 @@ type BackendSchemaField = {
 };
 
 type BackendIndexConfig = {
-  build_key_fields?: string[];
+  incremental_fields?: string[];
+  primary_key_fields?: string[];
   default_embedding_model?: string;
   default_fulltext_analyzer?: string;
 };
@@ -117,7 +118,8 @@ function mapIndexConfigToBackend(
   }
 
   return {
-    build_key_fields: config.buildKeyFields,
+    incremental_fields: config.incrementalFields,
+    primary_key_fields: config.primaryKeyFields,
     default_fulltext_analyzer: config.defaultFulltextAnalyzer,
     default_embedding_model: config.defaultEmbeddingModel,
   };
@@ -131,7 +133,8 @@ function mapIndexConfigFromBackend(
   }
 
   return {
-    buildKeyFields: config.build_key_fields,
+    incrementalFields: config.incremental_fields,
+    primaryKeyFields: config.primary_key_fields,
     defaultFulltextAnalyzer: config.default_fulltext_analyzer,
     defaultEmbeddingModel: config.default_embedding_model,
   };

@@ -46,7 +46,7 @@ const resource: CatalogResource = {
   columnCount: 1,
   description: "",
   id: "resource-1",
-  indexConfig: { buildKeyFields: ["id"] },
+  indexConfig: { incrementalFields: ["id"], primaryKeyFields: ["id"] },
   name: "orders",
   rowCount: 1,
   schema: [

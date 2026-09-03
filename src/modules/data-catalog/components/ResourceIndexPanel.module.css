@@ -41,12 +41,23 @@
   border-left: 1px solid #d9e0ea;
 }
 
+.viewTabTooltipWrapper {
+  display: inline-flex;
+  border-left: 1px solid #d9e0ea;
+}
+
 .viewTabActive {
   composes: viewTab;
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
   font-weight: 600;
   box-shadow: inset 0 -2px 0 #2e68ff;
+}
+
+.viewTabDisabled {
+  composes: viewTab;
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
 }
 
 .viewBarHint {
