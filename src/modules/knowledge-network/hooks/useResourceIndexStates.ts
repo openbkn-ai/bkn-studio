@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
@@ -18,7 +19,7 @@ export function useResourceIndexStates(resourceIds: Array<string | undefined>) {
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:view_detail", "catalog:task_manage"],
+    requiredPermissions: [...dataCatalogResourceStatusPermissions],
   });
   const boundResourceIds = useMemo(
     () =>

@@ -125,9 +125,8 @@ export function ConceptGroupDetailScene() {
   const [addObjectTypesOpen, setAddObjectTypesOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { access: operationAccess } = useKnowledgeNetworkOperationAccessState(networkId, [
-    "modify",
-  ]);
+  const { access: operationAccess, error: permissionError } =
+    useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
   const canModify = operationAccess.modify;
 
   const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
@@ -412,6 +411,7 @@ export function ConceptGroupDetailScene() {
         title={detail.name}
       >
         <div className={styles.page}>
+          {permissionError ? <Alert message={permissionError} showIcon type="error" /> : null}
           <section className={styles.summaryCard}>
             <div className={styles.summaryHead}>
               <span

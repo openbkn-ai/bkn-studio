@@ -14,6 +14,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
@@ -225,7 +226,7 @@ export function ObjectTypeDetailScene() {
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:view_detail", "catalog:task_manage"],
+    requiredPermissions: [...dataCatalogResourceStatusPermissions],
   });
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;

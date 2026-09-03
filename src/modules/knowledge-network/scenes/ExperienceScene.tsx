@@ -29,7 +29,10 @@ import {
   parsePrecisionSafeJSON,
 } from "@/framework/request/precision-safe-json";
 import { buildApiKeyPagePath, consumeApiKeyHandoff } from "@/modules/api-keys/utils/api-key-handoff";
-import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  useExperienceNetwork,
+  type ExperienceNetworkIdentity,
+} from "@/modules/knowledge-network/hooks/useExperienceNetwork";
 import {
   CONTEXT_LOADER_OPS,
   MCP_PATH,
@@ -182,6 +185,7 @@ type ExperienceSceneProps = {
   embedded?: boolean;
   initialMode?: ContextLoaderMode;
   lockMode?: boolean;
+  network?: ExperienceNetworkIdentity | null;
   showMcpConnect?: boolean;
 };
 
@@ -189,6 +193,7 @@ export function ExperienceScene({
   embedded = false,
   initialMode = "agent",
   lockMode = false,
+  network: providedNetwork,
   showMcpConnect = false,
 }: ExperienceSceneProps) {
   const navigate = useNavigate();
@@ -216,7 +221,7 @@ export function ExperienceScene({
     [message, t],
   );
 
-  const [network, setNetwork] = useState<{ name: string; slug: string } | null>(null);
+  const network = useExperienceNetwork(id, providedNetwork);
   const [mode, setMode] = useState<ContextLoaderMode>(initialMode);
   const showModeTabs = !lockMode;
   const showEnvSettings = mode !== "agent" && !lockMode;
@@ -305,25 +310,6 @@ export function ExperienceScene({
     },
     [invalidateFill, invalidateRequest],
   );
-
-  useEffect(() => {
-    if (!id) {
-      setNetwork(null);
-      return;
-    }
-
-    let cancelled = false;
-    getKnowledgeNetwork(id)
-      .then((record) => {
-        if (!cancelled && record) {
-          setNetwork({ name: record.name, slug: record.identifier });
-        }
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
 
   const knId = network?.slug ?? "kn_legal";
   const currentKnIdRef = useRef(knId);
