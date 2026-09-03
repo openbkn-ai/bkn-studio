@@ -54,6 +54,10 @@ vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
   ]),
 }));
 
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ runtimeConfig: { currentUser: { isSuperAdmin: true } } }),
+}));
+
 const profile = {
   accessScopeFingerprint: "sha256:test",
   allowedLogCategories: ["runtime.system" as const, "runtime.business" as const],

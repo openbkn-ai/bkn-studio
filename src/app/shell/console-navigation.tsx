@@ -12,7 +12,6 @@ import type {
 } from "@/app/shell/navigation/types";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
-import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { bknTraceNavigation } from "@/modules/bkn-trace/navigation";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
@@ -126,14 +125,14 @@ export function filterNavByCapability(
 export function filterNavByPermission(
   items: ConsoleNavItem[],
   permissions: string[],
-  roles: string[] = [],
+  isSuperAdmin = false,
 ): ConsoleNavItem[] {
   const visible: ConsoleNavItem[] = [];
   for (const item of items) {
     if (item.requiresBusinessPermission && !permissions.some(isBusinessPermission)) {
       continue;
     }
-    if (item.requiresSuperAdmin && !isSuperAdmin(roles)) {
+    if (item.requiresSuperAdmin && !isSuperAdmin) {
       continue;
     }
     if (
@@ -147,7 +146,7 @@ export function filterNavByPermission(
       continue;
     }
     if (item.children?.length) {
-      const children = filterNavByPermission(item.children, permissions, roles);
+      const children = filterNavByPermission(item.children, permissions, isSuperAdmin);
       if (children.length === 0 && !item.path) {
         continue;
       }

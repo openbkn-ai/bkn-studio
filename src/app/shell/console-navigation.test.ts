@@ -115,7 +115,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     const superAdmin = filterNavByPermission(
       consoleNavigation,
       ["catalog:view_detail"],
-      ["super_admin"],
+      true,
     );
     const observabilityChildren = (items: ReturnType<typeof filterNavByPermission>) =>
       items.find((item) => item.key === "observability")?.children ?? [];

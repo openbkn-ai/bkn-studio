@@ -11,7 +11,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { useAppServices } from "@/framework/context/use-app-services";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { BUSINESS_MODULES, createArchive, downloadArchive, getArchiveOverview, listArchiveJobs, listLogPolicies, listLogSources, retryArchiveCleanup, type ArchiveJob, type ArchiveKind, type ArchiveOverview, type BusinessModule, type LogPolicy, type LogSourceStatus } from "@/modules/bkn-trace/services/observability.service";
@@ -24,7 +23,7 @@ type ModuleSourceRow = { module: BusinessModule; reason?: string; sourceIds: str
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
-  const superAdmin = isSuperAdmin(runtimeConfig.currentUser.roles);
+  const superAdmin = runtimeConfig.currentUser.isSuperAdmin;
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);

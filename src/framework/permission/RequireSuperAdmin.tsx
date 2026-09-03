@@ -9,7 +9,6 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
 import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
-import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 
 type RequireSuperAdminProps = {
@@ -20,5 +19,5 @@ type RequireSuperAdminProps = {
 export function RequireSuperAdmin({ children }: RequireSuperAdminProps) {
   const runtimeConfig = useRuntimeConfig();
 
-  return isSuperAdmin(runtimeConfig.currentUser.roles) ? <>{children}</> : <Navigate replace to={DEFAULT_APP_ENTRY_PATH} />;
+  return runtimeConfig.currentUser.isSuperAdmin ? <>{children}</> : <Navigate replace to={DEFAULT_APP_ENTRY_PATH} />;
 }

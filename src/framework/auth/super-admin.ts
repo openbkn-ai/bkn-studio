@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-/** `is_admin` includes the three administrator roles; only this role is platform super admin. */
+/**
+ * `/me` may return either the stable role key or the legacy localized display name.
+ * `is_admin` includes the three administrator roles and must not be used here.
+ */
 export function isSuperAdmin(roles: readonly string[]): boolean {
-  return roles.includes("super_admin");
+  return roles.some((role) => role === "super_admin" || role === "超级管理员");
 }
