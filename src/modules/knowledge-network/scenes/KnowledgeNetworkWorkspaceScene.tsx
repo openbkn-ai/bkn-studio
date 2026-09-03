@@ -98,6 +98,13 @@ export function KnowledgeNetworkWorkspaceScene({
     detail,
     "task_manage",
   );
+  const experienceNetwork = useMemo(
+    () =>
+      detail
+        ? { id: detail.id, name: detail.name, slug: detail.identifier }
+        : null,
+    [detail],
+  );
 
   const navigationItems: WorkspaceNavItem[] = useMemo(() => {
     const items: WorkspaceNavItem[] = [
@@ -224,7 +231,14 @@ export function KnowledgeNetworkWorkspaceScene({
     ) {
       const initialMode = section === "experience-mcp" ? "mcp" : "agent";
 
-      return <ExperienceScene embedded initialMode={initialMode} lockMode />;
+      return (
+        <ExperienceScene
+          embedded
+          initialMode={initialMode}
+          lockMode
+          network={experienceNetwork}
+        />
+      );
     }
 
     return (

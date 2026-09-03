@@ -14,6 +14,7 @@ export interface McpClientConfigOptions {
   allowInsecureTls?: boolean;
 }
 
+/** Keep client examples on Agent Retrieval's slash-terminated `/mcp/*path` root route. */
 export function withMcpTrailingSlash(mcpUrl: string): string {
   return mcpUrl.endsWith("/") ? mcpUrl : `${mcpUrl}/`;
 }

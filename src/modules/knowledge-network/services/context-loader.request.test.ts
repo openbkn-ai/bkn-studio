@@ -15,7 +15,6 @@ import {
   fetchObjectInstances,
   fetchMcpObjectTypes,
   fetchKnDetail,
-  fetchKnDetailRestLegacy,
   listMcpTools,
   sendRequest,
   type ContextLoaderOp,
@@ -211,6 +210,7 @@ describe("sendRequest", () => {
 
 describe("fetchKnDetail", () => {
   it("uses the MCP get_kn_detail tool with managed context", async () => {
+    const controller = new AbortController();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
@@ -232,7 +232,7 @@ describe("fetchKnDetail", () => {
         ),
       );
 
-    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
+    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, controller.signal, {
       nextContext: () => bknContext,
     });
 
@@ -248,22 +248,15 @@ describe("fetchKnDetail", () => {
         },
       },
     });
+    fetchSpy.mock.calls.forEach(([, init]) => {
+      expect(init?.signal).toBe(controller.signal);
+    });
   });
 });
 
-describe("legacy context-loader REST requests", () => {
-  it("uses the current UI locale", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ id: "kn-demo", object_types: [], concept_groups: [], relation_types: [] }), { status: 200 }),
-    );
-
-    await fetchKnDetailRestLegacy({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
-
-    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
-  });
-
+describe("context-loader REST requests", () => {
   it("preserves unsafe integers in object-instance preview rows", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         '{"datas":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}]}',
         { status: 200 },
@@ -279,6 +272,9 @@ describe("legacy context-loader REST requests", () => {
         unsigned: "18446744073709551615",
       },
     ]);
+    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({
+      "Accept-Language": "en-US",
+    });
   });
 });
 

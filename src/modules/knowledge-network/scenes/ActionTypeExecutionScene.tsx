@@ -89,7 +89,11 @@ export function ActionTypeExecutionScene() {
   const [executeModalOpen, setExecuteModalOpen] = useState(false);
   const [taskRefreshToken, setTaskRefreshToken] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const { access: operationAccess, isLoading: isPermissionLoading } =
+  const {
+    access: operationAccess,
+    error: permissionError,
+    isLoading: isPermissionLoading,
+  } =
     useKnowledgeNetworkOperationAccessState(
       networkId,
       ACTION_TYPE_EXECUTION_OPERATIONS,
@@ -426,53 +430,56 @@ export function ActionTypeExecutionScene() {
       ) : error ? (
         <Alert message={error} showIcon type="error" />
       ) : (
-        <div className={detailStyles.detailLayout}>
-          <aside className={detailStyles.sideNav}>
-            <button
-              className={
-                activeTab === "run" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
-              }
-              onClick={() => setActiveTab("run")}
-              type="button"
-            >
-              <PlayCircleOutlined />
-              <span>{t("knowledgeNetwork.actionTypeExecutionRun")}</span>
-            </button>
-            <button
-              className={
-                activeTab === "config" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
-              }
-              onClick={() => setActiveTab("config")}
-              type="button"
-            >
-              <SettingOutlined />
-              <span>{t("knowledgeNetwork.actionTypeExecutionConfig")}</span>
-            </button>
-            <button
-              className={
-                activeTab === "tasks" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
-              }
-              onClick={() => setActiveTab("tasks")}
-              type="button"
-            >
-              <UnorderedListOutlined />
-              <span>{t("knowledgeNetwork.actionTypeDetailTaskManagement")}</span>
-            </button>
-          </aside>
+        <>
+          {permissionError ? <Alert message={permissionError} showIcon type="error" /> : null}
+          <div className={detailStyles.detailLayout}>
+            <aside className={detailStyles.sideNav}>
+              <button
+                className={
+                  activeTab === "run" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
+                }
+                onClick={() => setActiveTab("run")}
+                type="button"
+              >
+                <PlayCircleOutlined />
+                <span>{t("knowledgeNetwork.actionTypeExecutionRun")}</span>
+              </button>
+              <button
+                className={
+                  activeTab === "config" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
+                }
+                onClick={() => setActiveTab("config")}
+                type="button"
+              >
+                <SettingOutlined />
+                <span>{t("knowledgeNetwork.actionTypeExecutionConfig")}</span>
+              </button>
+              <button
+                className={
+                  activeTab === "tasks" ? detailStyles.sideNavItemActive : detailStyles.sideNavItem
+                }
+                onClick={() => setActiveTab("tasks")}
+                type="button"
+              >
+                <UnorderedListOutlined />
+                <span>{t("knowledgeNetwork.actionTypeDetailTaskManagement")}</span>
+              </button>
+            </aside>
 
-          <div className={detailStyles.contentPanel}>
-            {activeTab === "run" ? renderRunPanel() : null}
-            {activeTab === "config" ? renderConfigPanel() : null}
-            {activeTab === "tasks" && detail ? (
-              <ActionTypeTaskManagementPanel
-                actionTypeId={actionTypeId}
-                canManage={canTaskManage}
-                networkId={networkId}
-                refreshToken={taskRefreshToken}
-              />
-            ) : null}
+            <div className={detailStyles.contentPanel}>
+              {activeTab === "run" ? renderRunPanel() : null}
+              {activeTab === "config" ? renderConfigPanel() : null}
+              {activeTab === "tasks" && detail ? (
+                <ActionTypeTaskManagementPanel
+                  actionTypeId={actionTypeId}
+                  canManage={canTaskManage}
+                  networkId={networkId}
+                  refreshToken={taskRefreshToken}
+                />
+              ) : null}
+            </div>
           </div>
-        </div>
+        </>
       )}
       {detail ? (
         <ActionTypeExecuteModal

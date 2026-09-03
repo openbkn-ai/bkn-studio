@@ -39,7 +39,11 @@ export type ContextLoaderOp = {
 
 export const REST_PREFIX = "/api/agent-retrieval/v1";
 
-/** MCP endpoint; the gateway route is /api/agent-retrieval/v1/mcp, not root /mcp. */
+/**
+ * Canonical MCP endpoint. Agent Retrieval mounts the outer Gin route at `/mcp/*path`, so the
+ * root Streamable HTTP endpoint is the slash-terminated `/mcp/`; omitting the slash does not
+ * enter that wildcard handler consistently and can redirect or reject a POST handshake.
+ */
 export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
 function languageHeaders(): Record<"Accept-Language", string> {
@@ -1050,7 +1054,11 @@ export type McpToolCallResult = {
 };
 
 export type McpSession = {
-  callTool(name: string, args: Record<string, unknown>): Promise<McpToolCallResult>;
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<McpToolCallResult>;
 };
 
 /**
@@ -1075,10 +1083,11 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
   let sessionId: string | null = null;
   let rpcId = 1;
 
-  async function initialize(): Promise<void> {
+  async function initialize(signal?: AbortSignal): Promise<void> {
     const initResp = await fetch(url, {
       method: "POST",
       headers: baseHeaders(),
+      signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: rpcId++,
@@ -1091,40 +1100,52 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
       throw new Error((await initResp.text()) || `MCP initialize failed (${initResp.status})`);
     }
     if (sessionId) {
-      await fetch(url, {
-        method: "POST",
-        headers: { ...baseHeaders(), "Mcp-Session-Id": sessionId },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-      }).catch(() => undefined);
+      try {
+        await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders(), "Mcp-Session-Id": sessionId },
+          signal,
+          body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+        });
+      } catch (error) {
+        if (signal?.aborted) {
+          throw error;
+        }
+      }
     }
   }
 
-  function callOnce(name: string, args: Record<string, unknown>): Promise<Response> {
+  function callOnce(
+    name: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const headers = sessionId ? { ...baseHeaders(), "Mcp-Session-Id": sessionId } : baseHeaders();
     return fetch(url, {
       method: "POST",
       headers,
+      signal,
       body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method: "tools/call", params: { name, arguments: args } }),
     });
   }
 
   return {
-    async callTool(name, args) {
+    async callTool(name, args, signal) {
       const start = performance.now();
-      if (!sessionId) await initialize();
-      let response = await callOnce(name, args);
+      if (!sessionId) await initialize(signal);
+      let response = await callOnce(name, args, signal);
       if (response.status === 401 && auth?.refresh) {
         // Token expired; refresh, reconnect, and retry.
         await auth.refresh().catch(() => null);
         sessionId = null;
-        await initialize();
-        response = await callOnce(name, args);
+        await initialize(signal);
+        response = await callOnce(name, args, signal);
       }
       if (response.status === 400 || response.status === 404) {
         // Session expired; reconnect once and retry.
         sessionId = null;
-        await initialize();
-        response = await callOnce(name, args);
+        await initialize(signal);
+        response = await callOnce(name, args, signal);
       }
       const text = await response.text();
       const parsed = parseMcpEnvelope(text);
@@ -1286,6 +1307,7 @@ export async function fetchKnDetail(
       { kn_id: env.knId, response_format: "json" },
       scope?.nextContext(),
     ),
+    signal,
   );
 
   if (signal?.aborted) {
@@ -1311,36 +1333,6 @@ export async function fetchKnDetail(
   }
 
   throw new Error("get_kn_detail did not return knowledge network detail");
-}
-
-export async function fetchKnDetailRestLegacy(
-  env: ContextLoaderEnv,
-  auth?: McpAuth,
-  signal?: AbortSignal,
-  scope?: BknCallScope,
-): Promise<KnDetail> {
-  const base = env.base.replace(/\/+$/, "");
-  const params = new URLSearchParams({ response_format: "json" });
-  const response = await restPost(
-    env,
-    auth,
-    `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext()),
-    signal,
-  );
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(text || `Failed to fetch knowledge network detail (${response.status})`);
-  }
-  const data = parsePrecisionSafeJSON(text) as Partial<KnDetail> & Record<string, unknown>;
-  return {
-    id: data.id ?? env.knId,
-    name: data.name,
-    comment: typeof data.comment === "string" ? data.comment : undefined,
-    object_types: Array.isArray(data.object_types) ? data.object_types : [],
-    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
-    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
-  };
 }
 
 /** Fetches object-type details through MCP so metric tools can choose real metric_id values. */
