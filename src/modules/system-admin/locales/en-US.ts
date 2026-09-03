@@ -91,6 +91,7 @@ export const systemAdminEnUS = {
       allOps: "All operations",
       empty: "No grants yet",
       add: "Add grant",
+      addOperation: "Add operation",
       resourceIdPlaceholder: "Resource ID (a specific one)",
       operationsPlaceholder: "Pick operations",
     },

@@ -91,6 +91,7 @@ export const systemAdminZhCN = {
       allOps: "全部操作",
       empty: "暂无授权",
       add: "添加授权",
+      addOperation: "添加操作",
       resourceIdPlaceholder: "资源 ID（指定某一条）",
       operationsPlaceholder: "选择操作",
     },

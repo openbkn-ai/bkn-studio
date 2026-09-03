@@ -6,12 +6,16 @@
  */
 
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Checkbox, Empty, Input, Select, Tag } from "antd";
+import { Checkbox, Empty, Input, Select, Tag, Tooltip } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
+import {
+  addOperationToGrant,
+  removeOperationFromGrant,
+} from "@/modules/system-admin/utils/resource-grant-operations";
 import {
   operationLabel,
   operationsForType,
@@ -43,6 +47,7 @@ export function ResourceGrantEditor({
   const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? WILDCARD);
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
   const [draftOps, setDraftOps] = useState<string[]>([]);
+  const [addingGrantKey, setAddingGrantKey] = useState<string | null>(null);
 
   const ops = useMemo(() => operationsForType(draftType), [draftType]);
 
@@ -72,6 +77,15 @@ export function ResourceGrantEditor({
     onChange(value.filter((item) => item !== grant));
   };
 
+  const addOperation = (grant: ResourceGrant, operation: string) => {
+    onChange(addOperationToGrant(value, grant, operation));
+    setAddingGrantKey(null);
+  };
+
+  const removeOperation = (grant: ResourceGrant, operation: string) => {
+    onChange(removeOperationFromGrant(value, grant, operation));
+  };
+
   return (
     <div className={styles.grantEditor}>
       {value.length ? (
@@ -86,7 +100,15 @@ export function ResourceGrantEditor({
               </div>
               <div className={styles.chipRow}>
                 {grant.operations.map((op) => (
-                  <Tag className={styles.permChip} key={op}>
+                  <Tag
+                    closable={!disabled}
+                    className={styles.permChip}
+                    key={op}
+                    onClose={(event) => {
+                      event.preventDefault();
+                      removeOperation(grant, op);
+                    }}
+                  >
                     {grant.resource.id === WILDCARD || op === "*"
                       ? op === "*"
                         ? t("systemAdmin.grant.allOps")
@@ -94,6 +116,32 @@ export function ResourceGrantEditor({
                       : operationLabel(grant.resource.type, op)}
                   </Tag>
                 ))}
+                {!disabled && !grant.operations.includes("*") ? (
+                  addingGrantKey === `${grant.resource.type}:${grant.resource.id}:${index}` ? (
+                    <Select
+                      autoFocus
+                      onBlur={() => setAddingGrantKey(null)}
+                      onSelect={(operation: string) => addOperation(grant, operation)}
+                      options={operationsForType(grant.resource.type)
+                        .filter((operation) => !grant.operations.includes(operation.key))
+                        .map((operation) => ({ label: operation.label, value: operation.key }))}
+                      placeholder={t("systemAdmin.grant.operationsPlaceholder")}
+                      size="small"
+                      style={{ minWidth: 150 }}
+                    />
+                  ) : (
+                    <Tooltip title={t("systemAdmin.grant.addOperation")}>
+                      <AppButton
+                        icon={<PlusOutlined />}
+                        onClick={() => setAddingGrantKey(`${grant.resource.type}:${grant.resource.id}:${index}`)}
+                        size="small"
+                        type="link"
+                      >
+                        {t("systemAdmin.grant.addOperation")}
+                      </AppButton>
+                    </Tooltip>
+                  )
+                ) : null}
               </div>
               {!disabled ? (
                 <AppButton
