@@ -107,6 +107,32 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it("keeps vector and full-text metrics visible when build controls are hidden", () => {
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel
+          active
+          hideBuildControls
+          resource={{
+            ...resource,
+            schema: [{
+              features: [
+                { config: { embedding_model: "model-1" }, featureType: "vector" },
+                { config: { analyzer: "standard" }, featureType: "fulltext" },
+              ],
+              name: "title",
+              type: "string",
+            }],
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.build.embeddingFieldCount")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.build.fulltextFieldCount")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
+  });
+
   it("preserves freshly generated semantic metadata when saving index config", async () => {
     const configuredResource: CatalogResource = {
       ...resource,

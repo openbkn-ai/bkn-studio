@@ -71,8 +71,21 @@ describe("data catalog discover-status mocks", () => {
         continue;
       }
       const fieldsByName = new Map(resource.schema.map((field) => [field.name, field]));
-      expect(task.primaryKeyFields.every((name) => isPrimaryKeyField(fieldsByName.get(name)!))).toBe(true);
-      expect(task.incrementalFields.every((name) => isIncrementalField(fieldsByName.get(name)!))).toBe(true);
+      const invalidKeys = [
+        ...task.primaryKeyFields
+          .filter((name) => {
+            const field = fieldsByName.get(name);
+            return !field || !isPrimaryKeyField(field);
+          })
+          .map((name) => `${task.id}.primaryKeyFields.${name}`),
+        ...task.incrementalFields
+          .filter((name) => {
+            const field = fieldsByName.get(name);
+            return !field || !isIncrementalField(field);
+          })
+          .map((name) => `${task.id}.incrementalFields.${name}`),
+      ];
+      expect(invalidKeys).toEqual([]);
     }
   });
 

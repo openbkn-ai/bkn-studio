@@ -89,16 +89,16 @@ function coerceFeatureDrafts(
   const normalized = groups.map((item, index) =>
     typeof item === "string"
       ? {
-          isDefault: index === 0,
-          name: defaultFeatureNameOf(kind, index),
-          value: item,
-        }
+        isDefault: index === 0,
+        name: defaultFeatureNameOf(kind, index),
+        value: item,
+      }
       : {
-          ...item,
-          isDefault: item.isDefault ?? index === 0,
-          name: item.name?.trim() || defaultFeatureNameOf(kind, index),
-          value: item.value ?? "",
-        },
+        ...item,
+        isDefault: item.isDefault ?? index === 0,
+        name: item.name?.trim() || defaultFeatureNameOf(kind, index),
+        value: item.value ?? "",
+      },
   );
   const defaultIndex = normalized.findIndex((item) => item.isDefault);
   return normalized.map((item, index) => ({
@@ -608,16 +608,16 @@ export function IndexConfigFormPanel({
     ? t("dataCatalog.build.modelsLoading")
     : modelsLoadFailed
       ? t("dataCatalog.build.modelsLoadError", {
-          message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
-        })
+        message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+      })
       : t("dataCatalog.build.noModels");
   const analyzerSelectionDisabledReason = analyzersLoading
     ? t("dataCatalog.build.analyzersLoading")
     : analyzersLoadFailed
       ? t("dataCatalog.build.analyzersLoadError", {
-          message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
-        })
-    : t("dataCatalog.build.analyzerSelectionUnavailable");
+        message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
+      })
+      : t("dataCatalog.build.analyzerSelectionUnavailable");
   const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
   const canBuild =
     hasIndexFeatures &&
@@ -686,10 +686,10 @@ export function IndexConfigFormPanel({
       ...options,
     ];
     const disabledReason = !disabled ? "" : isEmbedding
-        ? embeddingSelectionDisabledReason
-        : !isTextField(featureField.type)
-          ? t("dataCatalog.build.fulltextTypeHint")
-          : analyzerSelectionDisabledReason;
+      ? embeddingSelectionDisabledReason
+      : !isTextField(featureField.type)
+        ? t("dataCatalog.build.fulltextTypeHint")
+        : analyzerSelectionDisabledReason;
     const addFeature = () => {
       updateFeatureGroups(kind, featureField.name, [
         ...groups,
@@ -891,183 +891,181 @@ export function IndexConfigFormPanel({
             <span>{t("dataCatalog.build.incrementalFieldCount")}</span>
             <b>{incrementalFields.length}</b>
           </div>
+          <div className={formStyles.configMetric}>
+            <span>{t("dataCatalog.build.embeddingFieldCount")}</span>
+            <b>{embeddingFields.length}</b>
+          </div>
+          <div className={formStyles.configMetric}>
+            <span>{t("dataCatalog.build.fulltextFieldCount")}</span>
+            <b>{fulltextFields.length}</b>
+          </div>
           {!hideBuildControls ? (
-            <>
-              <div className={formStyles.configMetric}>
-                <span>{t("dataCatalog.build.embeddingFieldCount")}</span>
-                <b>{embeddingFields.length}</b>
-              </div>
-              <div className={formStyles.configMetric}>
-                <span>{t("dataCatalog.build.fulltextFieldCount")}</span>
-                <b>{fulltextFields.length}</b>
-              </div>
-              <div className={formStyles.configMetricWide}>
-                <span>{t("dataCatalog.build.configCanBuild")}</span>
-                <b>
-                  {canBuild
-                    ? t("dataCatalog.build.configCanBuildYes")
-                    : t("dataCatalog.build.configCannotBuild")}
-                </b>
-              </div>
-            </>
+            <div className={formStyles.configMetricWide}>
+              <span>{t("dataCatalog.build.configCanBuild")}</span>
+              <b>
+                {canBuild
+                  ? t("dataCatalog.build.configCanBuildYes")
+                  : t("dataCatalog.build.configCannotBuild")}
+              </b>
+            </div>
           ) : null}
         </div>
 
-          <div className={formStyles.resourceDefaults}>
-            <div className={formStyles.resourceDefaultsHead}>
-              <div>
-                <div className={formStyles.resourceDefaultsTitle}>
-                  {t("dataCatalog.build.resourceDefaultsTitle")}
-                </div>
-                <div className={formStyles.fieldHint}>
-                  {t("dataCatalog.build.resourceDefaultsHint")}
-                </div>
+        <div className={formStyles.resourceDefaults}>
+          <div className={formStyles.resourceDefaultsHead}>
+            <div>
+              <div className={formStyles.resourceDefaultsTitle}>
+                {t("dataCatalog.build.resourceDefaultsTitle")}
+              </div>
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.resourceDefaultsHint")}
               </div>
             </div>
-            <div className={formStyles.resourceDefaultsGrid}>
-                <div className={formStyles.resourceDefaultItem}>
-                  <div className={formStyles.resourceDefaultItemHead}>
-                    <span>
-                      {t("dataCatalog.build.defaultFulltextAnalyzer")}
-                    </span>
-                  </div>
+          </div>
+          <div className={formStyles.resourceDefaultsGrid}>
+            <div className={formStyles.resourceDefaultItem}>
+              <div className={formStyles.resourceDefaultItemHead}>
+                <span>
+                  {t("dataCatalog.build.defaultFulltextAnalyzer")}
+                </span>
+              </div>
+              <Select
+                allowClear
+                disabled={actionsLocked || analyzerSelectionDisabled}
+                onChange={(value) => {
+                  setDefaultFulltextAnalyzer(value ?? "");
+                  markDirty();
+                }}
+                options={analyzerOptions}
+                placeholder={t("dataCatalog.build.defaultFulltextAnalyzer")}
+                style={{ width: "100%" }}
+                value={defaultFulltextAnalyzer || undefined}
+              />
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.fulltextAnalyzerHint")}
+              </div>
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.fulltextAnalyzerEnglishHint")}
+              </div>
+              {fulltextFields.length > 0 && analyzersLoadState === "ready" ? (
+                <div className={formStyles.fieldHint}>
+                  {enabledChineseAnalyzers.length > 0
+                    ? t("dataCatalog.build.fulltextChineseAnalyzerAvailableHint", {
+                      analyzers: enabledChineseAnalyzers.join(", "),
+                    })
+                    : t("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")}
+                </div>
+              ) : null}
+              {analyzerSelectionDisabled ? (
+                <div className={formStyles.fieldHint}>
+                  {analyzerSelectionDisabledReason}
+                </div>
+              ) : null}
+              {fulltextAnalyzerOverrides.length > 0 ? (
+                <Alert
+                  message={t("dataCatalog.build.fulltextAnalyzerOverrides", {
+                    overrides: fulltextAnalyzerOverrides.join(", "),
+                  })}
+                  showIcon
+                  type="info"
+                />
+              ) : null}
+            </div>
+            <div className={formStyles.resourceDefaultItem}>
+              <div className={formStyles.resourceDefaultItemHead}>
+                <span>
+                  {t("dataCatalog.build.defaultEmbeddingModel")}
+                </span>
+              </div>
+              {modelsLoading ? (
+                <Select
+                  disabled
+                  loading
+                  placeholder={t("dataCatalog.build.modelsLoading")}
+                  style={{ width: "100%" }}
+                />
+              ) : modelsLoadFailed ? (
+                <Alert
+                  action={
+                    <Space size={4}>
+                      <AppButton
+                        onClick={() => {
+                          void reloadEmbeddingModels();
+                        }}
+                        size="small"
+                        type="link"
+                      >
+                        {t("dataCatalog.build.retryLoadModels")}
+                      </AppButton>
+                      <AppButton
+                        onClick={() => {
+                          void navigate("/model-resources/models");
+                        }}
+                        size="small"
+                        type="link"
+                      >
+                        {t("dataCatalog.build.goConnectModel")}
+                      </AppButton>
+                    </Space>
+                  }
+                  message={t("dataCatalog.build.modelsLoadError", {
+                    message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+                  })}
+                  showIcon
+                  type="error"
+                />
+              ) : noModels ? (
+                <Alert
+                  action={
+                    <AppButton
+                      onClick={() => {
+                        void navigate("/model-resources/models");
+                      }}
+                      size="small"
+                      type="link"
+                    >
+                      {t("dataCatalog.build.goConnectModel")}
+                    </AppButton>
+                  }
+                  message={t("dataCatalog.build.noModels")}
+                  showIcon
+                  type="warning"
+                />
+              ) : (
+                <>
                   <Select
                     allowClear
-                    disabled={actionsLocked || analyzerSelectionDisabled}
+                    disabled={actionsLocked}
                     onChange={(value) => {
-                      setDefaultFulltextAnalyzer(value ?? "");
+                      setDefaultModelId(value);
+                      setOrphanSavedModel(null);
                       markDirty();
                     }}
-                    options={analyzerOptions}
-                    placeholder={t("dataCatalog.build.defaultFulltextAnalyzer")}
+                    options={modelOptions}
+                    placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
                     style={{ width: "100%" }}
-                    value={defaultFulltextAnalyzer || undefined}
+                    value={defaultModelId}
                   />
-                  <div className={formStyles.fieldHint}>
-                    {t("dataCatalog.build.fulltextAnalyzerHint")}
-                  </div>
-                  <div className={formStyles.fieldHint}>
-                    {t("dataCatalog.build.fulltextAnalyzerEnglishHint")}
-                  </div>
-                  {fulltextFields.length > 0 && analyzersLoadState === "ready" ? (
-                    <div className={formStyles.fieldHint}>
-                      {enabledChineseAnalyzers.length > 0
-                        ? t("dataCatalog.build.fulltextChineseAnalyzerAvailableHint", {
-                            analyzers: enabledChineseAnalyzers.join(", "),
-                          })
-                        : t("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")}
-                    </div>
-                  ) : null}
-                  {analyzerSelectionDisabled ? (
-                    <div className={formStyles.fieldHint}>
-                      {analyzerSelectionDisabledReason}
-                    </div>
-                  ) : null}
-                  {fulltextAnalyzerOverrides.length > 0 ? (
+                  {orphanSavedModel ? (
                     <Alert
-                      message={t("dataCatalog.build.fulltextAnalyzerOverrides", {
-                        overrides: fulltextAnalyzerOverrides.join(", "),
+                      message={t("dataCatalog.build.savedModelUnavailable", {
+                        model: orphanSavedModel,
                       })}
-                      showIcon
-                      type="info"
-                    />
-                  ) : null}
-                </div>
-                <div className={formStyles.resourceDefaultItem}>
-                  <div className={formStyles.resourceDefaultItemHead}>
-                    <span>
-                      {t("dataCatalog.build.defaultEmbeddingModel")}
-                    </span>
-                  </div>
-                  {modelsLoading ? (
-                    <Select
-                      disabled
-                      loading
-                      placeholder={t("dataCatalog.build.modelsLoading")}
-                      style={{ width: "100%" }}
-                    />
-                  ) : modelsLoadFailed ? (
-                    <Alert
-                      action={
-                        <Space size={4}>
-                          <AppButton
-                            onClick={() => {
-                              void reloadEmbeddingModels();
-                            }}
-                            size="small"
-                            type="link"
-                          >
-                            {t("dataCatalog.build.retryLoadModels")}
-                          </AppButton>
-                          <AppButton
-                            onClick={() => {
-                              void navigate("/model-resources/models");
-                            }}
-                            size="small"
-                            type="link"
-                          >
-                            {t("dataCatalog.build.goConnectModel")}
-                          </AppButton>
-                        </Space>
-                      }
-                      message={t("dataCatalog.build.modelsLoadError", {
-                        message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
-                      })}
-                      showIcon
-                      type="error"
-                    />
-                  ) : noModels ? (
-                    <Alert
-                      action={
-                        <AppButton
-                          onClick={() => {
-                            void navigate("/model-resources/models");
-                          }}
-                          size="small"
-                          type="link"
-                        >
-                          {t("dataCatalog.build.goConnectModel")}
-                        </AppButton>
-                      }
-                      message={t("dataCatalog.build.noModels")}
                       showIcon
                       type="warning"
                     />
-                  ) : (
-                    <>
-                      <Select
-                        allowClear
-                        disabled={actionsLocked}
-                        onChange={(value) => {
-                          setDefaultModelId(value);
-                          setOrphanSavedModel(null);
-                          markDirty();
-                        }}
-                        options={modelOptions}
-                        placeholder={t("dataCatalog.build.defaultEmbeddingModel")}
-                        style={{ width: "100%" }}
-                        value={defaultModelId}
-                      />
-                      {orphanSavedModel ? (
-                        <Alert
-                          message={t("dataCatalog.build.savedModelUnavailable", {
-                            model: orphanSavedModel,
-                          })}
-                          showIcon
-                          type="warning"
-                        />
-                      ) : null}
-                    </>
-                  )}
-                  <div className={formStyles.fieldHint}>
-                    {t("dataCatalog.build.defaultEmbeddingModelHint")}
-                  </div>
-                  <div className={formStyles.fieldHint}>
-                    {t("dataCatalog.build.defaultEmbeddingModelUsageHint")}
-                  </div>
-                </div>
+                  ) : null}
+                </>
+              )}
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.defaultEmbeddingModelHint")}
+              </div>
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.defaultEmbeddingModelUsageHint")}
+              </div>
             </div>
           </div>
+        </div>
         {!hideBuildControls ? (
           <div className={formStyles.resourceDefaults}>
             <div className={formStyles.resourceDefaultsHead}>
@@ -1076,7 +1074,7 @@ export function IndexConfigFormPanel({
                   {t("dataCatalog.build.keyFields")}
                 </div>
                 <div className={formStyles.fieldHint}>
-                {t("dataCatalog.build.keyFieldsHint")}
+                  {t("dataCatalog.build.keyFieldsHint")}
                 </div>
               </div>
             </div>
@@ -1136,49 +1134,49 @@ export function IndexConfigFormPanel({
             </div>
           </div>
           <div className={styles.fieldRoleCard}>
-          {schemaLoading ? (
-            <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaLoading")}</div>
-          ) : schema.length === 0 ? (
-            <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaEmpty")}</div>
-          ) : (
-            <>
-              <div className={styles.frtBar}>
-                <span className={styles.frtStat}>
-                  {t("dataCatalog.build.fieldCount", { count: schema.length })}
-                </span>
-                <span className={styles.frtSummary}>
+            {schemaLoading ? (
+              <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaLoading")}</div>
+            ) : schema.length === 0 ? (
+              <div className={styles.frtEmpty}>{t("dataCatalog.build.schemaEmpty")}</div>
+            ) : (
+              <>
+                <div className={styles.frtBar}>
                   <span className={styles.frtStat}>
-                    <span className={cx(styles.frtDot, styles.frtDotEmb)} />
-                    {t("dataCatalog.build.roleEmbedding")}
-                    <b>{embeddingFields.length}</b>
+                    {t("dataCatalog.build.fieldCount", { count: schema.length })}
                   </span>
-                  <span className={styles.frtStat}>
-                    <span className={cx(styles.frtDot, styles.frtDotFt)} />
-                    {t("dataCatalog.build.roleFulltext")}
-                    <b>{fulltextFields.length}</b>
+                  <span className={styles.frtSummary}>
+                    <span className={styles.frtStat}>
+                      <span className={cx(styles.frtDot, styles.frtDotEmb)} />
+                      {t("dataCatalog.build.roleEmbedding")}
+                      <b>{embeddingFields.length}</b>
+                    </span>
+                    <span className={styles.frtStat}>
+                      <span className={cx(styles.frtDot, styles.frtDotFt)} />
+                      {t("dataCatalog.build.roleFulltext")}
+                      <b>{fulltextFields.length}</b>
+                    </span>
                   </span>
-                </span>
-              </div>
-              <div className={styles.frtScroll}>
-                <table className={styles.frtTable}>
-                  <colgroup>
-                    <col className={styles.frtNameCol} />
-                    <col className={styles.frtDisplayCol} />
-                    <col className={styles.frtTypeCol} />
-                    <col className={styles.frtDescriptionCol} />
-                    <col className={styles.frtActionWidthCol} />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th>{t("dataCatalog.resource.fieldName")}</th>
-                      <th>{t("dataCatalog.resource.fieldDisplayName")}</th>
-                      <th>{t("dataCatalog.resource.fieldType")}</th>
-                      <th>{t("dataCatalog.resource.fieldDescription")}</th>
-                      <th className={cx(styles.frtActionCol, formStyles.featureActionHead)}>{t("common.actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schema.map((field) => {
+                </div>
+                <div className={styles.frtScroll}>
+                  <table className={styles.frtTable}>
+                    <colgroup>
+                      <col className={styles.frtNameCol} />
+                      <col className={styles.frtDisplayCol} />
+                      <col className={styles.frtTypeCol} />
+                      <col className={styles.frtDescriptionCol} />
+                      <col className={styles.frtActionWidthCol} />
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th>{t("dataCatalog.resource.fieldName")}</th>
+                        <th>{t("dataCatalog.resource.fieldDisplayName")}</th>
+                        <th>{t("dataCatalog.resource.fieldType")}</th>
+                        <th>{t("dataCatalog.resource.fieldDescription")}</th>
+                        <th className={cx(styles.frtActionCol, formStyles.featureActionHead)}>{t("common.actions")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schema.map((field) => {
                         const canConfigureFeature = isFeatureConfigField(field.type);
                         const rowActive = featureCountOf(field.name) > 0;
                         const featureSummary = featureSummaryOf(field.name);
@@ -1234,12 +1232,12 @@ export function IndexConfigFormPanel({
                             </td>
                           </tr>
                         );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
