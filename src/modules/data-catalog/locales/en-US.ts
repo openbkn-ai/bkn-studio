@@ -60,10 +60,6 @@ export const dataCatalogEnUS = {
       lastEventShort: "Last event {{time}}",
       startConfigure: "Configure Index",
       statusCardTitle: "Live Index Status",
-      configStatusReady: "Index config saved. Start a build under Task Management.",
-      configStatusIncomplete:
-        "Only build-key fields are configured. Enable at least one embedding or full-text feature before building.",
-      configStatusEmpty: "Not configured yet. Select field roles and save.",
       launchTitle: "Start a Build",
       launchHint: "Create and start a build using the resource's current index config.",
       goConfigure: "Configure Index",

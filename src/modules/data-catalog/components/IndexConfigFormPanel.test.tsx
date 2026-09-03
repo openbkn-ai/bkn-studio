@@ -9,11 +9,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
+const listBuildTasksMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -26,7 +27,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
-  listBuildTasks: vi.fn().mockResolvedValue([]),
+  listBuildTasks: listBuildTasksMock,
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
@@ -67,6 +68,7 @@ describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
+    listBuildTasksMock.mockReset().mockResolvedValue([]);
     updateCatalogResourceMock.mockReset();
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
     loadEmbeddingModelOptionsMock.mockResolvedValue({
@@ -270,6 +272,48 @@ describe("IndexConfigFormPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.build.configCannotBuild")).toBeTruthy();
+  });
+
+  it("keeps resource key fields when an active task has no configuration snapshot", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
+      schema: [{
+        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    listBuildTasksMock.mockResolvedValue([{
+      createTime: 1,
+      embeddingFields: [],
+      embeddingModel: "",
+      error: null,
+      finishTime: null,
+      fulltextAnalyzer: "standard",
+      fulltextFields: ["title"],
+      id: "running-task",
+      incrementalFields: [],
+      lastProgressTime: null,
+      mode: "batch",
+      modelDimensions: 0,
+      primaryKeyFields: [],
+      resourceId: configuredResource.id,
+      startTime: 1,
+      status: "running",
+      syncedCount: 0,
+      totalCount: 1,
+    } satisfies BuildTask]);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("dataCatalog.build.activeTaskLocked");
+    expect(screen.getByText("dataCatalog.build.configCanBuild")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCannotBuild")).toBeNull();
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {

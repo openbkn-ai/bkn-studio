@@ -260,20 +260,6 @@ export function IndexConfigFormPanel({
         const tasks = await listBuildTasks({ resourceId: resource.id });
         const running = tasks.find((task) => isActiveBuildTask(task)) ?? null;
         setActiveTask(running);
-        if (
-          !preferredModel &&
-          running &&
-          running.embeddingFields.length + running.fulltextFields.length > 0
-        ) {
-          setPrimaryKeyFields(running.primaryKeyFields);
-          setIncrementalFields(running.incrementalFields);
-          setFieldEmbeddingModelGroups(Object.fromEntries(running.embeddingFields.map((field) => [field, [{ name: "vector", value: "", isDefault: true }]])));
-          setFieldFulltextAnalyzerGroups(Object.fromEntries(running.fulltextFields.map((field) => [field, [{ name: "fulltext", value: "", isDefault: true }]])));
-          if (running.fulltextAnalyzer) {
-            setDefaultFulltextAnalyzer(running.fulltextAnalyzer);
-          }
-          preferredModel = running.embeddingModel;
-        }
       } catch {
         setActiveTask(null);
       }

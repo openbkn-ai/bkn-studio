@@ -178,6 +178,10 @@ describe("resource.service · getCatalogResources", () => {
             category: "table",
             id: "res-1",
             index_name: "bkn_res-1",
+            index_config: {
+              incremental_fields: ["updated_at", "revision"],
+              primary_key_fields: ["tenant_id", "order_id"],
+            },
             local_status: "available",
             name: "orders",
           },
@@ -190,6 +194,10 @@ describe("resource.service · getCatalogResources", () => {
 
     await expect(getCatalogResources(["res-1"])).resolves.toEqual([
       expect.objectContaining({
+        indexConfig: {
+          incrementalFields: ["updated_at", "revision"],
+          primaryKeyFields: ["tenant_id", "order_id"],
+        },
         localIndexName: "bkn_res-1",
         localIndexStatus: "available",
       }),
@@ -229,6 +237,10 @@ describe("resource.service · updateCatalogResource", () => {
       category: "table",
       description: "",
       expectedUpdateTime: 123,
+      indexConfig: {
+        incrementalFields: ["updated_at", "revision"],
+        primaryKeyFields: ["tenant_id", "request_no"],
+      },
       name: "orders",
       schema: [
         {
@@ -270,7 +282,12 @@ describe("resource.service · updateCatalogResource", () => {
           ],
         }),
       ],
-      index_config: undefined,
+      index_config: {
+        default_embedding_model: undefined,
+        default_fulltext_analyzer: undefined,
+        incremental_fields: ["updated_at", "revision"],
+        primary_key_fields: ["tenant_id", "request_no"],
+      },
       source_identifier: "orders",
     });
   });
