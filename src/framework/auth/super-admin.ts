@@ -10,5 +10,5 @@
  * `is_admin` includes the three administrator roles and must not be used here.
  */
 export function isSuperAdmin(roles: readonly string[]): boolean {
-  return roles.some((role) => role === "super_admin" || role === "超级管理员");
+  return roles.some((role) => role === "super_admin" || role === "\u8d85\u7ea7\u7ba1\u7406\u5458");
 }

@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 import { isSuperAdmin } from "@/framework/auth/super-admin";
 
 describe("isSuperAdmin", () => {
-  it.each([["super_admin"], ["超级管理员"]])("recognizes the controlled role %s", (role) => {
-    expect(isSuperAdmin(role)).toBe(true);
+  it.each([["super_admin"], ["\u8d85\u7ea7\u7ba1\u7406\u5458"]])("recognizes the controlled role %s", (role) => {
+    expect(isSuperAdmin([role])).toBe(true);
   });
 
   it("does not treat three-admin roles as super admin", () => {
