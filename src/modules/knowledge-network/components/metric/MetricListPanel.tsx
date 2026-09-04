@@ -24,6 +24,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
@@ -41,6 +42,7 @@ import {
   useAccountDirectory,
 } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import { resolveMetricBoundObjectTypeName } from "@/modules/knowledge-network/utils/metric-display";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type MetricListPanelProps = {
@@ -94,6 +96,8 @@ export function MetricListPanel({
   const [pageSize, setPageSize] = usePersistentPageSize("metrics");
   const [total, setTotal] = useState(metrics.length);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [authorizingRecord, setAuthorizingRecord] =
+    useState<KnowledgeNetworkMetricRecord | null>(null);
   const accountDirectory = useAccountDirectory();
 
   const tagOptions = useMemo(() => {
@@ -190,6 +194,11 @@ export function MetricListPanel({
       return;
     }
 
+    if (key === "authorize") {
+      setAuthorizingRecord(record);
+      return;
+    }
+
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -225,8 +234,15 @@ export function MetricListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+            ? [{ key: "edit", label: t("common.edit") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
+            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -358,7 +374,8 @@ export function MetricListPanel({
     );
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage} ${styles.metricPage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage} ${styles.metricPage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.metricsTitle")}</h2>
       {unsupported ? (
         <Alert
@@ -498,6 +515,14 @@ export function MetricListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="metric"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
+        record={authorizingRecord}
+      />
+    </>
   );
 }

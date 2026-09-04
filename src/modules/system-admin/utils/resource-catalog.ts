@@ -70,12 +70,17 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   agent_tpl: "Agent template",
   catalog: "Data connection / Catalog",
   connector_type: "Connector type",
+  concept_group: "Concept group",
   data_flow: "Data flow",
   knowledge_network: "Knowledge network",
   large_model: "Large model",
   mcp: "MCP",
+  metric: "Metric",
+  object_type: "Object type",
   operator: "Function",
   resource: "Data resource",
+  relation_type: "Relation type",
+  risk_type: "Risk type",
   safe_admin: "bkn-safe management API",
   skill: "Skill",
   small_model: "Small model",
@@ -84,6 +89,18 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+// Only action types expose a task-management surface in Studio. The other knowledge-network child
+// resources may inherit this operation in bkn-safe, but offering it in the grant drawer would create
+// a permission with no user-facing capability.
+const KNOWLEDGE_NETWORK_CHILD_AUTHZ = [
+  "view_detail",
+  "create",
+  "modify",
+  "delete",
+  "query_data",
+  "authorize",
+];
+const ACTION_TYPE_AUTHZ = [...KNOWLEDGE_NETWORK_CHILD_AUTHZ, "task_manage", "execute"];
 // A data connection owns its tables: creating, editing and building one is judged on the catalog,
 // not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
 // lists match the operations bkn-safe actually stores on these types.
@@ -114,6 +131,12 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     "authorize",
     "task_manage",
   ]),
+  resourceType("concept_group", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("object_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("relation_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("action_type", ACTION_TYPE_AUTHZ),
+  resourceType("metric", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("risk_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
   resourceType("stream_data_pipeline", ["view_detail", "create", "modify", "delete", "authorize"]),
   resourceType("data_flow", [
     "list",

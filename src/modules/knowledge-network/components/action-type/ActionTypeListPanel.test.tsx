@@ -23,6 +23,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     modal: { confirm: vi.fn() },
+    runtimeConfig: { currentUser: { permissions: [] } },
   }),
 }));
 
@@ -55,12 +56,11 @@ afterEach(() => {
   navigate.mockReset();
 });
 
-describe("ActionTypeListPanel execution access", () => {
-  it("exposes execution management to task managers without modify access", async () => {
+describe("ActionTypeListPanel menu access", () => {
+  it("exposes execution management only with task-manage access", async () => {
     render(
       <ActionTypeListPanel
         canDelete={false}
-        canManageExecution
         canModify={false}
         items={[
           {
@@ -71,6 +71,7 @@ describe("ActionTypeListPanel execution access", () => {
             name: "Update order",
             objectTypeId: "object-1",
             objectTypeName: "Order",
+            operations: ["task_manage"],
             tags: [],
             updateTime: "2026-08-20 10:00:00",
             updaterName: "admin",
@@ -89,5 +90,38 @@ describe("ActionTypeListPanel execution access", () => {
       await screen.findByText("knowledgeNetwork.actionTypeExecutionEntry"),
     ).not.toBeNull();
     expect(screen.queryByText("common.edit")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.authorizeAction")).toBeNull();
+  });
+
+  it("exposes configure permissions only for action types with authorize", async () => {
+    render(
+      <ActionTypeListPanel
+        canDelete={false}
+        canModify={false}
+        items={[
+          {
+            actionKind: "update",
+            color: "#1677ff",
+            description: "Update an order",
+            id: "action-1",
+            name: "Update order",
+            objectTypeId: "object-1",
+            objectTypeName: "Order",
+            operations: ["authorize"],
+            tags: [],
+            updateTime: "2026-08-20 10:00:00",
+            updaterName: "admin",
+          },
+        ]}
+        networkId="network-1"
+        objectTypes={[]}
+        onDelete={vi.fn()}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "common.actions" }));
+
+    expect(await screen.findByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
   });
 });

@@ -27,6 +27,7 @@ import {
 import {
   enrichConceptGroupDetail,
   mockConceptGroups,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   syncKnowledgeNetworkStatistics,
   syncMockConceptGroups,
@@ -75,7 +76,11 @@ export async function listKnowledgeNetworkConceptGroups(networkId: string) {
 export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId: string) {
   if (useMock) {
     const group = mockConceptGroups[networkId]?.find((item) => item.id === groupId) ?? null;
-    return wait(group ? enrichConceptGroupDetail(networkId, group) : null);
+    return wait(
+      group
+        ? { ...enrichConceptGroupDetail(networkId, group), operations: mockKnowledgeNetworkChildOperations }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendConceptGroup>>(

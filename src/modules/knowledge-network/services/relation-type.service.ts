@@ -33,6 +33,7 @@ import {
   mockRelationTypeResourceMappings,
   mockRelationTypeMappings,
   mockRelationTypes,
+  mockKnowledgeNetworkChildOperations,
   persistMockRelationTypeResourceMappings,
   persistMockRelationTypeMappings,
   removeMockRelationTypeResourceMappings,
@@ -113,7 +114,12 @@ function persistMockRelationTypeMappingBundle(
 
 export async function listKnowledgeNetworkRelationTypes(networkId: string) {
   if (useMock) {
-    return wait((mockRelationTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockRelationTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendRelationType>>(
@@ -137,7 +143,10 @@ export async function getKnowledgeNetworkRelationType(
 ) {
   if (useMock) {
     return wait(
-      (mockRelationTypes[networkId] ?? []).find((item) => item.id === relationTypeId) ?? null,
+      (() => {
+        const record = (mockRelationTypes[networkId] ?? []).find((item) => item.id === relationTypeId);
+        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+      })(),
     );
   }
 

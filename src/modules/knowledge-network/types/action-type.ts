@@ -80,6 +80,7 @@ export type KnowledgeNetworkActionTypeRecord = {
   name: string;
   objectTypeId: string;
   objectTypeName: string;
+  operations?: string[];
   tags: string[];
   updateTime: string;
   updaterName: string;

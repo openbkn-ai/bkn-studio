@@ -24,6 +24,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
@@ -32,12 +33,12 @@ import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
 type ActionTypeListPanelProps = {
   canDelete: boolean;
-  canManageExecution: boolean;
   canModify: boolean;
   items: KnowledgeNetworkActionTypeRecord[];
   loading?: boolean;
@@ -66,7 +67,6 @@ function getActionKindLabel(
 
 export function ActionTypeListPanel({
   canDelete,
-  canManageExecution,
   canModify,
   items,
   loading,
@@ -88,6 +88,8 @@ export function ActionTypeListPanel({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize("action-types");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [authorizingRecord, setAuthorizingRecord] =
+    useState<KnowledgeNetworkActionTypeRecord | null>(null);
 
   const objectTypeOptions = useMemo(
     () =>
@@ -204,6 +206,11 @@ export function ActionTypeListPanel({
       return;
     }
 
+    if (key === "authorize") {
+      setAuthorizingRecord(record);
+      return;
+    }
+
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -241,11 +248,18 @@ export function ActionTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
-          ...(canManageExecution
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+            ? [{ key: "edit", label: t("common.edit") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "task_manage")
             ? [{ key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") }]
             : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
+            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -353,7 +367,8 @@ export function ActionTypeListPanel({
   };
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage} ${styles.actionTypePage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage} ${styles.actionTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.actionTypesTitle")}</h2>
 
       <div className={styles.toolbar}>
@@ -511,6 +526,14 @@ export function ActionTypeListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="action_type"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
+        record={authorizingRecord}
+      />
+    </>
   );
 }

@@ -178,15 +178,13 @@ export function WorkspaceOverviewSection({
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>
           <div className={styles.overviewHeaderTitleRight}>
-            {canAuthorize ? (
-              <AppButton
-                disabled={!detail}
-                icon={<KeyOutlined />}
-                onClick={() => setAuthorizeOpen(true)}
-              >
-                {t("systemAdmin.objectGrants.authorize")}
-              </AppButton>
-            ) : null}
+            <AppButton
+              disabled={!detail}
+              icon={<KeyOutlined />}
+              onClick={() => setAuthorizeOpen(true)}
+            >
+              {t("knowledgeNetwork.authorizeAction")}
+            </AppButton>
             {canModify ? (
               <AppButton icon={<EditOutlined />} onClick={onEdit}>
                 {t("common.edit")}

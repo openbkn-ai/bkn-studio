@@ -44,6 +44,7 @@ import {
   mockActionTypeDetailExtras,
   mockActionTypeExecutionConfigs,
   mockActionTypes,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   persistMockActionTypeDetailExtras,
   persistMockActionTypeExecutionConfig,
@@ -119,7 +120,10 @@ export async function getKnowledgeNetworkActionType(
 ) {
   if (useMock) {
     return wait(
-      (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId) ?? null,
+      (() => {
+        const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
+        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+      })(),
     );
   }
 

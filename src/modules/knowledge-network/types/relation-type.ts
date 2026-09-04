@@ -38,6 +38,7 @@ export type KnowledgeNetworkRelationTypeRecord = {
   id: string;
   mappingMode: "direct" | "resource";
   name: string;
+  operations?: string[];
   sourceObjectTypeId: string;
   sourceObjectTypeName: string;
   tags: string[];

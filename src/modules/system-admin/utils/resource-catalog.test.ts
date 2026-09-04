@@ -53,6 +53,27 @@ describe("resource-catalog", () => {
     ]);
   });
 
+  it("offers task management only for action types among knowledge-network children", () => {
+    for (const type of ["concept_group", "object_type", "relation_type", "metric", "risk_type"]) {
+      expect(operationsForType(type).map((item) => item.key)).not.toContain("task_manage");
+    }
+
+    expect(operationsForType("action_type").map((item) => item.key)).toContain("task_manage");
+  });
+
+  it("offers data querying for every knowledge-network child type", () => {
+    for (const type of [
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+      "risk_type",
+    ]) {
+      expect(operationsForType(type).map((item) => item.key)).toContain("query_data");
+    }
+  });
+
   it("falls back to raw keys for unknown resource and operation keys", () => {
     expect(resourceTypeLabel("unknown_resource")).toBe("unknown_resource");
     expect(operationLabel("unknown_resource", "unknown_op")).toBe("unknown_op");
