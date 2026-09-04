@@ -32,6 +32,7 @@ type BackendMcpInfo = {
   mcp_id: string | number;
   mode?: string;
   name: string;
+  operations?: string[];
   status?: string;
   tool_configs?: Array<{
     box_id?: string;
@@ -59,6 +60,7 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 let mockMcps: McpRecord[] = [
   {
+    operations: ["*"],
     mcpId: "mcp_sse_demo",
     name: "SSE Demo MCP",
     description: "Sample SSE MCP server for local development.",
@@ -72,6 +74,7 @@ let mockMcps: McpRecord[] = [
     isInternal: true,
   },
   {
+    operations: ["*"],
     mcpId: "mcp_custom_ops",
     name: "Custom Operations MCP",
     description: "User-defined MCP with imported toolbox tools.",
@@ -107,6 +110,7 @@ function mapMcpDetail(baseInfo: BackendMcpInfo): McpDetail {
 
 function mapMcp(item: BackendMcpInfo): McpRecord {
   return {
+    operations: item.operations,
     mcpId: String(item.mcp_id),
     name: item.name,
     description: item.description,

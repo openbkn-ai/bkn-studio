@@ -23,10 +23,11 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-function buildItem(status: string): ExecutionUnitCardItem {
+function buildItem(status: string, operations?: string[]): ExecutionUnitCardItem {
   return {
     id: "box-1",
     name: "Demo Toolbox",
+    operations,
     status,
   };
 }
@@ -100,5 +101,36 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
 
     expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "unpublish" }));
+  });
+
+  it("only exposes configuration when the row has authorize", () => {
+    const onAction = vi.fn();
+    const { unmount } = render(
+      <ExecutionUnitCardMenu
+        activeTab="toolbox"
+        item={buildItem("published")}
+        onAction={onAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
+    expect(within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize")).toBeNull();
+
+    unmount();
+    render(
+      <ExecutionUnitCardMenu
+        activeTab="toolbox"
+        item={buildItem("published", ["authorize"])}
+        onAction={onAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
+    fireEvent.click(within(screen.getByRole("menu")).getByText("systemAdmin.objectGrants.authorize"));
+
+    expect(onAction).toHaveBeenCalledWith(
+      "authorize",
+      expect.objectContaining({ operations: ["authorize"] }),
+    );
   });
 });

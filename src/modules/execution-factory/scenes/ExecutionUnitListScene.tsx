@@ -79,6 +79,7 @@ import {
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
@@ -104,6 +105,13 @@ const TAB_STORAGE_KEY = "execution-factory.activeTab";
 /** API/function subview under toolboxes, restored from detail-page navigation just like activeTab. */
 const TOOLBOX_VIEW_STORAGE_KEY = "execution-factory.toolboxView";
 const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
+
+type ObjectAuthorizationTarget = {
+  id: string;
+  name: string;
+  type: string;
+  objectAuthorized: boolean;
+};
 
 type IdleTaskHandle = {
   cancel: () => void;
@@ -203,6 +211,7 @@ function mapAuditUser(userId: string | undefined, directory: Map<string, string>
 
 function mapOperator(item: OperatorRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.operatorId,
     name: item.name,
     description: item.description,
@@ -221,6 +230,7 @@ function mapOperator(item: OperatorRecord, directory: Map<string, string>): Exec
 
 function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.boxId,
     name: item.name,
     description: item.description,
@@ -239,6 +249,7 @@ function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): Execut
 
 function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.mcpId,
     name: item.name,
     description: item.description,
@@ -255,6 +266,7 @@ function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitC
 
 function mapSkill(item: SkillRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.skillId,
     name: item.name,
     description: item.description,
@@ -330,9 +342,7 @@ export function ExecutionUnitListScene({
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
-  const [authorizeTarget, setAuthorizeTarget] = useState<{ id: string; name: string; type: string } | null>(
-    null,
-  );
+  const [authorizeTarget, setAuthorizeTarget] = useState<ObjectAuthorizationTarget | null>(null);
   const [installTarget, setInstallTarget] = useState<{
     id: string;
     name: string;
@@ -348,11 +358,7 @@ export function ExecutionUnitListScene({
   const [installedResourceIdsReady, setInstalledResourceIdsReady] = useState(!marketMode);
   const installedSyncAbortRef = useRef<AbortController | null>(null);
   const installedSyncManualRef = useRef(false);
-  const [publishedPermTarget, setPublishedPermTarget] = useState<{
-    id: string;
-    name: string;
-    type: string;
-  } | null>(null);
+  const [publishedPermTarget, setPublishedPermTarget] = useState<ObjectAuthorizationTarget | null>(null);
   const [editMcpId, setEditMcpId] = useState<string | null>(null);
   const [updateSkillPackageTarget, setUpdateSkillPackageTarget] = useState<{
     id: string;
@@ -948,11 +954,16 @@ export function ExecutionUnitListScene({
               await onConfirm();
               void message.success(t("common.success"));
               reloadList();
-              if (!marketMode && nextStatus === "published") {
+              if (
+                !marketMode &&
+                nextStatus === "published" &&
+                hasExecutionUnitRecordOperation(item, "authorize")
+              ) {
                 setPublishedPermTarget({
                   id: item.id,
                   name: item.name,
                   type: AUTHZ_TYPE_BY_TAB[activeTab],
+                  objectAuthorized: true,
                 });
               }
             } catch (error) {
@@ -984,7 +995,12 @@ export function ExecutionUnitListScene({
       };
 
       if (action === "authorize") {
-        setAuthorizeTarget({ id: item.id, name: item.name, type: AUTHZ_TYPE_BY_TAB[activeTab] });
+        setAuthorizeTarget({
+          id: item.id,
+          name: item.name,
+          type: AUTHZ_TYPE_BY_TAB[activeTab],
+          objectAuthorized: hasExecutionUnitRecordOperation(item, "authorize"),
+        });
         return;
       }
 
@@ -1612,6 +1628,7 @@ export function ExecutionUnitListScene({
           objId={authorizeTarget.id}
           objName={authorizeTarget.name}
           objType={authorizeTarget.type}
+          objectAuthorized={authorizeTarget.objectAuthorized}
           onClose={() => setAuthorizeTarget(null)}
           open={Boolean(authorizeTarget)}
         />

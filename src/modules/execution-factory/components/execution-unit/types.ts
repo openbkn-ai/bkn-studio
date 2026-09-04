@@ -12,6 +12,8 @@ export type ExecutionUnitCardItem = {
   name: string;
   /** The All view mixes types on one screen, so cards cannot infer their type from activeTab. */
   unitType?: ExecutionUnitTab;
+  /** Per-instance operations projected by Foundry; absent operations fail closed in the UI. */
+  operations?: string[];
   description?: string;
   metadataType?: string;
   /** MCP connection mode (sse / stream), used by the badge in the card subtitle. */
