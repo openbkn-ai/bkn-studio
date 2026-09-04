@@ -412,6 +412,11 @@ export function ConceptGroupDetailScene() {
   return (
     <>
       <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
         onBack={() => {
           void navigate(listPath);
         }}

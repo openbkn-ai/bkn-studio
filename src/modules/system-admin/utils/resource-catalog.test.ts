@@ -74,6 +74,17 @@ describe("resource-catalog", () => {
     }
   });
 
+  it("localizes every knowledge-network child resource type in Chinese", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("concept_group")).toBe("概念分组");
+    expect(resourceTypeLabel("object_type")).toBe("对象类");
+    expect(resourceTypeLabel("relation_type")).toBe("关系类");
+    expect(resourceTypeLabel("action_type")).toBe("行动类");
+    expect(resourceTypeLabel("metric")).toBe("指标");
+    expect(resourceTypeLabel("risk_type")).toBe("风险类");
+  });
+
   it("falls back to raw keys for unknown resource and operation keys", () => {
     expect(resourceTypeLabel("unknown_resource")).toBe("unknown_resource");
     expect(operationLabel("unknown_resource", "unknown_op")).toBe("unknown_op");

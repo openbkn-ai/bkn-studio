@@ -101,7 +101,10 @@ function filterAndSortMockMetrics(
   const offset = query.offset ?? 0;
 
   return {
-    entries: sliceMetricListPage(sorted, offset, query.limit),
+    entries: sliceMetricListPage(sorted, offset, query.limit).map((item) => ({
+      ...item,
+      operations: mockKnowledgeNetworkChildOperations,
+    })),
     totalCount: sorted.length,
   };
 }

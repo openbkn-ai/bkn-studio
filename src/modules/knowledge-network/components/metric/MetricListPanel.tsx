@@ -365,6 +365,9 @@ export function MetricListPanel({
             ? {
                 selectedRowKeys,
                 onChange: (keys) => setSelectedRowKeys(keys as string[]),
+                getCheckboxProps: (record) => ({
+                  disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                }),
               }
             : undefined
         }
@@ -410,7 +413,11 @@ export function MetricListPanel({
                 disabled={selectedRowKeys.length === 0}
                 icon={<DeleteOutlined />}
                 onClick={() => {
-                  const pageSelectedRecords = tableMetrics.filter((item) => selectedRowKeys.includes(item.id));
+                  const pageSelectedRecords = tableMetrics.filter(
+                    (item) =>
+                      selectedRowKeys.includes(item.id) &&
+                      hasKnowledgeNetworkRecordOperation(item, "delete"),
+                  );
                   confirmDelete(pageSelectedRecords);
                 }}
               >

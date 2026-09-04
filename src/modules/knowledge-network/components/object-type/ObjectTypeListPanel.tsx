@@ -228,7 +228,12 @@ export function ObjectTypeListPanel({
   }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
-    () => items.filter((item) => selectedRowKeys.includes(item.id)),
+    () =>
+      items.filter(
+        (item) =>
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete"),
+      ),
     [items, selectedRowKeys],
   );
 
@@ -612,6 +617,9 @@ export function ObjectTypeListPanel({
                   onChange: (nextSelectedRowKeys) => {
                     setSelectedRowKeys(nextSelectedRowKeys.map(String));
                   },
+                  getCheckboxProps: (record) => ({
+                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                  }),
                 }
               : undefined
           }

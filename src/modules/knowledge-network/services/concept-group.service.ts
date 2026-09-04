@@ -55,7 +55,12 @@ function resolveConceptGroupMutationResultId(value: unknown): string | null {
 
 export async function listKnowledgeNetworkConceptGroups(networkId: string) {
   if (useMock) {
-    return wait((mockConceptGroups[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockConceptGroups[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendConceptGroup>>(

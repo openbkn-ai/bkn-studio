@@ -36,15 +36,19 @@ export function KnowledgeNetworkObjectAuthorizeDrawer({
   open,
   record,
 }: KnowledgeNetworkObjectAuthorizeDrawerProps) {
+  if (!open || !record || !networkId) {
+    return null;
+  }
+
   return (
     <ObjectAuthorizeDrawer
       objectAuthorized={hasKnowledgeNetworkRecordOperation(record, "authorize")}
-      objId={record ? knowledgeNetworkChildAuthorizationId(networkId, record.id) : ""}
-      objName={record?.name ?? ""}
+      objId={knowledgeNetworkChildAuthorizationId(networkId, record.id)}
+      objName={record.name}
       objSub={networkName ?? networkId}
       objType={objectType}
       onClose={onClose}
-      open={open && Boolean(record && networkId)}
+      open
     />
   );
 }

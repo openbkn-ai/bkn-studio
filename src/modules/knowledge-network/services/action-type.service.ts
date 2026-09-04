@@ -96,7 +96,12 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
 
 export async function listKnowledgeNetworkActionTypes(networkId: string) {
   if (useMock) {
-    return wait((mockActionTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockActionTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendActionType>>(
