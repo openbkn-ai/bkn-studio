@@ -62,6 +62,8 @@ export type ConsoleNavItem = {
    * declare `permission` instead.
    */
   requiresBusinessPermission?: boolean;
+  /** Hide an entry unless the account holds the controlled super_admin role. */
+  requiresSuperAdmin?: boolean;
 };
 
 export type ConsoleNavContribution = {

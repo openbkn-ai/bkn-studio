@@ -17,6 +17,8 @@ export type RuntimeUser = {
   id: string | null;
   /** `/me/permissions`.is_admin — super_admin without literal role `"admin"`. */
   isAdmin: boolean;
+  /** Derived from the `*:*` resource wildcard or the controlled super-admin role. */
+  isSuperAdmin: boolean;
   name: string | null;
   permissions: string[];
   roles: string[];

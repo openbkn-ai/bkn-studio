@@ -9,6 +9,7 @@ import {
   deriveStudioPermissions,
   flattenSafeGrants,
 } from "@/framework/auth/permission-map";
+import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { http } from "@/framework/request/http";
 import { defaultDevPermissions } from "@/framework/runtime/module-manifests";
 import type { RuntimeUser } from "@/framework/runtime/types";
@@ -46,6 +47,7 @@ type MePermissionsResponse = {
 export const anonymousRuntimeUser: RuntimeUser = {
   id: null,
   isAdmin: false,
+  isSuperAdmin: false,
   name: null,
   permissions: [],
   roles: [],
@@ -92,12 +94,16 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const isAdmin = Boolean(perm.is_admin);
   // A resource wildcard means super administrator and covers every operation on every resource type, so per-point derivation is unnecessary.
   const hasResourceWildcard = safeGrants.has("*:*");
+  const roles = me.roles ?? [];
 
   return {
     id: me.id ?? null,
     isAdmin,
+    // `/me` and `/me/permissions` fail independently. Preserve wildcard-derived
+    // super-admin access even when the identity request is temporarily unavailable.
+    isSuperAdmin: hasResourceWildcard || isSuperAdmin(roles),
     name: me.name || me.account || me.id || null,
-    roles: me.roles ?? [],
+    roles,
     permissions: hasResourceWildcard
       ? [...defaultDevPermissions]
       : deriveStudioPermissions(defaultDevPermissions, safeGrants, isAdmin),

@@ -73,8 +73,39 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     const user = await fetchCurrentUser();
 
     expect(user.isAdmin).toBe(true);
+    expect(user.isSuperAdmin).toBe(true);
     expect(user.permissions).toContain("admin-audit:view");
     expect(user.permissions).toContain("admin-license:view");
+  });
+
+  it("/me 失败但资源通配成功 → 仍识别为超级管理员", async () => {
+    mockGet.mockImplementation((url: string) =>
+      url === "/safe/v1/me"
+        ? Promise.reject(new Error("500"))
+        : meOk({
+            is_admin: true,
+            permissions: [{ operations: ["*"], resource: { id: "*", type: "*" } }],
+          }),
+    );
+
+    const fetchCurrentUser = await importFetchCurrentUser();
+    const user = await fetchCurrentUser();
+
+    expect(user.roles).toEqual([]);
+    expect(user.isSuperAdmin).toBe(true);
+  });
+
+  it("本地化超级管理员角色 → 识别为超级管理员", async () => {
+    mockGet.mockImplementation((url: string) =>
+      url === "/safe/v1/me"
+        ? meOk({ id: "root", roles: ["超级管理员"] })
+        : meOk({ is_admin: true, permissions: [] }),
+    );
+
+    const fetchCurrentUser = await importFetchCurrentUser();
+    const user = await fetchCurrentUser();
+
+    expect(user.isSuperAdmin).toBe(true);
   });
 
   // Backend CanAdmin checks safe_admin:console:manage, which all three administrator roles hold,
@@ -101,6 +132,7 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     const user = await fetchCurrentUser();
 
     expect(user.isAdmin).toBe(true);
+    expect(user.isSuperAdmin).toBe(false);
     expect(user.permissions).toContain("admin-audit:view");
     expect(user.permissions).toContain("admin-authz:view");
     expect(user.permissions).toContain("admin-role:view");

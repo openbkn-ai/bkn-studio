@@ -52,6 +52,7 @@ export const bknTraceNavigation: ConsoleNavContribution = {
           labelKey: "shell.items.observabilitySettings",
           icon: <SettingOutlined />,
           path: "/observability/settings",
+          requiresSuperAdmin: true,
         },
       ],
     },

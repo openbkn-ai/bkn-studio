@@ -32,6 +32,8 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   return value.replace(/{{(\w+)}}/g, (_match, name: string) => typeof options?.[name] === "string" ? options[name] : "");
 };
 
+const mockCurrentUser = vi.hoisted(() => ({ isSuperAdmin: true }));
+
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
   return { ...original, useTranslation: () => ({ t: translate }) };
@@ -52,6 +54,10 @@ vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
     ["user-a", "Current Administrator"],
     ["266c6a42-6131-4d62-8f39-853e7093701c", "Administrator"],
   ]),
+}));
+
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ runtimeConfig: { currentUser: mockCurrentUser } }),
 }));
 
 const profile = {
@@ -79,6 +85,7 @@ describe("observability workspace scenes", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCurrentUser.isSuperAdmin = true;
     vi.mocked(createArchive).mockReset();
     vi.mocked(getArchiveOverview).mockReset();
     vi.mocked(listArchiveJobs).mockReset();
@@ -381,6 +388,17 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.status.not_integrated")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
+  });
+
+  it("非超级管理员访问设置页时拒绝访问且不请求数据", () => {
+    mockCurrentUser.isSuperAdmin = false;
+
+    render(<ObservabilitySettingsScene />);
+
+    expect(screen.getByText("bknTrace.errors.accessDenied")).not.toBeNull();
+    expect(getAccessProfile).not.toHaveBeenCalled();
+    expect(listLogSources).not.toHaveBeenCalled();
+    expect(listLogPolicies).not.toHaveBeenCalled();
   });
 
   it("设置页只展示可维护的日志保留项，不暴露内部 Trace 存储", async () => {

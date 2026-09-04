@@ -125,10 +125,14 @@ export function filterNavByCapability(
 export function filterNavByPermission(
   items: ConsoleNavItem[],
   permissions: string[],
+  isSuperAdmin = false,
 ): ConsoleNavItem[] {
   const visible: ConsoleNavItem[] = [];
   for (const item of items) {
     if (item.requiresBusinessPermission && !permissions.some(isBusinessPermission)) {
+      continue;
+    }
+    if (item.requiresSuperAdmin && !isSuperAdmin) {
       continue;
     }
     if (
@@ -142,7 +146,7 @@ export function filterNavByPermission(
       continue;
     }
     if (item.children?.length) {
-      const children = filterNavByPermission(item.children, permissions);
+      const children = filterNavByPermission(item.children, permissions, isSuperAdmin);
       if (children.length === 0 && !item.path) {
         continue;
       }

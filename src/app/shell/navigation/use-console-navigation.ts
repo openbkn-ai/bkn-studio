@@ -42,9 +42,10 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
             hideMarketCatalog: !isMarketCatalogEnabled(),
           }),
           runtimeConfig.currentUser.permissions,
+          runtimeConfig.currentUser.isSuperAdmin,
         ),
         snapshot,
       ),
-    [features.catalog, runtimeConfig.currentUser.permissions, snapshot],
+    [features.catalog, runtimeConfig.currentUser.isSuperAdmin, runtimeConfig.currentUser.permissions, snapshot],
   );
 }
