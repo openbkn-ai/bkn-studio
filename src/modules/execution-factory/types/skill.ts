@@ -8,6 +8,7 @@
 export type SkillStatus = "unpublish" | "published" | "offline";
 
 export type SkillRecord = {
+  operations?: string[];
   skillId: string;
   name: string;
   description?: string;

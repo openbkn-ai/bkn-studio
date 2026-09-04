@@ -65,6 +65,7 @@ type BackendOperatorDataInfo = {
   operator_execute_control?: BackendOperatorExecuteControl;
   operator_id: string;
   operator_info?: { category?: string; category_name?: string };
+  operations?: string[];
   release_time?: number;
   release_user?: string;
   status?: string;
@@ -100,6 +101,7 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 let mockOperators: OperatorRecord[] = [
   {
+    operations: ["*"],
     operatorId: "op_text_extract",
     name: "Text Extract",
     version: "1.0.0",
@@ -113,6 +115,7 @@ let mockOperators: OperatorRecord[] = [
     isInternal: false,
   },
   {
+    operations: ["*"],
     operatorId: "op_data_transform",
     name: "Data Transform",
     version: "0.2.1",
@@ -245,6 +248,7 @@ function buildOperatorMutationBody(
 
 function mapOperator(item: BackendOperatorDataInfo): OperatorRecord {
   return {
+    operations: item.operations,
     operatorId: item.operator_id,
     name: item.name ?? item.operator_id,
     version: item.version,

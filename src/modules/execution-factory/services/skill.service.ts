@@ -37,6 +37,7 @@ type BackendSkillSummary = {
   create_user?: string;
   description?: string;
   name: string;
+  operations?: string[];
   skill_id: string;
   status?: string;
   update_time?: number;
@@ -127,6 +128,7 @@ let mockSkillHistory: SkillHistoryRecord[] = [
 
 let mockSkills: SkillRecord[] = [
   {
+    operations: ["*"],
     skillId: "skill_doc_qa",
     name: "Document QA Skill",
     description: "Answer questions over uploaded documents.",
@@ -138,6 +140,7 @@ let mockSkills: SkillRecord[] = [
     updateTime: Date.now() - 345_600_000,
   },
   {
+    operations: ["*"],
     skillId: "skill_summarize",
     name: "Summarize Skill",
     description: "Summarize long-form content into concise notes.",
@@ -165,6 +168,7 @@ function normalizeTimestamp(value?: number): number | undefined {
 
 function mapSkill(item: BackendSkillSummary): SkillRecord {
   return {
+    operations: item.operations,
     skillId: item.skill_id,
     name: item.name,
     description: item.description,

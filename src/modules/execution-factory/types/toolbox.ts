@@ -18,6 +18,7 @@ export type ToolboxToolRecord = {
 };
 
 export type ToolboxRecord = {
+  operations?: string[];
   boxId: string;
   name: string;
   description?: string;

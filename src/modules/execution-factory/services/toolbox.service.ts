@@ -36,6 +36,7 @@ type BackendToolboxInfo = {
   create_user?: string;
   is_internal?: boolean;
   metadata_type?: string;
+  operations?: string[];
   release_time?: number;
   release_user?: string;
   status?: string;
@@ -56,6 +57,7 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 let mockToolboxes: ToolboxRecord[] = [
   {
+    operations: ["*"],
     boxId: "tb_context_loader",
     name: "Context Loader Toolbox",
     description: "Built-in toolbox for context loader tools.",
@@ -74,6 +76,7 @@ let mockToolboxes: ToolboxRecord[] = [
     isInternal: true,
   },
   {
+    operations: ["*"],
     boxId: "tb_custom_ops",
     name: "Custom Operations",
     description: "User-defined HTTP tools for business workflows.",
@@ -109,6 +112,7 @@ function mapToolbox(item: BackendToolboxInfo): ToolboxRecord {
     : undefined;
 
   return {
+    operations: item.operations,
     boxId: item.box_id,
     name: item.box_name,
     description: item.box_desc,
