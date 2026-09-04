@@ -11,6 +11,7 @@ import {
   mapActionKind,
   mapActionType,
   mapConceptGroupDetail,
+  mapRecentObject,
 } from "@/modules/knowledge-network/services/mappers";
 
 describe("action type list mapper", () => {
@@ -56,5 +57,15 @@ describe("action type list mapper", () => {
 
     expect(detail.actionTypes[0]?.actionKind).toBe("update");
     expect(detail.operations).toEqual(["authorize"]);
+  });
+
+  it("preserves operations for recently modified object types", () => {
+    const record = mapRecentObject({
+      id: "object-1",
+      name: "Risk order",
+      operations: ["view_detail", "modify"],
+    });
+
+    expect(record.operations).toEqual(["view_detail", "modify"]);
   });
 });
