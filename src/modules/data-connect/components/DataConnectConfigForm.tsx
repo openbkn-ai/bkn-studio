@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
+  getConnectorFieldHint,
   getConnectorFieldPlaceholder,
   getConnectorTemplateMeta,
   groupConnectorFields,
@@ -318,6 +319,7 @@ function ConnectorFieldGroup({
             fieldConfig.required,
             connectorConfig,
           );
+          const fieldHint = getConnectorFieldHint(fieldName, connectorType);
 
           return (
             <InlineField
@@ -325,7 +327,7 @@ function ConnectorFieldGroup({
               extra={
                 isEdit && fieldConfig.encrypted
                   ? t("dataConnect.encryptedFieldEditHint")
-                  : undefined
+                  : fieldHint
               }
               key={fieldName}
               label={label}

@@ -380,6 +380,7 @@ export const dataConnectZhCN = {
         project: "例如 demo_project",
         schema: "例如 public",
         schema_list: "例如 public, ods",
+        schemas: "留空扫描全部可访问 Schema；输入名称后按回车逐个添加",
         secret: "请输入密钥",
         secret_key: "请输入密钥",
         server: "例如 db.example.internal",
@@ -391,6 +392,10 @@ export const dataConnectZhCN = {
         user: "例如 readonly_user",
         username: "例如 readonly_user",
         warehouse: "例如 analytics_wh",
+      },
+      hints: {
+        databaseIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
+        schemaIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
       },
       portPlaceholders: {
         default: "例如 3306",

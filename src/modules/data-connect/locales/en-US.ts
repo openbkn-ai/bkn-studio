@@ -394,6 +394,7 @@ export const dataConnectEnUS = {
         project: "For example: demo_project",
         schema: "For example: public",
         schema_list: "For example: public, ods",
+        schemas: "Leave empty to discover all accessible schemas, or enter each name and press Enter",
         secret: "Enter secret",
         secret_key: "Enter secret",
         server: "For example: db.example.internal",
@@ -405,6 +406,12 @@ export const dataConnectEnUS = {
         user: "For example: readonly_user",
         username: "For example: readonly_user",
         warehouse: "For example: analytics_wh",
+      },
+      hints: {
+        databaseIdentifierCase:
+          "When specified, database names must exactly match the database, including case",
+        schemaIdentifierCase:
+          "When specified, schema names must exactly match the database, including case",
       },
       portPlaceholders: {
         default: "For example: 3306",

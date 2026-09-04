@@ -13,6 +13,7 @@ import {
   filterConnectorTypes,
   getConnectorConfigDefaults,
   getDataSourceFamilyMeta,
+  getConnectorFieldHint,
   getConnectorFieldPlaceholder,
   getConnectorTemplateMeta,
   getConnectorTypeTags,
@@ -56,6 +57,18 @@ describe("connector-template · SQL Server", () => {
     );
     expect(getConnectorFieldPlaceholder("options", "object", "sqlserver")).toBe(
       '例如 {"encrypt":true,"trustservercertificate":false}',
+    );
+    expect(getConnectorFieldPlaceholder("schemas", "array", "sqlserver")).toBe(
+      "留空扫描全部可访问 Schema；输入名称后按回车逐个添加",
+    );
+    expect(getConnectorFieldPlaceholder("databases", "array", "mariadb")).toBe(
+      "留空自动发现全部数据库；输入名称后按回车逐个添加",
+    );
+    expect(getConnectorFieldHint("schemas", "sqlserver")).toBe(
+      "填写时必须与数据库中的实际名称及大小写完全一致",
+    );
+    expect(getConnectorFieldHint("databases", "mariadb")).toBe(
+      "填写时必须与数据库中的实际名称及大小写完全一致",
     );
     expect(getConnectorTemplateMeta(sqlServerConnector).description).toBe(
       "连接 Microsoft SQL Server 关系型数据库。",
@@ -160,6 +173,18 @@ describe("connector-template · SQL Server", () => {
     );
     expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
       "For example: 1433",
+    );
+    expect(getConnectorFieldPlaceholder("schemas", "array", "sqlserver")).toBe(
+      "Leave empty to discover all accessible schemas, or enter each name and press Enter",
+    );
+    expect(getConnectorFieldPlaceholder("databases", "array", "mariadb")).toBe(
+      "Leave empty to discover all databases, or enter each name and press Enter",
+    );
+    expect(getConnectorFieldHint("schemas", "sqlserver")).toBe(
+      "When specified, schema names must exactly match the database, including case",
+    );
+    expect(getConnectorFieldHint("databases", "mariadb")).toBe(
+      "When specified, database names must exactly match the database, including case",
     );
     expect(humanizeConnectorFieldLabel("host")).toBe("Host");
     expect(humanizeConnectorFieldLabel("cluster")).toBe("Cluster");

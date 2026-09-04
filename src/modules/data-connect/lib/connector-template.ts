@@ -567,7 +567,7 @@ export function getConnectorFieldPlaceholder(
     api_key: "Enter API Key",
     database: "For example: supply_chain",
     database_list: "Leave empty to discover all databases, or enter each name and press Enter",
-    databases: "Leave empty to discover all databases, or enter each name and press Enter",
+    databases: "Leave empty to discover all databases; enter each name exactly as it appears in the database, including case",
     db: "For example: supply_chain",
     endpoint: "For example: https://search.internal:9200",
     host: "For example: db.example.internal",
@@ -576,6 +576,7 @@ export function getConnectorFieldPlaceholder(
     project: "For example: demo_project",
     schema: "For example: public",
     schema_list: "For example: public, ods",
+    schemas: "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
     secret: "Enter secret",
     secret_key: "Enter secret",
     server: "For example: db.example.internal",
@@ -619,6 +620,27 @@ export function getConnectorFieldPlaceholder(
     defaultValue: "Enter {{field}}",
     field: humanizeConnectorFieldLabel(fieldName),
   });
+}
+
+export function getConnectorFieldHint(fieldName: string, connectorType?: string) {
+  const normalized = fieldName.trim().toLowerCase();
+  const typeKey = connectorType?.trim().toLowerCase() ?? "";
+
+  if (normalized === "databases" && ["mariadb", "mysql"].includes(typeKey)) {
+    return dataConnectText(
+      "connectorTemplates.hints.databaseIdentifierCase",
+      "When specified, database names must exactly match the database, including case",
+    );
+  }
+
+  if (normalized === "schemas" && ["postgresql", "sqlserver"].includes(typeKey)) {
+    return dataConnectText(
+      "connectorTemplates.hints.schemaIdentifierCase",
+      "When specified, schema names must exactly match the database, including case",
+    );
+  }
+
+  return undefined;
 }
 
 export function resolveConnectorFieldControl(
