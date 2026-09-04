@@ -622,6 +622,27 @@ export function getConnectorFieldPlaceholder(
   });
 }
 
+export function getConnectorFieldHint(fieldName: string, connectorType?: string) {
+  const normalized = fieldName.trim().toLowerCase();
+  const typeKey = connectorType?.trim().toLowerCase() ?? "";
+
+  if (normalized === "databases" && ["mariadb", "mysql"].includes(typeKey)) {
+    return dataConnectText(
+      "connectorTemplates.hints.databaseIdentifierCase",
+      "When specified, database names must exactly match the database, including case",
+    );
+  }
+
+  if (normalized === "schemas" && ["postgresql", "sqlserver"].includes(typeKey)) {
+    return dataConnectText(
+      "connectorTemplates.hints.schemaIdentifierCase",
+      "When specified, schema names must exactly match the database, including case",
+    );
+  }
+
+  return undefined;
+}
+
 export function resolveConnectorFieldControl(
   fieldName: string,
   fieldType: string,

@@ -109,6 +109,9 @@ describe("DataConnectConfigForm", () => {
       .closest(".ant-select")
       ?.querySelector("input");
 
+    expect(
+      screen.getByText("填写时必须与数据库中的实际名称及大小写完全一致"),
+    ).not.toBeNull();
     expect(databaseInput).not.toBeNull();
     if (!databaseInput) {
       return;
