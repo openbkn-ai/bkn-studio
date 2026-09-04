@@ -43,7 +43,7 @@ export const executionFactoryEnUS = {
     executionUnitTabsV2: {
       mcp: "MCP Services",
       toolbox: "Toolsets",
-      operator: "Operator Dev",
+      operator: "Functions",
       skill: "SKILL Packs",
     },
     capabilityManagementTitle: "Capability Management",
@@ -170,10 +170,9 @@ export const executionFactoryEnUS = {
     addCapabilityFunctionNextHint:
       "Create a function toolset first, then add each function tool inside it.",
     developerOperatorEntry: "Operator dev: OpenAPI / function registration",
-    backToCapabilities: "← Back to toolsets / MCP / SKILLs",
     advancedOperatorEntry: "Operator dev",
     advancedOperatorBanner:
-      "Operator list and debug. For everyday HTTP APIs, use Add API under Toolsets; register an operator separately when orchestration metadata is needed.",
+      "Function list and debug. Register, debug, and publish functions here.",
     quickApiTabCurl: "Paste cURL",
     quickApiTabForm: "Simple form",
     quickApiCurlLabel: "cURL command",
@@ -223,7 +222,7 @@ export const executionFactoryEnUS = {
     emptyByTab: {
       mcp: "No MCP servers yet. Create one for agents to call via the MCP protocol.",
       toolbox: "No toolboxes yet. Create one to manage HTTP and other tools.",
-      operator: "No operators yet. Register an OpenAPI or function operator to publish and debug.",
+      operator: "No functions yet. Register an OpenAPI or function to publish and debug.",
       skill: "No SKILLs yet. Import a SKILL package to distribute and install.",
     },
     catalogEmptyByTab: {
@@ -235,7 +234,7 @@ export const executionFactoryEnUS = {
     emptyCreateByTab: {
       mcp: "Create MCP",
       toolbox: "Create toolbox",
-      operator: "Create operator",
+      operator: "Create function",
       skill: "Import SKILL",
     },
     createWizardTitle: "Create execution unit",
@@ -370,7 +369,7 @@ export const executionFactoryEnUS = {
     createFlowHint: "OpenAPI registration requires a valid OpenAPI document payload.",
     operatorCreateTypeLockedHint:
       "The metadata type was chosen in the create wizard and cannot be changed here. Fill in the operator details and function/OpenAPI definition.",
-    createOperatorButton: "New Operator",
+    createOperatorButton: "New Function",
     createToolboxButton: "New Toolbox",
     createMcpButton: "New MCP",
     importSkillButton: "Import SKILL",

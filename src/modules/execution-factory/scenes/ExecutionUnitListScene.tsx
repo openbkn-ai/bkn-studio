@@ -72,7 +72,6 @@ import {
   invalidateLocalResourceIdsCache,
 } from "@/modules/execution-factory/utils/collect-local-resource-ids";
 import {
-  getDefaultManagementTab,
   getExecutionUnitTabLabelKey,
   isCapabilityUxV2,
   resolveVisibleManagementTabs,
@@ -804,14 +803,6 @@ export function ExecutionUnitListScene({
     [activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
   );
 
-  const returnToPrimaryCapabilities = () => {
-    const primaryTab = getDefaultManagementTab();
-    window.localStorage.setItem(TAB_STORAGE_KEY, primaryTab);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("activeTab", primaryTab);
-    setSearchParams(nextParams);
-  };
-
   const statusOptions = useMemo(() => {
     // There is no separate offline option; offline belongs to unpublished and listStatuses queries both.
     const base = [
@@ -1345,15 +1336,6 @@ export function ExecutionUnitListScene({
   return (
     <>
       <section className={styles.page}>
-        {/* 页面标题由面包屑承担，这里不再重复一遍；算子视图仍需要返回入口。 */}
-        {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
-          <div className={styles.pageIntroActions}>
-            <Button onClick={returnToPrimaryCapabilities} type="link">
-              {t("executionFactory.backToCapabilities")}
-            </Button>
-          </div>
-        ) : null}
-
         {!marketMode ? (
           <div className={styles.toolbarActions}>
             <CreateMenu

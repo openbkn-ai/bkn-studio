@@ -43,7 +43,7 @@ export const executionFactoryZhCN = {
     executionUnitTabsV2: {
       mcp: "MCP 服务",
       toolbox: "工具集",
-      operator: "算子开发",
+      operator: "函数",
       skill: "SKILL 包",
     },
     capabilityManagementTitle: "能力管理",
@@ -166,10 +166,9 @@ export const executionFactoryZhCN = {
     addCapabilityAdvancedFunction: "注册函数算子",
     addCapabilityFunctionNextHint: "先创建函数型工具集，随后在工具列表中编写每个函数工具。",
     developerOperatorEntry: "算子开发：OpenAPI / 函数算子注册与调试",
-    backToCapabilities: "← 返回工具集 / MCP / SKILL",
     advancedOperatorEntry: "算子开发",
     advancedOperatorBanner:
-      "算子列表与调试入口。日常 HTTP 接口请在「工具集」添加 API；需要流程编排算子时，可从算子入口单独注册。",
+      "函数列表与调试入口。可在此注册、调试和发布函数。",
     quickApiTabCurl: "粘贴 cURL",
     quickApiTabForm: "填表单",
     quickApiCurlLabel: "cURL 命令",
@@ -219,7 +218,7 @@ export const executionFactoryZhCN = {
     emptyByTab: {
       mcp: "当前还没有 MCP 服务，点击「添加能力」注册 MCP Server。",
       toolbox: "当前还没有工具集，可通过「添加能力」接入 HTTP API 或函数。",
-      operator: "当前还没有算子，可注册 OpenAPI 或函数算子后发布与调试。",
+      operator: "当前还没有函数，可注册 OpenAPI 或函数后发布与调试。",
       skill: "当前还没有 SKILL 包，点击「添加能力」上传 ZIP 或 SKILL.md。",
     },
     catalogEmptyByTab: {
@@ -231,7 +230,7 @@ export const executionFactoryZhCN = {
     emptyCreateByTab: {
       mcp: "新建 MCP",
       toolbox: "新建工具箱",
-      operator: "新建算子",
+      operator: "新建函数",
       skill: "导入 SKILL",
     },
     createWizardTitle: "新建执行单元",
@@ -364,7 +363,7 @@ export const executionFactoryZhCN = {
     createFlowHint: "OpenAPI 注册需要提供有效的 OpenAPI 文档内容。",
     operatorCreateTypeLockedHint:
       "元数据类型已在创建向导中选择，此处不可修改。请填写算子名称、描述及函数/OpenAPI 定义。",
-    createOperatorButton: "新建算子",
+    createOperatorButton: "新建函数",
     createToolboxButton: "新建工具箱",
     createMcpButton: "新建 MCP",
     importSkillButton: "导入 SKILL",
