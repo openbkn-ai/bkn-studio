@@ -29,6 +29,7 @@ import {
 } from "@/modules/knowledge-network/services/mappers";
 import {
   mockMetrics,
+  mockKnowledgeNetworkChildOperations,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
@@ -100,7 +101,10 @@ function filterAndSortMockMetrics(
   const offset = query.offset ?? 0;
 
   return {
-    entries: sliceMetricListPage(sorted, offset, query.limit),
+    entries: sliceMetricListPage(sorted, offset, query.limit).map((item) => ({
+      ...item,
+      operations: mockKnowledgeNetworkChildOperations,
+    })),
     totalCount: sorted.length,
   };
 }
@@ -148,7 +152,8 @@ export async function listKnowledgeNetworkMetrics(
 export async function getKnowledgeNetworkMetric(networkId: string, metricId: string) {
   if (useMock) {
     updateMetricApiAvailability("ready");
-    return wait((mockMetrics[networkId] ?? []).find((item) => item.id === metricId) ?? null);
+    const record = (mockMetrics[networkId] ?? []).find((item) => item.id === metricId);
+    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   try {

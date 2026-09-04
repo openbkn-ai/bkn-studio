@@ -94,10 +94,6 @@ export function KnowledgeNetworkWorkspaceScene({
   const [sideCollapsed, setSideCollapsed] = useState(false);
   const canModify = hasKnowledgeNetworkRecordOperation(detail, "modify");
   const canDelete = hasKnowledgeNetworkRecordOperation(detail, "delete");
-  const canManageActionExecution = hasKnowledgeNetworkRecordOperation(
-    detail,
-    "task_manage",
-  );
   const experienceNetwork = useMemo(
     () =>
       detail
@@ -244,7 +240,6 @@ export function KnowledgeNetworkWorkspaceScene({
     return (
       <WorkspaceResourceSection
         canDelete={canDelete}
-        canManageActionExecution={canManageActionExecution}
         canModify={canModify}
         data={workspaceData}
         networkId={activeNetworkId}

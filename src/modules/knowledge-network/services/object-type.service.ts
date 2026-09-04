@@ -30,6 +30,7 @@ import {
   buildMockObjectTypeDetail,
   cloneDataProperties,
   mockConceptGroups,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   mockRecentObjects,
   persistMockObjectTypeProperties,
@@ -131,7 +132,12 @@ async function resolveObjectTypeConceptGroups(
 
 export async function listKnowledgeNetworkObjectTypes(networkId: string) {
   if (useMock) {
-    return wait((mockObjectTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockObjectTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendObjectType>>(
@@ -154,9 +160,8 @@ export async function getKnowledgeNetworkObjectType(
   objectTypeId: string,
 ) {
   if (useMock) {
-    return wait(
-      (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId) ?? null,
-    );
+    const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
+    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
@@ -172,7 +177,8 @@ export async function getKnowledgeNetworkObjectTypeDetail(
   objectTypeId: string,
 ) {
   if (useMock) {
-    return wait(buildMockObjectTypeDetail(networkId, objectTypeId));
+    const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
+    return wait(detail ? { ...detail, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(

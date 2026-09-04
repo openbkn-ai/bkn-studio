@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
@@ -34,6 +37,7 @@ export function RelationTypeDetailScene() {
   const [detail, setDetail] = useState<RelationTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
 
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
@@ -85,7 +89,13 @@ export function RelationTypeDetailScene() {
   }
 
   return (
-    <KnowledgeNetworkResourceConfigShell
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
       onBack={() => {
         void navigate(returnPath);
       }}
@@ -146,6 +156,14 @@ export function RelationTypeDetailScene() {
           />
         </section>
       </div>
-    </KnowledgeNetworkResourceConfigShell>
+      </KnowledgeNetworkResourceConfigShell>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="relation_type"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
+      />
+    </>
   );
 }

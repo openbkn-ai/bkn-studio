@@ -172,6 +172,7 @@ export function mapMetric(item: BackendMetric): KnowledgeNetworkMetricRecord {
     id: item.id,
     metricType: item.metric_type ?? "atomic",
     name: item.name,
+    operations: item.operations,
     scopeRef: item.scope_ref ?? "",
     scopeType: item.scope_type ?? "object_type",
     tags: item.tags ?? [],

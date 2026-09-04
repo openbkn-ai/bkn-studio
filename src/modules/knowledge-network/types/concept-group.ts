@@ -12,6 +12,7 @@ export type ConceptGroupRelatedResourceRef = {
   icon?: string;
   id: string;
   name: string;
+  operations?: string[];
 };
 
 export type ConceptGroupRecord = {
@@ -21,6 +22,7 @@ export type ConceptGroupRecord = {
   id: string;
   name: string;
   objectTypesTotal: number;
+  operations?: string[];
   relationTypesTotal: number;
   tags?: string[];
   updateTime: string;

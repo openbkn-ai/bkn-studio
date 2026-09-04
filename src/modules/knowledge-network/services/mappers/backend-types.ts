@@ -134,6 +134,7 @@ export type BackendObjectType = {
   incremental_key?: string;
   logic_properties?: BackendLogicProperty[];
   name: string;
+  operations?: string[];
   primary_keys?: string[];
   status?: {
     index_available?: boolean;
@@ -167,6 +168,7 @@ export type BackendConceptGroup = {
   comment?: string;
   id: string;
   name: string;
+  operations?: string[];
   object_types?: BackendObjectType[];
   relation_types?: BackendObjectType[];
   statistics?: {
@@ -187,6 +189,7 @@ export type BackendRelationType = {
   mapping_mode?: "direct" | "data_view";
   mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
   name: string;
+  operations?: string[];
   source_object_type?: {
     id?: string;
     name?: string;
@@ -228,6 +231,7 @@ export type BackendActionType = {
   };
   id: string;
   name: string;
+  operations?: string[];
   object_type?: {
     id?: string;
     name?: string;
@@ -282,6 +286,7 @@ export type BackendMetric = {
   id: string;
   metric_type?: KnowledgeNetworkMetricRecord["metricType"];
   name: string;
+  operations?: string[];
   scope_ref?: string;
   scope_type?: KnowledgeNetworkMetricRecord["scopeType"];
   tags?: string[];

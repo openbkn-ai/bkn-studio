@@ -11,6 +11,7 @@ import {
   mapActionKind,
   mapActionType,
   mapConceptGroupDetail,
+  mapRecentObject,
 } from "@/modules/knowledge-network/services/mappers";
 
 describe("action type list mapper", () => {
@@ -29,28 +30,42 @@ describe("action type list mapper", () => {
   });
 
   it("maps modify records to update for the action type list", () => {
-    expect(
-      mapActionType({
-        action_type: "modify",
-        id: "action-1",
-        name: "Edit order",
-      }).actionKind,
-    ).toBe("update");
+    const record = mapActionType({
+      action_type: "modify",
+      id: "action-1",
+      name: "Edit order",
+      operations: ["authorize"],
+    });
+
+    expect(record.actionKind).toBe("update");
+    expect(record.operations).toEqual(["authorize"]);
   });
 
   it("maps concept group action type entries with lowercase backend enums", () => {
-    expect(
-      mapConceptGroupDetail({
-        action_types: [
-          {
-            action_type: "modify",
-            id: "action-1",
-            name: "Edit order",
-          },
-        ],
-        id: "group-1",
-        name: "Order group",
-      }).actionTypes[0]?.actionKind,
-    ).toBe("update");
+    const detail = mapConceptGroupDetail({
+      action_types: [
+        {
+          action_type: "modify",
+          id: "action-1",
+          name: "Edit order",
+        },
+      ],
+      id: "group-1",
+      name: "Order group",
+      operations: ["authorize"],
+    });
+
+    expect(detail.actionTypes[0]?.actionKind).toBe("update");
+    expect(detail.operations).toEqual(["authorize"]);
+  });
+
+  it("preserves operations for recently modified object types", () => {
+    const record = mapRecentObject({
+      id: "object-1",
+      name: "Risk order",
+      operations: ["view_detail", "modify"],
+    });
+
+    expect(record.operations).toEqual(["view_detail", "modify"]);
   });
 });

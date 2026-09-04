@@ -20,6 +20,8 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConceptGroupAddObjectTypesModal } from "@/modules/knowledge-network/components/concept-group/ConceptGroupAddObjectTypesModal";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
@@ -123,6 +125,7 @@ export function ConceptGroupDetailScene() {
     useState<Record<RelatedTabKey, TabSearchState>>(DEFAULT_TAB_SEARCH);
   const [selectedObjectTypeIds, setSelectedObjectTypeIds] = useState<string[]>([]);
   const [addObjectTypesOpen, setAddObjectTypesOpen] = useState(false);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const { access: operationAccess, error: permissionError } =
@@ -387,6 +390,11 @@ export function ConceptGroupDetailScene() {
   if (loading) {
     return (
       <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
         loading
         onBack={() => {
           void navigate(listPath);
@@ -404,6 +412,11 @@ export function ConceptGroupDetailScene() {
   return (
     <>
       <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
         onBack={() => {
           void navigate(listPath);
         }}
@@ -552,6 +565,13 @@ export function ConceptGroupDetailScene() {
         onCancel={() => setAddObjectTypesOpen(false)}
         onSuccess={() => void loadData()}
         open={addObjectTypesOpen}
+      />
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="concept_group"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
       />
     </>
   );

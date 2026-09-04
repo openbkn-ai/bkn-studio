@@ -44,6 +44,7 @@ import {
   mockActionTypeDetailExtras,
   mockActionTypeExecutionConfigs,
   mockActionTypes,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   persistMockActionTypeDetailExtras,
   persistMockActionTypeExecutionConfig,
@@ -95,7 +96,12 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
 
 export async function listKnowledgeNetworkActionTypes(networkId: string) {
   if (useMock) {
-    return wait((mockActionTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockActionTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendActionType>>(
@@ -119,7 +125,10 @@ export async function getKnowledgeNetworkActionType(
 ) {
   if (useMock) {
     return wait(
-      (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId) ?? null,
+      (() => {
+        const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
+        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+      })(),
     );
   }
 

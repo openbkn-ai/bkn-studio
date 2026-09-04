@@ -71,6 +71,7 @@ export function mapRecentObject(item: BackendObjectType): KnowledgeNetworkRecent
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     comment: item.comment ?? "",
     color: item.color ?? "#1677ff",
     icon: item.icon,
@@ -84,6 +85,7 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
@@ -286,6 +288,7 @@ export function mapConceptGroup(item: BackendConceptGroup): ConceptGroupRecord {
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color,
     tags: item.tags ?? [],
@@ -385,6 +388,7 @@ export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRela
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#7c3aed",
     mappingMode,
@@ -443,6 +447,7 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#16a34a",
     actionKind: mapActionKind(item.action_type),

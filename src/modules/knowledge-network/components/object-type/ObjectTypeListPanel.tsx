@@ -25,6 +25,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import {
   readPositiveInteger,
@@ -35,6 +36,7 @@ import modalStyles from "@/modules/knowledge-network/components/network/Knowledg
 import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
@@ -86,6 +88,8 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [authorizingRecord, setAuthorizingRecord] =
+    useState<KnowledgeNetworkObjectTypeRecord | null>(null);
   const boundResourceIds = useMemo(
     () => items.map((item) => item.dataSource?.id),
     [items],
@@ -224,7 +228,12 @@ export function ObjectTypeListPanel({
   }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
-    () => items.filter((item) => selectedRowKeys.includes(item.id)),
+    () =>
+      items.filter(
+        (item) =>
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete"),
+      ),
     [items, selectedRowKeys],
   );
 
@@ -277,6 +286,11 @@ export function ObjectTypeListPanel({
       return;
     }
 
+    if (key === "authorize") {
+      setAuthorizingRecord(record);
+      return;
+    }
+
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -317,8 +331,15 @@ export function ObjectTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+            ? [{ key: "edit", label: t("common.edit") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
+            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -472,7 +493,8 @@ export function ObjectTypeListPanel({
   );
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.objectTypesTitle")}</h2>
 
       <div className={styles.toolbar}>
@@ -595,6 +617,9 @@ export function ObjectTypeListPanel({
                   onChange: (nextSelectedRowKeys) => {
                     setSelectedRowKeys(nextSelectedRowKeys.map(String));
                   },
+                  getCheckboxProps: (record) => ({
+                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                  }),
                 }
               : undefined
           }
@@ -618,6 +643,14 @@ export function ObjectTypeListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="object_type"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
+        record={authorizingRecord}
+      />
+    </>
   );
 }

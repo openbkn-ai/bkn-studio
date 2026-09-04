@@ -97,7 +97,7 @@ afterEach(() => {
 });
 
 describe("ConceptGroupDetailScene", () => {
-  it("keeps the detail header free of management actions", async () => {
+  it("renders Configure Permissions in the loaded detail header when authorized", async () => {
     getConceptGroup.mockResolvedValue({
       actionTypes: [],
       description: "Source data layer",
@@ -107,13 +107,14 @@ describe("ConceptGroupDetailScene", () => {
       relationTypes: [],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
+      operations: ["authorize"],
     });
 
     render(<ConceptGroupDetailScene />);
 
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findAllByText("Source Layer")).not.toHaveLength(0);
-    expect(screen.getByTestId("detail-header-actions").childElementCount).toBe(0);
+    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
     expect(screen.queryByText("common.edit")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.conceptGroupExport")).toBeNull();
     expect(screen.queryByText("common.delete")).toBeNull();

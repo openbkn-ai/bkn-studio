@@ -13,7 +13,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import {
   getKnowledgeNetworkActionTypeDetail,
@@ -38,6 +41,7 @@ export function ActionTypeDetailScene() {
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:toolbox:view",
@@ -97,7 +101,13 @@ export function ActionTypeDetailScene() {
   }
 
   return (
-    <KnowledgeNetworkResourceConfigShell
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
       onBack={() => {
         void navigate(listPath);
       }}
@@ -112,6 +122,14 @@ export function ActionTypeDetailScene() {
           objectTypes={objectTypes}
         />
       </div>
-    </KnowledgeNetworkResourceConfigShell>
+      </KnowledgeNetworkResourceConfigShell>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="action_type"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
+      />
+    </>
   );
 }

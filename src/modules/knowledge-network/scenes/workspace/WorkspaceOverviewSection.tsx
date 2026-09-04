@@ -178,13 +178,9 @@ export function WorkspaceOverviewSection({
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>
           <div className={styles.overviewHeaderTitleRight}>
-            {canAuthorize ? (
-              <AppButton
-                disabled={!detail}
-                icon={<KeyOutlined />}
-                onClick={() => setAuthorizeOpen(true)}
-              >
-                {t("systemAdmin.objectGrants.authorize")}
+            {detail && canAuthorize ? (
+              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                {t("knowledgeNetwork.authorizeAction")}
               </AppButton>
             ) : null}
             {canModify ? (
@@ -387,7 +383,7 @@ export function WorkspaceOverviewSection({
           objName={detail.name}
           objType="knowledge_network"
           onClose={() => setAuthorizeOpen(false)}
-          open={authorizeOpen}
+          open={authorizeOpen && canAuthorize}
         />
       ) : null}
     </div>

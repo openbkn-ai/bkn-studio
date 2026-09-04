@@ -53,6 +53,38 @@ describe("resource-catalog", () => {
     ]);
   });
 
+  it("offers task management only for action types among knowledge-network children", () => {
+    for (const type of ["concept_group", "object_type", "relation_type", "metric", "risk_type"]) {
+      expect(operationsForType(type).map((item) => item.key)).not.toContain("task_manage");
+    }
+
+    expect(operationsForType("action_type").map((item) => item.key)).toContain("task_manage");
+  });
+
+  it("offers data querying for every knowledge-network child type", () => {
+    for (const type of [
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+      "risk_type",
+    ]) {
+      expect(operationsForType(type).map((item) => item.key)).toContain("query_data");
+    }
+  });
+
+  it("localizes every knowledge-network child resource type in Chinese", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("concept_group")).toBe("概念分组");
+    expect(resourceTypeLabel("object_type")).toBe("对象类");
+    expect(resourceTypeLabel("relation_type")).toBe("关系类");
+    expect(resourceTypeLabel("action_type")).toBe("行动类");
+    expect(resourceTypeLabel("metric")).toBe("指标");
+    expect(resourceTypeLabel("risk_type")).toBe("风险类");
+  });
+
   it("falls back to raw keys for unknown resource and operation keys", () => {
     expect(resourceTypeLabel("unknown_resource")).toBe("unknown_resource");
     expect(operationLabel("unknown_resource", "unknown_op")).toBe("unknown_op");

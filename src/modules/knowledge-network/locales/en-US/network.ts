@@ -37,7 +37,7 @@ export const networkPart = {
     emptyMetrics: "No metrics yet.",
     emptyTitle: "No knowledge networks yet",
     enterWorkspace: "Open workspace",
-    authorizeAction: "Share",
+    authorizeAction: "Configure permissions",
     export: "Export",
     exportSuccess: "Exported successfully",
     iconField: "Icon",

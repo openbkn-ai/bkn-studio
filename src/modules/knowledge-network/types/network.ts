@@ -61,6 +61,7 @@ export type KnowledgeNetworkRecentObject = {
   icon?: string;
   id: string;
   name: string;
+  operations?: string[];
   tags: string[];
   updateTime: string;
   updaterName: string;

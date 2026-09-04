@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
@@ -60,6 +63,7 @@ export function MetricDetailScene({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
@@ -126,7 +130,13 @@ export function MetricDetailScene({
   const formula = detail.calculationFormula;
 
   return (
-    <KnowledgeNetworkResourceConfigShell
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
       onBack={() => {
         if (onBack) {
           onBack();
@@ -283,6 +293,14 @@ export function MetricDetailScene({
           )}
         </section>
       </div>
-    </KnowledgeNetworkResourceConfigShell>
+      </KnowledgeNetworkResourceConfigShell>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="metric"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
+      />
+    </>
   );
 }

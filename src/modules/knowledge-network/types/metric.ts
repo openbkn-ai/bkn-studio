@@ -119,6 +119,7 @@ export type KnowledgeNetworkMetricRecord = {
   id: string;
   metricType: KnowledgeNetworkMetricType;
   name: string;
+  operations?: string[];
   scopeRef: string;
   scopeType: KnowledgeNetworkMetricScopeType;
   tags: string[];

@@ -16,10 +16,13 @@ import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
 import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
@@ -182,6 +185,7 @@ export function ObjectTypeDetailScene() {
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [propertyType, setPropertyType] = useState<"data" | "logic">("data");
   const [keyword, setKeyword] = useState("");
   const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
@@ -1955,7 +1959,13 @@ export function ObjectTypeDetailScene() {
   );
 
   return (
-    <KnowledgeNetworkResourceConfigShell
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
+            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
+          ) : null
+        }
       onBack={() => {
         void navigate(returnPath);
       }}
@@ -1992,6 +2002,14 @@ export function ObjectTypeDetailScene() {
           />
         </section>
       </div>
-    </KnowledgeNetworkResourceConfigShell>
+      </KnowledgeNetworkResourceConfigShell>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="object_type"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
+      />
+    </>
   );
 }

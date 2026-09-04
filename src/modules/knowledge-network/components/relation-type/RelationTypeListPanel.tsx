@@ -25,11 +25,13 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
@@ -65,6 +67,8 @@ export function RelationTypeListPanel({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize("relation-types");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [authorizingRecord, setAuthorizingRecord] =
+    useState<KnowledgeNetworkRelationTypeRecord | null>(null);
 
   const objectTypeOptions = useMemo(
     () =>
@@ -122,7 +126,12 @@ export function RelationTypeListPanel({
   }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
-    () => items.filter((item) => selectedRowKeys.includes(item.id)),
+    () =>
+      items.filter(
+        (item) =>
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete"),
+      ),
     [items, selectedRowKeys],
   );
 
@@ -176,6 +185,11 @@ export function RelationTypeListPanel({
       void navigate(
         `/knowledge-network/workspace/${networkId}/relation-types/${record.id}/mapping`,
       );
+      return;
+    }
+
+    if (key === "authorize") {
+      setAuthorizingRecord(record);
       return;
     }
 
@@ -246,13 +260,18 @@ export function RelationTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [
                 { key: "edit", label: t("common.edit") },
                 { key: "mapping", label: t("knowledgeNetwork.relationTypeMappingEntry") },
               ]
             : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
+            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -378,7 +397,8 @@ export function RelationTypeListPanel({
   );
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage} ${styles.relationTypePage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage} ${styles.relationTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.relationTypesTitle")}</h2>
 
       <div className={styles.toolbar}>
@@ -518,6 +538,9 @@ export function RelationTypeListPanel({
                   onChange: (nextSelectedRowKeys) => {
                     setSelectedRowKeys(nextSelectedRowKeys.map(String));
                   },
+                  getCheckboxProps: (record) => ({
+                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                  }),
                 }
               : undefined
           }
@@ -541,6 +564,14 @@ export function RelationTypeListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="relation_type"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
+        record={authorizingRecord}
+      />
+    </>
   );
 }

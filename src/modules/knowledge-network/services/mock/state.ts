@@ -45,6 +45,9 @@ const mockKnowledgeNetworkOperations = [
   "task_manage",
 ];
 
+/** Local Studio mock data follows the same per-instance child contract as bkn-safe. */
+export const mockKnowledgeNetworkChildOperations = [...mockKnowledgeNetworkOperations];
+
 export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
     id: "kn-domain-risk",
@@ -1270,6 +1273,7 @@ export function buildMockObjectTypeDetail(
 
   return {
     ...record,
+    operations: record.operations ?? mockKnowledgeNetworkChildOperations,
     dataProperties: properties,
     dataSource: mockObjectTypeDataSources[networkId]?.[objectTypeId],
     displayKey,
