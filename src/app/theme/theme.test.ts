@@ -21,6 +21,7 @@ const runtimeConfig: RuntimeConfig = {
   currentUser: {
     id: null,
     isAdmin: false,
+    isSuperAdmin: false,
     name: null,
     permissions: [],
     roles: [],
