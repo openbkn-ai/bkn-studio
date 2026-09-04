@@ -57,6 +57,12 @@ describe("connector-template · SQL Server", () => {
     expect(getConnectorFieldPlaceholder("options", "object", "sqlserver")).toBe(
       '例如 {"encrypt":true,"trustservercertificate":false}',
     );
+    expect(getConnectorFieldPlaceholder("schemas", "array", "sqlserver")).toBe(
+      "留空扫描全部可访问 Schema；填写时必须与数据库中的实际名称及大小写完全一致",
+    );
+    expect(getConnectorFieldPlaceholder("databases", "array", "mariadb")).toBe(
+      "留空自动发现全部数据库；填写时必须与数据库中的实际名称及大小写完全一致",
+    );
     expect(getConnectorTemplateMeta(sqlServerConnector).description).toBe(
       "连接 Microsoft SQL Server 关系型数据库。",
     );
@@ -160,6 +166,12 @@ describe("connector-template · SQL Server", () => {
     );
     expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
       "For example: 1433",
+    );
+    expect(getConnectorFieldPlaceholder("schemas", "array", "sqlserver")).toBe(
+      "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
+    );
+    expect(getConnectorFieldPlaceholder("databases", "array", "mariadb")).toBe(
+      "Leave empty to discover all databases; enter each name exactly as it appears in the database, including case",
     );
     expect(humanizeConnectorFieldLabel("host")).toBe("Host");
     expect(humanizeConnectorFieldLabel("cluster")).toBe("Cluster");
