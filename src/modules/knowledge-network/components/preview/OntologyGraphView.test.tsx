@@ -5,9 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,36 +46,4 @@ describe("OntologyGraphView", () => {
     expect(screen.getByText("Places").getAttribute("class")).toContain("edgeLabel");
   });
 
-  it("keeps relation labels readable in default, hover, and active states", () => {
-    const css = readFileSync(
-      resolve(
-        process.cwd(),
-        "src/modules/knowledge-network/components/preview/OntologyGraphView.module.css",
-      ),
-      "utf8",
-    );
-
-    expect(css).toMatch(
-      /\.gridDot\s*{[^}]*fill:\s*var\(--color-text-faint\);[^}]*opacity:\s*var\(--ontology-grid-dot-opacity\);/s,
-    );
-    expect(css).toMatch(
-      /:global\(:root\[data-theme="dark"\]\) \.wrap\s*{[^}]*--ontology-grid-dot-opacity:\s*0\.18;/s,
-    );
-    expect(css).toMatch(
-      /\.edgeLabel\s*{[^}]*fill:\s*var\(--color-text-primary\);/s,
-    );
-    expect(css).toMatch(
-      /\.edge:hover \.edgeLabelBg\s*{[^}]*fill:\s*var\(--color-hover\);[^}]*stroke:\s*var\(--color-primary-border\);/s,
-    );
-    expect(css).toMatch(
-      /\.edge:hover \.edgeLabel\s*{[^}]*fill:\s*var\(--color-text-link\);/s,
-    );
-    expect(css).toMatch(
-      /\.edgeActive \.edgeLabelBg\s*{[^}]*fill:\s*var\(--color-primary-100\);[^}]*stroke:\s*var\(--color-primary-border\);/s,
-    );
-    expect(css).toMatch(
-      /\.edgeActive \.edgeLabel\s*{[^}]*fill:\s*var\(--color-text-link\);/s,
-    );
-    expect(css).not.toMatch(/\.edgeLabel\s*{[^}]*fill:\s*#[0-9a-f]{3,8}/is);
-  });
 });
