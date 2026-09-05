@@ -163,7 +163,7 @@ export function LicenseManagementScene() {
       await writeTextToClipboard(value);
       await message.success(t("systemAdmin.license.copySuccess"));
     } catch {
-      await message.warning(t("systemAdmin.license.copyUnsupported"));
+      await message.warning(t("common.copyFailed"));
     }
   };
 
