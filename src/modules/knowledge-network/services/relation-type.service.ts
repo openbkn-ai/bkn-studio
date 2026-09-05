@@ -10,6 +10,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkRelationTypeMutationPayload,
@@ -198,7 +199,13 @@ export async function getKnowledgeNetworkRelationTypeDetail(
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapRelationTypeDetail(record) : null;
+  return record
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "relation-types",
+        mapRelationTypeDetail(record),
+      )
+    : null;
 }
 
 export async function createKnowledgeNetworkRelationType(

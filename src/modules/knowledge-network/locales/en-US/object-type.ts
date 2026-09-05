@@ -228,6 +228,7 @@ export const objecttypePart = {
       "Identifies a unique object instance and can be composed from multiple fields.",
     objectTypePrimaryKeyRequired: "Set at least one primary key.",
     objectTypePropertyDisplayName: "Display name",
+    objectTypePropertyDescription: "Property description",
     objectTypePropertyDuplicateDisplayName: "Display name already exists.",
     objectTypePropertyDuplicateMapping: "This resource field is already mapped to another property.",
     objectTypePropertyDuplicateName: "Property name already exists.",

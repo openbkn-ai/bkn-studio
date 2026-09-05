@@ -10,6 +10,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkMetricRecord,
@@ -163,7 +164,9 @@ export async function getKnowledgeNetworkMetric(networkId: string, metricId: str
 
     updateMetricApiAvailability("ready");
     const item = unwrapSingleEntryResponse(response.data);
-    return item ? mapMetric(item) : null;
+    return item
+      ? ensureKnowledgeNetworkChildOperations(networkId, "metrics", mapMetric(item))
+      : null;
   } catch (error) {
     if (getErrorStatus(error) === 404) {
       updateMetricApiAvailability("unsupported");

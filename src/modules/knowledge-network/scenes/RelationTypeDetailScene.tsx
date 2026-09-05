@@ -11,13 +11,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { RelationTypeMappingConfigTable } from "@/modules/knowledge-network/components/relation-type/RelationTypeMappingConfigTable";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
-import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
-import { getKnowledgeNetworkRelationTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
+import {
+  deleteKnowledgeNetworkRelationType,
+  getKnowledgeNetworkRelationTypeDetail,
+} from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypeDetail } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./RelationTypeDetailScene.module.css";
@@ -30,6 +34,7 @@ export function RelationTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { message, modal } = useAppServices();
   const { networkId = "", relationTypeId = "" } = useParams<{
     networkId: string;
     relationTypeId: string;
@@ -48,6 +53,28 @@ export function RelationTypeDetailScene() {
     )
       ? locationState.knowledgeNetworkReturnTo
       : listPath;
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.relationTypeDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkRelationType(networkId, relationTypeId);
+        void message.success(t("common.success"));
+        void navigate(listPath);
+      },
+      title: t("knowledgeNetwork.relationTypeDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const loadData = useCallback(async () => {
     if (!networkId || !relationTypeId) {
@@ -92,9 +119,45 @@ export function RelationTypeDetailScene() {
     <>
       <KnowledgeNetworkResourceConfigShell
         actions={
-          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
-            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
-          ) : null
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
+              {
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
+              },
+              {
+                key: "mapping",
+                label: t("knowledgeNetwork.relationTypeMappingEntry"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/mapping`,
+                  );
+                },
+                operation: "modify",
+              },
+              {
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
+              },
+              {
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
+              },
+            ]}
+            record={detail}
+          />
         }
       onBack={() => {
         void navigate(returnPath);

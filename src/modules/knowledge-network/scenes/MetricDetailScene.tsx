@@ -11,15 +11,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
-import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import {
+  deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
@@ -51,6 +53,7 @@ export function MetricDetailScene({
 }: MetricDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { message, modal } = useAppServices();
   const params = useParams<{
     metricId: string;
     networkId: string;
@@ -67,6 +70,37 @@ export function MetricDetailScene({
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
+
+  const leaveDetail = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    void navigate(listPath);
+  };
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.metricDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkMetric(networkId, metricId);
+        void message.success(t("common.success"));
+        leaveDetail();
+      },
+      title: t("knowledgeNetwork.metricDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const loadData = useCallback(async () => {
     if (!networkId || !metricId) {
@@ -108,14 +142,7 @@ export function MetricDetailScene({
     return (
       <KnowledgeNetworkResourceConfigShell
         loading
-        onBack={() => {
-          if (onBack) {
-            onBack();
-            return;
-          }
-
-          void navigate(listPath);
-        }}
+        onBack={leaveDetail}
         subtitle={t("knowledgeNetwork.metricDetailDescription")}
         title={t("knowledgeNetwork.metricDetailTitle")}
       />
@@ -133,18 +160,37 @@ export function MetricDetailScene({
     <>
       <KnowledgeNetworkResourceConfigShell
         actions={
-          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
-            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
-          ) : null
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
+              {
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
+              },
+              {
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
+              },
+              {
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
+              },
+            ]}
+            record={detail}
+          />
         }
-      onBack={() => {
-        if (onBack) {
-          onBack();
-          return;
-        }
-
-        void navigate(listPath);
-      }}
+      onBack={leaveDetail}
       subtitle={t("knowledgeNetwork.metricDetailDescription")}
       title={detail.name}
     >

@@ -13,12 +13,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { ActionTypeOverviewPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeOverviewPanel";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
-import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import {
+  deleteKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
   listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -32,7 +33,7 @@ import styles from "./ActionTypeDetailScene.module.css";
 export function ActionTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { runtimeConfig } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const { actionTypeId = "", networkId = "" } = useParams<{
     actionTypeId: string;
     networkId: string;
@@ -56,6 +57,28 @@ export function ActionTypeDetailScene() {
     actionSource.type === "manual" ||
     (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.actionTypeDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkActionType(networkId, actionTypeId);
+        void message.success(t("common.success"));
+        void navigate(listPath);
+      },
+      title: t("knowledgeNetwork.actionTypeDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const loadData = useCallback(async () => {
     if (!networkId || !actionTypeId) {
@@ -104,9 +127,45 @@ export function ActionTypeDetailScene() {
     <>
       <KnowledgeNetworkResourceConfigShell
         actions={
-          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
-            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
-          ) : null
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
+              {
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
+              },
+              {
+                key: "execution",
+                label: t("knowledgeNetwork.actionTypeExecutionEntry"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
+                  );
+                },
+                operation: "task_manage",
+              },
+              {
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
+              },
+              {
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
+              },
+            ]}
+            record={detail}
+          />
         }
       onBack={() => {
         void navigate(listPath);

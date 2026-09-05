@@ -202,6 +202,7 @@ export const objecttypePart = {
       "\u7528\u4e8e\u6807\u8bc6\u552f\u4e00\u5bf9\u8c61\u5b9e\u4f8b\uff0c\u652f\u6301\u7531\u591a\u4e2a\u5b57\u6bb5\u7ec4\u6210\u3002\u5f53\u6240\u9009\u4e3b\u952e\u5b57\u6bb5\u7684\u6570\u636e\u5b58\u5728\u91cd\u590d\u65f6\uff0c\u5bf9\u8be5\u503c\u5c06\u8fdb\u884c\u878d\u5408\u786e\u4fdd\u552f\u4e00\u6027\u3002",
     objectTypePrimaryKeyRequired: "请至少设置一个主键。",
     objectTypePropertyDisplayName: "属性显示名",
+    objectTypePropertyDescription: "属性描述",
     objectTypePropertyDuplicateDisplayName: "显示名已存在。",
     objectTypePropertyDuplicateMapping: "该资源字段已被其他属性映射。",
     objectTypePropertyDuplicateName: "属性名已存在。",
