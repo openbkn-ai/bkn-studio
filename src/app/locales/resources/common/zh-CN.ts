@@ -13,6 +13,8 @@ export const commonZhCN = {
     create: "新建",
     import: "导入",
     copy: "复制",
+    copySuccess: "已复制",
+    copyFailed: "复制失败",
     viewDetails: "查看详情",
     hideDetails: "收起详情",
     back: "返回",

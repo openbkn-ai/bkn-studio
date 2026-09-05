@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { gatewayOrigin } from "@/framework/auth/oauth";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { buildApiKeyPagePath } from "@/modules/api-keys/utils/api-key-handoff";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 
@@ -82,7 +83,7 @@ function CodeIntegrationPanel<T extends string>({
 
   const copyText = async (text: string, successText: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await writeTextToClipboard(text);
       void message.success(successText);
     } catch {
       void message.error(copyFailedMessage);

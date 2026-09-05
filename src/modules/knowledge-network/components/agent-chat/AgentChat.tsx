@@ -19,6 +19,7 @@ import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { normalizeSupportedLocale } from "@/framework/i18n/locale";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
@@ -702,8 +703,7 @@ export function AgentChat({
   const copyReportMd = useCallback(() => {
     const md = buildMarkdown();
     if (!md) return;
-    void navigator.clipboard
-      ?.writeText(md)
+    void writeTextToClipboard(md)
       .then(() => message.success(t("knowledgeNetwork.agentChat.report.copySuccess")))
       .catch(() => message.error(t("knowledgeNetwork.agentChat.report.copyFailed")));
   }, [buildMarkdown, message, t]);

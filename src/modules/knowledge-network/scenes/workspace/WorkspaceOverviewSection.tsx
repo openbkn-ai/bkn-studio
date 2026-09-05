@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { formatNumber } from "@/framework/i18n/format";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -85,8 +86,7 @@ export function WorkspaceOverviewSection({
       return;
     }
 
-    void navigator.clipboard
-      ?.writeText(networkIdentifier)
+    void writeTextToClipboard(networkIdentifier)
       .then(() => message.success(t("knowledgeNetwork.networkIdentifierCopied")))
       .catch(() => message.error(t("knowledgeNetwork.copyNetworkIdentifierFailed")));
   };

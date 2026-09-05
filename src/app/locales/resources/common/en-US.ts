@@ -13,6 +13,8 @@ export const commonEnUS = {
     create: "Create",
     import: "Import",
     copy: "Copy",
+    copySuccess: "Copied",
+    copyFailed: "Copy failed",
     viewDetails: "View details",
     hideDetails: "Hide details",
     back: "Back",

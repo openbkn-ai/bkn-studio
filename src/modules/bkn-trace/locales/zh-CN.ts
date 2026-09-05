@@ -21,7 +21,7 @@ export const bknTraceZhCN = {
         actions: { analyze: "交给 BKN Agent 分析", back: "返回业务会话", copyMarkdown: "复制 Markdown", downloadMarkdown: "下载 Markdown", query: "查询", refresh: "刷新", reset: "重置筛选" },
         agent: {
           acceptance: "验收", analyzing: "分析中", analyzingRound: "正在分析当前交互轮次", backToEdit: "返回编辑", category: "类别", change: "修改方式", close: "关闭 BKN Agent 分析",
-          copyAdviceMarkdown: "复制建议 Markdown", copyCurrentMarkdown: "复制本次 Markdown", currentRound: "当前交互轮次分析",
+          adviceMarkdownCopied: "建议 Markdown 已复制", copyAdviceMarkdown: "复制建议 Markdown", copyCurrentMarkdown: "复制本次 Markdown", copyFailed: "复制失败", currentRound: "当前交互轮次分析",
           editorDescription: "仅包含当前交互轮次的调用过程事实；编辑只影响本次分析，不修改 Trace。", failed: "分析失败", failurePrefix: "分析失败：", failureReasonMissing: "未返回失败原因",
           failureWithReason: "分析失败：{{reason}}", generatingMarkdown: "正在生成过程事实 Markdown…", history: "历史分析记录", historyItem: "分析记录 {{index}} · {{time}} · {{status}}",
           httpFailure: "业务溯源分析请求失败（HTTP {{status}}）", intro: "先确认或编辑待分析 Markdown，再启动分析。Agent 实际收到的内容与此处完全相同；可按需查询源 BKN 进行核验，但不得补写 Trace 中不存在的事实。",
@@ -75,7 +75,9 @@ export const bknTraceZhCN = {
       callDetail: "调用详情",
       closeDetail: "关闭调用详情",
       copy: "复制",
+      copyFailed: "复制失败",
       copyFullText: "复制全文",
+      copySuccess: "已复制",
       columns: { agent: "Agent / 应用", duration: "耗时", rootOperation: "根调用", startedAt: "开始时间", status: "状态" },
       diagnostics: {
         missingTerminal: "调用缺少结束记录，无法确认最终结果。",
@@ -165,10 +167,10 @@ export const bknTraceZhCN = {
       outcomes: { canceled: "已取消", denied: "已拒绝", failure: "失败", success: "成功", unknown: "未知" },
       detail: {
         action: "操作", actor: "操作者", actorAndSource: "操作者与来源", actorId: "操作者 ID", associations: "关联记录", authMethod: "认证方式", businessObject: "业务操作", conversationId: "会话 ID",
-        businessContext: "业务上下文", clientIp: "来源 IP", copyRawFacts: "复制原始事实", event: "事件类型", facts: "操作事实",
+        businessContext: "业务上下文", clientIp: "来源 IP", copyFailed: "复制失败", copyRawFacts: "复制原始事实", event: "事件类型", facts: "操作事实",
         credential: "使用凭证", eventId: "事件 ID", failure: "失败原因", openBusinessProvenance: "打开关联业务溯源", openTrace: "打开关联 Trace",
         method: "请求方法", operation: "操作摘要", operationStatus: "执行状态", operationType: "操作类型", rawFacts: "原始事实（默认收起）", recordedAt: "记录时间", requestId: "请求 ID", source: "来源", statusCode: "状态码", target: "操作对象", targetId: "对象 ID", taskId: "任务 ID", traceId: "Trace ID",
-        rawAction: "原始动作", targetType: "对象类型", technicalIds: "技术标识", time: "操作时间", title: "操作日志详情",
+        rawAction: "原始动作", rawFactsCopied: "原始事实已复制", targetType: "对象类型", technicalIds: "技术标识", time: "操作时间", title: "操作日志详情",
       },
       domainAction: "{{action}}{{target}}",
       domainAuditActions: { add_members: "向{{target}}添加成员", create: "创建", delete: "删除", import: "导入", remove_members: "从{{target}}移除成员", update: "更新" },
