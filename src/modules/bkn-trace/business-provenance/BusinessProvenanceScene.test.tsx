@@ -220,6 +220,23 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByRole("button", { name: /重\s*试/ })).not.toBeNull();
   });
 
+  it("offers original Trace Markdown when a legacy interaction has no historical projection", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-legacy", questionPreview: "历史会话", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-legacy", questionPreview: "历史轮次" }], total: 1 });
+    getInteraction.mockRejectedValue({ response: { status: 404 } });
+    getMarkdown.mockResolvedValue("# 原始 Trace 记录\n\n历史调用事实");
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "历史会话" }));
+
+    expect(await screen.findByText("该轮次暂无可用的历史业务溯源投影")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "复制原始 Trace（Markdown）" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "下载原始 Trace（Markdown）" })).not.toBeNull();
+    await waitFor(() => expect(getMarkdown).toHaveBeenCalledWith("int-legacy"));
+    expect(getAnalysisHistory).not.toHaveBeenCalled();
+    expect(streamAnalysis).not.toHaveBeenCalled();
+  });
+
   it("clears a stale interaction error when the round filter has no selection", async () => {
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-filter", questionPreview: "筛选会话", interactionCount: 1 }], total: 1 });
     getInteractions

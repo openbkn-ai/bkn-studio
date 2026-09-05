@@ -274,6 +274,7 @@ export function BusinessProvenanceScene() {
   const [interactionListError, setInteractionListError] = useState(false);
   const [interactionDetailLoading, setInteractionDetailLoading] = useState(false);
   const [interactionDetailError, setInteractionDetailError] = useState(false);
+  const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
@@ -316,7 +317,7 @@ export function BusinessProvenanceScene() {
     let current = true;
     setInteractions([]); setInteractionTotal(0); setSelectedInteraction(undefined);
     setInteractionListLoading(true); setInteractionListError(false);
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
+    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setProjectionUnavailable(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
       .then((page) => { if (current) { setInteractions(page.entries); setInteractionTotal(page.total); setSelectedInteraction(page.entries[0]); } })
       .catch(() => { if (current) { setInteractionListError(true); message.error(bpText("errors.interactionsLoad")); } })
@@ -327,25 +328,43 @@ export function BusinessProvenanceScene() {
     if (!selectedInteraction) {
       setInteractionDetailLoading(false);
       setInteractionDetailError(false);
+      setProjectionUnavailable(false);
       return;
     }
     let current = true;
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false);
-    setAnalysisMarkdown(""); setAnalysisMarkdownLoading(true); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
+    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
+    setAnalysisMarkdown(""); setAnalysisMarkdownLoading(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
-      .then((value) => { if (current) setProjection(value); })
-      .catch(() => { if (current) { setInteractionDetailError(true); message.error(bpText("errors.factsLoad")); } })
+      .then((value) => {
+        if (!current) return;
+        setProjection(value);
+        setAnalysisMarkdownLoading(true);
+        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
+          .then((markdown) => { if (current) setAnalysisMarkdown(markdown); })
+          .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
+          .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
+        void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId).then((entries) => {
+          if (!current) return;
+          setAnalysisHistory(entries);
+          const latest = entries.find((entry) => entry.status === "completed" && entry.result);
+          setAnalysisResult(latest?.result);
+        }).catch(() => { if (current) setAnalysisHistory([]); });
+      })
+      .catch((error) => {
+        if (!current) return;
+        if (responseStatus(error) !== 404) {
+          setInteractionDetailError(true);
+          message.error(bpText("errors.factsLoad"));
+          return;
+        }
+        setProjectionUnavailable(true);
+        setAnalysisMarkdownLoading(true);
+        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
+          .then((markdown) => { if (current) setAnalysisMarkdown(markdown); })
+          .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
+          .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
+      })
       .finally(() => { if (current) setInteractionDetailLoading(false); });
-    void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
-      .then((value) => { if (current) setAnalysisMarkdown(value); })
-      .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
-      .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
-    void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId).then((entries) => {
-      if (!current) return;
-      setAnalysisHistory(entries);
-      const latest = entries.find((entry) => entry.status === "completed" && entry.result);
-      setAnalysisResult(latest?.result);
-    }).catch(() => { if (current) setAnalysisHistory([]); });
     return () => { current = false; };
   }, [interactionReload, selectedInteraction]);
 
@@ -461,7 +480,7 @@ export function BusinessProvenanceScene() {
         <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projection ? <>
+        {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
           <section className={styles.interactionSummary}>
             <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
             <div className={styles.sourceTexts}><div><h4>{bpText("rounds.inputOriginal")}</h4><p>{selectedInteraction?.questionPreview || bpText("inputNotRecorded")}</p></div><div><h4>{bpText("rounds.outputOriginal")}</h4><p>{selectedInteraction?.resultPreview || bpText("resultNotRecorded")}</p></div></div>

@@ -52,6 +52,7 @@ export const bknTraceZhCN = {
           factBoundary: "事实边界", factBoundaryDescription: "本轮有 {{count}} 次调用确定性定位到该业务元素。", factBoundaryDescription_one: "本轮有 {{count}} 次调用确定性定位到该业务元素。", factBoundaryDescription_other: "本轮有 {{count}} 次调用确定性定位到该业务元素。", network: "业务知识网络", noContext: "本轮未记录可展示的关系上下文。",
           observed: "本轮已触达", observedOnly: "仅展示本轮调用确定性触达的业务元素。", path: "业务知识网络 → 本轮触达对象 → 源 BKN 关系（上下文）→ 相邻对象", relatedCalls: "关联调用", relations: "相关 BKN 关系",
         },
+        legacy: { title: "该轮次暂无可用的历史业务溯源投影", description: "本轮未生成历史业务溯源投影；可复制或下载已记录的原始 Trace Markdown 进行复盘。", copyMarkdown: "复制原始 Trace（Markdown）", downloadMarkdown: "下载原始 Trace（Markdown）" },
         list: { description: "从用户问题和业务结果出发，查看 Agent 如何调用业务知识网络并形成结论。", empty: "暂无业务会话", title: "业务溯源", total: "共 {{count}} 条" },
         listSeparator: "、", networkUnresolved: "尚未定位知识网络", none: "无。", notRecorded: "未记录", notReturned: "未返回",
         operation: {
