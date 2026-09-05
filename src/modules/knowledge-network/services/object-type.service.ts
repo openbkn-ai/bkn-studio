@@ -11,6 +11,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeMutationPayload,
@@ -186,7 +187,13 @@ export async function getKnowledgeNetworkObjectTypeDetail(
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapObjectTypeDetail(record) : null;
+  return record
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "object-types",
+        mapObjectTypeDetail(record),
+      )
+    : null;
 }
 
 export async function getObjectTypeSampleData(

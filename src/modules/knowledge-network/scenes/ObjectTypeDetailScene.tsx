@@ -12,22 +12,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
 import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
+import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
-import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
   ObjectTypePropertyTable,
   ObjectTypePropertyTableColumnSettings,
+  ObjectTypePropertyDescriptionCell,
 } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
@@ -36,6 +38,7 @@ import { buildSampleRowKey } from "@/modules/knowledge-network/lib/object-type-i
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
+  deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypes,
@@ -160,6 +163,7 @@ export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { message, modal } = useAppServices();
   const runtimeConfig = useRuntimeConfig();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
@@ -242,6 +246,28 @@ export function ObjectTypeDetailScene() {
     )
       ? locationState.knowledgeNetworkReturnTo
       : listPath;
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.objectTypeDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkObjectType(networkId, objectTypeId);
+        void message.success(t("common.success"));
+        void navigate(listPath);
+      },
+      title: t("knowledgeNetwork.objectTypeDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const openMetricTrial = useCallback((metricId: string) => {
     setSearchParams((current) => {
@@ -867,9 +893,9 @@ export function ObjectTypeDetailScene() {
       {
         dataIndex: "comment",
         key: "comment",
-        ellipsis: true,
-        title: t("common.description"),
-        render: (value?: string) => value || "--",
+        title: t("knowledgeNetwork.objectTypePropertyDescription"),
+        render: (value?: string) => <ObjectTypePropertyDescriptionCell value={value} />,
+        width: 240,
       },
       {
         key: "actions",
@@ -1962,46 +1988,72 @@ export function ObjectTypeDetailScene() {
     <>
       <KnowledgeNetworkResourceConfigShell
         actions={
-          hasKnowledgeNetworkRecordOperation(detail, "authorize") ? (
-            <AppButton onClick={() => setAuthorizeOpen(true)}>{t("knowledgeNetwork.authorizeAction")}</AppButton>
-          ) : null
-        }
-      onBack={() => {
-        void navigate(returnPath);
-      }}
-      subtitle={detail.id}
-      title={detail.name}
-    >
-      <div className={styles.page}>
-        <section className={styles.tabCard}>
-          <Tabs
-            activeKey={activeTab}
-            items={[
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
               {
-                children: overviewPanel,
-                key: "overview",
-                label: t("knowledgeNetwork.objectTypeDetailTabOverview"),
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
               },
               {
-                children: propertiesPanel,
-                key: "properties",
-                label: t("knowledgeNetwork.objectTypeDetailTabProperties"),
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
               },
               {
-                children: dataPanel,
-                key: "data",
-                label: t("knowledgeNetwork.objectTypeDetailTabData"),
-              },
-              {
-                children: relatedPanel,
-                key: "related",
-                label: t("knowledgeNetwork.objectTypeDetailTabRelated"),
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
               },
             ]}
-            onChange={handleTabChange}
+            record={detail}
           />
-        </section>
-      </div>
+        }
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={detail.id}
+        title={detail.name}
+      >
+        <div className={styles.page}>
+          <section className={styles.tabCard}>
+            <Tabs
+              activeKey={activeTab}
+              items={[
+                {
+                  children: overviewPanel,
+                  key: "overview",
+                  label: t("knowledgeNetwork.objectTypeDetailTabOverview"),
+                },
+                {
+                  children: propertiesPanel,
+                  key: "properties",
+                  label: t("knowledgeNetwork.objectTypeDetailTabProperties"),
+                },
+                {
+                  children: dataPanel,
+                  key: "data",
+                  label: t("knowledgeNetwork.objectTypeDetailTabData"),
+                },
+                {
+                  children: relatedPanel,
+                  key: "related",
+                  label: t("knowledgeNetwork.objectTypeDetailTabRelated"),
+                },
+              ]}
+              onChange={handleTabChange}
+            />
+          </section>
+        </div>
       </KnowledgeNetworkResourceConfigShell>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

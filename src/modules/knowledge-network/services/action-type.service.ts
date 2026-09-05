@@ -10,6 +10,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ActionTypeDetail,
   ActionTypeExecutionLogDetail,
@@ -173,7 +174,11 @@ export async function getKnowledgeNetworkActionTypeDetail(
     return null;
   }
 
-  return mapActionTypeDetail(record);
+  return ensureKnowledgeNetworkChildOperations(
+    networkId,
+    "action-types",
+    mapActionTypeDetail(record),
+  );
 }
 
 export async function listKnowledgeNetworkActionTypeExecutionLogs(

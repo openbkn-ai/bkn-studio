@@ -11,6 +11,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ConceptGroupDetail,
   ConceptGroupMutationPayload,
@@ -93,7 +94,13 @@ export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapConceptGroupDetail(record) : null;
+  return record
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "concept-groups",
+        mapConceptGroupDetail(record),
+      )
+    : null;
 }
 
 export async function createKnowledgeNetworkConceptGroup(

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapActionKind,
   mapActionType,
+  mapActionTypeDetail,
   mapConceptGroupDetail,
   mapRecentObject,
 } from "@/modules/knowledge-network/services/mappers";
@@ -39,6 +40,17 @@ describe("action type list mapper", () => {
 
     expect(record.actionKind).toBe("update");
     expect(record.operations).toEqual(["authorize"]);
+  });
+
+  it("preserves operations for the action type detail", () => {
+    const detail = mapActionTypeDetail({
+      action_type: "modify",
+      id: "action-1",
+      name: "Edit order",
+      operations: ["modify", "authorize", "delete"],
+    });
+
+    expect(detail.operations).toEqual(["modify", "authorize", "delete"]);
   });
 
   it("maps concept group action type entries with lowercase backend enums", () => {

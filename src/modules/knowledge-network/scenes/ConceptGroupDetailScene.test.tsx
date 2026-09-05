@@ -31,6 +31,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
       success: vi.fn(),
       warning: vi.fn(),
     },
+    modal: { confirm: vi.fn() },
   }),
 }));
 
@@ -42,6 +43,7 @@ vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => 
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
+  deleteKnowledgeNetworkConceptGroup: vi.fn(),
   getKnowledgeNetworkConceptGroup: getConceptGroup,
   removeObjectTypesFromKnowledgeNetworkConceptGroup: vi.fn(),
 }));
@@ -97,7 +99,7 @@ afterEach(() => {
 });
 
 describe("ConceptGroupDetailScene", () => {
-  it("renders Configure Permissions in the loaded detail header when authorized", async () => {
+  it("renders every operation granted by the loaded detail record", async () => {
     getConceptGroup.mockResolvedValue({
       actionTypes: [],
       description: "Source data layer",
@@ -107,7 +109,7 @@ describe("ConceptGroupDetailScene", () => {
       relationTypes: [],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
-      operations: ["authorize"],
+      operations: ["query_data", "modify", "authorize", "delete"],
     });
 
     render(<ConceptGroupDetailScene />);
@@ -115,8 +117,8 @@ describe("ConceptGroupDetailScene", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findAllByText("Source Layer")).not.toHaveLength(0);
     expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
-    expect(screen.queryByText("common.edit")).toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.conceptGroupExport")).toBeNull();
-    expect(screen.queryByText("common.delete")).toBeNull();
+    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.conceptGroupExport")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
   });
 });

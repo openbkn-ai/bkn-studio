@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   listKnowledgeNetworkMetrics: vi.fn(),
   listKnowledgeNetworkObjectTypes: vi.fn(),
   listKnowledgeNetworkRelationTypes: vi.fn(),
+  modalConfirm: vi.fn(),
+  navigate: vi.fn(),
   routeParams: {
     current: {},
   },
@@ -31,7 +33,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
   useLocation: () => ({ state: null }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mocks.navigate,
   useParams: () => mocks.routeParams.current,
   useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
@@ -42,6 +44,8 @@ vi.mock("@/framework/context/use-runtime-config", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
+    message: { success: vi.fn() },
+    modal: { confirm: mocks.modalConfirm },
     runtimeConfig: { currentUser: { permissions: [] } },
   }),
 }));
@@ -68,6 +72,10 @@ vi.mock(
 );
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
+  deleteKnowledgeNetworkActionType: vi.fn(),
+  deleteKnowledgeNetworkMetric: vi.fn(),
+  deleteKnowledgeNetworkObjectType: vi.fn(),
+  deleteKnowledgeNetworkRelationType: vi.fn(),
   getKnowledgeNetworkActionTypeDetail: mocks.getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
@@ -116,14 +124,8 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
 });
 
-function expectEmptyHeaderActions() {
-  expect(screen.getByTestId("detail-header-actions").childElementCount).toBe(0);
-  expect(screen.queryByText("common.edit")).toBeNull();
-  expect(screen.queryByText("common.delete")).toBeNull();
-}
-
 describe("knowledge network detail scene headers", () => {
-  it("keeps the action type detail header free of management actions", async () => {
+  it("shows action type operations granted by the detail record", async () => {
     mocks.routeParams.current = { actionTypeId: "action-1", networkId: "network-1" };
     mocks.getKnowledgeNetworkActionTypeDetail.mockResolvedValue({
       actionKind: "update",
@@ -139,6 +141,7 @@ describe("knowledge network detail scene headers", () => {
       name: "Update order",
       objectTypeId: "object-1",
       objectTypeName: "Order",
+      operations: ["modify", "task_manage", "authorize", "delete"],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
       updaterName: "admin",
@@ -149,11 +152,18 @@ describe("knowledge network detail scene headers", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findByText("Update order")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expectEmptyHeaderActions();
-    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionEntry")).toBeNull();
+    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionEntry")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.actionTypeExecutionEntry"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/action-types/action-1/execution",
+    );
   });
 
-  it("keeps the object type detail header free of management actions", async () => {
+  it("shows object type operations granted by the detail record", async () => {
     mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
     mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
       color: "#126ee3",
@@ -167,6 +177,7 @@ describe("knowledge network detail scene headers", () => {
       incrementalKey: "",
       logicProperties: [],
       name: "Order",
+      operations: ["modify", "authorize", "delete"],
       primaryKeys: [],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
@@ -178,10 +189,20 @@ describe("knowledge network detail scene headers", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findByText("Order")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expectEmptyHeaderActions();
+    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("common.edit"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/object-types/object-1/edit",
+    );
+
+    fireEvent.click(screen.getByText("common.delete"));
+    expect(mocks.modalConfirm).toHaveBeenCalledOnce();
   });
 
-  it("keeps the relation type detail header free of management actions", async () => {
+  it("shows relation type operations granted by the detail record", async () => {
     mocks.routeParams.current = { networkId: "network-1", relationTypeId: "relation-1" };
     mocks.getKnowledgeNetworkRelationTypeDetail.mockResolvedValue({
       color: "#126ee3",
@@ -189,6 +210,7 @@ describe("knowledge network detail scene headers", () => {
       id: "relation-1",
       mappingMode: "direct",
       name: "Contains",
+      operations: ["modify", "authorize", "delete"],
       propertyMappings: [],
       resourceMappings: [],
       sourceObjectTypeId: "object-1",
@@ -205,11 +227,18 @@ describe("knowledge network detail scene headers", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findByText("Contains")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expectEmptyHeaderActions();
-    expect(screen.queryByText("knowledgeNetwork.relationTypeMappingEntry")).toBeNull();
+    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.relationTypeMappingEntry")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.relationTypeMappingEntry"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/relation-types/relation-1/mapping",
+    );
   });
 
-  it("keeps the metric detail header free of management actions", async () => {
+  it("shows metric operations granted by the detail record", async () => {
     mocks.routeParams.current = { metricId: "metric-1", networkId: "network-1" };
     mocks.getKnowledgeNetworkMetric.mockResolvedValue({
       calculationFormula: {
@@ -219,6 +248,7 @@ describe("knowledge network detail scene headers", () => {
       id: "metric-1",
       metricType: "atomic",
       name: "Order count",
+      operations: ["modify", "authorize", "delete"],
       scopeRef: "subgraph-1",
       scopeType: "subgraph",
       tags: [],
@@ -231,6 +261,13 @@ describe("knowledge network detail scene headers", () => {
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("true");
     expect(await screen.findByText("Order count")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
-    expectEmptyHeaderActions();
+    expect(screen.getByText("common.edit")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("common.delete")).not.toBeNull();
+
+    fireEvent.click(screen.getByText("common.edit"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/metrics/metric-1/edit",
+    );
   });
 });

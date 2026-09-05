@@ -33,10 +33,10 @@ import {
   getKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
-  ConceptGroupDetail,
   ConceptGroupRecord,
   KnowledgeNetworkImportMode,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { downloadConceptGroupExport } from "@/modules/knowledge-network/utils/concept-group-export";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -54,18 +54,6 @@ type ConceptGroupListPanelProps = {
   ) => Promise<void>;
   onRefresh: () => Promise<void>;
 };
-
-function downloadConceptGroupExport(detail: ConceptGroupDetail) {
-  const blob = new Blob([JSON.stringify(detail, null, 2)], {
-    type: "application/json;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${detail.name}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 export function ConceptGroupListPanel({
   canDelete,
