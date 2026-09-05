@@ -358,8 +358,17 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
 }
 
 /** Collapsible tool-call card showing actual request parameters and response. */
-function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof useTranslation>["t"] }) {
-  const [open, setOpen] = useState(false);
+function ToolCallCard({
+  call,
+  open,
+  onToggle,
+  t,
+}: {
+  call: ToolCallView;
+  open: boolean;
+  onToggle: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
@@ -378,7 +387,7 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
       <button
         type="button"
         className={`${styles.callHead} ${call.status === "running" ? styles.callLive : ""}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
       >
         <span className={styles.verb}>MCP</span>
         <span className={styles.callName}>{call.name}</span>
@@ -411,14 +420,22 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
 /**
  * One run of consecutive tool calls. A lone call stays a bare card; a run collapses
  * into a single closed group so the transcript reads as text, not as a wall of calls.
+ *
+ * Card expansion is held here, keyed by call id. A streaming run switches from the
+ * bare card to the group the moment its second call arrives, and that swaps the child
+ * structure, so state owned by the card itself would be thrown away mid-stream: the
+ * card a user just expanded to read the request would silently close. For the same
+ * reason the group opens by default when a card inside it is already expanded.
  */
 function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<typeof useTranslation>["t"] }) {
-  const [open, setOpen] = useState(false);
+  const [openCalls, setOpenCalls] = useState<Record<string, boolean>>({});
+  const [groupOpen, setGroupOpen] = useState<boolean | null>(null);
+  const toggleCall = (id: string) => setOpenCalls((prev) => ({ ...prev, [id]: !prev[id] }));
   if (calls.length === 0) return null;
   if (calls.length === 1) {
     return (
       <div className={styles.calls}>
-        <ToolCallCard call={calls[0]} t={t} />
+        <ToolCallCard call={calls[0]} open={!!openCalls[calls[0].id]} onToggle={() => toggleCall(calls[0].id)} t={t} />
       </div>
     );
   }
@@ -430,12 +447,14 @@ function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<ty
     : failed > 0
       ? t("knowledgeNetwork.agentChat.chatPane.toolGroup.failed", { count: failed })
       : `${calls.reduce((ms, call) => ms + (call.latencyMs ?? 0), 0)}ms`;
+  // Once the user has toggled the group, their choice wins over the expanded-card default.
+  const open = groupOpen ?? calls.some((call) => openCalls[call.id]);
   return (
     <div className={styles.group}>
       <button
         type="button"
         className={`${styles.callHead} ${running ? styles.callLive : ""}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setGroupOpen(!open)}
       >
         <span className={styles.verb}>MCP</span>
         <span className={styles.callName}>
@@ -448,7 +467,7 @@ function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<ty
       {open ? (
         <div className={styles.groupBody}>
           {calls.map((call) => (
-            <ToolCallCard key={call.id} call={call} t={t} />
+            <ToolCallCard key={call.id} call={call} open={!!openCalls[call.id]} onToggle={() => toggleCall(call.id)} t={t} />
           ))}
         </div>
       ) : null}

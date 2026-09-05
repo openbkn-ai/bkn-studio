@@ -191,6 +191,45 @@ describe("ChatPane 工具调用折叠", () => {
     expect(headerLabels()).toEqual(["思考过程", "已调用工具 3 次", "search_schema", "run_sql", "run_sql"]);
   });
 
+  it("第二次调用到达时，已展开的卡片不被收回去", async () => {
+    stubLifecycle();
+    let emit!: (chunk: Parameters<Parameters<AgentChatModule["runAgentChat"]>[0]["onChunk"]>[0]) => void;
+    let finishRun!: () => void;
+    runAgentChat.mockImplementation(
+      ({ onChunk }) =>
+        new Promise<void>((resolve) => {
+          emit = onChunk;
+          finishRun = resolve;
+        }),
+    );
+
+    const ref = renderPane();
+    await act(async () => {
+      ref.current?.send("问一句");
+      await Promise.resolve();
+    });
+
+    // A run starts as a bare card; the user expands it to read the request.
+    act(() => {
+      emit({ type: "tool-call", id: "c1", name: "run_sql", args: { sql: "SELECT 1" } });
+    });
+    fireEvent.click(screen.getByText("run_sql"));
+    expect(document.querySelectorAll("pre").length).toBeGreaterThan(0);
+
+    // The second call swaps the bare card for the group. Expansion must survive that swap,
+    // otherwise the card the user is reading closes mid-stream.
+    act(() => {
+      emit({ type: "tool-call", id: "c2", name: "search_schema", args: {} });
+    });
+    expect(screen.getByText("已调用工具 2 次")).toBeTruthy();
+    expect([...document.querySelectorAll("pre")].some((node) => (node.textContent ?? "").includes("SELECT 1"))).toBe(true);
+
+    await act(async () => {
+      finishRun();
+      await Promise.resolve();
+    });
+  });
+
   it("单次调用不额外套一层分组", async () => {
     stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
