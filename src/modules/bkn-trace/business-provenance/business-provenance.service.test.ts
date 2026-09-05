@@ -54,6 +54,7 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1",
+      { skipErrorToast: true },
     );
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1/markdown",

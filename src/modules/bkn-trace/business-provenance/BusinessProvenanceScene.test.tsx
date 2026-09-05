@@ -232,6 +232,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("该轮次暂无可用的历史业务溯源投影")).not.toBeNull();
     expect(screen.getByRole("button", { name: "复制原始 Trace（Markdown）" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "下载原始 Trace（Markdown）" })).not.toBeNull();
+    expect(screen.queryByText("0 次调用")).toBeNull();
     await waitFor(() => expect(getMarkdown).toHaveBeenCalledWith("int-legacy"));
     expect(getAnalysisHistory).not.toHaveBeenCalled();
     expect(streamAnalysis).not.toHaveBeenCalled();

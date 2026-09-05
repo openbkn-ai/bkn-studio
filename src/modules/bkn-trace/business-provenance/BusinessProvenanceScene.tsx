@@ -472,7 +472,7 @@ export function BusinessProvenanceScene() {
     <section className={styles.workspace}>
       <header className={styles.workspaceHeader}>
         <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← {bpText("actions.back")}</Button>
-        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
+        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span>{projection ? <span>{bpText("callCount", { count: projection.operations.length })}</span> : null}<span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
       <aside className={styles.roundSidebar}>
         <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: selectedConversation.interactionCount ?? interactionTotal, current: selectedInteraction?.roundNumber && selectedInteraction.roundNumber > 0 ? selectedInteraction.roundNumber : bpText("roundNotRecorded") })}</span></div></div>

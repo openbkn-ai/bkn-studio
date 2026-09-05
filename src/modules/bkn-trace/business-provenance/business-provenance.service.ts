@@ -160,7 +160,7 @@ export async function getBusinessProvenanceInteraction(interactionId: string): P
       operation_id?: string; attempt?: number; tool_name?: string; knowledge_network_id?: string;
       status?: OperationResolution["status"]; call_status?: string; protocol?: string; started_at?: string; finished_at?: string; duration_ms?: number; input?: unknown; output?: unknown; error?: unknown; query?: { sql?: string; resource_ids?: string[]; resources?: Array<{ id?: string; name?: string; object_id?: string; object_name?: string }>; conditions?: unknown; result_count?: number }; objects?: Array<{ id?: string; name?: string }>; elements?: Array<{ kind?: string; id?: string; name?: string; parent_id?: string; field?: string }>; missing_facts?: string[];
     }>;
-  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`);
+  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, { skipErrorToast: true });
   return {
     interactionId: response.data.interaction_id ?? interactionId,
     conversationContext: (response.data.conversation_context ?? []).map((context) => ({ knowledgeNetworkId: context.knowledge_network_id ?? "", sourceInteractionId: context.source_interaction_id ?? "", sourceOperationId: context.source_operation_id ?? "" })),
