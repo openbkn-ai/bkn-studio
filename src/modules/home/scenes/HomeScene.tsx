@@ -22,6 +22,7 @@ import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import type { PermissionCheckMode } from "@/framework/permission/has-permissions";
@@ -393,12 +394,7 @@ export function HomeScene() {
   const currentStage = PLATFORM_STAGES.find((stage) => stage.id === activeStage) ?? PLATFORM_STAGES[0];
 
   const copyInstallCommand = (command: string) => {
-    if (!navigator.clipboard) {
-      message.error(t("home.engineering.install.copyFailed"));
-      return;
-    }
-
-    void navigator.clipboard.writeText(command).then(
+    void writeTextToClipboard(command).then(
       () => message.success(t("home.engineering.install.copied")),
       () => message.error(t("home.engineering.install.copyFailed")),
     );

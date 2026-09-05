@@ -36,6 +36,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildAppPath } from "@/app/router/app-paths";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import type { PayloadEnvelope } from "@/modules/bkn-trace/shared/operation-fact.types";
 import styles from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene.module.css";
 import {
@@ -436,10 +438,16 @@ function PayloadView({ interactionId, payload }: { interactionId: string; payloa
 
 function InlinePayload({ value }: { value: unknown }) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const content = JSON.stringify(value, null, 2) ?? "null";
+  const copyContent = () => {
+    void writeTextToClipboard(content)
+      .then(() => message.success(t("bknTrace.traceWorkspace.copySuccess")))
+      .catch(() => message.error(t("bknTrace.traceWorkspace.copyFailed")));
+  };
   return (
     <div className={styles.payloadBlock}>
-      <Button icon={<CopyOutlined />} onClick={() => void navigator.clipboard?.writeText(content)} size="small">
+      <Button icon={<CopyOutlined />} onClick={copyContent} size="small">
         {t("bknTrace.traceWorkspace.copy")}
       </Button>
       <pre className={styles.payload}>{content}</pre>
@@ -449,6 +457,7 @@ function InlinePayload({ value }: { value: unknown }) {
 
 function SummaryText({ label, text }: { label: string; text?: string }) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [open, setOpen] = useState(false);
   const [overflow, setOverflow] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
@@ -463,6 +472,11 @@ function SummaryText({ label, text }: { label: string; text?: string }) {
     return () => observer.disconnect();
   }, [text]);
   const content = text || "-";
+  const copyContent = () => {
+    void writeTextToClipboard(content)
+      .then(() => message.success(t("bknTrace.traceWorkspace.copySuccess")))
+      .catch(() => message.error(t("bknTrace.traceWorkspace.copyFailed")));
+  };
   const button = <button className={styles.clampedText} onClick={() => setOpen(true)} ref={ref} type="button">{content}</button>;
   return (
     <div className={styles.summaryText}>
@@ -470,7 +484,7 @@ function SummaryText({ label, text }: { label: string; text?: string }) {
       {overflow ? <Tooltip mouseEnterDelay={0.3} placement="bottomLeft" title={content}>{button}</Tooltip> : button}
       <Modal
         footer={(
-          <Button icon={<CopyOutlined />} onClick={() => void navigator.clipboard?.writeText(content)}>
+          <Button icon={<CopyOutlined />} onClick={copyContent}>
             {t("bknTrace.traceWorkspace.copyFullText")}
           </Button>
         )}

@@ -21,7 +21,7 @@ export const bknTraceEnUS = {
         actions: { analyze: "Analyze with BKN Agent", back: "Back to conversations", copyMarkdown: "Copy Markdown", downloadMarkdown: "Download Markdown", query: "Query", refresh: "Refresh", reset: "Reset filters" },
         agent: {
           acceptance: "Acceptance", analyzing: "Analyzing", analyzingRound: "Analyzing the current interaction", backToEdit: "Back to editor", category: "Category", change: "Change", close: "Close BKN Agent analysis",
-          copyAdviceMarkdown: "Copy advice Markdown", copyCurrentMarkdown: "Copy this Markdown", currentRound: "Current interaction analysis",
+          adviceMarkdownCopied: "Advice Markdown copied", copyAdviceMarkdown: "Copy advice Markdown", copyCurrentMarkdown: "Copy this Markdown", copyFailed: "Copy failed", currentRound: "Current interaction analysis",
           editorDescription: "This contains only call-process facts from the current interaction. Edits affect this analysis only and do not modify the Trace.", failed: "Analysis failed", failurePrefix: "Analysis failed: ", failureReasonMissing: "No failure reason returned",
           failureWithReason: "Analysis failed: {{reason}}", generatingMarkdown: "Generating process-fact Markdown…", history: "Analysis history", historyItem: "Analysis {{index}} · {{time}} · {{status}}",
           httpFailure: "Business provenance analysis request failed (HTTP {{status}})", intro: "Review or edit the Markdown before starting. The Agent receives exactly this content. It may query the source BKN for verification but must not invent facts absent from the Trace.",
@@ -75,7 +75,9 @@ export const bknTraceEnUS = {
       callDetail: "Call details",
       closeDetail: "Close call details",
       copy: "Copy",
+      copyFailed: "Copy failed",
       copyFullText: "Copy full text",
+      copySuccess: "Copied",
       columns: { agent: "Agent / App", duration: "Duration", rootOperation: "Root call", startedAt: "Started", status: "Status" },
       diagnostics: {
         missingTerminal: "The call has no terminal record, so its final outcome cannot be confirmed.",
@@ -165,10 +167,10 @@ export const bknTraceEnUS = {
       outcomes: { canceled: "Canceled", denied: "Denied", failure: "Failed", success: "Successful", unknown: "Unknown" },
       detail: {
         action: "Action", actor: "Actor", actorAndSource: "Actor and source", actorId: "Actor ID", associations: "Related records", authMethod: "Authentication", businessObject: "Business operation", conversationId: "Conversation ID",
-        businessContext: "Business context", clientIp: "Client IP", copyRawFacts: "Copy raw facts", event: "Event type", facts: "Operation facts",
+        businessContext: "Business context", clientIp: "Client IP", copyFailed: "Copy failed", copyRawFacts: "Copy raw facts", event: "Event type", facts: "Operation facts",
         credential: "Credential", eventId: "Event ID", failure: "Failure", openBusinessProvenance: "Open related business provenance", openTrace: "Open related trace",
         method: "Request method", operation: "Operation summary", operationStatus: "Operation status", operationType: "Operation type", rawFacts: "Raw facts (collapsed)", recordedAt: "Recorded at", requestId: "Request ID", source: "Source", statusCode: "Status code", target: "Target", targetId: "Target ID", taskId: "Task ID", traceId: "Trace ID",
-        rawAction: "Raw action", targetType: "Target type", technicalIds: "Technical identifiers", time: "Operation time", title: "Operation log details",
+        rawAction: "Raw action", rawFactsCopied: "Raw facts copied", targetType: "Target type", technicalIds: "Technical identifiers", time: "Operation time", title: "Operation log details",
       },
       domainAction: "{{action}} {{target}}",
       domainAuditActions: { add_members: "Add members to {{target}}", create: "Create", delete: "Delete", import: "Import", remove_members: "Remove members from {{target}}", update: "Update" },

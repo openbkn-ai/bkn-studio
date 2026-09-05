@@ -79,4 +79,15 @@ describe("writeTextToClipboard", () => {
 
     expect(execCommand).toHaveBeenCalledWith("copy");
   });
+
+  it("rejects when neither clipboard strategy can copy the text", async () => {
+    setClipboard(undefined);
+    setExecCommand(() => false);
+
+    await expect(writeTextToClipboard("manual copy required")).rejects.toThrow(
+      "Copy command was rejected",
+    );
+
+    expect(document.querySelector("textarea")).toBeNull();
+  });
 });

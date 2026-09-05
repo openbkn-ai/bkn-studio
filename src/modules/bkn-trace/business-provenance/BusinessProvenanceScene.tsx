@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/app/locales/i18n";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import {
   getBusinessProvenanceAnalysisHistory,
   getBusinessProvenanceConversations,
@@ -386,8 +387,12 @@ export function BusinessProvenanceScene() {
 
   const copyMarkdown = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown) return;
-    await navigator.clipboard?.writeText(analysisMarkdown);
-    message.success(bpText("agent.markdownCopied"));
+    try {
+      await writeTextToClipboard(analysisMarkdown);
+      message.success(bpText("agent.markdownCopied"));
+    } catch {
+      message.error(bpText("agent.copyFailed"));
+    }
   }, [analysisMarkdown, selectedInteraction]);
 
   const downloadMarkdown = useCallback(() => {
@@ -565,7 +570,7 @@ function AnalysisResult({ result, onRestart }: { result: Record<string, unknown>
     <h3>{bpText("agent.recommendations")}</h3>
     {advice.suggestions.length ? advice.suggestions.map((suggestion, index) => <article className={styles.recommendation} key={`${suggestion.id ?? "recommendation"}-${index}`}><header><strong>{suggestion.change || bpText("agent.suggestionTitleMissing")}</strong><span>{suggestion.id || `REC-${index + 1}`}</span></header><dl><dt>{bpText("agent.category")}</dt><dd>{suggestion.category || missing}</dd><dt>{bpText("agent.location")}</dt><dd>{suggestion.location || missing}</dd><dt>{bpText("agent.problem")}</dt><dd>{suggestion.problem || missing}</dd><dt>{bpText("agent.sourceEvidence")}</dt><dd>{suggestion.sourceEvidence || missing}</dd><dt>{bpText("agent.verificationEvidence")}</dt><dd>{suggestion.verificationEvidence || missing}</dd><dt>{bpText("agent.change")}</dt><dd>{suggestion.change || missing}</dd><dt>{bpText("agent.acceptance")}</dt><dd>{suggestion.acceptance || missing}</dd></dl></article>) : <div className={styles.agentSection}>{bpText("agent.noStrictSuggestion")}</div>}
     <h3>{bpText("agent.unableToDetermine")}</h3><div className={styles.agentSection}>{advice.notEvaluable || bpText("none")}</div>
-    <footer><Button onClick={() => { void navigator.clipboard?.writeText(adviceMarkdown(advice)); }}>{bpText("agent.copyAdviceMarkdown")}</Button><Button type="primary" onClick={onRestart}>{bpText("agent.restart")}</Button></footer>
+    <footer><Button onClick={() => { void writeTextToClipboard(adviceMarkdown(advice)).then(() => message.success(bpText("agent.adviceMarkdownCopied"))).catch(() => message.error(bpText("agent.copyFailed"))); }}>{bpText("agent.copyAdviceMarkdown")}</Button><Button type="primary" onClick={onRestart}>{bpText("agent.restart")}</Button></footer>
   </section>;
 }
 

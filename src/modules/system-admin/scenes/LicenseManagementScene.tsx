@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
@@ -72,13 +73,6 @@ function translatedLicenseKey(
   key: string,
 ) {
   return t(`systemAdmin.license.${category}.${key}`, { defaultValue: key });
-}
-
-function copySupported() {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.clipboard?.writeText === "function"
-  );
 }
 
 export function LicenseManagementScene() {
@@ -165,12 +159,12 @@ export function LicenseManagementScene() {
     if (!value) {
       return;
     }
-    if (!copySupported()) {
+    try {
+      await writeTextToClipboard(value);
+      await message.success(t("systemAdmin.license.copySuccess"));
+    } catch {
       await message.warning(t("systemAdmin.license.copyUnsupported"));
-      return;
     }
-    await navigator.clipboard.writeText(value);
-    await message.success(t("systemAdmin.license.copySuccess"));
   };
 
   const refreshAfterAction = async (next?: LicenseDetail) => {

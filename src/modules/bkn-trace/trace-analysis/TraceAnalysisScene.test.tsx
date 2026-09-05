@@ -16,6 +16,9 @@ import {
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() } }),
+}));
 vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
   getReferencedPayload: vi.fn(),
   getTechnicalTrace: vi.fn(),

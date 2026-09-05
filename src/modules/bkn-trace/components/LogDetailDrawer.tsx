@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildAppPath } from "@/app/router/app-paths";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { presentAuthMethod, presentLogAction, presentLogActor, presentLogTarget, presentTargetType } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { getLogDetail, type LogDetailResult } from "@/modules/bkn-trace/services/observability.service";
@@ -23,6 +25,7 @@ type Props = {
 
 export function LogDetailDrawer({ logId, onClose }: Props) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const userDirectory = useAuditUserDirectory();
   const [detail, setDetail] = useState<LogDetailResult>();
   const [error, setError] = useState<string>();
@@ -43,6 +46,12 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
   const record = detail?.data;
   const target = record ? presentLogTarget(record, t) : undefined;
   const actor = record ? presentLogActor(record, t, userDirectory) : undefined;
+  const copyRawFacts = () => {
+    if (!record) return;
+    void writeTextToClipboard(JSON.stringify(record, null, 2))
+      .then(() => message.success(t("bknTrace.logs.detail.rawFactsCopied")))
+      .catch(() => message.error(t("bknTrace.logs.detail.copyFailed")));
+  };
   return (
     <Drawer
       className={styles.compactDrawer}
@@ -123,7 +132,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
               key: "raw",
               label: t("bknTrace.logs.detail.rawFacts"),
               children: <>
-              <Button onClick={() => void navigator.clipboard?.writeText(JSON.stringify(record, null, 2))} size="small">
+              <Button onClick={copyRawFacts} size="small">
                 {t("bknTrace.logs.detail.copyRawFacts")}
               </Button>
               <pre className={styles.attributeBlock}>{JSON.stringify({ facts: record.facts, attributes: record.attributes }, null, 2)}</pre>
