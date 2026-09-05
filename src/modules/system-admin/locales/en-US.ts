@@ -172,6 +172,7 @@ export const systemAdminEnUS = {
       removeGrantConfirm: "Remove the permission rule for \"{{name}}\"?",
       removeLastOpConfirm: "This subject will have no operations left and the permission rule will be removed. Continue?",
       adminLocked: "The administrator holds all permissions and cannot be adjusted or removed here.",
+      delegateLocked: "Only a platform administrator can adjust or remove this grant — including your own.",
       revokeTitle: "Revoke permissions",
       revokeConfirm: "Revoke \"{{name}}\"'s permissions on \"{{object}}\"?",
       stats: {
