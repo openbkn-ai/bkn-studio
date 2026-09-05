@@ -14,6 +14,7 @@ export type ResolvedTheme = "dark" | "light";
 export type ThemePreference = "dark" | "light" | "system";
 
 export const SYSTEM_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)";
+export const THEME_PREFERENCE_STORAGE_KEY = "openbkn-theme-preference";
 
 export function resolveTheme(
   preference: ThemePreference,
@@ -28,6 +29,27 @@ export function getSystemTheme(): ResolvedTheme {
   }
 
   return window.matchMedia(SYSTEM_THEME_MEDIA_QUERY).matches ? "dark" : "light";
+}
+
+export function getStoredThemePreference(): ThemePreference {
+  if (typeof window === "undefined") {
+    return "system";
+  }
+
+  try {
+    const preference = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+    return preference === "dark" || preference === "light" ? preference : "system";
+  } catch {
+    return "system";
+  }
+}
+
+export function storeThemePreference(preference: ResolvedTheme): void {
+  try {
+    window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, preference);
+  } catch {
+    // Theme switching still works for the current page when storage is unavailable.
+  }
 }
 
 export function subscribeToSystemTheme(onChange: () => void): () => void {

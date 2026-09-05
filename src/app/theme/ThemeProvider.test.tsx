@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider } from "@/app/theme/ThemeProvider";
-import { useResolvedTheme } from "@/app/theme/theme-context";
+import { useResolvedTheme, useToggleTheme } from "@/app/theme/theme-context";
+import { THEME_PREFERENCE_STORAGE_KEY } from "@/app/theme/theme-mode";
 
 type MediaChangeListener = (event: MediaQueryListEvent) => void;
 
@@ -78,6 +79,20 @@ function ThemeValue() {
   return <output>{useResolvedTheme()}</output>;
 }
 
+function ThemeControls() {
+  const resolvedTheme = useResolvedTheme();
+  const toggleTheme = useToggleTheme();
+
+  return (
+    <>
+      <output>{resolvedTheme}</output>
+      <button type="button" onClick={toggleTheme}>
+        toggle
+      </button>
+    </>
+  );
+}
+
 function renderWithTheme(children: ReactNode) {
   return render(<ThemeProvider>{children}</ThemeProvider>);
 }
@@ -85,6 +100,7 @@ function renderWithTheme(children: ReactNode) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.localStorage.clear();
   delete document.documentElement.dataset.theme;
   document.documentElement.style.removeProperty("color-scheme");
 });
@@ -124,5 +140,17 @@ describe("ThemeProvider", () => {
     });
 
     expect(screen.getByRole("status").textContent).toBe("dark");
+  });
+
+  it("uses and persists an explicit theme selected by the user", () => {
+    installMatchMedia(false);
+    window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, "dark");
+
+    renderWithTheme(<ThemeControls />);
+
+    expect(screen.getByRole("status").textContent).toBe("dark");
+    fireEvent.click(screen.getByRole("button", { name: "toggle" }));
+    expect(screen.getByRole("status").textContent).toBe("light");
+    expect(window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe("light");
   });
 });

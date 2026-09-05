@@ -435,14 +435,14 @@ export function OntologyGraphView({
         onPointerLeave={onPointerUp}
       >
       <defs>
-        <pattern id="kn-onto-grid" width="26" height="26" patternUnits="userSpaceOnUse">
-          <circle cx="1.4" cy="1.4" r="1.3" fill="#eef1f6" />
+        <pattern id="kn-onto-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+          <circle className={styles.gridDot} cx="1.2" cy="1.2" r="1.1" />
         </pattern>
         <marker id="kn-onto-arrow" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 z" fill="#b3bdcf" />
+          <path className={styles.edgeArrow} d="M0,0 L8,4 L0,8 z" />
         </marker>
         <marker id="kn-onto-arrow-hi" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 z" fill="#2e68ff" />
+          <path className={styles.edgeArrowActive} d="M0,0 L8,4 L0,8 z" />
         </marker>
       </defs>
 

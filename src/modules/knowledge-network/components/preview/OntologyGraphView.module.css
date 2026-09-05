@@ -6,9 +6,15 @@
  */
 
 .wrap {
+  --ontology-grid-dot-opacity: 0.28;
+
   position: relative;
   width: 100%;
   height: 100%;
+}
+
+:global(:root[data-theme="dark"]) .wrap {
+  --ontology-grid-dot-opacity: 0.18;
 }
 
 /* 右上角工具条：重新排列 + 边名开关 同一排 */
@@ -149,14 +155,27 @@
   pointer-events: none;
 }
 
+.gridDot {
+  fill: var(--color-text-faint);
+  opacity: var(--ontology-grid-dot-opacity);
+}
+
+.edgeArrow {
+  fill: var(--color-text-faint);
+}
+
+.edgeArrowActive {
+  fill: var(--color-primary-600);
+}
+
 .edge line {
-  stroke: #c4ccd8;
+  stroke: var(--color-text-faint);
   stroke-width: 1.6;
   transition: stroke 0.15s ease, opacity 0.15s ease;
 }
 
 .edgeActive line {
-  stroke: #2e68ff;
+  stroke: var(--color-primary-600);
   stroke-width: 2.4;
 }
 
@@ -164,25 +183,41 @@
   opacity: 0.22;
 }
 
+.edgeDim:hover {
+  opacity: 0.9;
+}
+
 .edgeLabelBg {
   fill: var(--color-bg-raised);
   stroke: var(--color-border);
   stroke-width: 1;
+  transition: fill 0.15s ease, stroke 0.15s ease;
 }
 
 .edgeLabel {
-  fill: #5b6472;
+  fill: var(--color-text-primary);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   pointer-events: none;
+  transition: fill 0.15s ease;
+}
+
+.edge:hover .edgeLabelBg {
+  fill: var(--color-hover);
+  stroke: var(--color-primary-border);
+}
+
+.edge:hover .edgeLabel {
+  fill: var(--color-text-link);
 }
 
 .edgeActive .edgeLabelBg {
+  fill: var(--color-primary-100);
   stroke: var(--color-primary-border);
 }
 
 .edgeActive .edgeLabel {
-  fill: #2e68ff;
+  fill: var(--color-text-link);
 }
 
 .node {

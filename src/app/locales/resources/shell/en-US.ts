@@ -17,6 +17,10 @@ export const shellEnUS = {
     headerAside: "Application shell baseline",
     collapseSidenav: "Collapse navigation",
     expandSidenav: "Expand navigation",
+    theme: {
+      switchToDark: "Switch to dark mode",
+      switchToLight: "Switch to light mode",
+    },
     language: {
       label: "Language",
       zhCN: "中文",
