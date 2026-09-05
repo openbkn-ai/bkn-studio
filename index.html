@@ -15,8 +15,17 @@
     <link rel="shortcut icon" href="%BASE_URL%favicon.ico?v=openbkn-20260710" />
     <script>
       (() => {
+        let preference = "system";
+        try {
+          const storedPreference = window.localStorage.getItem("openbkn-theme-preference");
+          if (storedPreference === "dark" || storedPreference === "light") {
+            preference = storedPreference;
+          }
+        } catch {
+          // Fall back to the operating-system preference when storage is unavailable.
+        }
         const isDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-        const theme = isDark ? "dark" : "light";
+        const theme = preference === "system" ? (isDark ? "dark" : "light") : preference;
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
       })();

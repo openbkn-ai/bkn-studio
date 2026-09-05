@@ -6,32 +6,40 @@
  */
 
 import type { PropsWithChildren } from "react";
-import { useLayoutEffect, useSyncExternalStore } from "react";
+import { useCallback, useLayoutEffect, useState, useSyncExternalStore } from "react";
 
-import { ThemeContext } from "./theme-context";
+import { ThemeContext, ThemeToggleContext } from "./theme-context";
 
 import {
   applyDocumentTheme,
+  getStoredThemePreference,
   getSystemTheme,
   resolveTheme,
+  storeThemePreference,
   subscribeToSystemTheme,
   type ResolvedTheme,
-  type ThemePreference,
 } from "./theme-mode";
-
-const DEFAULT_THEME_PREFERENCE: ThemePreference = "system";
 
 function getServerTheme(): ResolvedTheme {
   return "light";
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
+  const [themePreference, setThemePreference] = useState(getStoredThemePreference);
   const systemTheme = useSyncExternalStore(
     subscribeToSystemTheme,
     getSystemTheme,
     getServerTheme,
   );
-  const resolvedTheme = resolveTheme(DEFAULT_THEME_PREFERENCE, systemTheme);
+  const resolvedTheme = resolveTheme(themePreference, systemTheme);
+  const toggleTheme = useCallback(() => {
+    setThemePreference((currentPreference) => {
+      const currentTheme = resolveTheme(currentPreference, systemTheme);
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      storeThemePreference(nextTheme);
+      return nextTheme;
+    });
+  }, [systemTheme]);
 
   // The initial document theme is set synchronously in index.html. Keep the DOM in sync with
   // operating-system changes before the browser paints the React update.
@@ -39,5 +47,9 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     applyDocumentTheme(resolvedTheme);
   }, [resolvedTheme]);
 
-  return <ThemeContext.Provider value={resolvedTheme}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeToggleContext.Provider value={toggleTheme}>
+      <ThemeContext.Provider value={resolvedTheme}>{children}</ThemeContext.Provider>
+    </ThemeToggleContext.Provider>
+  );
 }

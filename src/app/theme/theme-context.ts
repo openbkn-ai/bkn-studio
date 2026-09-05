@@ -12,7 +12,12 @@ import type { ResolvedTheme } from "./theme-mode";
 // A light fallback keeps isolated widgets and their tests usable; the mounted application always
 // provides the resolved operating-system theme.
 export const ThemeContext = createContext<ResolvedTheme>("light");
+export const ThemeToggleContext = createContext<() => void>(() => undefined);
 
 export function useResolvedTheme(): ResolvedTheme {
   return useContext(ThemeContext);
+}
+
+export function useToggleTheme(): () => void {
+  return useContext(ThemeToggleContext);
 }

@@ -17,6 +17,10 @@ export const shellZhCN = {
     headerAside: "统一应用壳层",
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
+    theme: {
+      switchToDark: "切换到深色模式",
+      switchToLight: "切换到浅色模式",
+    },
     language: {
       label: "语言",
       zhCN: "中文",
