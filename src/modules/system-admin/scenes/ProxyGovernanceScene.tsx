@@ -14,13 +14,15 @@ import {
 import { Alert, Descriptions, Drawer, Input, Select, Statistic, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   getProxySyncPlan,
   listProxyAccounts,
@@ -64,6 +66,7 @@ export function ProxyGovernanceScene() {
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [planNetworkId, setPlanNetworkId] = useState<string | null>(null);
+  const planRequestIdRef = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +83,10 @@ export function ProxyGovernanceScene() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => () => {
+    planRequestIdRef.current += 1;
+  }, []);
 
   const summary = useMemo(() => ({
     total: accounts.length,
@@ -101,17 +108,35 @@ export function ProxyGovernanceScene() {
   }, [accounts, keyword, status]);
 
   const openPlan = useCallback(async (knowledgeNetworkId: string) => {
+    const requestId = planRequestIdRef.current + 1;
+    planRequestIdRef.current = requestId;
     setPlanNetworkId(knowledgeNetworkId);
     setPlan(null);
     setPlanError(null);
     setPlanLoading(true);
     try {
-      setPlan(await getProxySyncPlan(knowledgeNetworkId));
+      const nextPlan = await getProxySyncPlan(knowledgeNetworkId);
+      if (planRequestIdRef.current === requestId &&
+        nextPlan.knowledgeNetworkId === knowledgeNetworkId) {
+        setPlan(nextPlan);
+      }
     } catch (error) {
-      setPlanError(extractRequestErrorMessage(error));
+      if (planRequestIdRef.current === requestId) {
+        setPlanError(extractRequestErrorMessage(error));
+      }
     } finally {
-      setPlanLoading(false);
+      if (planRequestIdRef.current === requestId) {
+        setPlanLoading(false);
+      }
     }
+  }, []);
+
+  const closePlan = useCallback(() => {
+    planRequestIdRef.current += 1;
+    setPlanNetworkId(null);
+    setPlan(null);
+    setPlanError(null);
+    setPlanLoading(false);
   }, []);
 
   const retrySync = useCallback(async (knowledgeNetworkId: string) => {
@@ -224,14 +249,16 @@ export function ProxyGovernanceScene() {
           <AppButton icon={<EyeOutlined />} onClick={() => void openPlan(item.knowledgeNetworkId)} type="link">
             {t("systemAdmin.proxyGovernance.viewSources")}
           </AppButton>
-          <AppButton
-            icon={<SyncOutlined />}
-            loading={syncingIds.has(item.knowledgeNetworkId)}
-            onClick={() => void retrySync(item.knowledgeNetworkId)}
-            type="link"
-          >
-            {t("systemAdmin.proxyGovernance.retrySync")}
-          </AppButton>
+          <PermissionGate permissions={[authzPoints.grant, authzPoints.revoke]}>
+            <AppButton
+              icon={<SyncOutlined />}
+              loading={syncingIds.has(item.knowledgeNetworkId)}
+              onClick={() => void retrySync(item.knowledgeNetworkId)}
+              type="link"
+            >
+              {t("systemAdmin.proxyGovernance.retrySync")}
+            </AppButton>
+          </PermissionGate>
         </div>
       ),
     },
@@ -287,14 +314,16 @@ export function ProxyGovernanceScene() {
           <h1 className={styles.title}>{t("systemAdmin.proxyGovernance.title")}</h1>
           <p className={styles.subtitle}>{t("systemAdmin.proxyGovernance.description")}</p>
         </div>
-        <AppButton
-          icon={<SafetyCertificateOutlined />}
-          loading={reconciling}
-          onClick={reconcile}
-          type="primary"
-        >
-          {t("systemAdmin.proxyGovernance.reconcile")}
-        </AppButton>
+        <PermissionGate permissions={[authzPoints.grant, authzPoints.revoke]}>
+          <AppButton
+            icon={<SafetyCertificateOutlined />}
+            loading={reconciling}
+            onClick={reconcile}
+            type="primary"
+          >
+            {t("systemAdmin.proxyGovernance.reconcile")}
+          </AppButton>
+        </PermissionGate>
       </header>
 
       <div className={styles.summaryGrid}>
@@ -386,7 +415,7 @@ export function ProxyGovernanceScene() {
 
       <Drawer
         destroyOnHidden
-        onClose={() => setPlanNetworkId(null)}
+        onClose={closePlan}
         open={Boolean(planNetworkId)}
         title={t("systemAdmin.proxyGovernance.sourcesTitle")}
         width={820}

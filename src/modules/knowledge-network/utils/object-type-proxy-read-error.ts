@@ -22,6 +22,7 @@ export type ObjectTypeProxyReadFailureKind =
 
 export type ObjectTypeProxyReadFailure = {
   code?: string;
+  description?: string;
   kind: ObjectTypeProxyReadFailureKind;
 };
 
@@ -54,7 +55,8 @@ function getResponseErrorCode(error: unknown): string | undefined {
 export function classifyObjectTypeProxyReadFailure(
   error: unknown,
 ): ObjectTypeProxyReadFailure {
-  const extractedCode = extractRequestErrorDetails(error).code;
+  const errorDetails = extractRequestErrorDetails(error);
+  const extractedCode = errorDetails.code;
   const code = extractedCode ?? getResponseErrorCode(error);
   const status = axios.isAxiosError(error) ? error.response?.status : undefined;
 
@@ -70,7 +72,7 @@ export function classifyObjectTypeProxyReadFailure(
     return { code, kind: "dependency-unavailable" };
   }
 
-  return { code, kind: "unknown" };
+  return { code, description: errorDetails.description, kind: "unknown" };
 }
 
 export function getObjectTypeProxyReadFailureTranslationKeys(

@@ -1680,9 +1680,9 @@ export function ObjectTypeDetailScene() {
                     {t("common.retry")}
                   </Button>
                 )}
-                description={t(
-                  getObjectTypeProxyReadFailureTranslationKeys(previewError).description,
-                )}
+                description={previewError.kind === "unknown" && previewError.description
+                  ? previewError.description
+                  : t(getObjectTypeProxyReadFailureTranslationKeys(previewError).description)}
                 message={t(
                   getObjectTypeProxyReadFailureTranslationKeys(previewError).message,
                 )}

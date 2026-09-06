@@ -263,6 +263,49 @@ describe("knowledge network detail scene headers", () => {
     });
   });
 
+  it("shows a readable backend description for an unknown sample-data failure", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current = "tab=data";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      dataSource: { id: "resource-1", name: "Orders", type: "resource" },
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: ["view_detail", "query_data"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+    mocks.getObjectTypeSampleData.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        data: {
+          description: "The selected data view cannot be queried",
+          error_code: "DataView.QueryFailed",
+          error_details: "internal query plan",
+        },
+        status: 500,
+      },
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeProxyReadUnknown"),
+    ).not.toBeNull();
+    expect(screen.getByText("The selected data view cannot be queried")).not.toBeNull();
+    expect(screen.queryByText("internal query plan")).toBeNull();
+  });
+
   it("distinguishes managed-proxy permission denial from caller permission denial", async () => {
     mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
     mocks.searchParams.current = "tab=data";

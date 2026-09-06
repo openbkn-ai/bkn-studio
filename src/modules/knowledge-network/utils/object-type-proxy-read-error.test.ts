@@ -58,10 +58,24 @@ describe("classifyObjectTypeProxyReadFailure", () => {
     expect(failure).not.toHaveProperty("details");
   });
 
-  it("uses a local generic message for unknown failures", () => {
+  it("preserves the readable backend description for unknown non-proxy failures", () => {
+    expect(
+      classifyObjectTypeProxyReadFailure(createAxiosLikeError(500, "DataView.QueryFailed")),
+    ).toEqual({
+      code: "DataView.QueryFailed",
+      description: "internal backend description",
+      kind: "unknown",
+    });
+  });
+
+  it("keeps the original description and local title for unknown frontend failures", () => {
     const failure = classifyObjectTypeProxyReadFailure(new Error("resource-1 leaked"));
 
-    expect(failure).toEqual({ code: undefined, kind: "unknown" });
+    expect(failure).toEqual({
+      code: undefined,
+      description: "resource-1 leaked",
+      kind: "unknown",
+    });
     expect(getObjectTypeProxyReadFailureTranslationKeys(failure)).toEqual({
       description: "knowledgeNetwork.objectTypeProxyReadUnknownDescription",
       message: "knowledgeNetwork.objectTypeProxyReadUnknown",
