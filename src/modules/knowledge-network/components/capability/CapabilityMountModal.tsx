@@ -25,8 +25,33 @@ import type {
 
 import styles from "./CapabilityMountModal.module.css";
 
-/** One page is enough to pick from; the search box narrows anything larger. */
-const PICKER_PAGE_SIZE = 200;
+/** The execution factory rejects a page_size above 100 (`validate:"min=1,max=100"`). */
+const PICKER_PAGE_SIZE = 100;
+
+/** Guards against walking a pathological catalogue; the search box narrows anything beyond it. */
+const PICKER_MAX_PAGES = 5;
+
+/**
+ * The picker needs one flat list to filter and check against, so it walks the pages itself rather
+ * than paginating in the UI: a mounted-elsewhere tool sitting on page 3 must still show as mounted.
+ */
+async function collectPages<T>(
+  fetchPage: (page: number) => Promise<{ items: T[]; total: number }>,
+): Promise<T[]> {
+  const first = await fetchPage(1);
+  const items = [...first.items];
+  const pages = Math.min(
+    Math.ceil(first.total / PICKER_PAGE_SIZE),
+    PICKER_MAX_PAGES,
+  );
+
+  for (let page = 2; page <= pages; page += 1) {
+    const next = await fetchPage(page);
+    items.push(...next.items);
+  }
+
+  return items;
+}
 
 type CapabilityMountModalProps = {
   capabilityType: CapabilityType;
@@ -76,16 +101,16 @@ export function CapabilityMountModal({
       try {
         if (isSkill) {
           // Only a published skill can be mounted; the backend rejects the rest anyway.
-          const result = await listSkills({
-            page: 1,
-            pageSize: PICKER_PAGE_SIZE,
-            status: "published",
-          });
-          setSkills(result.items);
+          const items = await collectPages((page) =>
+            listSkills({ page, pageSize: PICKER_PAGE_SIZE, status: "published" }),
+          );
+          setSkills(items);
         } else {
-          const result = await listToolboxes({ page: 1, pageSize: PICKER_PAGE_SIZE });
-          setBoxes(result.items);
-          setBoxId(result.items[0]?.boxId ?? "");
+          const items = await collectPages((page) =>
+            listToolboxes({ page, pageSize: PICKER_PAGE_SIZE }),
+          );
+          setBoxes(items);
+          setBoxId(items[0]?.boxId ?? "");
         }
       } catch (requestError) {
         setError(extractRequestErrorMessage(requestError));
@@ -105,8 +130,10 @@ export function CapabilityMountModal({
       setLoading(true);
       resetSelection();
       try {
-        const result = await listTools(boxId, { page: 1, pageSize: PICKER_PAGE_SIZE });
-        setTools(result.items);
+        const items = await collectPages((page) =>
+          listTools(boxId, { page, pageSize: PICKER_PAGE_SIZE }),
+        );
+        setTools(items);
       } catch (requestError) {
         setTools([]);
         setError(extractRequestErrorMessage(requestError));
