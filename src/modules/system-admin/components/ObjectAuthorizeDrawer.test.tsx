@@ -60,10 +60,10 @@ function grant(accessorId: string, operations: string[]): ObjectGrant {
   };
 }
 
-function renderDrawer() {
+function renderDrawer({ objectAuthorized = true } = {}) {
   return render(
     <ObjectAuthorizeDrawer
-      objectAuthorized
+      objectAuthorized={objectAuthorized}
       objId="catalog-1"
       objName="nb_test_conn"
       objType="catalog"
@@ -121,6 +121,22 @@ describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
       "admin-authz:revoke",
     ];
     renderDrawer();
+    await act(async () => {});
+
+    expect(lockedCardCount()).toBe(0);
+    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(3);
+  });
+
+  // The two admin-authz points are configured separately, and the platform authorization page does
+  // not pass objectAuthorized. A role holding revoke alone is still an administrator to bkn-safe,
+  // so the rows stay removable — reading administrator status off the grant point alone took the
+  // remove control away from them.
+  it("leaves every row removable for a revoke-only administrator", async () => {
+    appServices.runtimeConfig.currentUser.permissions = [
+      "admin-authz:view",
+      "admin-authz:revoke",
+    ];
+    renderDrawer({ objectAuthorized: false });
     await act(async () => {});
 
     expect(lockedCardCount()).toBe(0);
