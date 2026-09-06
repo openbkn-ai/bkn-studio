@@ -197,6 +197,14 @@ export const agentChatPart = {
         error: "错误",
         response: "响应",
       },
+      toolGroup: {
+        summary: "已调用工具 {{count}} 次",
+        summary_one: "已调用工具 {{count}} 次",
+        summary_other: "已调用工具 {{count}} 次",
+        failed: "{{count}} 个失败",
+        failed_one: "{{count}} 个失败",
+        failed_other: "{{count}} 个失败",
+      },
       error: {
         retry: "重试本轮",
         detail: "详情",

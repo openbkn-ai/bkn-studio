@@ -155,11 +155,20 @@ type ToolCallView = {
   latencyMs?: number;
 };
 
+/**
+ * Ordered render segment. A turn interleaves tool calls and text across up to
+ * maxSteps steps; parts preserve that order so a run of consecutive calls can
+ * collapse into one group and text output starts the next run.
+ */
+type MessagePart = { kind: "text"; text: string } | { kind: "tools"; ids: string[] };
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   reasoning?: string;
   toolCalls?: ToolCallView[];
+  /** Render order only; content and toolCalls stay flat for history, export, and snapshots. */
+  parts?: MessagePart[];
   /** Actual token count for this turn, available from usage at finish. */
   tokens?: number;
   /** Total elapsed time for this turn in ms. */
@@ -175,6 +184,30 @@ type ChatMessage = {
 type SessionStats = { tokens: number; ms: number };
 
 type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
+
+function appendTextPart(parts: MessagePart[] | undefined, delta: string): MessagePart[] {
+  const next = [...(parts ?? [])];
+  const last = next[next.length - 1];
+  if (last?.kind === "text") next[next.length - 1] = { kind: "text", text: last.text + delta };
+  else next.push({ kind: "text", text: delta });
+  return next;
+}
+
+function appendToolPart(parts: MessagePart[] | undefined, id: string): MessagePart[] {
+  const next = [...(parts ?? [])];
+  const last = next[next.length - 1];
+  if (last?.kind === "tools") next[next.length - 1] = { kind: "tools", ids: [...last.ids, id] };
+  else next.push({ kind: "tools", ids: [id] });
+  return next;
+}
+
+/** Messages persisted before parts existed: all calls first, then all text. */
+function legacyParts(m: ChatMessage): MessagePart[] {
+  const parts: MessagePart[] = [];
+  if (m.toolCalls?.length) parts.push({ kind: "tools", ids: m.toolCalls.map((tc) => tc.id) });
+  if (m.content) parts.push({ kind: "text", text: m.content });
+  return parts;
+}
 
 /** Rough token estimate for live streaming display; replaced by real usage at finish. */
 function estimateTokens(chars: number): number {
@@ -306,7 +339,9 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
     <div className={styles.reasoning}>
       <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
         <span>
-          {live ? t("knowledgeNetwork.agentChat.reasoning.live") : t("knowledgeNetwork.agentChat.reasoning.done")}
+          {live
+            ? t("knowledgeNetwork.agentChat.chatPane.reasoning.live")
+            : t("knowledgeNetwork.agentChat.chatPane.reasoning.done")}
           {live ? (
             <span className={styles.thinkDots}>
               <i />
@@ -323,8 +358,17 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
 }
 
 /** Collapsible tool-call card showing actual request parameters and response. */
-function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof useTranslation>["t"] }) {
-  const [open, setOpen] = useState(false);
+function ToolCallCard({
+  call,
+  open,
+  onToggle,
+  t,
+}: {
+  call: ToolCallView;
+  open: boolean;
+  onToggle: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
   const statusDot =
     call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
   const statusText =
@@ -340,7 +384,11 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
     : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
   return (
     <div className={`${styles.call} ${open ? styles.callOpen : ""}`}>
-      <button type="button" className={styles.callHead} onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        className={`${styles.callHead} ${call.status === "running" ? styles.callLive : ""}`}
+        onClick={onToggle}
+      >
         <span className={styles.verb}>MCP</span>
         <span className={styles.callName}>{call.name}</span>
         <span className={`${styles.dot} ${statusDot}`} />
@@ -363,6 +411,64 @@ function ToolCallCard({ call, t }: { call: ToolCallView; t: ReturnType<typeof us
             </div>
             <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "-"}</pre>
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * One run of consecutive tool calls. A lone call stays a bare card; a run collapses
+ * into a single closed group so the transcript reads as text, not as a wall of calls.
+ *
+ * Card expansion is held here, keyed by call id. A streaming run switches from the
+ * bare card to the group the moment its second call arrives, and that swaps the child
+ * structure, so state owned by the card itself would be thrown away mid-stream: the
+ * card a user just expanded to read the request would silently close. For the same
+ * reason the group opens by default when a card inside it is already expanded.
+ */
+function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<typeof useTranslation>["t"] }) {
+  const [openCalls, setOpenCalls] = useState<Record<string, boolean>>({});
+  const [groupOpen, setGroupOpen] = useState<boolean | null>(null);
+  const toggleCall = (id: string) => setOpenCalls((prev) => ({ ...prev, [id]: !prev[id] }));
+  if (calls.length === 0) return null;
+  if (calls.length === 1) {
+    return (
+      <div className={styles.calls}>
+        <ToolCallCard call={calls[0]} open={!!openCalls[calls[0].id]} onToggle={() => toggleCall(calls[0].id)} t={t} />
+      </div>
+    );
+  }
+  const running = calls.some((call) => call.status === "running");
+  const failed = calls.filter((call) => call.status === "error").length;
+  const statusDot = running ? styles.dotRunning : failed > 0 ? styles.dotError : styles.dotOk;
+  const meta = running
+    ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
+    : failed > 0
+      ? t("knowledgeNetwork.agentChat.chatPane.toolGroup.failed", { count: failed })
+      : `${calls.reduce((ms, call) => ms + (call.latencyMs ?? 0), 0)}ms`;
+  // Once the user has toggled the group, their choice wins over the expanded-card default.
+  const open = groupOpen ?? calls.some((call) => openCalls[call.id]);
+  return (
+    <div className={styles.group}>
+      <button
+        type="button"
+        className={`${styles.callHead} ${running ? styles.callLive : ""}`}
+        onClick={() => setGroupOpen(!open)}
+      >
+        <span className={styles.verb}>MCP</span>
+        <span className={styles.callName}>
+          {t("knowledgeNetwork.agentChat.chatPane.toolGroup.summary", { count: calls.length })}
+        </span>
+        <span className={`${styles.dot} ${statusDot}`} />
+        <span className={styles.callMeta}>{meta}</span>
+        <span className={styles.chev}>{open ? <DownOutlined /> : <RightOutlined />}</span>
+      </button>
+      {open ? (
+        <div className={styles.groupBody}>
+          {calls.map((call) => (
+            <ToolCallCard key={call.id} call={call} open={!!openCalls[call.id]} onToggle={() => toggleCall(call.id)} t={t} />
+          ))}
         </div>
       ) : null}
     </div>
@@ -632,14 +738,17 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     (chunk: AgentChunk) => {
       switch (chunk.type) {
         case "text":
-          updateAssistant((m) => ({ ...m, content: m.content + chunk.delta }));
+          updateAssistant((m) => ({ ...m, content: m.content + chunk.delta, parts: appendTextPart(m.parts, chunk.delta) }));
           break;
         case "reasoning":
+          // Reasoning stays one merged block above the turn. Splitting it per step made the
+          // trace jump around the transcript as each step reopened a new box.
           updateAssistant((m) => ({ ...m, reasoning: (m.reasoning ?? "") + chunk.delta }));
           break;
         case "tool-call":
           updateAssistant((m) => ({
             ...m,
+            parts: appendToolPart(m.parts, chunk.id),
             toolCalls: [
               ...(m.toolCalls ?? []),
               (() => {
@@ -767,7 +876,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       setMessages(() => [
         ...kept,
         { role: "user", content: question },
-        { role: "assistant", content: "", toolCalls: [] },
+        { role: "assistant", content: "", toolCalls: [], parts: [] },
       ]);
 
       const controller = new AbortController();
@@ -1185,7 +1294,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           <div className={styles.wrap}>
             {messages.map((m, i) => {
               const isLast = i === lastIdx;
-              const hasTools = !!m.toolCalls && m.toolCalls.length > 0;
+              // Assistant turns render by segment order; user turns are plain text.
+              const renderParts = m.role === "assistant" ? m.parts ?? legacyParts(m) : [];
+              const callById = new Map((m.toolCalls ?? []).map((tc) => [tc.id, tc]));
               return (
                 <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
                   <div className={styles.avatar}>
@@ -1198,21 +1309,27 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         : t("knowledgeNetwork.agentChat.chatPane.message.agent")}
                     </div>
                     {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
-                    {hasTools ? (
-                      <div className={styles.calls}>
-                        {m.toolCalls!.map((tc) => (
-                          <ToolCallCard key={tc.id} call={tc} t={t} />
-                        ))}
-                      </div>
-                    ) : null}
-                    {m.content ? (
-                      // During streaming, MarkdownView reparses only the tail block.
-                      m.role === "assistant" ? (
-                        <MarkdownView text={m.content} streaming={busy && isLast} />
-                      ) : (
-                        <div className={styles.txt}>{m.content}</div>
+                    {m.role === "user" ? (
+                      <div className={styles.txt}>{m.content}</div>
+                    ) : (
+                      renderParts.map((part, pi) =>
+                        part.kind === "tools" ? (
+                          <ToolCallSegment
+                            key={pi}
+                            calls={part.ids.map((id) => callById.get(id)).filter((call): call is ToolCallView => !!call)}
+                            t={t}
+                          />
+                        ) : (
+                          // During streaming, MarkdownView reparses only the tail block.
+                          <MarkdownView
+                            key={pi}
+                            text={part.text}
+                            streaming={busy && isLast && pi === renderParts.length - 1}
+                          />
+                        ),
                       )
-                    ) : m.role === "assistant" && busy && isLast && !m.reasoning && !hasTools ? (
+                    )}
+                    {m.role === "assistant" && renderParts.length === 0 && busy && isLast && !m.reasoning ? (
                       <div className={styles.typing}>
                         <i />
                         <i />

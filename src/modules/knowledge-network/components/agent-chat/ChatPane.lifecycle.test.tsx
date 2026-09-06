@@ -226,6 +226,10 @@ describe("ChatPane 受管生命周期接线", () => {
       await Promise.resolve();
     });
 
+    // Consecutive tool calls collapse into one closed group; expand it before the cards.
+    for (const group of screen.getAllByText(/已调用工具/)) {
+      fireEvent.click(group);
+    }
     // Tool cards are collapsed by default and render the request body only when expanded.
     for (const header of screen.getAllByText(/^(run_sql|bkn_[a-z_]+)$/)) {
       fireEvent.click(header);
