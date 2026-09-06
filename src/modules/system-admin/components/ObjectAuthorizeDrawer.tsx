@@ -147,13 +147,18 @@ export function ObjectAuthorizeDrawer({
     currentPermissions,
     requiredPermissions: authzPoints.grant,
   });
+  const isAdminRevoker = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.revoke,
+  });
+  // Either admin-authz point makes the caller a platform administrator, the party bkn-safe exempts
+  // from its per-row guard. The two points are held separately — a review role may carry `revoke`
+  // alone — so reading administrator status off `grant` would lock a revoke-only administrator out
+  // of rows the backend accepts from them. Which control they get is still decided per direction by
+  // canGrant/canRevoke below.
+  const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
   const canGrant = objectAuthorized || isAdminGrantor;
-  const canRevoke =
-    objectAuthorized ||
-    hasPermissions({
-      currentPermissions,
-      requiredPermissions: authzPoints.revoke,
-    });
+  const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
@@ -521,7 +526,7 @@ export function ObjectAuthorizeDrawer({
             <div className={styles.authzList}>
               {grants.map((grant) => {
                 const builtinLocked = isProtected(grant.accessorId);
-                const delegateLocked = !isAdminGrantor && isDelegateProtected(grant);
+                const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtected(grant);
                 const locked = builtinLocked || delegateLocked;
                 const grantee = resolveGrantee(grant.accessorId);
                 return (
