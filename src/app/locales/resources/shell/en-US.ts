@@ -55,6 +55,7 @@ export const shellEnUS = {
       userManagement: "User Management",
       roleManagement: "Role Management",
       authorizationManagement: "Permission Management",
+      proxyGovernance: "Proxy Governance",
       licenseManagement: "License Management",
       modelManagement: "Model Configuration",
       bknTrace: "BKN Trace",

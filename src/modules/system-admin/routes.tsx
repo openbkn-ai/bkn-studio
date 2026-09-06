@@ -39,6 +39,11 @@ const LicenseManagementPage = lazy(async () => {
   return { default: module.LicenseManagementPage };
 });
 
+const ProxyGovernancePage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/ProxyGovernancePage");
+  return { default: module.ProxyGovernancePage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -108,6 +113,17 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: guarded(systemAdminPermissions.license, <LicenseManagementPage />),
+  },
+  {
+    path: "system/proxy-governance",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.proxyGovernance.description",
+        menuKey: "proxy-governance",
+        titleKey: "systemAdmin.proxyGovernance.title",
+      },
+    },
+    element: guarded(systemAdminPermissions.authorizations, <ProxyGovernancePage />),
   },
   {
     path: "system/audit",

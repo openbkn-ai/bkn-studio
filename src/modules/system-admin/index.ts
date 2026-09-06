@@ -15,4 +15,5 @@ export { UserManagementScene } from "@/modules/system-admin/scenes/UserManagemen
 export { RoleManagementScene } from "@/modules/system-admin/scenes/RoleManagementScene";
 export { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
 export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
+export { ProxyGovernanceScene } from "@/modules/system-admin/scenes/ProxyGovernanceScene";
 export type * from "@/modules/system-admin/types/admin";

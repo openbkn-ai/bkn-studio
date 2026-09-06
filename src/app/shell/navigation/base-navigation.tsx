@@ -68,6 +68,13 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         permission: systemAdminPermissions.authorizations,
       },
       {
+        key: "proxy-governance",
+        labelKey: "shell.items.proxyGovernance",
+        icon: <SafetyCertificateOutlined />,
+        path: "/system/proxy-governance",
+        permission: systemAdminPermissions.authorizations,
+      },
+      {
         key: "license-management",
         labelKey: "shell.items.licenseManagement",
         icon: <FileProtectOutlined />,

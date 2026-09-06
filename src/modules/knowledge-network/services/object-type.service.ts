@@ -222,7 +222,7 @@ export async function getObjectTypeSampleData(
   }
 
   const response = await http.get<BackendObjectTypeSampleDataResponse>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
     {
       params: {
         limit: 20,

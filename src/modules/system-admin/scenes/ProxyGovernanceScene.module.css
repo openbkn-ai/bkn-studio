@@ -1,0 +1,148 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  min-height: 100%;
+  padding: 18px 20px 24px;
+  background: var(--color-bg-surface);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.subtitle {
+  max-width: 760px;
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 0;
+}
+
+.summaryCard {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-divider);
+}
+
+.filters,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search {
+  width: 320px;
+}
+
+.statusSelect {
+  width: 150px;
+}
+
+.tablePanel {
+  border: 1px solid var(--color-border);
+}
+
+.mono {
+  color: var(--color-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
+
+.secondary {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.versionCell {
+  display: grid;
+  gap: 2px;
+}
+
+.reconcilePanel {
+  margin-bottom: 12px;
+}
+
+.reconcileDetails {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-top: 0;
+  background: var(--color-interface-panel-bg);
+}
+
+.reconcileGroup {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.reconcileLabel {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.reconcileValues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.drawerMeta {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 960px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .header,
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    width: min(100%, 420px);
+  }
+}

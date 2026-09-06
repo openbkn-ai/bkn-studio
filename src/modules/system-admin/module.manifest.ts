@@ -36,7 +36,7 @@ export const systemAdminModuleManifest = {
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members", "authorization/object-grants", "license-management/license"],
+  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members", "authorization/object-grants", "license-management/license", "bkn-backend/proxy-accounts"],
   scenes: [
     {
       id: "system-admin.users",
@@ -66,6 +66,12 @@ export const systemAdminModuleManifest = {
       id: "system-admin.audit",
       exportName: "AuditLogScene",
       description: "Browse the bkn-safe admin audit log: who changed what, with status and time filters.",
+      inputs: [],
+    },
+    {
+      id: "system-admin.proxy-governance",
+      exportName: "ProxyGovernanceScene",
+      description: "Inspect managed knowledge-network proxy state, review server-derived grant sources, retry synchronization, and reconcile authorization drift.",
       inputs: [],
     },
   ],

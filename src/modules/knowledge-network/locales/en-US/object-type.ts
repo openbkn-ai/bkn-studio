@@ -84,6 +84,33 @@ export const objecttypePart = {
     objectTypeDataQuerySampleCount_other: "{{count}} sample rows",
     objectTypeDataQuerySearchPlaceholder: "Search sample data",
     objectTypeDataQueryTitle: "Data query",
+    objectTypeProxyReadForbidden: "Sample data access denied",
+    objectTypeProxyReadForbiddenDescription:
+      "Your account cannot query this object type. Ask a knowledge-network administrator to grant access.",
+    objectTypeProxyReadBindingInvalid: "Published binding is invalid",
+    objectTypeProxyReadBindingInvalidDescription:
+      "The object type resource is not a current published and synchronized binding. Check the model publication state.",
+    objectTypeProxyReadMappingMissing: "Proxy mapping is missing",
+    objectTypeProxyReadMappingMissingDescription:
+      "This knowledge network has no managed proxy mapping. Ask a security administrator to synchronize it.",
+    objectTypeProxyReadProxyDisabled: "Proxy account is inactive",
+    objectTypeProxyReadProxyDisabledDescription:
+      "The managed proxy account is disabling or archived. Ask a security administrator to restore it.",
+    objectTypeProxyReadProxyPermissionDenied: "Proxy resource permission denied",
+    objectTypeProxyReadProxyPermissionDeniedDescription:
+      "Caller authorization succeeded, but the managed proxy lacks access to the published resource. Ask a security administrator to inspect grant sources and retry synchronization.",
+    objectTypeProxyReadSyncFailed: "Proxy permission sync failed",
+    objectTypeProxyReadSyncFailedDescription:
+      "The latest proxy permission synchronization failed. Ask a security administrator to retry it from Proxy Governance.",
+    objectTypeProxyReadSyncPending: "Proxy permissions are synchronizing",
+    objectTypeProxyReadSyncPendingDescription:
+      "Proxy permissions do not yet match the current published model. Wait for synchronization to finish and retry.",
+    objectTypeProxyReadUnavailable: "Sample data is temporarily unavailable",
+    objectTypeProxyReadUnavailableDescription:
+      "The knowledge-network proxy or a required service is not ready. Caller-direct fallback was denied; try again later.",
+    objectTypeProxyReadUnknown: "Could not load sample data",
+    objectTypeProxyReadUnknownDescription:
+      "An unexpected error occurred. Retry the request; if it continues to fail, contact an administrator with the time of the operation.",
     objectTypeDataViewIndexLoading: "Loading",
     objectTypeDataViewIndexState: "Index build state",
     objectTypeDataViewName: "Data view",

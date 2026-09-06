@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkMetric: vi.fn(),
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
+  getObjectTypeSampleData: vi.fn(),
   listKnowledgeNetworkActionTypes: vi.fn(),
   listKnowledgeNetworkMetrics: vi.fn(),
   listKnowledgeNetworkObjectTypes: vi.fn(),
@@ -22,6 +23,9 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   routeParams: {
     current: {},
+  },
+  searchParams: {
+    current: "",
   },
 }));
 
@@ -35,7 +39,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useLocation: () => ({ state: null }),
   useNavigate: () => mocks.navigate,
   useParams: () => mocks.routeParams.current,
-  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(mocks.searchParams.current), vi.fn()],
 }));
 
 vi.mock("@/framework/context/use-runtime-config", () => ({
@@ -80,7 +84,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
-  getObjectTypeSampleData: vi.fn().mockResolvedValue({ columns: [], rows: [] }),
+  getObjectTypeSampleData: mocks.getObjectTypeSampleData,
   listKnowledgeNetworkActionTypes: mocks.listKnowledgeNetworkActionTypes,
   listKnowledgeNetworkMetrics: mocks.listKnowledgeNetworkMetrics,
   listKnowledgeNetworkObjectTypes: mocks.listKnowledgeNetworkObjectTypes,
@@ -92,16 +96,21 @@ vi.mock(
   () => ({
     KnowledgeNetworkResourceConfigShell: ({
       actions,
+      children,
       loading = false,
       title,
     }: {
       actions?: ReactNode;
+      children?: ReactNode;
       loading?: boolean;
       title: ReactNode;
     }) => (
       <div data-loading={String(loading)} data-testid="detail-shell">
         <div data-testid="detail-title">{title}</div>
         <div data-testid="detail-header-actions">{actions}</div>
+        {mocks.searchParams.current ? (
+          <div data-testid="detail-content">{children}</div>
+        ) : null}
       </div>
     ),
   }),
@@ -122,6 +131,8 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkMetrics.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkObjectTypes.mockResolvedValue([]);
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
+  mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
+  mocks.searchParams.current = "";
 });
 
 describe("knowledge network detail scene headers", () => {
@@ -200,6 +211,98 @@ describe("knowledge network detail scene headers", () => {
 
     fireEvent.click(screen.getByText("common.delete"));
     expect(mocks.modalConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("shows a fail-closed proxy dependency error and retries the sample request", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current = "tab=data";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [{ displayName: "Order ID", name: "order_id", type: "string" }],
+      dataSource: { id: "resource-1", name: "Orders", type: "resource" },
+      description: "Object description",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: ["view_detail", "query_data"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+    mocks.getObjectTypeSampleData
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          data: {
+            description: "internal dependency detail",
+            error_code: "OntologyQuery.InternalError.CheckPermissionFailed",
+            error_details: "managed-proxy-1 cannot read resource-1",
+          },
+          status: 503,
+        },
+      })
+      .mockResolvedValueOnce({ columns: [], rows: [] });
+
+    render(<ObjectTypeDetailScene />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeProxyReadUnavailable"),
+    ).not.toBeNull();
+    expect(screen.queryByText("managed-proxy-1 cannot read resource-1")).toBeNull();
+
+    fireEvent.click(screen.getByText("common.retry"));
+
+    await vi.waitFor(() => {
+      expect(mocks.getObjectTypeSampleData).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("distinguishes managed-proxy permission denial from caller permission denial", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current = "tab=data";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      dataSource: { id: "resource-1", name: "Orders", type: "resource" },
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: ["view_detail", "query_data"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+    mocks.getObjectTypeSampleData.mockRejectedValue({
+      isAxiosError: true,
+      response: {
+        data: {
+          error_code: "OntologyQuery.Proxy.PermissionDenied",
+          error_details: "proxy-orders lacks resource-1",
+        },
+        status: 403,
+      },
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    expect(
+      await screen.findByText("knowledgeNetwork.objectTypeProxyReadProxyPermissionDenied"),
+    ).not.toBeNull();
+    expect(screen.queryByText("proxy-orders lacks resource-1")).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.objectTypeProxyReadForbidden")).toBeNull();
   });
 
   it("shows relation type operations granted by the detail record", async () => {
