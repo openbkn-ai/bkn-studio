@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import { ActionTypeListPanel } from "@/modules/knowledge-network/components/action-type/ActionTypeListPanel";
+import { CapabilityListPanel } from "@/modules/knowledge-network/components/capability/CapabilityListPanel";
 import { ConceptGroupListPanel } from "@/modules/knowledge-network/components/concept-group/ConceptGroupListPanel";
 import { MetricListPanel } from "@/modules/knowledge-network/components/metric/MetricListPanel";
 import { ObjectTypeListPanel } from "@/modules/knowledge-network/components/object-type/ObjectTypeListPanel";
@@ -22,6 +23,10 @@ import {
   deleteKnowledgeNetworkRelationType,
   importKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  attachKnowledgeNetworkCapabilities,
+  detachKnowledgeNetworkCapabilities,
+} from "@/modules/knowledge-network/services/capability-binding.service";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 
 type WorkspaceData = ReturnType<typeof useWorkspaceData>;
@@ -145,6 +150,32 @@ export function WorkspaceResourceSection({
           unsupported={data.metricApiUnavailable}
         />
       );
+    case "functions":
+    case "skills": {
+      const capabilityType = section === "skills" ? "skill" : "function";
+
+      return (
+        <CapabilityListPanel
+          canDelete={canModify}
+          canModify={canModify}
+          capabilityType={capabilityType}
+          data={section === "skills" ? data.skills : data.functions}
+          loading={data.sectionLoading}
+          onDetach={async (bindingIds) => {
+            await detachKnowledgeNetworkCapabilities(networkId, bindingIds);
+            await data.reloadCapabilities(capabilityType);
+          }}
+          onMount={async (inputs) => {
+            const created = await attachKnowledgeNetworkCapabilities(networkId, inputs);
+            await data.reloadCapabilities(capabilityType);
+            return created.length;
+          }}
+          onRefresh={async () => {
+            await data.reloadCapabilities(capabilityType);
+          }}
+        />
+      );
+    }
     default:
       return null;
   }

@@ -49,6 +49,8 @@ function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
       metricsTotal,
       objectTypesTotal: 0,
       relationTypesTotal: 0,
+      skillsTotal: 0,
+      functionsTotal: 0,
     },
     tags: [],
     updateTime: "2026-01-01",

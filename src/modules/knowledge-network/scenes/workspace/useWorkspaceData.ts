@@ -19,11 +19,13 @@ import {
   listKnowledgeNetworkRecentObjects,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
   integrateWorkspaceMetrics,
   logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
+  CapabilityBindingListResult,
   ConceptGroupRecord,
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -39,6 +41,16 @@ import {
   createMetricsTotalPending,
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
+
+/** One page holds every binding a network realistically mounts; the panel filters client-side. */
+const CAPABILITY_SECTION_LIMIT = 200;
+
+const EMPTY_CAPABILITY_RESULT: CapabilityBindingListResult = {
+  boxes: [],
+  entries: [],
+  metadataAvailable: true,
+  totalCount: 0,
+};
 
 function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   return `${networkId}:${section}`;
@@ -57,6 +69,10 @@ export function useWorkspaceData(
   );
   const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
+  const [functions, setFunctions] = useState<CapabilityBindingListResult>(
+    EMPTY_CAPABILITY_RESULT,
+  );
+  const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -185,6 +201,24 @@ export function useWorkspaceData(
             setActionTypes(actionTypeResult);
             break;
           }
+          case "functions":
+            setFunctions(
+              await listKnowledgeNetworkCapabilities(networkId, {
+                limit: CAPABILITY_SECTION_LIMIT,
+                type: "function",
+                withDetail: true,
+              }),
+            );
+            break;
+          case "skills":
+            setSkills(
+              await listKnowledgeNetworkCapabilities(networkId, {
+                limit: CAPABILITY_SECTION_LIMIT,
+                type: "skill",
+                withDetail: true,
+              }),
+            );
+            break;
           case "metrics":
             if (integrateWorkspaceMetrics) {
               const metricResult = await listKnowledgeNetworkMetrics(networkId);
@@ -267,6 +301,31 @@ export function useWorkspaceData(
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "action-types"));
   }, [networkId]);
 
+  const reloadCapabilities = useCallback(
+    async (capabilityType: "function" | "skill") => {
+      if (!networkId) {
+        return;
+      }
+
+      const section = capabilityType === "function" ? "functions" : "skills";
+      loadedSectionsRef.current.delete(sectionCacheKey(networkId, section));
+      const result = await listKnowledgeNetworkCapabilities(networkId, {
+        limit: CAPABILITY_SECTION_LIMIT,
+        type: capabilityType,
+        withDetail: true,
+      });
+      if (capabilityType === "function") {
+        setFunctions(result);
+      } else {
+        setSkills(result);
+      }
+      loadedSectionsRef.current.add(sectionCacheKey(networkId, section));
+      // The nav count comes from the detail statistics, so a mount has to refresh it too.
+      await loadDetail();
+    },
+    [loadDetail, networkId],
+  );
+
   const reloadMetrics = useCallback(async () => {
     if (!networkId || !integrateWorkspaceMetrics) {
       return;
@@ -291,6 +350,7 @@ export function useWorkspaceData(
     loading: sectionLoading,
     loadWorkspaceData,
     loadRecentObjects,
+    functions,
     metricApiUnavailable,
     metrics,
     objectTypes,
@@ -298,11 +358,13 @@ export function useWorkspaceData(
     recentLoading,
     relationTypes,
     reloadActionTypes,
+    reloadCapabilities,
     reloadConceptGroups,
     reloadMetrics,
     reloadObjectTypes,
     reloadRelationTypes,
     sectionError,
     sectionLoading,
+    skills,
   };
 }

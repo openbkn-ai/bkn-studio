@@ -126,6 +126,22 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("action-types"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/functions",
+    {
+      descriptionKey: "knowledgeNetwork.capabilityFunctionsDescription",
+      titleKey: "knowledgeNetwork.workspaceFunctions",
+    },
+    workspaceSectionPage("functions"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/skills",
+    {
+      descriptionKey: "knowledgeNetwork.capabilitySkillsDescription",
+      titleKey: "knowledgeNetwork.workspaceSkills",
+    },
+    workspaceSectionPage("skills"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics",
     {
       descriptionKey: "knowledgeNetwork.metricsDescription",

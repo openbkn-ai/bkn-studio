@@ -1,0 +1,44 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pickerToolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pickerBoxSelect {
+  flex: none;
+  min-width: 240px;
+}
+
+.pickerSearch {
+  flex: 1 1 auto;
+}
+
+/* Without this the label collapses to one character per line once the toolbar runs out of room. */
+.pickerWholeBox {
+  flex: none;
+  white-space: nowrap;
+}
+
+.pickerHint {
+  color: var(--app-color-text-tertiary, #8c8c8c);
+  font-size: 12px;
+}
+
+.pickerFooterInfo {
+  margin-inline-end: auto;
+  color: var(--app-color-text-secondary, #595959);
+  font-size: 12px;
+}

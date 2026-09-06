@@ -1,0 +1,57 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const capabilityPart = {
+  capabilityFunctionsTitle: "函数",
+  capabilityFunctionsDescription:
+    "挂载执行工厂的工具，供本知识网络的 Agent 与 SKILL 受管调用。绑定的是工具，工具箱只是选择时的分组。",
+  capabilitySkillsTitle: "SKILLs",
+  capabilitySkillsDescription:
+    "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
+  capabilityMountFunction: "挂载函数",
+  capabilityMountSkill: "挂载 SKILL",
+  capabilityDetach: "解绑",
+  capabilityDetachSelected: "解绑所选",
+  capabilityDetachConfirmTitle: "确认解绑该能力？",
+  capabilityDetachConfirmContent:
+    "解绑后本知识网络不再能调用它，执行工厂中的资产本身不受影响。",
+  capabilityDetachSuccess: "已解绑",
+  capabilityMountSuccess: "已挂载 {{count}} 项",
+  capabilityMountNothingNew: "所选能力已全部挂载",
+  capabilityColumnName: "名称",
+  capabilityColumnBox: "工具箱",
+  capabilityColumnStatus: "状态",
+  capabilityColumnComment: "备注",
+  capabilityColumnMountTime: "挂载时间",
+  capabilityStatusMissing: "已失效",
+  capabilityStatusMissingHint: "执行工厂中的资产已删除，调用时不会命中，请解绑或重新挂载。",
+  capabilityBoundAsBox: "整箱挂载",
+  capabilityMetadataUnavailable:
+    "执行工厂暂时不可达，名称与状态取不到；挂载关系本身完好，稍后刷新即可。",
+  capabilityBoxTopUpTitle: "{{boxName}}：{{mounted}}/{{total}} 个工具已挂载",
+  capabilityBoxTopUpAction: "补挂 {{count}} 个新增工具",
+  capabilityBoxMissing: "工具箱已从执行工厂删除",
+  capabilityEmptyFunctions: "还没有挂载函数。点「挂载函数」从执行工厂的工具箱中选。",
+  capabilityEmptySkills: "还没有挂载 SKILL。点「挂载 SKILL」从平台技能中选。",
+  capabilitySearchPlaceholder: "搜索名称或 ID",
+  capabilityRefresh: "刷新",
+  capabilityPickerSkillTitle: "挂载 SKILL",
+  capabilityPickerFunctionTitle: "挂载函数",
+  capabilityPickerSearchPlaceholder: "搜索名称",
+  capabilityPickerSelected: "已选 {{count}} 项",
+  capabilityPickerMounted: "已挂载",
+  capabilityPickerSelectWholeBox: "整箱挂载",
+  capabilityPickerWholeBoxHint:
+    "整箱挂载在写入时展开为该箱当前全部工具；箱内后续新增的工具不会自动挂载。",
+  capabilityPickerEmptySkills: "平台上还没有可挂载的 SKILL。",
+  capabilityPickerEmptyFunctions: "执行工厂里还没有可挂载的工具。",
+  capabilityPickerConfirm: "挂载",
+  capabilityErrorTargetNotFound: "目标能力不存在，可能已在执行工厂中删除。",
+  capabilityErrorTargetNotAvailable: "目标能力尚未发布或已禁用，请先在执行工厂发布。",
+  capabilityErrorEmptyToolBox: "该工具箱内没有可挂载的工具。",
+  capabilityErrorFactoryUnavailable: "执行工厂不可达，挂载未写入，请稍后重试。",
+} as const;

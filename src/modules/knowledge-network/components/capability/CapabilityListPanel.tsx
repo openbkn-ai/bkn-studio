@@ -1,0 +1,378 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Empty, Input, Table, Tag, Tooltip } from "antd";
+import type { TableProps } from "antd";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+
+import { useAppServices } from "@/framework/context/use-app-services";
+import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { CapabilityMountModal } from "@/modules/knowledge-network/components/capability/CapabilityMountModal";
+import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import {
+  CAPABILITY_STATUS_MISSING,
+  type AttachCapabilityInput,
+  type CapabilityBindingListResult,
+  type CapabilityBindingRecord,
+  type CapabilityType,
+} from "@/modules/knowledge-network/types/knowledge-network";
+import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
+
+type CapabilityListPanelProps = {
+  canDelete: boolean;
+  canModify: boolean;
+  capabilityType: CapabilityType;
+  data: CapabilityBindingListResult;
+  loading?: boolean;
+  onDetach: (bindingIds: string[]) => Promise<void>;
+  onMount: (inputs: AttachCapabilityInput[]) => Promise<number>;
+  onRefresh: () => Promise<void>;
+};
+
+/** Where the asset itself lives; a binding is only a reference to it. */
+function executionFactoryPath(record: CapabilityBindingRecord) {
+  return record.capabilityType === "skill"
+    ? `/execution-factory/skills/${record.capabilityId}`
+    : `/execution-factory/toolboxes/${record.boxId}/tools/${record.capabilityId}/edit`;
+}
+
+export function CapabilityListPanel({
+  canDelete,
+  canModify,
+  capabilityType,
+  data,
+  loading,
+  onDetach,
+  onMount,
+  onRefresh,
+}: CapabilityListPanelProps) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { message, modal } = useAppServices();
+  const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePersistentPageSize(
+    capabilityType === "skill" ? "capability-skills" : "capability-functions",
+  );
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [mountOpen, setMountOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const isSkill = capabilityType === "skill";
+
+  const filtered = useMemo(() => {
+    const trimmed = keyword.trim().toLowerCase();
+    if (!trimmed) {
+      return data.entries;
+    }
+
+    return data.entries.filter(
+      (item) =>
+        item.name.toLowerCase().includes(trimmed) ||
+        item.capabilityId.toLowerCase().includes(trimmed) ||
+        item.boxName.toLowerCase().includes(trimmed),
+    );
+  }, [data.entries, keyword]);
+
+  const pageItems = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
+
+  const mountedRefs = useMemo(
+    () =>
+      new Set(
+        data.entries.map((item) =>
+          item.capabilityType === "skill"
+            ? item.capabilityId
+            : `${item.boxId}/${item.capabilityId}`,
+        ),
+      ),
+    [data.entries],
+  );
+
+  const runDetach = async (bindingIds: string[]) => {
+    setBusy(true);
+    try {
+      await onDetach(bindingIds);
+      setSelectedRowKeys((keys) => keys.filter((key) => !bindingIds.includes(key)));
+      void message.success(t("knowledgeNetwork.capabilityDetachSuccess"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDetach = (bindingIds: string[]) => {
+    modal.confirm({
+      content: t("knowledgeNetwork.capabilityDetachConfirmContent"),
+      okButtonProps: { danger: true },
+      okText: t("knowledgeNetwork.capabilityDetach"),
+      onOk: () => runDetach(bindingIds),
+      title: t("knowledgeNetwork.capabilityDetachConfirmTitle"),
+    });
+  };
+
+  const columns: TableProps<CapabilityBindingRecord>["columns"] = [
+    {
+      dataIndex: "name",
+      key: "name",
+      title: t("knowledgeNetwork.capabilityColumnName"),
+      render: (_: string, record) => (
+        <div>
+          <AppButton
+            onClick={() => {
+              void navigate(executionFactoryPath(record));
+            }}
+            type="link"
+          >
+            {record.name || record.capabilityId}
+          </AppButton>
+          {record.name ? (
+            <div className={styles.objectName}>{record.capabilityId}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    ...(isSkill
+      ? []
+      : [
+          {
+            dataIndex: "boxName",
+            key: "boxName",
+            title: t("knowledgeNetwork.capabilityColumnBox"),
+            render: (_: string, record: CapabilityBindingRecord) => (
+              <div>
+                <div>{record.boxName || record.boxId}</div>
+                {record.boundAsBox ? (
+                  <Tag>{t("knowledgeNetwork.capabilityBoundAsBox")}</Tag>
+                ) : null}
+              </div>
+            ),
+          },
+        ]),
+    {
+      dataIndex: "status",
+      key: "status",
+      title: t("knowledgeNetwork.capabilityColumnStatus"),
+      render: (value: string) =>
+        value === CAPABILITY_STATUS_MISSING ? (
+          <Tooltip title={t("knowledgeNetwork.capabilityStatusMissingHint")}>
+            <Tag color="error">{t("knowledgeNetwork.capabilityStatusMissing")}</Tag>
+          </Tooltip>
+        ) : (
+          <span>{value || "-"}</span>
+        ),
+    },
+    {
+      dataIndex: "comment",
+      key: "comment",
+      title: t("knowledgeNetwork.capabilityColumnComment"),
+      render: (value: string) => value || "-",
+    },
+    {
+      dataIndex: "createTime",
+      key: "createTime",
+      title: t("knowledgeNetwork.capabilityColumnMountTime"),
+    },
+    {
+      key: "actions",
+      title: t("common.actions"),
+      width: 120,
+      render: (_: unknown, record) =>
+        canDelete ? (
+          <AppButton danger onClick={() => confirmDetach([record.id])} type="link">
+            {t("knowledgeNetwork.capabilityDetach")}
+          </AppButton>
+        ) : null,
+    },
+  ];
+
+  const topUpBoxes = data.boxes.filter(
+    (item) => item.unmountedTools > 0 || item.boxMissing,
+  );
+
+  return (
+    <>
+      <section className={styles.page}>
+        <h2 className={styles.title}>
+          {isSkill
+            ? t("knowledgeNetwork.capabilitySkillsTitle")
+            : t("knowledgeNetwork.capabilityFunctionsTitle")}
+        </h2>
+
+        {data.metadataAvailable ? null : (
+          <Alert
+            className={styles.noticeBanner}
+            message={t("knowledgeNetwork.capabilityMetadataUnavailable")}
+            showIcon
+            type="warning"
+          />
+        )}
+
+        {topUpBoxes.map((box) => (
+          <Alert
+            action={
+              box.boxMissing || !canModify ? null : (
+                <AppButton
+                  loading={busy}
+                  onClick={() => {
+                    void (async () => {
+                      setBusy(true);
+                      try {
+                        const created = await onMount([
+                          { allTools: true, boxId: box.boxId, capabilityType: "function" },
+                        ]);
+                        void message.success(
+                          t("knowledgeNetwork.capabilityMountSuccess", { count: created }),
+                        );
+                      } finally {
+                        setBusy(false);
+                      }
+                    })();
+                  }}
+                  size="small"
+                  type="link"
+                >
+                  {t("knowledgeNetwork.capabilityBoxTopUpAction", {
+                    count: box.unmountedTools,
+                  })}
+                </AppButton>
+              )
+            }
+            className={styles.noticeBanner}
+            key={box.boxId}
+            message={
+              box.boxMissing
+                ? t("knowledgeNetwork.capabilityBoxMissing")
+                : t("knowledgeNetwork.capabilityBoxTopUpTitle", {
+                    boxName: box.boxName || box.boxId,
+                    mounted: box.mountedTools,
+                    total: box.totalTools,
+                  })
+            }
+            showIcon
+            type={box.boxMissing ? "error" : "info"}
+          />
+        ))}
+
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarLeft}>
+            {canModify ? (
+              <AppButton
+                className={styles.toolbarButton}
+                icon={<PlusOutlined />}
+                onClick={() => setMountOpen(true)}
+                type="primary"
+              >
+                {isSkill
+                  ? t("knowledgeNetwork.capabilityMountSkill")
+                  : t("knowledgeNetwork.capabilityMountFunction")}
+              </AppButton>
+            ) : null}
+            {canDelete ? (
+              <AppButton
+                className={styles.toolbarButton}
+                danger
+                disabled={selectedRowKeys.length === 0}
+                icon={<DeleteOutlined />}
+                onClick={() => confirmDetach(selectedRowKeys)}
+              >
+                {t("knowledgeNetwork.capabilityDetachSelected")}
+              </AppButton>
+            ) : null}
+          </div>
+          <div className={styles.toolbarRight}>
+            <Input
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => {
+                setKeyword(event.target.value);
+                setPage(1);
+              }}
+              placeholder={t("knowledgeNetwork.capabilitySearchPlaceholder")}
+              prefix={<SearchOutlined className={styles.searchIcon} />}
+              value={keyword}
+            />
+            <AppButton
+              className={styles.iconButton}
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                void onRefresh();
+              }}
+              title={t("knowledgeNetwork.capabilityRefresh")}
+            />
+          </div>
+        </div>
+
+        <div className={styles.tableCard}>
+          {filtered.length === 0 ? (
+            <Empty
+              className={styles.emptyPanel}
+              description={
+                isSkill
+                  ? t("knowledgeNetwork.capabilityEmptySkills")
+                  : t("knowledgeNetwork.capabilityEmptyFunctions")
+              }
+            />
+          ) : (
+            <Table
+              columns={columns}
+              dataSource={pageItems}
+              loading={loading || busy}
+              pagination={false}
+              rowKey="id"
+              rowSelection={
+                canDelete
+                  ? {
+                      onChange: (keys) => setSelectedRowKeys(keys as string[]),
+                      selectedRowKeys,
+                    }
+                  : undefined
+              }
+              scroll={{ x: 880 }}
+              size="middle"
+            />
+          )}
+          {filtered.length > 0 ? (
+            <TablePaginationBar
+              current={page}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              pageSize={pageSize}
+              showSizeChanger
+              total={filtered.length}
+            />
+          ) : null}
+        </div>
+      </section>
+
+      <CapabilityMountModal
+        capabilityType={capabilityType}
+        mountedRefs={mountedRefs}
+        onCancel={() => setMountOpen(false)}
+        onSubmit={async (inputs) => {
+          const created = await onMount(inputs);
+          if (created === 0) {
+            void message.info(t("knowledgeNetwork.capabilityMountNothingNew"));
+          } else {
+            void message.success(
+              t("knowledgeNetwork.capabilityMountSuccess", { count: created }),
+            );
+          }
+          setMountOpen(false);
+        }}
+        open={mountOpen}
+      />
+    </>
+  );
+}

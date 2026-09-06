@@ -161,9 +161,11 @@ export const networkPart = {
     workspaceDescription:
       "The workspace shell is already in place. The remaining legacy Vega pages will be migrated in later slices.",
     workspaceMetrics: "Metrics",
-    workspaceMetricModeling: "Metric model",
+    workspaceFunctions: "Functions",
+    workspaceSkills: "SKILLs",
+    workspaceDynamicModel: "Dynamic model",
     workspaceObjectTypes: "Object types",
-    workspaceOntologyModeling: "Ontology model",
+    workspaceConceptModel: "Concept model",
     workspaceOverview: "Overview",
     workspaceOverviewShort: "Overview",
     workspacePreview: "Preview",

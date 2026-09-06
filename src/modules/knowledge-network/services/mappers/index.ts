@@ -63,6 +63,8 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
       actionTypesTotal: item.statistics?.action_types_total ?? 0,
       conceptGroupsTotal: item.statistics?.concept_groups_total ?? 0,
       metricsTotal: item.statistics?.metrics_total ?? 0,
+      skillsTotal: item.statistics?.skills_total ?? 0,
+      functionsTotal: item.statistics?.functions_total ?? 0,
     },
   };
 }
@@ -460,6 +462,12 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
 }
 
 
+export {
+  mapCapabilityBinding,
+  mapCapabilityBindingsList,
+  mapCapabilityBoxSummary,
+  toBackendAttachEntry,
+} from "./capability.mapper";
 export { mapMetric, toBackendMetricCondition, toBackendMetricEntry } from "./metric.mapper";
 
 export {

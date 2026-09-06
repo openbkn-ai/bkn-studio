@@ -48,6 +48,8 @@ const detail: KnowledgeNetworkRecord = {
     actionTypesTotal: 0,
     conceptGroupsTotal: 0,
     metricsTotal: 0,
+    skillsTotal: 0,
+    functionsTotal: 0,
     objectTypesTotal: 0,
     relationTypesTotal: 0,
   },
