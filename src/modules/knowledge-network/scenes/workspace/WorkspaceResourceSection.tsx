@@ -151,15 +151,19 @@ export function WorkspaceResourceSection({
         />
       );
     case "functions":
+    case "apis":
     case "skills": {
-      const capabilityType = section === "skills" ? "skill" : "function";
+      const kind = section === "skills" ? "skill" : section === "apis" ? "api" : "function";
+      const capabilityType = kind === "skill" ? "skill" : "function";
+      const sectionData =
+        section === "skills" ? data.skills : section === "apis" ? data.apis : data.functions;
 
       return (
         <CapabilityListPanel
           canDelete={canModify}
           canModify={canModify}
-          capabilityType={capabilityType}
-          data={section === "skills" ? data.skills : data.functions}
+          data={sectionData}
+          kind={kind}
           loading={data.sectionLoading}
           onDetach={async (bindingIds) => {
             await detachKnowledgeNetworkCapabilities(networkId, bindingIds);

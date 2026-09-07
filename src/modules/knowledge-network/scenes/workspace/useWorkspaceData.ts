@@ -21,6 +21,11 @@ import {
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
+  loadToolBoxKinds,
+  resolveBindingKind,
+  type CapabilityToolKind,
+} from "@/modules/knowledge-network/services/capability-tool-kind.service";
+import {
   integrateWorkspaceMetrics,
   logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
@@ -44,6 +49,37 @@ import {
 
 /** One page holds every binding a network realistically mounts; the panel filters client-side. */
 const CAPABILITY_SECTION_LIMIT = 200;
+
+/**
+ * Tool bindings come back as one list whatever the tool is, so the split between the API and the
+ * function section is done here, off the owning tool box's metadata type.
+ */
+function splitToolBindings(
+  result: CapabilityBindingListResult,
+  kinds: Map<string, CapabilityToolKind>,
+): Record<CapabilityToolKind, CapabilityBindingListResult> {
+  const entriesByKind: Record<CapabilityToolKind, CapabilityBindingListResult["entries"]> = {
+    api: [],
+    function: [],
+  };
+  result.entries.forEach((entry) => {
+    entriesByKind[resolveBindingKind(entry, kinds)].push(entry);
+  });
+
+  const byKind = {} as Record<CapabilityToolKind, CapabilityBindingListResult>;
+  (["api", "function"] as const).forEach((kind) => {
+    const entries = entriesByKind[kind];
+    const boxIds = new Set(entries.map((entry) => entry.boxId));
+    byKind[kind] = {
+      boxes: result.boxes.filter((box) => boxIds.has(box.boxId)),
+      entries,
+      metadataAvailable: result.metadataAvailable,
+      totalCount: entries.length,
+    };
+  });
+
+  return byKind;
+}
 
 const EMPTY_CAPABILITY_RESULT: CapabilityBindingListResult = {
   boxes: [],
@@ -72,6 +108,7 @@ export function useWorkspaceData(
   const [functions, setFunctions] = useState<CapabilityBindingListResult>(
     EMPTY_CAPABILITY_RESULT,
   );
+  const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);
@@ -156,6 +193,25 @@ export function useWorkspaceData(
     }
   }, [networkId]);
 
+  const loadToolBindings = useCallback(async (targetNetworkId: string) => {
+    const [result, kinds] = await Promise.all([
+      listKnowledgeNetworkCapabilities(targetNetworkId, {
+        limit: CAPABILITY_SECTION_LIMIT,
+        type: "function",
+        withDetail: true,
+      }),
+      // A failed catalogue read must not empty the lists: every binding then lands under functions.
+      loadToolBoxKinds().catch((error: unknown) => {
+        logServiceFallback("useWorkspaceData.capabilities.toolBoxKinds", error);
+        return new Map<string, CapabilityToolKind>();
+      }),
+    ]);
+
+    const split = splitToolBindings(result, kinds);
+    setFunctions(split.function);
+    setApis(split.api);
+  }, []);
+
   const loadSectionData = useCallback(
     async (targetSection: KnowledgeNetworkWorkspaceSection, options?: { force?: boolean }) => {
       if (!networkId) {
@@ -202,13 +258,8 @@ export function useWorkspaceData(
             break;
           }
           case "functions":
-            setFunctions(
-              await listKnowledgeNetworkCapabilities(networkId, {
-                limit: CAPABILITY_SECTION_LIMIT,
-                type: "function",
-                withDetail: true,
-              }),
-            );
+          case "apis":
+            await loadToolBindings(networkId);
             break;
           case "skills":
             setSkills(
@@ -238,14 +289,21 @@ export function useWorkspaceData(
         setSectionLoading(false);
       }
     },
-    [networkId, applyMetricsTotalToDetail],
+    [networkId, applyMetricsTotalToDetail, loadToolBindings],
   );
 
   useEffect(() => {
     clearSectionCache();
     setRecentObjects([]);
     void loadDetail();
-  }, [clearSectionCache, loadDetail, networkId]);
+    // The nav counts for functions and APIs are a split of one binding list, which the detail
+    // statistics report as a single total, so the split has to be resolved before either page opens.
+    if (networkId) {
+      void loadToolBindings(networkId).catch((error: unknown) => {
+        logServiceFallback("useWorkspaceData.capabilities.navCounts", error);
+      });
+    }
+  }, [clearSectionCache, loadDetail, loadToolBindings, networkId]);
 
   useEffect(() => {
     void loadSectionData(section);
@@ -307,23 +365,31 @@ export function useWorkspaceData(
         return;
       }
 
-      const section = capabilityType === "function" ? "functions" : "skills";
-      loadedSectionsRef.current.delete(sectionCacheKey(networkId, section));
-      const result = await listKnowledgeNetworkCapabilities(networkId, {
-        limit: CAPABILITY_SECTION_LIMIT,
-        type: capabilityType,
-        withDetail: true,
+      const sections: KnowledgeNetworkWorkspaceSection[] =
+        capabilityType === "function" ? ["functions", "apis"] : ["skills"];
+      sections.forEach((section) => {
+        loadedSectionsRef.current.delete(sectionCacheKey(networkId, section));
       });
+
       if (capabilityType === "function") {
-        setFunctions(result);
+        await loadToolBindings(networkId);
       } else {
-        setSkills(result);
+        setSkills(
+          await listKnowledgeNetworkCapabilities(networkId, {
+            limit: CAPABILITY_SECTION_LIMIT,
+            type: "skill",
+            withDetail: true,
+          }),
+        );
       }
-      loadedSectionsRef.current.add(sectionCacheKey(networkId, section));
+
+      sections.forEach((section) => {
+        loadedSectionsRef.current.add(sectionCacheKey(networkId, section));
+      });
       // The nav count comes from the detail statistics, so a mount has to refresh it too.
       await loadDetail();
     },
-    [loadDetail, networkId],
+    [loadDetail, loadToolBindings, networkId],
   );
 
   const reloadMetrics = useCallback(async () => {
@@ -350,6 +416,7 @@ export function useWorkspaceData(
     loading: sectionLoading,
     loadWorkspaceData,
     loadRecentObjects,
+    apis,
     functions,
     metricApiUnavailable,
     metrics,

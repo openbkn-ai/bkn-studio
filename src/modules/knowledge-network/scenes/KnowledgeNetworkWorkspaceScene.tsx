@@ -8,6 +8,7 @@
 import {
   ApiOutlined,
   ApartmentOutlined,
+  CloudServerOutlined,
   CodeOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
@@ -163,7 +164,16 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "functions",
         label: t("knowledgeNetwork.workspaceFunctions"),
         icon: <CodeOutlined />,
-        count: detail?.statistics.functionsTotal ?? 0,
+        // Counted from the split list rather than statistics.functionsTotal: the backend counts
+        // every tool binding as a function, APIs included.
+        count: workspaceData.functions.totalCount,
+      },
+      {
+        key: "apis",
+        // Not ApiOutlined: relation types already own that icon in the group above.
+        label: t("knowledgeNetwork.workspaceApis"),
+        icon: <CloudServerOutlined />,
+        count: workspaceData.apis.totalCount,
       },
       {
         key: "skills",
@@ -174,7 +184,7 @@ export function KnowledgeNetworkWorkspaceScene({
     );
 
     return items;
-  }, [activeNetworkId, detail, t]);
+  }, [activeNetworkId, detail, t, workspaceData.apis.totalCount, workspaceData.functions.totalCount]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview",
@@ -194,7 +204,11 @@ export function KnowledgeNetworkWorkspaceScene({
   // Metrics, functions and SKILLs are one group: they are what the network can compute and call,
   // as opposed to the concept model that describes what it knows.
   const dynamicNavItems = navigationItems.filter(
-    (item) => item.key === "metrics" || item.key === "functions" || item.key === "skills",
+    (item) =>
+      item.key === "metrics" ||
+      item.key === "functions" ||
+      item.key === "apis" ||
+      item.key === "skills",
   );
 
   const renderSideNavItem = (

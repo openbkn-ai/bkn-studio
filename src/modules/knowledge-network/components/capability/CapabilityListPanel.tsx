@@ -16,6 +16,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { CapabilityMountModal } from "@/modules/knowledge-network/components/capability/CapabilityMountModal";
+import type { CapabilityToolKind } from "@/modules/knowledge-network/services/capability-tool-kind.service";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   CAPABILITY_STATUS_MISSING,
@@ -26,16 +27,29 @@ import {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
+/**
+ * One panel serves three nav entries. SKILLs and tools are different capability types on the wire;
+ * "api" and "function" are the same type split by what the owning tool box holds.
+ */
+export type CapabilitySectionKind = "api" | "function" | "skill";
+
 type CapabilityListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
-  capabilityType: CapabilityType;
   data: CapabilityBindingListResult;
+  kind: CapabilitySectionKind;
   loading?: boolean;
   onDetach: (bindingIds: string[]) => Promise<void>;
   onMount: (inputs: AttachCapabilityInput[]) => Promise<number>;
   onRefresh: () => Promise<void>;
 };
+
+/** Locale key fragment per section, so titles and empty states stay one lookup instead of a chain. */
+const TITLE_KEY = {
+  api: "Apis",
+  function: "Functions",
+  skill: "Skills",
+} as const;
 
 /** Where the asset itself lives; a binding is only a reference to it. */
 function executionFactoryPath(record: CapabilityBindingRecord) {
@@ -47,8 +61,8 @@ function executionFactoryPath(record: CapabilityBindingRecord) {
 export function CapabilityListPanel({
   canDelete,
   canModify,
-  capabilityType,
   data,
+  kind,
   loading,
   onDetach,
   onMount,
@@ -59,14 +73,14 @@ export function CapabilityListPanel({
   const { message, modal } = useAppServices();
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = usePersistentPageSize(
-    capabilityType === "skill" ? "capability-skills" : "capability-functions",
-  );
+  const [pageSize, setPageSize] = usePersistentPageSize(`capability-${kind}`);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [mountOpen, setMountOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const isSkill = capabilityType === "skill";
+  const isSkill = kind === "skill";
+  const capabilityType: CapabilityType = isSkill ? "skill" : "function";
+  const toolKind: CapabilityToolKind | undefined = isSkill ? undefined : kind;
 
   const filtered = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -203,9 +217,7 @@ export function CapabilityListPanel({
     <>
       <section className={styles.page}>
         <h2 className={styles.title}>
-          {isSkill
-            ? t("knowledgeNetwork.capabilitySkillsTitle")
-            : t("knowledgeNetwork.capabilityFunctionsTitle")}
+          {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
         </h2>
 
         {data.metadataAvailable ? null : (
@@ -272,9 +284,7 @@ export function CapabilityListPanel({
                 onClick={() => setMountOpen(true)}
                 type="primary"
               >
-                {isSkill
-                  ? t("knowledgeNetwork.capabilityMountSkill")
-                  : t("knowledgeNetwork.capabilityMountFunction")}
+                {t(`knowledgeNetwork.capabilityMount${TITLE_KEY[kind]}`)}
               </AppButton>
             ) : null}
             {canDelete ? (
@@ -316,11 +326,7 @@ export function CapabilityListPanel({
           {filtered.length === 0 ? (
             <Empty
               className={styles.emptyPanel}
-              description={
-                isSkill
-                  ? t("knowledgeNetwork.capabilityEmptySkills")
-                  : t("knowledgeNetwork.capabilityEmptyFunctions")
-              }
+              description={t(`knowledgeNetwork.capabilityEmpty${TITLE_KEY[kind]}`)}
             />
           ) : (
             <Table
@@ -358,6 +364,7 @@ export function CapabilityListPanel({
 
       <CapabilityMountModal
         capabilityType={capabilityType}
+        toolKind={toolKind}
         mountedRefs={mountedRefs}
         onCancel={() => setMountOpen(false)}
         onSubmit={async (inputs) => {

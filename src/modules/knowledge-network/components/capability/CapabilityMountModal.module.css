@@ -5,40 +5,58 @@
  * Conditions. See LICENSE for the full text.
  */
 
+/*
+ * Ant Design paints a dialog with colorBgElevated, which this app never overrides, so in dark mode
+ * a modal comes out neutral grey while the table and tree inside it use the navy container colour.
+ * Pin the dialog to the same surface token the rest of the console uses.
+ */
+.pickerModal :global(.ant-modal-content),
+.pickerModal :global(.ant-modal-header) {
+  background: var(--color-bg-surface);
+}
+
 .picker {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.pickerToolbar {
-  display: flex;
-  gap: 12px;
+.pickerTree {
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  padding: 8px;
+}
+
+.pickerNode {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.pickerBoxSelect {
-  flex: none;
-  min-width: 240px;
-}
-
-.pickerSearch {
-  flex: 1 1 auto;
-}
-
-/* Without this the label collapses to one character per line once the toolbar runs out of room. */
-.pickerWholeBox {
-  flex: none;
+.pickerNode > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pickerHint {
-  color: var(--app-color-text-tertiary, #8c8c8c);
+  color: var(--color-text-muted);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerEmpty {
+  padding: 32px 0;
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 .pickerFooterInfo {
   margin-inline-end: auto;
-  color: var(--app-color-text-secondary, #595959);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }

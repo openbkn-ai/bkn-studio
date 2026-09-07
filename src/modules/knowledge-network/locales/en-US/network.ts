@@ -162,6 +162,7 @@ export const networkPart = {
       "The workspace shell is already in place. The remaining legacy Vega pages will be migrated in later slices.",
     workspaceMetrics: "Metrics",
     workspaceFunctions: "Functions",
+    workspaceApis: "APIs",
     workspaceSkills: "SKILLs",
     workspaceDynamicModel: "Dynamic model",
     workspaceObjectTypes: "Object types",
