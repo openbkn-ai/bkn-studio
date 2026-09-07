@@ -7,9 +7,12 @@
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
+  /* Match the bare <h2> other list pages use: an Ant link button is 32px tall by default and
+     would push the toolbar and table 8px further down than on metrics or object types. */
+  min-height: 24px;
 }
 
 .titleRow {
@@ -31,4 +34,9 @@
 
 .manageLink {
   flex: none;
+}
+
+.manageLink:global(.ant-btn) {
+  height: 24px;
+  padding: 0;
 }
