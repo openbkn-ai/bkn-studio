@@ -48,6 +48,11 @@ export const capabilityPart = {
   capabilityColumnComment: "备注",
   capabilityColumnMountTime: "挂载时间",
   capabilityStatusMissing: "已失效",
+  capabilityStatusEnabled: "已启用",
+  capabilityStatusDisabled: "已停用",
+  capabilityStatusPublished: "已发布",
+  capabilityStatusUnpublished: "未发布",
+  capabilityStatusOffline: "已下线",
   capabilityStatusMissingHint: "执行工厂中的资产已删除，调用时不会命中，请解绑或重新挂载。",
   capabilityBoundAsBox: "整集挂载",
   capabilityMetadataUnavailable:

@@ -62,6 +62,28 @@ const TITLE_KEY = {
 } as const;
 
 /**
+ * The execution factory reports two status vocabularies: a tool is enabled/disabled, a SKILL, a
+ * toolset and an MCP Server are published/unpublish/offline. Both reach the binding row untranslated,
+ * so map them here and fall back to the raw value rather than hiding a status this list does not
+ * know yet.
+ */
+const STATUS_LABEL_KEY: Record<string, string> = {
+  disabled: "capabilityStatusDisabled",
+  enabled: "capabilityStatusEnabled",
+  offline: "capabilityStatusOffline",
+  published: "capabilityStatusPublished",
+  unpublish: "capabilityStatusUnpublished",
+};
+
+const STATUS_TAG_COLOR: Record<string, string> = {
+  disabled: "default",
+  enabled: "success",
+  offline: "default",
+  published: "success",
+  unpublish: "warning",
+};
+
+/**
  * Where the asset itself lives; a binding is only a reference to it. An MCP tool has no page of its
  * own — it is addressed by name inside its Server — so it points at the Server.
  */
@@ -200,14 +222,27 @@ export function CapabilityListPanel({
       dataIndex: "status",
       key: "status",
       title: t("knowledgeNetwork.capabilityColumnStatus"),
-      render: (value: string) =>
-        value === CAPABILITY_STATUS_MISSING ? (
-          <Tooltip title={t("knowledgeNetwork.capabilityStatusMissingHint")}>
-            <Tag color="error">{t("knowledgeNetwork.capabilityStatusMissing")}</Tag>
-          </Tooltip>
-        ) : (
-          <span>{value || "-"}</span>
-        ),
+      render: (value: string) => {
+        if (value === CAPABILITY_STATUS_MISSING) {
+          return (
+            <Tooltip title={t("knowledgeNetwork.capabilityStatusMissingHint")}>
+              <Tag color="error">{t("knowledgeNetwork.capabilityStatusMissing")}</Tag>
+            </Tooltip>
+          );
+        }
+
+        if (!value) {
+          return "-";
+        }
+
+        const labelKey = STATUS_LABEL_KEY[value];
+
+        return (
+          <Tag color={STATUS_TAG_COLOR[value] ?? "default"}>
+            {labelKey ? t(`knowledgeNetwork.${labelKey}`) : value}
+          </Tag>
+        );
+      },
     },
     {
       dataIndex: "comment",

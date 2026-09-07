@@ -48,6 +48,11 @@ export const capabilityPart = {
   capabilityColumnComment: "Comment",
   capabilityColumnMountTime: "Mounted at",
   capabilityStatusMissing: "Missing",
+  capabilityStatusEnabled: "Enabled",
+  capabilityStatusDisabled: "Disabled",
+  capabilityStatusPublished: "Published",
+  capabilityStatusUnpublished: "Unpublished",
+  capabilityStatusOffline: "Offline",
   capabilityStatusMissingHint:
     "The asset is gone from the execution factory: calls will not hit it. Release it or mount a replacement.",
   capabilityBoundAsBox: "Whole toolset",
