@@ -131,6 +131,25 @@ function buildTask(overrides: Partial<BuildTask>): BuildTask {
 }
 
 describe("ResourceIndexPanel", () => {
+  it("does not present a batch task total as the current index document count", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, localIndexStatus: "available" }}
+          tasks={[buildTask({ totalCount: 72000 })]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container.textContent).not.toContain("dataCatalog.indexWorkspace.indexedRowsShort");
+  });
+
   it("uses the shared colored status tag and an overflow action menu", () => {
     render(
       <MemoryRouter>
