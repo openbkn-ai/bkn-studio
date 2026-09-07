@@ -85,15 +85,32 @@ const STATUS_TONE: Record<string, "muted" | "ok" | "warn"> = {
 };
 
 /**
- * A row is releasable only through its own mount. One that is in the list purely because an object
- * type or an action type points at the tool has nothing to release — the reference has to go first.
- * A backend that does not report provenance yet returns no sources, and every row it lists is then
- * a plain binding, so treat that as releasable rather than locking the page.
+ * An entry that is in the list only because an object type or an action type reaches for the tool
+ * has no binding row behind it — the backend returns it with an empty id — and nothing to release:
+ * the reference has to go first. Anything with an id and a mount of its own can be released.
  */
 function isReleasable(record: CapabilityBindingRecord) {
   return (
-    record.sources.length === 0 ||
-    record.sources.some((source) => source.kind === "box" || source.kind === "manual")
+    record.id !== "" &&
+    (record.sources.length === 0 ||
+      record.sources.some((source) => source.kind === "box" || source.kind === "manual"))
+  );
+}
+
+/**
+ * A reference-only entry shares no id with anything, so the table needs an identity of its own:
+ * the capability itself, which is unique within one list.
+ */
+function rowKey(record: CapabilityBindingRecord) {
+  return record.id || `${record.capabilityType}:${record.boxId}/${record.capabilityId}`;
+}
+
+/** Mounted means "this network mounted it", not "it appears in the list": a referenced-only tool is still mountable. */
+function isMountedByHand(record: CapabilityBindingRecord) {
+  return (
+    record.id !== "" &&
+    (record.sources.length === 0 ||
+      record.sources.some((source) => source.kind === "box" || source.kind === "manual"))
   );
 }
 
@@ -170,11 +187,13 @@ export function CapabilityListPanel({
   const mountedRefs = useMemo(
     () =>
       new Set(
-        data.entries.map((item) =>
-          item.capabilityType === "skill"
-            ? item.capabilityId
-            : `${item.boxId}/${item.capabilityId}`,
-        ),
+        data.entries
+          .filter(isMountedByHand)
+          .map((item) =>
+            item.capabilityType === "skill"
+              ? item.capabilityId
+              : `${item.boxId}/${item.capabilityId}`,
+          ),
       ),
     [data.entries],
   );
@@ -509,11 +528,14 @@ export function CapabilityListPanel({
               dataSource={pageItems}
               loading={loading || busy}
               pagination={false}
-              rowKey="id"
+              rowKey={rowKey}
               rowSelection={
                 canDelete
                   ? {
-                      getCheckboxProps: (record) => ({ disabled: !isReleasable(record) }),
+                      getCheckboxProps: (record) => ({
+                        disabled: !isReleasable(record),
+                        name: rowKey(record),
+                      }),
                       onChange: (keys) => setSelectedRowKeys(keys as string[]),
                       selectedRowKeys,
                     }

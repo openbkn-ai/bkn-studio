@@ -128,6 +128,33 @@ describe("capability-binding.service", () => {
     );
   });
 
+  it("keeps a model-referenced entry, which arrives without a binding id", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            id: "",
+            capability_type: "function",
+            box_id: "box-1",
+            capability_id: "tool-1",
+            name: "采购单风险跟进",
+            sources: [
+              { kind: "action_type", refs: [{ id: "at-1", name: "测试" }] },
+            ],
+          },
+        ],
+        total_count: 1,
+      },
+    });
+
+    const result = await listKnowledgeNetworkCapabilities("kn-1", { type: "function" });
+
+    expect(result.entries[0]).toMatchObject({ id: "", name: "采购单风险跟进" });
+    expect(result.entries[0]?.sources).toEqual([
+      { kind: "action_type", refs: [{ id: "at-1", name: "测试", property: undefined }] },
+    ]);
+  });
+
   it("addresses an MCP tool by server and tool name", async () => {
     postMock.mockResolvedValue({ data: { entries: [{ id: "binding-2" }] } });
 

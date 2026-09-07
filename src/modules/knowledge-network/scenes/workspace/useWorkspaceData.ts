@@ -43,7 +43,12 @@ import {
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
 
-const CAPABILITY_SECTION_LIMIT = 200;
+/**
+ * The backend appends model-referenced capabilities only to a page that reaches the end of the
+ * stored rows, so a short page would drop them. Ask for the largest page it accepts, which covers
+ * any real network in one read; the loop below stays for the pathological case.
+ */
+const CAPABILITY_SECTION_LIMIT = 1000;
 
 /** Enough pages for any real network; a truncated read would understate the nav counts. */
 const CAPABILITY_MAX_PAGES = 10;
