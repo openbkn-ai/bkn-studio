@@ -274,6 +274,23 @@ export function CapabilityMountModal({
     boxes.length > 0 &&
     boxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
 
+  /**
+   * Clicking a row's label toggles its checkbox. Without this only the checkbox itself responds,
+   * which reads as "the left half works and the right half does not".
+   */
+  const toggleKey = useCallback(
+    (key: string) => {
+      const next = new Set(checkedKeys);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      handleCheck([...next]);
+    },
+    [checkedKeys, handleCheck],
+  );
+
   /** Boxes with some, but not all, of their tools picked; antd renders these as a dash. */
   const halfCheckedBoxKeys = useMemo(
     () =>
@@ -553,6 +570,14 @@ export function CapabilityMountModal({
                     handleCheck(checked.map(String));
                   }}
                   onExpand={(keys) => setExpandedKeys(keys.map(String))}
+                  onSelect={(_keys, info) => {
+                    if (info.node.disabled) {
+                      return;
+                    }
+
+                    toggleKey(String(info.node.key));
+                  }}
+                  selectedKeys={[]}
                   treeData={treeData}
                 />
               )}

@@ -115,6 +115,14 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
       return;
     }
 
+    // Return where the visitor came from — a knowledge network's capability list links straight
+    // here, and sending it to the toolset's tool list strands them in another module. Skill and MCP
+    // detail already do this; the fixed path stays as the fallback for a direct hit.
+    if (window.history.length > 1) {
+      void navigate(-1);
+      return;
+    }
+
     void navigate(`/execution-factory/toolboxes/${boxId}/tools`);
   };
 
