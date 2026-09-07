@@ -35,7 +35,7 @@ import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task
 import { deleteBuildTask } from "@/modules/data-catalog/services/build-task.service";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
-import { formatCount, timeAgo } from "@/modules/data-catalog/lib/format";
+import { timeAgo } from "@/modules/data-catalog/lib/format";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import {
@@ -108,11 +108,6 @@ function buildStatusSummary(
   const parts = [
     formatEffectiveState(effective, t),
     t(`dataCatalog.modes.${effective.mode}`),
-    t("dataCatalog.indexWorkspace.indexedRowsShort", {
-      count: formatCount(
-        effective.mode === "streaming" ? effective.syncedCount : effective.totalCount,
-      ) as never,
-    }),
   ];
 
   if (effective.mode === "streaming") {
