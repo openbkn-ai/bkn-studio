@@ -53,6 +53,8 @@ export type CapabilityBindingRecord = {
    * panel falls back to.
    */
   sources: CapabilitySource[];
+  /** Set on function bindings: "openapi" is shown as an API, "function" as a code function. */
+  metadataType: CapabilityMetadataType | "";
   /** "missing" when the target is gone; otherwise the execution-factory status, or empty. */
   status: string;
   updateTime: string;
@@ -80,8 +82,12 @@ export type CapabilityBindingListResult = {
   totalCount: number;
 };
 
+/** What kind of tool a function binding points at; absent for skills and MCP tools. */
+export type CapabilityMetadataType = "function" | "openapi";
+
 export type CapabilityBindingListQuery = {
   boxId?: string;
+  metadataType?: CapabilityMetadataType;
   direction?: "asc" | "desc";
   limit?: number;
   offset?: number;

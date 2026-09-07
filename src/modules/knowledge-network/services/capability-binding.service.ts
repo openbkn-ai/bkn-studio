@@ -50,6 +50,7 @@ export async function listKnowledgeNetworkCapabilities(
         branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
         direction: query.direction ?? "desc",
         limit: query.limit ?? CAPABILITY_LIST_DEFAULT_LIMIT,
+        metadata_type: query.metadataType,
         offset: query.offset ?? 0,
         sort: query.sort ?? "create_time",
         type: query.type,

@@ -19,6 +19,8 @@ export type KnowledgeNetworkStatistics = {
   conceptGroupsTotal: number;
   /** Tool-level capability bindings; a whole-box mount counts once per expanded tool. */
   functionsTotal: number;
+  /** Bindings to OpenAPI toolsets; functionsTotal counts the code ones. */
+  apisTotal: number;
   /** Tools of MCP Servers bound to this network. */
   mcpToolsTotal: number;
   metricsTotal: number;

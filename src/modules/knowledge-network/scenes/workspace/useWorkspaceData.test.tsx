@@ -51,6 +51,7 @@ function createDetail(metricsTotal = 0): KnowledgeNetworkRecord {
       relationTypesTotal: 0,
       skillsTotal: 0,
       mcpToolsTotal: 0,
+      apisTotal: 0,
       functionsTotal: 0,
     },
     tags: [],

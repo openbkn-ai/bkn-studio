@@ -20,7 +20,6 @@ import type { SkillRecord } from "@/modules/execution-factory/types/skill";
 import type { ToolRecord } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import type { CapabilityToolKind } from "@/modules/knowledge-network/services/capability-tool-kind.service";
 import type {
   AttachCapabilityInput,
   CapabilityType,
@@ -72,8 +71,8 @@ type CapabilityMountModalProps = {
   onCancel: () => void;
   onSubmit: (inputs: AttachCapabilityInput[]) => Promise<void>;
   open: boolean;
-  /** Narrows the tool boxes offered to the section being mounted into. */
-  toolKind?: CapabilityToolKind;
+  /** Narrows the toolsets offered to the section being mounted into. */
+  toolKind?: "api" | "function";
 };
 
 export function CapabilityMountModal({

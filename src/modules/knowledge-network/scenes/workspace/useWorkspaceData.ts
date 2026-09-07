@@ -21,11 +21,6 @@ import {
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
-  loadToolBoxKinds,
-  resolveBindingKind,
-  type CapabilityToolKind,
-} from "@/modules/knowledge-network/services/capability-tool-kind.service";
-import {
   integrateWorkspaceMetrics,
   logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
@@ -93,22 +88,22 @@ async function listAllCapabilities(
 }
 
 /**
- * Tool bindings come back as one list whatever the tool is, so the split between the API and the
- * function section is done here, off the owning tool box's metadata type.
+ * Tool bindings come back as one list whatever the tool is; the backend tags each row with the kind
+ * of toolset it belongs to, the same line the workspace draws between its two lists. A row without
+ * the tag lands under functions, which is how functions_total counts it.
  */
 function splitToolBindings(
   result: CapabilityBindingListResult,
-  kinds: Map<string, CapabilityToolKind>,
-): Record<CapabilityToolKind, CapabilityBindingListResult> {
-  const entriesByKind: Record<CapabilityToolKind, CapabilityBindingListResult["entries"]> = {
+): Record<"api" | "function", CapabilityBindingListResult> {
+  const entriesByKind: Record<"api" | "function", CapabilityBindingListResult["entries"]> = {
     api: [],
     function: [],
   };
   result.entries.forEach((entry) => {
-    entriesByKind[resolveBindingKind(entry, kinds)].push(entry);
+    entriesByKind[entry.metadataType === "openapi" ? "api" : "function"].push(entry);
   });
 
-  const byKind = {} as Record<CapabilityToolKind, CapabilityBindingListResult>;
+  const byKind = {} as Record<"api" | "function", CapabilityBindingListResult>;
   (["api", "function"] as const).forEach((kind) => {
     const entries = entriesByKind[kind];
     const boxIds = new Set(entries.map((entry) => entry.boxId));
@@ -239,16 +234,7 @@ export function useWorkspaceData(
   }, [networkId]);
 
   const loadToolBindings = useCallback(async (targetNetworkId: string) => {
-    const [result, kinds] = await Promise.all([
-      listAllCapabilities(targetNetworkId, "function"),
-      // A failed catalogue read must not empty the lists: every binding then lands under functions.
-      loadToolBoxKinds().catch((error: unknown) => {
-        logServiceFallback("useWorkspaceData.capabilities.toolBoxKinds", error);
-        return new Map<string, CapabilityToolKind>();
-      }),
-    ]);
-
-    const split = splitToolBindings(result, kinds);
+    const split = splitToolBindings(await listAllCapabilities(targetNetworkId, "function"));
     setFunctions(split.function);
     setApis(split.api);
   }, []);
@@ -334,14 +320,7 @@ export function useWorkspaceData(
     clearSectionCache();
     setRecentObjects([]);
     void loadDetail();
-    // The nav counts for functions and APIs are a split of one binding list, which the detail
-    // statistics report as a single total, so the split has to be resolved before either page opens.
-    if (networkId) {
-      void loadToolBindings(networkId).catch((error: unknown) => {
-        logServiceFallback("useWorkspaceData.capabilities.navCounts", error);
-      });
-    }
-  }, [clearSectionCache, loadDetail, loadToolBindings, networkId]);
+  }, [clearSectionCache, loadDetail, networkId]);
 
   useEffect(() => {
     void loadSectionData(section);

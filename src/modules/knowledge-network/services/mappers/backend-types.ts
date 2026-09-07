@@ -39,6 +39,7 @@ export type BackendKnowledgeNetwork = {
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;
+    apis_total?: number;
     functions_total?: number;
     mcp_tools_total?: number;
     metrics_total?: number;

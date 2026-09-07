@@ -75,6 +75,27 @@ describe("capability-binding.service", () => {
     expect(config.params).toMatchObject({ branch: "main", type: "function" });
   });
 
+  it("reads the toolset kind the backend tags each binding with", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          { id: "b-1", capability_type: "function", metadata_type: "openapi" },
+          { id: "b-2", capability_type: "function", metadata_type: "function" },
+          { id: "b-3", capability_type: "function" },
+        ],
+        total_count: 3,
+      },
+    });
+
+    const result = await listKnowledgeNetworkCapabilities("kn-1", { type: "function" });
+
+    expect(result.entries.map((entry) => entry.metadataType)).toEqual([
+      "openapi",
+      "function",
+      "",
+    ]);
+  });
+
   it("treats a response without metadata_available as metadata being present", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
 

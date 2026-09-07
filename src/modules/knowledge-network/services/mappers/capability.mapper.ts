@@ -38,6 +38,7 @@ export type BackendCapabilityBinding = {
   description?: string;
   id?: string;
   kn_id?: string;
+  metadata_type?: string;
   name?: string;
   owner_name?: string;
   sources?: BackendCapabilitySource[];
@@ -126,6 +127,10 @@ export function mapCapabilityBinding(
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     description: item.description ?? "",
     id: item.id ?? "",
+    metadataType:
+      item.metadata_type === "openapi" || item.metadata_type === "function"
+        ? item.metadata_type
+        : "",
     name: item.name ?? "",
     sources: mapCapabilitySources(item.sources),
     status: item.status ?? "",

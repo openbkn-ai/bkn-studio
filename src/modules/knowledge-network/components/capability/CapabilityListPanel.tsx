@@ -23,7 +23,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { CapabilityMountModal } from "@/modules/knowledge-network/components/capability/CapabilityMountModal";
-import type { CapabilityToolKind } from "@/modules/knowledge-network/services/capability-tool-kind.service";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
   CAPABILITY_STATUS_MISSING,
@@ -146,7 +145,7 @@ export function CapabilityListPanel({
     : isMcp
       ? "mcp_tool"
       : "function";
-  const toolKind: CapabilityToolKind | undefined =
+  const toolKind: "api" | "function" | undefined =
     kind === "api" || kind === "function" ? kind : undefined;
 
   const filtered = useMemo(() => {

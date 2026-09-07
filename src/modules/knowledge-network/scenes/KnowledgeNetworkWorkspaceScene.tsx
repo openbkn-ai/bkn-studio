@@ -164,16 +164,14 @@ export function KnowledgeNetworkWorkspaceScene({
         key: "functions",
         label: t("knowledgeNetwork.workspaceFunctions"),
         icon: <CodeOutlined />,
-        // Counted from the split list rather than statistics.functionsTotal: the backend counts
-        // every tool binding as a function, APIs included.
-        count: workspaceData.functions.totalCount,
+        count: detail?.statistics.functionsTotal ?? 0,
       },
       {
         key: "apis",
         // Not ApiOutlined: relation types already own that icon in the group above.
         label: t("knowledgeNetwork.workspaceApis"),
         icon: <CloudServerOutlined />,
-        count: workspaceData.apis.totalCount,
+        count: detail?.statistics.apisTotal ?? 0,
       },
       {
         key: "mcp",
@@ -191,7 +189,7 @@ export function KnowledgeNetworkWorkspaceScene({
     );
 
     return items;
-  }, [activeNetworkId, detail, t, workspaceData.apis.totalCount, workspaceData.functions.totalCount]);
+  }, [activeNetworkId, detail, t]);
 
   const primaryNavItems = navigationItems.filter(
     (item) => item.key === "overview",
