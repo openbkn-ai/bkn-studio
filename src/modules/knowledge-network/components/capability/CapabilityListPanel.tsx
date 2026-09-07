@@ -76,12 +76,13 @@ const STATUS_LABEL_KEY: Record<string, string> = {
   unpublish: "capabilityStatusUnpublished",
 };
 
-const STATUS_TAG_COLOR: Record<string, string> = {
-  disabled: "default",
-  enabled: "success",
-  offline: "default",
-  published: "success",
-  unpublish: "warning",
+/** A dot carries the state without a tag's chrome; the column reads as data, not as badges. */
+const STATUS_TONE: Record<string, "muted" | "ok" | "warn"> = {
+  disabled: "muted",
+  enabled: "ok",
+  offline: "muted",
+  published: "ok",
+  unpublish: "warn",
 };
 
 /**
@@ -181,14 +182,9 @@ export function CapabilityListPanel({
 
   const renderSources = (record: CapabilityBindingRecord) => {
     if (record.sources.length === 0) {
-      // No provenance from the backend: the row can only be what this page itself mounted.
-      return (
-        <Tag>
-          {record.boundAsBox
-            ? t("knowledgeNetwork.capabilityBoundAsBox")
-            : t("knowledgeNetwork.capabilitySourceManual")}
-        </Tag>
-      );
+      // No provenance from the backend: the row can only be what this page itself mounted. Whether
+      // it came from one tool or a whole toolset needs no badge — it mounts and releases the same.
+      return <Tag>{t("knowledgeNetwork.capabilitySourceManual")}</Tag>;
     }
 
     return (
@@ -199,13 +195,7 @@ export function CapabilityListPanel({
             .filter(Boolean);
 
           if (source.kind === "manual" || source.kind === "box") {
-            return (
-              <Tag key={source.kind}>
-                {source.kind === "box"
-                  ? t("knowledgeNetwork.capabilityBoundAsBox")
-                  : t("knowledgeNetwork.capabilitySourceManual")}
-              </Tag>
-            );
+            return <Tag key={source.kind}>{t("knowledgeNetwork.capabilitySourceManual")}</Tag>;
           }
 
           return (
@@ -294,7 +284,10 @@ export function CapabilityListPanel({
         if (value === CAPABILITY_STATUS_MISSING) {
           return (
             <Tooltip title={t("knowledgeNetwork.capabilityStatusMissingHint")}>
-              <Tag color="error">{t("knowledgeNetwork.capabilityStatusMissing")}</Tag>
+              <span className={panelStyles.status}>
+                <span className={`${panelStyles.statusDot} ${panelStyles.statusError}`} />
+                {t("knowledgeNetwork.capabilityStatusMissing")}
+              </span>
             </Tooltip>
           );
         }
@@ -304,11 +297,19 @@ export function CapabilityListPanel({
         }
 
         const labelKey = STATUS_LABEL_KEY[value];
+        const tone = STATUS_TONE[value] ?? "muted";
+        const toneClass =
+          tone === "ok"
+            ? panelStyles.statusOk
+            : tone === "warn"
+              ? panelStyles.statusWarn
+              : panelStyles.statusMuted;
 
         return (
-          <Tag color={STATUS_TAG_COLOR[value] ?? "default"}>
+          <span className={panelStyles.status}>
+            <span className={`${panelStyles.statusDot} ${toneClass}`} />
             {labelKey ? t(`knowledgeNetwork.${labelKey}`) : value}
-          </Tag>
+          </span>
         );
       },
     },

@@ -32,6 +32,35 @@
   cursor: help;
 }
 
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.statusOk {
+  background: var(--color-success-text);
+}
+
+.statusWarn {
+  background: var(--color-warning-text);
+}
+
+.statusMuted {
+  background: var(--color-text-muted);
+}
+
+.statusError {
+  background: var(--color-error-text);
+}
+
 .sourceTags {
   display: inline-flex;
   flex-wrap: wrap;

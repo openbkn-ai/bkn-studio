@@ -63,7 +63,6 @@ export const capabilityPart = {
   capabilityStatusOffline: "Offline",
   capabilityStatusMissingHint:
     "The asset is gone from the execution factory: calls will not hit it. Release it or mount a replacement.",
-  capabilityBoundAsBox: "Whole toolset",
   capabilityMetadataUnavailable:
     "The execution factory is unreachable, so names and statuses are blank. The bindings themselves are intact — refresh later.",
   capabilityBoxTopUpTitle: "{{boxName}}: {{mounted}}/{{total}} tools mounted",

@@ -60,7 +60,6 @@ export const capabilityPart = {
   capabilityStatusUnpublished: "未发布",
   capabilityStatusOffline: "已下线",
   capabilityStatusMissingHint: "执行工厂中的资产已删除，调用时不会命中，请解绑或重新挂载。",
-  capabilityBoundAsBox: "整集挂载",
   capabilityMetadataUnavailable:
     "执行工厂暂时不可达，名称与状态取不到；挂载关系本身完好，稍后刷新即可。",
   capabilityBoxTopUpTitle: "{{boxName}}：{{mounted}}/{{total}} 个工具已挂载",
