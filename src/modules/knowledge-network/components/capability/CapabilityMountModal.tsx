@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Input, Modal, Table, Tag, Tree } from "antd";
+import { Alert, Checkbox, Input, Modal, Table, Tag, Tree } from "antd";
 import type { TableProps, TreeDataNode } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -212,6 +212,30 @@ export function CapabilityMountModal({
     [boxes, checkedKeys, loadBoxTools, mountableToolKeys, toolsByBox],
   );
 
+  /**
+   * The tree's own checkboxes only reach one box at a time, so mounting a whole catalogue would be
+   * a click per box. This selects every box — the same as ticking each one — or clears the lot.
+   */
+  const toggleAllBoxes = useCallback(
+    (checked: boolean) => {
+      if (!checked) {
+        setCheckedKeys([]);
+        return;
+      }
+
+      const keys = boxes.flatMap((box) => [
+        `${BOX_KEY_PREFIX}${box.boxId}`,
+        ...mountableToolKeys(box.boxId, toolsByBox[box.boxId] ?? []),
+      ]);
+      setCheckedKeys(keys);
+    },
+    [boxes, mountableToolKeys, toolsByBox],
+  );
+
+  const allBoxesChecked =
+    boxes.length > 0 &&
+    boxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.boxId}`));
+
   /** Boxes with some, but not all, of their tools picked; antd renders these as a dash. */
   const halfCheckedBoxKeys = useMemo(
     () =>
@@ -416,12 +440,26 @@ export function CapabilityMountModal({
       <div className={styles.picker}>
         {error ? <Alert message={error} showIcon type="error" /> : null}
 
-        <Input
-          allowClear
-          onChange={(event) => setKeyword(event.target.value)}
-          placeholder={t("knowledgeNetwork.capabilityPickerSearchPlaceholder")}
-          value={keyword}
-        />
+        <div className={styles.pickerToolbar}>
+          <Input
+            allowClear
+            className={styles.pickerSearch}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder={t("knowledgeNetwork.capabilityPickerSearchPlaceholder")}
+            value={keyword}
+          />
+          {isSkill ? null : (
+            <Checkbox
+              checked={allBoxesChecked}
+              className={styles.pickerSelectAll}
+              disabled={boxes.length === 0}
+              indeterminate={!allBoxesChecked && checkedKeys.length > 0}
+              onChange={(event) => toggleAllBoxes(event.target.checked)}
+            >
+              {t("knowledgeNetwork.capabilityPickerSelectAll")}
+            </Checkbox>
+          )}
+        </div>
 
         {isSkill ? (
           <Table

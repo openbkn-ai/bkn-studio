@@ -21,6 +21,21 @@
   gap: 12px;
 }
 
+.pickerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pickerSearch {
+  flex: 1 1 auto;
+}
+
+.pickerSelectAll {
+  flex: none;
+  white-space: nowrap;
+}
+
 .pickerTree {
   max-height: 380px;
   overflow: auto;

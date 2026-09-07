@@ -1,0 +1,30 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/*
+ * A mounted capability is only half the story: the asset itself is still created, edited and
+ * published in the execution factory. Say so under the title rather than leaving people to guess
+ * what mounting bought them.
+ */
+.usageTip {
+  margin: 4px 0 0;
+  max-width: 720px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.manageLink {
+  flex: none;
+}

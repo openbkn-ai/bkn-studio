@@ -15,6 +15,13 @@ export const capabilityPart = {
     "Mount HTTP interface tools from the execution factory. Same binding as a function; only the owning tool box differs — OpenAPI rather than code.",
   capabilitySkillsDescription:
     "Mount published SKILL packages. Only mounted SKILLs are recalled for this network.",
+  capabilityManageInFactory: "Manage in execution factory",
+  capabilityUsageTipFunctions:
+    "Once mounted, agents and SKILLs of this network call these functions by capability name — no URL or token in the calling code. Creating, editing and publishing a function stays in the execution factory.",
+  capabilityUsageTipApis:
+    "Once mounted, agents and SKILLs of this network call these interfaces by capability name, with identity and trace attached automatically. Registering and publishing them stays in the execution factory.",
+  capabilityUsageTipSkills:
+    "Only mounted SKILLs are recalled for this network; an unmounted one is neither discoverable nor callable. Importing, updating and publishing a SKILL stays in the execution factory.",
   capabilityMountFunctions: "Mount function",
   capabilityMountApis: "Mount API",
   capabilityMountSkills: "Mount SKILL",
@@ -24,7 +31,9 @@ export const capabilityPart = {
   capabilityDetachConfirmContent:
     "The network can no longer call it. The asset itself stays untouched in the execution factory.",
   capabilityDetachSuccess: "Released",
-  capabilityMountSuccess: "Mounted {{count}} item(s)",
+  capabilityMountSuccess: "Mounted {{count}} capabilities",
+  capabilityMountSuccess_one: "Mounted {{count}} capability",
+  capabilityMountSuccess_other: "Mounted {{count}} capabilities",
   capabilityMountNothingNew: "Everything selected is already mounted",
   capabilityColumnName: "Name",
   capabilityColumnBox: "Tool box",
@@ -38,7 +47,9 @@ export const capabilityPart = {
   capabilityMetadataUnavailable:
     "The execution factory is unreachable, so names and statuses are blank. The bindings themselves are intact — refresh later.",
   capabilityBoxTopUpTitle: "{{boxName}}: {{mounted}}/{{total}} tools mounted",
-  capabilityBoxTopUpAction: "Mount {{count}} new tool(s)",
+  capabilityBoxTopUpAction: "Mount {{count}} new tools",
+  capabilityBoxTopUpAction_one: "Mount {{count}} new tool",
+  capabilityBoxTopUpAction_other: "Mount {{count}} new tools",
   capabilityBoxMissing: "Tool box deleted from the execution factory",
   capabilityEmptyFunctions:
     "No function mounted yet. Use Mount function to pick from a code tool box.",
@@ -53,7 +64,10 @@ export const capabilityPart = {
   capabilityPickerSelected: "{{count}} selected",
   capabilityPickerMounted: "Mounted",
   capabilityPickerSelectWholeBox: "Whole box",
-  capabilityPickerBoxToolCount: "{{count}} tool(s)",
+  capabilityPickerSelectAll: "Select all",
+  capabilityPickerBoxToolCount: "{{count}} tools",
+  capabilityPickerBoxToolCount_one: "{{count}} tool",
+  capabilityPickerBoxToolCount_other: "{{count}} tools",
   capabilityPickerWholeBoxHint:
     "A whole-box mount is expanded at write time into every tool the box holds now. Tools added later are not inherited.",
   capabilityPickerEmptySkills: "No SKILL available to mount.",

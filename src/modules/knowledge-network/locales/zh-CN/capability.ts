@@ -15,6 +15,13 @@ export const capabilityPart = {
     "挂载执行工厂的 HTTP 接口类工具。与函数同属工具绑定，区别只在工具箱是 OpenAPI 类还是代码函数类。",
   capabilitySkillsDescription:
     "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
+  capabilityManageInFactory: "去执行工厂管理",
+  capabilityUsageTipFunctions:
+    "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些函数，不需要在代码里配 URL 或 Token。函数本身的新建、改代码与发布仍在执行工厂。",
+  capabilityUsageTipApis:
+    "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些接口，调用时自动带上身份与 Trace。接口的注册与发布仍在执行工厂。",
+  capabilityUsageTipSkills:
+    "挂载后，本网络检索技能时只会召回这里挂过的 SKILL；没挂的不可见也不可调用。SKILL 的导入、更新与发布仍在执行工厂。",
   capabilityMountFunctions: "挂载函数",
   capabilityMountApis: "挂载接口",
   capabilityMountSkills: "挂载 SKILL",
@@ -25,6 +32,8 @@ export const capabilityPart = {
     "解绑后本知识网络不再能调用它，执行工厂中的资产本身不受影响。",
   capabilityDetachSuccess: "已解绑",
   capabilityMountSuccess: "已挂载 {{count}} 项",
+  capabilityMountSuccess_one: "已挂载 {{count}} 项",
+  capabilityMountSuccess_other: "已挂载 {{count}} 项",
   capabilityMountNothingNew: "所选能力已全部挂载",
   capabilityColumnName: "名称",
   capabilityColumnBox: "工具箱",
@@ -38,6 +47,8 @@ export const capabilityPart = {
     "执行工厂暂时不可达，名称与状态取不到；挂载关系本身完好，稍后刷新即可。",
   capabilityBoxTopUpTitle: "{{boxName}}：{{mounted}}/{{total}} 个工具已挂载",
   capabilityBoxTopUpAction: "补挂 {{count}} 个新增工具",
+  capabilityBoxTopUpAction_one: "补挂 {{count}} 个新增工具",
+  capabilityBoxTopUpAction_other: "补挂 {{count}} 个新增工具",
   capabilityBoxMissing: "工具箱已从执行工厂删除",
   capabilityEmptyFunctions: "还没有挂载函数。点「挂载函数」从执行工厂的函数工具箱中选。",
   capabilityEmptyApis: "还没有挂载接口。点「挂载接口」从执行工厂的 OpenAPI 工具箱中选。",
@@ -51,7 +62,10 @@ export const capabilityPart = {
   capabilityPickerSelected: "已选 {{count}} 项",
   capabilityPickerMounted: "已挂载",
   capabilityPickerSelectWholeBox: "整箱挂载",
+  capabilityPickerSelectAll: "全选",
   capabilityPickerBoxToolCount: "{{count}} 个工具",
+  capabilityPickerBoxToolCount_one: "{{count}} 个工具",
+  capabilityPickerBoxToolCount_other: "{{count}} 个工具",
   capabilityPickerWholeBoxHint:
     "整箱挂载在写入时展开为该箱当前全部工具；箱内后续新增的工具不会自动挂载。",
   capabilityPickerEmptySkills: "平台上还没有可挂载的 SKILL。",

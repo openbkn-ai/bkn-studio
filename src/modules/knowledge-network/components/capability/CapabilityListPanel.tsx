@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  ExportOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { Alert, Empty, Input, Table, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
@@ -26,6 +32,8 @@ import {
   type CapabilityType,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
+
+import panelStyles from "./CapabilityListPanel.module.css";
 
 /**
  * One panel serves three nav entries. SKILLs and tools are different capability types on the wire;
@@ -215,10 +223,33 @@ export function CapabilityListPanel({
 
   return (
     <>
-      <section className={styles.page}>
-        <h2 className={styles.title}>
-          {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
-        </h2>
+      {/* objectTypePage carries the console's list-page scale: 16px title, square controls, 14px
+          table text. Without it this page renders a size larger than metrics or object types. */}
+      <section className={`${styles.page} ${styles.objectTypePage}`}>
+        <div className={panelStyles.header}>
+          <div>
+            <h2 className={styles.title}>
+              {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
+            </h2>
+            <p className={panelStyles.usageTip}>
+              {t(`knowledgeNetwork.capabilityUsageTip${TITLE_KEY[kind]}`)}
+            </p>
+          </div>
+          <AppButton
+            className={panelStyles.manageLink}
+            icon={<ExportOutlined />}
+            onClick={() => {
+              void navigate(
+                isSkill
+                  ? "/execution-factory/units?activeTab=skill"
+                  : "/execution-factory/units?activeTab=toolbox",
+              );
+            }}
+            type="link"
+          >
+            {t("knowledgeNetwork.capabilityManageInFactory")}
+          </AppButton>
+        </div>
 
         {data.metadataAvailable ? null : (
           <Alert
