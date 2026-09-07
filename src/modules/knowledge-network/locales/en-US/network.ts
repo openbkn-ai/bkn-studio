@@ -163,6 +163,7 @@ export const networkPart = {
     workspaceMetrics: "Metrics",
     workspaceFunctions: "Functions",
     workspaceApis: "APIs",
+    workspaceMcpTools: "MCP",
     workspaceSkills: "SKILLs",
     workspaceDynamicModel: "Dynamic model",
     workspaceObjectTypes: "Object types",

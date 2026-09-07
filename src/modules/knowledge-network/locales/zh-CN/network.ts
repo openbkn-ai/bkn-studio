@@ -157,6 +157,7 @@ export const networkPart = {
     workspaceMetrics: "指标",
     workspaceFunctions: "函数",
     workspaceApis: "API",
+    workspaceMcpTools: "MCP",
     workspaceSkills: "SKILLs",
     workspaceDynamicModel: "动力模型",
     workspaceObjectTypes: "对象类",

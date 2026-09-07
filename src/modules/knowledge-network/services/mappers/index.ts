@@ -65,6 +65,7 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
       metricsTotal: item.statistics?.metrics_total ?? 0,
       skillsTotal: item.statistics?.skills_total ?? 0,
       functionsTotal: item.statistics?.functions_total ?? 0,
+      mcpToolsTotal: item.statistics?.mcp_tools_total ?? 0,
     },
   };
 }

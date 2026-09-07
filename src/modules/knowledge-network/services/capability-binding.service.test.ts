@@ -107,6 +107,24 @@ describe("capability-binding.service", () => {
     );
   });
 
+  it("addresses an MCP tool by server and tool name", async () => {
+    postMock.mockResolvedValue({ data: { entries: [{ id: "binding-2" }] } });
+
+    await attachKnowledgeNetworkCapabilities("kn-1", [
+      { boxId: "mcp-1", capabilityId: "search", capabilityType: "mcp_tool" },
+    ]);
+
+    const [, body] = postMock.mock.calls[0] as [
+      string,
+      { capabilities: Record<string, unknown>[] },
+    ];
+    expect(body.capabilities[0]).toMatchObject({
+      box_id: "mcp-1",
+      capability_id: "search",
+      capability_type: "mcp_tool",
+    });
+  });
+
   it("releases bindings as one comma-separated batch", async () => {
     deleteMock.mockResolvedValue({ data: null });
 

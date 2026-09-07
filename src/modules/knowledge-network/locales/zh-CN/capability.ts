@@ -10,6 +10,9 @@ export const capabilityPart = {
   capabilityFunctionsDescription:
     "挂载执行工厂的工具，供本知识网络的 Agent 与 SKILL 受管调用。绑定的是工具，工具集只是选择时的分组。",
   capabilitySkillsTitle: "SKILLs",
+  capabilityMcpToolsTitle: "MCP",
+  capabilityMcpToolsDescription:
+    "挂载 MCP 服务里的工具。按工具名寻址，调用走 MCP 协议，与工具集里的函数、API 是两条链路。",
   capabilityApisTitle: "API",
   capabilityApisDescription:
     "挂载执行工厂里 OpenAPI 工具集中的 API。与函数同属工具绑定，区别只在工具集是 OpenAPI 类还是代码函数类。",
@@ -19,12 +22,15 @@ export const capabilityPart = {
   capabilityUsageTipLabel: "使用说明",
   capabilityUsageTipFunctions:
     "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些函数，不需要在代码里配 URL 或 Token。函数本身的新建、改代码与发布仍在执行工厂。",
+  capabilityUsageTipMcpTools:
+    "挂载后，本网络的 Agent 与 SKILL 可调用这些 MCP 工具，调用经 MCP 代理下发。MCP 服务的注册与发布仍在执行工厂。",
   capabilityUsageTipApis:
     "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些 API，调用时自动带上身份与 Trace。API 的注册与发布仍在执行工厂。",
   capabilityUsageTipSkills:
     "挂载后，本网络检索技能时只会召回这里挂过的 SKILL；没挂的不可见也不可调用。SKILL 的导入、更新与发布仍在执行工厂。",
   capabilityMountFunctions: "挂载函数",
   capabilityMountApis: "挂载 API",
+  capabilityMountMcpTools: "挂载 MCP 工具",
   capabilityMountSkills: "挂载 SKILL",
   capabilityDetach: "解绑",
   capabilityDetachSelected: "解绑所选",
@@ -37,7 +43,7 @@ export const capabilityPart = {
   capabilityMountSuccess_other: "已挂载 {{count}} 项",
   capabilityMountNothingNew: "所选能力已全部挂载",
   capabilityColumnName: "名称",
-  capabilityColumnBox: "工具集",
+  capabilityColumnBox: "工具集 / MCP 服务",
   capabilityColumnStatus: "状态",
   capabilityColumnComment: "备注",
   capabilityColumnMountTime: "挂载时间",
@@ -52,6 +58,7 @@ export const capabilityPart = {
   capabilityBoxTopUpAction_other: "补挂 {{count}} 个新增工具",
   capabilityBoxMissing: "工具集已从执行工厂删除",
   capabilityEmptyFunctions: "还没有挂载函数。点「挂载函数」从执行工厂的函数工具集中选。",
+  capabilityEmptyMcpTools: "还没有挂载 MCP 工具。点「挂载 MCP 工具」从执行工厂的 MCP 服务中选。",
   capabilityEmptyApis: "还没有挂载 API。点「挂载 API」从执行工厂的 OpenAPI 工具集中选。",
   capabilityEmptySkills: "还没有挂载 SKILL。点「挂载 SKILL」从平台技能中选。",
   capabilitySearchPlaceholder: "搜索名称或 ID",
@@ -59,6 +66,7 @@ export const capabilityPart = {
   capabilityPickerSkillTitle: "挂载 SKILL",
   capabilityPickerFunctionTitle: "挂载函数",
   capabilityPickerApiTitle: "挂载 API",
+  capabilityPickerMcpTitle: "挂载 MCP 工具",
   capabilityPickerSearchPlaceholder: "搜索名称",
   capabilityPickerSelected: "已选 {{count}} 项",
   capabilityPickerMounted: "已挂载",
@@ -71,6 +79,7 @@ export const capabilityPart = {
     "整集挂载在写入时展开为该工具集当前全部工具；集内后续新增的工具不会自动挂载。",
   capabilityPickerEmptySkills: "平台上还没有可挂载的 SKILL。",
   capabilityPickerEmptyFunctions: "执行工厂里还没有可挂载的函数工具。",
+  capabilityPickerEmptyMcpTools: "执行工厂里还没有可挂载的 MCP 工具。",
   capabilityPickerEmptyApis: "执行工厂里还没有可挂载的 API 工具。",
   capabilityPickerConfirm: "挂载",
   capabilityErrorTargetNotFound: "目标能力不存在，可能已在执行工厂中删除。",

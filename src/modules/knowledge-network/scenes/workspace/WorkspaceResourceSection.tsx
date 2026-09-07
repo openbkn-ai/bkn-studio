@@ -31,6 +31,21 @@ import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/u
 
 type WorkspaceData = ReturnType<typeof useWorkspaceData>;
 
+/** The three capability sections differ only in what they mount; one panel serves all of them. */
+const CAPABILITY_SECTION_KIND = {
+  apis: "api",
+  functions: "function",
+  mcp: "mcp",
+  skills: "skill",
+} as const;
+
+const CAPABILITY_SECTION_TYPE = {
+  apis: "function",
+  functions: "function",
+  mcp: "mcp_tool",
+  skills: "skill",
+} as const;
+
 type WorkspaceResourceSectionProps = {
   canDelete: boolean;
   canModify: boolean;
@@ -152,11 +167,18 @@ export function WorkspaceResourceSection({
       );
     case "functions":
     case "apis":
+    case "mcp":
     case "skills": {
-      const kind = section === "skills" ? "skill" : section === "apis" ? "api" : "function";
-      const capabilityType = kind === "skill" ? "skill" : "function";
+      const kind = CAPABILITY_SECTION_KIND[section];
+      const capabilityType = CAPABILITY_SECTION_TYPE[section];
       const sectionData =
-        section === "skills" ? data.skills : section === "apis" ? data.apis : data.functions;
+        section === "skills"
+          ? data.skills
+          : section === "mcp"
+            ? data.mcpTools
+            : section === "apis"
+              ? data.apis
+              : data.functions;
 
       return (
         <CapabilityListPanel

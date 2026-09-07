@@ -74,6 +74,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       conceptGroupsTotal: 6,
       metricsTotal: 9,
       skillsTotal: 0,
+      mcpToolsTotal: 0,
       functionsTotal: 0,
     },
   },
@@ -98,6 +99,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       conceptGroupsTotal: 4,
       metricsTotal: 6,
       skillsTotal: 0,
+      mcpToolsTotal: 0,
       functionsTotal: 0,
     },
   },
@@ -122,6 +124,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       conceptGroupsTotal: 5,
       metricsTotal: 8,
       skillsTotal: 0,
+      mcpToolsTotal: 0,
       functionsTotal: 0,
     },
   },
@@ -1256,6 +1259,7 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
   const bindings = mockCapabilityBindings[networkId] ?? [];
   const skillCount = bindings.filter((item) => item.capabilityType === "skill").length;
   const functionCount = bindings.filter((item) => item.capabilityType === "function").length;
+  const mcpToolCount = bindings.filter((item) => item.capabilityType === "mcp_tool").length;
 
   mockKnowledgeNetworks = mockKnowledgeNetworks.map((item) =>
     item.id === networkId
@@ -1271,6 +1275,7 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
             metricsTotal: metricCount,
             objectTypesTotal: objectTypeCount,
             skillsTotal: skillCount,
+            mcpToolsTotal: mcpToolCount,
             relationTypesTotal: relationTypeCount,
           },
         }

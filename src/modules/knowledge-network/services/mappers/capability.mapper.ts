@@ -63,7 +63,14 @@ export type BackendAttachCapabilityEntry = {
 };
 
 function mapCapabilityType(value: string | undefined): CapabilityType {
-  return value === "function" ? "function" : "skill";
+  switch (value) {
+    case "function":
+      return "function";
+    case "mcp_tool":
+      return "mcp_tool";
+    default:
+      return "skill";
+  }
 }
 
 export function mapCapabilityBinding(

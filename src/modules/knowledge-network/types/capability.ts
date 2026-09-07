@@ -7,17 +7,18 @@
 
 /**
  * A knowledge network binds capabilities that the execution factory owns: a Skill by its id, a
- * Function by the pair of its tool box and tool. The binding stores a reference only — name,
- * description and status are backfilled by the backend from the execution factory on read.
+ * Function by the pair of its toolset and tool, an MCP tool by its Server and tool name. The
+ * binding stores a reference only — name, description and status are backfilled by the backend
+ * from the execution factory on read.
  */
-export type CapabilityType = "function" | "skill";
+export type CapabilityType = "function" | "mcp_tool" | "skill";
 
 /** Marks a binding whose target is gone from the execution factory. Reported, never auto-deleted. */
 export const CAPABILITY_STATUS_MISSING = "missing";
 
 export type CapabilityBindingRecord = {
   boundAsBox: boolean;
-  /** Tool box of a function binding; empty for a skill. */
+  /** Toolset of a function binding, MCP Server of an mcp_tool binding; empty for a skill. */
   boxId: string;
   boxName: string;
   branch: string;

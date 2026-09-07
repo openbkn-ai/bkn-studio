@@ -20,6 +20,7 @@ export type KnowledgeNetworkWorkspaceSection =
   | "metrics"
   | "functions"
   | "apis"
+  | "mcp"
   | "skills";
 
 export type KnowledgeNetworkWorkspaceSceneProps = {

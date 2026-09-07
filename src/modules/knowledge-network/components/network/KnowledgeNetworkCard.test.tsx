@@ -34,6 +34,7 @@ function createRecord(operations?: string[]): KnowledgeNetworkRecord {
       conceptGroupsTotal: 0,
       metricsTotal: 0,
       skillsTotal: 0,
+      mcpToolsTotal: 0,
       functionsTotal: 0,
     },
   };

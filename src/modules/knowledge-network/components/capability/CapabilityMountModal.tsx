@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { listMcps, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
 import { listSkills } from "@/modules/execution-factory/services/skill.service";
 import { listTools } from "@/modules/execution-factory/services/tool.service";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
@@ -55,6 +56,15 @@ async function collectPages<T>(
   return items;
 }
 
+/**
+ * Both tool sources are a container holding named tools, so the tree works off one shape: a toolset
+ * with its tools, or an MCP Server with the tools it exposes. What differs is only how a tool is
+ * addressed — by tool_id inside a box, by name inside a Server — which is what `id` carries.
+ */
+type PickerContainer = { id: string; name: string; toolCount?: number };
+
+type PickerTool = { description?: string; id: string; name: string; status?: string };
+
 type CapabilityMountModalProps = {
   capabilityType: CapabilityType;
   /** Skill ids, or "{boxId}/{toolId}" for tools, already bound to this network. */
@@ -76,13 +86,14 @@ export function CapabilityMountModal({
 }: CapabilityMountModalProps) {
   const { t } = useTranslation();
   const isSkill = capabilityType === "skill";
+  const isMcp = capabilityType === "mcp_tool";
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skills, setSkills] = useState<SkillRecord[]>([]);
-  const [boxes, setBoxes] = useState<ToolboxRecord[]>([]);
-  const [toolsByBox, setToolsByBox] = useState<Record<string, ToolRecord[]>>({});
+  const [boxes, setBoxes] = useState<PickerContainer[]>([]);
+  const [toolsByBox, setToolsByBox] = useState<Record<string, PickerTool[]>>({});
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -108,15 +119,28 @@ export function CapabilityMountModal({
             listSkills({ page, pageSize: PICKER_PAGE_SIZE, status: "published" }),
           );
           setSkills(items);
+        } else if (isMcp) {
+          // Only a published Server can be mounted, same rule the backend applies on write.
+          const servers = await collectPages((page) =>
+            listMcps({ page, pageSize: PICKER_PAGE_SIZE, status: "published" }),
+          );
+          setBoxes(servers.map((server) => ({ id: server.mcpId, name: server.name })));
         } else {
           const items = await collectPages((page) =>
             listToolboxes({ page, pageSize: PICKER_PAGE_SIZE }),
           );
           const wanted = toolKind ?? "function";
           setBoxes(
-            items.filter(
-              (box) => (box.metadataType === "openapi" ? "api" : "function") === wanted,
-            ),
+            items
+              .filter(
+                (box: ToolboxRecord) =>
+                  (box.metadataType === "openapi" ? "api" : "function") === wanted,
+              )
+              .map((box: ToolboxRecord) => ({
+                id: box.boxId,
+                name: box.name,
+                toolCount: box.toolCount,
+              })),
           );
         }
       } catch (requestError) {
@@ -125,7 +149,7 @@ export function CapabilityMountModal({
         setLoading(false);
       }
     })();
-  }, [isSkill, open, toolKind]);
+  }, [isMcp, isSkill, open, toolKind]);
 
   const isToolMounted = useCallback(
     (boxId: string, toolId: string) => mountedRefs.has(`${boxId}/${toolId}`),
@@ -134,10 +158,10 @@ export function CapabilityMountModal({
 
   /** Tools a whole-box mount would actually add: the ones this network does not hold yet. */
   const mountableToolKeys = useCallback(
-    (boxId: string, tools: ToolRecord[]) =>
+    (boxId: string, tools: PickerTool[]) =>
       tools
-        .filter((tool) => !isToolMounted(boxId, tool.toolId))
-        .map((tool) => `${TOOL_KEY_PREFIX}${boxId}/${tool.toolId}`),
+        .filter((tool) => !isToolMounted(boxId, tool.id))
+        .map((tool) => `${TOOL_KEY_PREFIX}${boxId}/${tool.id}`),
     [isToolMounted],
   );
 
@@ -148,9 +172,23 @@ export function CapabilityMountModal({
       }
 
       try {
-        const items = await collectPages((page) =>
-          listTools(boxId, { page, pageSize: PICKER_PAGE_SIZE }),
-        );
+        const items = isMcp
+          ? (await listMcpTools(boxId)).map((tool) => ({
+              description: tool.description,
+              // An MCP tool is addressed by name; that is what the binding stores.
+              id: tool.name,
+              name: tool.name,
+            }))
+          : (
+              await collectPages((page: number) =>
+                listTools(boxId, { page, pageSize: PICKER_PAGE_SIZE }),
+              )
+            ).map((tool: ToolRecord) => ({
+              description: tool.description,
+              id: tool.toolId,
+              name: tool.name,
+              status: tool.status,
+            }));
         setToolsByBox((current) => ({ ...current, [boxId]: items }));
         // A box checked before its tools arrived still means "all of them": tick them on arrival,
         // otherwise expanding a checked box shows every child unticked.
@@ -164,7 +202,7 @@ export function CapabilityMountModal({
         setError(extractRequestErrorMessage(requestError));
       }
     },
-    [mountableToolKeys, toolsByBox],
+    [isMcp, mountableToolKeys, toolsByBox],
   );
 
   /**
@@ -180,14 +218,14 @@ export function CapabilityMountModal({
       const next = new Set(nextKeys);
 
       boxes.forEach((box) => {
-        const boxKey = `${BOX_KEY_PREFIX}${box.boxId}`;
-        const tools = toolsByBox[box.boxId];
-        const childKeys = mountableToolKeys(box.boxId, tools ?? []);
+        const boxKey = `${BOX_KEY_PREFIX}${box.id}`;
+        const tools = toolsByBox[box.id];
+        const childKeys = mountableToolKeys(box.id, tools ?? []);
 
         if (!previous.has(boxKey) && next.has(boxKey)) {
           childKeys.forEach((key) => next.add(key));
           if (!tools) {
-            void loadBoxTools(box.boxId);
+            void loadBoxTools(box.id);
           }
           return;
         }
@@ -224,8 +262,8 @@ export function CapabilityMountModal({
       }
 
       const keys = boxes.flatMap((box) => [
-        `${BOX_KEY_PREFIX}${box.boxId}`,
-        ...mountableToolKeys(box.boxId, toolsByBox[box.boxId] ?? []),
+        `${BOX_KEY_PREFIX}${box.id}`,
+        ...mountableToolKeys(box.id, toolsByBox[box.id] ?? []),
       ]);
       setCheckedKeys(keys);
     },
@@ -234,23 +272,23 @@ export function CapabilityMountModal({
 
   const allBoxesChecked =
     boxes.length > 0 &&
-    boxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.boxId}`));
+    boxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
 
   /** Boxes with some, but not all, of their tools picked; antd renders these as a dash. */
   const halfCheckedBoxKeys = useMemo(
     () =>
       boxes
         .filter((box) => {
-          const boxKey = `${BOX_KEY_PREFIX}${box.boxId}`;
+          const boxKey = `${BOX_KEY_PREFIX}${box.id}`;
           if (checkedKeys.includes(boxKey)) {
             return false;
           }
 
-          const childKeys = mountableToolKeys(box.boxId, toolsByBox[box.boxId] ?? []);
+          const childKeys = mountableToolKeys(box.id, toolsByBox[box.id] ?? []);
 
           return childKeys.some((key) => checkedKeys.includes(key));
         })
-        .map((box) => `${BOX_KEY_PREFIX}${box.boxId}`),
+        .map((box) => `${BOX_KEY_PREFIX}${box.id}`),
     [boxes, checkedKeys, mountableToolKeys, toolsByBox],
   );
 
@@ -258,14 +296,14 @@ export function CapabilityMountModal({
     const trimmed = keyword.trim().toLowerCase();
 
     return boxes.reduce<TreeDataNode[]>((nodes, box) => {
-        const tools = toolsByBox[box.boxId];
+        const tools = toolsByBox[box.id];
         const boxMatches = !trimmed || box.name.toLowerCase().includes(trimmed);
         const matchedTools = (tools ?? []).filter(
           (tool) =>
             !trimmed ||
             boxMatches ||
             tool.name.toLowerCase().includes(trimmed) ||
-            tool.toolId.toLowerCase().includes(trimmed),
+            tool.id.toLowerCase().includes(trimmed),
         );
 
         if (trimmed && !boxMatches && matchedTools.length === 0) {
@@ -275,15 +313,15 @@ export function CapabilityMountModal({
         nodes.push({
           children: tools
             ? matchedTools.map((tool) => {
-                const mounted = isToolMounted(box.boxId, tool.toolId);
+                const mounted = isToolMounted(box.id, tool.id);
 
                 return {
                   disabled: mounted,
                   isLeaf: true,
-                  key: `${TOOL_KEY_PREFIX}${box.boxId}/${tool.toolId}`,
+                  key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
                   title: (
                     <span className={styles.pickerNode}>
-                      <span>{tool.name || tool.toolId}</span>
+                      <span>{tool.name || tool.id}</span>
                       {mounted ? (
                         <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
                       ) : null}
@@ -295,7 +333,7 @@ export function CapabilityMountModal({
                 } satisfies TreeDataNode;
               })
             : undefined,
-          key: `${BOX_KEY_PREFIX}${box.boxId}`,
+          key: `${BOX_KEY_PREFIX}${box.id}`,
           title: (
             <span className={styles.pickerNode}>
               <span>{box.name}</span>
@@ -332,7 +370,7 @@ export function CapabilityMountModal({
       return total;
     }
 
-    return total + (boxes.find((box) => box.boxId === boxId)?.toolCount ?? 1);
+    return total + (boxes.find((box) => box.id === boxId)?.toolCount ?? 1);
   }, 0);
   const selectedCount = isSkill
     ? selectedSkillIds.length
@@ -350,7 +388,7 @@ export function CapabilityMountModal({
       ...checkedBoxIds.map((boxId) => ({
         allTools: true,
         boxId,
-        capabilityType: "function" as const,
+        capabilityType,
       })),
       ...checkedToolRefs.map((ref) => {
         const [boxId, toolId] = ref.split("/");
@@ -358,7 +396,7 @@ export function CapabilityMountModal({
         return {
           boxId: boxId ?? "",
           capabilityId: toolId ?? "",
-          capabilityType: "function" as const,
+          capabilityType,
         };
       }),
     ];
@@ -395,9 +433,11 @@ export function CapabilityMountModal({
 
   const title = isSkill
     ? t("knowledgeNetwork.capabilityPickerSkillTitle")
-    : toolKind === "api"
-      ? t("knowledgeNetwork.capabilityPickerApiTitle")
-      : t("knowledgeNetwork.capabilityPickerFunctionTitle");
+    : isMcp
+      ? t("knowledgeNetwork.capabilityPickerMcpTitle")
+      : toolKind === "api"
+        ? t("knowledgeNetwork.capabilityPickerApiTitle")
+        : t("knowledgeNetwork.capabilityPickerFunctionTitle");
 
   return (
     <Modal
@@ -492,9 +532,11 @@ export function CapabilityMountModal({
             <div className={styles.pickerTree}>
               {treeData.length === 0 && !loading ? (
                 <div className={styles.pickerEmpty}>
-                  {toolKind === "api"
-                    ? t("knowledgeNetwork.capabilityPickerEmptyApis")
-                    : t("knowledgeNetwork.capabilityPickerEmptyFunctions")}
+                  {isMcp
+                    ? t("knowledgeNetwork.capabilityPickerEmptyMcpTools")
+                    : toolKind === "api"
+                      ? t("knowledgeNetwork.capabilityPickerEmptyApis")
+                      : t("knowledgeNetwork.capabilityPickerEmptyFunctions")}
                 </div>
               ) : (
                 <Tree

@@ -176,6 +176,13 @@ export function KnowledgeNetworkWorkspaceScene({
         count: workspaceData.apis.totalCount,
       },
       {
+        key: "mcp",
+        label: t("knowledgeNetwork.workspaceMcpTools"),
+        icon: <ForkOutlined />,
+        // Backend counts these on its own: mcp_tool is a capability type of its own, so no split.
+        count: detail?.statistics.mcpToolsTotal ?? 0,
+      },
+      {
         key: "skills",
         label: t("knowledgeNetwork.workspaceSkills"),
         icon: <SkillsSparkIcon />,
@@ -208,6 +215,7 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "metrics" ||
       item.key === "functions" ||
       item.key === "apis" ||
+      item.key === "mcp" ||
       item.key === "skills",
   );
 

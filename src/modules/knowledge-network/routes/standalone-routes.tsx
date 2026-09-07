@@ -142,6 +142,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("apis"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/mcp",
+    {
+      descriptionKey: "knowledgeNetwork.capabilityMcpToolsDescription",
+      titleKey: "knowledgeNetwork.workspaceMcpTools",
+    },
+    workspaceSectionPage("mcp"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/skills",
     {
       descriptionKey: "knowledgeNetwork.capabilitySkillsDescription",

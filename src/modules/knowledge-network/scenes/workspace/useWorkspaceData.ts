@@ -31,6 +31,7 @@ import {
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
   CapabilityBindingListResult,
+  CapabilityType,
   ConceptGroupRecord,
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -59,7 +60,7 @@ const CAPABILITY_MAX_PAGES = 10;
  */
 async function listAllCapabilities(
   networkId: string,
-  type: "function" | "skill",
+  type: CapabilityType,
 ): Promise<CapabilityBindingListResult> {
   const first = await listKnowledgeNetworkCapabilities(networkId, {
     limit: CAPABILITY_SECTION_LIMIT,
@@ -150,6 +151,9 @@ export function useWorkspaceData(
     EMPTY_CAPABILITY_RESULT,
   );
   const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
+  const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(
+    EMPTY_CAPABILITY_RESULT,
+  );
   const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);
@@ -298,6 +302,9 @@ export function useWorkspaceData(
           case "apis":
             await loadToolBindings(networkId);
             break;
+          case "mcp":
+            setMcpTools(await listAllCapabilities(networkId, "mcp_tool"));
+            break;
           case "skills":
             setSkills(await listAllCapabilities(networkId, "skill"));
             break;
@@ -391,19 +398,25 @@ export function useWorkspaceData(
   }, [networkId]);
 
   const reloadCapabilities = useCallback(
-    async (capabilityType: "function" | "skill") => {
+    async (capabilityType: CapabilityType) => {
       if (!networkId) {
         return;
       }
 
       const sections: KnowledgeNetworkWorkspaceSection[] =
-        capabilityType === "function" ? ["functions", "apis"] : ["skills"];
+        capabilityType === "function"
+          ? ["functions", "apis"]
+          : capabilityType === "mcp_tool"
+            ? ["mcp"]
+            : ["skills"];
       sections.forEach((section) => {
         loadedSectionsRef.current.delete(sectionCacheKey(networkId, section));
       });
 
       if (capabilityType === "function") {
         await loadToolBindings(networkId);
+      } else if (capabilityType === "mcp_tool") {
+        setMcpTools(await listAllCapabilities(networkId, "mcp_tool"));
       } else {
         setSkills(await listAllCapabilities(networkId, "skill"));
       }
@@ -443,6 +456,7 @@ export function useWorkspaceData(
     loadRecentObjects,
     apis,
     functions,
+    mcpTools,
     metricApiUnavailable,
     metrics,
     objectTypes,

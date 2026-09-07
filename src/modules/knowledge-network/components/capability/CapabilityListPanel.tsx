@@ -40,7 +40,7 @@ import panelStyles from "./CapabilityListPanel.module.css";
  * One panel serves three nav entries. SKILLs and tools are different capability types on the wire;
  * "api" and "function" are the same type split by what the owning tool box holds.
  */
-export type CapabilitySectionKind = "api" | "function" | "skill";
+export type CapabilitySectionKind = "api" | "function" | "mcp" | "skill";
 
 type CapabilityListPanelProps = {
   canDelete: boolean;
@@ -57,14 +57,23 @@ type CapabilityListPanelProps = {
 const TITLE_KEY = {
   api: "Apis",
   function: "Functions",
+  mcp: "McpTools",
   skill: "Skills",
 } as const;
 
-/** Where the asset itself lives; a binding is only a reference to it. */
+/**
+ * Where the asset itself lives; a binding is only a reference to it. An MCP tool has no page of its
+ * own — it is addressed by name inside its Server — so it points at the Server.
+ */
 function executionFactoryPath(record: CapabilityBindingRecord) {
-  return record.capabilityType === "skill"
-    ? `/execution-factory/skills/${record.capabilityId}`
-    : `/execution-factory/toolboxes/${record.boxId}/tools/${record.capabilityId}/edit`;
+  switch (record.capabilityType) {
+    case "skill":
+      return `/execution-factory/skills/${record.capabilityId}`;
+    case "mcp_tool":
+      return `/execution-factory/mcp/${record.boxId}`;
+    default:
+      return `/execution-factory/toolboxes/${record.boxId}/tools/${record.capabilityId}/edit`;
+  }
 }
 
 export function CapabilityListPanel({
@@ -88,8 +97,14 @@ export function CapabilityListPanel({
   const [busy, setBusy] = useState(false);
 
   const isSkill = kind === "skill";
-  const capabilityType: CapabilityType = isSkill ? "skill" : "function";
-  const toolKind: CapabilityToolKind | undefined = isSkill ? undefined : kind;
+  const isMcp = kind === "mcp";
+  const capabilityType: CapabilityType = isSkill
+    ? "skill"
+    : isMcp
+      ? "mcp_tool"
+      : "function";
+  const toolKind: CapabilityToolKind | undefined =
+    kind === "api" || kind === "function" ? kind : undefined;
 
   const filtered = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -246,7 +261,9 @@ export function CapabilityListPanel({
               void navigate(
                 isSkill
                   ? "/execution-factory/units?activeTab=skill"
-                  : "/execution-factory/units?activeTab=toolbox",
+                  : isMcp
+                    ? "/execution-factory/units?activeTab=mcp"
+                    : "/execution-factory/units?activeTab=toolbox",
               );
             }}
             type="link"
