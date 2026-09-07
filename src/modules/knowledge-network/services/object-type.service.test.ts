@@ -26,7 +26,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     vi.unstubAllEnvs();
   });
 
-  it("queries object type sample data through the BKN API", async () => {
+  it("queries object type sample data through the managed-proxy ontology-query API", async () => {
     const rawResponse = JSON.stringify({
       columns: [{ data_index: "order_id", title: "订单 ID" }],
       entries: [{ order_id: 1 }],
@@ -46,7 +46,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     const result = await getObjectTypeSampleData("kn-1", "purchase_order");
 
     expect(getMock).toHaveBeenCalledWith(
-      "/bkn-backend/v1/knowledge-networks/kn-1/object-types/purchase_order/sample-data",
+      "/ontology-query/v1/knowledge-networks/kn-1/object-types/purchase_order/sample-data",
       {
         params: {
           limit: 20,
@@ -57,6 +57,10 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       },
     );
     expect(postMock).not.toHaveBeenCalled();
+    expect(getMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("/vega-backend/"),
+      expect.anything(),
+    );
     expect(result).toEqual({
       columns: [{ dataIndex: "order_id", title: "订单 ID" }],
       name: "采购订单",

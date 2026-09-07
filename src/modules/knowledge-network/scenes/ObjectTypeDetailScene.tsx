@@ -6,7 +6,7 @@
  */
 
 import { ArrowRightOutlined } from "@ant-design/icons";
-import { Alert, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
+import { Alert, Button, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,11 @@ import { getCatalogResources } from "@/modules/data-catalog/services/resource.se
 import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import {
+  classifyObjectTypeProxyReadFailure,
+  getObjectTypeProxyReadFailureTranslationKeys,
+  type ObjectTypeProxyReadFailure,
+} from "@/modules/knowledge-network/utils/object-type-proxy-read-error";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
@@ -194,7 +199,8 @@ export function ObjectTypeDetailScene() {
   const [keyword, setKeyword] = useState("");
   const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<ObjectTypeProxyReadFailure | null>(null);
+  const [previewReloadToken, setPreviewReloadToken] = useState(0);
   const [previewKeyword, setPreviewKeyword] = useState("");
   const [previewLoadedObjectTypeId, setPreviewLoadedObjectTypeId] = useState<string | null>(null);
   const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
@@ -420,7 +426,7 @@ export function ObjectTypeDetailScene() {
       } catch (nextError) {
         if (!cancelled) {
           setPreview(null);
-          setPreviewError(extractRequestErrorMessage(nextError));
+          setPreviewError(classifyObjectTypeProxyReadFailure(nextError));
           setPreviewLoadedObjectTypeId(null);
         }
       } finally {
@@ -441,6 +447,7 @@ export function ObjectTypeDetailScene() {
     objectTypeId,
     preview,
     previewLoadedObjectTypeId,
+    previewReloadToken,
     shouldLoadPreview,
   ]);
 
@@ -1664,7 +1671,26 @@ export function ObjectTypeDetailScene() {
             {!boundDataView ? (
               <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
             ) : previewError ? (
-              <Alert message={previewError} showIcon type="error" />
+              <Alert
+                action={(
+                  <Button
+                    onClick={() => setPreviewReloadToken((current) => current + 1)}
+                    size="small"
+                  >
+                    {t("common.retry")}
+                  </Button>
+                )}
+                description={previewError.kind === "unknown" && previewError.description
+                  ? previewError.description
+                  : t(getObjectTypeProxyReadFailureTranslationKeys(previewError).description)}
+                message={t(
+                  getObjectTypeProxyReadFailureTranslationKeys(previewError).message,
+                )}
+                showIcon
+                type={previewError.kind === "caller-forbidden" ||
+                  previewError.kind === "proxy-permission-denied" ||
+                  previewError.kind === "binding-invalid" ? "warning" : "error"}
+              />
             ) : previewLoading ? (
               <div className={styles.loadingState}>
                 <Spin />
