@@ -16,6 +16,7 @@ export const capabilityPart = {
   capabilitySkillsDescription:
     "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
   capabilityManageInFactory: "去执行工厂管理",
+  capabilityUsageTipLabel: "使用说明",
   capabilityUsageTipFunctions:
     "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些函数，不需要在代码里配 URL 或 Token。函数本身的新建、改代码与发布仍在执行工厂。",
   capabilityUsageTipApis:

@@ -16,6 +16,7 @@ export const capabilityPart = {
   capabilitySkillsDescription:
     "Mount published SKILL packages. Only mounted SKILLs are recalled for this network.",
   capabilityManageInFactory: "Manage in execution factory",
+  capabilityUsageTipLabel: "How this is used",
   capabilityUsageTipFunctions:
     "Once mounted, agents and SKILLs of this network call these functions by capability name — no URL or token in the calling code. Creating, editing and publishing a function stays in the execution factory.",
   capabilityUsageTipApis:

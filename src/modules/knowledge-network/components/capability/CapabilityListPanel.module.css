@@ -12,17 +12,21 @@
   gap: 16px;
 }
 
+.titleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /*
  * A mounted capability is only half the story: the asset itself is still created, edited and
- * published in the execution factory. Say so under the title rather than leaving people to guess
- * what mounting bought them.
+ * published in the execution factory. The hint sits behind the title's question mark rather than
+ * as a paragraph, so the page opens at the same height as every other list page.
  */
 .usageTip {
-  margin: 4px 0 0;
-  max-width: 720px;
   color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 14px;
+  cursor: help;
 }
 
 .manageLink {

@@ -9,6 +9,7 @@ import {
   DeleteOutlined,
   ExportOutlined,
   PlusOutlined,
+  QuestionCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -227,14 +228,17 @@ export function CapabilityListPanel({
           table text. Without it this page renders a size larger than metrics or object types. */}
       <section className={`${styles.page} ${styles.objectTypePage}`}>
         <div className={panelStyles.header}>
-          <div>
-            <h2 className={styles.title}>
-              {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
-            </h2>
-            <p className={panelStyles.usageTip}>
-              {t(`knowledgeNetwork.capabilityUsageTip${TITLE_KEY[kind]}`)}
-            </p>
-          </div>
+          <h2 className={`${styles.title} ${panelStyles.titleRow}`}>
+            {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
+            <Tooltip
+              title={t(`knowledgeNetwork.capabilityUsageTip${TITLE_KEY[kind]}`)}
+            >
+              <QuestionCircleOutlined
+                aria-label={t("knowledgeNetwork.capabilityUsageTipLabel")}
+                className={panelStyles.usageTip}
+              />
+            </Tooltip>
+          </h2>
           <AppButton
             className={panelStyles.manageLink}
             icon={<ExportOutlined />}
