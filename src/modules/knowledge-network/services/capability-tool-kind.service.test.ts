@@ -33,6 +33,7 @@ function binding(boxId: string): CapabilityBindingRecord {
     description: "",
     id: "binding-1",
     name: "",
+    sources: [],
     status: "",
     updateTime: "-",
     updaterName: "-",

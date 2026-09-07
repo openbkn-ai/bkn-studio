@@ -1231,6 +1231,7 @@ export function attachMockCapabilities(
       description: "",
       id: `binding-${crypto.randomUUID().slice(0, 8)}`,
       name: "",
+      sources: [{ kind: input.allTools ? "box" : "manual", refs: [] }],
       status: "",
       updateTime: timestamp,
       updaterName: "Local Admin",

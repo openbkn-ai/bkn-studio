@@ -16,6 +16,24 @@ export type CapabilityType = "function" | "mcp_tool" | "skill";
 /** Marks a binding whose target is gone from the execution factory. Reported, never auto-deleted. */
 export const CAPABILITY_STATUS_MISSING = "missing";
 
+/**
+ * How a capability came to be in this network. A row can have several: a tool mounted by hand and
+ * later referenced by an action type carries both, and only the manual half can be released.
+ */
+export type CapabilitySourceKind = "action_type" | "box" | "manual" | "object_type";
+
+export type CapabilitySourceRef = {
+  id: string;
+  name: string;
+  /** Object-type sources name the property that uses the tool: deleting it is not deleting the type. */
+  property?: string;
+};
+
+export type CapabilitySource = {
+  kind: CapabilitySourceKind;
+  refs: CapabilitySourceRef[];
+};
+
 export type CapabilityBindingRecord = {
   boundAsBox: boolean;
   /** Toolset of a function binding, MCP Server of an mcp_tool binding; empty for a skill. */
@@ -30,6 +48,11 @@ export type CapabilityBindingRecord = {
   description: string;
   id: string;
   name: string;
+  /**
+   * Empty until the backend reports provenance; a row is then a plain binding, which is what the
+   * panel falls back to.
+   */
+  sources: CapabilitySource[];
   /** "missing" when the target is gone; otherwise the execution-factory status, or empty. */
   status: string;
   updateTime: string;

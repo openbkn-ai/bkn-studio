@@ -7,6 +7,8 @@
 
 import type {
   AttachCapabilityInput,
+  CapabilitySource,
+  CapabilitySourceKind,
   CapabilityBindingListResult,
   CapabilityBindingRecord,
   CapabilityBoxSummary,
@@ -19,6 +21,11 @@ import { formatTimestamp } from "@/modules/knowledge-network/services/shared/run
  * The wire name of the owning container is `box_id` on every surface — execution factory, Context
  * Loader and Studio all call it that — even though the backend column stays type-neutral.
  */
+export type BackendCapabilitySource = {
+  kind?: string;
+  refs?: Array<{ id?: string; name?: string; property?: string }>;
+};
+
 export type BackendCapabilityBinding = {
   bound_as_box?: boolean;
   box_id?: string;
@@ -33,6 +40,7 @@ export type BackendCapabilityBinding = {
   kn_id?: string;
   name?: string;
   owner_name?: string;
+  sources?: BackendCapabilitySource[];
   status?: string;
   update_time?: number;
   updater?: BackendAccountInfo;
@@ -62,6 +70,36 @@ export type BackendAttachCapabilityEntry = {
   comment?: string;
 };
 
+const CAPABILITY_SOURCE_KINDS: CapabilitySourceKind[] = [
+  "action_type",
+  "box",
+  "manual",
+  "object_type",
+];
+
+/** An unknown kind is dropped rather than guessed: a wrong source would misstate who owns a row. */
+function mapCapabilitySources(
+  items: BackendCapabilitySource[] | undefined,
+): CapabilitySource[] {
+  return (items ?? []).reduce<CapabilitySource[]>((sources, item) => {
+    const kind = CAPABILITY_SOURCE_KINDS.find((known) => known === item.kind);
+    if (!kind) {
+      return sources;
+    }
+
+    sources.push({
+      kind,
+      refs: (item.refs ?? []).map((ref) => ({
+        id: ref.id ?? "",
+        name: ref.name ?? ref.id ?? "",
+        property: ref.property,
+      })),
+    });
+
+    return sources;
+  }, []);
+}
+
 function mapCapabilityType(value: string | undefined): CapabilityType {
   switch (value) {
     case "function":
@@ -89,6 +127,7 @@ export function mapCapabilityBinding(
     description: item.description ?? "",
     id: item.id ?? "",
     name: item.name ?? "",
+    sources: mapCapabilitySources(item.sources),
     status: item.status ?? "",
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",

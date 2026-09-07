@@ -32,6 +32,12 @@
   cursor: help;
 }
 
+.sourceTags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .manageLink {
   flex: none;
 }

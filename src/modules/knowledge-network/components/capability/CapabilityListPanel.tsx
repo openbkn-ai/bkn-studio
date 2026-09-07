@@ -30,6 +30,7 @@ import {
   type AttachCapabilityInput,
   type CapabilityBindingListResult,
   type CapabilityBindingRecord,
+  type CapabilitySource,
   type CapabilityType,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -82,6 +83,25 @@ const STATUS_TAG_COLOR: Record<string, string> = {
   published: "success",
   unpublish: "warning",
 };
+
+/**
+ * A row is releasable only through its own mount. One that is in the list purely because an object
+ * type or an action type points at the tool has nothing to release — the reference has to go first.
+ * A backend that does not report provenance yet returns no sources, and every row it lists is then
+ * a plain binding, so treat that as releasable rather than locking the page.
+ */
+function isReleasable(record: CapabilityBindingRecord) {
+  return (
+    record.sources.length === 0 ||
+    record.sources.some((source) => source.kind === "box" || source.kind === "manual")
+  );
+}
+
+function referencingSources(record: CapabilityBindingRecord): CapabilitySource[] {
+  return record.sources.filter(
+    (source) => source.kind === "action_type" || source.kind === "object_type",
+  );
+}
 
 /**
  * Where the asset itself lives; a binding is only a reference to it. An MCP tool has no page of its
@@ -159,12 +179,68 @@ export function CapabilityListPanel({
     [data.entries],
   );
 
+  const renderSources = (record: CapabilityBindingRecord) => {
+    if (record.sources.length === 0) {
+      // No provenance from the backend: the row can only be what this page itself mounted.
+      return (
+        <Tag>
+          {record.boundAsBox
+            ? t("knowledgeNetwork.capabilityBoundAsBox")
+            : t("knowledgeNetwork.capabilitySourceManual")}
+        </Tag>
+      );
+    }
+
+    return (
+      <span className={panelStyles.sourceTags}>
+        {record.sources.map((source) => {
+          const names = source.refs
+            .map((ref) => (ref.property ? `${ref.name}.${ref.property}` : ref.name))
+            .filter(Boolean);
+
+          if (source.kind === "manual" || source.kind === "box") {
+            return (
+              <Tag key={source.kind}>
+                {source.kind === "box"
+                  ? t("knowledgeNetwork.capabilityBoundAsBox")
+                  : t("knowledgeNetwork.capabilitySourceManual")}
+              </Tag>
+            );
+          }
+
+          return (
+            <Tag color="blue" key={source.kind}>
+              {t(
+                source.kind === "action_type"
+                  ? "knowledgeNetwork.capabilitySourceActionType"
+                  : "knowledgeNetwork.capabilitySourceObjectType",
+                { names: names.join("、") },
+              )}
+            </Tag>
+          );
+        })}
+      </span>
+    );
+  };
+
   const runDetach = async (bindingIds: string[]) => {
+    // A row that is also referenced stays in the list with only its references left; saying so
+    // beforehand is the difference between "it worked" and "nothing happened".
+    const staysReferenced = data.entries.some(
+      (entry) => bindingIds.includes(entry.id) && referencingSources(entry).length > 0,
+    );
+
     setBusy(true);
     try {
       await onDetach(bindingIds);
       setSelectedRowKeys((keys) => keys.filter((key) => !bindingIds.includes(key)));
-      void message.success(t("knowledgeNetwork.capabilityDetachSuccess"));
+      void message.success(
+        t(
+          staysReferenced
+            ? "knowledgeNetwork.capabilityDetachKeptByReference"
+            : "knowledgeNetwork.capabilityDetachSuccess",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -185,20 +261,17 @@ export function CapabilityListPanel({
       dataIndex: "name",
       key: "name",
       title: t("knowledgeNetwork.capabilityColumnName"),
+      // The id is shown only when it is all there is: a name plus its id underneath is noise on a
+      // page where every row already links to the asset itself.
       render: (_: string, record) => (
-        <div>
-          <AppButton
-            onClick={() => {
-              void navigate(executionFactoryPath(record));
-            }}
-            type="link"
-          >
-            {record.name || record.capabilityId}
-          </AppButton>
-          {record.name ? (
-            <div className={styles.objectName}>{record.capabilityId}</div>
-          ) : null}
-        </div>
+        <AppButton
+          onClick={() => {
+            void navigate(executionFactoryPath(record));
+          }}
+          type="link"
+        >
+          {record.name || record.capabilityId}
+        </AppButton>
       ),
     },
     ...(isSkill
@@ -209,12 +282,7 @@ export function CapabilityListPanel({
             key: "boxName",
             title: t("knowledgeNetwork.capabilityColumnBox"),
             render: (_: string, record: CapabilityBindingRecord) => (
-              <div>
-                <div>{record.boxName || record.boxId}</div>
-                {record.boundAsBox ? (
-                  <Tag>{t("knowledgeNetwork.capabilityBoundAsBox")}</Tag>
-                ) : null}
-              </div>
+              <span>{record.boxName || record.boxId}</span>
             ),
           },
         ]),
@@ -245,6 +313,11 @@ export function CapabilityListPanel({
       },
     },
     {
+      key: "sources",
+      title: t("knowledgeNetwork.capabilityColumnSources"),
+      render: (_: unknown, record) => renderSources(record),
+    },
+    {
       dataIndex: "comment",
       key: "comment",
       title: t("knowledgeNetwork.capabilityColumnComment"),
@@ -259,12 +332,27 @@ export function CapabilityListPanel({
       key: "actions",
       title: t("common.actions"),
       width: 120,
-      render: (_: unknown, record) =>
-        canDelete ? (
-          <AppButton danger onClick={() => confirmDetach([record.id])} type="link">
-            {t("knowledgeNetwork.capabilityDetach")}
-          </AppButton>
-        ) : null,
+      render: (_: unknown, record) => {
+        if (!canDelete) {
+          return null;
+        }
+
+        if (isReleasable(record)) {
+          return (
+            <AppButton danger onClick={() => confirmDetach([record.id])} type="link">
+              {t("knowledgeNetwork.capabilityDetach")}
+            </AppButton>
+          );
+        }
+
+        return (
+          <Tooltip title={t("knowledgeNetwork.capabilityDetachBlockedHint")}>
+            <AppButton danger disabled type="link">
+              {t("knowledgeNetwork.capabilityDetach")}
+            </AppButton>
+          </Tooltip>
+        );
+      },
     },
   ];
 
@@ -425,6 +513,7 @@ export function CapabilityListPanel({
               rowSelection={
                 canDelete
                   ? {
+                      getCheckboxProps: (record) => ({ disabled: !isReleasable(record) }),
                       onChange: (keys) => setSelectedRowKeys(keys as string[]),
                       selectedRowKeys,
                     }
