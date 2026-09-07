@@ -101,7 +101,7 @@ export const objecttypePart = {
       "Caller authorization succeeded, but the managed proxy lacks access to the published resource. Ask a security administrator to inspect grant sources and retry synchronization.",
     objectTypeProxyReadSyncFailed: "Proxy permission sync failed",
     objectTypeProxyReadSyncFailedDescription:
-      "The latest proxy permission synchronization failed. Ask a security administrator to retry it from Proxy Governance.",
+      "The latest proxy permission synchronization failed. Ask a security administrator to inspect the published model and proxy synchronization state.",
     objectTypeProxyReadSyncPending: "Proxy permissions are synchronizing",
     objectTypeProxyReadSyncPendingDescription:
       "Proxy permissions do not yet match the current published model. Wait for synchronization to finish and retry.",

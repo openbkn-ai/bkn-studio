@@ -86,7 +86,7 @@ export const objecttypePart = {
     objectTypeProxyReadProxyPermissionDenied: "代理缺少资源权限",
     objectTypeProxyReadProxyPermissionDeniedDescription: "调用者权限校验已通过，但托管代理缺少已发布资源权限，请联系安全管理员检查授权来源并重试同步。",
     objectTypeProxyReadSyncFailed: "代理权限同步失败",
-    objectTypeProxyReadSyncFailedDescription: "该知识网络最近一次代理权限同步失败，请联系安全管理员在代理治理页重试。",
+    objectTypeProxyReadSyncFailedDescription: "该知识网络最近一次代理权限同步失败，请联系安全管理员检查已发布模型和代理同步状态。",
     objectTypeProxyReadSyncPending: "代理权限同步中",
     objectTypeProxyReadSyncPendingDescription: "代理权限尚未与当前已发布模型一致，请等待同步完成后重试。",
     objectTypeProxyReadUnavailable: "样本数据暂不可用",
