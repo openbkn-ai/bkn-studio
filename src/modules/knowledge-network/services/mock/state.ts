@@ -1199,6 +1199,7 @@ export function listMockCapabilities(
 export function attachMockCapabilities(
   networkId: string,
   inputs: AttachCapabilityInput[],
+  toolBoxKinds: ReadonlyMap<string, string> = new Map(),
 ): CapabilityBindingRecord[] {
   const existing = mockCapabilityBindings[networkId] ?? [];
   const created: CapabilityBindingRecord[] = [];
@@ -1233,7 +1234,12 @@ export function attachMockCapabilities(
       creatorName: "Local Admin",
       description: "",
       id: `binding-${crypto.randomUUID().slice(0, 8)}`,
-      metadataType: "",
+      metadataType:
+        input.capabilityType !== "function"
+          ? ""
+          : toolBoxKinds.get(boxId) === "openapi"
+            ? "openapi"
+            : "function",
       name: "",
       sources: [{ kind: input.allTools ? "box" : "manual", refs: [] }],
       status: "",
@@ -1265,6 +1271,9 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
   const skillCount = bindings.filter((item) => item.capabilityType === "skill").length;
   const functionCount = bindings.filter((item) => item.capabilityType === "function").length;
   const mcpToolCount = bindings.filter((item) => item.capabilityType === "mcp_tool").length;
+  // functions_total narrowed to code toolsets when apis_total arrived; the two together are every
+  // tool binding.
+  const apiCount = bindings.filter((item) => item.metadataType === "openapi").length;
 
   mockKnowledgeNetworks = mockKnowledgeNetworks.map((item) =>
     item.id === networkId
@@ -1276,12 +1285,12 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
             ...item.statistics,
             actionTypesTotal: actionTypeCount,
             conceptGroupsTotal: conceptGroupCount,
-            functionsTotal: functionCount,
+            functionsTotal: functionCount - apiCount,
             metricsTotal: metricCount,
             objectTypesTotal: objectTypeCount,
             skillsTotal: skillCount,
             mcpToolsTotal: mcpToolCount,
-            apisTotal: 0,
+            apisTotal: apiCount,
             relationTypesTotal: relationTypeCount,
           },
         }

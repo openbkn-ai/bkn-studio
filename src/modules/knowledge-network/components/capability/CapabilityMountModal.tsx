@@ -25,6 +25,10 @@ import type {
   CapabilityType,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
+import {
+  filterVisibleContainers,
+  type PickerTool,
+} from "./capability-picker-filter";
 import styles from "./CapabilityMountModal.module.css";
 
 /** The execution factory rejects a page_size above 100 (`validate:"min=1,max=100"`). */
@@ -61,8 +65,6 @@ async function collectPages<T>(
  * addressed — by tool_id inside a box, by name inside a Server — which is what `id` carries.
  */
 type PickerContainer = { id: string; name: string; toolCount?: number };
-
-type PickerTool = { description?: string; id: string; name: string; status?: string };
 
 type CapabilityMountModalProps = {
   capabilityType: CapabilityType;
@@ -249,29 +251,43 @@ export function CapabilityMountModal({
     [boxes, checkedKeys, loadBoxTools, mountableToolKeys, toolsByBox],
   );
 
+  const visibleBoxes = useMemo(
+    () => filterVisibleContainers(boxes, toolsByBox, keyword),
+    [boxes, keyword, toolsByBox],
+  );
+
   /**
-   * The tree's own checkboxes only reach one box at a time, so mounting a whole catalogue would be
-   * a click per box. This selects every box — the same as ticking each one — or clears the lot.
+   * The tree's own checkboxes only reach one container at a time, so mounting a whole catalogue
+   * would be a click each. This ticks every container the search is showing, or clears those —
+   * anything picked outside the current search stays as it was.
    */
   const toggleAllBoxes = useCallback(
     (checked: boolean) => {
-      if (!checked) {
-        setCheckedKeys([]);
-        return;
-      }
-
-      const keys = boxes.flatMap((box) => [
+      const affected = visibleBoxes.flatMap((box) => [
         `${BOX_KEY_PREFIX}${box.id}`,
         ...mountableToolKeys(box.id, toolsByBox[box.id] ?? []),
       ]);
-      setCheckedKeys(keys);
+
+      setCheckedKeys((current) => {
+        if (!checked) {
+          return current.filter((key) => !affected.includes(key));
+        }
+
+        return [...new Set([...current, ...affected])];
+      });
     },
-    [boxes, mountableToolKeys, toolsByBox],
+    [mountableToolKeys, toolsByBox, visibleBoxes],
   );
 
   const allBoxesChecked =
-    boxes.length > 0 &&
-    boxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
+    visibleBoxes.length > 0 &&
+    visibleBoxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
+
+  const someVisibleChecked = visibleBoxes.some(
+    (box) =>
+      checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`) ||
+      checkedKeys.some((key) => key.startsWith(`${TOOL_KEY_PREFIX}${box.id}/`)),
+  );
 
   /**
    * Clicking a row's label toggles its checkbox. Without this only the checkbox itself responds,
@@ -311,7 +327,7 @@ export function CapabilityMountModal({
   const treeData: TreeDataNode[] = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
 
-    return boxes.reduce<TreeDataNode[]>((nodes, box) => {
+    return visibleBoxes.reduce<TreeDataNode[]>((nodes, box) => {
         const tools = toolsByBox[box.id];
         const boxMatches = !trimmed || box.name.toLowerCase().includes(trimmed);
         const matchedTools = (tools ?? []).filter(
@@ -364,7 +380,7 @@ export function CapabilityMountModal({
 
       return nodes;
     }, []);
-  }, [boxes, isToolMounted, keyword, t, toolsByBox]);
+  }, [isToolMounted, keyword, t, toolsByBox, visibleBoxes]);
 
   const checkedBoxIds = checkedKeys
     .filter((key) => key.startsWith(BOX_KEY_PREFIX))
@@ -508,8 +524,8 @@ export function CapabilityMountModal({
             <Checkbox
               checked={allBoxesChecked}
               className={styles.pickerSelectAll}
-              disabled={boxes.length === 0}
-              indeterminate={!allBoxesChecked && checkedKeys.length > 0}
+              disabled={visibleBoxes.length === 0}
+              indeterminate={!allBoxesChecked && someVisibleChecked}
               onChange={(event) => toggleAllBoxes(event.target.checked)}
             >
               {t("knowledgeNetwork.capabilityPickerSelectAll")}

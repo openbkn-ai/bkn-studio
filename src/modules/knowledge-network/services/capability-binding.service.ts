@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import {
   mapCapabilityBinding,
   mapCapabilityBindingsList,
@@ -71,7 +72,14 @@ export async function attachKnowledgeNetworkCapabilities(
   inputs: AttachCapabilityInput[],
 ): Promise<CapabilityBindingRecord[]> {
   if (useMock) {
-    return wait(attachMockCapabilities(networkId, inputs));
+    // The backend tags each tool binding with its toolset's kind, and that tag is what splits the
+    // function and API lists. Mock mode has to do the same or every mounted API lands in functions.
+    const catalogue = await listToolboxes({ page: 1, pageSize: 100 });
+    const kinds = new Map(
+      catalogue.items.map((box) => [box.boxId, box.metadataType ?? "function"] as const),
+    );
+
+    return wait(attachMockCapabilities(networkId, inputs, kinds));
   }
 
   const response = await http.post<BackendCapabilityBindingsList>(
