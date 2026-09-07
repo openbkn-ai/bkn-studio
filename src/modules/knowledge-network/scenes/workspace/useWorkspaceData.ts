@@ -47,8 +47,49 @@ import {
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
 
-/** One page holds every binding a network realistically mounts; the panel filters client-side. */
 const CAPABILITY_SECTION_LIMIT = 200;
+
+/** Enough pages for any real network; a truncated read would understate the nav counts. */
+const CAPABILITY_MAX_PAGES = 10;
+
+/**
+ * Tool bindings drive both list pages and both nav counts, and the split between API and function
+ * can only be made on entries this client holds. Reading one page would silently undercount a
+ * network with more bindings than the page size, so walk the pages until the reported total is in.
+ */
+async function listAllCapabilities(
+  networkId: string,
+  type: "function" | "skill",
+): Promise<CapabilityBindingListResult> {
+  const first = await listKnowledgeNetworkCapabilities(networkId, {
+    limit: CAPABILITY_SECTION_LIMIT,
+    type,
+    withDetail: true,
+  });
+  const entries = [...first.entries];
+  const boxes = [...first.boxes];
+
+  const pages = Math.min(
+    Math.ceil(first.totalCount / CAPABILITY_SECTION_LIMIT),
+    CAPABILITY_MAX_PAGES,
+  );
+  for (let page = 1; page < pages; page += 1) {
+    const next = await listKnowledgeNetworkCapabilities(networkId, {
+      limit: CAPABILITY_SECTION_LIMIT,
+      offset: page * CAPABILITY_SECTION_LIMIT,
+      type,
+      withDetail: true,
+    });
+    entries.push(...next.entries);
+    next.boxes.forEach((box) => {
+      if (!boxes.some((known) => known.boxId === box.boxId)) {
+        boxes.push(box);
+      }
+    });
+  }
+
+  return { ...first, boxes, entries };
+}
 
 /**
  * Tool bindings come back as one list whatever the tool is, so the split between the API and the
@@ -195,11 +236,7 @@ export function useWorkspaceData(
 
   const loadToolBindings = useCallback(async (targetNetworkId: string) => {
     const [result, kinds] = await Promise.all([
-      listKnowledgeNetworkCapabilities(targetNetworkId, {
-        limit: CAPABILITY_SECTION_LIMIT,
-        type: "function",
-        withDetail: true,
-      }),
+      listAllCapabilities(targetNetworkId, "function"),
       // A failed catalogue read must not empty the lists: every binding then lands under functions.
       loadToolBoxKinds().catch((error: unknown) => {
         logServiceFallback("useWorkspaceData.capabilities.toolBoxKinds", error);
@@ -262,13 +299,7 @@ export function useWorkspaceData(
             await loadToolBindings(networkId);
             break;
           case "skills":
-            setSkills(
-              await listKnowledgeNetworkCapabilities(networkId, {
-                limit: CAPABILITY_SECTION_LIMIT,
-                type: "skill",
-                withDetail: true,
-              }),
-            );
+            setSkills(await listAllCapabilities(networkId, "skill"));
             break;
           case "metrics":
             if (integrateWorkspaceMetrics) {
@@ -374,13 +405,7 @@ export function useWorkspaceData(
       if (capabilityType === "function") {
         await loadToolBindings(networkId);
       } else {
-        setSkills(
-          await listKnowledgeNetworkCapabilities(networkId, {
-            limit: CAPABILITY_SECTION_LIMIT,
-            type: "skill",
-            withDetail: true,
-          }),
-        );
+        setSkills(await listAllCapabilities(networkId, "skill"));
       }
 
       sections.forEach((section) => {
