@@ -156,7 +156,7 @@ export const networkPart = {
       "工作区壳层已经迁入，后续会继续补齐旧 Vega 的完整业务页。",
     workspaceMetrics: "指标",
     workspaceFunctions: "函数",
-    workspaceApis: "接口",
+    workspaceApis: "API",
     workspaceSkills: "SKILLs",
     workspaceDynamicModel: "动力模型",
     workspaceObjectTypes: "对象类",
