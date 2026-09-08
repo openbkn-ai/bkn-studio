@@ -57,16 +57,16 @@ describe("resource-catalog", () => {
   it("limits role grants to supported type-wide resource types", () => {
     const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
 
-    expect(roleGrantTypes).toEqual(
-      expect.not.arrayContaining([
-        "agent",
-        "agent_tpl",
-        "connector_type",
-        "data_flow",
-        "risk_type",
-        "stream_data_pipeline",
-      ]),
-    );
+    for (const type of [
+      "agent",
+      "agent_tpl",
+      "connector_type",
+      "data_flow",
+      "risk_type",
+      "stream_data_pipeline",
+    ]) {
+      expect(roleGrantTypes).not.toContain(type);
+    }
     expect(roleGrantTypes).toEqual(
       expect.arrayContaining([
         "concept_group",
