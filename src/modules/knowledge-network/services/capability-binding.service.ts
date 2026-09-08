@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { listTools } from "@/modules/execution-factory/services/tool.service";
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import {
   mapCapabilityBinding,
@@ -79,7 +80,22 @@ export async function attachKnowledgeNetworkCapabilities(
       catalogue.items.map((box) => [box.boxId, box.metadataType ?? "function"] as const),
     );
 
-    return wait(attachMockCapabilities(networkId, inputs, kinds));
+    // The real backend expands a whole-toolset mount server-side; mock has to do it too or the
+    // demo build silently mounts nothing when someone ticks a toolset.
+    const expanded: AttachCapabilityInput[] = [];
+    for (const input of inputs) {
+      if (!input.allTools || !input.boxId) {
+        expanded.push(input);
+        continue;
+      }
+
+      const tools = await listTools(input.boxId, { page: 1, pageSize: 100 });
+      tools.items.forEach((tool) => {
+        expanded.push({ ...input, capabilityId: tool.toolId });
+      });
+    }
+
+    return wait(attachMockCapabilities(networkId, expanded, kinds));
   }
 
   const response = await http.post<BackendCapabilityBindingsList>(

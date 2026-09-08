@@ -198,35 +198,44 @@ export function CapabilityListPanel({
     [data.entries],
   );
 
-  const renderSources = (record: CapabilityBindingRecord) => {
-    if (record.sources.length === 0) {
-      // No provenance from the backend: the row can only be what this page itself mounted. Whether
-      // it came from one tool or a whole toolset needs no badge — it mounts and releases the same.
-      return <Tag>{t("knowledgeNetwork.capabilitySourceManual")}</Tag>;
+  /**
+   * How the capability got here — a mount someone made, or nothing of the sort. Kept apart from who
+   * uses it: read together they contradict each other, since a tool can be mounted and referenced
+   * at once, and only the mount can be released.
+   */
+  const renderMountKind = (record: CapabilityBindingRecord) =>
+    isMountedByHand(record) ? (
+      <Tag>{t("knowledgeNetwork.capabilitySourceManual")}</Tag>
+    ) : (
+      <span className={panelStyles.mutedCell}>
+        {t("knowledgeNetwork.capabilitySourceNotMounted")}
+      </span>
+    );
+
+  /** Who reaches for the capability: the object types and action types that point at it. */
+  const renderReferences = (record: CapabilityBindingRecord) => {
+    const references = referencingSources(record);
+    if (references.length === 0) {
+      return <span className={panelStyles.mutedCell}>-</span>;
     }
 
     return (
       <span className={panelStyles.sourceTags}>
-        {record.sources.map((source) => {
-          const names = source.refs
-            .map((ref) => (ref.property ? `${ref.name}.${ref.property}` : ref.name))
-            .filter(Boolean);
-
-          if (source.kind === "manual" || source.kind === "box") {
-            return <Tag key={source.kind}>{t("knowledgeNetwork.capabilitySourceManual")}</Tag>;
-          }
-
-          return (
-            <Tag color="blue" key={source.kind}>
-              {t(
-                source.kind === "action_type"
-                  ? "knowledgeNetwork.capabilitySourceActionType"
-                  : "knowledgeNetwork.capabilitySourceObjectType",
-                { names: names.join("、") },
-              )}
-            </Tag>
-          );
-        })}
+        {references.map((source) => (
+          <Tag color="blue" key={source.kind}>
+            {t(
+              source.kind === "action_type"
+                ? "knowledgeNetwork.capabilitySourceActionType"
+                : "knowledgeNetwork.capabilitySourceObjectType",
+              {
+                names: source.refs
+                  .map((ref) => (ref.property ? `${ref.name}.${ref.property}` : ref.name))
+                  .filter(Boolean)
+                  .join("、"),
+              },
+            )}
+          </Tag>
+        ))}
       </span>
     );
   };
@@ -332,9 +341,15 @@ export function CapabilityListPanel({
       },
     },
     {
-      key: "sources",
-      title: t("knowledgeNetwork.capabilityColumnSources"),
-      render: (_: unknown, record) => renderSources(record),
+      key: "mountKind",
+      title: t("knowledgeNetwork.capabilityColumnMountKind"),
+      width: 120,
+      render: (_: unknown, record) => renderMountKind(record),
+    },
+    {
+      key: "references",
+      title: t("knowledgeNetwork.capabilityColumnReferences"),
+      render: (_: unknown, record) => renderReferences(record),
     },
     {
       dataIndex: "comment",
