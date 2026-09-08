@@ -11,7 +11,6 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
-import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
 const UnitManagementListPage = lazy(async () => {
@@ -72,6 +71,10 @@ function withRouteLoading(element: ReactNode, permissions: string | readonly str
   );
 }
 
+function withPublicRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+}
+
 export const executionFactoryRoutes: RouteObject[] = [
   {
     path: "execution-factory/units",
@@ -82,7 +85,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.unitManagementTitle",
       },
     },
-    element: withRouteLoading(<UnitManagementListPage />, executionFactoryViewPermissions),
+    element: withPublicRouteLoading(<UnitManagementListPage />),
   },
   {
     path: "execution-factory/units/new",

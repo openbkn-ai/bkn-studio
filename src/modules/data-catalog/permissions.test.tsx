@@ -85,11 +85,12 @@ describe("data-catalog permission points", () => {
     }
   });
 
-  it("the index-build menu entry and its route guard stay in sync", () => {
+  it("the index-build menu entry and list route are public entry points", () => {
     const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/index-builds");
 
-    expect(navigationItem?.permission).toEqual(guardPermissionsOf("index-builds"));
-    expect(navigationItem?.permissionMode).toBe("any");
+    expect(navigationItem?.permission).toBeUndefined();
+    expect(navigationItem?.permissionMode).toBeUndefined();
+    expect(guardPermissionsOf("index-builds")).toEqual([]);
   });
 
   it("a catalog task grant opens the index-build page", () => {
@@ -102,20 +103,20 @@ describe("data-catalog permission points", () => {
     expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
   });
 
-  it("a table-only grant browses the catalog but cannot manage build tasks", () => {
+  it("a table-only grant can enter the public catalog and build-task pages", () => {
     const permissions = permissionsOf([
       { resource: { type: "resource", id: "*" }, operations: ["view_detail", "query_data"] },
     ]);
 
     expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(false);
+    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(true);
   });
 
-  it("holds no data permission by default: an ungranted user sees neither page", () => {
+  it("an ungranted user can enter public list pages", () => {
     const permissions = permissionsOf([]);
 
     expect(permissions).toEqual([]);
-    expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(false);
-    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(false);
+    expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(true);
   });
 });

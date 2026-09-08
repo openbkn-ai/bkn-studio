@@ -10,8 +10,6 @@ import { Suspense } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import { RouteLoading } from "@/app/router/RouteLoading";
-import { RequirePermission } from "@/framework/permission/RequirePermission";
-import { knowledgeNetworkModuleManifest } from "@/modules/knowledge-network/module.manifest";
 
 const KNOWLEDGE_NETWORK_MANAGEMENT_MENU_KEY = "domain-knowledge-network-management";
 
@@ -39,10 +37,6 @@ export function createKnowledgeNetworkRoute(
         titleKey: meta.titleKey,
       },
     },
-    element: (
-      <RequirePermission mode="any" permissions={[...knowledgeNetworkModuleManifest.permissions]}>
-        {withRouteLoading(element)}
-      </RequirePermission>
-    ),
+    element: withRouteLoading(element),
   };
 }

@@ -11,14 +11,28 @@ import {
 } from "@/framework/permission/has-permissions";
 
 export type HomeActionAccess = {
+  path?: string;
   permissionMode?: PermissionCheckMode;
   permissions?: string | string[];
 };
+
+const NAVIGATION_ENTRY_PATHS = new Set([
+  "/data-connect",
+  "/data-directory",
+  "/index-builds",
+  "/knowledge-network",
+  "/knowledge-network/integration",
+  "/execution-factory/units",
+]);
 
 export function canAccessHomeAction(
   currentPermissions: string[],
   action: HomeActionAccess,
 ) {
+  if (action.path && NAVIGATION_ENTRY_PATHS.has(action.path)) {
+    return true;
+  }
+
   if (!action.permissions) {
     return true;
   }
