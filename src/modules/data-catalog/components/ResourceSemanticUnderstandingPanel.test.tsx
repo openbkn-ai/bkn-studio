@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { FormInstance } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
@@ -47,7 +48,7 @@ vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", (
 }));
 
 import { ResourceSemanticUnderstandingPanel } from "./ResourceSemanticUnderstandingPanel";
-import { semanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
+import { semanticUnderstandingTaskFormDefaults, useSemanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const resource: CatalogResource = {
   catalogId: "catalog-1",
@@ -63,6 +64,14 @@ const resource: CatalogResource = {
   updateTime: "2026-08-11T00:00:00Z",
   expectedUpdateTime: 0,
 };
+
+function SemanticUnderstandingTaskFormDefaultsHarness({ form, open }: {
+  form: Pick<FormInstance, "setFieldsValue">;
+  open: boolean;
+}) {
+  useSemanticUnderstandingTaskFormDefaults(form, open);
+  return null;
+}
 
 describe("ResourceSemanticUnderstandingPanel", () => {
   beforeEach(() => {
@@ -80,13 +89,17 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   });
 
-  it("resets sample rows to ten in the creation defaults", () => {
-    expect(semanticUnderstandingTaskFormDefaults).toMatchObject({
-      applyMode: "fill_empty",
-      confidenceThreshold: 0.75,
-      includeSampleRows: false,
-      sampleMaxRows: 10,
-    });
+  it("resets sample rows to ten each time the creation dialog opens", () => {
+    const form = { setFieldsValue: vi.fn() } as unknown as Pick<FormInstance, "setFieldsValue">;
+    const { rerender } = render(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open={false} />);
+
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open />);
+    expect(form.setFieldsValue).toHaveBeenCalledWith(semanticUnderstandingTaskFormDefaults);
+
+    vi.mocked(form.setFieldsValue).mockClear();
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open={false} />);
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open />);
+    expect(form.setFieldsValue).toHaveBeenCalledWith(semanticUnderstandingTaskFormDefaults);
   });
 
   it("initializes the semantic task defaults before opening the creation dialog", async () => {

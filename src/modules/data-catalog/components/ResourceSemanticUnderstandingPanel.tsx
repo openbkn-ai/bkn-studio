@@ -34,7 +34,7 @@ import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTas
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
-import { semanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
+import { useSemanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -117,10 +117,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
                 ? { className: styles.summaryValueError, label: t("dataCatalog.semanticWorkspace.failed") }
                 : { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.cancelled") };
 
-  useEffect(() => {
-    if (!open) return;
-    form.setFieldsValue(semanticUnderstandingTaskFormDefaults);
-  }, [form, open]);
+  useSemanticUnderstandingTaskFormDefaults(form, open);
 
   const start = async () => {
     const values = await form.validateFields();
