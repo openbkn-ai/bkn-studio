@@ -45,7 +45,6 @@ import {
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
-  unsupportedSchemaFields,
 } from "@/modules/data-catalog/lib/build-guards";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
@@ -629,8 +628,7 @@ export function IndexConfigFormPanel({
     primaryKeyFields.length > 0 &&
     incrementalFields.length > 0 &&
     invalidSavedPrimaryKeyFields.length === 0 &&
-    invalidSavedIncrementalFields.length === 0 &&
-    unsupportedSchemaFields(schema).length === 0;
+    invalidSavedIncrementalFields.length === 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
   const normalizeFeatureDrafts = (
