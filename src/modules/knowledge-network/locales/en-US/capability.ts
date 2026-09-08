@@ -47,8 +47,8 @@ export const capabilityPart = {
   capabilityColumnStatus: "Status",
   capabilityColumnSources: "Source",
   capabilitySourceManual: "Mounted by hand",
-  capabilitySourceActionType: "Action type [{{names}}]",
-  capabilitySourceObjectType: "Object type [{{names}}]",
+  capabilitySourceActionType: "Used by action type [{{names}}]",
+  capabilitySourceObjectType: "Used by object type [{{names}}]",
   capabilityDetachBlockedHint:
     "This capability is here because an object type or an action type points at it, so there is no mount to release. Change the referencing type instead.",
   capabilityDetachKeptByReference:
