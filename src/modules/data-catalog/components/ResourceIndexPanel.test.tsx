@@ -169,6 +169,26 @@ describe("ResourceIndexPanel", () => {
     expect(container.textContent).not.toContain("dataCatalog.indexWorkspace.indexedRowsShort");
   });
 
+  it("does not present a task as effective before the resource index is available", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[buildTask({ mode: "batch", status: "running" })]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container.textContent).toContain("dataCatalog.resource.noEffectiveIndex");
+    expect(container.textContent).not.toContain("dataCatalog.resource.effectiveActive");
+  });
+
   it("uses the shared colored status tag and an overflow action menu", async () => {
     const historyTasks = [
       buildTask({ id: "completed-task", status: "completed" }),

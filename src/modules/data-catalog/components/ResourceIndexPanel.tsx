@@ -99,10 +99,15 @@ function formatEffectiveState(task: BuildTask, t: TFunction) {
 
 function buildStatusSummary(
   latest: BuildTask | null,
+  localIndexStatus: CatalogResource["localIndexStatus"],
   t: TFunction,
   language: string,
 ) {
-  if (!latest || (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")) {
+  if (
+    localIndexStatus !== "available"
+    || !latest
+    || (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")
+  ) {
     return null;
   }
 
@@ -508,7 +513,7 @@ export function ResourceIndexPanel({
     },
   ];
 
-  const statusSummary = buildStatusSummary(latest, t, i18n.language);
+  const statusSummary = buildStatusSummary(latest, resource.localIndexStatus, t, i18n.language);
 
   const gateBanner =
     !gate.ok && catalog ? (

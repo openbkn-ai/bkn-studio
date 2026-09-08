@@ -50,6 +50,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [summaryTask, setSummaryTask] = useState<SemanticUnderstandingTaskSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const loadSummary = useCallback(async () => {
     const requestId = ++summaryRequestIdRef.current;
+    setSummaryError(null);
     const baseFilters = {
       direction: "desc" as const,
       resourceId: resource.id,
@@ -122,9 +124,10 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       if (requestId === summaryRequestIdRef.current) {
         setSummaryTask(result.items[0] ?? null);
       }
-    } catch {
+    } catch (e) {
       if (requestId === summaryRequestIdRef.current) {
         setSummaryTask(null);
+        setSummaryError(extractRequestErrorMessage(e));
       }
     }
   }, [resource.id]);
@@ -133,7 +136,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     if (!resourceChanged) return;
     pageRequestIdRef.current += 1;
     summaryRequestIdRef.current += 1;
-    setTasks([]); setSummaryTask(null); setTotal(0);
+    setTasks([]); setSummaryTask(null); setSummaryError(null); setTotal(0);
     setSelectedKeys([]);
     setApplyModeFilter(undefined);
     setStatusFilter([]);
@@ -169,7 +172,9 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   const summary = summaryTask;
   const summaryPresentation =
-    !summary
+    summaryError
+      ? { className: styles.summaryValueError, label: summaryError }
+      : !summary
       ? { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.noResult") }
       : summary.status === "completed" && summary.applied
         ? { className: styles.summaryValueSuccess, label: t("dataCatalog.semanticWorkspace.applied") }

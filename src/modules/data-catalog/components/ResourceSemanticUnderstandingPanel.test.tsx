@@ -259,6 +259,18 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect(screen.getByText("dataCatalog.semanticWorkspace.applied")).toBeTruthy();
   });
 
+  it("shows a summary error instead of no result when loading the summary fails", async () => {
+    listSemanticUnderstandingTasksMock.mockImplementation((filters: { applied?: boolean }) => {
+      if (filters.applied) return Promise.reject(new Error("Summary unavailable"));
+      return Promise.resolve({ items: [], total: 0 });
+    });
+
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    expect(await screen.findByText("Summary unavailable")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.semanticWorkspace.noResult")).toBeNull();
+  });
+
   it("returns to the first page after creating a task", async () => {
     const tasks = Array.from({ length: 11 }, (_, index) => ({
       agentId: "resource-semantic-understanding",
