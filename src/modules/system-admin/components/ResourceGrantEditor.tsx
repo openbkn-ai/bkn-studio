@@ -28,6 +28,8 @@ import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type ResourceGrantEditorProps = {
   disabled?: boolean;
+  /** Role grants are type-wide; concrete object grants are managed elsewhere. */
+  typeWideOnly?: boolean;
   /** Locked to one resource, such as a data-connection grant; only operations can be selected. */
   lockedResource?: ResourceRef;
   onChange: (next: ResourceGrant[]) => void;
@@ -39,12 +41,13 @@ const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.
 export function ResourceGrantEditor({
   disabled,
   lockedResource,
+  typeWideOnly = false,
   onChange,
   value,
 }: ResourceGrantEditorProps) {
   const { t } = useTranslation();
   const [draftType, setDraftType] = useState<string>(lockedResource?.type ?? RESOURCE_TYPES[0].type);
-  const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? WILDCARD);
+  const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? "");
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
   const [draftOps, setDraftOps] = useState<string[]>([]);
   const [addingGrantKey, setAddingGrantKey] = useState<string | null>(null);
@@ -54,7 +57,10 @@ export function ResourceGrantEditor({
   const resolvedId = lockedResource ? lockedResource.id : wholeType ? WILDCARD : draftId.trim();
 
   const addGrant = () => {
-    if (!draftOps.length || (!lockedResource && !wholeType && !draftId.trim())) {
+    if (
+      !draftOps.length ||
+      (!lockedResource && !wholeType && (typeWideOnly || !draftId.trim()))
+    ) {
       return;
     }
     const resource: ResourceRef = { type: draftType, id: resolvedId };
@@ -179,14 +185,26 @@ export function ResourceGrantEditor({
                 style={{ minWidth: 160 }}
                 value={draftType}
               />
-              <Input
-                disabled={wholeType}
-                onChange={(event) => setDraftId(event.target.value)}
-                placeholder={t("systemAdmin.grant.resourceIdPlaceholder")}
-                style={{ flex: 1, minWidth: 140 }}
-                value={wholeType ? "" : draftId}
-              />
-              <Checkbox checked={wholeType} onChange={(event) => setWholeType(event.target.checked)}>
+              {!typeWideOnly ? (
+                <Input
+                  disabled={wholeType}
+                  onChange={(event) => setDraftId(event.target.value)}
+                  placeholder={t("systemAdmin.grant.resourceIdPlaceholder")}
+                  style={{ flex: 1, minWidth: 140 }}
+                  value={wholeType ? "" : draftId}
+                />
+              ) : null}
+              <Checkbox
+                checked={typeWideOnly || wholeType}
+                disabled={typeWideOnly}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setWholeType(checked);
+                  if (checked || typeWideOnly) {
+                    setDraftId("");
+                  }
+                }}
+              >
                 {t("systemAdmin.grant.wholeType")}
               </Checkbox>
             </>
