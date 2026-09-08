@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { filterAccessibleExecutionUnitTabs } from "@/modules/execution-factory/permissions";
+import {
+  canAccessExecutionUnitManagement,
+  filterAccessibleExecutionUnitTabs,
+} from "@/modules/execution-factory/permissions";
 
 describe("filterAccessibleExecutionUnitTabs", () => {
   const tabs = ["operator", "toolbox", "mcp", "skill"] as const;
@@ -24,5 +27,14 @@ describe("filterAccessibleExecutionUnitTabs", () => {
     ],
   ])("keeps only tabs readable by %s", (_name, permissions, expected) => {
     expect(filterAccessibleExecutionUnitTabs([...tabs], permissions)).toEqual(expected);
+  });
+
+  it("does not mount the management list when the user has no execution-unit view grant", () => {
+    expect(canAccessExecutionUnitManagement([])).toBe(false);
+    expect(canAccessExecutionUnitManagement(["knowledge-network:view"])).toBe(false);
+  });
+
+  it("allows the management list when the user can view at least one execution-unit type", () => {
+    expect(canAccessExecutionUnitManagement(["execution-factory:mcp:view"])).toBe(true);
   });
 });

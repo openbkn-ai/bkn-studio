@@ -84,7 +84,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(group!.children ?? [])).toEqual(["user-management", "log-management"]);
   });
 
-  it("审计角色不会看到未授予的业务菜单", () => {
+  it("审计角色仍可看到固定业务入口", () => {
     const filtered = filterNavByPermission(consoleNavigation, [
       "admin-audit:view",
       "admin-user:view",
@@ -93,7 +93,14 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "admin-authz:view",
     ]);
 
-    expect(keys(filtered)).toEqual(["home", "system-management"]);
+    expect(keys(filtered)).toEqual([
+      "home",
+      "domain-knowledge-network",
+      "execution-factory",
+      "general-business-knowledge-network",
+      "observability",
+      "system-management",
+    ]);
   });
 
   it("数据资源知识网络入口不依赖菜单权限", () => {
