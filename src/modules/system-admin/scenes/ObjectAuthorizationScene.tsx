@@ -51,6 +51,7 @@ import {
   hydrateUserLookup,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
 import { AUTHZ_OBJECT_TYPES, authzObjectTypeOptions } from "@/modules/system-admin/utils/authz-catalog";
+import { isSelfAuthorizeLockout } from "@/modules/system-admin/utils/object-grant-guards";
 import { operationLabel, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
@@ -93,6 +94,7 @@ export function ObjectAuthorizationScene() {
     requiredPermissions: authzPoints.grant,
   });
   const canManageGrants = canGrant || canRevokeGrant;
+  const currentUserId = runtimeConfig.currentUser.id;
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
@@ -388,41 +390,61 @@ export function ObjectAuthorizationScene() {
   );
 
   const buildGrantActionMenu = useCallback(
-    (grant: ObjectGrant): MenuProps => ({
-      items: [
-        {
-          key: "manage",
-          label: t(
-            canManageGrants
-              ? "systemAdmin.objectGrants.manage"
-              : "systemAdmin.objectGrants.viewDetail",
-          ),
-        },
-        canRevokeGrant
-          ? {
-              danger: true,
-              key: "revoke",
-              label: t("systemAdmin.objectGrants.revoke"),
+    (grant: ObjectGrant): MenuProps => {
+      // Revoking here deletes the row outright, stranding a caller who holds no admin-authz:grant
+      // on their own `authorize` exactly as the drawer's remove control would. The drawer locks that
+      // row; this menu is the list's own way to the same DELETE, and refuses it on the same terms.
+      const selfAuthorizeLocked = isSelfAuthorizeLockout({
+        currentUserId,
+        grant,
+        isAdminGrantor: canGrant,
+      });
+      return {
+        items: [
+          {
+            key: "manage",
+            label: t(
+              canManageGrants
+                ? "systemAdmin.objectGrants.manage"
+                : "systemAdmin.objectGrants.viewDetail",
+            ),
+          },
+          canRevokeGrant
+            ? {
+                danger: true,
+                disabled: selfAuthorizeLocked,
+                key: "revoke",
+                label: selfAuthorizeLocked ? (
+                  <Tooltip title={t("systemAdmin.objectGrants.selfAuthorizeLocked")}>
+                    <span>{t("systemAdmin.objectGrants.revoke")}</span>
+                  </Tooltip>
+                ) : (
+                  t("systemAdmin.objectGrants.revoke")
+                ),
+              }
+            : null,
+        ].filter(Boolean),
+        onClick: ({ key, domEvent }) => {
+          domEvent.stopPropagation();
+          if (key === "manage") {
+            openDrawer({
+              id: grant.objId,
+              name: grant.objName,
+              sub: grant.objSub,
+              type: grant.objType,
+            });
+            return;
+          }
+          if (key === "revoke") {
+            if (selfAuthorizeLocked) {
+              return;
             }
-          : null,
-      ].filter(Boolean),
-      onClick: ({ key, domEvent }) => {
-        domEvent.stopPropagation();
-        if (key === "manage") {
-          openDrawer({
-            id: grant.objId,
-            name: grant.objName,
-            sub: grant.objSub,
-            type: grant.objType,
-          });
-          return;
-        }
-        if (key === "revoke") {
-          confirmRevoke(grant);
-        }
-      },
-    }),
-    [canManageGrants, canRevokeGrant, confirmRevoke, openDrawer, t],
+            confirmRevoke(grant);
+          }
+        },
+      };
+    },
+    [canGrant, canManageGrants, canRevokeGrant, confirmRevoke, currentUserId, openDrawer, t],
   );
 
   const columns: ColumnsType<ObjectGrant> = useMemo(() => [

@@ -73,9 +73,26 @@ function renderDrawer({ objectAuthorized = true } = {}) {
   );
 }
 
-/** The lock icon marks a row the caller may not write; each card renders one at most. */
+/** The lock icon marks a row the caller may not erase; each card renders one at most. */
 function lockedCardCount() {
   return document.querySelectorAll('[aria-label="lock"]').length;
+}
+
+/** The operation chip for `opKey` on the card of the grantee rendered under `granteeName`. */
+function findChip(granteeName: string, opKey: string) {
+  // authzWhoName -> authzWho -> authzCardHead -> authzCard
+  const card = screen.getByText(granteeName).closest("div")?.parentElement;
+  return [...(card?.querySelectorAll("button") ?? [])].find((button) =>
+    button.textContent?.includes(opKey),
+  );
+}
+
+function chipOn(granteeName: string, opKey: string) {
+  const chip = findChip(granteeName, opKey);
+  if (!chip) {
+    throw new Error(`no ${opKey} chip on the ${granteeName} card`);
+  }
+  return chip;
 }
 
 describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
@@ -159,6 +176,33 @@ describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
     expect(lockedCardCount()).toBe(1);
     // Their own row is the locked one; the public row and the ordinary grant stay removable.
     expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(2);
+    // Only the erasing direction is pinned. Adding an operation to their own row is a POST of the
+    // union and leaves `authorize` standing, so the rest of the card stays live. (#518 already
+    // keeps the `authorize` chip itself off this surface — offering it would be a grant.)
+    expect(findChip("u-owner", "authorize")).toBeUndefined();
+    expect(chipOn("u-owner", "modify").disabled).toBe(false);
+  });
+
+  // Unchecking the last operation on a row is a DELETE, so it runs on the revoke point — the one
+  // route by which a chip, not the remove control, can erase an `authorize`-only row. The platform
+  // authorization page passes no objectAuthorized, which is where that chip renders.
+  it("pins an authorize-only row of the caller's own", async () => {
+    appServices.runtimeConfig.currentUser.permissions = [
+      "admin-authz:view",
+      "admin-authz:revoke",
+    ];
+    listObjectGrantsForObjectMock.mockResolvedValue({
+      accounts: [],
+      grants: [grant("u-owner", ["authorize"]), grant("u-mate", ["authorize"])],
+    });
+    renderDrawer({ objectAuthorized: false });
+    await act(async () => {});
+
+    expect(lockedCardCount()).toBe(1);
+    expect(chipOn("u-owner", "authorize").disabled).toBe(true);
+    // Someone else's authorize-only row is still theirs to revoke, and that is what the point is
+    // for — so this proves the lock reads the accessor, not the caller's missing grant point.
+    expect(chipOn("u-mate", "authorize").disabled).toBe(false);
   });
 
   // The same caller holding the grant point can restore what they drop, so nothing is locked.
