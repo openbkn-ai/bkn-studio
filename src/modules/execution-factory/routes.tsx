@@ -11,7 +11,6 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
-import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
 const UnitManagementListPage = lazy(async () => {
