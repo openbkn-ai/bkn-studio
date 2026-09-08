@@ -27,6 +27,10 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { authzPoints } from "@/modules/system-admin/permissions";
+import {
+  isDelegateProtectedGrant,
+  isSelfAuthorizeLockout,
+} from "@/modules/system-admin/utils/object-grant-guards";
 import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
@@ -98,27 +102,6 @@ function mergeObjectGrants(
   return [...others, ...objectGrants];
 }
 
-/** The subject bkn-safe writes when the execution factory publishes something to everyone. */
-const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
-
-/**
- * Whether bkn-safe will refuse a non-administrator write against this row
- * (its protectAuthorizeHolder guard), so the drawer can lock it rather than offer a control that
- * always 403s.
- *
- * Two rows are off limits to a delegate, and both because the write erases: POST is
- * replace-semantics and DELETE removes everything the accessor holds.
- *
- * - A row carrying `authorize` — the object's creator, or anyone an administrator trusted with
- *   sharing. Letting a delegate rewrite it would let them take the object away from the person who
- *   made it, and `authorize` is administrator-conferred, so nobody inside the drawer could put it
- *   back. This covers the caller's OWN row: an owner cannot drop their own authorize either.
- * - The public-access row, whose removal would un-publish the object platform-wide.
- */
-function isDelegateProtected(grant: ObjectGrant) {
-  return grant.accessorId === PUBLIC_ACCESSOR_ID || grant.operations.includes("authorize");
-}
-
 export function ObjectAuthorizeDrawer({
   objectAuthorized = false,
   objId,
@@ -157,6 +140,7 @@ export function ObjectAuthorizeDrawer({
   // of rows the backend accepts from them. Which control they get is still decided per direction by
   // canGrant/canRevoke below.
   const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
+  const currentUserId = runtimeConfig.currentUser.id;
   const canGrant = objectAuthorized || isAdminGrantor;
   const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
@@ -526,8 +510,19 @@ export function ObjectAuthorizeDrawer({
             <div className={styles.authzList}>
               {grants.map((grant) => {
                 const builtinLocked = isProtected(grant.accessorId);
-                const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtected(grant);
+                const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtectedGrant(grant);
+                const selfAuthorizeLocked = isSelfAuthorizeLockout({
+                  currentUserId,
+                  grant,
+                  isAdminGrantor,
+                });
+                // Two locks of different reach. bkn-safe refuses a delegate any write against these
+                // rows, so that one takes the whole card. The self-lockout is about what the caller
+                // could undo, and only the erasing directions can strand them: dropping the row, or
+                // unchecking `authorize` on it. Adding operations to their own row still goes
+                // through — POST sends the union and leaves `authorize` standing.
                 const locked = builtinLocked || delegateLocked;
+                const eraseLocked = locked || selfAuthorizeLocked;
                 const grantee = resolveGrantee(grant.accessorId);
                 return (
                   <div className={styles.authzCard} key={grant.accessorId}>
@@ -544,12 +539,14 @@ export function ObjectAuthorizeDrawer({
                             : t("systemAdmin.objectGrants.granteeUser")}
                         </Tag>
                       </span>
-                      {locked ? (
+                      {eraseLocked ? (
                         <Tooltip
                           title={t(
                             builtinLocked
                               ? "systemAdmin.objectGrants.adminLocked"
-                              : "systemAdmin.objectGrants.delegateLocked",
+                              : delegateLocked
+                                ? "systemAdmin.objectGrants.delegateLocked"
+                                : "systemAdmin.objectGrants.selfAuthorizeLocked",
                           )}
                         >
                           <span className={styles.subText}>
@@ -583,7 +580,12 @@ export function ObjectAuthorizeDrawer({
                             styles.chipOpt,
                             selected ? styles.chipOptSelected : "",
                           ].join(" ")}
-                          disabled={busy || locked || !allowed}
+                          disabled={
+                            busy ||
+                            locked ||
+                            (selfAuthorizeLocked && op.key === "authorize") ||
+                            !allowed
+                          }
                           key={op.key}
                           onClick={() => void toggleOp(grant, op.key)}
                           type="button"
