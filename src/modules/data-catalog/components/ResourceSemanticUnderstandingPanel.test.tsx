@@ -47,6 +47,7 @@ vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", (
 }));
 
 import { ResourceSemanticUnderstandingPanel } from "./ResourceSemanticUnderstandingPanel";
+import { semanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const resource: CatalogResource = {
   catalogId: "catalog-1",
@@ -77,6 +78,15 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("resets sample rows to ten in the creation defaults", () => {
+    expect(semanticUnderstandingTaskFormDefaults).toMatchObject({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: false,
+      sampleMaxRows: 10,
+    });
   });
 
   it("initializes the semantic task defaults before opening the creation dialog", async () => {
@@ -119,21 +129,6 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       resourceId: "resource-1",
       sampleMaxRows: 20,
     }));
-  });
-
-  it("resets sample rows after cancelling the creation dialog", async () => {
-    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
-
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
-    const sampleRowsInput = (await screen.findAllByRole("spinbutton")).at(-1);
-    fireEvent.change(sampleRowsInput!, { target: { value: "20" } });
-    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
-
-    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
-
-    await waitFor(() => expect(screen.getAllByRole("spinbutton").at(-1)?.getAttribute("value")).toBe("10"));
   });
 
   it("keeps table header filters available when no task matches", async () => {

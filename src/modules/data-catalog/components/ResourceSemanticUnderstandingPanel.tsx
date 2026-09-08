@@ -34,6 +34,7 @@ import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTas
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
+import { semanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -118,12 +119,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   useEffect(() => {
     if (!open) return;
-    form.setFieldsValue({
-      applyMode: "fill_empty",
-      confidenceThreshold: 0.75,
-      includeSampleRows: false,
-      sampleMaxRows: 10,
-    });
+    form.setFieldsValue(semanticUnderstandingTaskFormDefaults);
   }, [form, open]);
 
   const start = async () => {
