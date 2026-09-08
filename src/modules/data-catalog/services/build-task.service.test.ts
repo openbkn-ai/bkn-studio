@@ -189,16 +189,18 @@ describe("createBuildTask", () => {
     });
 
     it("sends repeated backend status parameters without active", async () => {
-      getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+      getMock.mockResolvedValue({ data: { entries: [], total_count: 37 } });
       const { listBuildTaskPage } = await import(
         "@/modules/data-catalog/services/build-task.service"
       );
 
-      await listBuildTaskPage({
+      const result = await listBuildTaskPage({
         page: 1,
         pageSize: 20,
         statuses: ["stopping", "stopped", "cancelled"],
       });
+
+      expect(result.total).toBe(37);
 
       expect(getMock).toHaveBeenCalledOnce();
       expect(getMock.mock.calls[0]?.[0]).toBe("/vega-backend/v1/build-tasks");

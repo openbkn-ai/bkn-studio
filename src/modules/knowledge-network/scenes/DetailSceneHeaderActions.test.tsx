@@ -54,10 +54,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
   }),
 }));
 
-vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
-  listBuildTasks: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
   useResolvedUpdaterName: (name?: string) => name || "--",
 }));

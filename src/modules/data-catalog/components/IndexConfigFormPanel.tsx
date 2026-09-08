@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { loadAnalyzerCapabilities, findUnavailableAnalyzers, type AnalyzerCapabilitiesLoadState } from "@/modules/data-catalog/utils/analyzer-capabilities";
 import {
   getCatalogResource,
@@ -257,9 +257,14 @@ export function IndexConfigFormPanel({
       }
 
       try {
-        const tasks = await listBuildTasks({ resourceId: resource.id });
-        const running = tasks.find((task) => isActiveBuildTask(task)) ?? null;
-        setActiveTask(running);
+        const result = await listBuildTaskPage({
+          direction: "desc",
+          limit: 1,
+          resourceId: resource.id,
+          sort: "create_time",
+          statuses: ["pending", "running", "stopping"],
+        });
+        setActiveTask(result.items[0] ?? null);
       } catch {
         setActiveTask(null);
       }

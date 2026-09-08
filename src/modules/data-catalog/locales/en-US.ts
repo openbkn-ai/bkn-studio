@@ -187,7 +187,6 @@ export const dataCatalogEnUS = {
     },
     emptyDescription: "Create and discover a connection first, then browse resources and build indexes here. If the platform already holds connections you cannot see here, access to their catalogs has not been granted to you.",
     backToCatalog: "Back to Data Catalog",
-    buildChip: "Building · {{count}}",
     format: {
       daysAgo: "{{count}}d ago",
       hoursAgo: "{{count}}h ago",
@@ -560,10 +559,9 @@ export const dataCatalogEnUS = {
       progress: "Progress",
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
-      emptyVisible: "No tasks you can see",
-      emptyUnauthorizedDescription: "Only tasks you may see are listed, and that is decided on the catalog each task belongs to. Ask an administrator to grant you access to the catalogs whose tasks you expect here.",
-      visibleCount: "{{count}} on this page",
-      emptyDescription: "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
+      totalCount: "{{count}} total",
+      emptyDescription:
+        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
       pauseListening: "Pause Listening",
       resumeListening: "Resume Listening",
       paused: "Listening paused",

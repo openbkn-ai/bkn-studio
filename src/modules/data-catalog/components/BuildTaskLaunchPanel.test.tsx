@@ -25,13 +25,13 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 const createBuildTaskMock = vi.hoisted(() => vi.fn());
-const listBuildTasksMock = vi.hoisted(() => vi.fn());
+const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const resumeBuildTaskMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   BuildTaskConflictError: class BuildTaskConflictError extends Error {},
   createBuildTask: createBuildTaskMock,
-  listBuildTasks: listBuildTasksMock,
+  listBuildTaskPage: listBuildTaskPageMock,
   resumeBuildTask: resumeBuildTaskMock,
 }));
 
@@ -65,8 +65,8 @@ const resource: CatalogResource = {
 describe("BuildTaskLaunchPanel", () => {
   beforeEach(() => {
     createBuildTaskMock.mockReset();
-    listBuildTasksMock.mockReset();
-    listBuildTasksMock.mockResolvedValue([]);
+    listBuildTaskPageMock.mockReset();
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     resumeBuildTaskMock.mockReset();
   });
 
@@ -85,6 +85,25 @@ describe("BuildTaskLaunchPanel", () => {
     expect(screen.getByText("dataCatalog.build.batchLabel")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.build.streamingLabel")).toBeNull();
     expect(screen.getByText("dataCatalog.build.executeIncremental")).toBeTruthy();
+  });
+
+  it("loads only the latest active task for the resource", async () => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={resource}
+      />,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    }));
   });
 
   it("does not issue a second start request after task creation", async () => {

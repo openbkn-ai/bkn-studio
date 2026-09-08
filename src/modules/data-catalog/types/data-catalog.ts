@@ -195,13 +195,6 @@ export type BuildTask = {
   totalCount: number;
 };
 
-export type BuildTaskListQuery = {
-  catalogId?: string;
-  resourceId?: string;
-  silent?: boolean;
-  statuses?: BuildTaskStatus[];
-};
-
 /** Server-side sort dimension for the build-task list API. */
 export type BuildTaskSort =
   | "create_time"
@@ -214,7 +207,7 @@ export type BuildTaskPageQuery = {
   executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
   direction?: "asc" | "desc";
-  /** Raw window. The caller scans by offset because the backend filters after paging (#977). */
+  /** Server pagination window; Vega applies task visibility and filters before limit and offset. */
   limit?: number;
   offset?: number;
   /** Page coordinates, kept for callers that read a fixed page. Ignored when offset/limit are given. */
@@ -227,7 +220,7 @@ export type BuildTaskPageQuery = {
 
 export type BuildTaskPageResult = {
   items: BuildTask[];
-  /** Unfiltered count reported by the backend; not the number of rows the caller may see (#977). */
+  /** Count of tasks visible to the current caller after the server-side filters are applied. */
   total: number;
 };
 

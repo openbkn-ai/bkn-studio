@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Dropdown, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -25,7 +25,6 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { collectVisiblePage, pagerTotal } from "@/modules/data-catalog/lib/visible-page";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { BuildProgress } from "@/modules/data-catalog/components/BuildProgress";
@@ -90,13 +89,7 @@ export function IndexBuildListScene() {
   const [pageSize, setPageSize] = useState(10);
   const [sort, setSort] = useState<BuildTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
-  // Page cursors into the raw (unfiltered) space: offsets[n] starts page n+1, because the backend
-  // filters after paging and a page number alone cannot say where its rows begin (#977). Held in a
-  // ref, not state — loading a page writes the next cursor, so as state it would re-create the
-  // loader that produced it and the effect below would load forever.
-  const offsetsRef = useRef<number[]>([0]);
-  const [hasMore, setHasMore] = useState(false);
-  const [rawTotal, setRawTotal] = useState(0);
+  const [total, setTotal] = useState(0);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const canManageResourceTasks = hasPermissions({
@@ -134,57 +127,36 @@ export function IndexBuildListScene() {
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
       setSearchParams(next, { replace: true });
-      offsetsRef.current = [0];
       setSelectedKeys([]);
       setPage(1);
     },
     [listFilters, searchParams, setSearchParams],
   );
 
-  const readPage = useCallback(
-    async (startOffset: number) =>
-      collectVisiblePage(
-        (offset, limit) =>
-          listBuildTaskPage({ ...taskQuery, limit, offset }).then((result) => ({
-            items: result.items,
-            total: result.total,
-          })),
-        { pageSize, startOffset },
-      ),
-    [pageSize, taskQuery],
-  );
-
-  const applyPage = useCallback(
-    (result: Awaited<ReturnType<typeof readPage>>) => {
-      setTasks(result.items);
-      setRawTotal(result.rawTotal);
-      // A spent request budget is not the end of the list: the next page stays reachable.
-      setHasMore(!result.exhausted);
-      offsetsRef.current[page] = result.nextOffset;
-    },
-    [page],
-  );
-
   const loadTasks = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      applyPage(await readPage(offsetsRef.current[page - 1] ?? 0));
+      const result = await listBuildTaskPage(taskQuery);
+      setTasks(result.items);
+      setTotal(result.total);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [applyPage, page, readPage]);
+  }, [taskQuery]);
 
   // Poll only tasks on the current page to prevent request volume growing with resource count.
   const refreshTasksSilently = useCallback(async () => {
     try {
-      applyPage(await readPage(offsetsRef.current[page - 1] ?? 0));
+      const result = await listBuildTaskPage(taskQuery);
+      setTasks(result.items);
+      setTotal(result.total);
     } catch {
       // Retain existing data when polling fails and wait for the next cycle.
     }
-  }, [applyPage, page, readPage]);
+  }, [taskQuery]);
 
   useEffect(() => {
     void loadTasks();
@@ -506,12 +478,10 @@ export function IndexBuildListScene() {
               emptyText: (
                 <EmptyStatePanel
                   description={
-                    rawTotal > 0
-                      ? t("dataCatalog.task.emptyUnauthorizedDescription")
-                      : t("dataCatalog.task.emptyDescription")
+                    t("dataCatalog.task.emptyDescription")
                   }
                   icon={<UnorderedListOutlined />}
-                  title={rawTotal > 0 ? t("dataCatalog.task.emptyVisible") : t("dataCatalog.task.empty")}
+                  title={t("dataCatalog.task.empty")}
                 />
               ),
             }}
@@ -534,25 +504,22 @@ export function IndexBuildListScene() {
           />
         )}
       </TableSurface>
-      {tasks.length > 0 || page > 1 || hasMore ? (
+      {total > 0 || page > 1 ? (
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
             setSelectedKeys([]);
             if (nextPageSize !== pageSize) {
-              offsetsRef.current = [0];
               setPage(1);
               setPageSize(nextPageSize);
               return;
             }
-            // Only a page whose cursor is known can be entered, which is this one or the next.
-            setPage(Math.min(nextPage, page + 1));
+            setPage(nextPage);
           }}
           pageSize={pageSize}
           showSizeChanger
-          // The backend's count includes tasks this account cannot see, so it is not shown as a total.
-          showTotal={() => t("dataCatalog.task.visibleCount", { count: tasks.length })}
-          total={pagerTotal({ hasMore, loaded: tasks.length, page, pageSize })}
+          showTotal={() => t("dataCatalog.task.totalCount", { count: total })}
+          total={total}
         />
       ) : null}
 

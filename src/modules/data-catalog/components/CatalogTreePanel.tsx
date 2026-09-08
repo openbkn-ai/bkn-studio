@@ -321,7 +321,7 @@ export function CatalogTreePanel({
           };
         }),
         key: group.key,
-        selectable: false,
+        selectable: true,
         title: (
           <span className={styles.groupNodeTitle}>
             <span className={styles.groupNodeName}>{group.label}</span>
@@ -622,7 +622,22 @@ export function CatalogTreePanel({
             if (!meta) {
               return;
             }
+            if (meta.type === "connector") {
+              const currentKeys = expandedKeysRef.current;
+              const nextKeys = currentKeys.includes(key)
+                ? currentKeys.filter((expandedKey) => expandedKey !== key)
+                : [...currentKeys, key];
+              setExpandedKeys(nextKeys);
+              expandedKeysRef.current = nextKeys;
+              return;
+            }
             if (meta.type === "catalog") {
+              if (!expandedKeysRef.current.includes(key)) {
+                const nextKeys = [...expandedKeysRef.current, key];
+                setExpandedKeys(nextKeys);
+                expandedKeysRef.current = nextKeys;
+                loadCatalogSchemas(meta.catalogId);
+              }
               onSelectScope?.(null);
               onSelectCatalog(meta.catalogId);
               return;
