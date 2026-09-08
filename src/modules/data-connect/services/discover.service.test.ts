@@ -61,6 +61,7 @@ describe("discover.service · task status contract", () => {
     expect(result.items[0]?.lastProgressTime).toBe(250);
     expect(result.items[0]?.queuePriority).toBe(30);
     expect(result.items[0]?.resourceId).toBe("resource-1");
+    expect(result.total).toBe(1);
     expect(result.items[0]).not.toHaveProperty("startTimeValue");
     expect(result.items[0]).not.toHaveProperty("finishTimeValue");
     expect(getMock).toHaveBeenCalledOnce();

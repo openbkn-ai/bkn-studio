@@ -257,3 +257,22 @@ describe("resource semantic-understanding task history", () => {
     expect(offsets).toEqual([0, 100]);
   });
 });
+
+describe("semantic-understanding task list", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("preserves Vega's filtered total count for pagination", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 36 } });
+    const { listSemanticUnderstandingTasks: listWithAPI } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    const result = await listWithAPI({ statuses: ["completed"] }, { limit: 20, offset: 0 });
+
+    expect(result).toEqual({ items: [], total: 36 });
+  });
+});

@@ -560,10 +560,9 @@ export const dataCatalogEnUS = {
       progress: "Progress",
       statusFilterPlaceholder: "All statuses",
       empty: "No index tasks",
-      emptyVisible: "No tasks you can see",
-      emptyUnauthorizedDescription: "Only tasks you may see are listed, and that is decided on the catalog each task belongs to. Ask an administrator to grant you access to the catalogs whose tasks you expect here.",
-      visibleCount: "{{count}} on this page",
-      emptyDescription: "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
+      totalCount: "{{count}} total",
+      emptyDescription:
+        "No tasks match the current filters. Configure and submit a build from a resource's Data Index tab in Data Catalog.",
       pauseListening: "Pause Listening",
       resumeListening: "Resume Listening",
       paused: "Listening paused",
