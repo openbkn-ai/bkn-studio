@@ -157,6 +157,7 @@ export function ObjectAuthorizeDrawer({
   // of rows the backend accepts from them. Which control they get is still decided per direction by
   // canGrant/canRevoke below.
   const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
+  const currentUserId = runtimeConfig.currentUser.id;
   const canGrant = objectAuthorized || isAdminGrantor;
   const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
@@ -526,7 +527,19 @@ export function ObjectAuthorizeDrawer({
             <div className={styles.authzList}>
               {grants.map((grant) => {
                 const builtinLocked = isProtected(grant.accessorId);
-                const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtected(grant);
+                // Both writes erase, and putting `authorize` back is a grant. A caller without
+                // `admin-authz:grant` who drops it from their own row leaves the drawer with no way
+                // back in: the chip that would restore it is the one their point does not cover, and
+                // objectAuthorized — the other route to canGrant — dies with the row. So their own
+                // row stays locked even where bkn-safe would take the write. (An `authorize` held
+                // through a department grant is the same trap, but membership is not resolved here.)
+                const selfAuthorizeLockout =
+                  !isAdminGrantor &&
+                  currentUserId !== null &&
+                  grant.accessorId === currentUserId &&
+                  grant.operations.includes("authorize");
+                const delegateLocked =
+                  isDelegateProtected(grant) && (!isPlatformAuthzAdmin || selfAuthorizeLockout);
                 const locked = builtinLocked || delegateLocked;
                 const grantee = resolveGrantee(grant.accessorId);
                 return (
@@ -549,7 +562,9 @@ export function ObjectAuthorizeDrawer({
                           title={t(
                             builtinLocked
                               ? "systemAdmin.objectGrants.adminLocked"
-                              : "systemAdmin.objectGrants.delegateLocked",
+                              : isPlatformAuthzAdmin
+                                ? "systemAdmin.objectGrants.selfAuthorizeLocked"
+                                : "systemAdmin.objectGrants.delegateLocked",
                           )}
                         >
                           <span className={styles.subText}>

@@ -160,6 +160,7 @@ export const systemAdminEnUS = {
       removeLastOpConfirm: "This subject will have no operations left and the permission rule will be removed. Continue?",
       adminLocked: "The administrator holds all permissions and cannot be adjusted or removed here.",
       delegateLocked: "Only a platform administrator can adjust or remove this grant — including your own.",
+      selfAuthorizeLocked: "This grant carries your own authorize permission. Your role cannot grant it back, so it stays locked here.",
       revokeTitle: "Revoke permissions",
       revokeConfirm: "Revoke \"{{name}}\"'s permissions on \"{{object}}\"?",
       stats: {
