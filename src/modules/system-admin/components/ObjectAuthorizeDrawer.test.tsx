@@ -17,7 +17,7 @@ const listUsersPageMock = vi.hoisted(() => vi.fn());
 const appServices = vi.hoisted(() => ({
   message: { error: vi.fn(), success: vi.fn() },
   modal: { confirm: vi.fn() },
-  runtimeConfig: { currentUser: { permissions: [] as string[] } },
+  runtimeConfig: { currentUser: { id: "u-owner", permissions: [] as string[] } },
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -81,6 +81,7 @@ function lockedCardCount() {
 describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    appServices.runtimeConfig.currentUser.id = "u-owner";
     appServices.runtimeConfig.currentUser.permissions = [];
     listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
     listObjectGrantsForObjectMock.mockResolvedValue({
@@ -132,11 +133,38 @@ describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
   // so the rows stay removable — reading administrator status off the grant point alone took the
   // remove control away from them.
   it("leaves every row removable for a revoke-only administrator", async () => {
+    appServices.runtimeConfig.currentUser.id = "u-admin";
     appServices.runtimeConfig.currentUser.permissions = [
       "admin-authz:view",
       "admin-authz:revoke",
     ];
     renderDrawer({ objectAuthorized: false });
+    await act(async () => {});
+
+    expect(lockedCardCount()).toBe(0);
+    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(3);
+  });
+
+  // Restoring `authorize` is a grant, and a revoke-only administrator holds no grant point: dropping
+  // it from their own row would leave them outside the object with no control here to undo it. The
+  // rows they can put back stay open.
+  it("keeps a revoke-only administrator from dropping their own authorize", async () => {
+    appServices.runtimeConfig.currentUser.permissions = [
+      "admin-authz:view",
+      "admin-authz:revoke",
+    ];
+    renderDrawer();
+    await act(async () => {});
+
+    expect(lockedCardCount()).toBe(1);
+    // Their own row is the locked one; the public row and the ordinary grant stay removable.
+    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(2);
+  });
+
+  // The same caller holding the grant point can restore what they drop, so nothing is locked.
+  it("leaves the caller's own authorize row open once they hold the grant point", async () => {
+    appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant"];
+    renderDrawer();
     await act(async () => {});
 
     expect(lockedCardCount()).toBe(0);
