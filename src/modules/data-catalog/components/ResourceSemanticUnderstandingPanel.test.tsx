@@ -99,6 +99,28 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   });
 
+  it("lets users choose up to twenty sample rows", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
+
+    const sampleRowsInput = (await screen.findAllByRole("spinbutton")).at(-1);
+    expect(sampleRowsInput?.getAttribute("value")).toBe("10");
+    fireEvent.change(sampleRowsInput!, { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+
+    await waitFor(() => expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows: 20,
+    }));
+  });
+
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 

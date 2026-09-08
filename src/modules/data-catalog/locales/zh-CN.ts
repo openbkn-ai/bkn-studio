@@ -31,8 +31,7 @@ export const dataCatalogZhCN = {
       goConfigure: "配置索引",
       launchConfigTitle: "当前资源配置",
       editConfigLink: "去修改",
-      launchConfigSummary:
-        "主键 {{primaryKey}} · 增量键 {{incremental}} · 向量 {{embedding}} · 全文 {{fulltext}} · 模型 {{model}} · 分词器 {{analyzer}}",
+      launchConfigSummary: "主键 {{primaryKey}} · 增量键 {{incremental}} · 向量 {{embedding}} · 全文 {{fulltext}} · 模型 {{model}} · 分词器 {{analyzer}}",
       viewConfig: "配置索引",
       viewTasks: "索引任务",
       tasksUnavailableForDataset: "Dataset 资源暂不支持索引任务。",
@@ -49,10 +48,8 @@ export const dataCatalogZhCN = {
       discardChangesDescription: "切换 Tab 将丢失当前未保存的修改，且无法恢复。",
       discardChangesConfirm: "放弃并切换",
       discoveryFailedTitle: "资源最近一次探查失败",
-      discoveryFailedNoSchemaDescription:
-        "当前没有可用的字段元数据，请重新执行探查后再预览、查询或构建索引。",
-      discoveryFailedStaleSchemaDescription:
-        "仍可使用上一次成功探查的字段，但这些字段可能已经过期。",
+      discoveryFailedNoSchemaDescription: "当前没有可用的字段元数据，请重新执行探查后再预览、查询或构建索引。",
+      discoveryFailedStaleSchemaDescription: "仍可使用上一次成功探查的字段，但这些字段可能已经过期。",
       resourceMissingTitle: "资源已从源端消失",
       resourceMissingDescription: "探查未在源端找到该资源，请恢复源端对象并重新探查后再查询或构建索引。",
       resourceDisabledTitle: "资源已停用",
@@ -71,22 +68,124 @@ export const dataCatalogZhCN = {
     indexBuildTitle: "任务管理",
     indexBuildDescription: "管理数据资源相关任务，支持任务查看，暂停，重启，删除等操作。",
     taskManagement: {
-      tabs: { indexBuild: "索引构建任务", discover: "探查任务", semanticUnderstanding: "语义理解任务" },
-      columns: { task: "任务 ID", catalog: "所属目录", resource: "所属资源", strategy: "探查策略", trigger: "触发方式", scope: "任务范围", applyMode: "应用方式", confidence: "置信度", applied: "应用状态" },
-      scope: { catalog: "数据目录", resource: "数据资源" },
-      applyMode: { dryRun: "仅预览", fillEmpty: "填充空值", force: "强制覆盖" },
-      applied: { applied: "已应用", notApplied: "未应用" },
+      tabs: {
+        indexBuild: "索引构建任务",
+        discover: "探查任务",
+        semanticUnderstanding: "语义理解任务"
+      },
+      columns: {
+        task: "任务 ID",
+        catalog: "所属目录",
+        resource: "所属资源",
+        strategy: "探查策略",
+        trigger: "触发方式",
+        scope: "任务范围",
+        applyMode: "应用方式",
+        confidence: "置信度",
+        applied: "应用状态"
+      },
+      scope: {
+        catalog: "数据目录",
+        resource: "数据资源"
+      },
+      applyMode: {
+        dryRun: "仅预览",
+        fillEmpty: "填充空值",
+        force: "强制覆盖"
+      },
+      applied: {
+        applied: "已应用",
+        notApplied: "未应用"
+      },
       moreFilters: "更多筛选",
       moreFiltersWithCount: "更多筛选（{{count}}）",
       clearAdvancedFilters: "清空更多筛选",
-      semanticStatus: { pending: "等待中", running: "执行中", completed: "已完成", failed: "失败", cancelled: "已取消" },
-      details: { taskInformation: "任务信息", taskScope: "任务范围", scheduleId: "计划 ID", startTime: "开始时间", message: "执行信息", agentId: "Agent ID", failureReason: "失败原因" },
-      discover: { empty: "暂无探查任务" },
-      semantic: { empty: "暂无语义理解任务", deleteTitle: "删除语义理解任务", deleteDescription: "确认删除语义理解任务“{{id}}”吗？", detailSections: { task: "任务信息", execution: "执行与应用", quality: "质量与字段应用", payload: "输入与结果", audit: "审计信息" }, fields: { catalogId: "目录 ID", resourceId: "资源 ID", agentTaskId: "Agent 任务 ID", confidenceThreshold: "置信度阈值", confidenceDetail: "置信度明细", applyDetail: "应用明细", inputHash: "输入哈希", input: "输入快照", result: "理解结果", resourceEffective: "资源语义增强", fieldEffective: "有效字段增强", warnings: "处理提示", field: "字段", updated: "已更新属性", reason: "原因" }, values: { effective: "有效", notEffective: "无有效更新", fieldEffective: "{{effective}} / {{total}} 个字段" }, fieldStatus: { updated: "已更新", partial: "部分更新", unchanged: "无变更", skipped: "已跳过" }, mock: { customerCatalog: "CRM 主数据", phoneInsufficientSamplesWarning: "字段 phone 的样本值不足，未生成语义建议。", insufficientSamples: "样本值不足", customerSemanticSummary: "已为客户主数据补充字段语义。" } },
+      semanticStatus: {
+        pending: "等待中",
+        running: "执行中",
+        completed: "已完成",
+        failed: "失败",
+        cancelled: "已取消"
+      },
+      details: {
+        taskInformation: "任务信息",
+        taskScope: "任务范围",
+        scheduleId: "计划 ID",
+        startTime: "开始时间",
+        message: "执行信息",
+        agentId: "Agent ID",
+        failureReason: "失败原因"
+      },
+      discover: {
+        empty: "暂无探查任务"
+      },
+      semantic: {
+        empty: "暂无语义理解任务",
+        deleteTitle: "删除语义理解任务",
+        deleteDescription: "确认删除语义理解任务“{{id}}”吗？",
+        detailSections: {
+          task: "任务信息",
+          execution: "执行与应用",
+          quality: "质量与字段应用",
+          payload: "输入与结果",
+          audit: "审计信息"
+        },
+        fields: {
+          catalogId: "目录 ID",
+          resourceId: "资源 ID",
+          agentTaskId: "Agent 任务 ID",
+          confidenceThreshold: "置信度阈值",
+          confidenceDetail: "置信度明细",
+          applyDetail: "应用明细",
+          inputHash: "输入哈希",
+          input: "输入快照",
+          result: "理解结果",
+          resourceEffective: "资源语义增强",
+          fieldEffective: "有效字段增强",
+          warnings: "处理提示",
+          field: "字段",
+          updated: "已更新属性",
+          reason: "原因"
+        },
+        values: {
+          effective: "有效",
+          notEffective: "无有效更新",
+          fieldEffective: "{{effective}} / {{total}} 个字段"
+        },
+        fieldStatus: {
+          updated: "已更新",
+          partial: "部分更新",
+          unchanged: "无变更",
+          skipped: "已跳过"
+        },
+        mock: {
+          customerCatalog: "CRM 主数据",
+          phoneInsufficientSamplesWarning: "字段 phone 的样本值不足，未生成语义建议。",
+          insufficientSamples: "样本值不足",
+          customerSemanticSummary: "已为客户主数据补充字段语义。"
+        }
+      },
     },
-    semanticWorkspace: { summary: "语义理解结果", noResult: "暂无结果", applied: "已应用", generatedNotApplied: "已生成，未应用", pending: "等待中", running: "执行中", failed: "生成失败", cancelled: "已取消", create: "新建任务", createTitle: "新建语义理解任务", start: "开始语义理解", started: "已开始语义理解任务", empty: "暂无语义理解任务", confidenceThreshold: "置信度阈值", includeSamples: "包含样本数据", includeSamplesHint: "样本数据将以未脱敏形式发送给语义理解服务。" },
-    emptyDescription:
-      "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
+    semanticWorkspace: {
+      summary: "语义理解结果",
+      noResult: "暂无结果",
+      applied: "已应用",
+      generatedNotApplied: "已生成，未应用",
+      pending: "等待中",
+      running: "执行中",
+      failed: "生成失败",
+      cancelled: "已取消",
+      create: "新建任务",
+      createTitle: "新建语义理解任务",
+      start: "开始语义理解",
+      started: "已开始语义理解任务",
+      empty: "暂无语义理解任务",
+      confidenceThreshold: "置信度阈值",
+      includeSamples: "包含样本数据",
+      includeSamplesHint: "样本数据将以未脱敏形式发送给语义理解服务。",
+      sampleRows: "样本行数（1–20）"
+    },
+    emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
     backToCatalog: "返回数据目录",
     buildChip: "构建中 · {{count}}",
     format: {
@@ -107,12 +206,9 @@ export const dataCatalogZhCN = {
     taskErrors: {
       dataTooLong: {
         title: "任务进度标记写入失败",
-        syncedMarkMessage:
-          "同步游标内容超过任务表可保存长度，导致后端更新任务状态失败。",
-        columnMessage:
-          "字段 {{column}} 的内容超过数据库可保存长度，导致任务状态更新失败。",
-        syncedMarkSuggestion:
-          "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
+        syncedMarkMessage: "同步游标内容超过任务表可保存长度，导致后端更新任务状态失败。",
+        columnMessage: "字段 {{column}} 的内容超过数据库可保存长度，导致任务状态更新失败。",
+        syncedMarkSuggestion: "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
         columnSuggestion: "建议检查对应字段长度配置，扩容后重新构建。",
       },
       duplicateEntry: {
@@ -177,11 +273,9 @@ export const dataCatalogZhCN = {
       logicalNamePlaceholder: "例如 team_analytics",
       logicalDescriptionPlaceholder: "可选，说明该逻辑分组用途",
       deleteLogicalTitle: "删除逻辑分组",
-      deleteLogicalDescription:
-        '确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。',
+      deleteLogicalDescription: '确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。',
       deleteLogicalBlockedTitle: "当前无法删除逻辑分组",
-      deleteLogicalBlockedDescription:
-        "请先处理以下阻断项，然后重试：",
+      deleteLogicalBlockedDescription: "请先处理以下阻断项，然后重试：",
       deleteLogicalBlockers: {
         protected_resources: "受保护资源 {{count}} 个",
         protected_resources_one: "受保护资源 {{count}} 个",
@@ -236,7 +330,11 @@ export const dataCatalogZhCN = {
       rowCount: "行数",
       indexState: "索引状态",
       indexName: "本地索引名称",
-      localIndexStatuses: { available: "可用", stale: "已失效", unavailable: "不可用" },
+      localIndexStatuses: {
+        available: "可用",
+        stale: "已失效",
+        unavailable: "不可用"
+      },
       searchPlaceholder: "搜索资源名称",
       noMatch: "没有符合筛选条件的资源",
       fieldCount: "字段数",
@@ -250,11 +348,9 @@ export const dataCatalogZhCN = {
       tags: "标签",
       updater: "更新人",
       sourceIdentifierPlaceholder: "如 crm_core.customers 或一段 SQL",
-      sourceIdentifierHint:
-        "数据源中的表名 / 视图定义；探查（discover）发现的资源会自动填写。",
+      sourceIdentifierHint: "数据源中的表名 / 视图定义；探查（discover）发现的资源会自动填写。",
       schemaDefinition: "Schema 定义",
-      schemaHint:
-        "每行一个字段：名称 类型。留空时使用默认 schema（id / name / updated_at），后续可由探查补全。",
+      schemaHint: "每行一个字段：名称 类型。留空时使用默认 schema（id / name / updated_at），后续可由探查补全。",
       fieldName: "字段名",
       fieldDisplayName: "业务名称",
       fieldDescription: "描述",
@@ -272,8 +368,7 @@ export const dataCatalogZhCN = {
       noEffectiveIndex: "暂无生效索引——构建成功后即可在知识网络中进行向量检索。",
       noIndexHint: "该资源还没有索引。构建后即可在知识网络中进行向量检索。",
       rebuildFailedTitle: "重建失败。检索不受影响，仍由旧版索引 {{version}} 提供服务。",
-      rebuildFailedHint:
-        "重建失败:{{error}}。检索不受影响,仍由旧版索引 {{version}} 提供服务。",
+      rebuildFailedHint: "重建失败:{{error}}。检索不受影响,仍由旧版索引 {{version}} 提供服务。",
       notFound: "未找到该资源,可能已被删除",
     },
     actions: {
@@ -297,10 +392,13 @@ export const dataCatalogZhCN = {
       unchanged: "未变化",
       updated: "已更新",
     },
-    resourceStatuses: { active: "活跃", deprecated: "已废弃", stale: "已失效" },
+    resourceStatuses: {
+      active: "活跃",
+      deprecated: "已废弃",
+      stale: "已失效"
+    },
     gate: {
-      catalogDisabled:
-        "所属连接「{{name}}」已停用,无法预览数据或构建索引。",
+      catalogDisabled: "所属连接「{{name}}」已停用,无法预览数据或构建索引。",
       catalogDisabledShort: "连接已停用",
       goEnable: "去连接页处理",
     },
@@ -310,8 +408,7 @@ export const dataCatalogZhCN = {
       summary: "展示 {{visibleRows}} · 总计 {{totalRows}}",
       empty: "没有数据",
       metadataDiscoveryFailed: "资源元数据探查失败",
-      metadataDiscoveryFailedDescription:
-        "未探查到可用字段，暂时无法预览。请重新执行探查后再试。",
+      metadataDiscoveryFailedDescription: "未探查到可用字段，暂时无法预览。请重新执行探查后再试。",
       metadataUnavailable: "资源元数据尚未就绪",
       metadataUnavailableDescription: "补充或刷新资源字段后才能预览数据。",
       resourceMissing: "源端资源不存在",
@@ -320,8 +417,7 @@ export const dataCatalogZhCN = {
       resourceDisabledDescription: "当前资源处于停用状态，启用后才能预览数据。",
       resourceStale: "资源已失效",
       resourceStaleDescription: "当前资源已失效，即使保留了字段元数据也不能预览数据。",
-      mockLongText:
-        "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
+      mockLongText: "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
     },
     build: {
       submit: "开始构建",
@@ -334,20 +430,14 @@ export const dataCatalogZhCN = {
       editTitle: "配置索引",
       editSubmit: "开始构建",
       editConfirmTitle: "开始新的构建?",
-      editConfirmContent:
-        "将按资源当前配置创建新的构建任务。新索引成功前仍以旧索引服务检索（若仍可用）。",
+      editConfirmContent: "将按资源当前配置创建新的构建任务。新索引成功前仍以旧索引服务检索（若仍可用）。",
       editConfirmOk: "开始构建",
       edited: "已创建新的构建任务",
-      streamingActiveLocked:
-        "流式任务仍在运行或监听中。请先暂停/停止当前任务，再修改配置或新建流式构建。",
-      streamingRecreateHint:
-        "流式任务不支持原地改配置。请先保存资源配置，再到任务管理创建新的流式构建。",
-      activeTaskLocked:
-        "该资源已有进行中的构建任务，整个配置页面已锁定。请先等待完成或停止当前任务，再修改配置或发起新构建。",
-      configConflict:
-        "当前存在进行中的构建任务，无法修改索引配置。请先停止任务后再保存。",
-      startRejected:
-        "无法启动该任务（配置可能已变更，或已有更新的成功构建）。请到「配置索引」保存最新配置后，再新建构建。",
+      streamingActiveLocked: "流式任务仍在运行或监听中。请先暂停/停止当前任务，再修改配置或新建流式构建。",
+      streamingRecreateHint: "流式任务不支持原地改配置。请先保存资源配置，再到任务管理创建新的流式构建。",
+      activeTaskLocked: "该资源已有进行中的构建任务，整个配置页面已锁定。请先等待完成或停止当前任务，再修改配置或发起新构建。",
+      configConflict: "当前存在进行中的构建任务，无法修改索引配置。请先停止任务后再保存。",
+      startRejected: "无法启动该任务（配置可能已变更，或已有更新的成功构建）。请到「配置索引」保存最新配置后，再新建构建。",
       created: "构建任务已创建:{{id}}",
       conflict: "该资源已有进行中的构建任务,需等待完成或先暂停监听。",
       resource: "数据资源",
@@ -416,8 +506,7 @@ export const dataCatalogZhCN = {
       featureNotEnabled: "未启用",
       featureConfiguredCount: "已配置",
       removeFeatureType: "移除本类",
-      duplicateFeatureTypeUnsupported:
-        "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
+      duplicateFeatureTypeUnsupported: "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
       featureSummaryEmpty: "未配置特征",
       featureUnsupported: "暂不支持",
       defaultEmbeddingModelHint: "实际可选项以当前环境已接入的 Embedding 模型为准。",
@@ -425,8 +514,7 @@ export const dataCatalogZhCN = {
       fulltextAnalyzerHint: "实际可选项以当前环境服务端返回为准。",
       fulltextAnalyzerEnglishHint: "standard 适用于英文/通用文本，english 用于英文词干分析。",
       fulltextChineseAnalyzerAvailableHint: "当前已启用可用于中文文本的分词器：{{analyzers}}。",
-      fulltextChineseAnalyzerUnavailableHint:
-        "当前未启用 IK/HanLP 等中文分词器；standard 和 english 不提供中文分词能力，中文检索的召回和相关性可能受限。请联系管理员启用中文分词器。",
+      fulltextChineseAnalyzerUnavailableHint: "当前未启用 IK/HanLP 等中文分词器；standard 和 english 不提供中文分词能力，中文检索的召回和相关性可能受限。请联系管理员启用中文分词器。",
       analyzerSelectionUnavailable: "分词器能力当前不可用。",
       analyzers: {
         standard: "standard · 英文/通用",
@@ -450,8 +538,7 @@ export const dataCatalogZhCN = {
       modelsLoadError: "加载 embedding 模型失败：{{message}}",
       modelsLoadErrorFallback: "请稍后重试或检查模型管理服务",
       retryLoadModels: "重试",
-      savedModelUnavailable:
-        "已保存的 embedding 模型「{{model}}」不在当前环境注册表中，请重新选择已接入的模型。",
+      savedModelUnavailable: "已保存的 embedding 模型「{{model}}」不在当前环境注册表中，请重新选择已接入的模型。",
       dimensions: "向量维度",
       dimensionsHint: "(随模型联动预览；实际维度由服务端在构建时写入)",
     },
@@ -462,18 +549,21 @@ export const dataCatalogZhCN = {
       detail: "任务详情",
       buildDetail: "构建任务详情",
       semanticDetail: "语义理解任务详情",
-      detailSections: { status: "任务状态", task: "任务信息", execution: "执行信息", audit: "审计信息" },
+      detailSections: {
+        status: "任务状态",
+        task: "任务信息",
+        execution: "执行信息",
+        audit: "审计信息"
+      },
       rawError: "原始错误",
       modalTitle: "构建任务",
       progress: "进度",
       statusFilterPlaceholder: "全部状态",
       empty: "暂无索引任务",
       emptyVisible: "没有可见的任务",
-      emptyUnauthorizedDescription:
-        "这里只显示你有权查看的任务，可见性取决于任务所属目录的授权。若你认为应当看到某些任务，请联系管理员为对应目录授予权限。",
+      emptyUnauthorizedDescription: "这里只显示你有权查看的任务，可见性取决于任务所属目录的授权。若你认为应当看到某些任务，请联系管理员为对应目录授予权限。",
       visibleCount: "本页 {{count}} 条",
-      emptyDescription:
-        "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
+      emptyDescription: "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
       pauseListening: "暂停监听",
       resumeListening: "恢复监听",
       paused: "已暂停监听",
@@ -490,11 +580,9 @@ export const dataCatalogZhCN = {
       rerunResume: "从中断处继续构建",
       rerunReset: "从头开始重新构建",
       rebuildFullConfirmTitle: "确定全量重跑本任务?",
-      rebuildFullConfirmContent:
-        "将对该构建任务执行 reset=true：忽略游标从头同步。若资源索引配置相对该任务已变更，启动可能被拒绝，需新建构建。",
+      rebuildFullConfirmContent: "将对该构建任务执行 reset=true：忽略游标从头同步。若资源索引配置相对该任务已变更，启动可能被拒绝，需新建构建。",
       retried: "已重新提交构建任务:{{id}}",
-      startRejected:
-        "无法启动该任务（配置可能已变或已有更新的成功构建）。请到资源「数据索引」保存配置并新建构建。",
+      startRejected: "无法启动该任务（配置可能已变或已有更新的成功构建）。请到资源「数据索引」保存配置并新建构建。",
       deleteConfirmTitle: "删除构建任务 {{id}}?",
       deleteConfirmContent: "删除后任务记录不可恢复。",
       deleteConfirmContentActive: "任务仍在运行,将先停止再删除;删除后任务记录不可恢复。",

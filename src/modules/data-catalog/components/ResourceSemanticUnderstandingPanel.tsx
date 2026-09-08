@@ -46,6 +46,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
+  const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -294,6 +295,9 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
         <Form.Item extra={t("dataCatalog.semanticWorkspace.includeSamplesHint")} name="includeSampleRows" valuePropName="checked">
           <Checkbox>{t("dataCatalog.semanticWorkspace.includeSamples")}</Checkbox>
         </Form.Item>
+        {includeSampleRows ? <Form.Item initialValue={10} label={t("dataCatalog.semanticWorkspace.sampleRows")} name="sampleMaxRows" rules={[{ required: true }]}>
+          <InputNumber max={20} min={1} precision={0} style={{ width: "100%" }} />
+        </Form.Item> : null}
       </Form>
     </Modal>
     {detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}

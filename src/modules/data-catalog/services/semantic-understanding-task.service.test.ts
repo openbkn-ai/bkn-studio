@@ -7,10 +7,13 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const getMock = vi.hoisted(() => vi.fn());
+const { getMock, postMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  postMock: vi.fn(),
+}));
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock },
+  http: { get: getMock, post: postMock },
 }));
 
 import {
@@ -41,6 +44,37 @@ describe("semantic-understanding task mocks", () => {
     } finally {
       await deleteSemanticUnderstandingTask(task.id);
     }
+  });
+});
+
+describe("createResourceSemanticUnderstandingTask", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sends the selected sample row limit to Vega", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockResolvedValue({ data: { id: "task-1" } });
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows: 20,
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/semantic-understanding-tasks", {
+      apply_mode: "dry_run",
+      confidence_threshold: undefined,
+      include_sample_rows: true,
+      resource_id: "resource-1",
+      sample_policy: { masked: false, max_rows: 20 },
+      scope: "resource",
+    });
   });
 });
 
