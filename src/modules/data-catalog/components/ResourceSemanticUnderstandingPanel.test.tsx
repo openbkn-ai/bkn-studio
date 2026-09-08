@@ -121,6 +121,21 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   });
 
+  it("resets sample rows after cancelling the creation dialog", async () => {
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
+    const sampleRowsInput = (await screen.findAllByRole("spinbutton")).at(-1);
+    fireEvent.change(sampleRowsInput!, { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
+
+    await waitFor(() => expect(screen.getAllByRole("spinbutton").at(-1)?.getAttribute("value")).toBe("10"));
+  });
+
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
