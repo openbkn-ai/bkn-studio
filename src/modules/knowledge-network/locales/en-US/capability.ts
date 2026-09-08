@@ -45,10 +45,12 @@ export const capabilityPart = {
   capabilityColumnName: "Name",
   capabilityColumnBox: "Toolset / MCP Server",
   capabilityColumnStatus: "Status",
-  capabilityColumnSources: "Source",
+  capabilityColumnMountKind: "Mounted",
+  capabilityColumnReferences: "Referenced by",
+  capabilitySourceNotMounted: "Not mounted",
   capabilitySourceManual: "Mounted by hand",
-  capabilitySourceActionType: "Used by action type [{{names}}]",
-  capabilitySourceObjectType: "Used by object type [{{names}}]",
+  capabilitySourceActionType: "Action type [{{names}}]",
+  capabilitySourceObjectType: "Object type [{{names}}]",
   capabilityDetachBlockedHint:
     "This capability is here because an object type or an action type points at it, so there is no mount to release. Change the referencing type instead.",
   capabilityDetachKeptByReference:
