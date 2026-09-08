@@ -98,6 +98,27 @@ function mergeObjectGrants(
   return [...others, ...objectGrants];
 }
 
+/** The subject bkn-safe writes when the execution factory publishes something to everyone. */
+const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
+
+/**
+ * Whether bkn-safe will refuse a non-administrator write against this row
+ * (its protectAuthorizeHolder guard), so the drawer can lock it rather than offer a control that
+ * always 403s.
+ *
+ * Two rows are off limits to a delegate, and both because the write erases: POST is
+ * replace-semantics and DELETE removes everything the accessor holds.
+ *
+ * - A row carrying `authorize` — the object's creator, or anyone an administrator trusted with
+ *   sharing. Letting a delegate rewrite it would let them take the object away from the person who
+ *   made it, and `authorize` is administrator-conferred, so nobody inside the drawer could put it
+ *   back. This covers the caller's OWN row: an owner cannot drop their own authorize either.
+ * - The public-access row, whose removal would un-publish the object platform-wide.
+ */
+function isDelegateProtected(grant: ObjectGrant) {
+  return grant.accessorId === PUBLIC_ACCESSOR_ID || grant.operations.includes("authorize");
+}
+
 export function ObjectAuthorizeDrawer({
   objectAuthorized = false,
   objId,
@@ -126,13 +147,19 @@ export function ObjectAuthorizeDrawer({
     currentPermissions,
     requiredPermissions: authzPoints.grant,
   });
+  const isAdminRevoker = hasPermissions({
+    currentPermissions,
+    requiredPermissions: authzPoints.revoke,
+  });
+  // Either admin-authz point makes the caller a platform administrator, the party bkn-safe exempts
+  // from its per-row guard. The two points are held separately — a review role may carry `revoke`
+  // alone — so reading administrator status off `grant` would lock a revoke-only administrator out
+  // of rows the backend accepts from them. Which control they get is still decided per direction by
+  // canGrant/canRevoke below.
+  const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
+  const currentUserId = runtimeConfig.currentUser.id;
   const canGrant = objectAuthorized || isAdminGrantor;
-  const canRevoke =
-    objectAuthorized ||
-    hasPermissions({
-      currentPermissions,
-      requiredPermissions: authzPoints.revoke,
-    });
+  const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
@@ -499,7 +526,21 @@ export function ObjectAuthorizeDrawer({
             ) : null}
             <div className={styles.authzList}>
               {grants.map((grant) => {
-                const locked = isProtected(grant.accessorId);
+                const builtinLocked = isProtected(grant.accessorId);
+                // Both writes erase, and putting `authorize` back is a grant. A caller without
+                // `admin-authz:grant` who drops it from their own row leaves the drawer with no way
+                // back in: the chip that would restore it is the one their point does not cover, and
+                // objectAuthorized — the other route to canGrant — dies with the row. So their own
+                // row stays locked even where bkn-safe would take the write. (An `authorize` held
+                // through a department grant is the same trap, but membership is not resolved here.)
+                const selfAuthorizeLockout =
+                  !isAdminGrantor &&
+                  currentUserId !== null &&
+                  grant.accessorId === currentUserId &&
+                  grant.operations.includes("authorize");
+                const delegateLocked =
+                  isDelegateProtected(grant) && (!isPlatformAuthzAdmin || selfAuthorizeLockout);
+                const locked = builtinLocked || delegateLocked;
                 const grantee = resolveGrantee(grant.accessorId);
                 return (
                   <div className={styles.authzCard} key={grant.accessorId}>
@@ -517,7 +558,15 @@ export function ObjectAuthorizeDrawer({
                         </Tag>
                       </span>
                       {locked ? (
-                        <Tooltip title={t("systemAdmin.objectGrants.adminLocked")}>
+                        <Tooltip
+                          title={t(
+                            builtinLocked
+                              ? "systemAdmin.objectGrants.adminLocked"
+                              : isPlatformAuthzAdmin
+                                ? "systemAdmin.objectGrants.selfAuthorizeLocked"
+                                : "systemAdmin.objectGrants.delegateLocked",
+                          )}
+                        >
                           <span className={styles.subText}>
                             <LockOutlined />
                           </span>

@@ -157,6 +157,8 @@ export const systemAdminZhCN = {
       removeGrantConfirm: "确定移除「{{name}}」的权限配置吗？",
       removeLastOpConfirm: "该权限主体将不再拥有任何操作，权限配置会被移除。是否继续？",
       adminLocked: "管理员拥有全部权限，不可在此调整或移除。",
+      delegateLocked: "这条权限配置只有平台管理员能调整或移除，你自己的那条也一样。",
+      selfAuthorizeLocked: "这条带着你自己的授权权限。你的角色无法重新授予它，移除后装不回来，因此锁定。",
       revokeTitle: "撤销权限",
       revokeConfirm: "确定撤销「{{name}}」对「{{object}}」的权限吗？",
       stats: {
