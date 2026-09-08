@@ -317,17 +317,17 @@ export function ResourceDetailPanel({
         </div>
         {editing ? <p className={styles.editHint}>{t("dataCatalog.resource.editHint")}</p> : null}
         <div className={styles.basicInfo}>
-          <p className={styles.basicInfoRow}>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>ID:</span> <span>{resource.id}</span>
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.basicName")}:</span>{" "}
             <span>{resource.name}</span>
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.tags")}:</span>{" "}
             {resource.tags?.length ? <Space size={[12, 8]} wrap>{resource.tags.map((tag) => <Tag className={styles.resourceTag} key={tag}>{tag}</Tag>)}</Space> : "-"}
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.description")}:</span>{" "}
             {editing ? (
               <Input.TextArea
@@ -338,22 +338,22 @@ export function ResourceDetailPanel({
                 value={descriptionDraft}
               />
             ) : <span>{resource.description || "-"}</span>}
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}:</span> {t(`dataCatalog.categories.${resource.category}`)}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}:</span> <Tag className={resource.enabled === false ? styles.statusTagNeutral : styles.statusTagSuccess}>{t(resource.enabled === false ? "common.disabled" : "common.enabled")}</Tag>
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.discoverStatus")}:</span>{" "}
             {resource.lastDiscoverStatus ? <Tag className={resource.lastDiscoverStatus === "error" || resource.lastDiscoverStatus === "missing" ? styles.statusTagError : resource.lastDiscoverStatus === "new" || resource.lastDiscoverStatus === "updated" ? styles.statusTagProcessing : styles.statusTagSuccess}>{t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}</Tag> : "-"}
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("common.status")}:</span>{" "}
             {resource.status ? <Tag className={resource.status === "active" ? styles.statusTagSuccess : resource.status === "stale" ? styles.statusTagWarning : styles.statusTagNeutral}>{t(`dataCatalog.resourceStatuses.${resource.status}`)}</Tag> : "-"}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.statusMessage")}:</span> {resource.statusMessage || "-"}
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.sourceIdentifier")}:</span> {resource.sourceIdentifier || "-"}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.schemaName")}:</span> {resource.schemaName || "-"}
@@ -361,16 +361,16 @@ export function ResourceDetailPanel({
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}:</span> {resource.columnCount ?? "-"}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}:</span> {resource.rowCount || "-"}
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexName")}:</span> {resource.localIndexName || "-"}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexState")}:</span>{" "}
             <Tag className={resource.localIndexStatus === "available" ? styles.statusTagSuccess : resource.localIndexStatus === "stale" ? styles.statusTagWarning : styles.statusTagNeutral}>
               {t(`dataCatalog.resource.localIndexStatuses.${resource.localIndexStatus}`)}
             </Tag>
-          </p>
-          <p className={styles.basicInfoRow}>
+          </div>
+          <div className={styles.basicInfoRow}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.creator")}:</span> {resource.creatorName || "-"}
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.createTime")}:</span> {resource.createTime || "-"}
@@ -379,7 +379,7 @@ export function ResourceDetailPanel({
             <span className={styles.basicInfoDivider}>|</span>
             <span className={styles.basicInfoLabel}>{t("common.updateTime")}:</span>{" "}
             <span>{resource.updateTime}</span>
-          </p>
+          </div>
         </div>
       </div>
 

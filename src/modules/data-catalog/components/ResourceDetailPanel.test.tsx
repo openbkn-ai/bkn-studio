@@ -83,6 +83,21 @@ describe("ResourceDetailPanel", () => {
     expect(getCatalogResourceMock).not.toHaveBeenCalled();
   });
 
+  it("does not place the tag space inside a paragraph", async () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          catalog={null}
+          resource={{ ...resource, tags: ["index"] }}
+        />
+      </MemoryRouter>,
+    );
+
+    const tag = await screen.findByText("index");
+    expect(tag.closest(".ant-space")?.parentElement?.tagName).toBe("DIV");
+  });
+
   it("refreshes the resource version after an update conflict", async () => {
     const latestResource = {
       ...resource,

@@ -27,6 +27,7 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
     "@ant-design/icons": "^6.1.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
     "antd": "^5.28.0",

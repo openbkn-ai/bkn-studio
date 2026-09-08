@@ -38,6 +38,9 @@ export function invalidKeyFields(
   return keyFields.filter((name) => !fieldsByName.get(name) || !isSupported(fieldsByName.get(name)!));
 }
 
-export function unsupportedSchemaFields(schema: ResourceSchemaField[]): ResourceSchemaField[] {
-  return schema.filter((field) => field.type.trim().toLowerCase() === "other");
+export function excludedBuildSchemaFields(schema: ResourceSchemaField[]): ResourceSchemaField[] {
+  return schema.filter((field) => {
+    const type = field.type.trim().toLowerCase();
+    return type === "binary" || type === "other";
+  });
 }

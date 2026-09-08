@@ -11,7 +11,7 @@ import {
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
-  unsupportedSchemaFields,
+  excludedBuildSchemaFields,
 } from "./build-guards";
 
 const schema = [
@@ -36,7 +36,8 @@ describe("build guards", () => {
     ]);
   });
 
-  it("identifies all other-type schema fields", () => {
-    expect(unsupportedSchemaFields(schema)).toEqual([schema[3]]);
+  it("identifies binary and other fields excluded from builds", () => {
+    const binary = { name: "attachment", originalType: "bytea", type: "binary" };
+    expect(excludedBuildSchemaFields([...schema, binary])).toEqual([schema[3], binary]);
   });
 });

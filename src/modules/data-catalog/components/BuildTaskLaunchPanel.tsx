@@ -32,7 +32,7 @@ import {
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
-  unsupportedSchemaFields,
+  excludedBuildSchemaFields,
 } from "@/modules/data-catalog/lib/build-guards";
 import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
@@ -83,7 +83,7 @@ export function BuildTaskLaunchPanel({
   resource,
 }: BuildTaskLaunchPanelProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
 
   const [mode, setMode] = useState<BuildMode>("batch");
   const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
@@ -99,7 +99,7 @@ export function BuildTaskLaunchPanel({
     config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
   const batchNeedsKeyFields =
     mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
-  const otherFields = useMemo(() => unsupportedSchemaFields(resource.schema), [resource.schema]);
+  const excludedFields = useMemo(() => excludedBuildSchemaFields(resource.schema), [resource.schema]);
   const invalidConfiguredKeyFields = useMemo(
     () => [
       ...invalidKeyFields(resource.schema, primaryKeyFields, isPrimaryKeyField),
@@ -175,13 +175,31 @@ export function BuildTaskLaunchPanel({
   const controlsDisabled = disabled || actionsLocked;
   const startDisabled =
     controlsDisabled || !hasResourceConfig || batchNeedsKeyFields ||
-    otherFields.length > 0 || invalidConfiguredKeyFields.length > 0;
+    invalidConfiguredKeyFields.length > 0;
 
-  const startBuild = async () => {
-    if (otherFields.length > 0) {
-      setError({ description: t("dataCatalog.build.unsupportedSchemaFields", { fields: otherFields.map((field) => field.name).join(", ") }) });
-      return;
+  const createTask = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const task = await createBuildTask({
+        mode,
+        resourceId: resource.id,
+        executeType: mode === "batch" ? executeType : undefined,
+      });
+      message.success(t("dataCatalog.build.created", { id: task.id }));
+      onStarted(task);
+    } catch (persistError) {
+      if (persistError instanceof BuildTaskConflictError) {
+        setError({ description: t("dataCatalog.build.conflict") });
+      } else {
+        setError(extractRequestErrorDetails(persistError));
+      }
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const startBuild = () => {
     if (invalidConfiguredKeyFields.length > 0) {
       setError({ description: t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") }) });
       return;
@@ -203,25 +221,19 @@ export function BuildTaskLaunchPanel({
       return;
     }
 
-    setSaving(true);
-    setError(null);
-    try {
-      const task = await createBuildTask({
-        mode,
-        resourceId: resource.id,
-        executeType: mode === "batch" ? executeType : undefined,
+    if (excludedFields.length > 0) {
+      void modal.confirm({
+        cancelText: t("common.cancel"),
+        content: t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
+          fields: excludedFields.map((field) => field.originalType ? `${field.name} (${field.originalType})` : field.name).join(", "),
+        }),
+        okText: t("dataCatalog.build.excludedSchemaFieldsConfirmOk"),
+        onOk: createTask,
+        title: t("dataCatalog.build.excludedSchemaFieldsConfirmTitle"),
       });
-      message.success(t("dataCatalog.build.created", { id: task.id }));
-      onStarted(task);
-    } catch (persistError) {
-      if (persistError instanceof BuildTaskConflictError) {
-        setError({ description: t("dataCatalog.build.conflict") });
-      } else {
-        setError(extractRequestErrorDetails(persistError));
-      }
-    } finally {
-      setSaving(false);
+      return;
     }
+    void createTask();
   };
 
   if (!active) {
@@ -262,14 +274,14 @@ export function BuildTaskLaunchPanel({
         />
       ) : null}
 
-      {otherFields.length > 0 ? (
+      {excludedFields.length > 0 ? (
         <Alert
-          message={t("dataCatalog.build.unsupportedSchemaFields", { fields: otherFields.map((field) => field.name).join(", ") })}
+          message={t("dataCatalog.build.excludedSchemaFieldsHint", { fields: excludedFields.map((field) => field.name).join(", ") })}
           showIcon
-          type="error"
+          type="warning"
         />
       ) : null}
-      {otherFields.length === 0 && invalidConfiguredKeyFields.length > 0 ? (
+      {invalidConfiguredKeyFields.length > 0 ? (
         <Alert
           action={
             <AppButton onClick={onGoConfigure} size="small" type="link">
