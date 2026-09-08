@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Checkbox, Dropdown, Form, InputNumber, Modal, Select, Space, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -49,12 +49,14 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
   const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
+  const [summaryTask, setSummaryTask] = useState<SemanticUnderstandingTaskSummary | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [filtersResourceId, setFiltersResourceId] = useState(resource.id);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [applyModeFilter, setApplyModeFilter] = useState<string>();
   const [statusFilter, setStatusFilter] = useState<SemanticUnderstandingTaskSummary["status"][]>([]);
@@ -63,12 +65,16 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const pageRequestIdRef = useRef(0);
+  const summaryRequestIdRef = useRef(0);
+  const resourceChanged = filtersResourceId !== resource.id;
   const canManageTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
   });
 
-  const load = useCallback(async () => {
+  const loadPage = useCallback(async (targetPage: number, targetPageSize: number) => {
+    const requestId = ++pageRequestIdRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -80,18 +86,54 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
         scope: "resource",
         sort,
         statuses: statusFilter.length === 0 ? undefined : statusFilter,
-      }, { limit: pageSize, offset: (page - 1) * pageSize });
-      setTasks(result.items);
-      setTotal(result.total);
+      }, { limit: targetPageSize, offset: (targetPage - 1) * targetPageSize });
+      if (requestId === pageRequestIdRef.current) {
+        setTasks(result.items);
+        setTotal(result.total);
+      }
     } catch (e) {
-      setError(extractRequestErrorMessage(e));
+      if (requestId === pageRequestIdRef.current) {
+        setError(extractRequestErrorMessage(e));
+      }
     } finally {
-      setLoading(false);
+      if (requestId === pageRequestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [appliedFilter, applyModeFilter, direction, page, pageSize, resource.id, sort, statusFilter]);
+  }, [appliedFilter, applyModeFilter, direction, resource.id, sort, statusFilter]);
+
+  const loadSummary = useCallback(async () => {
+    const requestId = ++summaryRequestIdRef.current;
+    const baseFilters = {
+      direction: "desc" as const,
+      resourceId: resource.id,
+      scope: "resource" as const,
+      sort: "create_time" as const,
+    };
+    try {
+      const appliedResult = await listSemanticUnderstandingTasks({
+        ...baseFilters,
+        applied: true,
+        statuses: ["completed"],
+      }, { limit: 1, offset: 0 });
+      const result = appliedResult.items.length > 0
+        ? appliedResult
+        : await listSemanticUnderstandingTasks(baseFilters, { limit: 1, offset: 0 });
+      if (requestId === summaryRequestIdRef.current) {
+        setSummaryTask(result.items[0] ?? null);
+      }
+    } catch {
+      if (requestId === summaryRequestIdRef.current) {
+        setSummaryTask(null);
+      }
+    }
+  }, [resource.id]);
 
   useEffect(() => {
-    setTasks([]); setTotal(0);
+    if (!resourceChanged) return;
+    pageRequestIdRef.current += 1;
+    summaryRequestIdRef.current += 1;
+    setTasks([]); setSummaryTask(null); setTotal(0);
     setSelectedKeys([]);
     setApplyModeFilter(undefined);
     setStatusFilter([]);
@@ -100,11 +142,16 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     setDirection("desc");
     setPage(1);
     setDetailTaskId(null);
-  }, [resource.id]);
+    setFiltersResourceId(resource.id);
+  }, [resource.id, resourceChanged]);
 
   useEffect(() => {
-    if (active) void load();
-  }, [active, load]);
+    if (active && !resourceChanged) void loadPage(page, pageSize);
+  }, [active, loadPage, page, pageSize, resourceChanged]);
+
+  useEffect(() => {
+    if (active && !resourceChanged) void loadSummary();
+  }, [active, loadSummary, resourceChanged]);
 
   useEffect(() => {
     const lastPage = Math.max(1, Math.ceil(total / pageSize));
@@ -113,11 +160,14 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
 
   useEffect(() => {
     if (useMock || !active || !tasks.some((task) => task.status === "pending" || task.status === "running")) return;
-    const timer = window.setInterval(() => void load(), 10_000);
+    const timer = window.setInterval(() => {
+      void loadPage(page, pageSize);
+      void loadSummary();
+    }, 10_000);
     return () => window.clearInterval(timer);
-  }, [active, load, tasks]);
+  }, [active, loadPage, loadSummary, page, pageSize, tasks]);
 
-  const summary = useMemo(() => tasks.find((task) => task.status === "completed" && task.applied) ?? tasks[0], [tasks]);
+  const summary = summaryTask;
   const summaryPresentation =
     !summary
       ? { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.noResult") }
@@ -150,7 +200,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       form.resetFields();
       setSelectedKeys([]);
       setPage(1);
-      await load();
+      await Promise.all([loadPage(1, pageSize), loadSummary()]);
     } finally {
       setCreating(false);
     }
@@ -186,7 +236,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
           message.success(t("common.success"));
         }
         setSelectedKeys([]);
-        await load();
+        await Promise.all([loadPage(page, pageSize), loadSummary()]);
       },
     });
   };
@@ -236,7 +286,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
             if (key === "detail") setDetailTaskId(task.id);
             if (key === "delete") void modal.confirm({
               title: t("dataCatalog.taskManagement.semantic.deleteTitle"), content: t("dataCatalog.taskManagement.semantic.deleteDescription", { id: task.id }), okButtonProps: { danger: true },
-              onOk: async () => { await deleteSemanticUnderstandingTask(task.id); message.success(t("common.success")); await load(); },
+              onOk: async () => { await deleteSemanticUnderstandingTask(task.id); message.success(t("common.success")); await Promise.all([loadPage(page, pageSize), loadSummary()]); },
             });
           }
         }} trigger={["click"]}><AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" /></Dropdown>;
@@ -265,7 +315,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
             <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
           </AppButton>
         </PermissionGate>
-        <AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton>
+        <AppButton icon={<ReloadOutlined />} onClick={() => void Promise.all([loadPage(page, pageSize), loadSummary()])}>{t("common.refresh")}</AppButton>
         <PermissionGate permissions="catalog:task_manage">
           <AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>
             {batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}

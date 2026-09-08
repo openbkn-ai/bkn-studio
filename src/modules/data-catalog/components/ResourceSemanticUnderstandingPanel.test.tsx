@@ -148,6 +148,10 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
     await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
+    const calls = listSemanticUnderstandingTasksMock.mock.calls as unknown as Array<
+      [unknown, { limit: number; offset: number }]
+    >;
+    expect(calls.filter(([, window]) => window.limit === 10)).toHaveLength(1);
     expect(screen.getByText("dataCatalog.taskManagement.columns.applyMode").closest("th")).not.toBeNull();
     expect(document.querySelectorAll(".ant-table-filter-trigger").length).toBeGreaterThan(0);
   });
@@ -222,6 +226,39 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect((screen.getByText("semantic-task-2").closest("tr")?.querySelector("input[type=checkbox]") as HTMLInputElement).checked).toBe(false);
   });
 
+  it("loads the summary independently from the paginated task history", async () => {
+    listSemanticUnderstandingTasksMock.mockImplementation((filters: { applied?: boolean }) => {
+      if (filters.applied) {
+        return Promise.resolve({
+          items: [{
+            agentId: "resource-semantic-understanding",
+            applied: true,
+            applyMode: "fill_empty",
+            catalogId: resource.catalogId,
+            confidence: 0.8,
+            confidenceThreshold: 0.75,
+            createTime: 1,
+            creator: { id: "user-1", name: "User", type: "user" },
+            id: "applied-task",
+            resourceId: resource.id,
+            scope: "resource",
+            status: "completed",
+          }],
+          total: 1,
+        });
+      }
+      return Promise.resolve({ items: [], total: 20 });
+    });
+
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ applied: true, resourceId: resource.id, statuses: ["completed"] }),
+      { limit: 1, offset: 0 },
+    ));
+    expect(screen.getByText("dataCatalog.semanticWorkspace.applied")).toBeTruthy();
+  });
+
   it("returns to the first page after creating a task", async () => {
     const tasks = Array.from({ length: 11 }, (_, index) => ({
       agentId: "resource-semantic-understanding",
@@ -247,10 +284,15 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     fireEvent.click(screen.getByTitle("2"));
     await screen.findByText("semantic-task-11");
 
+    listSemanticUnderstandingTasksMock.mockClear();
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
 
     await screen.findByText("semantic-task-1");
     expect(screen.queryByText("semantic-task-11")).toBeNull();
+    const calls = listSemanticUnderstandingTasksMock.mock.calls as unknown as Array<
+      [unknown, { limit: number; offset: number }]
+    >;
+    expect(calls.every(([, window]) => window.offset === 0)).toBe(true);
   });
 });

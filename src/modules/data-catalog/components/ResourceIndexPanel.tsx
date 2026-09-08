@@ -22,6 +22,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -181,7 +182,9 @@ export function ResourceIndexPanel({
   const [historyTasks, setHistoryTasks] = useState<BuildTask[]>([]);
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [filtersResourceId, setFiltersResourceId] = useState(resource.id);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [modeFilter, setModeFilter] = useState<BuildMode>();
   const [executeTypeFilter, setExecuteTypeFilter] = useState<BuildTaskExecuteType>();
@@ -189,37 +192,50 @@ export function ResourceIndexPanel({
   const [sort, setSort] = useState<BuildTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const autoPickedRef = useRef(false);
+  const historyRequestIdRef = useRef(0);
   const canViewTasks = canViewResourceIndexTasks(resource);
+  const resourceChanged = filtersResourceId !== resource.id;
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (targetPage: number, targetPageSize: number) => {
     if (!canViewTasks) return;
+    const requestId = ++historyRequestIdRef.current;
     setHistoryLoading(true);
+    setHistoryError(null);
     try {
       const result = await listBuildTaskPage({
         direction,
         executeType: executeTypeFilter,
         mode: modeFilter,
-        page: taskPage,
-        pageSize: taskPageSize,
+        page: targetPage,
+        pageSize: targetPageSize,
         resourceId: resource.id,
         sort,
         statuses: statusFilter.length ? statusFilter : undefined,
       });
-      setHistoryTasks(result.items);
-      setHistoryTotal(result.total);
+      if (requestId === historyRequestIdRef.current) {
+        setHistoryTasks(result.items);
+        setHistoryTotal(result.total);
+      }
+    } catch (error) {
+      if (requestId === historyRequestIdRef.current) {
+        setHistoryError(extractRequestErrorMessage(error));
+      }
     } finally {
-      setHistoryLoading(false);
+      if (requestId === historyRequestIdRef.current) {
+        setHistoryLoading(false);
+      }
     }
-  }, [canViewTasks, direction, executeTypeFilter, modeFilter, resource.id, sort, statusFilter, taskPage, taskPageSize]);
+  }, [canViewTasks, direction, executeTypeFilter, modeFilter, resource.id, sort, statusFilter]);
 
   const refreshTasks = useCallback(async () => {
     await onRefresh();
-    await loadHistory();
-  }, [loadHistory, onRefresh]);
+    await loadHistory(taskPage, taskPageSize);
+  }, [loadHistory, onRefresh, taskPage, taskPageSize]);
   const { pauseOrResume, remove, retry } = useBuildTaskActions(refreshTasks);
 
   useEffect(() => {
     autoPickedRef.current = false;
+    historyRequestIdRef.current += 1;
   }, [resource.id]);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
@@ -296,8 +312,10 @@ export function ResourceIndexPanel({
   }, [canViewTasks, indexView, onIndexViewChange]);
 
   useEffect(() => {
+    if (!resourceChanged) return;
     setHistoryTasks([]);
     setHistoryTotal(0);
+    setHistoryError(null);
     setTaskPage(1);
     setSelectedKeys([]);
     setModeFilter(undefined);
@@ -306,12 +324,13 @@ export function ResourceIndexPanel({
     setSort("create_time");
     setDirection("desc");
     setDetailTaskId(null);
-  }, [resource.id]);
+    setFiltersResourceId(resource.id);
+  }, [resource.id, resourceChanged]);
 
   useEffect(() => {
-    if (!active || indexView !== "tasks") return;
-    void loadHistory();
-  }, [active, indexView, loadHistory]);
+    if (resourceChanged || !active || indexView !== "tasks") return;
+    void loadHistory(taskPage, taskPageSize);
+  }, [active, indexView, loadHistory, resourceChanged, taskPage, taskPageSize]);
 
   useEffect(() => {
     const lastPage = Math.max(1, Math.ceil(historyTotal / taskPageSize));
@@ -617,7 +636,8 @@ export function ResourceIndexPanel({
                 onStarted={() => {
                   setSelectedKeys([]);
                   setTaskPage(1);
-                  void refreshTasks();
+                  void onRefresh();
+                  void loadHistory(1, taskPageSize);
                 }}
                 resource={resource}
               />
@@ -654,6 +674,14 @@ export function ResourceIndexPanel({
             </Space>
           </div>
         </div>
+        {historyError ? (
+          <Alert
+            action={<AppButton onClick={() => void refreshTasks()} type="link">{t("common.retry")}</AppButton>}
+            message={historyError}
+            showIcon
+            type="error"
+          />
+        ) : null}
         <TableSurface className={panelStyles.tableSurface}>
           <AppTable<BuildTask>
             columns={taskColumns}

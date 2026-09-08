@@ -93,7 +93,11 @@ vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
 vi.mock("@/framework/ui/common/TableSurface", () => ({ TableSurface: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
 vi.mock("@/modules/data-catalog/components/BuildProgress", () => ({ BuildProgress: () => null }));
 vi.mock("@/modules/data-catalog/components/BuildTaskDetailDrawer", () => ({ BuildTaskDetailDrawer: () => null }));
-vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({ BuildTaskLaunchPanel: () => null }));
+vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({
+  BuildTaskLaunchPanel: ({ onStarted }: { onStarted: () => void }) => (
+    <button onClick={onStarted} type="button">start task</button>
+  ),
+}));
 vi.mock("@/modules/data-catalog/components/IndexConfigFormPanel", () => ({ IndexConfigFormPanel: () => null }));
 vi.mock("@/modules/data-catalog/hooks/use-build-task-actions", () => ({
   useBuildTaskActions: () => ({ pauseOrResume: vi.fn(), remove: vi.fn(), retry: vi.fn() }),
@@ -142,6 +146,7 @@ function buildTask(overrides: Partial<BuildTask>): BuildTask {
 
 describe("ResourceIndexPanel", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
   });
 
@@ -221,11 +226,110 @@ describe("ResourceIndexPanel", () => {
       pageSize: 10,
       resourceId: resource.id,
     })));
+    expect(listBuildTaskPageMock).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "page 3" }));
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.objectContaining({
       page: 3,
       pageSize: 10,
       resourceId: resource.id,
     })));
+  });
+
+  it("refreshes the first history page when a task is started", async () => {
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 21 });
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "page 3" }));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 })));
+    listBuildTaskPageMock.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "start task" }));
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    const calls = listBuildTaskPageMock.mock.calls as unknown as Array<[{ page: number }]>;
+    expect(calls.every(([query]) => query.page === 1)).toBe(true);
+  });
+
+  it("keeps the newest history page when an earlier request resolves late", async () => {
+    let resolveFirstPage: (result: { items: BuildTask[]; total: number }) => void;
+    let resolveThirdPage: (result: { items: BuildTask[]; total: number }) => void;
+    const firstPage = new Promise<{ items: BuildTask[]; total: number }>((resolve) => {
+      resolveFirstPage = resolve;
+    });
+    const thirdPage = new Promise<{ items: BuildTask[]; total: number }>((resolve) => {
+      resolveThirdPage = resolve;
+    });
+    listBuildTaskPageMock.mockResolvedValue({ items: [buildTask({ id: "initial-page-1-task" })], total: 21 });
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    await screen.findByRole("button", { name: "page 3" });
+    listBuildTaskPageMock.mockClear();
+    listBuildTaskPageMock.mockImplementation(({ page }: { page: number }) =>
+      page === 1 ? firstPage : thirdPage,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "reloadcommon.refresh" }));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    fireEvent.click(screen.getByRole("button", { name: "page 3" }));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 3 })));
+    resolveThirdPage!({ items: [buildTask({ id: "page-3-task" })], total: 21 });
+    await screen.findByText("page-3-task");
+
+    resolveFirstPage!({ items: [buildTask({ id: "stale-page-1-task" })], total: 21 });
+
+    await waitFor(() => expect(screen.queryByText("stale-page-1-task")).toBeNull());
+    expect(screen.getByText("page-3-task")).toBeTruthy();
+  });
+
+  it("shows a retryable error when loading task history fails", async () => {
+    listBuildTaskPageMock.mockRejectedValue(new Error("history unavailable"));
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={null}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("history unavailable");
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
+    const callsBeforeRetry = listBuildTaskPageMock.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+    await waitFor(() => expect(listBuildTaskPageMock.mock.calls.length).toBeGreaterThan(callsBeforeRetry));
   });
 });
