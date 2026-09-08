@@ -25,10 +25,21 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
-  BusinessTree: ({ onExpand }: { onExpand?: (keys: Key[]) => void }) => (
+  BusinessTree: ({
+    expandedKeys = [],
+    onExpand,
+    onSelect,
+  }: {
+    expandedKeys?: Key[];
+    onExpand?: (keys: Key[]) => void;
+    onSelect?: (keys: Key[]) => void;
+  }) => (
     <>
+      <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
       <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
       <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
+      <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
+      <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
     </>
   ),
   BusinessTreePanel: ({ children, headerActions }: { children: ReactNode; headerActions: ReactNode }) => (
@@ -107,5 +118,97 @@ describe("CatalogTreePanel", () => {
 
     rerender(<CatalogTreePanel {...props} catalogs={[{ ...catalog }]} />);
     await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(2));
+  });
+
+  it("expands a connector group when its title is selected", () => {
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "postgresql",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "physical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        connectorTypes={[]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "select connector" }));
+
+    expect(screen.getByTestId("expanded-keys").textContent).toContain("connector:postgresql");
+  });
+
+  it("expands a catalog and loads its schemas when its title is selected", async () => {
+    const onLoadCatalogSchemas = vi.fn().mockResolvedValue(["public"]);
+    const onSelectCatalog = vi.fn();
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "postgresql",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "physical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        connectorTypes={[]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={onLoadCatalogSchemas}
+        onRefresh={vi.fn()}
+        onSelectCatalog={onSelectCatalog}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "select catalog" }));
+
+    expect(onSelectCatalog).toHaveBeenCalledWith("catalog-1");
+    expect(screen.getByTestId("expanded-keys").textContent).toContain("catalog:catalog-1");
+    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledWith("catalog-1"));
   });
 });

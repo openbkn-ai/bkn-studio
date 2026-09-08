@@ -187,7 +187,6 @@ export const dataCatalogZhCN = {
     },
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
     backToCatalog: "返回数据目录",
-    buildChip: "构建中 · {{count}}",
     format: {
       daysAgo: "{{count}} 天前",
       hoursAgo: "{{count}} 小时前",

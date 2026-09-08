@@ -11,7 +11,6 @@ import i18n from "@/app/locales/i18n";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import {
-  catalogListAllQuery,
   createLogicalCatalog,
   createPhysicalCatalog,
   deleteCatalog,
@@ -25,7 +24,6 @@ import {
   updateCatalog,
   updateCatalogHealthCheckSchedule,
 } from "@/shared/catalog";
-import { filterCatalogs } from "@/shared/catalog/catalog-mapper";
 import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
@@ -37,7 +35,6 @@ import type {
   DataConnectListQuery,
   DataConnectListResult,
   DataConnectMutationPayload,
-  DataConnectRecord,
   DataConnectUpdatePayload,
 } from "@/modules/data-connect/types/data-connect";
 
@@ -250,34 +247,7 @@ export async function listDataConnectRecords(
     return listCatalogs({ ...query, type: "physical" });
   }
 
-  const batchSize = 200;
-  const allItems: DataConnectRecord[] = [];
-  let page = 1;
-  let total = 0;
-
-  do {
-    const result = await listCatalogs(
-      catalogListAllQuery({
-        page,
-        pageSize: batchSize,
-      }),
-    );
-
-    allItems.push(...result.items);
-    total = result.total;
-    page += 1;
-  } while (allItems.length < total);
-
-  const filtered = filterCatalogs(allItems, {
-    ...query,
-    type: "physical",
-  });
-  const startIndex = (query.page - 1) * query.pageSize;
-
-  return {
-    items: filtered.slice(startIndex, startIndex + query.pageSize),
-    total: filtered.length,
-  };
+  return listCatalogs({ ...query, type: "physical" });
 }
 
 export async function getDataConnectRecord(id: string) {

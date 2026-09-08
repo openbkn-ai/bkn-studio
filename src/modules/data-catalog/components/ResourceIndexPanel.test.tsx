@@ -8,11 +8,21 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./shared.module.css";
+
+const { listBuildTaskPageMock } = vi.hoisted(() => ({
+  listBuildTaskPageMock: vi.fn(),
+}));
+
+vi.mock("@/modules/data-catalog/services/build-task.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/data-catalog/services/build-task.service")>()),
+  deleteBuildTask: vi.fn(),
+  listBuildTaskPage: listBuildTaskPageMock,
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -131,6 +141,10 @@ function buildTask(overrides: Partial<BuildTask>): BuildTask {
 }
 
 describe("ResourceIndexPanel", () => {
+  beforeEach(() => {
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
+  });
+
   it("does not present a batch task total as the current index document count", () => {
     const { container } = render(
       <MemoryRouter>
@@ -150,7 +164,13 @@ describe("ResourceIndexPanel", () => {
     expect(container.textContent).not.toContain("dataCatalog.indexWorkspace.indexedRowsShort");
   });
 
-  it("uses the shared colored status tag and an overflow action menu", () => {
+  it("uses the shared colored status tag and an overflow action menu", async () => {
+    const historyTasks = [
+      buildTask({ id: "completed-task", status: "completed" }),
+      buildTask({ id: "stopping-task", status: "stopping" }),
+      buildTask({ id: "stopped-task", status: "stopped" }),
+    ];
+    listBuildTaskPageMock.mockResolvedValue({ items: historyTasks, total: historyTasks.length });
     render(
       <MemoryRouter>
         <ResourceIndexPanel
@@ -161,15 +181,12 @@ describe("ResourceIndexPanel", () => {
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
           resource={resource}
-          tasks={[
-            buildTask({ id: "completed-task", status: "completed" }),
-            buildTask({ id: "stopping-task", status: "stopping" }),
-            buildTask({ id: "stopped-task", status: "stopped" }),
-          ]}
+          tasks={historyTasks}
         />
       </MemoryRouter>,
     );
 
+    await screen.findByText("dataCatalog.task.statuses.completed");
     expect(screen.getByText("dataCatalog.task.statuses.completed").classList).toContain(
       styles.taskSucceeded,
     );
@@ -182,9 +199,9 @@ describe("ResourceIndexPanel", () => {
     expect(screen.getByTestId("selection-completed-task").textContent).toBe("false");
   });
 
-  it("returns to the last valid history page when tasks shrink", async () => {
-    const tasks = Array.from({ length: 21 }, (_, index) => buildTask({ id: `task-${index + 1}` }));
-    const view = render(
+  it("loads the selected history page from Vega with the resource filter", async () => {
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 21 });
+    render(
       <MemoryRouter>
         <ResourceIndexPanel
           active
@@ -194,29 +211,21 @@ describe("ResourceIndexPanel", () => {
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
           resource={resource}
-          tasks={tasks}
+          tasks={[]}
         />
       </MemoryRouter>,
     );
 
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({
+      page: 1,
+      pageSize: 10,
+      resourceId: resource.id,
+    })));
     fireEvent.click(screen.getByRole("button", { name: "page 3" }));
-    expect(screen.getByTestId("task-page").textContent).toBe("3");
-
-    view.rerender(
-      <MemoryRouter>
-        <ResourceIndexPanel
-          active
-          catalog={null}
-          indexView="tasks"
-          indexViewExplicit
-          onIndexViewChange={vi.fn()}
-          onRefresh={vi.fn()}
-          resource={resource}
-          tasks={tasks.slice(0, 20)}
-        />
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId("task-page").textContent).toBe("2"));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      page: 3,
+      pageSize: 10,
+      resourceId: resource.id,
+    })));
   });
 });

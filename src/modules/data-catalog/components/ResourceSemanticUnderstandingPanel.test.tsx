@@ -14,10 +14,10 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 
 const {
   createResourceSemanticUnderstandingTaskMock,
-  listResourceSemanticUnderstandingTasksMock,
+  listSemanticUnderstandingTasksMock,
 } = vi.hoisted(() => ({
   createResourceSemanticUnderstandingTaskMock: vi.fn(),
-  listResourceSemanticUnderstandingTasksMock: vi.fn(),
+  listSemanticUnderstandingTasksMock: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -44,7 +44,7 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", () => ({
   createResourceSemanticUnderstandingTask: createResourceSemanticUnderstandingTaskMock,
   deleteSemanticUnderstandingTask: vi.fn(),
-  listResourceSemanticUnderstandingTasks: listResourceSemanticUnderstandingTasksMock,
+  listSemanticUnderstandingTasks: listSemanticUnderstandingTasksMock,
 }));
 
 import { ResourceSemanticUnderstandingPanel } from "./ResourceSemanticUnderstandingPanel";
@@ -76,7 +76,7 @@ function SemanticUnderstandingTaskFormDefaultsHarness({ form, open }: {
 describe("ResourceSemanticUnderstandingPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    listResourceSemanticUnderstandingTasksMock.mockResolvedValue([]);
+    listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [], total: 0 });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -147,13 +147,13 @@ describe("ResourceSemanticUnderstandingPanel", () => {
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
-    await waitFor(() => expect(listResourceSemanticUnderstandingTasksMock).toHaveBeenCalled());
+    await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
     expect(screen.getByText("dataCatalog.taskManagement.columns.applyMode").closest("th")).not.toBeNull();
     expect(document.querySelectorAll(".ant-table-filter-trigger").length).toBeGreaterThan(0);
   });
 
   it("shows finish time before create time", async () => {
-    listResourceSemanticUnderstandingTasksMock.mockResolvedValue([{
+    listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [{
       agentId: "resource-semantic-understanding",
       applied: false,
       applyMode: "dry_run",
@@ -167,7 +167,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       resourceId: resource.id,
       scope: "resource",
       status: "completed",
-    }]);
+    }], total: 1 });
 
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
@@ -184,8 +184,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
   });
 
   it("paginates the complete history and disables active task selection", async () => {
-    listResourceSemanticUnderstandingTasksMock.mockResolvedValue(
-      Array.from({ length: 11 }, (_, index) => ({
+    const tasks = Array.from({ length: 11 }, (_, index) => ({
         agentId: "resource-semantic-understanding",
         applied: false,
         applyMode: "dry_run",
@@ -198,8 +197,10 @@ describe("ResourceSemanticUnderstandingPanel", () => {
         resourceId: resource.id,
         scope: "resource",
         status: index === 0 ? "running" : "completed",
-      })),
-    );
+      }));
+    listSemanticUnderstandingTasksMock.mockImplementation((_filters: unknown, window: { limit: number; offset: number }) => Promise.resolve({
+      items: tasks.slice(window.offset, window.offset + window.limit), total: tasks.length,
+    }));
 
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
@@ -236,7 +237,9 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       scope: "resource" as const,
       status: "completed" as const,
     }));
-    listResourceSemanticUnderstandingTasksMock.mockResolvedValue(tasks);
+    listSemanticUnderstandingTasksMock.mockImplementation((_filters: unknown, window: { limit: number; offset: number }) => Promise.resolve({
+      items: tasks.slice(window.offset, window.offset + window.limit), total: tasks.length,
+    }));
     createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "new-task" });
 
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);

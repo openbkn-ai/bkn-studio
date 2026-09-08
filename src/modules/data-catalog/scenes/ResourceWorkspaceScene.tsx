@@ -34,7 +34,7 @@ import {
   resourceGateOf,
   sortTasks,
 } from "@/modules/data-catalog/lib/index-state";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   discoverCatalogResource,
@@ -107,9 +107,14 @@ export function ResourceWorkspaceScene({
         return;
       }
 
-      const [catalogRecord, taskList] = await Promise.all([
+      const [catalogRecord, latestTaskPage] = await Promise.all([
         getCatalog(detail.catalogId),
-        listBuildTasks({ resourceId }),
+        listBuildTaskPage({
+          direction: "desc",
+          limit: 1,
+          resourceId,
+          sort: "create_time",
+        }),
       ]);
 
       if (resourceVersionRef.current === resourceVersion) {
@@ -117,7 +122,7 @@ export function ResourceWorkspaceScene({
       }
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
-        setTasks(taskList);
+        setTasks(latestTaskPage.items);
       }
     } catch (error) {
       if (

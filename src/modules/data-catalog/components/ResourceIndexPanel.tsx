@@ -14,7 +14,7 @@ import {
 import { Alert, Dropdown, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import type { TFunction } from "i18next";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -32,7 +32,7 @@ import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTa
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
-import { deleteBuildTask } from "@/modules/data-catalog/services/build-task.service";
+import { deleteBuildTask, listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { timeAgo } from "@/modules/data-catalog/lib/format";
@@ -97,29 +97,29 @@ function formatEffectiveState(task: BuildTask, t: TFunction) {
 }
 
 function buildStatusSummary(
-  effective: BuildTask | null,
+  latest: BuildTask | null,
   t: TFunction,
   language: string,
 ) {
-  if (!effective) {
+  if (!latest || (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")) {
     return null;
   }
 
   const parts = [
-    formatEffectiveState(effective, t),
-    t(`dataCatalog.modes.${effective.mode}`),
+    formatEffectiveState(latest, t),
+    t(`dataCatalog.modes.${latest.mode}`),
   ];
 
-  if (effective.mode === "streaming") {
+  if (latest.mode === "streaming") {
     parts.push(
       t("dataCatalog.indexWorkspace.lastEventShort", {
-        time: timeAgo(effective.lastProgressTime ?? effective.createTime, language),
+        time: timeAgo(latest.lastProgressTime ?? latest.createTime, language),
       }),
     );
-  } else if (effective.finishTime) {
+  } else if (latest.finishTime) {
     parts.push(
       t("dataCatalog.indexWorkspace.finishedAtShort", {
-        time: formatDateTimeYmdHms(effective.finishTime),
+        time: formatDateTimeYmdHms(latest.finishTime),
       }),
     );
   }
@@ -127,17 +127,9 @@ function buildStatusSummary(
   return parts.join(" · ");
 }
 
-function progressTask(effective: BuildTask | null, latest: BuildTask | null) {
+function progressTask(latest: BuildTask | null) {
   if (latest && CONTROLLABLE_TASK_STATUSES.has(latest.status)) {
-    if (
-      effective &&
-      effective.id === latest.id &&
-      latest.status === "running" &&
-      latest.mode === "streaming"
-    ) {
-      return null;
-    }
-    if (effective && effective.id === latest.id && latest.status === "completed") {
+    if (latest.status === "running" && latest.mode === "streaming" && latest.syncedCount > 0) {
       return null;
     }
     return latest;
@@ -186,6 +178,9 @@ export function ResourceIndexPanel({
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
+  const [historyTasks, setHistoryTasks] = useState<BuildTask[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [modeFilter, setModeFilter] = useState<BuildMode>();
@@ -193,8 +188,35 @@ export function ResourceIndexPanel({
   const [statusFilter, setStatusFilter] = useState<BuildTaskStatus[]>([]);
   const [sort, setSort] = useState<BuildTaskSort>("create_time");
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
-  const { pauseOrResume, remove, retry } = useBuildTaskActions(onRefresh);
   const autoPickedRef = useRef(false);
+  const canViewTasks = canViewResourceIndexTasks(resource);
+
+  const loadHistory = useCallback(async () => {
+    if (!canViewTasks) return;
+    setHistoryLoading(true);
+    try {
+      const result = await listBuildTaskPage({
+        direction,
+        executeType: executeTypeFilter,
+        mode: modeFilter,
+        page: taskPage,
+        pageSize: taskPageSize,
+        resourceId: resource.id,
+        sort,
+        statuses: statusFilter.length ? statusFilter : undefined,
+      });
+      setHistoryTasks(result.items);
+      setHistoryTotal(result.total);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [canViewTasks, direction, executeTypeFilter, modeFilter, resource.id, sort, statusFilter, taskPage, taskPageSize]);
+
+  const refreshTasks = useCallback(async () => {
+    await onRefresh();
+    await loadHistory();
+  }, [loadHistory, onRefresh]);
+  const { pauseOrResume, remove, retry } = useBuildTaskActions(refreshTasks);
 
   useEffect(() => {
     autoPickedRef.current = false;
@@ -216,26 +238,10 @@ export function ResourceIndexPanel({
       currentPermissions: runtimeConfig.currentUser.permissions,
       requiredPermissions: "catalog:task_manage",
     });
-  const canViewTasks = canViewResourceIndexTasks(resource);
-  const effective = state.effective;
   const latest = state.latest;
   const activeTask = latest && CONTROLLABLE_TASK_STATUSES.has(latest.status) ? latest : null;
-  const progressSource = progressTask(effective, latest);
-  const filteredTasks = useMemo(() => {
-    const timestampOf = (task: BuildTask) => {
-      if (sort === "last_progress_time") return task.lastProgressTime ?? 0;
-      if (sort === "finish_time") return task.finishTime ?? 0;
-      return task.createTime;
-    };
-    return sortedTasks
-      .filter((task) =>
-        (!modeFilter || task.mode === modeFilter) &&
-        (!executeTypeFilter || task.executeType === executeTypeFilter) &&
-        (statusFilter.length === 0 || statusFilter.includes(task.status)),
-      )
-      .sort((left, right) => (timestampOf(left) - timestampOf(right)) * (direction === "asc" ? 1 : -1));
-  }, [direction, executeTypeFilter, modeFilter, sort, sortedTasks, statusFilter]);
-  const batchDeleteTargets = filteredTasks.filter(
+  const progressSource = progressTask(latest);
+  const batchDeleteTargets = historyTasks.filter(
     (task) => selectedKeys.includes(task.id) && !isActiveBuildTask(task),
   );
 
@@ -263,7 +269,7 @@ export function ResourceIndexPanel({
           message.success(t("common.success"));
         }
         setSelectedKeys([]);
-        await onRefresh();
+        await refreshTasks();
       },
     });
   };
@@ -290,6 +296,8 @@ export function ResourceIndexPanel({
   }, [canViewTasks, indexView, onIndexViewChange]);
 
   useEffect(() => {
+    setHistoryTasks([]);
+    setHistoryTotal(0);
     setTaskPage(1);
     setSelectedKeys([]);
     setModeFilter(undefined);
@@ -300,15 +308,15 @@ export function ResourceIndexPanel({
     setDetailTaskId(null);
   }, [resource.id]);
 
-  const pagedTasks = useMemo(() => {
-    const start = (taskPage - 1) * taskPageSize;
-    return filteredTasks.slice(start, start + taskPageSize);
-  }, [filteredTasks, taskPage, taskPageSize]);
+  useEffect(() => {
+    if (!active || indexView !== "tasks") return;
+    void loadHistory();
+  }, [active, indexView, loadHistory]);
 
   useEffect(() => {
-    const lastPage = Math.max(1, Math.ceil(filteredTasks.length / taskPageSize));
+    const lastPage = Math.max(1, Math.ceil(historyTotal / taskPageSize));
     if (taskPage > lastPage) setTaskPage(lastPage);
-  }, [filteredTasks.length, taskPage, taskPageSize]);
+  }, [historyTotal, taskPage, taskPageSize]);
 
   const updateTaskFilters = (patch: {
     executeType?: BuildTaskExecuteType;
@@ -481,7 +489,7 @@ export function ResourceIndexPanel({
     },
   ];
 
-  const statusSummary = buildStatusSummary(effective, t, i18n.language);
+  const statusSummary = buildStatusSummary(latest, t, i18n.language);
 
   const gateBanner =
     !gate.ok && catalog ? (
@@ -581,21 +589,7 @@ export function ResourceIndexPanel({
           </div>
         ) : null}
 
-        {latest?.status === "failed" && effective ? (
-          <Alert
-            className={panelStyles.statusAlert}
-            message={t("dataCatalog.resource.rebuildFailedTitle", {
-              version: effective.id,
-            })}
-            description={renderBuildFailureAlert(
-              latest,
-              i18n.language,
-              t("dataCatalog.task.rawError"),
-            )}
-            showIcon
-            type="warning"
-          />
-        ) : latest?.status === "failed" && latest.error ? (
+        {latest?.status === "failed" && latest.error ? (
           <Alert
             className={panelStyles.statusAlert}
             message={renderBuildFailureAlert(
@@ -623,7 +617,7 @@ export function ResourceIndexPanel({
                 onStarted={() => {
                   setSelectedKeys([]);
                   setTaskPage(1);
-                  void onRefresh();
+                  void refreshTasks();
                 }}
                 resource={resource}
               />
@@ -636,13 +630,13 @@ export function ResourceIndexPanel({
         <div className={panelStyles.historyHead}>
           <h3 className={panelStyles.historyTitle}>
             {t("dataCatalog.resource.historyTasks")}
-            {sortedTasks.length > 0 ? (
-              <span className={panelStyles.historyCount}> ({sortedTasks.length})</span>
+            {historyTotal > 0 ? (
+              <span className={panelStyles.historyCount}> ({historyTotal})</span>
             ) : null}
           </h3>
           <div className={panelStyles.historyControls}>
             <Space>
-              <AppButton icon={<ReloadOutlined />} onClick={() => void onRefresh()}>
+              <AppButton icon={<ReloadOutlined />} onClick={() => void refreshTasks()}>
                 {t("common.refresh")}
               </AppButton>
               <PermissionGate permissions="catalog:task_manage">
@@ -663,8 +657,9 @@ export function ResourceIndexPanel({
         <TableSurface className={panelStyles.tableSurface}>
           <AppTable<BuildTask>
             columns={taskColumns}
-            dataSource={pagedTasks}
+            dataSource={historyTasks}
             locale={{ emptyText: t("dataCatalog.resource.historyEmpty") }}
+            loading={historyLoading}
             onChange={(pagination, filters, sorter, extra) => {
               if (extra.action === "filter") {
                 updateTaskFilters({
@@ -685,18 +680,18 @@ export function ResourceIndexPanel({
             } : undefined}
           />
         </TableSurface>
-        {filteredTasks.length > 0 ? (
+        {historyTotal > 0 ? (
           <TablePaginationBar
             current={taskPage}
             onChange={(nextPage, nextPageSize) => {
               setSelectedKeys([]);
-              setTaskPage(nextPage);
+              setTaskPage(nextPageSize === taskPageSize ? nextPage : 1);
               setTaskPageSize(nextPageSize);
             }}
             pageSize={taskPageSize}
             showSizeChanger
             showTotal={(count) => t("common.total", { total: count })}
-            total={filteredTasks.length}
+            total={historyTotal}
           />
         ) : null}
       </div>

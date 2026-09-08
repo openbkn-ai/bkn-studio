@@ -19,7 +19,6 @@ import type {
   BuildMode,
   BuildTask,
   BuildTaskCreateInput,
-  BuildTaskListQuery,
   BuildTaskSort,
   BuildTaskPageQuery,
   BuildTaskPageResult,
@@ -79,8 +78,6 @@ type ListResponse<T> = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const BUILD_TASK_LIST_PAGE_SIZE = 200;
-
 const wait = async <T,>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), delay);
@@ -258,69 +255,6 @@ export function mapBuildTask(item: BackendBuildTask): BuildTask {
     lastProgressTime: item.last_progress_time ?? null,
     error: item.error_msg || null,
   };
-}
-
-function filterTasks(items: BuildTask[], query: BuildTaskListQuery) {
-  return items
-    .filter((item) => {
-      const matchesResource = !query.resourceId || item.resourceId === query.resourceId;
-      const matchesStatus =
-        !query.statuses || query.statuses.length === 0 || query.statuses.includes(item.status);
-      return matchesResource && matchesStatus;
-    })
-    .sort((left, right) => right.createTime - left.createTime);
-}
-
-export async function listBuildTasks(
-  query: BuildTaskListQuery = {},
-): Promise<BuildTask[]> {
-  if (useMock) {
-    let tasks = [...mockBuildTasks];
-    if (query.catalogId) {
-      // Mocks do not filter by catalog_id, so resolve catalog to resourceIds through mockResources.
-      const resourceIds = new Set(
-        mockResources
-          .filter((resource) => resource.catalogId === query.catalogId)
-          .map((resource) => resource.id),
-      );
-      tasks = tasks.filter((task) => resourceIds.has(task.resourceId));
-    }
-    return wait(filterTasks(tasks, query), 120);
-  }
-
-  const backendStatuses = query.statuses?.length
-    ? backendStatusParams(query.statuses)
-    : undefined;
-  // The backend filters each page after reading it, so a short or empty page says nothing about
-  // what comes after it and the count covers rows the caller may not see (#977). Walk the raw
-  // space by the requested window until it runs out; stopping on a short page loses the rest.
-  const tasks: BuildTask[] = [];
-  let offset = 0;
-
-  for (; ;) {
-    const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
-      "/vega-backend/v1/build-tasks",
-      {
-        params: {
-          limit: BUILD_TASK_LIST_PAGE_SIZE,
-          offset,
-          resource_id: query.resourceId || undefined,
-          catalog_id: query.catalogId || undefined,
-          status: backendStatuses,
-        },
-        paramsSerializer: { indexes: null },
-        skipErrorToast: query.silent,
-      },
-    );
-    tasks.push(...response.data.entries.map(mapBuildTask));
-    offset += BUILD_TASK_LIST_PAGE_SIZE;
-
-    if (offset >= response.data.total_count) {
-      break;
-    }
-  }
-
-  return filterTasks(tasks, query);
 }
 
 // Task statuses are passed through to the backend unchanged.

@@ -30,7 +30,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
 import { SemanticTaskAppliedTag, SemanticTaskStatusTag } from "@/modules/data-catalog/components/SemanticTaskPresentation";
-import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listResourceSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
@@ -49,6 +49,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
   const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -71,16 +72,26 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     setLoading(true);
     setError(null);
     try {
-      setTasks(await listResourceSemanticUnderstandingTasks(resource.id));
+      const result = await listSemanticUnderstandingTasks({
+        applied: appliedFilter,
+        applyMode: applyModeFilter,
+        direction,
+        resourceId: resource.id,
+        scope: "resource",
+        sort,
+        statuses: statusFilter.length === 0 ? undefined : statusFilter,
+      }, { limit: pageSize, offset: (page - 1) * pageSize });
+      setTasks(result.items);
+      setTotal(result.total);
     } catch (e) {
       setError(extractRequestErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [resource.id]);
+  }, [appliedFilter, applyModeFilter, direction, page, pageSize, resource.id, sort, statusFilter]);
 
   useEffect(() => {
-    setTasks([]);
+    setTasks([]); setTotal(0);
     setSelectedKeys([]);
     setApplyModeFilter(undefined);
     setStatusFilter([]);
@@ -94,6 +105,11 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   useEffect(() => {
     if (active) void load();
   }, [active, load]);
+
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / pageSize));
+    if (page > lastPage) setPage(lastPage);
+  }, [page, pageSize, total]);
 
   useEffect(() => {
     if (useMock || !active || !tasks.some((task) => task.status === "pending" || task.status === "running")) return;
@@ -140,34 +156,12 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
     }
   };
 
-  const filteredTasks = useMemo(() => tasks
-    .filter((task) =>
-      (!applyModeFilter || task.applyMode === applyModeFilter) &&
-      (statusFilter.length === 0 || statusFilter.includes(task.status)) &&
-      (appliedFilter === undefined || task.applied === appliedFilter),
-    )
-    .sort((left, right) => {
-      const leftTime = sort === "finish_time" ? left.finishTime ?? 0 : left.createTime;
-      const rightTime = sort === "finish_time" ? right.finishTime ?? 0 : right.createTime;
-      return (leftTime - rightTime) * (direction === "asc" ? 1 : -1);
-    }), [appliedFilter, applyModeFilter, direction, sort, statusFilter, tasks]);
-
-  const batchDeleteTargets = filteredTasks.filter(
+  const batchDeleteTargets = tasks.filter(
     (task) =>
       selectedKeys.includes(task.id) &&
       task.status !== "pending" &&
       task.status !== "running",
   );
-  const pagedTasks = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredTasks.slice(start, start + pageSize);
-  }, [filteredTasks, page, pageSize]);
-
-  useEffect(() => {
-    const lastPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize));
-    if (page > lastPage) setPage(lastPage);
-  }, [filteredTasks.length, page, pageSize]);
-
   const handleBatchDelete = () => {
     if (!batchDeleteTargets.length) return;
     void modal.confirm({
@@ -280,9 +274,9 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
       </Space>
     </section>
     {error ? <Alert message={error} showIcon type="error" /> : <TableSurface>
-      <AppTable columns={columns} dataSource={pagedTasks} locale={{ emptyText: <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> }} loading={loading} onChange={handleTableChange} pagination={false} rowKey="id" rowSelection={canManageTasks ? { selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)), getCheckboxProps: (task) => ({ disabled: task.status === "pending" || task.status === "running" }) } : undefined} />
+      <AppTable columns={columns} dataSource={tasks} locale={{ emptyText: <EmptyStatePanel description={t("dataCatalog.semanticWorkspace.empty")} title={t("dataCatalog.semanticWorkspace.empty")} /> }} loading={loading} onChange={handleTableChange} pagination={false} rowKey="id" rowSelection={canManageTasks ? { selectedRowKeys: selectedKeys, onChange: (keys) => setSelectedKeys(keys.map(String)), getCheckboxProps: (task) => ({ disabled: task.status === "pending" || task.status === "running" }) } : undefined} />
     </TableSurface>}
-    {filteredTasks.length > 0 ? <TablePaginationBar current={page} onChange={(nextPage, nextPageSize) => { setSelectedKeys([]); setPage(nextPageSize === pageSize ? nextPage : 1); setPageSize(nextPageSize); }} pageSize={pageSize} showSizeChanger showTotal={(count) => t("common.total", { total: count })} total={filteredTasks.length} /> : null}
+    {total > 0 ? <TablePaginationBar current={page} onChange={(nextPage, nextPageSize) => { setSelectedKeys([]); setPage(nextPageSize === pageSize ? nextPage : 1); setPageSize(nextPageSize); }} pageSize={pageSize} showSizeChanger showTotal={(count) => t("common.total", { total: count })} total={total} /> : null}
     <Modal cancelText={t("common.cancel")} confirmLoading={creating} okText={t("dataCatalog.semanticWorkspace.start")} onCancel={() => setOpen(false)} onOk={() => void start()} open={open} title={t("dataCatalog.semanticWorkspace.createTitle")}>
       <Form form={form} layout="vertical">
         <Form.Item label={t("dataCatalog.taskManagement.columns.applyMode")} name="applyMode" rules={[{ required: true }]}>
