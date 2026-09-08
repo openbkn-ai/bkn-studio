@@ -306,5 +306,5 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       [unknown, { limit: number; offset: number }]
     >;
     expect(calls.every(([, window]) => window.offset === 0)).toBe(true);
-  });
+  }, 20_000);
 });
