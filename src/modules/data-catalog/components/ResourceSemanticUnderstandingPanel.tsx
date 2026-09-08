@@ -34,6 +34,7 @@ import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTas
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
+import { useSemanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -46,6 +47,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<CreateSemanticUnderstandingTaskPayload>();
+  const includeSampleRows = Form.useWatch("includeSampleRows", form) ?? false;
   const [tasks, setTasks] = useState<SemanticUnderstandingTaskSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,20 +117,18 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
                 ? { className: styles.summaryValueError, label: t("dataCatalog.semanticWorkspace.failed") }
                 : { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.cancelled") };
 
-  useEffect(() => {
-    if (!open) return;
-    form.setFieldsValue({
-      applyMode: "fill_empty",
-      confidenceThreshold: 0.75,
-      includeSampleRows: false,
-    });
-  }, [form, open]);
+  useSemanticUnderstandingTaskFormDefaults(form, open);
 
   const start = async () => {
     const values = await form.validateFields();
+    const { sampleMaxRows, ...taskValues } = values;
     setCreating(true);
     try {
-      await createResourceSemanticUnderstandingTask({ ...values, resourceId: resource.id });
+      await createResourceSemanticUnderstandingTask({
+        ...taskValues,
+        ...(taskValues.includeSampleRows ? { sampleMaxRows } : {}),
+        resourceId: resource.id,
+      });
       message.success(t("dataCatalog.semanticWorkspace.started"));
       setOpen(false);
       form.resetFields();
@@ -294,6 +294,9 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
         <Form.Item extra={t("dataCatalog.semanticWorkspace.includeSamplesHint")} name="includeSampleRows" valuePropName="checked">
           <Checkbox>{t("dataCatalog.semanticWorkspace.includeSamples")}</Checkbox>
         </Form.Item>
+        {includeSampleRows ? <Form.Item label={t("dataCatalog.semanticWorkspace.sampleRows")} name="sampleMaxRows" rules={[{ required: true }]}>
+          <InputNumber max={20} min={1} precision={0} style={{ width: "100%" }} />
+        </Form.Item> : null}
       </Form>
     </Modal>
     {detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}

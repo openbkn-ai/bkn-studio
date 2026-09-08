@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { FormInstance } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import sharedStyles from "@/modules/data-catalog/components/shared.module.css";
@@ -47,6 +48,7 @@ vi.mock("@/modules/data-catalog/services/semantic-understanding-task.service", (
 }));
 
 import { ResourceSemanticUnderstandingPanel } from "./ResourceSemanticUnderstandingPanel";
+import { semanticUnderstandingTaskFormDefaults, useSemanticUnderstandingTaskFormDefaults } from "./semantic-understanding-task-form";
 
 const resource: CatalogResource = {
   catalogId: "catalog-1",
@@ -63,6 +65,14 @@ const resource: CatalogResource = {
   expectedUpdateTime: 0,
 };
 
+function SemanticUnderstandingTaskFormDefaultsHarness({ form, open }: {
+  form: Pick<FormInstance, "setFieldsValue">;
+  open: boolean;
+}) {
+  useSemanticUnderstandingTaskFormDefaults(form, open);
+  return null;
+}
+
 describe("ResourceSemanticUnderstandingPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,6 +87,19 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       removeEventListener: vi.fn(),
       removeListener: vi.fn(),
     }));
+  });
+
+  it("resets sample rows to ten each time the creation dialog opens", () => {
+    const form = { setFieldsValue: vi.fn() } as unknown as Pick<FormInstance, "setFieldsValue">;
+    const { rerender } = render(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open={false} />);
+
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open />);
+    expect(form.setFieldsValue).toHaveBeenCalledWith(semanticUnderstandingTaskFormDefaults);
+
+    vi.mocked(form.setFieldsValue).mockClear();
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open={false} />);
+    rerender(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open />);
+    expect(form.setFieldsValue).toHaveBeenCalledWith(semanticUnderstandingTaskFormDefaults);
   });
 
   it("initializes the semantic task defaults before opening the creation dialog", async () => {
@@ -96,6 +119,28 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       confidenceThreshold: 0.75,
       includeSampleRows: false,
       resourceId: "resource-1",
+    }));
+  });
+
+  it("lets users choose up to twenty sample rows", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
+
+    const sampleRowsInput = (await screen.findAllByRole("spinbutton")).at(-1);
+    expect(sampleRowsInput?.getAttribute("value")).toBe("10");
+    fireEvent.change(sampleRowsInput!, { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+
+    await waitFor(() => expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows: 20,
     }));
   });
 

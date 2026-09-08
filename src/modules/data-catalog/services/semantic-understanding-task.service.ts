@@ -148,6 +148,7 @@ export type CreateSemanticUnderstandingTaskPayload = {
   confidenceThreshold?: number;
   includeSampleRows?: boolean;
   resourceId: string;
+  sampleMaxRows?: number;
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -396,13 +397,14 @@ export async function createResourceSemanticUnderstandingTask(payload: CreateSem
     return task;
   }
   const includeSampleRows = payload.includeSampleRows ?? false;
+  const sampleMaxRows = payload.sampleMaxRows ?? 10;
   const response = await http.post<{ id: string }>("/vega-backend/v1/semantic-understanding-tasks", {
     scope: "resource",
     resource_id: payload.resourceId,
     apply_mode: payload.applyMode,
     confidence_threshold: payload.confidenceThreshold,
     include_sample_rows: includeSampleRows,
-    sample_policy: includeSampleRows ? { masked: false, max_rows: 10 } : undefined,
+    sample_policy: includeSampleRows ? { masked: false, max_rows: sampleMaxRows } : undefined,
   });
   return response.data;
 }
