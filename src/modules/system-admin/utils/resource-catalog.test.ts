@@ -11,6 +11,7 @@ import i18n from "@/app/locales/i18n";
 import {
   operationLabel,
   operationsForType,
+  ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
 } from "@/modules/system-admin/utils/resource-catalog";
 
@@ -51,6 +52,37 @@ describe("resource-catalog", () => {
       "view_detail",
       "query_data",
     ]);
+  });
+
+  it("limits role grants to supported type-wide resource types", () => {
+    const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
+
+    expect(roleGrantTypes).toEqual(
+      expect.not.arrayContaining([
+        "agent",
+        "agent_tpl",
+        "connector_type",
+        "data_flow",
+        "risk_type",
+        "stream_data_pipeline",
+      ]),
+    );
+    expect(roleGrantTypes).toEqual(
+      expect.arrayContaining([
+        "concept_group",
+        "object_type",
+        "relation_type",
+        "action_type",
+        "metric",
+      ]),
+    );
+  });
+
+  it("uses the product names for the data connection and data directory", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("catalog")).toBe("数据连接");
+    expect(resourceTypeLabel("resource")).toBe("数据目录");
   });
 
   it("offers task management only for action types among knowledge-network children", () => {

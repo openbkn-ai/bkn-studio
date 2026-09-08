@@ -19,7 +19,7 @@ import {
 import {
   operationLabel,
   operationsForType,
-  RESOURCE_TYPES,
+  ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
@@ -46,7 +46,9 @@ export function ResourceGrantEditor({
   value,
 }: ResourceGrantEditorProps) {
   const { t } = useTranslation();
-  const [draftType, setDraftType] = useState<string>(lockedResource?.type ?? RESOURCE_TYPES[0].type);
+  const [draftType, setDraftType] = useState<string>(
+    lockedResource?.type ?? ROLE_GRANT_RESOURCE_TYPES[0].type,
+  );
   const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? "");
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
   const [draftOps, setDraftOps] = useState<string[]>([]);
@@ -178,7 +180,7 @@ export function ResourceGrantEditor({
                   setDraftType(type);
                   setDraftOps([]);
                 }}
-                options={RESOURCE_TYPES.map((item) => ({
+                options={ROLE_GRANT_RESOURCE_TYPES.map((item) => ({
                   label: resourceTypeLabel(item.type),
                   value: item.type,
                 }))}
