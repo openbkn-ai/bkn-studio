@@ -396,9 +396,9 @@ export const dataCatalogEnUS = {
       primaryKeyFieldsPlaceholder: "Select primary key",
       incrementalFieldsPlaceholder: "Select incremental key",
       primaryKeyFieldsHint:
-        "Choose fields that uniquely identify a source row; composite keys follow tag order.",
+        "Choose fields that uniquely identify a source row; composite keys follow tag order. Missing primary-key fields are appended to the internal batch cursor.",
       incrementalFieldsHint:
-        "Choose fields that advance batch-build cursors; ensure they can be stably sorted in tag order.",
+        "Choose fields that advance batch-build cursors; ensure they can be stably sorted in tag order. Missing primary-key fields are appended internally.",
       fieldFeatureConfig: "Field Feature Configuration",
       fieldFeatureConfigHint:
         "Configure embedding and full-text features for text fields.",
