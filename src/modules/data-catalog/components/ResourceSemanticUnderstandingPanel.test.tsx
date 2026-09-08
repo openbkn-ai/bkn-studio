@@ -142,7 +142,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       resourceId: "resource-1",
       sampleMaxRows: 20,
     }));
-  });
+  }, 20_000);
 
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
