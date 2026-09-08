@@ -187,7 +187,6 @@ export const dataCatalogZhCN = {
     },
     emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
     backToCatalog: "返回数据目录",
-    buildChip: "构建中 · {{count}}",
     format: {
       daysAgo: "{{count}} 天前",
       hoursAgo: "{{count}} 小时前",
@@ -560,10 +559,9 @@ export const dataCatalogZhCN = {
       progress: "进度",
       statusFilterPlaceholder: "全部状态",
       empty: "暂无索引任务",
-      emptyVisible: "没有可见的任务",
-      emptyUnauthorizedDescription: "这里只显示你有权查看的任务，可见性取决于任务所属目录的授权。若你认为应当看到某些任务，请联系管理员为对应目录授予权限。",
-      visibleCount: "本页 {{count}} 条",
-      emptyDescription: "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
+      totalCount: "共 {{count}} 条",
+      emptyDescription:
+        "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
       pauseListening: "暂停监听",
       resumeListening: "恢复监听",
       paused: "已暂停监听",

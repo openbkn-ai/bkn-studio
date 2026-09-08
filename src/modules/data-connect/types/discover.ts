@@ -105,7 +105,7 @@ export type DataConnectDiscoverScheduleListQuery = {
 
 export type DataConnectDiscoverTaskListQuery = {
   catalogId?: string;
-  /** Raw window. Callers scan by offset because the backend filters after paging (#977). */
+  /** Server pagination window; Vega applies task visibility and filters before limit and offset. */
   limit?: number;
   offset?: number;
   page?: number;

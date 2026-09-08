@@ -20,7 +20,7 @@ import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import {
   BuildTaskConflictError,
   createBuildTask,
-  listBuildTasks,
+  listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
 import type {
   BuildMode,
@@ -154,9 +154,15 @@ export function BuildTaskLaunchPanel({
     setMode("batch");
     setExecuteType("full");
     setError(null);
-    void listBuildTasks({ resourceId: resource.id })
-      .then((tasks) => {
-        setExistingActive(tasks.find((task) => isActiveBuildTask(task)) ?? null);
+    void listBuildTaskPage({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    })
+      .then((result) => {
+        setExistingActive(result.items[0] ?? null);
       })
       .catch(() => {
         setExistingActive(null);

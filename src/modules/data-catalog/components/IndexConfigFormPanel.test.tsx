@@ -14,7 +14,7 @@ import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/da
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
-const listBuildTasksMock = vi.hoisted(() => vi.fn());
+const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -27,7 +27,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
-  listBuildTasks: listBuildTasksMock,
+  listBuildTaskPage: listBuildTaskPageMock,
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
@@ -68,7 +68,7 @@ describe("IndexConfigFormPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
-    listBuildTasksMock.mockReset().mockResolvedValue([]);
+    listBuildTaskPageMock.mockReset().mockResolvedValue({ items: [], total: 0 });
     updateCatalogResourceMock.mockReset();
     loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
     loadEmbeddingModelOptionsMock.mockResolvedValue({
@@ -105,6 +105,22 @@ describe("IndexConfigFormPanel", () => {
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
+  });
+
+  it("loads only the latest active task when configuring an index", async () => {
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    }));
   });
 
   it("keeps vector and full-text metrics visible when build controls are hidden", () => {
@@ -310,7 +326,7 @@ describe("IndexConfigFormPanel", () => {
         type: "string",
       }],
     };
-    listBuildTasksMock.mockResolvedValue([{
+    listBuildTaskPageMock.mockResolvedValue({ items: [{
       createTime: 1,
       embeddingFields: [],
       embeddingModel: "",
@@ -329,7 +345,7 @@ describe("IndexConfigFormPanel", () => {
       status: "running",
       syncedCount: 0,
       totalCount: 1,
-    } satisfies BuildTask]);
+    } satisfies BuildTask], total: 1 });
 
     render(
       <MemoryRouter>

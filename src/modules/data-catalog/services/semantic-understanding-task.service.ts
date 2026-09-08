@@ -114,7 +114,7 @@ export function buildSemanticUnderstandingTaskListParams(
   page: number,
   pageSize: number,
   filters: SemanticUnderstandingTaskListFilters,
-  /** Raw window, when the caller scans by offset because the backend filters after paging (#977). */
+  /** Server pagination window; Vega applies task visibility and filters before limit and offset. */
   window?: { limit: number; offset: number },
 ) {
   return {

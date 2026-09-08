@@ -12,7 +12,7 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const getCatalogMock = vi.hoisted(() => vi.fn());
-const listBuildTasksMock = vi.hoisted(() => vi.fn());
+const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const subscribeMockDbMock = vi.hoisted(() => vi.fn());
 
 vi.mock("antd", () => ({
@@ -80,7 +80,7 @@ vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   setCatalogResourceEnabled: vi.fn(),
 }));
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
-  listBuildTasks: listBuildTasksMock,
+  listBuildTaskPage: listBuildTaskPageMock,
 }));
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
   subscribeMockDb: subscribeMockDbMock,
@@ -108,8 +108,29 @@ describe("ResourceWorkspaceScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCatalogMock.mockResolvedValue({ id: "catalog-1", name: "Catalog" });
-    listBuildTasksMock.mockResolvedValue([]);
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     subscribeMockDbMock.mockImplementation(() => () => {});
+  });
+
+  it("loads only the latest build task for the resource status", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: staleResource.id,
+      sort: "create_time",
+    }));
   });
 
   it("finishes an in-flight workspace load after a tab refresh", async () => {

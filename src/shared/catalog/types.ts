@@ -103,6 +103,8 @@ export type CatalogRecord = {
 
 export type CatalogListQuery = {
   connectorType?: string;
+  enabled?: boolean;
+  healthStatus?: CatalogHealthStatus;
   keyword: string;
   page: number;
   pageSize: number;

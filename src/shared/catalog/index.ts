@@ -43,11 +43,6 @@ export {
   updateMockCatalogRecord,
 } from "@/shared/catalog/catalog.service";
 
-export {
-  resourceBlastRadius,
-  type CatalogBlastRadius,
-} from "@/shared/catalog/blast-radius";
-
 export { inferConnectorCategory } from "@/shared/catalog/catalog-mapper";
 
 export {

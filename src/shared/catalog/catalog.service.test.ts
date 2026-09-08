@@ -45,6 +45,29 @@ describe("catalog.service · listCatalogs", () => {
     expect(lastParams()).toMatchObject({ type: "physical" });
   });
 
+  it("keeps Vega's filtered total for physical catalog pages", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 23 } });
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    await expect(listCatalogs({ keyword: "", page: 2, pageSize: 10, type: "physical" }))
+      .resolves.toEqual({ items: [], total: 23 });
+  });
+
+  it("passes enabled and health-status filters to Vega", async () => {
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    await listCatalogs({
+      enabled: false,
+      healthStatus: "offline",
+      keyword: "",
+      page: 1,
+      pageSize: 10,
+      type: "physical",
+    });
+
+    expect(lastParams()).toMatchObject({ enabled: false, health_check_status: "offline" });
+  });
+
   it("omits the type filter when all catalog types are requested", async () => {
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");
 
