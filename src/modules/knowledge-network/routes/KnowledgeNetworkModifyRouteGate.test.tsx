@@ -38,6 +38,10 @@ function createRecord(operations?: string[]): KnowledgeNetworkRecord {
       actionTypesTotal: 0,
       conceptGroupsTotal: 0,
       metricsTotal: 0,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
     },
   };
 }

@@ -1,0 +1,77 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  /* Match the bare <h2> other list pages use: an Ant link button is 32px tall by default and
+     would push the toolbar and table 8px further down than on metrics or object types. */
+  min-height: 24px;
+}
+
+.titleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/*
+ * A mounted capability is only half the story: the asset itself is still created, edited and
+ * published in the execution factory. The hint sits behind the title's question mark rather than
+ * as a paragraph, so the page opens at the same height as every other list page.
+ */
+.usageTip {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  cursor: help;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.statusOk {
+  background: var(--color-success-text);
+}
+
+.statusWarn {
+  background: var(--color-warning-text);
+}
+
+.statusMuted {
+  background: var(--color-text-muted);
+}
+
+.statusError {
+  background: var(--color-error-text);
+}
+
+.sourceTags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.manageLink {
+  flex: none;
+}
+
+.manageLink:global(.ant-btn) {
+  height: 24px;
+  padding: 0;
+}

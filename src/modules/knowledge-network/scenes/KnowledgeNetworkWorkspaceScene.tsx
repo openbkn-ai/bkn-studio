@@ -8,6 +8,8 @@
 import {
   ApiOutlined,
   ApartmentOutlined,
+  CloudServerOutlined,
+  CodeOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FileTextOutlined,
@@ -30,6 +32,7 @@ import type {
   KnowledgeNetworkWorkspaceSection,
 } from "@/modules/knowledge-network/contracts/scenes";
 import { KnowledgeNetworkFormModal } from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal";
+import { SkillsSparkIcon } from "@/modules/knowledge-network/components/shared/SkillsSparkIcon";
 import { useWorkspaceData } from "@/modules/knowledge-network/scenes/workspace/useWorkspaceData";
 import { ExperienceScene } from "@/modules/knowledge-network/scenes/ExperienceScene";
 import { WorkspaceOverviewSection } from "@/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection";
@@ -156,6 +159,35 @@ export function KnowledgeNetworkWorkspaceScene({
       });
     }
 
+    items.push(
+      {
+        key: "functions",
+        label: t("knowledgeNetwork.workspaceFunctions"),
+        icon: <CodeOutlined />,
+        count: detail?.statistics.functionsTotal ?? 0,
+      },
+      {
+        key: "apis",
+        // Not ApiOutlined: relation types already own that icon in the group above.
+        label: t("knowledgeNetwork.workspaceApis"),
+        icon: <CloudServerOutlined />,
+        count: detail?.statistics.apisTotal ?? 0,
+      },
+      {
+        key: "mcp",
+        label: t("knowledgeNetwork.workspaceMcpTools"),
+        icon: <ForkOutlined />,
+        // Backend counts these on its own: mcp_tool is a capability type of its own, so no split.
+        count: detail?.statistics.mcpToolsTotal ?? 0,
+      },
+      {
+        key: "skills",
+        label: t("knowledgeNetwork.workspaceSkills"),
+        icon: <SkillsSparkIcon />,
+        count: detail?.statistics.skillsTotal ?? 0,
+      },
+    );
+
     return items;
   }, [activeNetworkId, detail, t]);
 
@@ -174,7 +206,16 @@ export function KnowledgeNetworkWorkspaceScene({
       item.key === "relation-types" ||
       item.key === "action-types",
   );
-  const metricNavItems = navigationItems.filter((item) => item.key === "metrics");
+  // Metrics, functions and SKILLs are one group: they are what the network can compute and call,
+  // as opposed to the concept model that describes what it knows.
+  const dynamicNavItems = navigationItems.filter(
+    (item) =>
+      item.key === "metrics" ||
+      item.key === "functions" ||
+      item.key === "apis" ||
+      item.key === "mcp" ||
+      item.key === "skills",
+  );
 
   const renderSideNavItem = (
     item: WorkspaceNavItem,
@@ -288,16 +329,16 @@ export function KnowledgeNetworkWorkspaceScene({
             {experienceNavItems.map((item) => renderSideNavItem(item, { showCount: false }))}
             <div className={styles.sideDivider} />
             {sideCollapsed ? null : (
-              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceOntologyModeling")}</div>
+              <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceConceptModel")}</div>
             )}
             {resourceNavItems.map((item) => renderSideNavItem(item))}
-            {metricNavItems.length > 0 ? (
+            {dynamicNavItems.length > 0 ? (
               <>
                 <div className={styles.sideDivider} />
                 {sideCollapsed ? null : (
-                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceMetricModeling")}</div>
+                  <div className={styles.sideTitle}>{t("knowledgeNetwork.workspaceDynamicModel")}</div>
                 )}
-                {metricNavItems.map((item) => renderSideNavItem(item))}
+                {dynamicNavItems.map((item) => renderSideNavItem(item))}
               </>
             ) : null}
           </div>
