@@ -9,6 +9,7 @@ import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
 import {
+  KnowledgeNetworkDiffPage,
   KnowledgeNetworkIntegrationPage,
   KnowledgeNetworkListPage,
 } from "@/modules/knowledge-network/routes/lazy-pages";
@@ -24,6 +25,14 @@ export const knowledgeNetworkRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.integrationTitle",
     },
     <KnowledgeNetworkIntegrationPage />,
+  ),
+  createKnowledgeNetworkRoute(
+    "knowledge-network/diff",
+    {
+      descriptionKey: "knowledgeNetwork.diffEmptyHint",
+      titleKey: "knowledgeNetwork.diffTitle",
+    },
+    <KnowledgeNetworkDiffPage />,
   ),
   createKnowledgeNetworkRoute(
     "knowledge-network",

@@ -23,6 +23,11 @@ export const KnowledgeNetworkListPage = lazyNamedExport(
   "KnowledgeNetworkListPage",
 );
 
+export const KnowledgeNetworkDiffPage = lazyNamedExport(
+  () => import("@/modules/knowledge-network/pages/KnowledgeNetworkDiffPage"),
+  "KnowledgeNetworkDiffPage",
+);
+
 export const KnowledgeNetworkIntegrationPage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/KnowledgeNetworkIntegrationPage"),
   "KnowledgeNetworkIntegrationPage",

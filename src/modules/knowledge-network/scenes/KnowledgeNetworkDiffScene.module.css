@@ -1,0 +1,304 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  /* Scene-local tokens, following the convention of the other scenes in this module. */
+  --txt: #1b2230;
+  --txt2: #5b6678;
+  --faint: #8b94a4;
+  --line: #e6e9ef;
+  --surface: #ffffff;
+  --accent: #2e68ff;
+  --accent-bg: #eef3ff;
+  --add: #237a48;
+  --add-bg: #e7f4ec;
+  --mod: #8a5a00;
+  --mod-bg: #fdf1dc;
+  --del: #b03024;
+  --del-bg: #fbe9e7;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px 32px;
+  color: var(--txt);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.sideField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 260px;
+}
+
+.sideLabel {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.arrow {
+  padding-bottom: 6px;
+  color: var(--faint);
+}
+
+.options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--txt2);
+}
+
+/* ---- summary ---- */
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--txt2);
+}
+
+.chipValue {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt);
+}
+
+.chipAdd { border-left-color: var(--add); }
+.chipAdd .chipValue { color: var(--add); }
+.chipMod { border-left-color: var(--mod); }
+.chipMod .chipValue { color: var(--mod); }
+.chipDel { border-left-color: var(--del); }
+.chipDel .chipValue { color: var(--del); }
+
+/* ---- shell ---- */
+.shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Both panes scroll in their own box against a shared viewport height. With only the list
+   scrolling, reading a long field table dragged the list off screen and the reader lost their
+   place in it. */
+.rail {
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px 0;
+}
+
+.groupTitle {
+  padding: 10px 12px 4px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-left: 3px solid transparent;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover { background: #f6f8fb; }
+
+.itemActive {
+  border-left-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.itemName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--txt);
+}
+
+.itemKey {
+  color: var(--faint);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A word says what happened; a glyph has to be learned first. */
+.stateTag {
+  flex: none;
+  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.stateAdd { background: var(--add-bg); color: var(--add); }
+.stateMod { background: var(--mod-bg); color: var(--mod); }
+.stateDel { background: var(--del-bg); color: var(--del); }
+.stateSame { background: #f0f2f5; color: var(--txt2); }
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.groupCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfd;
+  font-size: 13px;
+}
+
+.groupHeadName { font-weight: 500; }
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  align-items: start;
+}
+
+.fieldRow:last-child { border-bottom: 0; }
+
+.fieldName { color: var(--txt2); }
+
+.valueCell { word-break: break-word; }
+
+.valueOld { color: var(--del); }
+.valueNew { color: var(--add); }
+.valueSame { color: var(--txt2); }
+
+/* An absent side is stated, not left blank: a blank cell reads as "unknown". */
+.valueAbsent { color: var(--faint); }
+
+.columnHeads {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 0 14px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.columnHeadName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--txt2);
+}
+
+.rawPath {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  /* One column stacked: two scroll boxes inside a scrolling page is worse than none. */
+  .rail, .detail { max-height: none; overflow-y: visible; }
+  .fieldRow, .columnHeads { grid-template-columns: 1fr; }
+}
+
+/* ---- one-sided definition, shown as content rather than as a diff ---- */
+.onlyOnSide {
+  color: var(--txt2);
+  font-size: 13px;
+}
+
+.contentRow {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 16px;
+  line-height: 1.7;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  align-items: start;
+}
+
+.contentRow:last-child { border-bottom: 0; }
+
+.tableScroll { overflow-x: auto; }
+
+.contentTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.contentTable th {
+  text-align: left;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.contentTable td {
+  padding: 9px 14px;
+  line-height: 1.7;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.contentTable tr:last-child td { border-bottom: 0; }

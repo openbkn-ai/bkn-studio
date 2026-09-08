@@ -10,6 +10,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
   SortAscendingOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import { Alert, Dropdown, Empty, Input, Modal, Select, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -254,6 +255,17 @@ export function KnowledgeNetworkListScene({
               onImported={reloadData}
             />
           </PermissionGate>
+          {/* Comparison reads two networks and belongs to neither of them, so it sits beside
+              create and import rather than inside a single network's page. */}
+          <AppButton
+            className={styles.toolbarButton}
+            icon={<SwapOutlined />}
+            onClick={() => {
+              void navigate("/knowledge-network/diff");
+            }}
+          >
+            {t("knowledgeNetwork.diffCompare")}
+          </AppButton>
         </div>
         <div className={styles.toolbarRight}>
           <Input

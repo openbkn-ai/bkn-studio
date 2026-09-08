@@ -14,6 +14,7 @@ import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
+import { knDiffPart } from "./kn-diff";
 
 export const knowledgeNetworkEnUS = {
   knowledgeNetwork: {
@@ -26,5 +27,6 @@ export const knowledgeNetworkEnUS = {
     ...metricPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
+    ...knDiffPart,
   },
 } as const;
