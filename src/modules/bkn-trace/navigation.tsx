@@ -22,7 +22,6 @@ export const bknTraceNavigation: ConsoleNavContribution = {
       key: "observability",
       labelKey: "shell.items.observability",
       icon: <BranchesOutlined />,
-      requiresBusinessPermission: true,
       children: [
         {
           key: "business-provenance",

@@ -136,7 +136,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         impactKey: "home.platform.stages.data.required.indexBuild.impact",
         outcomeKey: "home.platform.stages.data.required.indexBuild.outcome",
         optional: true,
-        path: "/data-directory",
+        path: "/index-builds",
         permissionMode: "any",
         permissions: ["catalog:task_manage"],
         summaryKey: "home.platform.stages.data.required.indexBuild.summary",

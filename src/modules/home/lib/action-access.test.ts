@@ -14,6 +14,24 @@ describe("canAccessHomeAction", () => {
     expect(canAccessHomeAction([], {})).toBe(true);
   });
 
+  it("allows configured navigation entries without a menu permission", () => {
+    expect(
+      canAccessHomeAction([], {
+        path: "/knowledge-network",
+        permissions: "knowledge-network:view",
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps non-navigation actions permission-gated", () => {
+    expect(
+      canAccessHomeAction([], {
+        path: "/data-connect/discover",
+        permissions: "catalog:task_manage",
+      }),
+    ).toBe(false);
+  });
+
   it("blocks a permission-gated action without a required permission", () => {
     expect(
       canAccessHomeAction(["knowledge-network:view"], {

@@ -11,7 +11,6 @@ import type { RouteObject } from "react-router-dom";
 import type { AppRouteContribution } from "@/app/router/types";
 import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
-import { dataConnectModuleManifest } from "@/modules/data-connect/module.manifest";
 
 const DataConnectListPage = lazy(async () => {
   const module = await import("@/modules/data-connect/pages/DataConnectListPage");
@@ -36,6 +35,10 @@ function withRouteLoading(permissions: string | string[], element: ReactNode) {
   );
 }
 
+function withPublicRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+}
+
 export const dataConnectRoutes: RouteObject[] = [
   {
     path: "data-connect",
@@ -46,7 +49,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.title",
       },
     },
-    element: withRouteLoading([...dataConnectModuleManifest.permissions], <DataConnectListPage />),
+    element: withPublicRouteLoading(<DataConnectListPage />),
   },
   {
     path: "data-connect/new",
