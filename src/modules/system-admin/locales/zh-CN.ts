@@ -397,7 +397,7 @@ export const systemAdminZhCN = {
     },
     roles: {
       title: "角色管理",
-      description: "角色是一组权限的集合，决定成员能在哪些资源上做哪些操作；成员可以是用户或部门。",
+      description: "角色是一组权限的集合，决定成员能在哪些资源上做哪些操作；成员目前仅支持用户。",
       create: "新建角色",
       searchPlaceholder: "按角色名称或描述搜索",
       builtin: "内置",
@@ -436,14 +436,14 @@ export const systemAdminZhCN = {
         description: "描述",
         descriptionPlaceholder: "这个角色用来做什么？",
         permissions: "权限",
-        permissionsHint: "选择资源类型、范围与允许的操作",
+        permissionsHint: "选择资源类型与允许的操作",
         permissionsReadOnly: "只读：配置角色权限需要「角色权限配置」权限",
         builtinLocked: "内置角色为只读，不可修改名称、描述或权限。",
       },
       membersModal: {
         title: "成员管理 · {{name}}",
-        addPlaceholder: "选择用户或部门…",
-        searchPlaceholder: "搜索成员名称或部门路径",
+        addPlaceholder: "选择用户…",
+        searchPlaceholder: "搜索成员名称",
         columns: {
           member: "成员",
           type: "类型",
@@ -455,7 +455,7 @@ export const systemAdminZhCN = {
         memberDept: "部门",
         memberDeptInactive: "部门（不生效）",
         remove: "移除",
-        note: "成员可以是用户或部门；部门成员会自动继承该角色的权限。",
+        note: "角色成员目前仅支持用户。",
       },
       detail: {
         title: "角色详情 · {{name}}",

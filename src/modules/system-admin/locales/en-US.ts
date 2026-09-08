@@ -399,7 +399,7 @@ export const systemAdminEnUS = {
     },
     roles: {
       title: "Role Management",
-      description: "A role is a set of permissions deciding what its members can do on which resources; members can be users or departments.",
+      description: "A role is a set of permissions deciding what its members can do on which resources; members currently must be users.",
       create: "New Role",
       searchPlaceholder: "Search by role name or description",
       builtin: "Built-in",
@@ -438,14 +438,14 @@ export const systemAdminEnUS = {
         description: "Description",
         descriptionPlaceholder: "What is this role for?",
         permissions: "Permissions",
-        permissionsHint: "Pick the resource type, scope and allowed operations",
+        permissionsHint: "Pick the resource type and allowed operations",
         permissionsReadOnly: "Read-only: configuring role permissions requires the role-permission point",
         builtinLocked: "Built-in roles are read-only — name, description and permissions cannot be changed.",
       },
       membersModal: {
         title: "Members · {{name}}",
-        addPlaceholder: "Pick a user or department…",
-        searchPlaceholder: "Search by member or department path",
+        addPlaceholder: "Pick a user…",
+        searchPlaceholder: "Search by member name",
         columns: {
           member: "Member",
           type: "Type",
@@ -457,7 +457,7 @@ export const systemAdminEnUS = {
         memberDept: "Department",
         memberDeptInactive: "Department (inactive)",
         remove: "Remove",
-        note: "Members can be users or departments; department members inherit the role's permissions.",
+        note: "Role members currently must be users.",
       },
       detail: {
         title: "Role Detail · {{name}}",
