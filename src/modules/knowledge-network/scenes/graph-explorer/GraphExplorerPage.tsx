@@ -24,7 +24,9 @@ import {
   friendlyError,
   fromSearchInstance,
   identityCondition,
+  knSearchInstances,
   mergeGraph,
+  needsKnSearch,
   parseRelationPaths,
   relabel,
   runCypherQuery,
@@ -34,6 +36,7 @@ import {
   type GNode,
   type KnCondition,
   type ObjectTypeMeta,
+  type RrfOptions,
   type SearchOptions,
 } from "@/modules/knowledge-network/services/graph-explorer.service";
 import {
@@ -495,9 +498,12 @@ export function GraphExplorerScene() {
   /* ------------------------------ search callbacks ------------------------------ */
 
   const handleSearch = useCallback(
-    async (query: string, options: SearchOptions): Promise<GNode[]> => {
+    async (query: string, options: SearchOptions, rrf: RrfOptions): Promise<GNode[]> => {
       const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn) => {
-        const payload = await client.searchInstances(query, turn, options);
+        // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep the MCP tool.
+        const payload = needsKnSearch(rrf)
+          ? await knSearchInstances({ base, token: "", knId: networkId }, auth, query, options, rrf, turn)
+          : await client.searchInstances(query, turn, options);
         const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
         const needMeta = new Set<string>();
         for (const hit of hits) {
@@ -515,7 +521,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, loadMetas, message, runTurn, t],
+    [auth, base, client, loadMetas, message, networkId, runTurn, t],
   );
 
   const handleQuery = useCallback(

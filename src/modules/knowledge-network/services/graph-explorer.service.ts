@@ -8,7 +8,7 @@
 import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
-import type { BknCallScope, McpSession, McpToolCallResult } from "./context-loader.service";
+import { REST_PREFIX, restPost, type BknCallScope, type ContextLoaderEnv, type McpAuth, type McpSession, type McpToolCallResult } from "./context-loader.service";
 
 /* ============================ Graph model ============================ */
 
@@ -486,6 +486,80 @@ export const DEFAULT_SEARCH_OPTIONS: Required<SearchOptions> = {
   maxObjectTypes: 10,
   rerank: false,
 };
+
+/**
+ * Fusion knobs of the semantic instance recall. search_instance does not accept them; they
+ * live in kn_search's retrieval_config.semantic_instance_retrieval, so any non-default value
+ * routes the search through REST /kn/kn_search instead of the MCP tool.
+ */
+export type RrfOptions = {
+  enableRrfFusion: boolean;
+  enableKnn: boolean;
+  rrfK: number;
+  knnWeight: number;
+  initialCandidateCount: number;
+  minDirectRelevance: number;
+  rerankMode: "off" | "shadow" | "on";
+};
+
+export const DEFAULT_RRF_OPTIONS: RrfOptions = {
+  enableRrfFusion: true,
+  enableKnn: true,
+  rrfK: 60,
+  knnWeight: 0.5,
+  initialCandidateCount: 50,
+  minDirectRelevance: 0.3,
+  rerankMode: "off",
+};
+
+/** True when the fusion knobs differ from the backend defaults and kn_search must be used. */
+export function needsKnSearch(rrf: RrfOptions | undefined): boolean {
+  if (!rrf) return false;
+  return (Object.keys(DEFAULT_RRF_OPTIONS) as (keyof RrfOptions)[]).some((key) => rrf[key] !== DEFAULT_RRF_OPTIONS[key]);
+}
+
+/** Body of REST /kn/kn_search carrying the same scope as search_instance plus the fusion knobs. */
+export function buildKnSearchBody(knId: string, query: string, options: SearchOptions, rrf: RrfOptions): Rec {
+  const merged = { ...DEFAULT_SEARCH_OPTIONS, ...options };
+  const conceptRetrieval: Rec = { top_k: Math.max(merged.maxObjectTypes, merged.objectTypes.length) };
+  if (merged.objectTypes.length > 0) conceptRetrieval.object_types = merged.objectTypes;
+  if (merged.excludeObjectTypes.length > 0) conceptRetrieval.exclude_object_types = merged.excludeObjectTypes;
+  if (merged.conceptGroups.length > 0) conceptRetrieval.concept_groups = merged.conceptGroups;
+  const semantic: Rec = {
+    per_type_instance_limit: merged.maxInstancesPerType,
+    enable_rrf_fusion: rrf.enableRrfFusion,
+    enable_knn_instance_retrieval: rrf.enableKnn,
+    rrf_k: rrf.rrfK,
+    knn_weight: rrf.knnWeight,
+    initial_candidate_count: rrf.initialCandidateCount,
+    min_direct_relevance: rrf.minDirectRelevance,
+    instance_rerank_mode: rrf.rerankMode,
+  };
+  return {
+    query,
+    kn_id: knId,
+    retrieval_config: { concept_retrieval: conceptRetrieval, semantic_instance_retrieval: semantic },
+  };
+}
+
+/** Runs kn_search over REST with the managed context and returns its payload (nodes + object_types). */
+export async function knSearchInstances(
+  env: ContextLoaderEnv,
+  auth: McpAuth | undefined,
+  query: string,
+  options: SearchOptions,
+  rrf: RrfOptions,
+  scope?: BknCallScope | null,
+): Promise<Rec> {
+  const base = env.base.replace(/\/+$/, "");
+  const body = withContext(buildKnSearchBody(env.knId, query, options, rrf), scope);
+  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/kn_search`, body);
+  const text = await response.text();
+  if (!response.ok) throw new Error(text || `kn_search failed (${response.status})`);
+  const payload = parsePrecisionSafeJSON(text);
+  if (!isRecord(payload)) throw new Error("kn_search did not return an object");
+  return payload;
+}
 
 export type GraphExplorerClient = {
   loadObjectTypes(ids: string[], scope?: BknCallScope | null): Promise<ObjectTypeMeta[]>;

@@ -147,6 +147,34 @@
   justify-self: start;
 }
 
+.helpIcon {
+  margin-left: 4px;
+  color: var(--color-text-tertiary, #bfbfbf);
+  cursor: help;
+}
+
+.rrfIntro {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.sliderCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.sliderCell :global(.ant-slider) {
+  margin: 4px 6px 0;
+}
+
+.sliderValue {
+  font-size: 11px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+
 .advancedControl {
   display: inline-flex;
   align-items: center;

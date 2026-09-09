@@ -5,17 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Collapse, Empty, Input, InputNumber, Select, Spin, Switch, Tabs, Tag, Typography } from "antd";
+import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { Alert, Button, Checkbox, Collapse, Empty, Input, InputNumber, Select, Slider, Spin, Switch, Tabs, Tag, Tooltip, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
+  DEFAULT_RRF_OPTIONS,
   DEFAULT_SEARCH_OPTIONS,
+  needsKnSearch,
   type GEdge,
   type GNode,
   type KnCondition,
   type ObjectTypeMeta,
+  type RrfOptions,
   type SearchOptions,
 } from "@/modules/knowledge-network/services/graph-explorer.service";
 
@@ -28,8 +31,8 @@ export type SearchPanelProps = {
   metaByOt: Record<string, ObjectTypeMeta>;
   /** Loads and caches the object type definition; resolves null when it cannot be loaded. */
   ensureMeta: (otId: string) => Promise<ObjectTypeMeta | null>;
-  /** Semantic search with the search_instance tunables chosen in the panel. */
-  onSearch: (query: string, options: SearchOptions) => Promise<GNode[]>;
+  /** Semantic search with the search_instance tunables and, when changed, the fusion knobs. */
+  onSearch: (query: string, options: SearchOptions, rrf: RrfOptions) => Promise<GNode[]>;
   /** Exact lookup by primary key value(s); composite keys arrive comma-separated in key order. */
   onLocate: (otId: string, rawKey: string) => Promise<GNode[]>;
   onQuery: (otId: string, condition: KnCondition | null) => Promise<GNode[]>;
@@ -220,6 +223,19 @@ export function SearchPanel({
   const [query, setQuery] = useState("");
   const [searchOptions, setSearchOptions] = useState<Required<SearchOptions>>({ ...DEFAULT_SEARCH_OPTIONS });
   const patchSearch = (patch: Partial<SearchOptions>) => setSearchOptions((previous) => ({ ...previous, ...patch }));
+  const [rrf, setRrf] = useState<RrfOptions>({ ...DEFAULT_RRF_OPTIONS });
+  const patchRrf = (patch: Partial<RrfOptions>) => setRrf((previous) => ({ ...previous, ...patch }));
+  const viaKnSearch = needsKnSearch(rrf);
+
+  /** Label with a hover explanation; every tunable carries one so the panel documents itself. */
+  const helpLabel = (text: string, help: string) => (
+    <span className={styles.advancedLabel}>
+      {text}
+      <Tooltip title={help} placement="right">
+        <QuestionCircleOutlined className={styles.helpIcon} />
+      </Tooltip>
+    </span>
+  );
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<GNode[]>([]);
@@ -241,7 +257,7 @@ export function SearchPanel({
     setSearching(true);
     setSearchError(null);
     try {
-      setSearchResults(await onSearch(text, searchOptions));
+      setSearchResults(await onSearch(text, { ...searchOptions, rerank: rrf.rerankMode === "on" }, rrf));
       setSearched(true);
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : String(error));
@@ -321,7 +337,7 @@ export function SearchPanel({
                   onChange={(value: string[]) => patchSearch({ conceptGroups: value })}
                 />
                 <div className={styles.advancedGrid}>
-                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType")}</span>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType"), t("knowledgeNetwork.graphExplorer.search.maxInstancesPerTypeHelp"))}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
@@ -330,7 +346,7 @@ export function SearchPanel({
                     value={searchOptions.maxInstancesPerType}
                     onChange={(value) => patchSearch({ maxInstancesPerType: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxInstancesPerType })}
                   />
-                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxObjectTypes")}</span>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.maxObjectTypes"), t("knowledgeNetwork.graphExplorer.search.maxObjectTypesHelp"))}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
@@ -339,11 +355,83 @@ export function SearchPanel({
                     value={searchOptions.maxObjectTypes}
                     onChange={(value) => patchSearch({ maxObjectTypes: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxObjectTypes })}
                   />
-                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.rerank")}</span>
-                  <span className={styles.advancedControl}>
-                    <Switch size="small" checked={searchOptions.rerank} onChange={(checked) => patchSearch({ rerank: checked })} />
-                  </span>
                 </div>
+              </div>
+            ),
+          },
+          {
+            key: "rrf",
+            label: t("knowledgeNetwork.graphExplorer.search.rrf"),
+            children: (
+              <div className={styles.advanced}>
+                <Typography.Paragraph type="secondary" className={styles.rrfIntro}>
+                  {t("knowledgeNetwork.graphExplorer.search.rrfIntro")}
+                </Typography.Paragraph>
+                <div className={styles.advancedGrid}>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.enableRrf"), t("knowledgeNetwork.graphExplorer.search.enableRrfHelp"))}
+                  <span className={styles.advancedControl}>
+                    <Switch size="small" data-testid="graph-explorer-rrf-enable" checked={rrf.enableRrfFusion} onChange={(checked) => patchRrf({ enableRrfFusion: checked })} />
+                  </span>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.enableKnn"), t("knowledgeNetwork.graphExplorer.search.enableKnnHelp"))}
+                  <span className={styles.advancedControl}>
+                    <Switch size="small" checked={rrf.enableKnn} onChange={(checked) => patchRrf({ enableKnn: checked })} />
+                  </span>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.rrfK"), t("knowledgeNetwork.graphExplorer.search.rrfKHelp"))}
+                  <InputNumber
+                    size="small"
+                    className={styles.advancedNumber}
+                    min={1}
+                    max={1000}
+                    value={rrf.rrfK}
+                    onChange={(value) => patchRrf({ rrfK: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.rrfK })}
+                  />
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.knnWeight"), t("knowledgeNetwork.graphExplorer.search.knnWeightHelp"))}
+                  <div className={styles.sliderCell}>
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={rrf.knnWeight}
+                      tooltip={{ formatter: (value) => (typeof value === "number" ? value.toFixed(2) : "") }}
+                      onChange={(value: number) => patchRrf({ knnWeight: Math.round(value * 100) / 100 })}
+                    />
+                    <span className={styles.sliderValue}>
+                      {t("knowledgeNetwork.graphExplorer.search.knnWeightValue", { knn: rrf.knnWeight.toFixed(2), text: (1 - rrf.knnWeight).toFixed(2) })}
+                    </span>
+                  </div>
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.initialCandidateCount"), t("knowledgeNetwork.graphExplorer.search.initialCandidateCountHelp"))}
+                  <InputNumber
+                    size="small"
+                    className={styles.advancedNumber}
+                    min={1}
+                    max={1000}
+                    value={rrf.initialCandidateCount}
+                    onChange={(value) => patchRrf({ initialCandidateCount: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.initialCandidateCount })}
+                  />
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.minDirectRelevance"), t("knowledgeNetwork.graphExplorer.search.minDirectRelevanceHelp"))}
+                  <InputNumber
+                    size="small"
+                    className={styles.advancedNumber}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={rrf.minDirectRelevance}
+                    onChange={(value) => patchRrf({ minDirectRelevance: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.minDirectRelevance })}
+                  />
+                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.rerankMode"), t("knowledgeNetwork.graphExplorer.search.rerankModeHelp"))}
+                  <Select
+                    size="small"
+                    className={styles.advancedNumber}
+                    value={rrf.rerankMode}
+                    options={[
+                      { value: "off", label: t("knowledgeNetwork.graphExplorer.search.rerankOff") },
+                      { value: "shadow", label: t("knowledgeNetwork.graphExplorer.search.rerankShadow") },
+                      { value: "on", label: t("knowledgeNetwork.graphExplorer.search.rerankOn") },
+                    ]}
+                    onChange={(value: RrfOptions["rerankMode"]) => patchRrf({ rerankMode: value })}
+                  />
+                </div>
+                {viaKnSearch ? <Typography.Text type="warning">{t("knowledgeNetwork.graphExplorer.search.viaKnSearch")}</Typography.Text> : null}
               </div>
             ),
           },

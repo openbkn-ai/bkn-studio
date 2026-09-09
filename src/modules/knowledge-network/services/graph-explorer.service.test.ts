@@ -9,7 +9,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { McpSession, McpToolCallResult } from "./context-loader.service";
 import {
+  DEFAULT_RRF_OPTIONS,
   buildInstanceId,
+  buildKnSearchBody,
+  needsKnSearch,
   createGraphExplorerClient,
   fromExploreSubgraph,
   fromQueryObjectInstance,
@@ -275,6 +278,37 @@ describe("relabel", () => {
   it("recomputes display with the new label map", () => {
     const [n] = relabel([{ id: "x", otId: "ot", otName: "ot", identity: {}, display: "old", props: { _display: "d", city: "c" } }], { ot: "city" });
     expect(n.display).toBe("c");
+  });
+});
+
+describe("kn_search routing", () => {
+  it("only leaves the MCP tool when a fusion knob differs from the backend default", () => {
+    expect(needsKnSearch(undefined)).toBe(false);
+    expect(needsKnSearch({ ...DEFAULT_RRF_OPTIONS })).toBe(false);
+    expect(needsKnSearch({ ...DEFAULT_RRF_OPTIONS, knnWeight: 0.7 })).toBe(true);
+    expect(needsKnSearch({ ...DEFAULT_RRF_OPTIONS, rerankMode: "shadow" })).toBe(true);
+  });
+
+  it("maps scope and fusion knobs onto retrieval_config", () => {
+    expect(
+      buildKnSearchBody("kn1", "q", { objectTypes: ["a", "b", "c"], conceptGroups: ["cg"], maxObjectTypes: 2, maxInstancesPerType: 7 }, { ...DEFAULT_RRF_OPTIONS, rrfK: 30, knnWeight: 0.8, rerankMode: "shadow" }),
+    ).toEqual({
+      query: "q",
+      kn_id: "kn1",
+      retrieval_config: {
+        concept_retrieval: { top_k: 3, object_types: ["a", "b", "c"], concept_groups: ["cg"] },
+        semantic_instance_retrieval: {
+          per_type_instance_limit: 7,
+          enable_rrf_fusion: true,
+          enable_knn_instance_retrieval: true,
+          rrf_k: 30,
+          knn_weight: 0.8,
+          initial_candidate_count: 50,
+          min_direct_relevance: 0.3,
+          instance_rerank_mode: "shadow",
+        },
+      },
+    });
   });
 });
 
