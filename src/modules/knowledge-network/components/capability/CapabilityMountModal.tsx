@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { ToolOutlined } from "@ant-design/icons";
 import { Alert, Checkbox, Input, Modal, Table, Tag, Tree } from "antd";
 import type { TableProps, TreeDataNode } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -64,7 +65,7 @@ async function collectPages<T>(
  * with its tools, or an MCP Server with the tools it exposes. What differs is only how a tool is
  * addressed — by tool_id inside a box, by name inside a Server — which is what `id` carries.
  */
-type PickerContainer = { id: string; name: string; toolCount?: number };
+type PickerContainer = { description?: string; id: string; name: string; toolCount?: number };
 
 type CapabilityMountModalProps = {
   capabilityType: CapabilityType;
@@ -125,7 +126,13 @@ export function CapabilityMountModal({
           const servers = await collectPages((page) =>
             listMcps({ page, pageSize: PICKER_PAGE_SIZE, status: "published" }),
           );
-          setBoxes(servers.map((server) => ({ id: server.mcpId, name: server.name })));
+          setBoxes(
+            servers.map((server) => ({
+              description: server.description,
+              id: server.mcpId,
+              name: server.name,
+            })),
+          );
         } else {
           const items = await collectPages((page) =>
             listToolboxes({ page, pageSize: PICKER_PAGE_SIZE }),
@@ -138,6 +145,7 @@ export function CapabilityMountModal({
                   (box.metadataType === "openapi" ? "api" : "function") === wanted,
               )
               .map((box: ToolboxRecord) => ({
+                description: box.description,
                 id: box.boxId,
                 name: box.name,
                 toolCount: box.toolCount,
@@ -410,16 +418,21 @@ export function CapabilityMountModal({
                   isLeaf: true,
                   key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
                   title: (
-                    <span className={styles.pickerTool}>
-                      <span className={styles.pickerNode}>
-                        <span>{tool.name || tool.id}</span>
-                        {mounted ? (
-                          <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
+                    <span className={styles.pickerRow}>
+                      <span className={styles.toolIcon}>
+                        <ToolOutlined />
+                      </span>
+                      <span className={styles.pickerBody}>
+                        <span className={styles.itemTitle}>
+                          <span className={styles.itemName}>{tool.name || tool.id}</span>
+                          {mounted ? (
+                            <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
+                          ) : null}
+                        </span>
+                        {tool.description ? (
+                          <span className={styles.itemDescription}>{tool.description}</span>
                         ) : null}
                       </span>
-                      {tool.description ? (
-                        <span className={styles.pickerDescription}>{tool.description}</span>
-                      ) : null}
                     </span>
                   ),
                 } satisfies TreeDataNode;
@@ -428,18 +441,28 @@ export function CapabilityMountModal({
           disableCheckbox: isBoxFullyMounted(box),
           key: `${BOX_KEY_PREFIX}${box.id}`,
           title: (
-            <span className={styles.pickerNode}>
-              <span>{box.name}</span>
-              <span className={styles.pickerHint}>
-                {t("knowledgeNetwork.capabilityPickerBoxToolCount", {
-                  count: tools?.length ?? box.toolCount ?? 0,
-                })}
+            <span className={styles.pickerRow}>
+              <span className={styles.boxIcon}>
+                <ToolOutlined />
               </span>
-              {mountedCount > 0 ? (
-                <Tag>
-                  {t("knowledgeNetwork.capabilityPickerBoxMounted", { count: mountedCount })}
-                </Tag>
-              ) : null}
+              <span className={styles.pickerBody}>
+                <span className={styles.itemTitle}>
+                  <span className={styles.itemName}>{box.name}</span>
+                  <span className={styles.pickerHint}>
+                    {t("knowledgeNetwork.capabilityPickerBoxToolCount", {
+                      count: tools?.length ?? box.toolCount ?? 0,
+                    })}
+                  </span>
+                  {mountedCount > 0 ? (
+                    <Tag>
+                      {t("knowledgeNetwork.capabilityPickerBoxMounted", { count: mountedCount })}
+                    </Tag>
+                  ) : null}
+                </span>
+                {box.description ? (
+                  <span className={styles.itemDescription}>{box.description}</span>
+                ) : null}
+              </span>
             </span>
           ),
       });

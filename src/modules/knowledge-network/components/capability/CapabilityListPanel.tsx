@@ -524,7 +524,10 @@ export function CapabilityListPanel({
               size="middle"
             />
           )}
-          {filtered.length > 0 ? (
+        </div>
+
+        {filtered.length > 0 ? (
+          <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}
               onChange={(nextPage, nextPageSize) => {
@@ -533,10 +536,11 @@ export function CapabilityListPanel({
               }}
               pageSize={pageSize}
               showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
               total={filtered.length}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </section>
 
       <CapabilityMountModal

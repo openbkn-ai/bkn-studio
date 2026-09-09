@@ -36,11 +36,37 @@
   white-space: nowrap;
 }
 
+/*
+ * The rows follow the action-type tool picker: a tinted icon for a container, a plain one for a
+ * tool, name and description stacked, dividers between containers and the whole row lighting up on
+ * hover. antd's tree keeps the checkbox and expand mechanics; only its row chrome is overridden.
+ */
 .pickerTree {
   max-height: 60vh;
   overflow: auto;
   border: 1px solid var(--color-border);
-  padding: 8px;
+  border-radius: 8px;
+}
+
+.pickerTree :global(.ant-tree-treenode) {
+  align-items: flex-start;
+  padding: 10px 16px 10px 8px;
+  transition: background-color 0.2s;
+}
+
+.pickerTree :global(.ant-tree-treenode:hover) {
+  background: var(--color-hover);
+}
+
+.pickerTree :global(.ant-tree-treenode + .ant-tree-treenode-switcher-open),
+.pickerTree :global(.ant-tree-treenode + .ant-tree-treenode-switcher-close) {
+  border-top: 1px solid var(--color-divider);
+}
+
+/* The row carries the hover; antd's own highlight on just the title would double it. */
+.pickerTree :global(.ant-tree-node-content-wrapper),
+.pickerTree :global(.ant-tree-node-content-wrapper:hover) {
+  background: transparent;
 }
 
 /*
@@ -57,44 +83,89 @@
   min-width: 0;
 }
 
-/*
- * A tool row keeps its description on a second line. Name, tag and description on one line, each
- * cut short to fit, read as a wall; the box rows above stay on one line since they carry only a
- * name and a count.
- */
-.pickerTool {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding-bottom: 4px;
+/* Centre the switcher and checkbox on the 28px container icon; tool rows keep antd's 24px rhythm. */
+.pickerTree :global(.ant-tree-treenode-switcher-open .ant-tree-switcher),
+.pickerTree :global(.ant-tree-treenode-switcher-close .ant-tree-switcher) {
+  margin-top: 2px;
 }
 
-.pickerDescription {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 18px;
+.pickerTree :global(.ant-tree-treenode-switcher-open .ant-tree-checkbox),
+.pickerTree :global(.ant-tree-treenode-switcher-close .ant-tree-checkbox) {
+  margin-top: 6px;
+}
+
+.pickerRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.boxIcon {
+  align-items: center;
+  background: var(--color-warning-bg);
+  border-radius: 6px;
+  color: var(--color-warning-text);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.toolIcon {
+  align-items: center;
+  background: var(--color-hover);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.pickerBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.itemTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.itemName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pickerNode {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.pickerNode > span:first-child {
+.itemDescription {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pickerHint {
+  flex: none;
   color: var(--color-text-muted);
   font-size: 12px;
+  font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
