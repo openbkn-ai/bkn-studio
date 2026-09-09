@@ -78,7 +78,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
   } = props;
 
   return (
-    <div className={styles.toolbar}>
+    <div className={styles.toolbar} data-testid="graph-explorer-toolbar">
       <Space size={8} wrap className={styles.group}>
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.layout")}</span>
         <Select
