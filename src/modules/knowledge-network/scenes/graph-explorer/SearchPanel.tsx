@@ -340,7 +340,9 @@ export function SearchPanel({
                     onChange={(value) => patchSearch({ maxObjectTypes: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxObjectTypes })}
                   />
                   <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.rerank")}</span>
-                  <Switch size="small" checked={searchOptions.rerank} onChange={(checked) => patchSearch({ rerank: checked })} />
+                  <span className={styles.advancedControl}>
+                    <Switch size="small" checked={searchOptions.rerank} onChange={(checked) => patchSearch({ rerank: checked })} />
+                  </span>
                 </div>
               </div>
             ),

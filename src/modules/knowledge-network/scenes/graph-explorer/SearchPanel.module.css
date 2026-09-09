@@ -139,11 +139,23 @@
   display: grid;
   grid-template-columns: max-content 1fr;
   align-items: center;
-  gap: 8px 12px;
+  gap: 6px 12px;
 }
 
 .advancedNumber {
-  width: 100%;
+  width: 112px;
+  justify-self: start;
+}
+
+.advancedControl {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: 24px;
+}
+
+.advanced :global(.ant-collapse-content-box) {
+  padding-top: 4px;
 }
 
 .advancedLabel {
