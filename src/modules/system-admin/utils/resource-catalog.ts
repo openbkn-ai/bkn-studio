@@ -130,6 +130,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     "query_data",
     "authorize",
     "task_manage",
+    "execute",
   ]),
   resourceType("concept_group", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
   resourceType("object_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),

@@ -106,6 +106,10 @@ describe("resource-catalog", () => {
     }
   });
 
+  it("offers action execution on a knowledge network", () => {
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("execute");
+  });
+
   it("localizes every knowledge-network child resource type in Chinese", async () => {
     await i18n.changeLanguage("zh-CN");
 
