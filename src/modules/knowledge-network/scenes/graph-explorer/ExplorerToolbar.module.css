@@ -1,0 +1,55 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-surface, #fff);
+  flex-wrap: wrap;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+
+.select {
+  width: 104px;
+}
+
+.selectWide {
+  width: 150px;
+}
+
+.divider {
+  height: 20px;
+  margin: 0 2px;
+}
+
+.pathTag {
+  margin: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stats {
+  font-size: 12px;
+}

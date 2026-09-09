@@ -1,0 +1,110 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const graphExplorerPart = {
+  graphExplorer: {
+    title: "图探索",
+    description: "从实例出发，沿关系逐跳探索知识网络",
+    openAction: "图探索",
+    tabs: {
+      semantic: "语义搜索",
+      condition: "条件查询",
+    },
+    search: {
+      placeholder: "用自然语言描述要找的实例，回车搜索",
+      button: "搜索",
+      empty: "没有匹配的实例",
+      resultCount: "{{count}} 条结果",
+    },
+    condition: {
+      objectType: "对象类",
+      objectTypePlaceholder: "选择对象类",
+      field: "属性",
+      operator: "算子",
+      value: "值",
+      addRow: "添加条件",
+      query: "查询",
+      empty: "没有满足条件的实例",
+      valuePlaceholder: "输入值；in 用逗号分隔",
+    },
+    addToCanvas: "加入画布",
+    addSelected: "加入所选（{{count}}）",
+    onCanvas: "已在画布",
+    menu: {
+      expandOut: "展开出边",
+      expandIn: "展开入边",
+      expandBoth: "双向展开",
+      setPathStart: "设为路径起点",
+      setPathEnd: "设为路径终点",
+      remove: "从画布移除",
+      pin: "固定位置",
+      unpin: "取消固定",
+    },
+    toolbar: {
+      layout: "布局",
+      shape: "形状",
+      label: "标签属性",
+      labelDefault: "默认",
+      relayout: "重新排列",
+      fit: "适配视口",
+      clear: "清空画布",
+      clearCache: "清除缓存",
+      findPath: "查找路径",
+      clearPath: "取消路径",
+      stats: "{{nodes}} 节点 · {{edges}} 边",
+      pathStart: "起点",
+      pathEnd: "终点",
+      unset: "未选",
+    },
+    layouts: {
+      force: "力导向",
+      dagre: "层次",
+      radial: "辐射",
+      circular: "环形",
+      grid: "网格",
+    },
+    shapes: {
+      circle: "圆形",
+      rect: "矩形",
+      diamond: "菱形",
+      ellipse: "椭圆",
+      hexagon: "六边形",
+      star: "星形",
+    },
+    toast: {
+      noNeighbors: "该节点在此方向没有邻居",
+      pathNotFound: "3 跳内不连通",
+      pathFound: "找到 {{hops}} 跳路径",
+      pathNeedBoth: "请先在右键菜单里指定起点和终点",
+      limitReached: "画布节点已达 {{limit}} 个上限，请先移除部分节点",
+      missingPrimaryKey: "对象类「{{name}}」缺少主键，无法加入画布",
+      cacheRestored: "已恢复上次画布",
+      cacheSaveFailed: "本地存储空间不足，画布未能保存",
+      cacheCleared: "已清除本地缓存",
+      added: "已加入 {{count}} 个节点",
+      nothingNew: "没有新的节点或边",
+    },
+    lifecycleUnavailable: "交互生命周期服务不可用，图探索暂时无法查询",
+    drawer: {
+      title: "节点属性",
+      objectType: "对象类",
+      instanceId: "实例 ID",
+      empty: "无属性",
+    },
+    turn: {
+      search: "图探索：语义搜索「{{query}}」",
+      query: "图探索：条件查询 {{ot}}",
+      expand: "图探索：展开 {{label}}",
+      path: "图探索：查找路径",
+      schema: "图探索：加载对象类定义",
+    },
+    restore: {
+      clear: "清除",
+    },
+    emptyCanvas: "从左侧搜索实例并加入画布，或右键节点展开邻居",
+  },
+} as const;

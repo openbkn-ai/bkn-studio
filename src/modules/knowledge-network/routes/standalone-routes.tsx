@@ -16,6 +16,7 @@ import {
   ConceptGroupCreatePage,
   ConceptGroupDetailPage,
   ConceptGroupEditPage,
+  GraphExplorerPage,
   MetricCreatePage,
   MetricDataQueryPage,
   MetricDetailPage,
@@ -68,6 +69,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.experienceMcpTitle",
     },
     workspaceSectionPage("experience-mcp"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/graph-explorer",
+    {
+      descriptionKey: "knowledgeNetwork.graphExplorer.description",
+      titleKey: "knowledgeNetwork.graphExplorer.title",
+    },
+    <GraphExplorerPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups",

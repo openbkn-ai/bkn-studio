@@ -1,0 +1,110 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const graphExplorerPart = {
+  graphExplorer: {
+    title: "Graph Explorer",
+    description: "Start from an instance and follow relations across the knowledge network",
+    openAction: "Graph explorer",
+    tabs: {
+      semantic: "Semantic search",
+      condition: "Filter query",
+    },
+    search: {
+      placeholder: "Describe the instance in natural language, press Enter to search",
+      button: "Search",
+      empty: "No matching instances",
+      resultCount: "{{count}} results",
+    },
+    condition: {
+      objectType: "Object type",
+      objectTypePlaceholder: "Select an object type",
+      field: "Property",
+      operator: "Operator",
+      value: "Value",
+      addRow: "Add condition",
+      query: "Query",
+      empty: "No instances match the conditions",
+      valuePlaceholder: "Enter a value; separate with commas for in",
+    },
+    addToCanvas: "Add to canvas",
+    addSelected: "Add selected ({{count}})",
+    onCanvas: "On canvas",
+    menu: {
+      expandOut: "Expand outgoing",
+      expandIn: "Expand incoming",
+      expandBoth: "Expand both",
+      setPathStart: "Set as path start",
+      setPathEnd: "Set as path end",
+      remove: "Remove from canvas",
+      pin: "Pin position",
+      unpin: "Unpin",
+    },
+    toolbar: {
+      layout: "Layout",
+      shape: "Shape",
+      label: "Label property",
+      labelDefault: "Default",
+      relayout: "Rearrange",
+      fit: "Fit view",
+      clear: "Clear canvas",
+      clearCache: "Clear cache",
+      findPath: "Find path",
+      clearPath: "Clear path",
+      stats: "{{nodes}} nodes · {{edges}} edges",
+      pathStart: "Start",
+      pathEnd: "End",
+      unset: "Not set",
+    },
+    layouts: {
+      force: "Force",
+      dagre: "Hierarchical",
+      radial: "Radial",
+      circular: "Circular",
+      grid: "Grid",
+    },
+    shapes: {
+      circle: "Circle",
+      rect: "Rectangle",
+      diamond: "Diamond",
+      ellipse: "Ellipse",
+      hexagon: "Hexagon",
+      star: "Star",
+    },
+    toast: {
+      noNeighbors: "This node has no neighbours in that direction",
+      pathNotFound: "Not connected within 3 hops",
+      pathFound: "Found a {{hops}}-hop path",
+      pathNeedBoth: "Set both a start and an end node from the context menu first",
+      limitReached: "The canvas has reached the limit of {{limit}} nodes; remove some first",
+      missingPrimaryKey: "Object type \"{{name}}\" has no primary key; it cannot be added to the canvas",
+      cacheRestored: "Restored the previous canvas",
+      cacheSaveFailed: "Local storage is full; the canvas was not saved",
+      cacheCleared: "Local cache cleared",
+      added: "Added {{count}} nodes",
+      nothingNew: "No new nodes or edges",
+    },
+    lifecycleUnavailable: "The interaction lifecycle service is unavailable; graph exploration cannot query right now",
+    drawer: {
+      title: "Node properties",
+      objectType: "Object type",
+      instanceId: "Instance ID",
+      empty: "No properties",
+    },
+    turn: {
+      search: "Graph explorer: semantic search \"{{query}}\"",
+      query: "Graph explorer: filter query {{ot}}",
+      expand: "Graph explorer: expand {{label}}",
+      path: "Graph explorer: find path",
+      schema: "Graph explorer: load object type definitions",
+    },
+    restore: {
+      clear: "Clear",
+    },
+    emptyCanvas: "Search for instances on the left and add them to the canvas, or right-click a node to expand its neighbours",
+  },
+} as const;
