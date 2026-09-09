@@ -5,6 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import {
+  parseContentDispositionFilename,
+  triggerBrowserDownload,
+} from "@/framework/download/file-download";
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 import {
@@ -42,10 +46,8 @@ import {
   replaceMockKnowledgeNetworks,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
-  downloadBlobFile,
   downloadJsonFile,
   emptyStatistics,
-  filenameFromContentDisposition,
   filterKnowledgeNetworks,
   formatTimestamp,
   logServiceFallback,
@@ -54,6 +56,11 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+
+// The backend assembles the whole network — schema plus capability dependencies —
+// while the request is open, which outlasts the client's 30s default on a large
+// network. The other packaging exports in this repo settle on the same minute.
+const BKN_EXPORT_TIMEOUT_MS = 60_000;
 
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
@@ -297,12 +304,14 @@ export async function exportKnowledgeNetwork(
   if (format === "bkn") {
     const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
       responseType: "blob",
+      timeout: BKN_EXPORT_TIMEOUT_MS,
     });
 
-    downloadBlobFile(
-      filenameFromContentDisposition(response.headers["content-disposition"]) ??
-        `${networkId}.tar`,
+    triggerBrowserDownload(
       response.data,
+      parseContentDispositionFilename(
+        response.headers["content-disposition"] as string | undefined,
+      ) ?? `${networkId}.tar`,
     );
     return;
   }

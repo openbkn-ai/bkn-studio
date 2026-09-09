@@ -481,7 +481,7 @@ export async function downloadSkillPackage(
   );
 
   const { parseContentDispositionFilename, sanitizeDownloadFilename, triggerBrowserDownload } =
-    await import("@/modules/execution-factory/utils/download-file");
+    await import("@/framework/download/file-download");
 
   const contentDisposition = response.headers["content-disposition"] as string | undefined;
   const fromHeader = parseContentDispositionFilename(contentDisposition);
@@ -588,7 +588,7 @@ export async function exportCapabilityPackage(
   );
 
   const { parseContentDispositionFilename, sanitizeDownloadFilename, triggerBrowserDownload } =
-    await import("@/modules/execution-factory/utils/download-file");
+    await import("@/framework/download/file-download");
 
   const contentDisposition = response.headers["content-disposition"] as string | undefined;
   const fromHeader = parseContentDispositionFilename(contentDisposition);

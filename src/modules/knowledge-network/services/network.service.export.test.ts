@@ -114,6 +114,7 @@ describe("exportKnowledgeNetwork", () => {
 
     expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/bkns/kn-1", {
       responseType: "blob",
+      timeout: 60_000,
     });
     expect(downloads).toHaveLength(1);
     expect(downloads[0]?.name).toBe("kn-1-main.tar");

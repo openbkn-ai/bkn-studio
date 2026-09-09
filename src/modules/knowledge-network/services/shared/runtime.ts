@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { triggerBrowserDownload } from "@/framework/download/file-download";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   KnowledgeNetworkListQuery,
@@ -241,43 +242,9 @@ export function rethrowImportConflict(error: unknown): never {
   throw error;
 }
 
-/**
- * Reads the download name the backend chose. `filename*` wins over `filename`
- * because only the former carries an encoding, and a name that fails to decode
- * is dropped so the caller falls back to a name it can build itself.
- */
-export function filenameFromContentDisposition(header: unknown): string | undefined {
-  if (typeof header !== "string" || !header) {
-    return undefined;
-  }
-
-  const encoded = /filename\*=(?:UTF-8|utf-8)''([^;]+)/.exec(header)?.[1];
-
-  if (encoded) {
-    try {
-      return decodeURIComponent(encoded.trim()) || undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  const plain = /filename="?([^";]+)"?/.exec(header)?.[1];
-
-  return plain?.trim() || undefined;
-}
-
-export function downloadBlobFile(filename: string, blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 export function downloadJsonFile(filename: string, payload: unknown) {
-  downloadBlobFile(
-    `${filename}.json`,
+  triggerBrowserDownload(
     new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    `${filename}.json`,
   );
 }

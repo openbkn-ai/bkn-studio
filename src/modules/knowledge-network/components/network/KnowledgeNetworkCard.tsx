@@ -147,6 +147,13 @@ export function KnowledgeNetworkCard({
             },
           }}
           overlayClassName={styles.cardMenu}
+          // The menu popup is a React child of the card, so clicks inside it
+          // bubble to the card's own handler. Leaf items stop that themselves in
+          // onClick, but a submenu parent fires no onClick at all — without this
+          // wrapper, opening the export formats would open the workspace instead.
+          popupRender={(menu) => (
+            <div onClick={(event) => event.stopPropagation()}>{menu}</div>
+          )}
           trigger={["click"]}
         >
           <button
