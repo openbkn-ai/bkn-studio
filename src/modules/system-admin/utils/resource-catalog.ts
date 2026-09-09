@@ -74,18 +74,18 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   data_flow: "Data flow",
   knowledge_network: "Knowledge network",
   large_model: "Large model",
-  mcp: "MCP",
+  mcp: "MCP service",
   metric: "Metric",
   object_type: "Object type",
-  operator: "Function",
+  operator: "Function set",
   resource: "Data resource",
   relation_type: "Relation type",
   risk_type: "Risk type",
   safe_admin: "bkn-safe management API",
-  skill: "Skill",
+  skill: "Skill package",
   small_model: "Small model",
   stream_data_pipeline: "Stream data pipeline",
-  tool_box: "Toolbox",
+  tool_box: "API toolset",
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
