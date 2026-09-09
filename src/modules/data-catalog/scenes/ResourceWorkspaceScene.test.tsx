@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
@@ -14,6 +14,9 @@ const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const getCatalogMock = vi.hoisted(() => vi.fn());
 const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const subscribeMockDbMock = vi.hoisted(() => vi.fn());
+const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
+const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn());
 
 vi.mock("antd", () => ({
   Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
@@ -37,7 +40,7 @@ vi.mock("react-router-dom", () => ({
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn() },
-    modal: { confirm: vi.fn() },
+    modal: { confirm: modalConfirmMock },
     runtimeConfig: { currentUser: { permissions: [] } },
   }),
 }));
@@ -47,7 +50,9 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
-  AppButton: ({ children }: { children?: React.ReactNode }) => <button type="button">{children}</button>,
+  AppButton: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick} type="button">{children}</button>
+  ),
 }));
 
 vi.mock("@/framework/ui/common/EmptyStatePanel", () => ({
@@ -75,9 +80,9 @@ vi.mock("@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel", 
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
-  discoverCatalogResource: vi.fn(),
+  discoverCatalogResource: discoverCatalogResourceMock,
   getCatalogResource: getCatalogResourceMock,
-  setCatalogResourceEnabled: vi.fn(),
+  setCatalogResourceEnabled: setCatalogResourceEnabledMock,
 }));
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   listBuildTaskPage: listBuildTaskPageMock,
@@ -110,6 +115,9 @@ describe("ResourceWorkspaceScene", () => {
     getCatalogMock.mockResolvedValue({ id: "catalog-1", name: "Catalog" });
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     subscribeMockDbMock.mockImplementation(() => () => {});
+    discoverCatalogResourceMock.mockReset();
+    setCatalogResourceEnabledMock.mockReset();
+    modalConfirmMock.mockReset();
   });
 
   it("loads only the latest build task for the resource status", async () => {
@@ -130,6 +138,56 @@ describe("ResourceWorkspaceScene", () => {
       limit: 1,
       resourceId: staleResource.id,
       sort: "create_time",
+    }));
+  });
+
+  it("confirms metadata refresh and resource availability changes before creating requests", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await screen.findByText("dataCatalog.resourceWorkspace.refreshMetadata");
+    fireEvent.click(screen.getByText("dataCatalog.resourceWorkspace.refreshMetadata"));
+    fireEvent.click(screen.getByText("common.disable"));
+
+    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      title: "dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle",
+    }));
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      okButtonProps: { danger: true },
+      title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
+    }));
+  });
+
+  it("confirms enabling a disabled resource before issuing the request", async () => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, enabled: false });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await screen.findByText("common.enable");
+    fireEvent.click(screen.getByText("common.enable"));
+
+    expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
+    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.resourceWorkspace.enableConfirmTitle",
     }));
   });
 

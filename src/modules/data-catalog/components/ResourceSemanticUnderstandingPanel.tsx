@@ -193,22 +193,31 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const start = async () => {
     const values = await form.validateFields();
     const { sampleMaxRows, ...taskValues } = values;
-    setCreating(true);
-    try {
-      await createResourceSemanticUnderstandingTask({
-        ...taskValues,
-        ...(taskValues.includeSampleRows ? { sampleMaxRows } : {}),
-        resourceId: resource.id,
-      });
-      message.success(t("dataCatalog.semanticWorkspace.started"));
-      setOpen(false);
-      form.resetFields();
-      setSelectedKeys([]);
-      setPage(1);
-      await Promise.all([loadPage(1, pageSize), loadSummary()]);
-    } finally {
-      setCreating(false);
-    }
+    const createTask = async () => {
+      setCreating(true);
+      try {
+        await createResourceSemanticUnderstandingTask({
+          ...taskValues,
+          ...(taskValues.includeSampleRows ? { sampleMaxRows } : {}),
+          resourceId: resource.id,
+        });
+        message.success(t("dataCatalog.semanticWorkspace.started"));
+        setOpen(false);
+        form.resetFields();
+        setSelectedKeys([]);
+        setPage(1);
+        await Promise.all([loadPage(1, pageSize), loadSummary()]);
+      } finally {
+        setCreating(false);
+      }
+    };
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(taskValues.includeSampleRows ? "dataCatalog.semanticWorkspace.startConfirmWithSamplesDescription" : "dataCatalog.semanticWorkspace.startConfirmDescription"),
+      okText: t("dataCatalog.semanticWorkspace.start"),
+      onOk: createTask,
+      title: t("dataCatalog.semanticWorkspace.startConfirmTitle"),
+    });
   };
 
   const batchDeleteTargets = tasks.filter(

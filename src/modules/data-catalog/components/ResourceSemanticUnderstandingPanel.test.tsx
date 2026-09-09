@@ -15,9 +15,11 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const {
   createResourceSemanticUnderstandingTaskMock,
   listSemanticUnderstandingTasksMock,
+  modalConfirmMock,
 } = vi.hoisted(() => ({
   createResourceSemanticUnderstandingTaskMock: vi.fn(),
   listSemanticUnderstandingTasksMock: vi.fn(),
+  modalConfirmMock: vi.fn<(config: { onOk: () => Promise<void> }) => void>(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -28,7 +30,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { success: vi.fn() },
-    modal: { confirm: vi.fn() },
+    modal: { confirm: modalConfirmMock },
     runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
   }),
 }));
@@ -76,6 +78,9 @@ function SemanticUnderstandingTaskFormDefaultsHarness({ form, open }: {
 describe("ResourceSemanticUnderstandingPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    modalConfirmMock.mockImplementation(({ onOk }) => {
+      void onOk();
+    });
     listSemanticUnderstandingTasksMock.mockResolvedValue({ items: [], total: 0 });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -113,6 +118,10 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect(screen.getByRole("spinbutton").getAttribute("value")).toBe("0.75");
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+
+    await waitFor(() => expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.semanticWorkspace.startConfirmTitle",
+    })));
 
     await waitFor(() => expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
       applyMode: "fill_empty",

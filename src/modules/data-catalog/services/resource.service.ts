@@ -652,7 +652,6 @@ const PREVIEW_CELL_POOL: Record<string, (row: number) => unknown> = {
       : i18n.t("dataCatalog.preview.mockLongText", { row: row + 1 }),
   varchar: (row) => `value_${row + 1}`,
 };
-
 function mockCell(field: ResourceSchemaField, row: number) {
   const type = field.type.toLowerCase();
   if (type.startsWith("bigint") || type.startsWith("int")) {
@@ -670,6 +669,59 @@ function mockCell(field: ResourceSchemaField, row: number) {
   return PREVIEW_CELL_POOL.varchar(row);
 }
 
+function mockPreviewCell(
+  field: ResourceSchemaField,
+  row: number,
+  query: ResourcePreviewQuery,
+  usesLocalIndex: boolean,
+) {
+  const type = field.type.toLowerCase();
+  if (type === "other") {
+    return usesLocalIndex
+      ? { mode: "unavailable" }
+      : { data: mockOtherContent(field, row), mode: "content" };
+  }
+  if (type !== "binary") {
+    return mockCell(field, row);
+  }
+  if (usesLocalIndex) {
+    return { mode: "unavailable" };
+  }
+  if (row % 7 === 0) {
+    return null;
+  }
+
+  const byteLength = 10 + (row % 51);
+  if (query.binaryMode === "content") {
+    return {
+      byte_length: byteLength,
+      data: mockBinaryContent(row, byteLength),
+      mode: "content",
+    };
+  }
+  return { byte_length: byteLength, mode: "metadata" };
+}
+
+function mockOtherContent(field: ResourceSchemaField, row: number) {
+  const originalType = field.originalType ?? "unknown";
+  switch (originalType.toLowerCase()) {
+    case "point":
+      return { x: 116.4 + row * 0.01, y: 39.9 + row * 0.01 };
+    case "geometry":
+      return `POLYGON((116.${row} 39.${row},116.${row + 1} 39.${row},116.${row + 1} 39.${row + 1},116.${row} 39.${row + 1},116.${row} 39.${row}))`;
+    default:
+      return { original_type: originalType, value: `unsupported_value_${row + 1}` };
+  }
+}
+
+function mockBinaryContent(row: number, byteLength: number) {
+  const bytes = Array.from(
+    { length: byteLength },
+    (_, index) => (row + index) % 256,
+  );
+  return btoa(String.fromCharCode(...bytes));
+}
+
 export async function previewCatalogResource(
   id: string,
   query: ResourcePreviewQuery,
@@ -682,23 +734,34 @@ export async function previewCatalogResource(
 
     const total = resource.rowCount;
     const count = Math.max(0, Math.min(query.limit, total - query.offset));
+    const usesLocalIndex = !query.ignoreLocalIndex &&
+      resource.category === "table" &&
+      resource.localIndexStatus === "available" &&
+      Boolean(resource.localIndexName);
     const rows = Array.from({ length: count }, (_, index) => {
       const rowIndex = query.offset + index;
       return Object.fromEntries(
-        resource.schema.map((field) => [field.name, mockCell(field, rowIndex)]),
+        resource.schema.map((field) => [field.name, mockPreviewCell(field, rowIndex, query, usesLocalIndex)]),
       );
     });
 
-    return wait({ rows, total }, 260);
+    return wait({
+      querySource: usesLocalIndex ? "local_index" : "source",
+      rows,
+      total,
+    }, 260);
   }
 
   // POST /resources/:id/data with X-HTTP-Method-Override: GET performs the data query.
   const response = await http.post<{
+    query_source?: "local_index" | "source";
     entries?: Record<string, unknown>[];
     total_count?: number;
   }>(
     `/vega-backend/v1/resources/${id}/data`,
     {
+      ...(query.ignoreLocalIndex ? { ignore_local_index: true } : {}),
+      ...(query.binaryMode ? { binary_mode: query.binaryMode } : {}),
       need_total: true,
       paging: {
         limit: query.limit,
@@ -713,6 +776,7 @@ export async function previewCatalogResource(
   );
 
   return {
+    querySource: response.data.query_source,
     rows: response.data.entries ?? [],
     total: response.data.total_count ?? 0,
   };

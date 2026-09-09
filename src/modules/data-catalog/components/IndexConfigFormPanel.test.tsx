@@ -123,6 +123,30 @@ describe("IndexConfigFormPanel", () => {
     }));
   });
 
+  it("paginates field feature configuration with ten fields per page", async () => {
+    const pagedResource: CatalogResource = {
+      ...resource,
+      schema: Array.from({ length: 11 }, (_, index) => ({
+        name: `field_${index + 1}`,
+        type: "string",
+      })),
+    };
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={pagedResource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("field_1")).toBeTruthy();
+    expect(screen.queryByText("field_11")).toBeNull();
+
+    fireEvent.click(screen.getByTitle("2"));
+
+    expect(await screen.findByText("field_11")).toBeTruthy();
+    expect(screen.queryByText("field_1")).toBeNull();
+  });
+
   it("keeps vector and full-text metrics visible when build controls are hidden", () => {
     render(
       <MemoryRouter>

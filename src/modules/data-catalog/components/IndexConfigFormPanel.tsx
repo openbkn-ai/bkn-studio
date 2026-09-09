@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { loadAnalyzerCapabilities, findUnavailableAnalyzers, type AnalyzerCapabilitiesLoadState } from "@/modules/data-catalog/utils/analyzer-capabilities";
 import {
@@ -59,6 +60,7 @@ export type IndexConfigFormPanelProps = {
 };
 
 const INHERIT_VALUE = "__inherit__";
+const FEATURE_FIELDS_PAGE_SIZE = 10;
 
 function isChineseAnalyzer(analyzer: string): boolean {
   return /^(?:ik|hanlp)(?:_|$)/.test(analyzer.trim().toLowerCase());
@@ -151,6 +153,17 @@ export function IndexConfigFormPanel({
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [featureFieldsPage, setFeatureFieldsPage] = useState(1);
+
+  const featureFieldsPageCount = Math.max(1, Math.ceil(schema.length / FEATURE_FIELDS_PAGE_SIZE));
+  const pagedFeatureFields = useMemo(
+    () => schema.slice((featureFieldsPage - 1) * FEATURE_FIELDS_PAGE_SIZE, featureFieldsPage * FEATURE_FIELDS_PAGE_SIZE),
+    [featureFieldsPage, schema],
+  );
+
+  useEffect(() => {
+    setFeatureFieldsPage((page) => Math.min(page, featureFieldsPageCount));
+  }, [featureFieldsPageCount]);
 
   useEffect(() => {
     if (!error) {
@@ -231,6 +244,7 @@ export function IndexConfigFormPanel({
     setOrphanSavedModel(null);
     setModels([]);
     setSchema(resource.schema);
+    setFeatureFieldsPage(1);
 
     const hydrateFromResource = (detail: CatalogResource) => {
       setSchema(detail.schema);
@@ -1179,7 +1193,7 @@ export function IndexConfigFormPanel({
                       </tr>
                     </thead>
                     <tbody>
-                      {schema.map((field) => {
+                      {pagedFeatureFields.map((field) => {
                         const canConfigureFeature = isFeatureConfigField(field.type);
                         const rowActive = featureCountOf(field.name) > 0;
                         const featureSummary = featureSummaryOf(field.name);
@@ -1239,6 +1253,15 @@ export function IndexConfigFormPanel({
                     </tbody>
                   </table>
                 </div>
+                {schema.length > FEATURE_FIELDS_PAGE_SIZE ? (
+                  <TablePaginationBar
+                    current={featureFieldsPage}
+                    onChange={setFeatureFieldsPage}
+                    pageSize={FEATURE_FIELDS_PAGE_SIZE}
+                    showSizeChanger={false}
+                    total={schema.length}
+                  />
+                ) : null}
               </>
             )}
           </div>
