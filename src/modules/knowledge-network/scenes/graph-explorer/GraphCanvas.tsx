@@ -34,6 +34,8 @@ export type GraphCanvasHandle = {
   setShape(shape: ExplorerShape): Promise<void>;
   /** Replaces node data (labels, colours) for nodes already on the canvas. */
   updateNodes(nodes: GNode[]): Promise<void>;
+  /** Shows or hides node and edge labels without touching the data. */
+  setLabelVisibility(nodeLabels: boolean, edgeLabels: boolean): Promise<void>;
   applyMarks(marks: CanvasMarks): Promise<void>;
   getPositions(): Record<string, NodePosition>;
 };
@@ -44,6 +46,8 @@ export type GraphCanvasProps = {
   initialPositions: Record<string, NodePosition>;
   layout: ExplorerLayout;
   shape: ExplorerShape;
+  showNodeLabels: boolean;
+  showEdgeLabels: boolean;
   colorOf: (otId: string) => string;
   menuLabels: Record<MenuAction, string>;
   onNodeClick?: (id: string) => void;
@@ -105,6 +109,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   propsRef.current = props;
   const marksRef = useRef<CanvasMarks>({ pathStart: null, pathEnd: null, pinned: new Set(), highlightNodes: new Set(), highlightEdges: new Set() });
   const layoutRef = useRef<ExplorerLayout>(props.layout);
+  const labelsRef = useRef({ node: props.showNodeLabels, edge: props.showEdgeLabels });
 
   const readPositions = useCallback((): Record<string, NodePosition> => {
     const graph = graphRef.current;
@@ -181,7 +186,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           fill: (d: NodeData) => propsRef.current.colorOf(stringifyValue(d.data?.otId)) || colorOf(""),
           stroke: "#ffffff",
           lineWidth: 1.5,
-          labelText: (d: NodeData) => truncate(stringifyValue(d.data?.display) || String(d.id)),
+          labelText: (d: NodeData) => (labelsRef.current.node ? truncate(stringifyValue(d.data?.display) || String(d.id)) : ""),
           labelPlacement: "bottom",
           labelFontSize: 12,
           labelFill: "#333333",
@@ -204,7 +209,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           lineWidth: 1.2,
           endArrow: true,
           endArrowSize: 8,
-          labelText: (d: EdgeData) => stringifyValue(d.data?.relTypeName),
+          labelText: (d: EdgeData) => (labelsRef.current.edge ? stringifyValue(d.data?.relTypeName) : ""),
           labelFontSize: 10,
           labelFill: "#5c6270",
           labelBackground: true,
@@ -383,6 +388,17 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         const updates = nodes.filter((node) => existing.has(node.id)).map((node) => ({ id: node.id, data: { otId: node.otId, otName: node.otName, display: node.display } }));
         if (updates.length === 0) return;
         graph.updateNodeData(updates);
+        await graph.draw();
+      },
+      async setLabelVisibility(nodeLabels, edgeLabels) {
+        await readyRef.current;
+        labelsRef.current = { node: nodeLabels, edge: edgeLabels };
+        const graph = graphRef.current;
+        if (!graph) return;
+        // Re-setting the element options makes G6 re-evaluate the labelText callbacks on draw.
+        const options = graph.getOptions();
+        graph.setNode({ ...options.node });
+        graph.setEdge({ ...options.edge });
         await graph.draw();
       },
       async applyMarks(marks) {

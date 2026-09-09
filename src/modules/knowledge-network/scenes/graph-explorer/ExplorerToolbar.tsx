@@ -6,7 +6,7 @@
  */
 
 import { ClearOutlined, CompressOutlined, DeleteOutlined, NodeIndexOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Button, Divider, Popconfirm, Select, Space, Tag, Tooltip, Typography } from "antd";
+import { Button, Divider, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +18,8 @@ import styles from "./ExplorerToolbar.module.css";
 export type ExplorerToolbarProps = {
   layout: ExplorerLayout;
   shape: ExplorerShape;
+  showNodeLabels: boolean;
+  showEdgeLabels: boolean;
   nodeCount: number;
   edgeCount: number;
   /** Object types present on the canvas, for the label property picker. */
@@ -32,6 +34,7 @@ export type ExplorerToolbarProps = {
   disabled: boolean;
   onLayoutChange: (layout: ExplorerLayout) => void;
   onShapeChange: (shape: ExplorerShape) => void;
+  onLabelVisibilityChange: (nodeLabels: boolean, edgeLabels: boolean) => void;
   onLabelChange: (otId: string, property: string | null) => void;
   onRelayout: () => void;
   onFitView: () => void;
@@ -48,6 +51,8 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
   const {
     layout,
     shape,
+    showNodeLabels,
+    showEdgeLabels,
     nodeCount,
     edgeCount,
     canvasObjectTypes,
@@ -60,6 +65,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
     disabled,
     onLayoutChange,
     onShapeChange,
+    onLabelVisibilityChange,
     onLabelChange,
     onRelayout,
     onFitView,
@@ -95,6 +101,10 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
           options={SHAPES.map((item) => ({ value: item, label: t(`knowledgeNetwork.graphExplorer.shapes.${item}`) }))}
           onChange={onShapeChange}
         />
+        <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.nodeLabels")}</span>
+        <Switch size="small" data-testid="graph-explorer-node-labels" checked={showNodeLabels} onChange={(checked) => onLabelVisibilityChange(checked, showEdgeLabels)} />
+        <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.edgeLabels")}</span>
+        <Switch size="small" data-testid="graph-explorer-edge-labels" checked={showEdgeLabels} onChange={(checked) => onLabelVisibilityChange(showNodeLabels, checked)} />
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.label")}</span>
         <LabelPicker canvasObjectTypes={canvasObjectTypes} propertyNamesByOt={propertyNamesByOt} labelByOt={labelByOt} onLabelChange={onLabelChange} />
       </Space>

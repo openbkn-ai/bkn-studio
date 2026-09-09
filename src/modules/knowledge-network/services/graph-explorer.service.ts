@@ -442,9 +442,28 @@ export type ExploreRequest = {
   pathLength: number;
 };
 
+/** Tunables of search_instance exposed in the semantic tab; empty lists and defaults are omitted from the call. */
+export type SearchOptions = {
+  objectTypes?: string[];
+  excludeObjectTypes?: string[];
+  conceptGroups?: string[];
+  maxInstancesPerType?: number;
+  maxObjectTypes?: number;
+  rerank?: boolean;
+};
+
+export const DEFAULT_SEARCH_OPTIONS: Required<SearchOptions> = {
+  objectTypes: [],
+  excludeObjectTypes: [],
+  conceptGroups: [],
+  maxInstancesPerType: 20,
+  maxObjectTypes: 10,
+  rerank: false,
+};
+
 export type GraphExplorerClient = {
   loadObjectTypes(ids: string[], scope?: BknCallScope | null): Promise<ObjectTypeMeta[]>;
-  searchInstances(query: string, scope?: BknCallScope | null, objectTypes?: string[]): Promise<Rec>;
+  searchInstances(query: string, scope?: BknCallScope | null, options?: SearchOptions): Promise<Rec>;
   queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
 };
@@ -461,12 +480,16 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       const list = Array.isArray(payload.object_types) ? payload.object_types : [];
       return list.map(objectTypeMetaFrom).filter((meta): meta is ObjectTypeMeta => meta !== null);
     },
-    async searchInstances(query, scope, objectTypes = []) {
-      const args: Rec = { kn_id: knId, query, max_instances_per_type: 20, response_format: "json" };
-      if (objectTypes.length > 0) {
-        args.object_types = objectTypes;
-        args.max_object_types = Math.max(objectTypes.length, 10);
-      }
+    async searchInstances(query, scope, options = {}) {
+      const merged = { ...DEFAULT_SEARCH_OPTIONS, ...options };
+      const args: Rec = { kn_id: knId, query, max_instances_per_type: merged.maxInstancesPerType, response_format: "json" };
+      if (merged.objectTypes.length > 0) args.object_types = merged.objectTypes;
+      if (merged.excludeObjectTypes.length > 0) args.exclude_object_types = merged.excludeObjectTypes;
+      if (merged.conceptGroups.length > 0) args.concept_groups = merged.conceptGroups;
+      // The cap is strict: pinned object types must never be cut off by it.
+      const maxObjectTypes = Math.max(merged.maxObjectTypes, merged.objectTypes.length);
+      if (maxObjectTypes !== DEFAULT_SEARCH_OPTIONS.maxObjectTypes) args.max_object_types = maxObjectTypes;
+      if (merged.rerank) args.rerank = true;
       const result = await session.callTool("search_instance", withContext(args, scope));
       return readPayload(result, "search_instance");
     },

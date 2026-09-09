@@ -33,6 +33,7 @@ import {
   type GNode,
   type KnCondition,
   type ObjectTypeMeta,
+  type SearchOptions,
 } from "@/modules/knowledge-network/services/graph-explorer.service";
 import {
   DEFAULT_SETTINGS,
@@ -411,6 +412,14 @@ export function GraphExplorerScene() {
     [updateSettings],
   );
 
+  const handleLabelVisibilityChange = useCallback(
+    (nodeLabels: boolean, edgeLabels: boolean) => {
+      updateSettings({ showNodeLabels: nodeLabels, showEdgeLabels: edgeLabels });
+      void canvasRef.current?.setLabelVisibility(nodeLabels, edgeLabels);
+    },
+    [updateSettings],
+  );
+
   const handleLabelChange = useCallback(
     (otId: string, property: string | null) => {
       const labelByOt = { ...settingsRef.current.labelByOt };
@@ -483,9 +492,9 @@ export function GraphExplorerScene() {
   /* ------------------------------ search callbacks ------------------------------ */
 
   const handleSearch = useCallback(
-    async (query: string, objectTypeIds: string[]): Promise<GNode[]> => {
+    async (query: string, options: SearchOptions): Promise<GNode[]> => {
       const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn) => {
-        const payload = await client.searchInstances(query, turn, objectTypeIds);
+        const payload = await client.searchInstances(query, turn, options);
         const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
         const needMeta = new Set<string>();
         for (const hit of hits) {
@@ -594,6 +603,10 @@ export function GraphExplorerScene() {
     () => (detail?.object_types ?? []).map((item) => ({ id: item.id, name: item.name?.trim() || item.id })),
     [detail],
   );
+  const conceptGroups = useMemo(
+    () => (detail?.concept_groups ?? []).map((item) => ({ id: item.id, name: item.name?.trim() || item.id })),
+    [detail],
+  );
 
   const menuLabels = useMemo<Record<MenuAction, string>>(
     () => ({
@@ -618,6 +631,7 @@ export function GraphExplorerScene() {
     <div className={styles.root}>
       <SearchPanel
         objectTypes={objectTypes}
+        conceptGroups={conceptGroups}
         metaByOt={metaByOt}
         ensureMeta={ensureMeta}
         onSearch={handleSearch}
@@ -633,6 +647,8 @@ export function GraphExplorerScene() {
         <ExplorerToolbar
           layout={settings.layout}
           shape={settings.shape}
+          showNodeLabels={settings.showNodeLabels}
+          showEdgeLabels={settings.showEdgeLabels}
           nodeCount={nodesRef.current.size}
           edgeCount={edgesRef.current.size}
           canvasObjectTypes={canvasObjectTypes}
@@ -645,6 +661,7 @@ export function GraphExplorerScene() {
           disabled={disabled}
           onLayoutChange={handleLayoutChange}
           onShapeChange={handleShapeChange}
+          onLabelVisibilityChange={handleLabelVisibilityChange}
           onLabelChange={handleLabelChange}
           onRelayout={() => void canvasRef.current?.relayout()}
           onFitView={() => void canvasRef.current?.fitView()}
@@ -689,6 +706,8 @@ export function GraphExplorerScene() {
             initialPositions={snapshot?.positions ?? {}}
             layout={settings.layout}
             shape={settings.shape}
+            showNodeLabels={settings.showNodeLabels}
+            showEdgeLabels={settings.showEdgeLabels}
             colorOf={colorOf}
             menuLabels={menuLabels}
             onNodeClick={setSelectedId}

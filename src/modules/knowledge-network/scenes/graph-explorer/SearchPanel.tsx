@@ -6,22 +6,29 @@
  */
 
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Empty, Input, Select, Spin, Tabs, Tag, Typography } from "antd";
+import { Alert, Button, Checkbox, Collapse, Empty, Input, InputNumber, Select, Spin, Switch, Tabs, Tag, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { GNode, KnCondition, ObjectTypeMeta } from "@/modules/knowledge-network/services/graph-explorer.service";
+import {
+  DEFAULT_SEARCH_OPTIONS,
+  type GNode,
+  type KnCondition,
+  type ObjectTypeMeta,
+  type SearchOptions,
+} from "@/modules/knowledge-network/services/graph-explorer.service";
 
 import { OPERATORS_BY_KIND, buildCondition, propertyKind, type ConditionRow } from "./condition-builder";
 import styles from "./SearchPanel.module.css";
 
 export type SearchPanelProps = {
   objectTypes: { id: string; name: string }[];
+  conceptGroups: { id: string; name: string }[];
   metaByOt: Record<string, ObjectTypeMeta>;
   /** Loads and caches the object type definition; resolves null when it cannot be loaded. */
   ensureMeta: (otId: string) => Promise<ObjectTypeMeta | null>;
-  /** Semantic search, optionally limited to the given object type ids. */
-  onSearch: (query: string, objectTypeIds: string[]) => Promise<GNode[]>;
+  /** Semantic search with the search_instance tunables chosen in the panel. */
+  onSearch: (query: string, options: SearchOptions) => Promise<GNode[]>;
   /** Exact lookup by primary key value(s); composite keys arrive comma-separated in key order. */
   onLocate: (otId: string, rawKey: string) => Promise<GNode[]>;
   onQuery: (otId: string, condition: KnCondition | null) => Promise<GNode[]>;
@@ -118,7 +125,20 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
 
 export const BROWSE_PAGE_SIZE = 50;
 
-export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onLocate, onQuery, onBrowse, onAdd, canvasIds, disabled, colorOf }: SearchPanelProps) {
+export function SearchPanel({
+  objectTypes,
+  conceptGroups,
+  metaByOt,
+  ensureMeta,
+  onSearch,
+  onLocate,
+  onQuery,
+  onBrowse,
+  onAdd,
+  canvasIds,
+  disabled,
+  colorOf,
+}: SearchPanelProps) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"semantic" | "condition" | "browse">("semantic");
 
@@ -171,7 +191,8 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onLoc
   };
 
   const [query, setQuery] = useState("");
-  const [scopeOts, setScopeOts] = useState<string[]>([]);
+  const [searchOptions, setSearchOptions] = useState<Required<SearchOptions>>({ ...DEFAULT_SEARCH_OPTIONS });
+  const patchSearch = (patch: Partial<SearchOptions>) => setSearchOptions((previous) => ({ ...previous, ...patch }));
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<GNode[]>([]);
@@ -193,7 +214,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onLoc
     setSearching(true);
     setSearchError(null);
     try {
-      setSearchResults(await onSearch(text, scopeOts));
+      setSearchResults(await onSearch(text, searchOptions));
       setSearched(true);
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : String(error));
@@ -232,10 +253,70 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onLoc
         maxTagCount="responsive"
         filterOption={matchIdOrLabel}
         disabled={disabled}
-        value={scopeOts}
+        value={searchOptions.objectTypes}
         placeholder={t("knowledgeNetwork.graphExplorer.search.scopePlaceholder")}
         options={objectTypes.map((item) => ({ value: item.id, label: item.name }))}
-        onChange={(value: string[]) => setScopeOts(value)}
+        onChange={(value: string[]) => patchSearch({ objectTypes: value })}
+      />
+      <Collapse
+        size="small"
+        ghost
+        items={[
+          {
+            key: "advanced",
+            label: t("knowledgeNetwork.graphExplorer.search.advanced"),
+            children: (
+              <div className={styles.advanced}>
+                <Select
+                  className={styles.fullWidth}
+                  mode="multiple"
+                  allowClear
+                  showSearch
+                  maxTagCount="responsive"
+                  filterOption={matchIdOrLabel}
+                  disabled={disabled}
+                  value={searchOptions.excludeObjectTypes}
+                  placeholder={t("knowledgeNetwork.graphExplorer.search.excludePlaceholder")}
+                  options={objectTypes.map((item) => ({ value: item.id, label: item.name }))}
+                  onChange={(value: string[]) => patchSearch({ excludeObjectTypes: value })}
+                />
+                <Select
+                  className={styles.fullWidth}
+                  mode="multiple"
+                  allowClear
+                  showSearch
+                  maxTagCount="responsive"
+                  filterOption={matchIdOrLabel}
+                  disabled={disabled || conceptGroups.length === 0}
+                  value={searchOptions.conceptGroups}
+                  placeholder={t("knowledgeNetwork.graphExplorer.search.conceptGroupsPlaceholder")}
+                  options={conceptGroups.map((item) => ({ value: item.id, label: item.name }))}
+                  onChange={(value: string[]) => patchSearch({ conceptGroups: value })}
+                />
+                <div className={styles.advancedRow}>
+                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType")}</span>
+                  <InputNumber
+                    size="small"
+                    min={1}
+                    max={200}
+                    value={searchOptions.maxInstancesPerType}
+                    onChange={(value) => patchSearch({ maxInstancesPerType: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxInstancesPerType })}
+                  />
+                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxObjectTypes")}</span>
+                  <InputNumber
+                    size="small"
+                    min={1}
+                    max={100}
+                    value={searchOptions.maxObjectTypes}
+                    onChange={(value) => patchSearch({ maxObjectTypes: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxObjectTypes })}
+                  />
+                  <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.rerank")}</span>
+                  <Switch size="small" checked={searchOptions.rerank} onChange={(checked) => patchSearch({ rerank: checked })} />
+                </div>
+              </div>
+            ),
+          },
+        ]}
       />
       <Input.Search
         data-testid="graph-explorer-search-input"

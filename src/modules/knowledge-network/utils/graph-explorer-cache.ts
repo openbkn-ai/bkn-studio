@@ -19,6 +19,8 @@ export type ExplorerSettings = {
   labelByOt: Record<string, string>;
   /** Object type id -> palette index, kept so colours survive a reload. */
   colorByOt: Record<string, number>;
+  showNodeLabels: boolean;
+  showEdgeLabels: boolean;
 };
 
 export type NodePosition = { x: number; y: number; fixed?: boolean };
@@ -36,6 +38,8 @@ export const DEFAULT_SETTINGS: ExplorerSettings = {
   shape: "circle",
   labelByOt: {},
   colorByOt: {},
+  showNodeLabels: true,
+  showEdgeLabels: true,
 };
 
 export const LAYOUTS: ExplorerLayout[] = ["force", "dagre", "radial", "circular", "grid"];
@@ -74,6 +78,8 @@ function sanitizeSettings(raw: unknown): ExplorerSettings {
       if (typeof value === "number" && Number.isInteger(value) && value >= 0) out.colorByOt[key] = value;
     }
   }
+  if (typeof raw.showNodeLabels === "boolean") out.showNodeLabels = raw.showNodeLabels;
+  if (typeof raw.showEdgeLabels === "boolean") out.showEdgeLabels = raw.showEdgeLabels;
   return out;
 }
 

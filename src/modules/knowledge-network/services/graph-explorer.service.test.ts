@@ -305,9 +305,20 @@ describe("createGraphExplorerClient", () => {
     const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue(ok({ nodes: [] }));
     const client = createGraphExplorerClient({ callTool }, "kn1");
     await client.searchInstances("q", null);
-    await client.searchInstances("q", null, ["ot_a", "ot_b"]);
+    await client.searchInstances("q", null, { objectTypes: ["ot_a", "ot_b"] });
+    await client.searchInstances("q", null, { excludeObjectTypes: ["ot_x"], conceptGroups: ["cg1"], maxInstancesPerType: 5, maxObjectTypes: 3, rerank: true });
     expect(callTool.mock.calls[0][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json" });
-    expect(callTool.mock.calls[1][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json", object_types: ["ot_a", "ot_b"], max_object_types: 10 });
+    expect(callTool.mock.calls[1][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json", object_types: ["ot_a", "ot_b"] });
+    expect(callTool.mock.calls[2][1]).toEqual({
+      kn_id: "kn1",
+      query: "q",
+      max_instances_per_type: 5,
+      response_format: "json",
+      exclude_object_types: ["ot_x"],
+      concept_groups: ["cg1"],
+      max_object_types: 3,
+      rerank: true,
+    });
   });
 
   it("passes paging through to query_object_instance only when offset is positive", async () => {
