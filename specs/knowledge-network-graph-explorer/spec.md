@@ -158,7 +158,7 @@ type GEdge = {
 ### 6.6 查找路径
 
 - 用户在右键菜单指定起点 A、终点 B。
-- 调 `explore_subgraph(A, path_length=3, bidirectional, limit=1)`。
+- 调 `explore_subgraph(A, path_length=3, bidirectional, limit=1)`；若下游拒绝（例如路径穿到没有已发布数据源的对象类时 ontology-query 返回 500），依次收窄到 `path_length=2`、`1` 重试，全部失败才报错。
 - 客户端遍历 `relation_paths`，取 `relations` 链中能到达 B 的最短一条（任一 relation 的 `source_object_id` 或 `target_object_id` 为 B 即视为到达，截断到该 relation）。
 - 路径上的节点与边加入画布并高亮；无结果时提示「3 跳内不连通」。
 
@@ -166,12 +166,14 @@ type GEdge = {
 
 ### 7.1 左栏
 
-- Tab「语义搜索」：输入框 + 回车；结果按对象类分组列出，每行显示标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
+- Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
+- Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。
+- 对象类与属性下拉同时按显示名与 id 过滤。
 
 ### 7.2 画布
 
-- 节点右键菜单：展开出边 / 展开入边 / 双向展开 / 设为路径起点 / 设为路径终点 / 从画布移除 / 固定位置（切换）。
+- 节点右键菜单：展开出边 / 展开入边 / 双向展开 / 设为路径起点 / 设为路径终点 / 从画布移除 / 固定位置（切换）。已是起点或终点的节点，对应菜单项变为「取消起点」/「取消终点」；已固定的节点显示「取消固定」。
 - 双击节点 = 双向展开。
 - 单击节点 → 右侧抽屉列出全部属性；单击空白关闭抽屉。
 - 展开结果与已有节点、边按 id 合并；新节点围绕源节点撒开，不改动其他节点位置；工具栏「重新排列」才全局重新布局。
@@ -180,10 +182,11 @@ type GEdge = {
 
 ### 7.3 工具栏
 
+- 路径区：起点 / 终点标签可关闭（清除该端点）；只要选了任一端点或存在高亮，就显示「取消路径」按钮，一键清起点、终点与高亮。
 - 布局：`force`（默认）/ `dagre` / `radial` / `circular` / `grid`，切换后立即重排。
 - 节点形状：`circle`（默认）/ `rect` / `diamond` / `ellipse` / `hexagon` / `star`，全局生效。
 - 标签属性：按对象类选择，见 6.5。
-- 适配视口、清空画布、清除本地缓存。
+- 适配视口（只在内容溢出时缩放，之后居中；单节点不会被放大到满屏）、清空画布、清除本地缓存（同时丢弃尚未落盘的防抖写入）。
 
 ### 7.4 上限
 
@@ -215,7 +218,7 @@ type GEdge = {
 | --- | --- |
 | lifecycle 不可用（`feature_not_installed` / `trace_core_unavailable`） | 页面顶部 alert，搜索与展开按钮禁用；判定沿用 `lifecycle.unsupported()` |
 | 展开后只有 `isolated_objects` | toast「该节点在此方向没有邻居」；不视为错误 |
-| `explore_subgraph` / `search_instance` 返回业务错误 | toast 展示后端 message，画布不变 |
+| `explore_subgraph` / `search_instance` 返回业务错误 | toast 展示错误：Context Loader 的错误信封里 `details` 还嵌着下游信封，解出最内层的 `description` 与 `solution`（如「调用依赖服务异常：数据资源不存在（请检查数据资源ID）」），不吐原始 JSON；画布不变 |
 | 401 | 沿用 `createMcpSession` 现有 `auth.refresh()` 重试 |
 | 节点主键缺失导致无法构造 id | 该节点不加入画布，toast 说明对象类缺少主键 |
 
