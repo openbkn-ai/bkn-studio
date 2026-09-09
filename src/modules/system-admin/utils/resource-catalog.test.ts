@@ -78,11 +78,11 @@ describe("resource-catalog", () => {
     );
   });
 
-  it("uses the product names for the data connection and data directory", async () => {
+  it("uses the corrected names for catalog and resource", async () => {
     await i18n.changeLanguage("zh-CN");
 
-    expect(resourceTypeLabel("catalog")).toBe("数据连接");
-    expect(resourceTypeLabel("resource")).toBe("数据目录");
+    expect(resourceTypeLabel("catalog")).toBe("数据目录");
+    expect(resourceTypeLabel("resource")).toBe("数据资源");
   });
 
   it("offers task management only for action types among knowledge-network children", () => {
