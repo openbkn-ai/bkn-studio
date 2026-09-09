@@ -47,7 +47,7 @@ import {
   pickQueryableObjectType,
   requestDataAssistantKindOf,
   listMcpTools,
-  synthesizeOp,
+  mcpOpsFrom,
   mcpPathOf,
   sendRequest,
   subgraphPathFor,
@@ -404,14 +404,9 @@ export function ExperienceScene({
     if (mode === "mcp" && !toolDefs && !toolsLoading && !toolsError) loadTools();
   }, [mode, toolDefs, toolsLoading, toolsError, loadTools]);
 
-  // MCP op list is driven by tools/list: use local ops when available, otherwise synthesize from inputSchema.
-  const mcpOps = useMemo<ContextLoaderOp[]>(
-    () =>
-      toolDefs
-        ? toolDefs.map((t) => CONTEXT_LOADER_OPS.find((o) => o.id === t.name) ?? synthesizeOp(t))
-        : CONTEXT_LOADER_OPS,
-    [toolDefs],
-  );
+  // The MCP surface is the deployment's: tools/list decides what is in this list, and the local
+  // ops only describe what it reports. See mcpOpsFrom.
+  const mcpOps = useMemo<ContextLoaderOp[]>(() => mcpOpsFrom(toolDefs), [toolDefs]);
   const activeOps = mode === "mcp" ? mcpOps : REST_CONTEXT_LOADER_OPS;
   const op = useMemo(
     () => activeOps.find((item) => item.id === selectedId) ?? activeOps[0] ?? null,

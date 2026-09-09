@@ -80,7 +80,7 @@ const SCHEMA_TOOLS = new Set([
   "search_schema",
   "describe_resource",
   "list_resources",
-  "find_skills",
+  "search_capabilities",
   "get_action_info",
 ]);
 
