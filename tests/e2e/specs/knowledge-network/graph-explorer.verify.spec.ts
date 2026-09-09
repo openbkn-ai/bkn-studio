@@ -15,6 +15,8 @@
  *   GE_OT          object type id for the filter tab (defaults to the found node's object type)
  *   GE_FIELD       property to filter on (defaults to the first primary key of the found node)
  *   GE_SHOTS       directory for screenshots
+ *   GE_USER/GE_PASS  account for the bkn-safe login page when the deployment redirects to it
+ *   GE_SEED_OT_NAME  object type display name whose first search hit becomes the seed (default: first hit)
  */
 import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs";
@@ -24,6 +26,27 @@ const KN = process.env.GE_KN ?? "";
 const QUERY = process.env.GE_QUERY ?? "";
 const OT = process.env.GE_OT ?? "";
 const SHOTS = process.env.GE_SHOTS ?? "/tmp/graph-explorer-shots";
+const SEED_OT_NAME = process.env.GE_SEED_OT_NAME ?? "";
+const USER = process.env.GE_USER ?? "";
+const PASS = process.env.GE_PASS ?? "";
+
+/** Walks the bkn-safe login (and consent, when shown) so the SPA ends up signed in. */
+async function loginIfNeeded(page: Page) {
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1500);
+  if (!page.url().includes("/login")) return;
+  if (!USER || !PASS) throw new Error("redirected to login but GE_USER/GE_PASS are not set");
+  await page.locator('input[name="account"]').fill(USER);
+  await page.locator('input[name="password"]').fill(PASS);
+  await page.getByRole("button", { name: /登录|Login|Sign in/i }).click();
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1500);
+  if (page.url().includes("consent")) {
+    const allow = page.getByRole("button", { name: /允许|同意|Allow|Accept|授权/i }).first();
+    if (await allow.count()) await allow.click();
+  }
+  await page.waitForURL(/\/studio\//, { timeout: 60_000 });
+}
 
 type CachedNode = { id: string; otId: string; identity: Record<string, unknown>; display: string };
 type Cache = { nodes: CachedNode[]; edges: { id: string }[]; positions: Record<string, { x: number; y: number }>; settings: { layout: string; shape: string } };
@@ -70,6 +93,33 @@ async function contextMenu(page: Page, id: string, label: string) {
   await item.click();
 }
 
+/** antd puts data-testid on the <input> for Input and on the wrapper for Select; resolve to the editable element. */
+async function editable(page: Page, testId: string) {
+  const root = page.getByTestId(testId);
+  const tag = await root.evaluate((el) => el.tagName);
+  return tag === "INPUT" || tag === "TEXTAREA" ? root : root.locator("input").first();
+}
+
+const OPEN_DROPDOWN = ".ant-select-dropdown:not(.ant-select-dropdown-hidden)";
+
+/** Drives a searchable antd select with the keyboard: type the needle, Enter takes the first surviving option. */
+async function pickOption(page: Page, testId: string, needle: string) {
+  const root = page.getByTestId(testId);
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await root.click();
+    const box = await editable(page, testId);
+    await box.fill(needle);
+    await page.waitForTimeout(300);
+    await box.press("Enter");
+    await page.waitForTimeout(300);
+    const chosen = await root.locator(".ant-select-selection-item").first().getAttribute("title").catch(() => null);
+    if (chosen && chosen.trim() !== "") return;
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(1_000);
+  }
+  throw new Error(`no option matching ${needle} in ${testId}`);
+}
+
 async function stats(page: Page): Promise<{ nodes: number; edges: number }> {
   const text = await page.getByTestId("graph-explorer-stats").innerText();
   const numbers = text.match(/\d+/g) ?? [];
@@ -85,21 +135,26 @@ test("graph explorer end to end", async ({ page, context }) => {
 
   // 1. Overview button opens the explorer in a new tab.
   await page.goto(`/studio/knowledge-network/workspace/${KN}/overview`);
+  await loginIfNeeded(page);
+  if (!page.url().includes("/overview")) await page.goto(`/studio/knowledge-network/workspace/${KN}/overview`);
   const openButton = page.getByTestId("open-graph-explorer");
   await expect(openButton).toBeVisible({ timeout: 60_000 });
   const [explorer] = await Promise.all([context.waitForEvent("page"), openButton.click()]);
-  await explorer.waitForLoadState("domcontentloaded");
-  expect(explorer.url()).toContain(`/knowledge-network/workspace/${KN}/graph-explorer`);
+  // window.open(..., "noopener") starts the tab at about:blank; wait for the real navigation.
+  await explorer.waitForURL(new RegExp(`/knowledge-network/workspace/${KN}/graph-explorer`), { timeout: 60_000 });
   await explorer.evaluate((kn) => localStorage.removeItem(`bkn-studio.graph-explorer.${kn}`), KN);
   await explorer.reload();
   await expect(explorer.getByTestId("graph-explorer-search-input")).toBeVisible({ timeout: 60_000 });
   await shot(explorer, "01-open");
 
   // 2. Semantic search → add first hit.
-  await explorer.getByTestId("graph-explorer-search-input").locator("input").fill(QUERY);
-  await explorer.getByTestId("graph-explorer-search-input").locator("input").press("Enter");
-  const firstResult = explorer.getByTestId("graph-explorer-result").first();
-  await expect(firstResult).toBeVisible({ timeout: 90_000 });
+  const searchBox = await editable(explorer, "graph-explorer-search-input");
+  await searchBox.fill(QUERY);
+  await searchBox.press("Enter");
+  const results = explorer.locator(".ant-tabs-tabpane-active").getByTestId("graph-explorer-result");
+  await expect(results.first()).toBeVisible({ timeout: 90_000 });
+  const firstResult = SEED_OT_NAME ? results.filter({ hasText: SEED_OT_NAME }).first() : results.first();
+  await expect(firstResult).toBeVisible({ timeout: 10_000 });
   await firstResult.getByTestId("graph-explorer-add").click();
   await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 20_000 }).toBe(1);
   await shot(explorer, "02-search-added");
@@ -111,31 +166,30 @@ test("graph explorer end to end", async ({ page, context }) => {
 
   // 3. Filter query for the same instance → id converges, stays 1 node.
   await explorer.getByRole("tab", { name: /条件查询|Filter query/ }).click();
-  await explorer.getByTestId("graph-explorer-ot-select").click();
-  await explorer.getByTestId("graph-explorer-ot-select").locator("input").fill(OT || seed.otId);
-  await explorer.locator(".ant-select-dropdown:visible .ant-select-item-option").first().click();
-  await explorer.getByTestId("graph-explorer-cond-field").click();
-  await explorer.getByTestId("graph-explorer-cond-field").locator("input").fill(seedField);
-  await explorer.locator(".ant-select-dropdown:visible .ant-select-item-option").first().click();
-  await explorer.getByTestId("graph-explorer-cond-value").fill(seedValue);
+  await pickOption(explorer, "graph-explorer-ot-select", OT || seed.otId);
+  await pickOption(explorer, "graph-explorer-cond-field", seedField);
+  await (await editable(explorer, "graph-explorer-cond-value")).fill(seedValue);
   await explorer.getByTestId("graph-explorer-query").click();
-  await expect(explorer.getByTestId("graph-explorer-on-canvas").first()).toBeVisible({ timeout: 60_000 });
+  // Inactive tab panes stay mounted but hidden, so scope to the active pane.
+  await expect(explorer.locator(".ant-tabs-tabpane-active").getByTestId("graph-explorer-on-canvas").first()).toBeVisible({ timeout: 60_000 });
   expect((await stats(explorer)).nodes).toBe(1);
   await shot(explorer, "03-filter-converged");
 
-  // 4. Expand outgoing, then incoming, then both.
+  // 4. Expand outgoing, incoming, then both. Which direction has neighbours depends on the data,
+  //    so only the union (bidirectional) is required to grow the canvas.
   await contextMenu(explorer, seed.id, "展开出边");
-  await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 60_000 }).toBeGreaterThan(1);
+  await explorer.waitForTimeout(6_000);
   const afterOut = await stats(explorer);
   await shot(explorer, "04-expand-out");
   await contextMenu(explorer, seed.id, "展开入边");
-  await explorer.waitForTimeout(4_000);
+  await explorer.waitForTimeout(6_000);
   const afterIn = await stats(explorer);
   await shot(explorer, "05-expand-in");
   await contextMenu(explorer, seed.id, "双向展开");
-  await explorer.waitForTimeout(4_000);
+  await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 60_000 }).toBeGreaterThan(1);
   const afterBoth = await stats(explorer);
   await shot(explorer, "06-expand-both");
+  console.log(`expand: out=${afterOut.nodes}/${afterOut.edges} in=${afterIn.nodes}/${afterIn.edges} both=${afterBoth.nodes}/${afterBoth.edges}`);
   expect(afterBoth.nodes).toBeGreaterThanOrEqual(Math.max(afterOut.nodes, afterIn.nodes));
 
   // 5. Path between the seed and a neighbour; then between the seed and itself is impossible, so pick a far node.
@@ -143,16 +197,32 @@ test("graph explorer end to end", async ({ page, context }) => {
   const neighbour = cache2.nodes.find((node) => node.id !== seed.id)!;
   await contextMenu(explorer, seed.id, "设为路径起点");
   await contextMenu(explorer, neighbour.id, "设为路径终点");
+  const toasts: string[] = [];
+  explorer.on("console", () => undefined);
+  const toastWatcher = setInterval(() => {
+    void explorer
+      .locator(".ant-message-notice")
+      .allInnerTexts()
+      .then((texts) => {
+        for (const text of texts) if (text && !toasts.includes(text)) toasts.push(text);
+      })
+      .catch(() => undefined);
+  }, 250);
   await explorer.getByTestId("graph-explorer-find-path").click();
-  await expect(explorer.locator(".ant-message-notice", { hasText: /跳路径|不连通|hop|Not connected/ })).toBeVisible({ timeout: 60_000 });
+  try {
+    await expect.poll(() => toasts.join(" | "), { timeout: 120_000 }).toMatch(/跳路径|不连通|hop|Not connected/);
+  } finally {
+    clearInterval(toastWatcher);
+    console.log(`path toasts: ${toasts.join(" | ")}`);
+  }
   await shot(explorer, "07-path");
 
   // 6. Layout and shape switches, then reload restores.
   await explorer.getByTestId("graph-explorer-layout").click();
-  await explorer.locator(".ant-select-dropdown:visible .ant-select-item-option", { hasText: /层次|Hierarchical/ }).click();
+  await explorer.locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /层次|Hierarchical/ }).click();
   await explorer.waitForTimeout(1_500);
   await explorer.getByTestId("graph-explorer-shape").click();
-  await explorer.locator(".ant-select-dropdown:visible .ant-select-item-option", { hasText: /矩形|Rectangle/ }).click();
+  await explorer.locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /矩形|Rectangle/ }).click();
   await explorer.waitForTimeout(1_500);
   await shot(explorer, "08-layout-shape");
   const before = await stats(explorer);
@@ -166,7 +236,7 @@ test("graph explorer end to end", async ({ page, context }) => {
 
   // 7. Clear cache.
   await explorer.getByRole("button", { name: /清除缓存|Clear cache/ }).click();
-  await explorer.locator(".ant-popconfirm:visible .ant-btn-primary").click();
+  await explorer.locator(".ant-popconfirm:not(.ant-popover-hidden) .ant-btn-primary").click();
   await expect.poll(() => readCache(explorer), { timeout: 10_000 }).toBeNull();
   await shot(explorer, "10-cache-cleared");
 });

@@ -28,6 +28,15 @@ export type SearchPanelProps = {
   colorOf: (otId: string) => string;
 };
 
+/** Lets the user type either the display name or the id into a searchable select. */
+function matchIdOrLabel(input: string, option?: { value?: string | number; label?: unknown }): boolean {
+  const needle = input.trim().toLowerCase();
+  if (!needle) return true;
+  const value = String(option?.value ?? "").toLowerCase();
+  const label = typeof option?.label === "string" ? option.label.toLowerCase() : "";
+  return value.includes(needle) || label.includes(needle);
+}
+
 type ResultListProps = {
   nodes: GNode[];
   canvasIds: ReadonlySet<string>;
@@ -188,7 +197,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
         className={styles.fullWidth}
         data-testid="graph-explorer-ot-select"
         showSearch
-        optionFilterProp="label"
+        filterOption={matchIdOrLabel}
         disabled={disabled}
         value={otId}
         placeholder={t("knowledgeNetwork.graphExplorer.condition.objectTypePlaceholder")}
@@ -210,7 +219,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
               className={styles.conditionField}
               data-testid="graph-explorer-cond-field"
               showSearch
-              optionFilterProp="label"
+              filterOption={matchIdOrLabel}
               disabled={disabled || !otId}
               value={row.field || undefined}
               placeholder={t("knowledgeNetwork.graphExplorer.condition.field")}

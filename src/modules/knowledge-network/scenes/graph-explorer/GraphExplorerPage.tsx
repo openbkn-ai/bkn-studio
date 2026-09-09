@@ -60,6 +60,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Backend errors arrive as a JSON envelope serialised into the message. Show the human
+ * description and a short tail of the technical detail instead of the raw envelope.
+ */
+function friendlyError(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error);
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{")) return trimmed;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (!isRecord(parsed)) return trimmed;
+    const description = typeof parsed.description === "string" ? parsed.description : typeof parsed.message === "string" ? parsed.message : "";
+    const details = typeof parsed.details === "string" ? parsed.details : typeof parsed.error_details === "string" ? parsed.error_details : "";
+    const tail = details.length > 160 ? `…${details.slice(-160)}` : details;
+    return [description, tail].filter(Boolean).join("：") || trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function GraphExplorerScene() {
   const { networkId = "" } = useParams<{ networkId: string }>();
   const { t } = useTranslation();
@@ -149,7 +169,7 @@ export function GraphExplorerScene() {
         return value;
       } catch (error) {
         if (lifecycle.unsupported()) setLifecycleDown(true);
-        message.error(error instanceof Error ? error.message : String(error));
+        message.error(friendlyError(error));
         return undefined;
       } finally {
         setBusy(false);
@@ -261,8 +281,20 @@ export function GraphExplorerScene() {
       return;
     }
     const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.turn.path"), async (turn) => {
-      const payload = await client.exploreSubgraph({ sourceOtId: start.otId, condition, direction: "bidirectional", pathLength: PATH_MAX_HOPS }, turn);
-      const chain = shortestChainTo(parseRelationPaths(isRecord(payload) ? payload.relation_paths : []), start.id, end.id);
+      // The widest radius can fail downstream on a path that crosses an object type with no
+      // published data. Narrow the radius before giving up, so a short path is still found.
+      let payload: Record<string, unknown> | null = null;
+      let lastError: unknown = null;
+      for (let hops = PATH_MAX_HOPS; hops >= 1; hops -= 1) {
+        try {
+          payload = await client.exploreSubgraph({ sourceOtId: start.otId, condition, direction: "bidirectional", pathLength: hops }, turn);
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (!payload) throw lastError instanceof Error ? lastError : new Error(String(lastError));
+      const chain = shortestChainTo(parseRelationPaths(payload.relation_paths), start.id, end.id);
       if (!chain) return { chain: null, nodes: [] as GNode[] };
       const subgraph = fromExploreSubgraph(payload, settingsRef.current.labelByOt);
       const onPath = new Set<string>([start.id, end.id]);

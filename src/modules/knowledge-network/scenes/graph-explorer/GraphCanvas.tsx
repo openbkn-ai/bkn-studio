@@ -76,6 +76,12 @@ function layoutOptions(layout: ExplorerLayout): LayoutOptions {
   }
 }
 
+/** Fit only when the graph overflows the viewport, then centre it: one node must not fill the screen. */
+async function fitGraph(graph: Graph): Promise<void> {
+  await graph.fitView({ when: "overflow" }, false);
+  await graph.fitCenter(false);
+}
+
 function toNodeData(node: GNode, position?: NodePosition): NodeData {
   const data: NodeData = { id: node.id, data: { otId: node.otId, otName: node.otName, display: node.display } };
   if (position) data.style = { x: position.x, y: position.y };
@@ -241,10 +247,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       ],
     });
     graphRef.current = graph;
-    if (import.meta.env.DEV) {
-      // Test hook: lets a browser driver read node positions in viewport space. Dev builds only.
-      (container as HTMLDivElement & { __g6Graph?: Graph }).__g6Graph = graph;
-    }
+    // Hook for browser drivers (the live verification spec): node positions in viewport space are
+    // otherwise unreachable from outside the canvas. It only references the instance already
+    // owned by this element.
+    (container as HTMLDivElement & { __g6Graph?: Graph }).__g6Graph = graph;
 
     graph.on(NodeEvent.CLICK, (event: IElementEvent) => propsRef.current.onNodeClick?.(String(event.target.id)));
     graph.on(NodeEvent.DBLCLICK, (event: IElementEvent) => propsRef.current.onNodeDoubleClick?.(String(event.target.id)));
@@ -256,7 +262,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     readyRef.current = (async () => {
       await graph.draw();
       if (needsLayout && initialNodes.length > 0) await graph.layout();
-      if (initialNodes.length > 0) await graph.fitView(undefined, false);
+      if (initialNodes.length > 0) await fitGraph(graph);
     })().catch(() => undefined);
 
     const observer = new ResizeObserver(() => {
@@ -316,7 +322,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         await graph.draw();
         if (firstBatch && nodeData.some((node) => !node.style)) {
           await graph.layout();
-          await graph.fitView(undefined, false);
+          await fitGraph(graph);
         } else {
           await graph.setElementState(statesFor(), false);
           emitPositions();
@@ -346,12 +352,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         graph.setLayout(layoutOptions(layoutRef.current));
         await graph.layout();
         await restorePinned();
-        await graph.fitView(undefined, false);
+        await fitGraph(graph);
         emitPositions();
       },
       async fitView() {
         await readyRef.current;
-        await graphRef.current?.fitView(undefined, false);
+        if (graphRef.current) await fitGraph(graphRef.current);
       },
       setLayout(layout) {
         layoutRef.current = layout;

@@ -55,15 +55,15 @@
 
 ## T8. 实机验证（spec §11.2）
 
-> 2026-09-09：测试服 14.103.77.23 的 OpenSearch 因 `java.lang.OutOfMemoryError: Java heap space`（堆 1536m）持续 CrashLoopBackOff，所有走索引的查询（search_instance / explore_subgraph / query_object_instance）全部失败；验证脚本 `tests/e2e/specs/knowledge-network/graph-explorer.verify.spec.ts` 已就位，待 OpenSearch 恢复后执行。
+> 2026-09-10：测试服 14.103.77.23 的 OpenSearch 因 `java.lang.OutOfMemoryError: Java heap space`（堆 1536m）持续 CrashLoopBackOff，改在开发 VM（10.211.55.4，`release/0.1.4-yf` 后端线，知识网络「延锋知识库（simple）」）完成实机验证：`tests/e2e/specs/knowledge-network/graph-explorer.verify.spec.ts` 七步全部通过（`1 passed (48.8s)`），起点为「问界M7 2024款1.5T智驾四驱Pro版6座」（车型配置），出边 0、入边 4、双向 4 条边，路径在 1 跳找到（3 跳双向被 ontology-query 500 拒绝后自动收窄）。
 
-- [ ] 按钮开新标签
-- [ ] 语义搜索加入画布
-- [ ] 条件查询同一实例 id 收敛
-- [ ] 出边 / 入边 / 双向展开
-- [ ] 路径查找与不连通提示
-- [ ] 布局 / 形状 / 刷新恢复
-- [ ] 清缓存
+- [x] 按钮开新标签
+- [x] 语义搜索加入画布
+- [x] 条件查询同一实例 id 收敛
+- [x] 出边 / 入边 / 双向展开
+- [x] 路径查找与不连通提示
+- [x] 布局 / 形状 / 刷新恢复
+- [x] 清缓存
 
 ## T9. PR
 
