@@ -12,6 +12,9 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
 import {
   formatKnowledgeNetworkUpdateTime,
   getKnowledgeNetworkCardMenuKeys,
+  getKnowledgeNetworkExportMenuKey,
+  KNOWLEDGE_NETWORK_EXPORT_FORMATS,
+  parseKnowledgeNetworkExportMenuKey,
 } from "./knowledge-network-card";
 
 function createRecord(operations?: string[]): KnowledgeNetworkRecord {
@@ -72,5 +75,24 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
     expect(hasKnowledgeNetworkRecordOperation(null, "modify")).toBe(false);
     expect(hasKnowledgeNetworkRecordOperation(createRecord(), "modify")).toBe(false);
     expect(hasKnowledgeNetworkRecordOperation(createRecord(["view_detail"]), "modify")).toBe(false);
+  });
+});
+
+describe("knowledge network export menu keys", () => {
+  it("offers both export formats", () => {
+    expect(KNOWLEDGE_NETWORK_EXPORT_FORMATS).toEqual(["json", "bkn"]);
+  });
+
+  it("routes a submenu key back to the format it stands for", () => {
+    KNOWLEDGE_NETWORK_EXPORT_FORMATS.forEach((format) => {
+      expect(parseKnowledgeNetworkExportMenuKey(getKnowledgeNetworkExportMenuKey(format))).toBe(
+        format,
+      );
+    });
+  });
+
+  it("does not read the other card actions as an export", () => {
+    expect(parseKnowledgeNetworkExportMenuKey("export")).toBeUndefined();
+    expect(parseKnowledgeNetworkExportMenuKey("delete")).toBeUndefined();
   });
 });

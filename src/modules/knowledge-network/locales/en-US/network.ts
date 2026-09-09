@@ -39,6 +39,8 @@ export const networkPart = {
     enterWorkspace: "Open workspace",
     authorizeAction: "Configure permissions",
     export: "Export",
+    exportBkn: "Export as a BKN package",
+    exportJson: "Export as JSON",
     exportSuccess: "Exported successfully",
     iconField: "Icon",
     iconSearchPlaceholder: "Search icons by keyword",

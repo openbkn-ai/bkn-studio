@@ -12,6 +12,7 @@ import {
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
 import type {
+  KnowledgeNetworkExportFormat,
   KnowledgeNetworkImportMode,
   KnowledgeNetworkListQuery,
   KnowledgeNetworkListResult,
@@ -41,8 +42,10 @@ import {
   replaceMockKnowledgeNetworks,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
+  downloadBlobFile,
   downloadJsonFile,
   emptyStatistics,
+  filenameFromContentDisposition,
   filterKnowledgeNetworks,
   formatTimestamp,
   logServiceFallback,
@@ -268,13 +271,18 @@ export async function listKnowledgeNetworkRecentObjects(networkId: string) {
   return response.data.entries.map(mapRecentObject);
 }
 
-export async function exportKnowledgeNetwork(networkId: string) {
+export async function exportKnowledgeNetwork(
+  networkId: string,
+  format: KnowledgeNetworkExportFormat = "json",
+) {
   if (useMock) {
     const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
     if (!record) {
       throw new Error("Knowledge network not found");
     }
 
+    // The BKN package is assembled by the backend, so mock mode can only ever
+    // hand back the JSON view of the same network.
     downloadJsonFile(record.name, {
       id: record.id,
       code: record.identifier,
@@ -283,6 +291,19 @@ export async function exportKnowledgeNetwork(networkId: string) {
       color: record.color,
       tags: record.tags,
     });
+    return;
+  }
+
+  if (format === "bkn") {
+    const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
+      responseType: "blob",
+    });
+
+    downloadBlobFile(
+      filenameFromContentDisposition(response.headers["content-disposition"]) ??
+        `${networkId}.tar`,
+      response.data,
+    );
     return;
   }
 

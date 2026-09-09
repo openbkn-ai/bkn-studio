@@ -38,6 +38,8 @@ export const networkPart = {
     enterWorkspace: "进入工作区",
     authorizeAction: "配置权限",
     export: "导出",
+    exportBkn: "导出为 BKN 包",
+    exportJson: "导出为 JSON",
     exportSuccess: "导出成功",
     iconField: "图标",
     iconSearchPlaceholder: "输入关键词筛选图标",
