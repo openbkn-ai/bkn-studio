@@ -677,7 +677,9 @@ function mockPreviewCell(
 ) {
   const type = field.type.toLowerCase();
   if (type === "other") {
-    return usesLocalIndex ? { mode: "unavailable" } : null;
+    return usesLocalIndex
+      ? { mode: "unavailable" }
+      : { data: mockOtherContent(field, row), mode: "content" };
   }
   if (type !== "binary") {
     return mockCell(field, row);
@@ -698,6 +700,18 @@ function mockPreviewCell(
     };
   }
   return { byte_length: byteLength, mode: "metadata" };
+}
+
+function mockOtherContent(field: ResourceSchemaField, row: number) {
+  const originalType = field.originalType ?? "unknown";
+  switch (originalType.toLowerCase()) {
+    case "point":
+      return { x: 116.4 + row * 0.01, y: 39.9 + row * 0.01 };
+    case "geometry":
+      return `POLYGON((116.${row} 39.${row},116.${row + 1} 39.${row},116.${row + 1} 39.${row + 1},116.${row} 39.${row + 1},116.${row} 39.${row}))`;
+    default:
+      return { original_type: originalType, value: `unsupported_value_${row + 1}` };
+  }
 }
 
 function mockBinaryContent(row: number, byteLength: number) {

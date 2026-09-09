@@ -124,6 +124,40 @@
   text-align: left;
 }
 
+.previewValueButton {
+  display: block;
+  max-width: 280px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewValueTooltip:global(.ant-tooltip) {
+  max-width: min(640px, calc(100vw - 48px));
+}
+
+.previewValueTooltip :global(.ant-tooltip-inner) {
+  max-height: min(480px, calc(100vh - 96px));
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fullPreviewValue {
+  max-height: min(60vh, 480px);
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .table tbody tr:hover td {
   background: var(--color-hover);
 }

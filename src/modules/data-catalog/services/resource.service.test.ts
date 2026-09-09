@@ -109,6 +109,34 @@ describe("resource.service · previewCatalogResource", () => {
     expect(result.rows[0]?.legacy_profile).toEqual({ mode: "unavailable" });
   });
 
+  it("returns representative Other values from an original-source mock preview", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const result = await previewCatalogResource("res-index-config-demo", {
+      ignoreLocalIndex: true,
+      limit: 2,
+      offset: 0,
+    });
+
+    expect(result.querySource).toBe("source");
+    expect(result.rows[0]?.location).toEqual({
+      data: { x: 116.4, y: 39.9 },
+      mode: "content",
+    });
+    expect(result.rows[1]?.location).toEqual({
+      data: { x: 116.41000000000001, y: 39.91 },
+      mode: "content",
+    });
+    expect(result.rows[0]?.service_area).toEqual({
+      data: "POLYGON((116.0 39.0,116.1 39.0,116.1 39.1,116.0 39.1,116.0 39.0))",
+      mode: "content",
+    });
+  });
+
   it("returns Binary metadata when a source mock resource has no local index name", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");

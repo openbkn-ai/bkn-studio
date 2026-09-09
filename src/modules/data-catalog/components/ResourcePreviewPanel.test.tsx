@@ -11,6 +11,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
 const previewCatalogResourceMock = vi.hoisted(() => vi.fn());
+const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
+const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -19,6 +21,14 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   previewCatalogResource: previewCatalogResourceMock,
+}));
+
+vi.mock("@/framework/compat/clipboard", () => ({
+  writeTextToClipboard: writeTextToClipboardMock,
+}));
+
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: messageMock }),
 }));
 
 vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
@@ -245,6 +255,82 @@ describe("ResourcePreviewPanel", () => {
     expect(await screen.findAllByText(`${"x".repeat(20)}…`)).toHaveLength(2);
     expect(screen.queryByText(content)).toBeNull();
     expect(screen.queryByLabelText("dataCatalog.preview.loadBinaryContent")).toBeNull();
+  });
+
+  it("opens and copies a full long-text value without widening its table cell", async () => {
+    const content = "x".repeat(8_000);
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [{ description: content }],
+      total: 1,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "description", type: "text" }] }}
+      />,
+    );
+
+    const preview = await screen.findByRole("button", { name: `${"x".repeat(20)}…` });
+    expect(preview).toBeTruthy();
+    fireEvent.click(preview);
+
+    expect(await screen.findByText(content)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.copyFullValue" }));
+    expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
+    await waitFor(() => {
+      expect(messageMock.success).toHaveBeenCalledWith("dataCatalog.preview.copyFullValueSuccess");
+    });
+  });
+
+  it("opens and copies Binary content when it was explicitly loaded", async () => {
+    const content = "QmluYXJ5IGNvbnRlbnQgZm9yIGNvcHlpbmcu";
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [{ blob: { byte_length: 24, data: content, mode: "content" } }],
+      total: 1,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "blob", type: "binary" }] }}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: `${content.slice(0, 20)}…` }));
+    expect(await screen.findByText(content)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.copyFullValue" }));
+    await waitFor(() => {
+      expect(writeTextToClipboardMock).toHaveBeenCalledWith(content);
+      expect(messageMock.success).toHaveBeenCalledWith("dataCatalog.preview.copyFullValueSuccess");
+    });
+  });
+
+  it("opens and copies serialized Other content when it is too long for the cell", async () => {
+    const content = { geometry: "POLYGON((116.4 39.9,116.5 39.9,116.5 40.0,116.4 40.0,116.4 39.9))" };
+    const serialized = JSON.stringify(content);
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: [{ service_area: { data: content, mode: "content" } }],
+      total: 1,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{ ...resource, columnCount: 1, schema: [{ name: "service_area", type: "other" }] }}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: `${serialized.slice(0, 20)}…` }));
+    expect(await screen.findByText(serialized)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.copyFullValue" }));
+    await waitFor(() => {
+      expect(writeTextToClipboardMock).toHaveBeenCalledWith(serialized);
+      expect(messageMock.success).toHaveBeenCalledWith("dataCatalog.preview.copyFullValueSuccess");
+    });
   });
 
   it("lets the user force source data and opt in to Binary content", async () => {

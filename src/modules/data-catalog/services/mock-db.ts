@@ -409,8 +409,8 @@ export const mockResources: CatalogResource[] = [
       {
         name: "location",
         displayName: "位置",
-        description: "记录关联的地理坐标",
-        type: "point",
+        description: "记录关联的地理坐标；当前连接器按未支持类型处理",
+        type: "other",
         originalName: "location",
         originalType: "point",
         originalDescription: "记录关联的地理坐标",
@@ -418,8 +418,8 @@ export const mockResources: CatalogResource[] = [
       {
         name: "service_area",
         displayName: "服务区域",
-        description: "记录关联的地理形状范围",
-        type: "shape",
+        description: "记录关联的地理形状范围；当前连接器按未支持类型处理",
+        type: "other",
         originalName: "service_area",
         originalType: "geometry",
         originalDescription: "记录关联的地理形状范围",

@@ -259,7 +259,7 @@ export function CatalogDetailPanel({
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
           <Tooltip
-            overlayClassName={styles.resourceNameTooltip}
+            classNames={{ root: styles.resourceNameTooltip }}
             title={tooltip}
           >
             <AppButton

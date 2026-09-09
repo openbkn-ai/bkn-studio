@@ -5,11 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Checkbox, Spin, Tooltip } from "antd";
+import { CopyOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { Alert, Button, Checkbox, Modal, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import {
   extractRequestErrorMessage,
   isRequestForbidden,
@@ -69,6 +71,7 @@ function formatPreviewCell(value: unknown) {
 type PreviewCellDisplay = {
   text: string;
   tooltip?: string;
+  fullText?: string;
 };
 
 function formatTextPreviewCell(value: unknown): PreviewCellDisplay {
@@ -76,12 +79,18 @@ function formatTextPreviewCell(value: unknown): PreviewCellDisplay {
   if (typeof value !== "string") {
     return { text };
   }
+  return formatExpandablePreviewCell(text);
+}
+
+function formatExpandablePreviewCell(value: unknown): PreviewCellDisplay {
+  const text = formatPreviewCell(value);
   if (text.length <= PREVIEW_CONTENT_LENGTH) {
     return { text, tooltip: text };
   }
   return {
     text: `${text.slice(0, PREVIEW_CONTENT_LENGTH)}…`,
     tooltip: text,
+    fullText: text,
   };
 }
 
@@ -105,6 +114,7 @@ function formatBinaryPreviewCell(
       return {
         text: `${content.slice(0, PREVIEW_CONTENT_LENGTH)}…`,
         tooltip: content,
+        fullText: content,
       };
     }
     const length = binaryValue.byte_length;
@@ -125,10 +135,10 @@ function formatOtherPreviewCell(
       return { text: t("dataCatalog.preview.fieldContentUnavailable") };
     }
     if ("data" in resourceValue) {
-      return { text: formatPreviewCell(resourceValue.data) };
+      return formatExpandablePreviewCell(resourceValue.data);
     }
   }
-  return { text: formatPreviewCell(value) };
+  return formatExpandablePreviewCell(value);
 }
 
 function resolvePreviewColumnHead(field: ResourceSchemaField) {
@@ -153,9 +163,11 @@ export function ResourcePreviewPanel({
   resource,
 }: ResourcePreviewPanelProps) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<ResourcePreviewResult | null>(null);
+  const [fullValue, setFullValue] = useState<{ field: string; text: string }>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -285,6 +297,13 @@ export function ResourcePreviewPanel({
     void load(nextOffset, resolvedPageSize);
   };
 
+  const copyFullValue = () => {
+    if (!fullValue) return;
+    void writeTextToClipboard(fullValue.text)
+      .then(() => message.success(t("dataCatalog.preview.copyFullValueSuccess")))
+      .catch(() => message.error(t("dataCatalog.preview.copyFullValueFailed")));
+  };
+
   return (
     <div className={styles.panel}>
       <div className={styles.metaRow}>
@@ -383,6 +402,7 @@ export function ResourcePreviewPanel({
                       const display = binaryDisplay ?? otherDisplay ?? textDisplay;
                       const text = display?.text ?? formatPreviewCell(value);
                       const tooltip = display?.tooltip ?? text;
+                      const fullText = display?.fullText;
                       return (
                         <td
                           className={[
@@ -393,8 +413,21 @@ export function ResourcePreviewPanel({
                             .join(" ")}
                           key={field.name}
                         >
-                          <Tooltip title={tooltip}>
-                            <span>{text}</span>
+                          <Tooltip
+                            classNames={fullText ? { root: styles.previewValueTooltip } : undefined}
+                            title={tooltip}
+                          >
+                            {fullText ? (
+                              <button
+                                className={styles.previewValueButton}
+                                onClick={() => setFullValue({ field: field.name, text: fullText })}
+                                type="button"
+                              >
+                                {text}
+                              </button>
+                            ) : (
+                              <span>{text}</span>
+                            )}
                           </Tooltip>
                         </td>
                       );
@@ -423,6 +456,23 @@ export function ResourcePreviewPanel({
           total={total}
         />
       ) : null}
+      <Modal
+        footer={(
+          <Button
+            aria-label={t("dataCatalog.preview.copyFullValue")}
+            icon={<CopyOutlined />}
+            onClick={copyFullValue}
+          >
+            {t("dataCatalog.preview.copyFullValue")}
+          </Button>
+        )}
+        onCancel={() => setFullValue(undefined)}
+        open={Boolean(fullValue)}
+        title={fullValue ? t("dataCatalog.preview.fullValue", { field: fullValue.field }) : undefined}
+        width={720}
+      >
+        <pre className={styles.fullPreviewValue}>{fullValue?.text}</pre>
+      </Modal>
     </div>
   );
 }
