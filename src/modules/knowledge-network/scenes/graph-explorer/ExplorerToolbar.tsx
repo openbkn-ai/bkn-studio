@@ -74,17 +74,19 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         <Select
           size="small"
           className={styles.select}
+          data-testid="graph-explorer-layout"
           value={layout}
           options={LAYOUTS.map((item) => ({ value: item, label: t(`knowledgeNetwork.graphExplorer.layouts.${item}`) }))}
           onChange={onLayoutChange}
         />
         <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.relayout")}>
-          <Button size="small" icon={<ReloadOutlined />} disabled={nodeCount === 0 || busy} onClick={onRelayout} />
+          <Button size="small" data-testid="graph-explorer-relayout" icon={<ReloadOutlined />} disabled={nodeCount === 0 || busy} onClick={onRelayout} />
         </Tooltip>
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.shape")}</span>
         <Select
           size="small"
           className={styles.select}
+          data-testid="graph-explorer-shape"
           value={shape}
           options={SHAPES.map((item) => ({ value: item, label: t(`knowledgeNetwork.graphExplorer.shapes.${item}`) }))}
           onChange={onShapeChange}
@@ -100,7 +102,14 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         <Tag color="red" className={styles.pathTag}>
           {t("knowledgeNetwork.graphExplorer.toolbar.pathEnd")}: {pathEnd?.display ?? t("knowledgeNetwork.graphExplorer.toolbar.unset")}
         </Tag>
-        <Button size="small" type="primary" icon={<NodeIndexOutlined />} disabled={disabled || busy || !pathStart || !pathEnd} onClick={onFindPath}>
+        <Button
+          size="small"
+          type="primary"
+          data-testid="graph-explorer-find-path"
+          icon={<NodeIndexOutlined />}
+          disabled={disabled || busy || !pathStart || !pathEnd}
+          onClick={onFindPath}
+        >
           {t("knowledgeNetwork.graphExplorer.toolbar.findPath")}
         </Button>
         {pathActive ? (
@@ -111,7 +120,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
       </Space>
       <div className={styles.spacer} />
       <Space size={6} className={styles.group}>
-        <Typography.Text type="secondary" className={styles.stats}>
+        <Typography.Text type="secondary" className={styles.stats} data-testid="graph-explorer-stats">
           {t("knowledgeNetwork.graphExplorer.toolbar.stats", { nodes: nodeCount, edges: edgeCount })}
         </Typography.Text>
         <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.fit")}>

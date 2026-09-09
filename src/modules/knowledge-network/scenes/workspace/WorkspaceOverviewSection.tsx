@@ -181,6 +181,7 @@ export function WorkspaceOverviewSection({
           </div>
           <div className={styles.overviewHeaderTitleRight}>
             <AppButton
+              data-testid="open-graph-explorer"
               icon={<ApartmentOutlined />}
               onClick={() => window.open(graphExplorerHref, "_blank", "noopener,noreferrer")}
             >

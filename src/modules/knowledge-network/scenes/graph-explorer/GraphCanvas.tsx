@@ -241,6 +241,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       ],
     });
     graphRef.current = graph;
+    if (import.meta.env.DEV) {
+      // Test hook: lets a browser driver read node positions in viewport space. Dev builds only.
+      (container as HTMLDivElement & { __g6Graph?: Graph }).__g6Graph = graph;
+    }
 
     graph.on(NodeEvent.CLICK, (event: IElementEvent) => propsRef.current.onNodeClick?.(String(event.target.id)));
     graph.on(NodeEvent.DBLCLICK, (event: IElementEvent) => propsRef.current.onNodeDoubleClick?.(String(event.target.id)));
@@ -393,5 +397,5 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     [emitPositions, readPositions, restorePinned, statesFor],
   );
 
-  return <div ref={containerRef} className={styles.canvas} />;
+  return <div ref={containerRef} className={styles.canvas} data-testid="graph-explorer-canvas" />;
 });

@@ -67,7 +67,7 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
         {nodes.map((node) => {
           const onCanvas = canvasIds.has(node.id);
           return (
-            <li key={node.id} className={styles.resultItem}>
+            <li key={node.id} className={styles.resultItem} data-testid="graph-explorer-result">
               <Checkbox
                 disabled={onCanvas}
                 checked={selected.has(node.id)}
@@ -86,9 +86,11 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
                 <div className={styles.resultMeta}>{node.otName}</div>
               </div>
               {onCanvas ? (
-                <Tag className={styles.resultTag}>{t("knowledgeNetwork.graphExplorer.onCanvas")}</Tag>
+                <Tag className={styles.resultTag} data-testid="graph-explorer-on-canvas">
+                  {t("knowledgeNetwork.graphExplorer.onCanvas")}
+                </Tag>
               ) : (
-                <Button size="small" onClick={() => onAdd([node])}>
+                <Button size="small" data-testid="graph-explorer-add" onClick={() => onAdd([node])}>
                   {t("knowledgeNetwork.graphExplorer.addToCanvas")}
                 </Button>
               )}
@@ -157,6 +159,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
   const semanticPane = (
     <div className={styles.pane}>
       <Input.Search
+        data-testid="graph-explorer-search-input"
         value={query}
         disabled={disabled}
         loading={searching}
@@ -183,6 +186,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
     <div className={styles.pane}>
       <Select
         className={styles.fullWidth}
+        data-testid="graph-explorer-ot-select"
         showSearch
         optionFilterProp="label"
         disabled={disabled}
@@ -204,6 +208,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
           <div key={index} className={styles.conditionRow}>
             <Select
               className={styles.conditionField}
+              data-testid="graph-explorer-cond-field"
               showSearch
               optionFilterProp="label"
               disabled={disabled || !otId}
@@ -218,6 +223,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
             />
             <Select
               className={styles.conditionOperator}
+              data-testid="graph-explorer-cond-op"
               disabled={disabled || !otId}
               value={row.operator}
               options={operators.map((operator) => ({ value: operator, label: operator }))}
@@ -225,6 +231,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
             />
             <Input
               className={styles.conditionValue}
+              data-testid="graph-explorer-cond-value"
               disabled={disabled || !otId}
               value={row.value}
               placeholder={t("knowledgeNetwork.graphExplorer.condition.valuePlaceholder")}
@@ -244,7 +251,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
         <Button type="dashed" icon={<PlusOutlined />} disabled={disabled || !otId} onClick={() => setRows((previous) => [...previous, { field: "", operator: "==", value: "" }])}>
           {t("knowledgeNetwork.graphExplorer.condition.addRow")}
         </Button>
-        <Button type="primary" loading={querying} disabled={disabled || !otId} onClick={() => void runQuery()}>
+        <Button type="primary" data-testid="graph-explorer-query" loading={querying} disabled={disabled || !otId} onClick={() => void runQuery()}>
           {t("knowledgeNetwork.graphExplorer.condition.query")}
         </Button>
       </div>
