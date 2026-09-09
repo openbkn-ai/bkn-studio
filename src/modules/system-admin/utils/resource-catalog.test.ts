@@ -85,6 +85,15 @@ describe("resource-catalog", () => {
     expect(resourceTypeLabel("resource")).toBe("数据资源");
   });
 
+  it("uses the execution-factory names for executable resource types", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("operator")).toBe("函数集");
+    expect(resourceTypeLabel("tool_box")).toBe("API 工具集");
+    expect(resourceTypeLabel("mcp")).toBe("MCP 服务");
+    expect(resourceTypeLabel("skill")).toBe("SKILL 包");
+  });
+
   it("offers task management only for action types among knowledge-network children", () => {
     for (const type of ["concept_group", "object_type", "relation_type", "metric", "risk_type"]) {
       expect(operationsForType(type).map((item) => item.key)).not.toContain("task_manage");
