@@ -62,16 +62,13 @@ export type CapabilityBindingRecord = {
 };
 
 /**
- * How much of a tool box this branch has mounted. A whole-box mount is expanded at write time and
- * does not follow the box afterwards, so tools added later show up here as unmounted.
+ * One tool box this branch holds bindings in. Which of its tools are mounted is the person's own
+ * choice and is not compared against the box; the summary only says whether the box still exists.
  */
 export type CapabilityBoxSummary = {
   boxId: string;
   boxMissing: boolean;
   boxName: string;
-  mountedTools: number;
-  totalTools: number;
-  unmountedTools: number;
 };
 
 export type CapabilityBindingListResult = {

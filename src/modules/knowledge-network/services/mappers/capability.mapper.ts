@@ -51,9 +51,6 @@ export type BackendCapabilityBoxSummary = {
   box_id?: string;
   box_missing?: boolean;
   box_name?: string;
-  mounted_tools?: number;
-  total_tools?: number;
-  unmounted_tools?: number;
 };
 
 export type BackendCapabilityBindingsList = {
@@ -146,9 +143,6 @@ export function mapCapabilityBoxSummary(
     boxId: item.box_id ?? "",
     boxMissing: item.box_missing ?? false,
     boxName: item.box_name ?? "",
-    mountedTools: item.mounted_tools ?? 0,
-    totalTools: item.total_tools ?? 0,
-    unmountedTools: item.unmounted_tools ?? 0,
   };
 }
 

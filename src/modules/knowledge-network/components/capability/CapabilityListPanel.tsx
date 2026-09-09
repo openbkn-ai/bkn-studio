@@ -390,9 +390,7 @@ export function CapabilityListPanel({
     },
   ];
 
-  const topUpBoxes = data.boxes.filter(
-    (item) => item.unmountedTools > 0 || item.boxMissing,
-  );
+  const missingBoxes = data.boxes.filter((item) => item.boxMissing);
 
   return (
     <>
@@ -438,49 +436,15 @@ export function CapabilityListPanel({
           />
         )}
 
-        {topUpBoxes.map((box) => (
+        {missingBoxes.map((box) => (
           <Alert
-            action={
-              box.boxMissing || !canModify ? null : (
-                <AppButton
-                  loading={busy}
-                  onClick={() => {
-                    void (async () => {
-                      setBusy(true);
-                      try {
-                        const created = await onMount([
-                          { allTools: true, boxId: box.boxId, capabilityType: "function" },
-                        ]);
-                        void message.success(
-                          t("knowledgeNetwork.capabilityMountSuccess", { count: created }),
-                        );
-                      } finally {
-                        setBusy(false);
-                      }
-                    })();
-                  }}
-                  size="small"
-                  type="link"
-                >
-                  {t("knowledgeNetwork.capabilityBoxTopUpAction", {
-                    count: box.unmountedTools,
-                  })}
-                </AppButton>
-              )
-            }
             className={styles.noticeBanner}
             key={box.boxId}
-            message={
-              box.boxMissing
-                ? t("knowledgeNetwork.capabilityBoxMissing")
-                : t("knowledgeNetwork.capabilityBoxTopUpTitle", {
-                    boxName: box.boxName || box.boxId,
-                    mounted: box.mountedTools,
-                    total: box.totalTools,
-                  })
-            }
+            message={t("knowledgeNetwork.capabilityBoxMissing", {
+              boxName: box.boxName || box.boxId,
+            })}
             showIcon
-            type={box.boxMissing ? "error" : "info"}
+            type="error"
           />
         ))}
 

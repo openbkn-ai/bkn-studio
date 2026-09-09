@@ -37,14 +37,50 @@
 }
 
 .pickerTree {
-  max-height: 380px;
+  max-height: 60vh;
   overflow: auto;
   border: 1px solid var(--color-border);
   padding: 8px;
 }
 
+/*
+ * antd lays a node out as a flex row whose content wrapper may not shrink below its text, and
+ * renders the title inline, so ellipsis on anything inside never applies — long descriptions ran
+ * under the modal edge. Let the wrapper shrink and make the title a block for the ellipsis to bite.
+ */
+.pickerTree :global(.ant-tree-node-content-wrapper) {
+  min-width: 0;
+}
+
+.pickerTree :global(.ant-tree-title) {
+  display: block;
+  min-width: 0;
+}
+
+/*
+ * A tool row keeps its description on a second line. Name, tag and description on one line, each
+ * cut short to fit, read as a wall; the box rows above stay on one line since they carry only a
+ * name and a count.
+ */
+.pickerTool {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.pickerDescription {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pickerNode {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;

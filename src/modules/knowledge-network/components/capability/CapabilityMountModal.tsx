@@ -157,6 +157,22 @@ export function CapabilityMountModal({
     [mountedRefs],
   );
 
+  /**
+   * A collapsed box shows nothing of its tools, so without this the only way to learn that some of
+   * them are already mounted is to expand every box.
+   */
+  const mountedCountByBox = useMemo(() => {
+    const counts = new Map<string, number>();
+    mountedRefs.forEach((ref) => {
+      const boxId = ref.split("/")[0] ?? "";
+      if (boxId && boxId !== ref) {
+        counts.set(boxId, (counts.get(boxId) ?? 0) + 1);
+      }
+    });
+
+    return counts;
+  }, [mountedRefs]);
+
   /** Tools a whole-box mount would actually add: the ones this network does not hold yet. */
   const mountableToolKeys = useCallback(
     (boxId: string, tools: PickerTool[]) =>
@@ -164,6 +180,40 @@ export function CapabilityMountModal({
         .filter((tool) => !isToolMounted(boxId, tool.id))
         .map((tool) => `${TOOL_KEY_PREFIX}${boxId}/${tool.id}`),
     [isToolMounted],
+  );
+
+  /**
+   * A box with nothing left to add: every tool it lists is mounted, or, before its tools are
+   * fetched, the catalogue count is already covered by what this network holds.
+   */
+  const isBoxFullyMounted = useCallback(
+    (box: PickerContainer) => {
+      const tools = toolsByBox[box.id];
+      if (tools) {
+        return tools.length > 0 && tools.every((tool) => isToolMounted(box.id, tool.id));
+      }
+
+      const mounted = mountedCountByBox.get(box.id) ?? 0;
+
+      return mounted > 0 && box.toolCount !== undefined && mounted >= box.toolCount;
+    },
+    [isToolMounted, mountedCountByBox, toolsByBox],
+  );
+
+  /**
+   * What is already mounted is shown ticked and disabled — "in, and not yours to toggle" — but it
+   * never enters the selection: antd hands every ticked key back on each change, so these are
+   * stripped before the selection is read, and appended again only when the tree is drawn.
+   */
+  const lockedKeys = useMemo(
+    () =>
+      boxes.flatMap((box) => [
+        ...(isBoxFullyMounted(box) ? [`${BOX_KEY_PREFIX}${box.id}`] : []),
+        ...(toolsByBox[box.id] ?? [])
+          .filter((tool) => isToolMounted(box.id, tool.id))
+          .map((tool) => `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`),
+      ]),
+    [boxes, isBoxFullyMounted, isToolMounted, toolsByBox],
   );
 
   const loadBoxTools = useCallback(
@@ -216,7 +266,7 @@ export function CapabilityMountModal({
   const handleCheck = useCallback(
     (nextKeys: string[]) => {
       const previous = new Set(checkedKeys);
-      const next = new Set(nextKeys);
+      const next = new Set(nextKeys.filter((key) => !lockedKeys.includes(key)));
 
       boxes.forEach((box) => {
         const boxKey = `${BOX_KEY_PREFIX}${box.id}`;
@@ -248,12 +298,18 @@ export function CapabilityMountModal({
 
       setCheckedKeys([...next]);
     },
-    [boxes, checkedKeys, loadBoxTools, mountableToolKeys, toolsByBox],
+    [boxes, checkedKeys, loadBoxTools, lockedKeys, mountableToolKeys, toolsByBox],
   );
 
   const visibleBoxes = useMemo(
     () => filterVisibleContainers(boxes, toolsByBox, keyword),
     [boxes, keyword, toolsByBox],
+  );
+
+  /** The boxes "select all" can still act on: a fully mounted one has nothing to pick. */
+  const selectableBoxes = useMemo(
+    () => visibleBoxes.filter((box) => !isBoxFullyMounted(box)),
+    [isBoxFullyMounted, visibleBoxes],
   );
 
   /**
@@ -263,7 +319,7 @@ export function CapabilityMountModal({
    */
   const toggleAllBoxes = useCallback(
     (checked: boolean) => {
-      const affected = visibleBoxes.flatMap((box) => [
+      const affected = selectableBoxes.flatMap((box) => [
         `${BOX_KEY_PREFIX}${box.id}`,
         ...mountableToolKeys(box.id, toolsByBox[box.id] ?? []),
       ]);
@@ -276,14 +332,14 @@ export function CapabilityMountModal({
         return [...new Set([...current, ...affected])];
       });
     },
-    [mountableToolKeys, toolsByBox, visibleBoxes],
+    [mountableToolKeys, selectableBoxes, toolsByBox],
   );
 
   const allBoxesChecked =
-    visibleBoxes.length > 0 &&
-    visibleBoxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
+    selectableBoxes.length > 0 &&
+    selectableBoxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
 
-  const someVisibleChecked = visibleBoxes.some(
+  const someVisibleChecked = selectableBoxes.some(
     (box) =>
       checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`) ||
       checkedKeys.some((key) => key.startsWith(`${TOOL_KEY_PREFIX}${box.id}/`)),
@@ -342,29 +398,34 @@ export function CapabilityMountModal({
           return nodes;
         }
 
+        const mountedCount = mountedCountByBox.get(box.id) ?? 0;
+
         nodes.push({
           children: tools
             ? matchedTools.map((tool) => {
                 const mounted = isToolMounted(box.id, tool.id);
 
                 return {
-                  disabled: mounted,
+                  disableCheckbox: mounted,
                   isLeaf: true,
                   key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
                   title: (
-                    <span className={styles.pickerNode}>
-                      <span>{tool.name || tool.id}</span>
-                      {mounted ? (
-                        <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
-                      ) : null}
+                    <span className={styles.pickerTool}>
+                      <span className={styles.pickerNode}>
+                        <span>{tool.name || tool.id}</span>
+                        {mounted ? (
+                          <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
+                        ) : null}
+                      </span>
                       {tool.description ? (
-                        <span className={styles.pickerHint}>{tool.description}</span>
+                        <span className={styles.pickerDescription}>{tool.description}</span>
                       ) : null}
                     </span>
                   ),
                 } satisfies TreeDataNode;
               })
             : undefined,
+          disableCheckbox: isBoxFullyMounted(box),
           key: `${BOX_KEY_PREFIX}${box.id}`,
           title: (
             <span className={styles.pickerNode}>
@@ -374,13 +435,18 @@ export function CapabilityMountModal({
                   count: tools?.length ?? box.toolCount ?? 0,
                 })}
               </span>
+              {mountedCount > 0 ? (
+                <Tag>
+                  {t("knowledgeNetwork.capabilityPickerBoxMounted", { count: mountedCount })}
+                </Tag>
+              ) : null}
             </span>
           ),
       });
 
       return nodes;
     }, []);
-  }, [isToolMounted, keyword, t, toolsByBox, visibleBoxes]);
+  }, [isBoxFullyMounted, isToolMounted, keyword, mountedCountByBox, t, toolsByBox, visibleBoxes]);
 
   const checkedBoxIds = checkedKeys
     .filter((key) => key.startsWith(BOX_KEY_PREFIX))
@@ -575,7 +641,10 @@ export function CapabilityMountModal({
                   blockNode
                   checkStrictly
                   checkable
-                  checkedKeys={{ checked: checkedKeys, halfChecked: halfCheckedBoxKeys }}
+                  checkedKeys={{
+                    checked: [...checkedKeys, ...lockedKeys],
+                    halfChecked: halfCheckedBoxKeys,
+                  }}
                   expandedKeys={expandedKeys}
                   loadData={(node) =>
                     loadBoxTools(String(node.key).slice(BOX_KEY_PREFIX.length))
@@ -586,7 +655,7 @@ export function CapabilityMountModal({
                   }}
                   onExpand={(keys) => setExpandedKeys(keys.map(String))}
                   onSelect={(_keys, info) => {
-                    if (info.node.disabled) {
+                    if (info.node.disabled || info.node.disableCheckbox) {
                       return;
                     }
 

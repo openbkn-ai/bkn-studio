@@ -67,11 +67,7 @@ export const capabilityPart = {
     "The asset is gone from the execution factory: calls will not hit it. Release it or mount a replacement.",
   capabilityMetadataUnavailable:
     "The execution factory is unreachable, so names and statuses are blank. The bindings themselves are intact — refresh later.",
-  capabilityBoxTopUpTitle: "{{boxName}}: {{mounted}}/{{total}} tools mounted",
-  capabilityBoxTopUpAction: "Mount {{count}} new tools",
-  capabilityBoxTopUpAction_one: "Mount {{count}} new tool",
-  capabilityBoxTopUpAction_other: "Mount {{count}} new tools",
-  capabilityBoxMissing: "Toolset deleted from the execution factory",
+  capabilityBoxMissing: "{{boxName}}: toolset deleted from the execution factory",
   capabilityEmptyFunctions:
     "No function mounted yet. Use Mount function to pick from a code toolset.",
   capabilityEmptyMcpTools:
@@ -87,6 +83,7 @@ export const capabilityPart = {
   capabilityPickerSearchPlaceholder: "Search by name",
   capabilityPickerSelected: "{{count}} selected",
   capabilityPickerMounted: "Mounted",
+  capabilityPickerBoxMounted: "{{count}} mounted",
   capabilityPickerSelectWholeBox: "Whole toolset",
   capabilityPickerSelectAll: "Select all",
   capabilityPickerBoxToolCount: "{{count}} tools",

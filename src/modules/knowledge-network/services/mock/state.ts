@@ -1172,23 +1172,18 @@ export function listMockCapabilities(
   );
   const offset = query.offset ?? 0;
   const limit = query.limit ?? filtered.length;
-  const boxes = new Map<string, { mounted: number; name: string }>();
+  const boxes = new Map<string, string>();
   filtered
     .filter((item) => item.boundAsBox && item.boxId)
     .forEach((item) => {
-      const summary = boxes.get(item.boxId) ?? { mounted: 0, name: item.boxName };
-      summary.mounted += 1;
-      boxes.set(item.boxId, summary);
+      boxes.set(item.boxId, item.boxName);
     });
 
   return {
-    boxes: [...boxes.entries()].map(([boxId, summary]) => ({
+    boxes: [...boxes.entries()].map(([boxId, boxName]) => ({
       boxId,
       boxMissing: false,
-      boxName: summary.name,
-      mountedTools: summary.mounted,
-      totalTools: summary.mounted,
-      unmountedTools: 0,
+      boxName,
     })),
     entries: filtered.slice(offset, offset + limit),
     metadataAvailable: true,
