@@ -166,7 +166,7 @@ type GEdge = {
 
 ### 7.1 左栏
 
-- Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
+- Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」折叠面板（`exclude_object_types`、`concept_groups`、`max_instances_per_type` 默认 20、`max_object_types` 默认 10 且不低于已选对象类数、`rerank`）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
 - Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。
 - 对象类与属性下拉同时按显示名与 id 过滤。
@@ -185,6 +185,7 @@ type GEdge = {
 - 路径区：起点 / 终点标签可关闭（清除该端点）；只要选了任一端点或存在高亮，就显示「取消路径」按钮，一键清起点、终点与高亮。
 - 布局：`force`（默认）/ `dagre` / `radial` / `circular` / `grid`，切换后立即重排。
 - 节点形状：`circle`（默认）/ `rect` / `diamond` / `ellipse` / `hexagon` / `star`，全局生效。
+- 节点名 / 边名开关：分别隐藏或显示节点标签与边标签，随 settings 持久化（`showNodeLabels` / `showEdgeLabels`，默认开）。
 - 标签属性：按对象类选择，见 6.5。
 - 适配视口（只在内容溢出时缩放，之后居中；单节点不会被放大到满屏）、清空画布、清除本地缓存（同时丢弃尚未落盘的防抖写入）。
 
@@ -203,7 +204,7 @@ type GEdge = {
   nodes: GNode[],
   edges: GEdge[],
   positions: Record<string, { x: number; y: number; fixed?: boolean }>,
-  settings: { layout, shape, labelByOt: Record<string, string> }
+  settings: { layout, shape, labelByOt: Record<string, string>, colorByOt: Record<string, number>, showNodeLabels: boolean, showEdgeLabels: boolean }
 }
 ```
 
