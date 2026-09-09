@@ -201,11 +201,11 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     body: { kn_id: "your_kn_id", at_id: "your_action_type", _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }] },
   },
   {
-    id: "find_skills",
-    summary: "Recalls candidate skills from business context. kn_id and object_type_id are object-type level; instance_identities make it instance-level.",
-    path: `${REST_PREFIX}/kn/find_skills`,
+    id: "search_capabilities",
+    summary: "Ranks every kind the knowledge network mounted in one space: Skills, Function tools, API tools and MCP tools. Narrow with types, and split Function tools further with metadata_types.",
+    path: `${REST_PREFIX}/kn/search_capabilities`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "your_kn_id", object_type_id: "your_object_type", instance_identities: [{ id: "instance_000001" }], skill_query: "Example skill search", top_k: 10 },
+    body: { kn_id: "your_kn_id", query: "Example capability search", types: ["skill", "function", "mcp_tool"], limit: 20 },
   },
   {
     id: "list_knowledge_networks",
@@ -606,6 +606,22 @@ export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> 
 }
 
 /** Converts live MCP tools/list entries into ContextLoaderOp when no local op exists. */
+/** Builds the MCP op list from what the deployment reports through tools/list.
+ *
+ * The deployment owns the surface. CONTEXT_LOADER_OPS only supplies the curated summary and
+ * example arguments for the tools it reports; anything else is synthesized from the tool's own
+ * inputSchema, and a tool the deployment does not report is not in the list.
+ *
+ * `null` means tools/list has not answered — no list yet, rather than the local one. Substituting
+ * the local list made the panel announce "loaded N services" for a compiled-in constant, so a
+ * stale build and a real surface were indistinguishable: it listed find_skills after that tool was
+ * retired, while hiding every tool added since the constant was last touched.
+ */
+export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
+  if (!toolDefs) return [];
+  return toolDefs.map((tool) => CONTEXT_LOADER_OPS.find((op) => op.id === tool.name) ?? synthesizeOp(tool));
+}
+
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
   const body = exampleBodyFromSchema(tool.inputSchema);
   return {
