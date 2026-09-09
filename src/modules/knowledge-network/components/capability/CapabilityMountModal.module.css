@@ -177,6 +177,16 @@
   text-align: center;
 }
 
+/*
+ * antd's footer is a plain block, so a count placed before the buttons sat flush against them and
+ * an auto margin had nothing to push against. One flex row, as the action-type picker does it.
+ */
+.pickerFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pickerFooterInfo {
   margin-inline-end: auto;
   color: var(--color-text-secondary);

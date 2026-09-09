@@ -564,35 +564,34 @@ export function CapabilityMountModal({
     <Modal
       className={`${modalStyles.businessModal} ${styles.pickerModal}`}
       confirmLoading={submitting}
-      footer={[
-        <span className={styles.pickerFooterInfo} key="info">
-          {t("knowledgeNetwork.capabilityPickerSelected", { count: selectedCount })}
-        </span>,
-        <AppButton key="cancel" onClick={onCancel}>
-          {t("common.cancel")}
-        </AppButton>,
-        <AppButton
-          disabled={selectedCount === 0}
-          key="confirm"
-          loading={submitting}
-          onClick={() => {
-            void (async () => {
-              setSubmitting(true);
-              setError(null);
-              try {
-                await onSubmit(buildInputs());
-              } catch (requestError) {
-                setError(extractRequestErrorMessage(requestError));
-              } finally {
-                setSubmitting(false);
-              }
-            })();
-          }}
-          type="primary"
-        >
-          {t("knowledgeNetwork.capabilityPickerConfirm")}
-        </AppButton>,
-      ]}
+      footer={
+        <div className={styles.pickerFooter}>
+          <span className={styles.pickerFooterInfo}>
+            {t("knowledgeNetwork.capabilityPickerSelected", { count: selectedCount })}
+          </span>
+          <AppButton onClick={onCancel}>{t("common.cancel")}</AppButton>
+          <AppButton
+            disabled={selectedCount === 0}
+            loading={submitting}
+            onClick={() => {
+              void (async () => {
+                setSubmitting(true);
+                setError(null);
+                try {
+                  await onSubmit(buildInputs());
+                } catch (requestError) {
+                  setError(extractRequestErrorMessage(requestError));
+                } finally {
+                  setSubmitting(false);
+                }
+              })();
+            }}
+            type="primary"
+          >
+            {t("knowledgeNetwork.capabilityPickerConfirm")}
+          </AppButton>
+        </div>
+      }
       onCancel={onCancel}
       open={open}
       title={title}
