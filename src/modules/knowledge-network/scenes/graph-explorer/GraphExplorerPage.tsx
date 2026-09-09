@@ -27,6 +27,7 @@ import {
   mergeGraph,
   parseRelationPaths,
   relabel,
+  runCypherQuery,
   shortestChainTo,
   type ExpandDirection,
   type GEdge,
@@ -52,9 +53,11 @@ import { GraphCanvas, type CanvasMarks, type GraphCanvasHandle } from "./GraphCa
 import styles from "./GraphExplorerPage.module.css";
 import { NodeDrawer } from "./NodeDrawer";
 import { buildCondition } from "./condition-builder";
+import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
 import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
+const CYPHER_ROW_LIMIT = 200;
 const UNKNOWN_COLOR = "#8c8c8c";
 
 type Highlight = { nodes: Set<string>; edges: Set<string> } | null;
@@ -553,6 +556,71 @@ export function GraphExplorerScene() {
     [client, detail, loadMetas, runTurn, t],
   );
 
+  const handleCypher = useCallback(
+    async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
+      const parsed = parseCypherPattern(fragment);
+      if (isCypherParseError(parsed)) {
+        const key = { empty: "parseEmpty", no_match: "parseNoNodes", no_nodes: "parseNoNodes", return_present: "parseReturn", unlabeled: "parseUnlabeled" }[parsed.error];
+        throw new Error(t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }));
+      }
+      const types = detail?.object_types ?? [];
+      const relations = detail?.relation_types ?? [];
+      const typeByLabel = (label: string) => types.find((item) => item.id === label) ?? types.find((item) => (item.name ?? "").trim() === label);
+      const otIds: string[] = [];
+      for (const node of parsed.nodes) {
+        const found = typeByLabel(node.label);
+        if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: node.label }));
+        otIds.push(found.id);
+      }
+      const resolvedEdges: ResolvedEdgeRef[] = parsed.edges.map((edge) => {
+        const found = relations.find((item) => item.id === edge.relation) ?? relations.find((item) => (item.name ?? "").trim() === edge.relation);
+        if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }));
+        return { ...edge, relTypeId: found.id, relTypeName: found.name?.trim() || found.id };
+      });
+      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn) => {
+        const metas = await loadMetas([...new Set(otIds)], turn);
+        const resolvedNodes: ResolvedNodeRef[] = parsed.nodes.map((node, index) => {
+          const otId = otIds[index];
+          const meta = metas[otId];
+          if (!meta || meta.primaryKeys.length === 0) {
+            throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+          }
+          return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
+        });
+        const result = await runCypherQuery(networkId, buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT));
+        const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
+        // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
+        const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
+        for (const node of resolvedNodes) {
+          if (node.primaryKeys.length !== 1) continue;
+          const pk = node.primaryKeys[0];
+          const values = graph.nodes.filter((item) => item.otId === node.otId).map((item) => item.identity[pk]);
+          for (let start = 0; start < values.length; start += 50) {
+            const chunk = values.slice(start, start + 50);
+            const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+            for (const full of fromQueryObjectInstance(metas[node.otId], payload, settingsRef.current.labelByOt[node.otId])) {
+              if (enriched.has(full.id)) enriched.set(full.id, full);
+            }
+          }
+        }
+        return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length };
+      });
+      if (!outcome) throw new Error("");
+      return outcome;
+    },
+    [client, detail, loadMetas, networkId, runTurn, t],
+  );
+
+  const handleAddGraph = useCallback(
+    (nodes: GNode[], edges: GEdge[]) => {
+      void addToCanvas(nodes, edges).then((added) => {
+        if (added && (added.nodes > 0 || added.edges > 0)) message.success(t("knowledgeNetwork.graphExplorer.toast.added", { count: added.nodes }));
+        else if (added) message.info(t("knowledgeNetwork.graphExplorer.toast.nothingNew"));
+      });
+    },
+    [addToCanvas, message, t],
+  );
+
   const handleBrowse = useCallback(
     async (otId: string, offset: number): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
@@ -638,6 +706,9 @@ export function GraphExplorerScene() {
         onLocate={handleLocate}
         onQuery={handleQuery}
         onBrowse={handleBrowse}
+        onCypher={handleCypher}
+        onAddGraph={handleAddGraph}
+        cypherRowLimit={CYPHER_ROW_LIMIT}
         onAdd={handleAdd}
         canvasIds={canvasIds}
         disabled={disabled}

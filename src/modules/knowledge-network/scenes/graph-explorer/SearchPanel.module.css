@@ -135,11 +135,15 @@
   gap: 8px;
 }
 
-.advancedRow {
-  display: flex;
+.advancedGrid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: 8px 12px;
+}
+
+.advancedNumber {
+  width: 100%;
 }
 
 .advancedLabel {

@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DEFAULT_SEARCH_OPTIONS,
+  type GEdge,
   type GNode,
   type KnCondition,
   type ObjectTypeMeta,
@@ -34,6 +35,11 @@ export type SearchPanelProps = {
   onQuery: (otId: string, condition: KnCondition | null) => Promise<GNode[]>;
   /** Lists instances of one object type without a filter, `offset` rows in. */
   onBrowse: (otId: string, offset: number) => Promise<GNode[]>;
+  /** Runs a MATCH / WHERE fragment through Cypher and returns the rebuilt subgraph plus the row count. */
+  onCypher: (fragment: string) => Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }>;
+  /** Adds nodes together with the edges among them. */
+  onAddGraph: (nodes: GNode[], edges: GEdge[]) => void;
+  cypherRowLimit: number;
   onAdd: (nodes: GNode[]) => void;
   canvasIds: ReadonlySet<string>;
   disabled: boolean;
@@ -134,13 +140,34 @@ export function SearchPanel({
   onLocate,
   onQuery,
   onBrowse,
+  onCypher,
+  onAddGraph,
+  cypherRowLimit,
   onAdd,
   canvasIds,
   disabled,
   colorOf,
 }: SearchPanelProps) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"semantic" | "condition" | "browse">("semantic");
+  const [tab, setTab] = useState<"semantic" | "condition" | "browse" | "cypher">("semantic");
+
+  const [cypherText, setCypherText] = useState("");
+  const [cypherRunning, setCypherRunning] = useState(false);
+  const [cypherError, setCypherError] = useState<string | null>(null);
+  const [cypherGraph, setCypherGraph] = useState<{ nodes: GNode[]; edges: GEdge[]; rows: number } | null>(null);
+
+  const runCypher = async () => {
+    if (!cypherText.trim() || disabled) return;
+    setCypherRunning(true);
+    setCypherError(null);
+    try {
+      setCypherGraph(await onCypher(cypherText));
+    } catch (error) {
+      setCypherError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCypherRunning(false);
+    }
+  };
 
   const [browseOt, setBrowseOt] = useState<string | undefined>(undefined);
   const [browsing, setBrowsing] = useState(false);
@@ -293,10 +320,11 @@ export function SearchPanel({
                   options={conceptGroups.map((item) => ({ value: item.id, label: item.name }))}
                   onChange={(value: string[]) => patchSearch({ conceptGroups: value })}
                 />
-                <div className={styles.advancedRow}>
+                <div className={styles.advancedGrid}>
                   <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType")}</span>
                   <InputNumber
                     size="small"
+                    className={styles.advancedNumber}
                     min={1}
                     max={200}
                     value={searchOptions.maxInstancesPerType}
@@ -305,6 +333,7 @@ export function SearchPanel({
                   <span className={styles.advancedLabel}>{t("knowledgeNetwork.graphExplorer.search.maxObjectTypes")}</span>
                   <InputNumber
                     size="small"
+                    className={styles.advancedNumber}
                     min={1}
                     max={100}
                     value={searchOptions.maxObjectTypes}
@@ -480,16 +509,60 @@ export function SearchPanel({
     </div>
   );
 
+  const cypherPane = (
+    <div className={styles.pane}>
+      <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.cypher.hint", { limit: cypherRowLimit })}</Typography.Text>
+      <Input.TextArea
+        data-testid="graph-explorer-cypher"
+        value={cypherText}
+        disabled={disabled}
+        autoSize={{ minRows: 4, maxRows: 10 }}
+        placeholder={t("knowledgeNetwork.graphExplorer.cypher.placeholder")}
+        onChange={(event) => setCypherText(event.target.value)}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void runCypher();
+        }}
+      />
+      <div className={styles.conditionActions}>
+        <Button type="primary" data-testid="graph-explorer-cypher-run" loading={cypherRunning} disabled={disabled || !cypherText.trim()} onClick={() => void runCypher()}>
+          {t("knowledgeNetwork.graphExplorer.cypher.run")}
+        </Button>
+        {cypherGraph && cypherGraph.nodes.length > 0 ? (
+          <Button data-testid="graph-explorer-cypher-add-all" onClick={() => onAddGraph(cypherGraph.nodes, cypherGraph.edges)}>
+            {t("knowledgeNetwork.graphExplorer.cypher.addAll", { nodes: cypherGraph.nodes.length, edges: cypherGraph.edges.length })}
+          </Button>
+        ) : null}
+      </div>
+      {cypherError ? <Alert className={styles.alert} type="error" showIcon message={cypherError} /> : null}
+      {cypherGraph ? (
+        <Typography.Text type="secondary">
+          {t("knowledgeNetwork.graphExplorer.cypher.summary", { rows: cypherGraph.rows, nodes: cypherGraph.nodes.length, edges: cypherGraph.edges.length })}
+        </Typography.Text>
+      ) : null}
+      <Spin spinning={cypherRunning}>
+        <ResultList
+          nodes={cypherGraph?.nodes ?? []}
+          canvasIds={canvasIds}
+          onAdd={(nodes) => onAddGraph(nodes, cypherGraph?.edges ?? [])}
+          colorOf={colorOf}
+          emptyText={t("knowledgeNetwork.graphExplorer.cypher.empty")}
+          searched={cypherGraph !== null}
+        />
+      </Spin>
+    </div>
+  );
+
   return (
     <aside className={styles.panel}>
       <Tabs
         activeKey={tab}
-        onChange={(key) => setTab(key as "semantic" | "condition" | "browse")}
+        onChange={(key) => setTab(key as "semantic" | "condition" | "browse" | "cypher")}
         className={styles.tabs}
         items={[
           { key: "semantic", label: t("knowledgeNetwork.graphExplorer.tabs.semantic"), children: semanticPane },
           { key: "condition", label: t("knowledgeNetwork.graphExplorer.tabs.condition"), children: conditionPane },
           { key: "browse", label: t("knowledgeNetwork.graphExplorer.tabs.browse"), children: browsePane },
+          { key: "cypher", label: t("knowledgeNetwork.graphExplorer.tabs.cypher"), children: cypherPane },
         ]}
       />
     </aside>

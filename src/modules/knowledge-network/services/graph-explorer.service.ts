@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
 import type { BknCallScope, McpSession, McpToolCallResult } from "./context-loader.service";
@@ -406,6 +407,31 @@ function lastJsonObject(text: string): string {
     }
   }
   return "";
+}
+
+/* ============================ Cypher (bkn-backend) ============================ */
+
+export type CypherResult = { columns: { name: string; type?: string }[]; entries: Record<string, unknown>[] };
+
+/**
+ * Runs a read-only Cypher query through bkn-backend. This is a plain REST call: the
+ * endpoint is not part of the managed lifecycle surface, so no bkn_context is needed.
+ * A failure is rethrown with the backend's JSON envelope as the message so friendlyError
+ * can surface its description and detail.
+ */
+export async function runCypherQuery(knId: string, query: string): Promise<CypherResult> {
+  try {
+    const response = await http.post<unknown>(`/bkn-backend/v1/knowledge-networks/${encodeURIComponent(knId)}/cypher-queries`, { query }, { skipErrorToast: true });
+    const data: unknown = response.data;
+    if (!isRecord(data)) throw new Error("cypher-queries did not return an object");
+    const columns = Array.isArray(data.columns) ? data.columns.filter(isRecord).map((c) => ({ name: stringifyValue(c.name), type: typeof c.type === "string" ? c.type : undefined })) : [];
+    const entries = Array.isArray(data.entries) ? data.entries.filter(isRecord) : [];
+    return { columns, entries };
+  } catch (error) {
+    const body = (error as { response?: { data?: unknown } })?.response?.data;
+    if (isRecord(body)) throw new Error(JSON.stringify(body));
+    throw error instanceof Error ? error : new Error(String(error));
+  }
 }
 
 /* ============================ MCP calls ============================ */
