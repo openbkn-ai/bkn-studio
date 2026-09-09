@@ -595,7 +595,11 @@ export function GraphExplorerScene() {
           onRelayout={() => void canvasRef.current?.relayout()}
           onFitView={() => void canvasRef.current?.fitView()}
           onFindPath={() => void findPath()}
-          onClearPath={() => setHighlight(null)}
+          onClearPath={() => {
+            setPathStart(null);
+            setPathEnd(null);
+            setHighlight(null);
+          }}
           onClearPathStart={() => {
             setPathStart(null);
             setHighlight(null);

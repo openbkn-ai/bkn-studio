@@ -132,8 +132,8 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         >
           {t("knowledgeNetwork.graphExplorer.toolbar.findPath")}
         </Button>
-        {pathActive ? (
-          <Button size="small" onClick={onClearPath}>
+        {pathActive || pathStart || pathEnd ? (
+          <Button size="small" data-testid="graph-explorer-clear-path" onClick={onClearPath}>
             {t("knowledgeNetwork.graphExplorer.toolbar.clearPath")}
           </Button>
         ) : null}
