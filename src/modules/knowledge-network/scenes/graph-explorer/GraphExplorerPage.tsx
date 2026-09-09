@@ -444,9 +444,13 @@ export function GraphExplorerScene() {
     setPositionsRev((value) => value + 1);
   }, []);
 
+  // Pending debounced save, so "clear cache" can drop a write that was already scheduled.
+  const saveTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!networkId) return;
     const handle = window.setTimeout(() => {
+      saveTimerRef.current = null;
       const positions: Record<string, NodePosition> = {};
       for (const [id, position] of Object.entries(positionsRef.current)) {
         positions[id] = pinned.has(id) ? { ...position, fixed: true } : { x: position.x, y: position.y };
@@ -459,10 +463,18 @@ export function GraphExplorerScene() {
       });
       if (outcome === "settings-only") message.warning(t("knowledgeNetwork.graphExplorer.toast.cacheSaveFailed"));
     }, SAVE_DEBOUNCE_MS);
-    return () => window.clearTimeout(handle);
+    saveTimerRef.current = handle;
+    return () => {
+      window.clearTimeout(handle);
+      if (saveTimerRef.current === handle) saveTimerRef.current = null;
+    };
   }, [graphRev, message, networkId, pinned, positionsRev, settings, t]);
 
   const handleClearCache = useCallback(() => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
     clearCache(networkId);
     setRestored(false);
     message.success(t("knowledgeNetwork.graphExplorer.toast.cacheCleared"));
