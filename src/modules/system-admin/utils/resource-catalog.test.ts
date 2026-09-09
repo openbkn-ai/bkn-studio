@@ -60,7 +60,6 @@ describe("resource-catalog", () => {
     for (const type of [
       "agent",
       "agent_tpl",
-      "connector_type",
       "data_flow",
       "risk_type",
       "stream_data_pipeline",
@@ -70,6 +69,7 @@ describe("resource-catalog", () => {
     expect(roleGrantTypes).toEqual(
       expect.arrayContaining([
         "concept_group",
+        "connector_type",
         "object_type",
         "relation_type",
         "action_type",
@@ -78,11 +78,12 @@ describe("resource-catalog", () => {
     );
   });
 
-  it("uses the product names for the data connection and data directory", async () => {
+  it("uses the resource-type names in the role grant selector", async () => {
     await i18n.changeLanguage("zh-CN");
 
-    expect(resourceTypeLabel("catalog")).toBe("数据连接");
-    expect(resourceTypeLabel("resource")).toBe("数据目录");
+    expect(resourceTypeLabel("catalog")).toBe("数据目录");
+    expect(resourceTypeLabel("resource")).toBe("数据资源");
+    expect(resourceTypeLabel("connector_type")).toBe("数据连接");
   });
 
   it("offers task management only for action types among knowledge-network children", () => {
