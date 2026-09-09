@@ -50,7 +50,8 @@ import { OBJECT_TYPE_PALETTE, type MenuAction } from "./constants";
 import { GraphCanvas, type CanvasMarks, type GraphCanvasHandle } from "./GraphCanvas";
 import styles from "./GraphExplorerPage.module.css";
 import { NodeDrawer } from "./NodeDrawer";
-import { SearchPanel } from "./SearchPanel";
+import { buildCondition } from "./condition-builder";
+import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
 const UNKNOWN_COLOR = "#8c8c8c";
@@ -470,9 +471,9 @@ export function GraphExplorerScene() {
   /* ------------------------------ search callbacks ------------------------------ */
 
   const handleSearch = useCallback(
-    async (query: string): Promise<GNode[]> => {
+    async (query: string, objectTypeIds: string[]): Promise<GNode[]> => {
       const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn) => {
-        const payload = await client.searchInstances(query, turn);
+        const payload = await client.searchInstances(query, turn, objectTypeIds);
         const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
         const needMeta = new Set<string>();
         for (const hit of hits) {
@@ -500,6 +501,45 @@ export function GraphExplorerScene() {
         const metas = await loadMetas([otId], turn);
         const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
         const payload = await client.queryInstances(otId, condition, 50, turn);
+        return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
+      });
+      if (nodes === undefined) throw new Error("");
+      return nodes;
+    },
+    [client, detail, loadMetas, runTurn, t],
+  );
+
+  const handleLocate = useCallback(
+    async (otId: string, rawKey: string): Promise<GNode[]> => {
+      const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.locateTurn", { ot: otName }), async (turn) => {
+        const metas = await loadMetas([otId], turn);
+        const meta = metas[otId];
+        if (!meta || meta.primaryKeys.length === 0) {
+          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: otName }));
+        }
+        // One value per primary key, in key order; a single-key type takes the whole input verbatim.
+        const values = meta.primaryKeys.length === 1 ? [rawKey] : rawKey.split(",").map((part) => part.trim());
+        const rows = meta.primaryKeys.map((field, index) => ({ field, operator: "==", value: values[index] ?? "" }));
+        const condition = buildCondition(rows, meta.properties);
+        if (!condition) return [];
+        const payload = await client.queryInstances(otId, condition, 10, turn);
+        return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
+      });
+      if (nodes === undefined) throw new Error("");
+      return nodes;
+    },
+    [client, detail, loadMetas, runTurn, t],
+  );
+
+  const handleBrowse = useCallback(
+    async (otId: string, offset: number): Promise<GNode[]> => {
+      const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
+      const page = Math.floor(offset / BROWSE_PAGE_SIZE) + 1;
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.turn", { ot: otName, page }), async (turn) => {
+        const metas = await loadMetas([otId], turn);
+        const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
+        const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, turn, offset);
         return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
       });
       if (nodes === undefined) throw new Error("");
@@ -569,7 +609,9 @@ export function GraphExplorerScene() {
         metaByOt={metaByOt}
         ensureMeta={ensureMeta}
         onSearch={handleSearch}
+        onLocate={handleLocate}
         onQuery={handleQuery}
+        onBrowse={handleBrowse}
         onAdd={handleAdd}
         canvasIds={canvasIds}
         disabled={disabled}

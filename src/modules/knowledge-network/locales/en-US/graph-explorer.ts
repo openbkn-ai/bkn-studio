@@ -13,12 +13,25 @@ export const graphExplorerPart = {
     tabs: {
       semantic: "Semantic search",
       condition: "Filter query",
+      browse: "Browse",
+    },
+    browse: {
+      hint: "Pick an object type and list its instances directly; choose your own starting points.",
+      load: "List instances",
+      more: "Load more",
+      empty: "This object type has no instances",
+      turn: "Graph explorer: browse {{ot}} page {{page}}",
+      locate: "Locate by primary key",
+      locatePlaceholder: "Primary key value; composite keys comma-separated in order",
+      locateTurn: "Graph explorer: locate {{ot}} by primary key",
+      locateEmpty: "No instance with that primary key",
     },
     search: {
       placeholder: "Describe the instance in natural language, press Enter to search",
       button: "Search",
       empty: "No matching instances",
       resultCount: "{{count}} results",
+      scopePlaceholder: "Limit to object types (optional; all when empty)",
     },
     condition: {
       objectType: "Object type",

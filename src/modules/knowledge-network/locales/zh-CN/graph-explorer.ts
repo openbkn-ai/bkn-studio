@@ -13,12 +13,25 @@ export const graphExplorerPart = {
     tabs: {
       semantic: "语义搜索",
       condition: "条件查询",
+      browse: "浏览",
+    },
+    browse: {
+      hint: "选一个对象类，直接列出它的实例，自己挑起点。",
+      load: "列出实例",
+      more: "加载更多",
+      empty: "该对象类没有实例",
+      turn: "图探索：浏览 {{ot}} 第 {{page}} 页",
+      locate: "按主键定位",
+      locatePlaceholder: "输入主键值；复合主键按顺序用逗号分隔",
+      locateTurn: "图探索：按主键定位 {{ot}}",
+      locateEmpty: "没有这个主键的实例",
     },
     search: {
       placeholder: "用自然语言描述要找的实例，回车搜索",
       button: "搜索",
       empty: "没有匹配的实例",
       resultCount: "{{count}} 条结果",
+      scopePlaceholder: "限定对象类（可选，不选则全网）",
     },
     condition: {
       objectType: "对象类",

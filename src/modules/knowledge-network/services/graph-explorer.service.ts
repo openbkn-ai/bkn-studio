@@ -444,8 +444,8 @@ export type ExploreRequest = {
 
 export type GraphExplorerClient = {
   loadObjectTypes(ids: string[], scope?: BknCallScope | null): Promise<ObjectTypeMeta[]>;
-  searchInstances(query: string, scope?: BknCallScope | null): Promise<Rec>;
-  queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null): Promise<Rec>;
+  searchInstances(query: string, scope?: BknCallScope | null, objectTypes?: string[]): Promise<Rec>;
+  queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
 };
 
@@ -461,16 +461,19 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       const list = Array.isArray(payload.object_types) ? payload.object_types : [];
       return list.map(objectTypeMetaFrom).filter((meta): meta is ObjectTypeMeta => meta !== null);
     },
-    async searchInstances(query, scope) {
-      const result = await session.callTool(
-        "search_instance",
-        withContext({ kn_id: knId, query, max_instances_per_type: 20, response_format: "json" }, scope),
-      );
+    async searchInstances(query, scope, objectTypes = []) {
+      const args: Rec = { kn_id: knId, query, max_instances_per_type: 20, response_format: "json" };
+      if (objectTypes.length > 0) {
+        args.object_types = objectTypes;
+        args.max_object_types = Math.max(objectTypes.length, 10);
+      }
+      const result = await session.callTool("search_instance", withContext(args, scope));
       return readPayload(result, "search_instance");
     },
-    async queryInstances(otId, condition, limit, scope) {
+    async queryInstances(otId, condition, limit, scope, offset = 0) {
       const args: Rec = { kn_id: knId, ot_id: otId, limit, response_format: "json" };
       if (condition) args.condition = condition;
+      if (offset > 0) args.offset = offset;
       const result = await session.callTool("query_object_instance", withContext(args, scope));
       return readPayload(result, "query_object_instance");
     },

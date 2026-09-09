@@ -20,8 +20,13 @@ export type SearchPanelProps = {
   metaByOt: Record<string, ObjectTypeMeta>;
   /** Loads and caches the object type definition; resolves null when it cannot be loaded. */
   ensureMeta: (otId: string) => Promise<ObjectTypeMeta | null>;
-  onSearch: (query: string) => Promise<GNode[]>;
+  /** Semantic search, optionally limited to the given object type ids. */
+  onSearch: (query: string, objectTypeIds: string[]) => Promise<GNode[]>;
+  /** Exact lookup by primary key value(s); composite keys arrive comma-separated in key order. */
+  onLocate: (otId: string, rawKey: string) => Promise<GNode[]>;
   onQuery: (otId: string, condition: KnCondition | null) => Promise<GNode[]>;
+  /** Lists instances of one object type without a filter, `offset` rows in. */
+  onBrowse: (otId: string, offset: number) => Promise<GNode[]>;
   onAdd: (nodes: GNode[]) => void;
   canvasIds: ReadonlySet<string>;
   disabled: boolean;
@@ -111,11 +116,62 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
   );
 }
 
-export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQuery, onAdd, canvasIds, disabled, colorOf }: SearchPanelProps) {
+export const BROWSE_PAGE_SIZE = 50;
+
+export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onLocate, onQuery, onBrowse, onAdd, canvasIds, disabled, colorOf }: SearchPanelProps) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"semantic" | "condition">("semantic");
+  const [tab, setTab] = useState<"semantic" | "condition" | "browse">("semantic");
+
+  const [browseOt, setBrowseOt] = useState<string | undefined>(undefined);
+  const [browsing, setBrowsing] = useState(false);
+  const [browseError, setBrowseError] = useState<string | null>(null);
+  const [browseResults, setBrowseResults] = useState<GNode[]>([]);
+  const [browsed, setBrowsed] = useState(false);
+  const [browseExhausted, setBrowseExhausted] = useState(false);
+
+  const [locateKey, setLocateKey] = useState("");
+
+  const runLocate = async () => {
+    const raw = locateKey.trim();
+    if (!browseOt || !raw || disabled) return;
+    setBrowsing(true);
+    setBrowseError(null);
+    try {
+      const hits = await onLocate(browseOt, raw);
+      setBrowseResults(hits);
+      setBrowseExhausted(true);
+      setBrowsed(true);
+      if (hits.length === 0) setBrowseError(t("knowledgeNetwork.graphExplorer.browse.locateEmpty"));
+    } catch (error) {
+      setBrowseError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
+  const runBrowse = async (append: boolean) => {
+    if (!browseOt || disabled) return;
+    setBrowsing(true);
+    setBrowseError(null);
+    try {
+      const offset = append ? browseResults.length : 0;
+      const page = await onBrowse(browseOt, offset);
+      setBrowseResults((previous) => {
+        const base = append ? previous : [];
+        const seen = new Set(base.map((node) => node.id));
+        return [...base, ...page.filter((node) => !seen.has(node.id))];
+      });
+      setBrowseExhausted(page.length < BROWSE_PAGE_SIZE);
+      setBrowsed(true);
+    } catch (error) {
+      setBrowseError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBrowsing(false);
+    }
+  };
 
   const [query, setQuery] = useState("");
+  const [scopeOts, setScopeOts] = useState<string[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<GNode[]>([]);
@@ -137,7 +193,7 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
     setSearching(true);
     setSearchError(null);
     try {
-      setSearchResults(await onSearch(text));
+      setSearchResults(await onSearch(text, scopeOts));
       setSearched(true);
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : String(error));
@@ -167,6 +223,20 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
 
   const semanticPane = (
     <div className={styles.pane}>
+      <Select
+        className={styles.fullWidth}
+        data-testid="graph-explorer-search-scope"
+        mode="multiple"
+        allowClear
+        showSearch
+        maxTagCount="responsive"
+        filterOption={matchIdOrLabel}
+        disabled={disabled}
+        value={scopeOts}
+        placeholder={t("knowledgeNetwork.graphExplorer.search.scopePlaceholder")}
+        options={objectTypes.map((item) => ({ value: item.id, label: item.name }))}
+        onChange={(value: string[]) => setScopeOts(value)}
+      />
       <Input.Search
         data-testid="graph-explorer-search-input"
         value={query}
@@ -278,15 +348,67 @@ export function SearchPanel({ objectTypes, metaByOt, ensureMeta, onSearch, onQue
     </div>
   );
 
+  const browsePane = (
+    <div className={styles.pane}>
+      <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.browse.hint")}</Typography.Text>
+      <Select
+        className={styles.fullWidth}
+        data-testid="graph-explorer-browse-ot"
+        showSearch
+        filterOption={matchIdOrLabel}
+        disabled={disabled}
+        value={browseOt}
+        placeholder={t("knowledgeNetwork.graphExplorer.condition.objectTypePlaceholder")}
+        options={objectTypes.map((item) => ({ value: item.id, label: item.name }))}
+        onChange={(value: string) => {
+          setBrowseOt(value);
+          setBrowseResults([]);
+          setBrowsed(false);
+          setBrowseExhausted(false);
+          void ensureMeta(value);
+        }}
+      />
+      <Input.Search
+        data-testid="graph-explorer-locate"
+        value={locateKey}
+        disabled={disabled || !browseOt}
+        enterButton={t("knowledgeNetwork.graphExplorer.browse.locate")}
+        placeholder={t("knowledgeNetwork.graphExplorer.browse.locatePlaceholder")}
+        onChange={(event) => setLocateKey(event.target.value)}
+        onSearch={() => void runLocate()}
+      />
+      <Button type="primary" data-testid="graph-explorer-browse" loading={browsing} disabled={disabled || !browseOt} onClick={() => void runBrowse(false)}>
+        {t("knowledgeNetwork.graphExplorer.browse.load")}
+      </Button>
+      {browseError ? <Alert className={styles.alert} type="error" showIcon message={browseError} /> : null}
+      <Spin spinning={browsing}>
+        <ResultList
+          nodes={browseResults}
+          canvasIds={canvasIds}
+          onAdd={onAdd}
+          colorOf={colorOf}
+          emptyText={t("knowledgeNetwork.graphExplorer.browse.empty")}
+          searched={browsed}
+        />
+      </Spin>
+      {browsed && browseResults.length > 0 && !browseExhausted ? (
+        <Button block disabled={browsing} onClick={() => void runBrowse(true)}>
+          {t("knowledgeNetwork.graphExplorer.browse.more")}
+        </Button>
+      ) : null}
+    </div>
+  );
+
   return (
     <aside className={styles.panel}>
       <Tabs
         activeKey={tab}
-        onChange={(key) => setTab(key as "semantic" | "condition")}
+        onChange={(key) => setTab(key as "semantic" | "condition" | "browse")}
         className={styles.tabs}
         items={[
           { key: "semantic", label: t("knowledgeNetwork.graphExplorer.tabs.semantic"), children: semanticPane },
           { key: "condition", label: t("knowledgeNetwork.graphExplorer.tabs.condition"), children: conditionPane },
+          { key: "browse", label: t("knowledgeNetwork.graphExplorer.tabs.browse"), children: browsePane },
         ]}
       />
     </aside>
