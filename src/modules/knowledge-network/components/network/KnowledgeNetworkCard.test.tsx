@@ -5,13 +5,24 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { KnowledgeNetworkCard } from "./KnowledgeNetworkCard";
+
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import {
   formatKnowledgeNetworkUpdateTime,
   getKnowledgeNetworkCardMenuKeys,
+  getKnowledgeNetworkExportMenuKey,
+  KNOWLEDGE_NETWORK_EXPORT_FORMATS,
+  parseKnowledgeNetworkExportMenuKey,
 } from "./knowledge-network-card";
 
 function createRecord(operations?: string[]): KnowledgeNetworkRecord {
@@ -72,5 +83,68 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
     expect(hasKnowledgeNetworkRecordOperation(null, "modify")).toBe(false);
     expect(hasKnowledgeNetworkRecordOperation(createRecord(), "modify")).toBe(false);
     expect(hasKnowledgeNetworkRecordOperation(createRecord(["view_detail"]), "modify")).toBe(false);
+  });
+});
+
+describe("knowledge network export menu keys", () => {
+  it("offers both export formats", () => {
+    expect(KNOWLEDGE_NETWORK_EXPORT_FORMATS).toEqual(["json", "bkn"]);
+  });
+
+  it("routes a submenu key back to the format it stands for", () => {
+    KNOWLEDGE_NETWORK_EXPORT_FORMATS.forEach((format) => {
+      expect(parseKnowledgeNetworkExportMenuKey(getKnowledgeNetworkExportMenuKey(format))).toBe(
+        format,
+      );
+    });
+  });
+
+  it("does not read the other card actions as an export", () => {
+    expect(parseKnowledgeNetworkExportMenuKey("export")).toBeUndefined();
+    expect(parseKnowledgeNetworkExportMenuKey("delete")).toBeUndefined();
+  });
+});
+
+describe("KnowledgeNetworkCard export menu interaction", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  function renderCard() {
+    const handlers = {
+      onAuthorize: vi.fn(),
+      onDelete: vi.fn(),
+      onEdit: vi.fn(),
+      onExport: vi.fn(),
+      onOpen: vi.fn(),
+    };
+    const view = render(
+      <KnowledgeNetworkCard {...handlers} record={createRecord(["view_detail"])} />,
+    );
+
+    return { ...handlers, view };
+  }
+
+  it("expands the export formats without opening the workspace", async () => {
+    const { onExport, onOpen, view } = renderCard();
+
+    fireEvent.click(view.container.querySelector("button") as HTMLButtonElement);
+
+    const exportItem = await screen.findByText("knowledgeNetwork.export");
+    fireEvent.click(exportItem);
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(onExport).not.toHaveBeenCalled();
+  });
+
+  it("exports in the format picked from the submenu", async () => {
+    const { onExport, onOpen, view } = renderCard();
+
+    fireEvent.click(view.container.querySelector("button") as HTMLButtonElement);
+    fireEvent.mouseEnter(await screen.findByText("knowledgeNetwork.export"));
+    fireEvent.click(await screen.findByText("knowledgeNetwork.exportBkn"));
+
+    expect(onExport).toHaveBeenCalledWith(expect.objectContaining({ id: "network-1" }), "bkn");
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });

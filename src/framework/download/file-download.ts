@@ -21,6 +21,12 @@ export function sanitizeDownloadFilename(name: string, fallback: string) {
   return sanitized || fallback;
 }
 
+/**
+ * Reads the download name the backend chose. `filename*` is preferred over
+ * `filename` because only the former declares an encoding, so a name outside
+ * ASCII survives it; a header carrying neither leaves the caller to name the
+ * file itself.
+ */
 export function parseContentDispositionFilename(
   contentDisposition?: string,
 ): string | undefined {
@@ -28,9 +34,17 @@ export function parseContentDispositionFilename(
     return undefined;
   }
 
-  const filenameMatch = contentDisposition.match(
-    /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i,
-  );
+  const encoded = /filename\*=\s*(?:UTF-8|utf-8)''([^;]+)/.exec(contentDisposition)?.[1];
+
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded.trim()) || undefined;
+    } catch {
+      return encoded.trim() || undefined;
+    }
+  }
+
+  const filenameMatch = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i.exec(contentDisposition);
 
   if (!filenameMatch?.[1]) {
     return undefined;

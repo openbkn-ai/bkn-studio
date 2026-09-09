@@ -94,3 +94,10 @@ export type KnowledgeNetworkPreviewGraph = {
 };
 
 export type KnowledgeNetworkImportMode = "ignore" | "overwrite";
+
+/**
+ * "json" downloads the backend's export view as a single JSON document.
+ * "bkn" downloads the BKN tar package defined by the BKN specification, which
+ * also carries the capability dependency section the JSON view leaves out.
+ */
+export type KnowledgeNetworkExportFormat = "bkn" | "json";

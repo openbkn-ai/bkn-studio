@@ -11,11 +11,17 @@ import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
-import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import type {
+  KnowledgeNetworkExportFormat,
+  KnowledgeNetworkRecord,
+} from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
   formatKnowledgeNetworkUpdateTime,
   getKnowledgeNetworkCardMenuKeys,
+  getKnowledgeNetworkExportMenuKey,
+  KNOWLEDGE_NETWORK_EXPORT_FORMATS,
+  parseKnowledgeNetworkExportMenuKey,
 } from "./knowledge-network-card";
 import styles from "./KnowledgeNetworkCard.module.css";
 
@@ -23,7 +29,7 @@ type KnowledgeNetworkCardProps = {
   onAuthorize: (record: KnowledgeNetworkRecord) => void;
   onDelete: (record: KnowledgeNetworkRecord) => void;
   onEdit: (record: KnowledgeNetworkRecord) => void;
-  onExport: (record: KnowledgeNetworkRecord) => void;
+  onExport: (record: KnowledgeNetworkRecord, format: KnowledgeNetworkExportFormat) => void;
   onOpen: (record: KnowledgeNetworkRecord) => void;
   record: KnowledgeNetworkRecord;
 };
@@ -53,6 +59,21 @@ export function KnowledgeNetworkCard({
               : key === "authorize"
                 ? t("knowledgeNetwork.authorizeAction")
                 : t("common.delete"),
+      // Export is the one entry that fans out: the same network leaves either as
+      // the JSON view or as the BKN package, so the format is picked here rather
+      // than in a dialog after the click.
+      ...(key === "export"
+        ? {
+            children: KNOWLEDGE_NETWORK_EXPORT_FORMATS.map((format) => ({
+              key: getKnowledgeNetworkExportMenuKey(format),
+              label: t(
+                format === "json"
+                  ? "knowledgeNetwork.exportJson"
+                  : "knowledgeNetwork.exportBkn",
+              ),
+            })),
+          }
+        : {}),
     }),
   );
 
@@ -105,8 +126,10 @@ export function KnowledgeNetworkCard({
                 return;
               }
 
-              if (key === "export") {
-                onExport(record);
+              const exportFormat = parseKnowledgeNetworkExportMenuKey(key);
+
+              if (exportFormat) {
+                onExport(record, exportFormat);
                 return;
               }
 
@@ -124,6 +147,13 @@ export function KnowledgeNetworkCard({
             },
           }}
           overlayClassName={styles.cardMenu}
+          // The menu popup is a React child of the card, so clicks inside it
+          // bubble to the card's own handler. Leaf items stop that themselves in
+          // onClick, but a submenu parent fires no onClick at all — without this
+          // wrapper, opening the export formats would open the workspace instead.
+          popupRender={(menu) => (
+            <div onClick={(event) => event.stopPropagation()}>{menu}</div>
+          )}
           trigger={["click"]}
         >
           <button
