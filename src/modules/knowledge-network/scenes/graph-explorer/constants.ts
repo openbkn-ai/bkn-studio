@@ -21,6 +21,16 @@ export const OBJECT_TYPE_PALETTE = [
   "#7cb305",
 ];
 
-export type MenuAction = "expandOut" | "expandIn" | "expandBoth" | "setPathStart" | "setPathEnd" | "remove" | "pin" | "unpin";
+export type MenuAction =
+  | "expandOut"
+  | "expandIn"
+  | "expandBoth"
+  | "setPathStart"
+  | "clearPathStart"
+  | "setPathEnd"
+  | "clearPathEnd"
+  | "remove"
+  | "pin"
+  | "unpin";
 
 export const MENU_ORDER: MenuAction[] = ["expandOut", "expandIn", "expandBoth", "setPathStart", "setPathEnd", "pin", "remove"];

@@ -13,6 +13,7 @@ import {
   createGraphExplorerClient,
   fromExploreSubgraph,
   fromQueryObjectInstance,
+  friendlyError,
   fromSearchInstance,
   identityCondition,
   mergeGraph,
@@ -316,5 +317,28 @@ describe("createGraphExplorerClient", () => {
     const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue({ ok: true, text: "boom", latencyMs: 1, isError: true });
     const client = createGraphExplorerClient({ callTool }, "kn1");
     await expect(client.searchInstances("x")).rejects.toThrow("boom");
+  });
+});
+
+describe("friendlyError", () => {
+  it("unwraps the downstream envelope embedded in the Context Loader details", () => {
+    const downstream = JSON.stringify({ error_code: "VegaBackend.Resource.NotFound", description: "数据资源不存在", solution: "请检查数据资源ID", error_details: "" });
+    const outer = JSON.stringify({
+      code: "agentRetrieval.InternalServerError.CommonExternalServerError",
+      description: "调用依赖服务异常",
+      solution: "Please check the service",
+      details: `Exception(http do error, method: POST, url: http://ontology-query-svc:13018/x, http status: 500, error: ${downstream})`,
+    });
+    expect(friendlyError(new Error(outer))).toBe("调用依赖服务异常：数据资源不存在（请检查数据资源ID）");
+  });
+
+  it("falls back to the description and a detail tail when there is no inner envelope", () => {
+    expect(friendlyError(new Error(JSON.stringify({ description: "内部错误", details: "QueryDatasetData returned HTTP 500" })))).toBe("内部错误：QueryDatasetData returned HTTP 500");
+    expect(friendlyError(new Error(JSON.stringify({ error: { message: "conversation_id is required" } })))).toBe("conversation_id is required");
+  });
+
+  it("returns plain messages untouched", () => {
+    expect(friendlyError(new Error("boom"))).toBe("boom");
+    expect(friendlyError("text")).toBe("text");
   });
 });

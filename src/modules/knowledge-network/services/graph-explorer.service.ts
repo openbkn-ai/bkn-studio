@@ -349,6 +349,65 @@ export function relabel(nodes: Iterable<GNode>, labelByOt: Record<string, string
   return out;
 }
 
+/**
+ * Turns a backend error into one readable sentence. Context Loader wraps a downstream
+ * failure as JSON whose `details` string embeds the downstream JSON again; both layers
+ * are unwrapped so the innermost description (the actual cause) leads.
+ */
+export function friendlyError(error: unknown): string {
+  const text = (error instanceof Error ? error.message : String(error)).trim();
+  const outer = parseErrorEnvelope(text);
+  if (!outer) return text;
+  const inner = parseErrorEnvelope(outer.details) ?? parseErrorEnvelope(lastJsonObject(outer.details));
+  const cause = inner?.description || inner?.details || "";
+  const hint = inner?.solution || "";
+  const head = outer.description || outer.details || text;
+  if (cause && cause !== head) return hint ? `${head}：${cause}（${hint}）` : `${head}：${cause}`;
+  if (!cause && outer.details && outer.details !== head) {
+    const tail = outer.details.length > 160 ? `…${outer.details.slice(-160)}` : outer.details;
+    return `${head}：${tail}`;
+  }
+  return hint ? `${head}（${hint}）` : head;
+}
+
+type ErrorEnvelope = { description: string; details: string; solution: string };
+
+function parseErrorEnvelope(text: string): ErrorEnvelope | null {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{")) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed)) return null;
+  const body = isRecord(parsed.error) ? parsed.error : parsed;
+  const pick = (...keys: string[]): string => {
+    for (const key of keys) {
+      const value = body[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  };
+  return { description: pick("description", "message"), details: pick("details", "error_details"), solution: pick("solution") };
+}
+
+/** The last `{…}` block inside a string, for details that read `… error: {"error_code": …}`. */
+function lastJsonObject(text: string): string {
+  const start = text.lastIndexOf("{");
+  if (start < 0) return "";
+  let depth = 0;
+  for (let index = start; index < text.length; index += 1) {
+    if (text[index] === "{") depth += 1;
+    if (text[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, index + 1);
+    }
+  }
+  return "";
+}
+
 /* ============================ MCP calls ============================ */
 
 function readPayload(result: McpToolCallResult, tool: string): Rec {

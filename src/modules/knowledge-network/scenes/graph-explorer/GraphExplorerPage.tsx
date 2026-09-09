@@ -21,6 +21,7 @@ import {
   edgeFromRelation,
   fromExploreSubgraph,
   fromQueryObjectInstance,
+  friendlyError,
   fromSearchInstance,
   identityCondition,
   mergeGraph,
@@ -58,26 +59,6 @@ type Highlight = { nodes: Set<string>; edges: Set<string> } | null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
- * Backend errors arrive as a JSON envelope serialised into the message. Show the human
- * description and a short tail of the technical detail instead of the raw envelope.
- */
-function friendlyError(error: unknown): string {
-  const text = error instanceof Error ? error.message : String(error);
-  const trimmed = text.trim();
-  if (!trimmed.startsWith("{")) return trimmed;
-  try {
-    const parsed: unknown = JSON.parse(trimmed);
-    if (!isRecord(parsed)) return trimmed;
-    const description = typeof parsed.description === "string" ? parsed.description : typeof parsed.message === "string" ? parsed.message : "";
-    const details = typeof parsed.details === "string" ? parsed.details : typeof parsed.error_details === "string" ? parsed.error_details : "";
-    const tail = details.length > 160 ? `…${details.slice(-160)}` : details;
-    return [description, tail].filter(Boolean).join("：") || trimmed;
-  } catch {
-    return trimmed;
-  }
 }
 
 export function GraphExplorerScene() {
@@ -377,6 +358,14 @@ export function GraphExplorerScene() {
           setPathEnd(id);
           setHighlight(null);
           break;
+        case "clearPathStart":
+          setPathStart(null);
+          setHighlight(null);
+          break;
+        case "clearPathEnd":
+          setPathEnd(null);
+          setHighlight(null);
+          break;
         case "remove":
           void removeNode(id);
           break;
@@ -560,7 +549,9 @@ export function GraphExplorerScene() {
       expandIn: t("knowledgeNetwork.graphExplorer.menu.expandIn"),
       expandBoth: t("knowledgeNetwork.graphExplorer.menu.expandBoth"),
       setPathStart: t("knowledgeNetwork.graphExplorer.menu.setPathStart"),
+      clearPathStart: t("knowledgeNetwork.graphExplorer.menu.clearPathStart"),
       setPathEnd: t("knowledgeNetwork.graphExplorer.menu.setPathEnd"),
+      clearPathEnd: t("knowledgeNetwork.graphExplorer.menu.clearPathEnd"),
       remove: t("knowledgeNetwork.graphExplorer.menu.remove"),
       pin: t("knowledgeNetwork.graphExplorer.menu.pin"),
       unpin: t("knowledgeNetwork.graphExplorer.menu.unpin"),
@@ -605,6 +596,14 @@ export function GraphExplorerScene() {
           onFitView={() => void canvasRef.current?.fitView()}
           onFindPath={() => void findPath()}
           onClearPath={() => setHighlight(null)}
+          onClearPathStart={() => {
+            setPathStart(null);
+            setHighlight(null);
+          }}
+          onClearPathEnd={() => {
+            setPathEnd(null);
+            setHighlight(null);
+          }}
           onClear={() => void clearCanvas()}
           onClearCache={handleClearCache}
         />

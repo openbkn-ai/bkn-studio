@@ -224,8 +224,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           getItems: (event: IElementEvent) => {
             const id = String(event.target.id);
             const labels = propsRef.current.menuLabels ?? menuLabels;
+            const marks = marksRef.current;
             return MENU_ORDER.map((action) => {
-              const effective: MenuAction = action === "pin" && marksRef.current.pinned.has(id) ? "unpin" : action;
+              // Toggle entries: a node that already carries the mark offers to clear it instead.
+              let effective: MenuAction = action;
+              if (action === "pin" && marks.pinned.has(id)) effective = "unpin";
+              if (action === "setPathStart" && marks.pathStart === id) effective = "clearPathStart";
+              if (action === "setPathEnd" && marks.pathEnd === id) effective = "clearPathEnd";
               return { name: labels[effective], value: effective };
             });
           },

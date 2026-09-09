@@ -37,6 +37,8 @@ export type ExplorerToolbarProps = {
   onFitView: () => void;
   onFindPath: () => void;
   onClearPath: () => void;
+  onClearPathStart: () => void;
+  onClearPathEnd: () => void;
   onClear: () => void;
   onClearCache: () => void;
 };
@@ -63,6 +65,8 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
     onFitView,
     onFindPath,
     onClearPath,
+    onClearPathStart,
+    onClearPathEnd,
     onClear,
     onClearCache,
   } = props;
@@ -96,10 +100,26 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
       </Space>
       <Divider type="vertical" className={styles.divider} />
       <Space size={6} className={styles.group}>
-        <Tag color="green" className={styles.pathTag}>
+        <Tag
+          color="green"
+          className={styles.pathTag}
+          closable={pathStart !== null}
+          onClose={(event) => {
+            event.preventDefault();
+            onClearPathStart();
+          }}
+        >
           {t("knowledgeNetwork.graphExplorer.toolbar.pathStart")}: {pathStart?.display ?? t("knowledgeNetwork.graphExplorer.toolbar.unset")}
         </Tag>
-        <Tag color="red" className={styles.pathTag}>
+        <Tag
+          color="red"
+          className={styles.pathTag}
+          closable={pathEnd !== null}
+          onClose={(event) => {
+            event.preventDefault();
+            onClearPathEnd();
+          }}
+        >
           {t("knowledgeNetwork.graphExplorer.toolbar.pathEnd")}: {pathEnd?.display ?? t("knowledgeNetwork.graphExplorer.toolbar.unset")}
         </Tag>
         <Button
