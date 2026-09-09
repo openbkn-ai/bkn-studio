@@ -21,6 +21,7 @@ Studio 目前只能以表格形式浏览知识网络实例（Data Browser），�
 
 ## 3. 非目标
 
+- Cypher 只用于选点与取子图：后端子集的 RETURN 只能返回属性、不支持变长关系，路径查找仍走 `explore_subgraph`。
 - 不做真正的最短路径算法：后端 openCypher 子集明确不支持变长关系（bkn-backend `logics/cypher/analyze.go:221`），ontology-query 也没有最短路接口。本期用 `explore_subgraph` 的 3 跳探索在客户端筛出最短链。
 - 不展示边属性：ontology-query 返回的 `Relation` 只有 `relation_type_id / relation_type_name / source_object_id / target_object_id`（`interfaces/knowledge_network.go:133-138`），没有 `properties`。边标签固定为关系类名。
 - 不做多人共享或服务端保存；缓存只在本地。
@@ -169,6 +170,7 @@ type GEdge = {
 - Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」折叠面板（`exclude_object_types`、`concept_groups`、`max_instances_per_type` 默认 20、`max_object_types` 默认 10 且不低于已选对象类数、`rerank`）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
 - Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。
+- Tab「Cypher」：用户只写 `MATCH … [WHERE …]`（标签可用对象类 id 或名称，关系必须带方向且只写一个关系类，这是后端 openCypher 子集的约束）；页面解析模式中的节点变量与有向关系，按各对象类主键自动补 `RETURN DISTINCT <var>.<pk> AS <var>__<pk>` 与 `LIMIT 200`，调用 bkn-backend `POST /knowledge-networks/{kn_id}/cypher-queries`（普通 REST，不在生命周期面），把行还原成节点与边（边类型来自模式中的关系类），再按主键 `in` 回查实例补齐标签与属性；可单个加入或「全部加入（含边）」。写了 RETURN / ORDER BY / SKIP / LIMIT、变量无标签、对象类或关系类不存在时给出明确提示。
 - 对象类与属性下拉同时按显示名与 id 过滤。
 
 ### 7.2 画布
