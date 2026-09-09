@@ -70,6 +70,9 @@ describe("BuildTaskLaunchPanel", () => {
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     resumeBuildTaskMock.mockReset();
     modalConfirmMock.mockReset();
+    modalConfirmMock.mockImplementation(({ onOk }) => {
+      void onOk();
+    });
   });
 
   it("keeps streaming disabled and exposes the persisted incremental batch entry", () => {
@@ -123,6 +126,10 @@ describe("BuildTaskLaunchPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
+    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.build.startBuildConfirmTitle",
+    }));
+
     await waitFor(() => {
       expect(createBuildTaskMock).toHaveBeenCalledWith({
         executeType: "full",
@@ -143,6 +150,8 @@ describe("BuildTaskLaunchPanel", () => {
         { name: "interests", originalType: "_text", type: "other" },
       ],
     };
+
+    modalConfirmMock.mockImplementation(() => undefined);
 
     render(
       <BuildTaskLaunchPanel

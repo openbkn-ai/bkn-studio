@@ -221,19 +221,17 @@ export function BuildTaskLaunchPanel({
       return;
     }
 
-    if (excludedFields.length > 0) {
-      void modal.confirm({
-        cancelText: t("common.cancel"),
-        content: t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: excludedFields.length > 0
+        ? t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
           fields: excludedFields.map((field) => field.originalType ? `${field.name} (${field.originalType})` : field.name).join(", "),
-        }),
-        okText: t("dataCatalog.build.excludedSchemaFieldsConfirmOk"),
-        onOk: createTask,
-        title: t("dataCatalog.build.excludedSchemaFieldsConfirmTitle"),
-      });
-      return;
-    }
-    void createTask();
+        })
+        : t("dataCatalog.build.startBuildConfirmContent"),
+      okText: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmOk") : t("dataCatalog.build.startBuild"),
+      onOk: createTask,
+      title: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmTitle") : t("dataCatalog.build.startBuildConfirmTitle"),
+    });
   };
 
   if (!active) {

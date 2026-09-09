@@ -6,8 +6,8 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Spin, Tooltip } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { Alert, Checkbox, Spin, Tooltip } from "antd";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -15,7 +15,6 @@ import {
   isRequestForbidden,
 } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { formatCount } from "@/modules/data-catalog/lib/format";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
@@ -34,6 +33,7 @@ type ResourcePreviewPanelProps = {
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+const PREVIEW_CONTENT_LENGTH = 20;
 
 function isNumericType(type: string) {
   const lowered = type.toLowerCase();
@@ -45,6 +45,11 @@ function isNumericType(type: string) {
     lowered.startsWith("float") ||
     lowered.startsWith("double")
   );
+}
+
+function isTextPreviewType(type: string) {
+  const lowered = type.trim().toLowerCase();
+  return lowered === "string" || lowered === "text";
 }
 
 function formatPreviewCell(value: unknown) {
@@ -59,6 +64,71 @@ function formatPreviewCell(value: unknown) {
   } catch {
     return "";
   }
+}
+
+type PreviewCellDisplay = {
+  text: string;
+  tooltip?: string;
+};
+
+function formatTextPreviewCell(value: unknown): PreviewCellDisplay {
+  const text = formatPreviewCell(value);
+  if (typeof value !== "string") {
+    return { text };
+  }
+  if (text.length <= PREVIEW_CONTENT_LENGTH) {
+    return { text, tooltip: text };
+  }
+  return {
+    text: `${text.slice(0, PREVIEW_CONTENT_LENGTH)}…`,
+    tooltip: text,
+  };
+}
+
+function formatBinaryPreviewCell(
+  value: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): PreviewCellDisplay {
+  if (value === null || value === undefined) {
+    return { text: "NULL" };
+  }
+  if (typeof value === "object" && value !== null) {
+    const binaryValue = value as { byte_length?: unknown; data?: unknown; mode?: unknown };
+    if (binaryValue.mode === "unavailable") {
+      return { text: t("dataCatalog.preview.binaryContentUnavailable") };
+    }
+    if (binaryValue.mode === "content" && typeof binaryValue.data === "string") {
+      const content = binaryValue.data;
+      if (content.length <= PREVIEW_CONTENT_LENGTH) {
+        return { text: content, tooltip: content };
+      }
+      return {
+        text: `${content.slice(0, PREVIEW_CONTENT_LENGTH)}…`,
+        tooltip: content,
+      };
+    }
+    const length = binaryValue.byte_length;
+    if (typeof length === "number") {
+      return { text: t("dataCatalog.preview.binaryContent", { count: length }) };
+    }
+  }
+  return { text: t("dataCatalog.preview.binaryContentUnavailable") };
+}
+
+function formatOtherPreviewCell(
+  value: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): PreviewCellDisplay {
+  if (value !== null && typeof value === "object") {
+    const resourceValue = value as { data?: unknown; mode?: unknown };
+    if (resourceValue.mode === "unavailable") {
+      return { text: t("dataCatalog.preview.fieldContentUnavailable") };
+    }
+    if ("data" in resourceValue) {
+      return { text: formatPreviewCell(resourceValue.data) };
+    }
+  }
+  return { text: formatPreviewCell(value) };
 }
 
 function resolvePreviewColumnHead(field: ResourceSchemaField) {
@@ -89,24 +159,42 @@ export function ResourcePreviewPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
+  const [binaryContent, setBinaryContent] = useState(false);
+  const requestVersionRef = useRef(0);
   const queryBlockReason = resourceQueryBlockReason(resource);
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
   const resourceStale = queryBlockReason === "stale";
   const previewUnavailable = queryBlockReason !== null;
+  const hasLocalIndex = resource.category === "table" &&
+    resource.localIndexStatus === "available" &&
+    Boolean(resource.localIndexName);
+  const hasBinaryField = resource.category === "table" &&
+    resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
+  const queriesSource = !hasLocalIndex || ignoreLocalIndex;
 
   const load = useCallback(
     async (nextOffset: number, nextLimit: number) => {
+      const requestVersion = ++requestVersionRef.current;
       setLoading(true);
       setError(null);
       setForbidden(false);
       try {
         const data = await previewCatalogResource(resource.id, {
+          ...(hasBinaryField && queriesSource ? { binaryMode: binaryContent ? "content" : "metadata" } : {}),
+          ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
           limit: nextLimit,
           offset: nextOffset,
         });
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
         setResult(data);
       } catch (loadError) {
+        if (requestVersion !== requestVersionRef.current) {
+          return;
+        }
         // Reading rows is granted separately from seeing the table's structure. The panel loads on
         // its own, so a bare 403 leaves the user guessing whether the table, the connection or
         // their own access is the problem — name it instead.
@@ -114,19 +202,25 @@ export function ResourcePreviewPanel({
         setError(extractRequestErrorMessage(loadError));
         setResult(null);
       } finally {
-        setLoading(false);
+        if (requestVersion === requestVersionRef.current) {
+          setLoading(false);
+        }
       }
     },
-    [resource.id],
+    [resource.id, ignoreLocalIndex, binaryContent, hasBinaryField, queriesSource],
   );
 
   useEffect(() => {
     if (!active || disabled || previewUnavailable) {
+      requestVersionRef.current += 1;
       return;
     }
     setPage(1);
     setPageSize(DEFAULT_PAGE_SIZE);
     void load(0, DEFAULT_PAGE_SIZE);
+    return () => {
+      requestVersionRef.current += 1;
+    };
   }, [active, disabled, load, previewUnavailable, resource.id]);
 
   const offset = (page - 1) * pageSize;
@@ -194,18 +288,39 @@ export function ResourcePreviewPanel({
   return (
     <div className={styles.panel}>
       <div className={styles.metaRow}>
-        <span>
-          {t("dataCatalog.preview.summary", {
-            totalRows: t("dataCatalog.format.rows", {
-              count: total,
-              formattedCount: formatCount(total),
-            }),
-            visibleRows: t("dataCatalog.format.rows", {
-              count: rows.length,
-              formattedCount: formatCount(rows.length),
-            }),
-          })}
-        </span>
+        <div className={styles.previewControls}>
+          {hasLocalIndex ? (
+            <Checkbox
+              checked={ignoreLocalIndex}
+              onChange={(event) => {
+                setIgnoreLocalIndex(event.target.checked);
+                if (!event.target.checked) {
+                  setBinaryContent(false);
+                }
+              }}
+            >
+              {t("dataCatalog.preview.queryOriginalSource")}
+            </Checkbox>
+          ) : null}
+          {hasBinaryField ? (
+            <Checkbox
+              checked={binaryContent}
+              disabled={!queriesSource}
+              onChange={(event) => setBinaryContent(event.target.checked)}
+            >
+              {t("dataCatalog.preview.loadBinaryContent")}
+            </Checkbox>
+          ) : null}
+          {result?.querySource ? (
+            <span className={styles.dataSource}>
+              {t(
+                result.querySource === "local_index"
+                  ? "dataCatalog.preview.dataSourceIndex"
+                  : "dataCatalog.preview.dataSourceOriginal",
+              )}
+            </span>
+          ) : null}
+        </div>
       </div>
       {forbidden ? (
         <Alert
@@ -256,7 +371,18 @@ export function ResourcePreviewPanel({
                     {columns.map((field) => {
                       const value = row[field.name];
                       const isNull = value === null || value === undefined;
-                      const text = formatPreviewCell(value);
+                      const binaryDisplay = field.type.trim().toLowerCase() === "binary"
+                        ? formatBinaryPreviewCell(value, t)
+                        : undefined;
+                      const otherDisplay = field.type.trim().toLowerCase() === "other"
+                        ? formatOtherPreviewCell(value, t)
+                        : undefined;
+                      const textDisplay = isTextPreviewType(field.type)
+                        ? formatTextPreviewCell(value)
+                        : undefined;
+                      const display = binaryDisplay ?? otherDisplay ?? textDisplay;
+                      const text = display?.text ?? formatPreviewCell(value);
+                      const tooltip = display?.tooltip ?? text;
                       return (
                         <td
                           className={[
@@ -267,13 +393,9 @@ export function ResourcePreviewPanel({
                             .join(" ")}
                           key={field.name}
                         >
-                          {text.length > 60 ? (
-                            <Tooltip title={text}>
-                              <span>{text}</span>
-                            </Tooltip>
-                          ) : (
-                            text
-                          )}
+                          <Tooltip title={tooltip}>
+                            <span>{text}</span>
+                          </Tooltip>
                         </td>
                       );
                     })}

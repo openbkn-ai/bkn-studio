@@ -119,11 +119,16 @@ export type ResourceUpdateInput = ResourceCreateInput & {
 };
 
 export type ResourcePreviewQuery = {
+  /** Bypass the local index and query the original data source. */
+  ignoreLocalIndex?: boolean;
+  /** Only valid when querying the original source. */
+  binaryMode?: "metadata" | "content";
   limit: number;
   offset: number;
 };
 
 export type ResourcePreviewResult = {
+  querySource?: "local_index" | "source";
   rows: Record<string, unknown>[];
   total: number;
 };

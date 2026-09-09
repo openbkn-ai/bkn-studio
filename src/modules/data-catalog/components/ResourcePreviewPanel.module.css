@@ -16,9 +16,26 @@
 }
 
 .metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
   flex-shrink: 0;
   color: var(--color-text-secondary);
   font-size: 13px;
+}
+
+.previewControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.dataSource {
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 .gatePanel {

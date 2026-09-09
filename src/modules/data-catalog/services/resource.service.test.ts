@@ -29,7 +29,7 @@ describe("resource.service · previewCatalogResource", () => {
   });
 
   it("uses Vega paging and the GET method override", async () => {
-    postMock.mockResolvedValue({ data: { entries: [{ id: "r-1" }], total_count: 42 } });
+    postMock.mockResolvedValue({ data: { query_source: "local_index", entries: [{ id: "r-1" }], total_count: 42 } });
     const { previewCatalogResource } = await import(
       "@/modules/data-catalog/services/resource.service"
     );
@@ -50,7 +50,92 @@ describe("resource.service · previewCatalogResource", () => {
         transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
-    expect(result).toEqual({ rows: [{ id: "r-1" }], total: 42 });
+    expect(result).toEqual({ querySource: "local_index", rows: [{ id: "r-1" }], total: 42 });
+  });
+
+  it("requests Binary content only when the caller forces the original source", async () => {
+    postMock.mockResolvedValue({ data: { query_source: "source", entries: [], total_count: 0 } });
+    const { previewCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    await previewCatalogResource("r-1", {
+      binaryMode: "content",
+      ignoreLocalIndex: true,
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({
+      binary_mode: "content",
+      ignore_local_index: true,
+    });
+  });
+
+  it("varies mock Binary content between source rows", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const result = await previewCatalogResource("res-customers", {
+      binaryMode: "content",
+      ignoreLocalIndex: true,
+      limit: 2,
+      offset: 1,
+    });
+    const first = result.rows[0]?.avatar_blob as { byte_length: number; data: string };
+    const second = result.rows[1]?.avatar_blob as { byte_length: number; data: string };
+
+    expect(first.byte_length).toBeGreaterThanOrEqual(10);
+    expect(first.byte_length).toBeLessThanOrEqual(60);
+    expect(second.byte_length).toBeGreaterThanOrEqual(10);
+    expect(second.byte_length).toBeLessThanOrEqual(60);
+    expect(first.byte_length).not.toBe(second.byte_length);
+    expect(first.data).not.toBe(second.data);
+  });
+
+  it("returns unavailable Other values from a local-index mock preview", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { previewCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const result = await previewCatalogResource("res-customers", { limit: 1, offset: 0 });
+
+    expect(result.querySource).toBe("local_index");
+    expect(result.rows[0]?.legacy_profile).toEqual({ mode: "unavailable" });
+  });
+
+  it("returns Binary metadata when a source mock resource has no local index name", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { mockResources } = await import("@/modules/data-catalog/services/mock-db");
+    const customer = mockResources.find((resource) => resource.id === "res-customers")!;
+    const localIndexName = customer.localIndexName;
+    customer.localIndexName = undefined;
+
+    try {
+      const { previewCatalogResource } = await import(
+        "@/modules/data-catalog/services/resource.service"
+      );
+      const result = await previewCatalogResource("res-customers", {
+        binaryMode: "metadata",
+        limit: 2,
+        offset: 1,
+      });
+
+      expect(result.querySource).toBe("source");
+      const binaryValue = result.rows[0]?.avatar_blob as { byte_length?: unknown; mode?: unknown };
+      expect(binaryValue).toMatchObject({
+        mode: "metadata",
+      });
+      expect(binaryValue.byte_length).toEqual(expect.any(Number));
+    } finally {
+      customer.localIndexName = localIndexName;
+    }
   });
 });
 
