@@ -185,6 +185,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
 const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
   "agent",
   "agent_tpl",
+  "connector_type",
   "data_flow",
   "risk_type",
   "stream_data_pipeline",
