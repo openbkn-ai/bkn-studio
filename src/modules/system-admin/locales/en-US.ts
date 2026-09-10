@@ -119,7 +119,7 @@ export const systemAdminEnUS = {
     },
     objectGrants: {
       title: "Permission Management",
-      description: "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user or department.",
+      description: "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user.",
       create: "New Permission Rule",
       authorize: "Configure Permissions",
       manage: "Manage",
@@ -146,9 +146,9 @@ export const systemAdminEnUS = {
     objectCount_other: "{{count}} objects",
       calloutPrefix: "Object permission rules sit on top of platform RBAC (",
       calloutSuffix:
-        "): roles come first; add access to a specific object for a user/department when needed. Effective access = role permissions plus object permission rules. For whole-type / all access, use role management.",
+        "): use them to grant a specific user access to a specific object. Effective access is the union of role permissions and object permission rules. Configure whole-type or all-resource permissions in role management; object permission rules do not grant wildcard (*) access.",
       pickObjectFirst: "Pick an object first",
-      pickGranteeFirst: "Pick a user or department first",
+      pickGranteeFirst: "Pick a user first",
       pickerNext: "Next - Configure Permissions",
       pickerHint: "A permission rule targets one object. Pick the object and subject first, then configure allowed operations in the drawer.",
       pickerObjectPlaceholder: "Pick an object to configure...",
@@ -163,11 +163,11 @@ export const systemAdminEnUS = {
       createPageGranteeHint: "Batch selection is supported. The same operation set will be applied to every subject.",
       drawerTitle: "Permission Rule - {{name}}",
       drawerHint:
-        "Add a user/department to this object and pick the allowed operations; clearing all operations removes the subject.",
+        "Add a user to this object and pick the allowed operations; clearing all operations removes the user.",
       drawerReadOnly:
         "Read-only: you can review this object\u2019s grants but cannot grant or revoke",
-      drawerEmpty: "No users or departments configured yet",
-      addGranteePlaceholder: "Pick a user/department to add as subject...",
+      drawerEmpty: "No users configured yet",
+      addGranteePlaceholder: "Pick a user to add...",
       removeGrantTitle: "Remove permission rule",
       removeGrantConfirm: "Remove the permission rule for \"{{name}}\"?",
       removeLastOpConfirm: "This subject will have no operations left and the permission rule will be removed. Continue?",
