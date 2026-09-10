@@ -352,17 +352,23 @@ export function relabel(nodes: Iterable<GNode>, labelByOt: Record<string, string
 
 /**
  * Turns a backend error into one readable sentence. Context Loader wraps a downstream
- * failure as JSON whose `details` string embeds the downstream JSON again; both layers
- * are unwrapped so the innermost description (the actual cause) leads.
+ * failure as JSON whose `details` string embeds the downstream JSON, which may embed yet
+ * another one (ontology-query → bkn-backend / vega). Every layer is unwrapped and the
+ * innermost description — the actual cause — leads the message.
  */
 export function friendlyError(error: unknown): string {
   const text = (error instanceof Error ? error.message : String(error)).trim();
   const outer = parseErrorEnvelope(text);
   if (!outer) return text;
-  const inner = parseErrorEnvelope(outer.details) ?? parseErrorEnvelope(lastJsonObject(outer.details));
-  const cause = inner?.description || inner?.details || "";
-  const hint = inner?.solution || "";
+  let deepest = outer;
+  for (let depth = 0; depth < 6; depth += 1) {
+    const next = parseErrorEnvelope(deepest.details) ?? parseErrorEnvelope(lastJsonObject(deepest.details));
+    if (!next || (!next.description && !next.details)) break;
+    deepest = next;
+  }
   const head = outer.description || outer.details || text;
+  const cause = deepest === outer ? "" : deepest.description || deepest.details;
+  const hint = deepest.solution;
   if (cause && cause !== head) return hint ? `${head}：${cause}（${hint}）` : `${head}：${cause}`;
   if (!cause && outer.details && outer.details !== head) {
     const tail = outer.details.length > 160 ? `…${outer.details.slice(-160)}` : outer.details;
@@ -376,12 +382,10 @@ type ErrorEnvelope = { description: string; details: string; solution: string };
 function parseErrorEnvelope(text: string): ErrorEnvelope | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith("{")) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return null;
-  }
+  let parsed: unknown = tryParseJson(trimmed);
+  // A downstream envelope embedded as a string arrives with escaped quotes ({\"error_code\":…});
+  // unescape one level and try again before giving up.
+  if (parsed === undefined && trimmed.includes('\\"')) parsed = tryParseJson(trimmed.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
   if (!isRecord(parsed)) return null;
   const body = isRecord(parsed.error) ? parsed.error : parsed;
   const pick = (...keys: string[]): string => {
@@ -392,6 +396,14 @@ function parseErrorEnvelope(text: string): ErrorEnvelope | null {
     return "";
   };
   return { description: pick("description", "message"), details: pick("details", "error_details"), solution: pick("solution") };
+}
+
+function tryParseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
 }
 
 /** The last `{…}` block inside a string, for details that read `… error: {"error_code": …}`. */

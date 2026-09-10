@@ -36,7 +36,7 @@ describe("graph explorer cache", () => {
       nodes: [node("a"), node("b")],
       edges: [edge("a", "b")],
       positions: { a: { x: 1, y: 2 }, b: { x: 3, y: 4, fixed: true } },
-      settings: { layout: "dagre" as const, shape: "rect" as const, labelByOt: { ot: "k" }, colorByOt: { ot: 2 }, showNodeLabels: true, showEdgeLabels: false },
+      settings: { layout: "dagre" as const, shape: "rect" as const, labelByOt: { ot: "k" }, colorByOt: { ot: 2 }, showNodeLabels: true, showEdgeLabels: false, sidebarCollapsed: true, groupByConceptGroup: true },
     };
     expect(writeCache("kn1", snapshot, storage)).toBe("saved");
     expect(readCache("kn1", storage)).toEqual({ version: CACHE_VERSION, ...snapshot });

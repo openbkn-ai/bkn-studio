@@ -38,6 +38,20 @@ export type GraphCanvasHandle = {
   setLabelVisibility(nodeLabels: boolean, edgeLabels: boolean): Promise<void>;
   applyMarks(marks: CanvasMarks): Promise<void>;
   getPositions(): Record<string, NodePosition>;
+  /** Replaces the whole canvas (undo): nodes without a stored position get laid out. */
+  replaceAll(nodes: GNode[], edges: GEdge[], positions: Record<string, NodePosition>): Promise<void>;
+  /** PNG data URL of the whole graph, not just the viewport. */
+  exportImage(): Promise<string>;
+  /** Ids of nodes currently in the `selected` state (shift+click / shift+drag). */
+  getSelectedIds(): string[];
+  /** Groups nodes into combos per concept group, or removes the combos with null. */
+  setGrouping(grouping: ConceptGrouping | null): Promise<void>;
+};
+
+/** Concept-group combos: which combo each object type belongs to, and the combo labels. */
+export type ConceptGrouping = {
+  combos: { id: string; name: string }[];
+  comboByOt: Record<string, string>;
 };
 
 export type GraphCanvasProps = {
@@ -86,11 +100,14 @@ async function fitGraph(graph: Graph): Promise<void> {
   await graph.fitCenter(false);
 }
 
-function toNodeData(node: GNode, position?: NodePosition): NodeData {
+function toNodeData(node: GNode, position?: NodePosition, combo?: string): NodeData {
   const data: NodeData = { id: node.id, data: { otId: node.otId, otName: node.otName, display: node.display } };
   if (position) data.style = { x: position.x, y: position.y };
+  if (combo) data.combo = combo;
   return data;
 }
+
+const COMBO_LAYOUT: LayoutOptions = { type: "combo-combined", comboPadding: 30, spacing: 40 };
 
 function toEdgeData(edge: GEdge): EdgeData {
   return { id: edge.id, source: edge.source, target: edge.target, data: { relTypeName: edge.relTypeName } };
@@ -110,6 +127,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const marksRef = useRef<CanvasMarks>({ pathStart: null, pathEnd: null, pinned: new Set(), highlightNodes: new Set(), highlightEdges: new Set() });
   const layoutRef = useRef<ExplorerLayout>(props.layout);
   const labelsRef = useRef({ node: props.showNodeLabels, edge: props.showEdgeLabels });
+  const groupingRef = useRef<ConceptGrouping | null>(null);
+  const comboFor = (otId: string): string | undefined => groupingRef.current?.comboByOt[otId];
+  const activeLayout = (): LayoutOptions => (groupingRef.current ? COMBO_LAYOUT : layoutOptions(layoutRef.current));
 
   const readPositions = useCallback((): Record<string, NodePosition> => {
     const graph = graphRef.current;
@@ -202,6 +222,19 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           pinned: { stroke: "#1f1f1f", lineWidth: 2.5, lineDash: [4, 2] },
         },
       },
+      combo: {
+        type: "rect",
+        style: {
+          labelText: (d: { data?: Record<string, unknown> }) => stringifyValue(d.data?.name),
+          labelPlacement: "top",
+          labelFontSize: 12,
+          labelFill: "#5c6270",
+          fillOpacity: 0.05,
+          stroke: "#a3a9b8",
+          lineDash: [4, 3],
+          radius: 8,
+        },
+      },
       edge: {
         type: "line",
         style: {
@@ -220,7 +253,15 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         },
       },
       layout: layoutOptions(layout),
-      behaviors: ["drag-canvas", "zoom-canvas", "drag-element"],
+      // Empty-canvas drag pans, wheel zooms; shift+click or shift+drag selects several nodes,
+      // and dragging one selected node moves the whole selection.
+      behaviors: [
+        "drag-canvas",
+        "zoom-canvas",
+        { type: "drag-element", key: "drag-element" },
+        { type: "click-select", key: "click-select", multiple: true, trigger: ["shift"] },
+        { type: "brush-select", key: "brush-select", trigger: ["shift"], mode: "union" },
+      ],
       plugins: [
         {
           type: "contextmenu",
@@ -347,8 +388,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         let placed = 0;
         const nodeData = fresh.map((node) => {
           const kept = stored[node.id];
-          if (kept) return toNodeData(node, kept);
-          if (!anchor) return toNodeData(node);
+          if (kept) return toNodeData(node, kept, comboFor(node.otId));
+          if (!anchor) return toNodeData(node, undefined, comboFor(node.otId));
           let ringIndex = 0;
           let offset = placed;
           while (ringIndex < rings.length && offset >= rings[ringIndex].slots) {
@@ -368,8 +409,14 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             y = anchor[1] + Math.sin(angle) * radius;
           }
           taken.push([x, y]);
-          return toNodeData(node, { x, y });
+          return toNodeData(node, { x, y }, comboFor(node.otId));
         });
+        // A grouped canvas needs the combo of every new object type to exist before its nodes arrive.
+        if (groupingRef.current) {
+          const existingCombos = new Set(graph.getComboData().map((combo) => String(combo.id)));
+          const needed = groupingRef.current.combos.filter((combo) => !existingCombos.has(combo.id) && nodeData.some((item) => item.combo === combo.id));
+          if (needed.length > 0) graph.addComboData(needed.map((combo) => ({ id: combo.id, data: { name: combo.name } })));
+        }
         const existingEdges = new Set(graph.getEdgeData().map((edge) => String(edge.id)));
         const edgeData = edges.filter((edge) => !existingEdges.has(edge.id)).map(toEdgeData);
         if (nodeData.length > 0) graph.addNodeData(nodeData);
@@ -405,7 +452,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         await readyRef.current;
         const graph = graphRef.current;
         if (!graph || graph.getNodeData().length === 0) return;
-        graph.setLayout(layoutOptions(layoutRef.current));
+        graph.setLayout(activeLayout());
         await graph.layout();
         await restorePinned();
         await fitGraph(graph);
@@ -417,7 +464,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       },
       setLayout(layout) {
         layoutRef.current = layout;
-        graphRef.current?.setLayout(layoutOptions(layout));
+        graphRef.current?.setLayout(groupingRef.current ? COMBO_LAYOUT : layoutOptions(layout));
       },
       async setShape(shape) {
         await readyRef.current;
@@ -466,6 +513,68 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         await graph.setElementState(statesFor(), false);
       },
       getPositions: readPositions,
+      async replaceAll(nodes, edges, positions) {
+        await readyRef.current;
+        const graph = graphRef.current;
+        if (!graph) return;
+        pinnedPositionsRef.current = {};
+        const grouping = groupingRef.current;
+        const usedCombos = new Set(nodes.map((node) => comboFor(node.otId)).filter((id): id is string => Boolean(id)));
+        graph.setData({
+          nodes: nodes.map((node) => toNodeData(node, positions[node.id], comboFor(node.otId))),
+          edges: edges.map(toEdgeData),
+          combos: grouping ? grouping.combos.filter((combo) => usedCombos.has(combo.id)).map((combo) => ({ id: combo.id, data: { name: combo.name } })) : [],
+        });
+        await graph.draw();
+        if (nodes.some((node) => !positions[node.id])) await graph.layout();
+        await graph.setElementState(statesFor(), false);
+        emitPositions();
+      },
+      getSelectedIds() {
+        const graph = graphRef.current;
+        if (!graph) return [];
+        return graph
+          .getNodeData()
+          .map((node) => String(node.id))
+          .filter((id) => graph.getElementState(id).includes("selected"));
+      },
+      async setGrouping(grouping) {
+        await readyRef.current;
+        const graph = graphRef.current;
+        if (!graph) return;
+        groupingRef.current = grouping;
+        const nodes = graph.getNodeData();
+        const edges = graph.getEdgeData();
+        const usedCombos = new Set<string>();
+        const nextNodes: NodeData[] = nodes.map((node) => {
+          const otId = stringifyValue(node.data?.otId);
+          const combo = grouping?.comboByOt[otId];
+          if (combo) usedCombos.add(combo);
+          const copy: NodeData = { ...node, data: { ...node.data } };
+          if (combo) copy.combo = combo;
+          else delete copy.combo;
+          return copy;
+        });
+        graph.setData({
+          nodes: nextNodes,
+          edges,
+          combos: grouping ? grouping.combos.filter((combo) => usedCombos.has(combo.id)).map((combo) => ({ id: combo.id, data: { name: combo.name } })) : [],
+        });
+        graph.setLayout(activeLayout());
+        await graph.draw();
+        if (nodes.length > 0) {
+          await graph.layout();
+          await fitGraph(graph);
+        }
+        await graph.setElementState(statesFor(), false);
+        emitPositions();
+      },
+      async exportImage() {
+        await readyRef.current;
+        const graph = graphRef.current;
+        if (!graph) throw new Error("canvas not ready");
+        return graph.toDataURL({ mode: "overall", type: "image/png", encoderOptions: 1 });
+      },
     }),
     [emitPositions, readPositions, restorePinned, statesFor],
   );

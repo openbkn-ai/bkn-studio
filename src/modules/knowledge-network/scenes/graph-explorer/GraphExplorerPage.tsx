@@ -52,11 +52,22 @@ import {
 
 import { ExplorerToolbar } from "./ExplorerToolbar";
 import { OBJECT_TYPE_PALETTE, type MenuAction } from "./constants";
-import { GraphCanvas, type CanvasMarks, type GraphCanvasHandle } from "./GraphCanvas";
+import { GraphCanvas, type CanvasMarks, type ConceptGrouping, type GraphCanvasHandle } from "./GraphCanvas";
 import styles from "./GraphExplorerPage.module.css";
+import { HistoryDrawer } from "./HistoryDrawer";
 import { NodeDrawer } from "./NodeDrawer";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+
+import {
+  newHistoryId,
+  pushHistory,
+  pushSnapshot,
+  takeSnapshot,
+  type CanvasSnapshot,
+  type HistoryEntry,
+  type HistoryKind,
+} from "@/modules/knowledge-network/utils/graph-explorer-history";
 
 import { buildCondition } from "./condition-builder";
 import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
@@ -120,6 +131,10 @@ export function GraphExplorerScene() {
   const [lifecycleDown, setLifecycleDown] = useState(false);
   const [restored, setRestored] = useState((snapshot?.nodes.length ?? 0) > 0);
   const [detail, setDetail] = useState<KnDetail | null>(null);
+  const undoRef = useRef<CanvasSnapshot[]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [llmModels, setLlmModels] = useState<{ name: string; isDefault?: boolean }[]>([]);
 
   // Model factory LLMs for Cypher generation; an empty list hides the AI box.
@@ -172,25 +187,57 @@ export function GraphExplorerScene() {
 
   /* ------------------------------ managed turns ------------------------------ */
 
+  /** What a call records in the history drawer; `raw` is filled by the closure with the backend payload. */
+  type TurnLog<T> = {
+    kind: HistoryKind;
+    title: string;
+    input: unknown;
+    summarize: (value: T) => string;
+    rerun?: HistoryEntry["rerun"];
+  };
+  type TurnContext = { raw?: unknown };
+
+  const logCall = useCallback((entry: Omit<HistoryEntry, "id" | "at">) => {
+    setHistory((previous) => pushHistory(previous, { ...entry, id: newHistoryId(), at: Date.now() }));
+  }, []);
+
   const runTurn = useCallback(
-    async <T,>(question: string, run: (turn: BknTurn | null) => Promise<T>, rethrow = false): Promise<T | undefined> => {
+    async <T,>(
+      question: string,
+      run: (turn: BknTurn | null, ctx: TurnContext) => Promise<T>,
+      options: { rethrow?: boolean; log?: TurnLog<T> } = {},
+    ): Promise<T | undefined> => {
       setBusy(true);
+      const ctx: TurnContext = {};
+      const started = performance.now();
       try {
-        const value = await withManagedTurn(lifecycle, question, run);
+        const value = await withManagedTurn(lifecycle, question, (turn) => run(turn, ctx));
         if (lifecycle.unsupported()) setLifecycleDown(true);
+        if (options.log) {
+          logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? value, ok: true, ms: Math.round(performance.now() - started), summary: options.log.summarize(value), rerun: options.log.rerun });
+        }
         return value;
       } catch (error) {
         if (lifecycle.unsupported()) setLifecycleDown(true);
+        const text = friendlyError(error);
+        if (options.log) {
+          logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? text, ok: false, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.failed"), rerun: options.log.rerun });
+        }
         // Panels with their own error area ask for the readable message instead of a toast.
-        if (rethrow) throw new Error(friendlyError(error));
-        message.error(friendlyError(error));
+        if (options.rethrow) throw new Error(text);
+        message.error({ content: text, key: "graph-explorer-error", duration: 6 });
         return undefined;
       } finally {
         setBusy(false);
       }
     },
-    [lifecycle, message],
+    [lifecycle, logCall, message, t],
   );
+
+  const rememberForUndo = useCallback(() => {
+    pushSnapshot(undoRef.current, takeSnapshot(nodesRef.current.values(), edgesRef.current.values(), positionsRef.current));
+    setUndoCount(undoRef.current.length);
+  }, []);
 
   const loadMetas = useCallback(
     async (ids: string[], turn: BknTurn | null): Promise<Record<string, ObjectTypeMeta>> => {
@@ -242,14 +289,19 @@ export function GraphExplorerScene() {
         message.warning(t("knowledgeNetwork.graphExplorer.toast.limitReached", { limit: NODE_LIMIT }));
         return null;
       }
+      rememberForUndo();
       const { addedNodes, addedEdges } = mergeGraph(nodesRef.current, edgesRef.current, { nodes: incomingNodes, edges: incomingEdges });
-      if (addedNodes.length === 0 && addedEdges.length === 0) return { nodes: 0, edges: 0 };
+      if (addedNodes.length === 0 && addedEdges.length === 0) {
+        undoRef.current.pop();
+        setUndoCount(undoRef.current.length);
+        return { nodes: 0, edges: 0 };
+      }
       assignColors(addedNodes);
       await canvasRef.current?.addElements(addedNodes, addedEdges, anchorId);
       bump();
       return { nodes: addedNodes.length, edges: addedEdges.length };
     },
-    [assignColors, bump, message, t],
+    [assignColors, bump, message, rememberForUndo, t],
   );
 
   const handleAdd = useCallback(
@@ -271,15 +323,29 @@ export function GraphExplorerScene() {
         message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: node.otName }));
         return;
       }
-      const result = await runTurn(t("knowledgeNetwork.graphExplorer.turn.expand", { label: node.display }), async (turn) => {
-        const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction, pathLength: 1 }, turn);
-        return fromExploreSubgraph(payload, settingsRef.current.labelByOt);
-      });
+      const input = { tool: "explore_subgraph", kn_id: networkId, source_object_type_id: node.otId, direction, path_length: 1, condition, limit: 1 };
+      const result = await runTurn(
+        t("knowledgeNetwork.graphExplorer.turn.expand", { label: node.display }),
+        async (turn, ctx) => {
+          const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction, pathLength: 1 }, turn);
+          ctx.raw = payload;
+          return fromExploreSubgraph(payload, settingsRef.current.labelByOt);
+        },
+        {
+          log: {
+            kind: "expand",
+            title: `${node.display} · ${direction}`,
+            input,
+            summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.nodes", { nodes: value.nodes.length, edges: value.edges.length }),
+            rerun: { kind: "expand", id, direction },
+          },
+        },
+      );
       if (!result) return;
       const added = await addToCanvas(result.nodes, result.edges, id);
       if (added && added.nodes === 0 && added.edges === 0) message.info(t("knowledgeNetwork.graphExplorer.toast.noNeighbors"));
     },
-    [addToCanvas, client, message, runTurn, t],
+    [addToCanvas, client, message, networkId, runTurn, t],
   );
 
   const findPath = useCallback(async () => {
@@ -294,7 +360,7 @@ export function GraphExplorerScene() {
       message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: start.otName }));
       return;
     }
-    const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.turn.path"), async (turn) => {
+    const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.turn.path"), async (turn, ctx) => {
       // The widest radius can fail downstream on a path that crosses an object type with no
       // published data. Narrow the radius before giving up, so a short path is still found.
       let payload: Record<string, unknown> | null = null;
@@ -308,6 +374,7 @@ export function GraphExplorerScene() {
         }
       }
       if (!payload) throw lastError instanceof Error ? lastError : new Error(String(lastError));
+      ctx.raw = payload;
       const chain = shortestChainTo(parseRelationPaths(payload.relation_paths), start.id, end.id);
       if (!chain) return { chain: null, nodes: [] as GNode[] };
       const subgraph = fromExploreSubgraph(payload, settingsRef.current.labelByOt);
@@ -317,6 +384,14 @@ export function GraphExplorerScene() {
         onPath.add(relation.target_object_id);
       }
       return { chain, nodes: subgraph.nodes.filter((node) => onPath.has(node.id)) };
+    }, {
+      log: {
+        kind: "path",
+        title: `${start.display} → ${end.display}`,
+        input: { tool: "explore_subgraph", kn_id: networkId, source_object_type_id: start.otId, direction: "bidirectional", path_length: `${PATH_MAX_HOPS}→1`, condition, target: end.id },
+        summarize: (value) => (value.chain ? t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: value.chain.length }) : t("knowledgeNetwork.graphExplorer.toast.pathNotFound")),
+        rerun: { kind: "path" },
+      },
     });
     if (!outcome) return;
     if (!outcome.chain) {
@@ -332,32 +407,83 @@ export function GraphExplorerScene() {
       edges: new Set(edges.map((edge) => edge.id)),
     });
     message.success(t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: outcome.chain.length }));
-  }, [addToCanvas, client, message, pathEnd, pathStart, runTurn, t]);
+  }, [addToCanvas, client, message, networkId, pathEnd, pathStart, runTurn, t]);
 
-  const removeNode = useCallback(
-    async (id: string) => {
-      if (!nodesRef.current.delete(id)) return;
+  const removeNodes = useCallback(
+    async (ids: string[]) => {
+      const present = ids.filter((id) => nodesRef.current.has(id));
+      if (present.length === 0) return 0;
+      rememberForUndo();
+      const removed = new Set(present);
+      for (const id of present) nodesRef.current.delete(id);
       for (const [edgeId, edge] of edgesRef.current) {
-        if (edge.source === id || edge.target === id) edgesRef.current.delete(edgeId);
+        if (removed.has(edge.source) || removed.has(edge.target)) edgesRef.current.delete(edgeId);
       }
-      delete positionsRef.current[id];
-      await canvasRef.current?.removeNode(id);
+      for (const id of present) delete positionsRef.current[id];
+      for (const id of present) await canvasRef.current?.removeNode(id);
       setPinned((previous) => {
-        if (!previous.has(id)) return previous;
-        const next = new Set(previous);
-        next.delete(id);
-        return next;
+        const next = new Set([...previous].filter((id) => !removed.has(id)));
+        return next.size === previous.size ? previous : next;
       });
-      if (pathStart === id) setPathStart(null);
-      if (pathEnd === id) setPathEnd(null);
-      if (selectedId === id) setSelectedId(null);
-      setHighlight((previous) => (previous && previous.nodes.has(id) ? null : previous));
+      if (pathStart && removed.has(pathStart)) setPathStart(null);
+      if (pathEnd && removed.has(pathEnd)) setPathEnd(null);
+      if (selectedId && removed.has(selectedId)) setSelectedId(null);
+      setHighlight((previous) => (previous && [...removed].some((id) => previous.nodes.has(id)) ? null : previous));
       bump();
+      return present.length;
     },
-    [bump, pathEnd, pathStart, selectedId],
+    [bump, pathEnd, pathStart, rememberForUndo, selectedId],
   );
 
+  const removeNode = useCallback((id: string) => removeNodes([id]), [removeNodes]);
+
+  const removeSelected = useCallback(async () => {
+    const ids = canvasRef.current?.getSelectedIds() ?? [];
+    if (ids.length === 0) {
+      message.info(t("knowledgeNetwork.graphExplorer.toast.noSelection"));
+      return;
+    }
+    const count = await removeNodes(ids);
+    if (count > 0) message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
+  }, [message, removeNodes, t]);
+
+  const handleUndo = useCallback(async () => {
+    const snapshot = undoRef.current.pop();
+    setUndoCount(undoRef.current.length);
+    if (!snapshot) {
+      message.info(t("knowledgeNetwork.graphExplorer.toast.nothingToUndo"));
+      return;
+    }
+    nodesRef.current = new Map(snapshot.nodes.map((node) => [node.id, node]));
+    edgesRef.current = new Map(snapshot.edges.map((edge) => [edge.id, edge]));
+    positionsRef.current = { ...snapshot.positions };
+    await canvasRef.current?.replaceAll(snapshot.nodes, snapshot.edges, snapshot.positions);
+    const ids = nodesRef.current;
+    setPinned((previous) => new Set([...previous].filter((id) => ids.has(id))));
+    setPathStart((previous) => (previous && ids.has(previous) ? previous : null));
+    setPathEnd((previous) => (previous && ids.has(previous) ? previous : null));
+    setSelectedId((previous) => (previous && ids.has(previous) ? previous : null));
+    setHighlight(null);
+    bump();
+    message.success({ content: t("knowledgeNetwork.graphExplorer.toast.undone"), key: "graph-explorer-undo", duration: 2 });
+  }, [bump, message, t]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      const url = await canvasRef.current?.exportImage();
+      if (!url) return;
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `graph-explorer-${networkId}-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+      anchor.click();
+      message.success(t("knowledgeNetwork.graphExplorer.toast.exported"));
+    } catch (error) {
+      message.error(friendlyError(error));
+    }
+  }, [message, networkId, t]);
+
   const clearCanvas = useCallback(async () => {
+    if (nodesRef.current.size > 0) rememberForUndo();
     nodesRef.current.clear();
     edgesRef.current.clear();
     positionsRef.current = {};
@@ -369,7 +495,7 @@ export function GraphExplorerScene() {
     setSelectedId(null);
     setRestored(false);
     bump();
-  }, [bump]);
+  }, [bump, rememberForUndo]);
 
   const handleMenu = useCallback(
     (action: MenuAction, id: string) => {
@@ -524,11 +650,13 @@ export function GraphExplorerScene() {
 
   const handleSearch = useCallback(
     async (query: string, options: SearchOptions, rrf: RrfOptions): Promise<GNode[]> => {
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn) => {
+      const viaKnSearch = needsKnSearch(rrf);
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn, ctx) => {
         // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep the MCP tool.
-        const payload = needsKnSearch(rrf)
+        const payload = viaKnSearch
           ? await knSearchInstances({ base, token: "", knId: networkId }, auth, query, options, rrf, turn)
           : await client.searchInstances(query, turn, options);
+        ctx.raw = payload;
         const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
         const needMeta = new Set<string>();
         for (const hit of hits) {
@@ -542,6 +670,13 @@ export function GraphExplorerScene() {
           message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: skipped.otName }));
         }
         return mapped.nodes;
+      }, {
+        log: {
+          kind: "search",
+          title: query,
+          input: { tool: viaKnSearch ? "kn_search" : "search_instance", kn_id: networkId, query, ...options, ...(viaKnSearch ? { rrf } : {}) },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+        },
       });
       if (nodes === undefined) throw new Error("");
       return nodes;
@@ -552,22 +687,30 @@ export function GraphExplorerScene() {
   const handleQuery = useCallback(
     async (otId: string, condition: KnCondition | null): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.query", { ot: otName }), async (turn) => {
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.query", { ot: otName }), async (turn, ctx) => {
         const metas = await loadMetas([otId], turn);
         const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
         const payload = await client.queryInstances(otId, condition, 50, turn);
+        ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
+      }, {
+        log: {
+          kind: "query",
+          title: otName,
+          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, condition, limit: 50 },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+        },
       });
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, runTurn, t],
+    [client, detail, loadMetas, networkId, runTurn, t],
   );
 
   const handleLocate = useCallback(
     async (otId: string, rawKey: string): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.locateTurn", { ot: otName }), async (turn) => {
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.locateTurn", { ot: otName }), async (turn, ctx) => {
         const metas = await loadMetas([otId], turn);
         const meta = metas[otId];
         if (!meta || meta.primaryKeys.length === 0) {
@@ -579,12 +722,20 @@ export function GraphExplorerScene() {
         const condition = buildCondition(rows, meta.properties);
         if (!condition) return [];
         const payload = await client.queryInstances(otId, condition, 10, turn);
+        ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
+      }, {
+        log: {
+          kind: "locate",
+          title: `${otName} = ${rawKey}`,
+          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, key: rawKey },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+        },
       });
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, runTurn, t],
+    [client, detail, loadMetas, networkId, runTurn, t],
   );
 
   const handleCypher = useCallback(
@@ -608,7 +759,8 @@ export function GraphExplorerScene() {
         if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }));
         return { ...edge, relTypeId: found.id, relTypeName: found.name?.trim() || found.id };
       });
-      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn) => {
+      let sentQuery = "";
+      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn, ctx) => {
         const metas = await loadMetas([...new Set(otIds)], turn);
         const resolvedNodes: ResolvedNodeRef[] = parsed.nodes.map((node, index) => {
           const otId = otIds[index];
@@ -618,7 +770,9 @@ export function GraphExplorerScene() {
           }
           return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
         });
-        const result = await runCypherQuery(networkId, buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT));
+        sentQuery = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
+        const result = await runCypherQuery(networkId, sentQuery);
+        ctx.raw = result;
         const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
         // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
         const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -635,7 +789,15 @@ export function GraphExplorerScene() {
           }
         }
         return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length };
-      }, true);
+      }, {
+        rethrow: true,
+        log: {
+          kind: "cypher",
+          title: fragment.trim().split("\n")[0],
+          input: { endpoint: "cypher-queries", kn_id: networkId, fragment, get query() { return sentQuery; } },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows: value.rows, nodes: value.nodes.length, edges: value.edges.length }),
+        },
+      });
       if (!outcome) throw new Error("");
       return outcome;
     },
@@ -666,13 +828,19 @@ export function GraphExplorerScene() {
     async (question: string, modelName: string): Promise<string> => {
       if (!detail) return "";
       setBusy(true);
+      const started = performance.now();
       try {
-        return await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question, cypherPromptTexts);
+        const fragment = await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question, cypherPromptTexts);
+        logCall({ kind: "ai", title: question, input: { model: modelName, question }, output: fragment, ok: true, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.text", { chars: fragment.length }) });
+        return fragment;
+      } catch (error) {
+        logCall({ kind: "ai", title: question, input: { model: modelName, question }, output: friendlyError(error), ok: false, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.failed") });
+        throw error;
       } finally {
         setBusy(false);
       }
     },
-    [base, cypherPromptTexts, detail, networkId, tokenProvider],
+    [base, cypherPromptTexts, detail, logCall, networkId, t, tokenProvider],
   );
 
   const handleAddGraph = useCallback(
@@ -689,16 +857,101 @@ export function GraphExplorerScene() {
     async (otId: string, offset: number): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
       const page = Math.floor(offset / BROWSE_PAGE_SIZE) + 1;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.turn", { ot: otName, page }), async (turn) => {
+      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.turn", { ot: otName, page }), async (turn, ctx) => {
         const metas = await loadMetas([otId], turn);
         const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
         const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, turn, offset);
+        ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]);
+      }, {
+        log: {
+          kind: "browse",
+          title: `${otName} · ${page}`,
+          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, limit: BROWSE_PAGE_SIZE, offset },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+        },
       });
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, runTurn, t],
+    [client, detail, loadMetas, networkId, runTurn, t],
+  );
+
+  /* ------------------------------ grouping, sidebar, keyboard ------------------------------ */
+
+  const conceptGrouping = useMemo<ConceptGrouping | null>(() => {
+    const groups = detail?.concept_groups ?? [];
+    if (groups.length === 0) return null;
+    const comboByOt: Record<string, string> = {};
+    const combos = groups.map((group) => {
+      const id = `cg:${group.id}`;
+      for (const otId of group.object_type_ids ?? []) {
+        if (!comboByOt[otId]) comboByOt[otId] = id;
+      }
+      return { id, name: group.name?.trim() || group.id };
+    });
+    return { combos, comboByOt };
+  }, [detail]);
+
+  const handleToggleGroup = useCallback(
+    (checked: boolean) => {
+      updateSettings({ groupByConceptGroup: checked });
+      void canvasRef.current?.setGrouping(checked ? conceptGrouping : null);
+    },
+    [conceptGrouping, updateSettings],
+  );
+
+  // Apply a persisted grouping once the concept groups are known.
+  const groupingAppliedRef = useRef(false);
+  useEffect(() => {
+    if (groupingAppliedRef.current || !conceptGrouping || !settings.groupByConceptGroup) return;
+    groupingAppliedRef.current = true;
+    void canvasRef.current?.setGrouping(conceptGrouping);
+  }, [conceptGrouping, settings.groupByConceptGroup]);
+
+  const handleToggleSidebar = useCallback(() => {
+    updateSettings({ sidebarCollapsed: !settingsRef.current.sidebarCollapsed });
+  }, [updateSettings]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        void handleUndo();
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        const ids = canvasRef.current?.getSelectedIds() ?? [];
+        if (ids.length > 0) {
+          event.preventDefault();
+          void removeNodes(ids).then((count) => {
+            if (count > 0) message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
+          });
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleUndo, message, removeNodes, t]);
+
+  const handleRerun = useCallback(
+    (entry: HistoryEntry) => {
+      if (!entry.rerun) return;
+      if (entry.rerun.kind === "expand") void expand(entry.rerun.id, entry.rerun.direction);
+      else void findPath();
+    },
+    [expand, findPath],
+  );
+
+  const copyText = useCallback(
+    (text: string) => {
+      void navigator.clipboard
+        .writeText(text)
+        .then(() => message.success({ content: t("knowledgeNetwork.graphExplorer.toast.copied"), key: "graph-explorer-copy", duration: 1.5 }))
+        .catch(() => undefined);
+    },
+    [message, t],
   );
 
   /* ------------------------------ derived view data ------------------------------ */
@@ -761,6 +1014,7 @@ export function GraphExplorerScene() {
 
   return (
     <div className={styles.root}>
+      {settings.sidebarCollapsed ? null : (
       <SearchPanel
         objectTypes={objectTypes}
         conceptGroups={conceptGroups}
@@ -780,6 +1034,7 @@ export function GraphExplorerScene() {
         disabled={disabled}
         colorOf={colorOf}
       />
+      )}
       <div className={styles.main}>
         <ExplorerToolbar
           layout={settings.layout}
@@ -818,6 +1073,17 @@ export function GraphExplorerScene() {
           }}
           onClear={() => void clearCanvas()}
           onClearCache={handleClearCache}
+          sidebarCollapsed={settings.sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
+          undoCount={undoCount}
+          onUndo={() => void handleUndo()}
+          onExport={() => void handleExport()}
+          historyCount={history.length}
+          onToggleHistory={() => setHistoryOpen((previous) => !previous)}
+          canGroup={conceptGrouping !== null}
+          groupByConceptGroup={settings.groupByConceptGroup}
+          onToggleGroup={handleToggleGroup}
+          onRemoveSelected={() => void removeSelected()}
         />
         {lifecycleDown ? <Alert type="warning" showIcon banner message={t("knowledgeNetwork.graphExplorer.lifecycleUnavailable")} /> : null}
         {restored ? (
@@ -866,6 +1132,7 @@ export function GraphExplorerScene() {
         </div>
       </div>
       <NodeDrawer node={selectedNode} color={selectedNode ? colorOf(selectedNode.otId) : UNKNOWN_COLOR} onClose={() => setSelectedId(null)} />
+      <HistoryDrawer open={historyOpen} entries={history} onClose={() => setHistoryOpen(false)} onCopy={copyText} onRerun={handleRerun} onClear={() => setHistory([])} />
     </div>
   );
 }

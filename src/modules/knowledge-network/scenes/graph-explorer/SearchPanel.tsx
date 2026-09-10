@@ -466,7 +466,11 @@ export function SearchPanel({
                     onChange={(value: RrfOptions["rerankMode"]) => patchRrf({ rerankMode: value })}
                   />
                 </div>
-                {viaKnSearch ? <Typography.Text type="warning">{t("knowledgeNetwork.graphExplorer.search.viaKnSearch")}</Typography.Text> : null}
+                {viaKnSearch ? (
+                  <Tooltip title={t("knowledgeNetwork.graphExplorer.search.viaKnSearchHelp")} placement="right">
+                    <Typography.Text type="warning">{t("knowledgeNetwork.graphExplorer.search.viaKnSearch")}</Typography.Text>
+                  </Tooltip>
+                ) : null}
               </div>
             ),
           },

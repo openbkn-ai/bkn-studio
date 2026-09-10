@@ -21,6 +21,8 @@ export type ExplorerSettings = {
   colorByOt: Record<string, number>;
   showNodeLabels: boolean;
   showEdgeLabels: boolean;
+  sidebarCollapsed: boolean;
+  groupByConceptGroup: boolean;
 };
 
 export type NodePosition = { x: number; y: number; fixed?: boolean };
@@ -40,6 +42,8 @@ export const DEFAULT_SETTINGS: ExplorerSettings = {
   colorByOt: {},
   showNodeLabels: true,
   showEdgeLabels: true,
+  sidebarCollapsed: false,
+  groupByConceptGroup: false,
 };
 
 export const LAYOUTS: ExplorerLayout[] = ["force", "dagre", "radial", "circular", "grid"];
@@ -80,6 +84,8 @@ function sanitizeSettings(raw: unknown): ExplorerSettings {
   }
   if (typeof raw.showNodeLabels === "boolean") out.showNodeLabels = raw.showNodeLabels;
   if (typeof raw.showEdgeLabels === "boolean") out.showEdgeLabels = raw.showEdgeLabels;
+  if (typeof raw.sidebarCollapsed === "boolean") out.sidebarCollapsed = raw.sidebarCollapsed;
+  if (typeof raw.groupByConceptGroup === "boolean") out.groupByConceptGroup = raw.groupByConceptGroup;
   return out;
 }
 

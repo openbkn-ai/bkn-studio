@@ -396,6 +396,27 @@ describe("friendlyError", () => {
     expect(friendlyError(new Error(outer))).toBe("调用依赖服务异常：数据资源不存在（请检查数据资源ID）");
   });
 
+  it("reaches the innermost envelope through three layers, as ontology-query wraps bkn-backend", () => {
+    const outer = JSON.stringify({
+      code: "agentRetrieval.InternalServerError.CommonExternalServerError",
+      description: "调用依赖服务异常",
+      solution: "Please check the service",
+      details:
+        'Exception(http do error, method: POST, url: http://ontology-query-svc:13018/x, http status: 500, error: {"error_code":"OntologyQuery.ObjectType.InternalError.GetObjectTypesByIDFailed","description":"按id获取对象类信息失败","solution":"请重试该操作","error_link":"暂无","error_details":"get relation type paths failed: {\\"error_code\\":\\"BknBackend.KnowledgeNetwork.NotFound\\",\\"description\\":\\"业务知识网络不存在\\",\\"solution\\":\\"请检查参数是否正确。\\",\\"error_link\\":\\"\\",\\"error_details\\":\\"Knowledge network[] not found\\"}"})',
+    });
+    expect(friendlyError(new Error(outer))).toBe("调用依赖服务异常：业务知识网络不存在（请检查参数是否正确。）");
+  });
+
+  it("unwraps a downstream envelope whose quotes arrive escaped", () => {
+    const outer = JSON.stringify({
+      code: "agentRetrieval.InternalServerError.CommonExternalServerError",
+      description: "调用依赖服务异常",
+      details:
+        'Exception(http do error, method: POST, url: http://ontology-query-svc:13018/x, http status: 500, error: {"error_code":"OntologyQuery.Internal","description":"内部错误","error_details":"query object failed: {\\"error_code\\":\\"VegaBackend.Resource.NotFound\\",\\"description\\":\\"数据资源不存在\\",\\"solution\\":\\"请检查数据资源ID\\",\\"error_link\\":\\"\\",\\"error_details\\":\\"\\"}"})',
+    });
+    expect(friendlyError(new Error(outer))).toBe("调用依赖服务异常：数据资源不存在（请检查数据资源ID）");
+  });
+
   it("falls back to the description and a detail tail when there is no inner envelope", () => {
     expect(friendlyError(new Error(JSON.stringify({ description: "内部错误", details: "QueryDatasetData returned HTTP 500" })))).toBe("内部错误：QueryDatasetData returned HTTP 500");
     expect(friendlyError(new Error(JSON.stringify({ error: { message: "conversation_id is required" } })))).toBe("conversation_id is required");

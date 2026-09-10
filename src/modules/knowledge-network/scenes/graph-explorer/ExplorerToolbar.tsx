@@ -5,8 +5,20 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ClearOutlined, CompressOutlined, DeleteOutlined, NodeIndexOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Button, Divider, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography } from "antd";
+import {
+  ClearOutlined,
+  CompressOutlined,
+  DeleteOutlined,
+  HistoryOutlined,
+  MenuFoldOutlined,
+  MinusCircleOutlined,
+  MenuUnfoldOutlined,
+  NodeIndexOutlined,
+  PictureOutlined,
+  ReloadOutlined,
+  UndoOutlined,
+} from "@ant-design/icons";
+import { Badge, Button, Divider, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -44,6 +56,18 @@ export type ExplorerToolbarProps = {
   onClearPathEnd: () => void;
   onClear: () => void;
   onClearCache: () => void;
+  sidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
+  undoCount: number;
+  onUndo: () => void;
+  onExport: () => void;
+  historyCount: number;
+  onToggleHistory: () => void;
+  /** Concept groups exist on this network, so grouping can be offered. */
+  canGroup: boolean;
+  groupByConceptGroup: boolean;
+  onToggleGroup: (checked: boolean) => void;
+  onRemoveSelected: () => void;
 };
 
 export function ExplorerToolbar(props: ExplorerToolbarProps) {
@@ -75,10 +99,24 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
     onClearPathEnd,
     onClear,
     onClearCache,
+    sidebarCollapsed,
+    onToggleSidebar,
+    undoCount,
+    onUndo,
+    onExport,
+    historyCount,
+    onToggleHistory,
+    canGroup,
+    groupByConceptGroup,
+    onToggleGroup,
+    onRemoveSelected,
   } = props;
 
   return (
     <div className={styles.toolbar} data-testid="graph-explorer-toolbar">
+      <Tooltip title={t(sidebarCollapsed ? "knowledgeNetwork.graphExplorer.toolbar.expandSidebar" : "knowledgeNetwork.graphExplorer.toolbar.collapseSidebar")}>
+        <Button size="small" data-testid="graph-explorer-sidebar-toggle" icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={onToggleSidebar} />
+      </Tooltip>
       <Space size={8} wrap className={styles.group}>
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.layout")}</span>
         <Select
@@ -101,6 +139,12 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
           options={SHAPES.map((item) => ({ value: item, label: t(`knowledgeNetwork.graphExplorer.shapes.${item}`) }))}
           onChange={onShapeChange}
         />
+        {canGroup ? (
+          <>
+            <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.groupByConceptGroup")}</span>
+            <Switch size="small" data-testid="graph-explorer-group" checked={groupByConceptGroup} disabled={busy} onChange={onToggleGroup} />
+          </>
+        ) : null}
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.nodeLabels")}</span>
         <Switch size="small" data-testid="graph-explorer-node-labels" checked={showNodeLabels} onChange={(checked) => onLabelVisibilityChange(checked, showEdgeLabels)} />
         <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.edgeLabels")}</span>
@@ -153,8 +197,26 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         <Typography.Text type="secondary" className={styles.stats} data-testid="graph-explorer-stats">
           {t("knowledgeNetwork.graphExplorer.toolbar.stats", { nodes: nodeCount, edges: edgeCount })}
         </Typography.Text>
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.undo")}>
+          <Badge count={undoCount} size="small" offset={[-2, 2]} overflowCount={99}>
+            <Button size="small" data-testid="graph-explorer-undo" icon={<UndoOutlined />} disabled={undoCount === 0 || busy} onClick={onUndo} />
+          </Badge>
+        </Tooltip>
         <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.fit")}>
           <Button size="small" icon={<CompressOutlined />} disabled={nodeCount === 0} onClick={onFitView} />
+        </Tooltip>
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.export")}>
+          <Button size="small" data-testid="graph-explorer-export" icon={<PictureOutlined />} disabled={nodeCount === 0} onClick={onExport} />
+        </Tooltip>
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.history")}>
+          <Badge count={historyCount} size="small" offset={[-2, 2]} overflowCount={99} color="#8c8c8c">
+            <Button size="small" data-testid="graph-explorer-history" icon={<HistoryOutlined />} onClick={onToggleHistory} />
+          </Badge>
+        </Tooltip>
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.removeSelectedHelp")}>
+          <Button size="small" data-testid="graph-explorer-remove-selected" icon={<MinusCircleOutlined />} disabled={nodeCount === 0 || busy} onClick={onRemoveSelected}>
+            {t("knowledgeNetwork.graphExplorer.toolbar.removeSelected")}
+          </Button>
         </Tooltip>
         <Popconfirm title={t("knowledgeNetwork.graphExplorer.toolbar.clear")} onConfirm={onClear} disabled={nodeCount === 0}>
           <Button size="small" icon={<ClearOutlined />} disabled={nodeCount === 0}>
