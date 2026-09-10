@@ -153,6 +153,19 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   }, 20_000);
 
+  it("rejects manually entered out-of-range sample rows", async () => {
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
+    fireEvent.change((await screen.findAllByRole("spinbutton")).at(-1)!, { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+
+    await screen.findByText("dataCatalog.semanticWorkspace.sampleRowsInvalid");
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    expect(createResourceSemanticUnderstandingTaskMock).not.toHaveBeenCalled();
+  });
+
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 

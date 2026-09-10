@@ -76,6 +76,44 @@ describe("createResourceSemanticUnderstandingTask", () => {
       scope: "resource",
     });
   });
+
+  it.each([1, 20])("sends valid sample row boundaries to Vega: %s", async (sampleMaxRows) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockClear();
+    postMock.mockResolvedValue({ data: { id: "task-1" } });
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows,
+    });
+
+    expect(postMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      sample_policy: { masked: false, max_rows: sampleMaxRows },
+    }));
+  });
+
+  it.each([0, 21, 30, -1, 1.5])("rejects invalid sample row limits before sending a request: %s", async (sampleMaxRows) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockClear();
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await expect(createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows,
+    })).rejects.toThrow("sampleMaxRows must be an integer between 1 and 20");
+    expect(postMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("mapSemanticUnderstandingTaskSummary", () => {
