@@ -94,6 +94,13 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   });
 
+  it("shows the empty-state title only once when there are no tasks", async () => {
+    render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
+
+    await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
+    expect(screen.getAllByText("dataCatalog.semanticWorkspace.empty")).toHaveLength(1);
+  });
+
   it("resets sample rows to ten each time the creation dialog opens", () => {
     const form = { setFieldsValue: vi.fn() } as unknown as Pick<FormInstance, "setFieldsValue">;
     const { rerender } = render(<SemanticUnderstandingTaskFormDefaultsHarness form={form} open={false} />);
