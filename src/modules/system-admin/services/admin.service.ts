@@ -108,7 +108,7 @@ let roles: AdminRole[] = [
     accessorIds: [], updatedAt: daysAgo(30),
   },
   {
-    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, models, and execution factory assets.",
+    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, and execution factory assets.",
     builtin: true, source: "business",
     permissions: [
       grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),

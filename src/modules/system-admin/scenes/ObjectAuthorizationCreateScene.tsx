@@ -24,7 +24,11 @@ import {
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
-import { AUTHZ_OBJECT_TYPES, HIDDEN_INSTANCE_OPS, isAuthzObjectType } from "@/modules/system-admin/utils/authz-catalog";
+import {
+  AUTHZ_OBJECT_PICKER_TYPES,
+  HIDDEN_INSTANCE_OPS,
+  isAuthzObjectPickerType,
+} from "@/modules/system-admin/utils/authz-catalog";
 import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
@@ -44,10 +48,7 @@ const GRANT_LIST_PATH = "/system/authorizations";
 
 const OBJECT_TYPE_GROUPS = [
   { key: "data", types: ["catalog", "resource"] },
-  {
-    key: "knowledge",
-    types: ["knowledge_network", "concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"],
-  },
+  { key: "knowledge", types: ["knowledge_network"] },
   { key: "execution", types: ["operator", "tool_box", "mcp", "skill"] },
 ] as const;
 
@@ -89,7 +90,7 @@ export function ObjectAuthorizationCreateScene() {
     ? (searchParams.get("object") ?? undefined)
     : undefined;
   const deepLinkedType = parseObjValue(deepLinkedObject)?.objType;
-  const supportedDeepLinkedType = deepLinkedType && isAuthzObjectType(deepLinkedType)
+  const supportedDeepLinkedType = deepLinkedType && isAuthzObjectPickerType(deepLinkedType)
     ? deepLinkedType
     : undefined;
   const supportedDeepLinkedObject = supportedDeepLinkedType
@@ -218,7 +219,7 @@ export function ObjectAuthorizationCreateScene() {
       OBJECT_TYPE_GROUPS.map((group) => ({
         label: t(`systemAdmin.objectGrants.objectTypeGroups.${group.key}`),
         options: group.types
-          .filter((type) => (AUTHZ_OBJECT_TYPES as readonly string[]).includes(type))
+          .filter((type) => (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type))
           .map((type) => ({ label: resourceTypeLabel(type), value: type })),
       })),
     [t],

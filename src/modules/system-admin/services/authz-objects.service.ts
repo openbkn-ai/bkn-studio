@@ -13,7 +13,10 @@
 // Used only in real mode; authz.service includes seed data for mock mode.
 import { http } from "@/framework/request/http";
 import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
-import { AUTHZ_OBJECT_TYPES } from "@/modules/system-admin/utils/authz-catalog";
+import {
+  AUTHZ_OBJECT_PICKER_TYPES,
+  isAuthzObjectPickerType,
+} from "@/modules/system-admin/utils/authz-catalog";
 
 const PAGE_SIZE = 100;
 
@@ -85,12 +88,12 @@ async function listOne(type: string, keyword: string): Promise<AuthorizableObjec
     .filter((object) => object.id);
 }
 
-// List authorizable objects by type. A picker normally asks for one type only; listing every type
-// remains available for callers that genuinely need a cross-type search.
+// List types that have a concrete-instance endpoint. Object-grant history can include additional
+// types, but new grants must not offer a type whose instances cannot be selected.
 export async function listDomainObjects(type?: string, keyword = ""): Promise<AuthorizableObject[]> {
-  const types = type && (AUTHZ_OBJECT_TYPES as readonly string[]).includes(type)
-    ? [type]
-    : AUTHZ_OBJECT_TYPES;
+  const types = type
+    ? (isAuthzObjectPickerType(type) ? [type] : [])
+    : AUTHZ_OBJECT_PICKER_TYPES;
   const settled = await Promise.allSettled(types.map((item) => listOne(item, keyword)));
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }

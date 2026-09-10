@@ -46,6 +46,9 @@ describe("role-catalog", () => {
     expect(roleDescription({ name: "super_admin", description: "中文后端描述", builtin: true })).toBe(
       "Built-in hidden and controlled role with full platform permissions.",
     );
+    expect(roleDescription({ name: "network_builder", description: "backend description", builtin: true })).toBe(
+      "Business network builder for data, knowledge, and execution factory assets.",
+    );
     expect(roleDescription({ name: "系统管理员", description: "用户自定义描述", builtin: false })).toBe("用户自定义描述");
     expect(roleSearchText({ name: "admin", description: "backend description", builtin: true })).toContain(
       "operations",
@@ -54,6 +57,9 @@ describe("role-catalog", () => {
     await i18n.changeLanguage("zh-CN");
     expect(roleDescription({ name: "super_admin", description: "中文后端描述", builtin: true })).toBe(
       "内置隐藏 / 受控角色，拥有平台全量权限。",
+    );
+    expect(roleDescription({ name: "network_builder", description: "后端描述", builtin: true })).toBe(
+      "负责数据、知识和执行工厂资产的业务网络构建者。",
     );
     expect(roleSearchText({ name: "admin", description: "backend description", builtin: true })).toContain("运维");
   });

@@ -7,13 +7,23 @@
 
 import { describe, expect, it } from "vitest";
 
-import { AUTHZ_OBJECT_TYPES, isAuthzObjectType } from "./authz-catalog";
+import {
+  AUTHZ_OBJECT_PICKER_TYPES,
+  AUTHZ_OBJECT_TYPES,
+  isAuthzObjectPickerType,
+  isAuthzObjectType,
+} from "./authz-catalog";
 
 describe("object authorization types", () => {
-  it("does not offer individual model authorization", () => {
-    expect(AUTHZ_OBJECT_TYPES).not.toContain("small_model");
-    expect(AUTHZ_OBJECT_TYPES).not.toContain("large_model");
-    expect(isAuthzObjectType("small_model")).toBe(false);
-    expect(isAuthzObjectType("large_model")).toBe(false);
+  it("keeps stored grant types filterable while restricting the new-grant picker", () => {
+    expect(AUTHZ_OBJECT_TYPES).toContain("small_model");
+    expect(AUTHZ_OBJECT_TYPES).toContain("large_model");
+    expect(isAuthzObjectType("small_model")).toBe(true);
+    expect(isAuthzObjectType("concept_group")).toBe(true);
+
+    for (const type of ["small_model", "large_model", "concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
+      expect(AUTHZ_OBJECT_PICKER_TYPES).not.toContain(type);
+      expect(isAuthzObjectPickerType(type)).toBe(false);
+    }
   });
 });
