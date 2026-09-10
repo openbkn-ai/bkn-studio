@@ -53,7 +53,7 @@ export const graphExplorerPart = {
       },
     },
     cypher: {
-      hint: "只写 MATCH … [WHERE …]，标签可用对象类 id 或名称，关系必须带方向且只写一个关系类；RETURN 由页面按主键自动补全，结果最多 {{limit}} 行。",
+      hint: "只写 MATCH … [WHERE …]，标签可用对象类 id 或名称；可写多条路径（逗号并列或多个 MATCH），关系只写一个关系类、方向可有可无；RETURN 由页面按主键自动补全，结果最多 {{limit}} 行。",
       placeholder: "MATCH (k:knowledge)-[:knowledge_cites_block]->(b:block) WHERE k.title <> ''",
       run: "运行",
       addAll: "全部加入（{{nodes}} 节点 · {{edges}} 边）",

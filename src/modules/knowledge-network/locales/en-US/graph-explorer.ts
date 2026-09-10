@@ -53,7 +53,7 @@ export const graphExplorerPart = {
       },
     },
     cypher: {
-      hint: "Write only MATCH … [WHERE …]. Labels take an object type id or name; relationships must be directed and name one relation type. The RETURN is completed from primary keys, capped at {{limit}} rows.",
+      hint: "Write only MATCH … [WHERE …]. Labels take an object type id or name; several paths are fine, comma-separated or as more MATCH clauses, and a relationship names one relation type with or without a direction. The RETURN is completed from primary keys, capped at {{limit}} rows.",
       placeholder: "MATCH (k:knowledge)-[:knowledge_cites_block]->(b:block) WHERE k.title <> ''",
       run: "Run",
       addAll: "Add all ({{nodes}} nodes · {{edges}} edges)",
