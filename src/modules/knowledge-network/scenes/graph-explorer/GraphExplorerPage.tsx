@@ -1112,7 +1112,7 @@ export function GraphExplorerScene() {
       }, {
         rethrow: true,
         log: {
-          kind: "ai",
+          kind: "explore",
           title: question.trim().split("\n")[0],
           input: { model: modelName, question, max_steps: AI_MAX_STEPS },
           summarize: (value) => t("knowledgeNetwork.graphExplorer.ai.summary", { steps: value.steps.length }),

@@ -290,6 +290,7 @@ export const graphExplorerPart = {
         path: "Path",
         cypher: "Cypher",
         ai: "AI generate",
+        explore: "AI explore",
       },
       summary: {
         nodes: "{{nodes}} nodes · {{edges}} edges",

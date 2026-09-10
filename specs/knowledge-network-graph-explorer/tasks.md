@@ -80,5 +80,5 @@
 
 - [x] `explore-agent.ts`（提示词、工具面、结果压缩、失败回传）+ 单测
 - [x] 页面 `cypherCore` / `enrichCore` 抽离；`handleAiExplore` 在一个回合内跑完整个工具循环；SearchPanel 新 Tab
-- [ ] VM 实机：世界杯网一句话「找 1930 年的阵容并展开球队」跑通，步骤实时出现、画布有增量、历史有条目
+- [x] VM 实机：世界杯网「找到 1930 年的世界杯赛事，画出来，再展开它的所有分组」3 步 17s 跑通（query_instances → show_instances → expand_neighbours），步骤实时出现、画布 326 节点、历史有条目
 

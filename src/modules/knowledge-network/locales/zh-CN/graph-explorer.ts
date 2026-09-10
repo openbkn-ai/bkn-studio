@@ -290,6 +290,7 @@ export const graphExplorerPart = {
         path: "路径",
         cypher: "Cypher",
         ai: "AI 生成",
+        explore: "AI 探索",
       },
       summary: {
         nodes: "{{nodes}} 节点 · {{edges}} 边",

@@ -34,7 +34,7 @@ export function takeSnapshot(nodes: Iterable<GNode>, edges: Iterable<GEdge>, pos
 
 /* ============================ Call history ============================ */
 
-export type HistoryKind = "search" | "query" | "browse" | "locate" | "ids" | "expand" | "path" | "cypher" | "ai";
+export type HistoryKind = "search" | "query" | "browse" | "locate" | "ids" | "expand" | "path" | "cypher" | "ai" | "explore";
 
 export type HistoryEntry = {
   id: string;
