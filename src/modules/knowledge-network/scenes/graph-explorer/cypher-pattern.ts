@@ -18,7 +18,10 @@ export type CypherNodeRef = { variable: string; label: string };
 export type CypherEdgeRef = { from: string; to: string; relation: string };
 export type CypherPattern = { nodes: CypherNodeRef[]; edges: CypherEdgeRef[]; body: string };
 
-export type CypherParseError = { error: "empty" | "no_match" | "no_nodes" | "return_present" | "unlabeled"; detail?: string };
+export type CypherParseError = {
+  error: "empty" | "no_match" | "no_nodes" | "return_present" | "unlabeled" | "multiple_match" | "multiple_patterns";
+  detail?: string;
+};
 
 const NODE_RE = /\(\s*([A-Za-z_][\w]*)\s*(?::\s*([^\s:)]+))?\s*\)/g;
 const TAIL_RE = /\b(RETURN|ORDER\s+BY|SKIP|LIMIT)\b[\s\S]*$/i;
@@ -29,7 +32,11 @@ export function parseCypherPattern(input: string): CypherPattern | CypherParseEr
   if (!trimmed) return { error: "empty" };
   if (TAIL_RE.test(trimmed)) return { error: "return_present" };
   const body = /^\s*MATCH\b/i.test(trimmed) ? trimmed : `MATCH ${trimmed}`;
+  // The backend subset compiles exactly one MATCH holding one continuous path: a second MATCH
+  // or a comma-separated pattern part is refused with 400, so say so before sending.
+  if ((body.match(/\bMATCH\b/gi) ?? []).length > 1) return { error: "multiple_match" };
   const matchOnly = body.replace(/\bWHERE\b[\s\S]*$/i, "");
+  if (/\)\s*,\s*\(/.test(matchOnly)) return { error: "multiple_patterns" };
   const nodes = new Map<string, string>();
   const positions: { variable: string; start: number; end: number }[] = [];
   for (const hit of matchOnly.matchAll(NODE_RE)) {

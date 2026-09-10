@@ -742,7 +742,15 @@ export function GraphExplorerScene() {
     async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
       const parsed = parseCypherPattern(fragment);
       if (isCypherParseError(parsed)) {
-        const key = { empty: "parseEmpty", no_match: "parseNoNodes", no_nodes: "parseNoNodes", return_present: "parseReturn", unlabeled: "parseUnlabeled" }[parsed.error];
+        const key = {
+          empty: "parseEmpty",
+          no_match: "parseNoNodes",
+          no_nodes: "parseNoNodes",
+          return_present: "parseReturn",
+          unlabeled: "parseUnlabeled",
+          multiple_match: "parseMultipleMatch",
+          multiple_patterns: "parseMultiplePatterns",
+        }[parsed.error];
         throw new Error(t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }));
       }
       const types = detail?.object_types ?? [];

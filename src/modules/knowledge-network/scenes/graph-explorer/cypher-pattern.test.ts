@@ -26,10 +26,15 @@ describe("parseCypherPattern", () => {
   });
 
   it("prepends MATCH when the user starts with the pattern and accepts Chinese labels", () => {
-    const parsed = parseCypherPattern("(k:知识), (c:零件品类)") as CypherPattern;
+    const parsed = parseCypherPattern("(k:知识)-[:knowledge_about_component]->(c:零件品类)") as CypherPattern;
     expect(parsed.body.startsWith("MATCH ")).toBe(true);
     expect(parsed.nodes.map((n) => n.label)).toEqual(["知识", "零件品类"]);
-    expect(parsed.edges).toEqual([]);
+    expect(parsed.edges).toHaveLength(1);
+  });
+
+  it("refuses what the backend subset refuses: several MATCH clauses or comma-separated patterns", () => {
+    expect(parseCypherPattern("MATCH (a:x)-[:r]->(b:y) MATCH (b)-[:s]->(c:z)")).toEqual({ error: "multiple_match" });
+    expect(parseCypherPattern("MATCH (t:teams)<-[:r1]-(pa:pa), (pa)-[:r2]->(p:players)")).toEqual({ error: "multiple_patterns" });
   });
 
   it("rejects empty input, a RETURN clause, and unlabeled variables", () => {

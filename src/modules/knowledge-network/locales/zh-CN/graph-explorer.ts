@@ -25,6 +25,8 @@ export const graphExplorerPart = {
       empty: "没有匹配的行",
       parseEmpty: "请输入 MATCH 模式",
       parseReturn: "不要写 RETURN / ORDER BY / SKIP / LIMIT，页面会自动补全",
+      parseMultipleMatch: "只能有一条 MATCH；把多条模式串成一条连续路径，例如 (a)<-[:r1]-(b)-[:r2]->(c)",
+      parseMultiplePatterns: "MATCH 里不能用逗号并列多个模式；请串成一条连续路径，例如 (a)<-[:r1]-(b)-[:r2]->(c)",
       parseNoNodes: "没有识别到节点模式，例如 (k:knowledge)",
       parseUnlabeled: "变量 {{variable}} 没有标签，请写成 ({{variable}}:对象类)",
       unknownLabel: "对象类「{{label}}」不存在",
@@ -40,7 +42,8 @@ export const graphExplorerPart = {
         intro: "你是知识网络图查询助手。把用户的自然语言问题改写成一段 openCypher 的 MATCH 模式，只输出模式本身。",
         rulesHeader: "硬性规则：",
         rules: [
-          "只写 MATCH … 与可选的 WHERE …；绝对不要写 RETURN、ORDER BY、SKIP、LIMIT，也不要解释。",
+          "只写一条 MATCH … 与可选的 WHERE …；绝对不要写 RETURN、ORDER BY、SKIP、LIMIT，也不要解释。",
+          "整个查询只能有一条 MATCH，且 MATCH 里只能是一条连续路径：不能用逗号并列多个模式，不能写第二个 MATCH。星形关系（一个中心分出两条边）要线性化成一条链，例如 (a)<-[:r1]-(b)-[:r2]->(c)。",
           "每个节点必须带变量和标签：(k:knowledge)。标签只能用下面列出的对象类 id。",
           "关系必须带方向且只写一个关系类 id：-[:rel_id]-> 或 <-[:rel_id]-。方向以关系类定义的 source -> target 为准。",
           "不支持变长关系（*1..3）、可选匹配、聚合、函数。WHERE 只能是 变量.属性 与字面量的 = <> < > <= >= 比较，用 AND 连接。",

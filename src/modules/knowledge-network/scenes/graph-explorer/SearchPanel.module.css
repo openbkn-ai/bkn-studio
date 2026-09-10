@@ -8,9 +8,10 @@
 .panel {
   display: flex;
   flex-direction: column;
-  width: 340px;
-  min-width: 300px;
-  max-width: 420px;
+  width: 320px;
+  min-width: 280px;
+  max-width: 400px;
+  font-size: 13px;
   border-right: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-bg-surface, #fff);
   overflow: hidden;
@@ -21,7 +22,29 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 0 12px;
+  padding: 0 10px;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 8px;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.pane :global(.ant-select),
+.pane :global(.ant-input),
+.pane :global(.ant-input-search),
+.pane :global(.ant-input-number),
+.pane :global(.ant-btn) {
+  font-size: 13px;
+}
+
+.pane :global(.ant-collapse-header) {
+  padding: 4px 0 !important;
+  font-size: 13px;
 }
 
 .tabs :global(.ant-tabs-content-holder) {
@@ -33,8 +56,8 @@
 .pane {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 12px;
+  gap: 8px;
+  padding-bottom: 10px;
 }
 
 .fullWidth {
@@ -74,7 +97,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 6px;
   background: var(--color-bg-page, #fafafa);
@@ -93,15 +116,15 @@
 }
 
 .resultTitle {
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12.5px;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .resultMeta {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--color-text-secondary, #8c8c8c);
 }
 

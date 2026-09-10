@@ -25,6 +25,8 @@ export const graphExplorerPart = {
       empty: "No matching rows",
       parseEmpty: "Enter a MATCH pattern",
       parseReturn: "Leave out RETURN / ORDER BY / SKIP / LIMIT; the page completes them",
+      parseMultipleMatch: "Only one MATCH is supported; chain the patterns into one continuous path, e.g. (a)<-[:r1]-(b)-[:r2]->(c)",
+      parseMultiplePatterns: "Comma-separated patterns are not supported; chain them into one continuous path, e.g. (a)<-[:r1]-(b)-[:r2]->(c)",
       parseNoNodes: "No node pattern found, e.g. (k:knowledge)",
       parseUnlabeled: "Variable {{variable}} has no label; write ({{variable}}:ObjectType)",
       unknownLabel: "Object type \"{{label}}\" does not exist",
@@ -40,7 +42,8 @@ export const graphExplorerPart = {
         intro: "You are a knowledge-network graph query assistant. Rewrite the user's question as one openCypher MATCH pattern and output the pattern only.",
         rulesHeader: "Hard rules:",
         rules: [
-          "Write only MATCH … and an optional WHERE …; never write RETURN, ORDER BY, SKIP or LIMIT, and do not explain.",
+          "Write only one MATCH … and an optional WHERE …; never write RETURN, ORDER BY, SKIP or LIMIT, and do not explain.",
+          "The whole query is one MATCH holding one continuous path: no comma-separated pattern parts, no second MATCH. Linearise a star (one centre with two edges) into a chain such as (a)<-[:r1]-(b)-[:r2]->(c).",
           "Every node needs a variable and a label: (k:knowledge). Labels must be object type ids from the list below.",
           "Relationships must be directed and name exactly one relation type id: -[:rel_id]-> or <-[:rel_id]-. The direction follows the relation type's source -> target.",
           "No variable-length relationships (*1..3), optional matches, aggregation or functions. WHERE only compares variable.property with a literal using = <> < > <= >=, joined by AND.",
