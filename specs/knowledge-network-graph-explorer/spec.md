@@ -167,10 +167,10 @@ type GEdge = {
 
 ### 7.1 左栏
 
-- Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」折叠面板（`exclude_object_types`、`concept_groups`、`max_instances_per_type` 默认 20、`max_object_types` 默认 10 且不低于已选对象类数、`rerank`）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。
+- Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」（`exclude_object_types` / `concept_groups` / `max_instances_per_type` / `max_object_types`）+「召回融合（RRF）」面板（`enable_rrf_fusion` / `enable_knn_instance_retrieval` / `rrf_k` / `knn_weight` / `initial_candidate_count` / `min_direct_relevance` / `instance_rerank_mode`，每项带悬停说明）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。融合参数不在 `search_instance` 请求体里，任一偏离默认即改走 REST `/kn/kn_search` 并显式传 `only_schema:false`（该接口默认只回 schema），其余仍走 `search_instance`；面板底部提示当前走哪条。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
+- Tab「Cypher」：只写 `MATCH … [WHERE …]`（标签用对象类 id 或名称，关系带方向、只写一个关系类 id），页面按每个节点变量的主键自动补 `RETURN DISTINCT … LIMIT 200`，调 bkn-backend `POST /knowledge-networks/{kn_id}/cypher-queries`（REST，无需 `bkn_context`），把行还原为节点与边，再用 `query_object_instance` 按主键 `in` 批量回查补齐属性；可单个或「全部加入（含边）」。子集限制（RETURN 只能是属性、无变长关系）沿用后端契约。顶部「AI 生成」框：把本网络的对象类（含属性）与关系类（带方向）连同问题发给模型工厂默认大模型，要求只输出 MATCH/WHERE 片段；结果剥去代码块、解释与多余 RETURN，节点内联属性映射 `{a: 'x'}` 改写为 WHERE，填入编辑器供用户修改后运行；多个模型可切换。
 - Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。
-- Tab「Cypher」：用户只写 `MATCH … [WHERE …]`（标签可用对象类 id 或名称，关系必须带方向且只写一个关系类，这是后端 openCypher 子集的约束）；页面解析模式中的节点变量与有向关系，按各对象类主键自动补 `RETURN DISTINCT <var>.<pk> AS <var>__<pk>` 与 `LIMIT 200`，调用 bkn-backend `POST /knowledge-networks/{kn_id}/cypher-queries`（普通 REST，不在生命周期面），把行还原成节点与边（边类型来自模式中的关系类），再按主键 `in` 回查实例补齐标签与属性；可单个加入或「全部加入（含边）」。写了 RETURN / ORDER BY / SKIP / LIMIT、变量无标签、对象类或关系类不存在时给出明确提示。
 - 对象类与属性下拉同时按显示名与 id 过滤。
 
 ### 7.2 画布
@@ -178,7 +178,8 @@ type GEdge = {
 - 节点右键菜单：展开出边 / 展开入边 / 双向展开 / 设为路径起点 / 设为路径终点 / 从画布移除 / 固定位置（切换）。已是起点或终点的节点，对应菜单项变为「取消起点」/「取消终点」；已固定的节点显示「取消固定」。
 - 双击节点 = 双向展开。
 - 单击节点 → 右侧抽屉列出全部属性；单击空白关闭抽屉。
-- 展开结果与已有节点、边按 id 合并；新节点围绕源节点撒开，不改动其他节点位置；工具栏「重新排列」才全局重新布局。
+- 展开结果与已有节点、边按 id 合并；新节点围绕源节点按同心环撒开（每环按约 70px 间距算容量，满则外扩一环，并沿角度向外避让已有节点），不改动其他节点位置；工具栏「重新排列」才全局重新布局。布局参数 `nodeSize 64 / nodeSpacing 24` 防标签重叠。
+- 工具栏「节点名」「边名」开关控制标签显隐，随设置持久化。
 - 边标签为关系类名，箭头 source → target。
 - 按对象类自动配色，同一对象类同色；配色表优先取 Studio 现有主题色板；若无可复用色板，则在 `GraphCanvas` 内置 12 色序列，按对象类首次出现顺序分配。
 
