@@ -1246,9 +1246,6 @@ function knDetailFromMcpPayload(payload: unknown, fallbackId: string): KnDetail 
   return normalizeKnDetailPayload(candidate, fallbackId);
 }
 
-/**
- * Fetches knowledge-network detail for the data browser and test-data fill.
- */
 /** REST POST with fresh Bearer injection and one retry after 401. */
 export async function restPost(
   env: ContextLoaderEnv,
@@ -1270,6 +1267,7 @@ export async function restPost(
   return resp;
 }
 
+/** Fetches knowledge-network detail through the MCP tool, inside the caller's managed turn. */
 export async function fetchKnDetail(
   env: ContextLoaderEnv,
   auth?: McpAuth,
@@ -1313,62 +1311,66 @@ export async function fetchKnDetail(
   throw new Error("get_kn_detail did not return knowledge network detail");
 }
 
-export async function fetchKnDetailRestLegacy(
+/**
+ * Fetches knowledge-network detail over REST /kn/get_kn_detail, for pages that are not agent
+ * turns. No bkn_context is sent, so the call runs ad hoc and opens no interaction. The route
+ * shares its handler logic with the MCP tool (same summary default, same metric counts), and the
+ * payload goes through the same normalization as fetchKnDetail, so both return the same KnDetail.
+ */
+export async function fetchKnDetailRest(
   env: ContextLoaderEnv,
   auth?: McpAuth,
   signal?: AbortSignal,
-  scope?: BknCallScope,
 ): Promise<KnDetail> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ response_format: "json" });
-  const response = await restPost(
-    env,
-    auth,
-    `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext()),
-    signal,
-  );
+  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`, { kn_id: env.knId }, signal);
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || `Failed to fetch knowledge network detail (${response.status})`);
+    throw new Error(text || `get_kn_detail failed (${response.status})`);
   }
-  const data = parsePrecisionSafeJSON(text) as Partial<KnDetail> & Record<string, unknown>;
-  return {
-    id: data.id ?? env.knId,
-    name: data.name,
-    comment: typeof data.comment === "string" ? data.comment : undefined,
-    object_types: Array.isArray(data.object_types) ? data.object_types : [],
-    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
-    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
-  };
-}
-
-/** Fetches object-type details through MCP so metric tools can choose real metric_id values. */
-export async function fetchMcpObjectTypes(
-  session: McpSession,
-  knId: string,
-  ids: string[],
-  scope?: BknCallScope,
-): Promise<KnObjectType[]> {
-  const result = await session.callTool(
-    "get_object_types",
-    withBknContext({ kn_id: knId, ids, response_format: "json" }, scope?.nextContext()),
-  );
-  if (!result.ok || result.isError || result.rpcError) {
-    throw new Error(result.rpcError?.message || result.text || "Failed to fetch object-type details");
-  }
-  const fromStructured = objectTypesFromMcpPayload(result.structured);
-  if (fromStructured) return fromStructured;
+  let payload: unknown;
   try {
-    const fromText = objectTypesFromMcpPayload(JSON.parse(result.text) as unknown);
-    if (fromText) return fromText;
+    payload = parsePrecisionSafeJSON(text);
   } catch {
-    // JSON response was requested; use the normalized error below if parsing still fails.
+    throw new Error("get_kn_detail did not return JSON");
   }
-  throw new Error("get_object_types did not return object_types");
+  const detail = knDetailFromMcpPayload(payload, env.knId);
+  if (!detail) {
+    throw new Error("get_kn_detail did not return knowledge network detail");
+  }
+  return detail;
 }
 
-function objectTypesFromMcpPayload(payload: unknown): KnObjectType[] | null {
+/**
+ * Fetches object-type details over REST /kn/get_object_types so metric tools can choose real
+ * metric_id values. The route attaches related_metrics the same way the MCP tool does.
+ */
+export async function fetchObjectTypes(
+  env: ContextLoaderEnv,
+  ids: string[],
+  auth?: McpAuth,
+  signal?: AbortSignal,
+): Promise<KnObjectType[]> {
+  const base = env.base.replace(/\/+$/, "");
+  const params = new URLSearchParams({ response_format: "json" });
+  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_object_types?${params.toString()}`, { kn_id: env.knId, ids }, signal);
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(text || `get_object_types failed (${response.status})`);
+  }
+  let payload: unknown;
+  try {
+    payload = parsePrecisionSafeJSON(text);
+  } catch {
+    throw new Error("get_object_types did not return JSON");
+  }
+  const objectTypes = objectTypesFromPayload(payload);
+  if (!objectTypes) throw new Error("get_object_types did not return object_types");
+  return objectTypes;
+}
+
+function objectTypesFromPayload(payload: unknown): KnObjectType[] | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
   if (Array.isArray(record.object_types)) return record.object_types as KnObjectType[];
@@ -1388,7 +1390,6 @@ export async function fetchObjectInstances(
   limit = 5,
   auth?: McpAuth,
   signal?: AbortSignal,
-  scope?: BknCallScope,
 ): Promise<Record<string, unknown>[]> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ kn_id: env.knId, ot_id: otId, response_format: "json" });
@@ -1396,7 +1397,7 @@ export async function fetchObjectInstances(
     env,
     auth,
     `${base}${REST_PREFIX}/kn/query_object_instance?${params.toString()}`,
-    withBknContext({ limit, need_total: false, properties: [] }, scope?.nextContext()),
+    { limit, need_total: false, properties: [] },
     signal,
   );
   const text = await response.text();

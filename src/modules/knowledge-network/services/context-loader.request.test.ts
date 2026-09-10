@@ -13,9 +13,9 @@ import {
   buildCurl,
   createMcpSession,
   fetchObjectInstances,
-  fetchMcpObjectTypes,
+  fetchObjectTypes,
   fetchKnDetail,
-  fetchKnDetailRestLegacy,
+  fetchKnDetailRest,
   listMcpTools,
   sendRequest,
   type ContextLoaderOp,
@@ -251,15 +251,59 @@ describe("fetchKnDetail", () => {
   });
 });
 
-describe("legacy context-loader REST requests", () => {
-  it("uses the current UI locale", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ id: "kn-demo", object_types: [], concept_groups: [], relation_types: [] }), { status: 200 }),
-    );
+describe("fetchKnDetailRest", () => {
+  const detailPayload = {
+    id: "kn-demo",
+    name: "Demo",
+    comment: "purpose",
+    object_types: [{ id: "orders", name: "Orders", data_properties: [{ name: "order_id", type: "string" }], related_metric_count: 2 }],
+    concept_groups: [{ id: "cg", name: "Group", object_type_ids: ["orders"] }],
+    relation_types: [{ id: "rel", name: "Rel", source_object_type_id: "orders", target_object_type_id: "orders" }],
+    action_types: [],
+  };
 
-    await fetchKnDetailRestLegacy({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+  it("posts get_kn_detail over REST without bkn_context and in the current UI locale", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(detailPayload), { status: 200 }));
 
+    await fetchKnDetailRest({ base: "https://platform.example.com/", token: "", knId: "kn-demo" });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/kn/get_kn_detail?response_format=json");
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ kn_id: "kn-demo" });
     expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
+  });
+
+  it("returns the same KnDetail the MCP tool yields for the same payload", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify(detailPayload), { status: 200 }));
+    const viaRest = await fetchKnDetailRest({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+
+    vi.restoreAllMocks();
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ jsonrpc: "2.0", result: { structuredContent: detailPayload } }), { status: 200 }));
+    const viaMcp = await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+
+    expect(viaRest).toEqual(viaMcp);
+    expect(viaRest.relation_types).toEqual([{ id: "rel", name: "Rel", sourceId: "orders", targetId: "orders" }]);
+  });
+
+  it("surfaces the error body of a failed call", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"description":"not found"}', { status: 404 }));
+    await expect(fetchKnDetailRest({ base: "https://platform.example.com", token: "", knId: "kn-demo" })).rejects.toThrow('{"description":"not found"}');
+  });
+});
+
+describe("fetchObjectInstances", () => {
+  it("posts query_object_instance with kn_id and ot_id in the query string and no bkn_context", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"datas":[]}', { status: 200 }));
+
+    await fetchObjectInstances({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, "orders", 5);
+
+    expect(fetchSpy.mock.calls[0][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/kn/query_object_instance?kn_id=kn-demo&ot_id=orders&response_format=json",
+    );
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ limit: 5, need_total: false, properties: [] });
   });
 
   it("preserves unsafe integers in object-instance preview rows", async () => {
@@ -282,40 +326,31 @@ describe("legacy context-loader REST requests", () => {
   });
 });
 
-describe("fetchMcpObjectTypes", () => {
-  it("uses get_object_types with the managed context and returns related metrics", async () => {
-    const session = {
-      callTool: vi.fn().mockResolvedValue({
-        ok: true,
-        text: "",
-        latencyMs: 1,
-        structured: { object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }] },
-        isError: false,
-      }),
-    };
-    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"], { nextContext: () => bknContext })).resolves.toEqual([
+describe("fetchObjectTypes", () => {
+  it("posts get_object_types over REST without bkn_context and returns related metrics", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ kn_id: "kn-demo", object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }] }), { status: 200 }),
+    );
+
+    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).resolves.toEqual([
       { id: "orders", related_metrics: [{ id: "m_order_count" }] },
     ]);
-    expect(session.callTool).toHaveBeenCalledWith("get_object_types", {
-      kn_id: "kn-demo",
-      ids: ["orders"],
-      response_format: "json",
-      bkn_context: bknContext,
-    });
+    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/kn/get_object_types?response_format=json");
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ kn_id: "kn-demo", ids: ["orders"] });
   });
 
-  it("falls back to a JSON data envelope when structured content is unavailable", async () => {
-    const session = {
-      callTool: vi.fn().mockResolvedValue({
-        ok: true,
-        text: '{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}',
-        latencyMs: 1,
-        isError: false,
-      }),
-    };
-    await expect(fetchMcpObjectTypes(session, "kn-demo", ["orders"])).resolves.toEqual([
+  it("accepts a data envelope", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}', { status: 200 }),
+    );
+    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).resolves.toEqual([
       { id: "orders", related_metrics: [{ id: "m_order_count" }] },
     ]);
+  });
+
+  it("names the tool and status when a failed call has no body", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 500 }));
+    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).rejects.toThrow("get_object_types failed (500)");
   });
 });
 

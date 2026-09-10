@@ -13,8 +13,7 @@ import { getStoredAccessToken } from "@/framework/auth/token-store";
 import { GraphCanvas, type GraphCanvasHandle } from "@/modules/knowledge-network/scenes/graph-explorer/GraphCanvas";
 import { OBJECT_TYPE_PALETTE, type MenuAction } from "@/modules/knowledge-network/scenes/graph-explorer/constants";
 import { buildShareUrl, combineLinkSource } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
-import { createBknLifecycle, lifecycleEnv, memoryConversationStore, withManagedTurn, type BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import { fetchKnDetail, type KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
+import { fetchKnDetailRest, type KnDetail, type McpAuth } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   NODE_LIMIT,
   capIncomingNodes,
@@ -68,15 +67,10 @@ export function GraphView() {
   const startedRef = useRef(false);
 
   const base = window.location.origin;
-  const lifecycle = useMemo(
-    () =>
-      createBknLifecycle(lifecycleEnv(base, params.kn), { getToken: () => params.token }, {
-        agentName: "bkn-agent-graph-view",
-        conversationStore: memoryConversationStore(),
-      }),
-    [base, params.kn, params.token],
-  );
-  const client = useMemo(() => createGraphExplorerClient(lifecycle.session, params.kn), [lifecycle, params.kn]);
+  // Plain REST calls with the link's token; showing a graph is not an agent turn.
+  const env = useMemo(() => ({ base, token: params.token, knId: params.kn }), [base, params.kn, params.token]);
+  const auth = useMemo<McpAuth>(() => ({ getToken: () => params.token }), [params.token]);
+  const client = useMemo(() => createGraphExplorerClient(env, auth), [env, auth]);
 
   const colorOf = useCallback((otId: string) => {
     const index = colorIndexRef.current.get(otId);
@@ -84,10 +78,10 @@ export function GraphView() {
   }, []);
 
   const loadMetas = useCallback(
-    async (otIds: string[], turn: BknTurn | null) => {
+    async (otIds: string[]) => {
       const missing = otIds.filter((id) => !metaRef.current[id]);
       if (missing.length > 0) {
-        for (const meta of await client.loadObjectTypes(missing, turn)) metaRef.current[meta.id] = meta;
+        for (const meta of await client.loadObjectTypes(missing)) metaRef.current[meta.id] = meta;
       }
       return metaRef.current;
     },
@@ -112,13 +106,11 @@ export function GraphView() {
     async (ids: string[], direction: ExpandDirection) => {
       const seeds = ids.map((id) => nodesRef.current.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
       if (seeds.length === 0) return;
-      const result = await withManagedTurn(lifecycle, t("knowledgeNetwork.graphExplorer.turn.expandMany", { count: seeds.length }), async (turn) => {
-        const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
-        return expandSeeds(client, seeds, metas, direction, NO_LABELS, turn);
-      });
+      const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
+      const result = await expandSeeds(client, seeds, metas, direction, NO_LABELS);
       await addToCanvas(result.nodes, result.edges, seeds.length === 1 ? seeds[0].id : undefined);
     },
-    [addToCanvas, client, lifecycle, loadMetas, t],
+    [addToCanvas, client, loadMetas],
   );
 
   const removeNode = useCallback(async (id: string) => {
@@ -146,9 +138,7 @@ export function GraphView() {
     }
     const run = async () => {
       setStatus({ kind: "loading", text: t("knowledgeNetwork.graphExplorer.view.status.loading") });
-      const data = await withManagedTurn(lifecycle, t("knowledgeNetwork.graphExplorer.turn.schema"), (turn) =>
-        fetchKnDetail({ base, token: "", knId: params.kn }, { getToken: () => params.token }, undefined, turn ?? undefined),
-      );
+      const data = await fetchKnDetailRest(env, auth);
       detailRef.current = data;
       setDetail(data);
       const parsed = parseIdList(params.ids.join("\n"), data.object_types.map((item) => item.id));
@@ -159,15 +149,13 @@ export function GraphView() {
         return;
       }
       setStatus({ kind: "loading", text: t("knowledgeNetwork.graphExplorer.view.status.fetching", { count: parsed.items.length }) });
-      const collected = await withManagedTurn(lifecycle, t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn) => {
-        const otIds = [...new Set(parsed.items.map((item) => item.otId))];
-        const metas = await loadMetas(otIds, turn);
-        for (const otId of otIds) {
-          const meta = metas[otId];
-          if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
-        }
-        return collectSubgraphByIds(client, parsed.items, metas, data.relation_types, NO_LABELS, turn);
-      });
+      const otIds = [...new Set(parsed.items.map((item) => item.otId))];
+      const metas = await loadMetas(otIds);
+      for (const otId of otIds) {
+        const meta = metas[otId];
+        if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+      }
+      const collected = await collectSubgraphByIds(client, parsed.items, metas, data.relation_types, NO_LABELS);
       const added = await addToCanvas(collected.nodes, collected.edges);
       const missing = parsed.items.length - collected.nodes.length;
       if (missing > 0) messages.push(t("knowledgeNetwork.graphExplorer.view.missing", { count: missing }));
@@ -184,7 +172,7 @@ export function GraphView() {
     run().catch((error: unknown) => {
       setStatus({ kind: "error", text: t("knowledgeNetwork.graphExplorer.view.status.error", { message: friendlyError(error) }) });
     });
-  }, [addToCanvas, base, client, expand, lifecycle, loadMetas, params, t]);
+  }, [addToCanvas, auth, client, env, expand, loadMetas, params, t]);
 
   const menuLabels = useMemo(
     () => Object.fromEntries(MENU_ACTIONS.map((action) => [action, t(`knowledgeNetwork.graphExplorer.menu.${action}`)])) as Record<MenuAction, string>,
