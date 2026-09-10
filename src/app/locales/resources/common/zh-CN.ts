@@ -28,6 +28,7 @@ export const commonZhCN = {
     confirm: "确定",
     cancel: "取消",
     ok: "确定",
+    custom: "自定义",
     add: "添加",
     remove: "移除",
     expand: "展开",

@@ -28,6 +28,7 @@ export const commonEnUS = {
     confirm: "Confirm",
     cancel: "Cancel",
     ok: "OK",
+    custom: "Custom",
     add: "Add",
     remove: "Remove",
     expand: "Expand",

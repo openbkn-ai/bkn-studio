@@ -35,8 +35,8 @@ export const subscriptionEnUS = {
         name: "Advanced data connectivity",
       },
       perm_object_level: {
-        description: "Object-level authorization and advanced role control",
-        name: "Object-level authorization",
+        description: "Row- and column-level permission control and data masking",
+        name: "Row- and column-level permissions and masking",
       },
       rbac_basic: {
         description: "Custom departments, roles and permission control",

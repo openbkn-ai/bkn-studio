@@ -30,7 +30,7 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
-      perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
+      perm_object_level: { description: "行列级权限控制与数据脱敏", name: "行列级权限和脱敏" },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
         bullets: {
