@@ -78,6 +78,8 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectable = nodes.filter((node) => !canvasIds.has(node.id));
   const selectedVisible = selectable.filter((node) => selected.has(node.id));
+  const allSelected = selectable.length > 0 && selectedVisible.length === selectable.length;
+  const someSelected = selectedVisible.length > 0 && !allSelected;
 
   if (nodes.length === 0) {
     return searched ? <Empty className={styles.empty} image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} /> : null;
@@ -86,7 +88,18 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
   return (
     <div className={styles.results}>
       <div className={styles.resultsHeader}>
-        <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.search.resultCount", { count: nodes.length })}</Typography.Text>
+        <span className={styles.resultsLeft}>
+          <Checkbox
+            data-testid="graph-explorer-select-all"
+            disabled={selectable.length === 0}
+            checked={allSelected}
+            indeterminate={someSelected}
+            onChange={(event) => setSelected(event.target.checked ? new Set(selectable.map((node) => node.id)) : new Set())}
+          >
+            {t("knowledgeNetwork.graphExplorer.selectAll")}
+          </Checkbox>
+          <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.search.resultCount", { count: nodes.length })}</Typography.Text>
+        </span>
         <Button
           size="small"
           type="primary"

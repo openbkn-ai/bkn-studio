@@ -124,6 +124,7 @@ export const graphExplorerPart = {
       valuePlaceholder: "输入值；in 用逗号分隔",
     },
     addToCanvas: "加入画布",
+    selectAll: "全选",
     addSelected: "加入所选（{{count}}）",
     onCanvas: "已在画布",
     menu: {

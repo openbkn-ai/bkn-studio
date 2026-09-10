@@ -124,6 +124,7 @@ export const graphExplorerPart = {
       valuePlaceholder: "Enter a value; separate with commas for in",
     },
     addToCanvas: "Add to canvas",
+    selectAll: "Select all",
     addSelected: "Add selected ({{count}})",
     onCanvas: "On canvas",
     menu: {
