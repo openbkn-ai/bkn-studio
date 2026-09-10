@@ -14,6 +14,8 @@ describe("data-catalog routes", () => {
     const rootRoute = dataCatalogRoutes.find((route) => route.path === "data-catalog");
     const indexRoute = rootRoute?.children?.find((route) => route.index);
 
+    expect(rootRoute).toBeDefined();
+    expect(indexRoute).toBeDefined();
     expect(indexRoute?.handle).toEqual(rootRoute?.handle);
   });
 });
