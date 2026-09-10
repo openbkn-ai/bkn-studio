@@ -11,11 +11,11 @@ export const graphExplorerPart = {
     description: "从实例出发，沿关系逐跳探索知识网络",
     openAction: "图探索",
     tabs: {
-      semantic: "语义搜索",
-      condition: "条件查询",
+      semantic: "语义",
+      condition: "条件",
       browse: "浏览",
       cypher: "Cypher",
-      ai: "AI 探索",
+      ai: "AI",
     },
     ai: {
       hint: "用自然语言说要看什么。模型会调用本网络的语义检索、条件筛选、按 ID 画图、展开邻居和 Cypher，边找边画到画布上，最后给一句总结。",

@@ -1376,6 +1376,12 @@ export function GraphExplorerScene() {
     }
     return [...seen].map(([id, name]) => ({ id, name }));
   }, [graphRev]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** One row per object type on the canvas, so the node colours can be read. */
+  const legend = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const node of nodesRef.current.values()) counts.set(node.otId, (counts.get(node.otId) ?? 0) + 1);
+    return canvasObjectTypes.map((item) => ({ ...item, count: counts.get(item.id) ?? 0 })).sort((a, b) => b.count - a.count);
+  }, [canvasObjectTypes]);
   const propertyNamesByOt = useMemo(() => {
     const out: Record<string, string[]> = {};
     for (const { id } of canvasObjectTypes) {
@@ -1540,6 +1546,17 @@ export function GraphExplorerScene() {
           {nodesRef.current.size === 0 ? (
             <div className={styles.emptyHint}>
               <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.emptyCanvas")}</Typography.Text>
+            </div>
+          ) : null}
+          {legend.length > 0 ? (
+            <div className={styles.legend} data-testid="graph-explorer-legend">
+              {legend.map((item) => (
+                <div key={item.id} className={styles.legendRow} title={item.id}>
+                  <span className={styles.legendDot} style={{ background: colorOf(item.id) }} />
+                  <span className={styles.legendName}>{item.name}</span>
+                  <span className={styles.legendCount}>{item.count}</span>
+                </div>
+              ))}
             </div>
           ) : null}
           {busy ? (

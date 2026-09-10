@@ -11,11 +11,11 @@ export const graphExplorerPart = {
     description: "Start from an instance and follow relations across the knowledge network",
     openAction: "Graph explorer",
     tabs: {
-      semantic: "Semantic search",
-      condition: "Filter query",
+      semantic: "Semantic",
+      condition: "Filter",
       browse: "Browse",
       cypher: "Cypher",
-      ai: "AI explore",
+      ai: "AI",
     },
     ai: {
       hint: "Say what you want to see. The model uses this network's semantic search, filters, drawing by id, neighbour expansion and Cypher, drawing on the canvas as it goes, then sums up in a sentence.",

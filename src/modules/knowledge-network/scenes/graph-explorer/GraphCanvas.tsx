@@ -84,13 +84,18 @@ function truncate(text: string): string {
 
 const NODE_DIAMETER = 64;
 const NODE_GAP = 24;
-/** Ring radius that fits `count` nodes side by side at NODE_DIAMETER + NODE_GAP. */
-function ringRadiusFor(count: number): number {
-  return (count * (NODE_DIAMETER + NODE_GAP)) / (2 * Math.PI);
+/** Above this the single ring stops fitting a screen and concentric rings take over. */
+const SINGLE_RING_MAX_RADIUS = 1200;
+/** Neighbours on a ring sit side by side, so they need less room than a force layout leaves. */
+const RING_GAP = 8;
+
+/** Ring radius that fits `count` nodes side by side at NODE_DIAMETER plus the given gap. */
+function ringRadiusFor(count: number, gap: number = NODE_GAP): number {
+  return (count * (NODE_DIAMETER + gap)) / (2 * Math.PI);
 }
 
 /** Degree per node and the busiest node, read from the current graph data. */
-function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string | null; maxDegree: number } {
+function degreeStats(graph: Graph): { count: number; degree: Map<string, number>; hubId: string | null; maxDegree: number } {
   const degree = new Map<string, number>();
   for (const edge of graph.getEdgeData()) {
     degree.set(String(edge.source), (degree.get(String(edge.source)) ?? 0) + 1);
@@ -104,7 +109,7 @@ function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string
       hubId = id;
     }
   }
-  return { degree, hubId, maxDegree };
+  return { count: graph.getNodeData().length, degree, hubId, maxDegree };
 }
 
 /**
@@ -113,7 +118,7 @@ function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string
  * degree so a hub's leaves get a ring they fit on; radial takes the same radius per level.
  */
 function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptions {
-  const stats = graph ? degreeStats(graph) : { degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
+  const stats = graph ? degreeStats(graph) : { count: 0, degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
   const clampRadius = (count: number) => Math.min(900, Math.max(180, ringRadiusFor(count)));
   switch (layout) {
     case "dagre":
@@ -132,7 +137,12 @@ function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptio
     case "circular":
       // Without nodeSpacing the layout sizes the ring to the viewport and stacks the nodes on it;
       // given the node size it derives the radius from the circumference the nodes actually need.
-      return { type: "circular", nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
+      // One ring only while it still fits a screen: past that the ring is thousands of pixels
+      // across with an empty middle, so the nodes go into concentric rings instead.
+      if (ringRadiusFor(stats.count, RING_GAP) <= SINGLE_RING_MAX_RADIUS) {
+        return { type: "circular", nodeSize: NODE_DIAMETER, nodeSpacing: RING_GAP };
+      }
+      return { type: "concentric", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: RING_GAP, sortBy: "degree" };
     case "grid":
       return { type: "grid", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "force":
