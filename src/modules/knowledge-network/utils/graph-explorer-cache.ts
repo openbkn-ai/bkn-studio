@@ -11,6 +11,8 @@ export const CACHE_VERSION = 1;
 
 export type ExplorerLayout = "force" | "dagre" | "radial" | "circular" | "grid";
 export type ExplorerShape = "circle" | "rect" | "diamond" | "ellipse" | "hexagon" | "star";
+/** single: only the dragged node moves; linked: its neighbours follow with a decaying pull. */
+export type DragMode = "single" | "linked";
 
 export type ExplorerSettings = {
   layout: ExplorerLayout;
@@ -23,6 +25,7 @@ export type ExplorerSettings = {
   showEdgeLabels: boolean;
   sidebarCollapsed: boolean;
   groupByConceptGroup: boolean;
+  dragMode: DragMode;
 };
 
 export type NodePosition = { x: number; y: number; fixed?: boolean };
@@ -44,6 +47,7 @@ export const DEFAULT_SETTINGS: ExplorerSettings = {
   showEdgeLabels: true,
   sidebarCollapsed: false,
   groupByConceptGroup: false,
+  dragMode: "single",
 };
 
 export const LAYOUTS: ExplorerLayout[] = ["force", "dagre", "radial", "circular", "grid"];
@@ -86,6 +90,7 @@ function sanitizeSettings(raw: unknown): ExplorerSettings {
   if (typeof raw.showEdgeLabels === "boolean") out.showEdgeLabels = raw.showEdgeLabels;
   if (typeof raw.sidebarCollapsed === "boolean") out.sidebarCollapsed = raw.sidebarCollapsed;
   if (typeof raw.groupByConceptGroup === "boolean") out.groupByConceptGroup = raw.groupByConceptGroup;
+  if (raw.dragMode === "single" || raw.dragMode === "linked") out.dragMode = raw.dragMode;
   return out;
 }
 

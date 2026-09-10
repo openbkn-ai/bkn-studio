@@ -9,7 +9,7 @@ import { CanvasEvent, Graph, GraphEvent, NodeEvent, type EdgeData, type IElement
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 import { stringifyValue, type GEdge, type GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
-import type { ExplorerLayout, ExplorerShape, NodePosition } from "@/modules/knowledge-network/utils/graph-explorer-cache";
+import type { DragMode, ExplorerLayout, ExplorerShape, NodePosition } from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 import { MENU_ORDER, type MenuAction } from "./constants";
 import styles from "./GraphCanvas.module.css";
@@ -44,6 +44,7 @@ export type GraphCanvasHandle = {
   exportImage(): Promise<string>;
   /** Ids of nodes currently in the `selected` state (shift+click / shift+drag). */
   getSelectedIds(): string[];
+  setDragMode(mode: DragMode): void;
   /** Groups nodes into combos per concept group, or removes the combos with null. */
   setGrouping(grouping: ConceptGrouping | null): Promise<void>;
 };
@@ -62,6 +63,7 @@ export type GraphCanvasProps = {
   shape: ExplorerShape;
   showNodeLabels: boolean;
   showEdgeLabels: boolean;
+  dragMode: DragMode;
   colorOf: (otId: string) => string;
   menuLabels: Record<MenuAction, string>;
   onNodeClick?: (id: string) => void;
@@ -128,6 +130,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const layoutRef = useRef<ExplorerLayout>(props.layout);
   const labelsRef = useRef({ node: props.showNodeLabels, edge: props.showEdgeLabels });
   const groupingRef = useRef<ConceptGrouping | null>(null);
+  const dragModeRef = useRef<DragMode>(props.dragMode);
+  // Linked drag: neighbours of the dragged node (not themselves dragged) and how much they follow.
+  const linkedDragRef = useRef<{ anchor: string; last: [number, number]; followers: Map<string, number> } | null>(null);
   const comboFor = (otId: string): string | undefined => groupingRef.current?.comboByOt[otId];
   const activeLayout = (): LayoutOptions => (groupingRef.current ? COMBO_LAYOUT : layoutOptions(layoutRef.current));
 
@@ -256,8 +261,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       // Empty-canvas drag pans, wheel zooms; shift+click or shift+drag selects several nodes,
       // and dragging one selected node moves the whole selection.
       behaviors: [
-        // Shift+drag is the brush; without this drag-canvas swallows the gesture and no box appears.
-        { type: "drag-canvas", key: "drag-canvas", enable: (event: { shiftKey?: boolean }) => !event.shiftKey },
+        // Pan only from empty canvas (G6's default test, restated because a custom `enable` replaces
+        // it) and never while Shift is held, which is the brush-select gesture.
+        {
+          type: "drag-canvas",
+          key: "drag-canvas",
+          enable: (event: { shiftKey?: boolean; targetType?: string }) => !event.shiftKey && (event.targetType === undefined || event.targetType === "canvas"),
+        },
         "zoom-canvas",
         { type: "drag-element", key: "drag-element" },
         { type: "click-select", key: "click-select", multiple: true, trigger: ["shift"] },
@@ -312,7 +322,38 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       propsRef.current.onNodeClick?.(String(event.target.id));
     });
     graph.on(NodeEvent.DBLCLICK, (event: IElementEvent) => propsRef.current.onNodeDoubleClick?.(String(event.target.id)));
-    graph.on(NodeEvent.DRAG_END, () => emitPositions());
+    graph.on(NodeEvent.DRAG_START, (event: IElementEvent) => {
+      if (dragModeRef.current !== "linked") return;
+      const id = String(event.target.id);
+      const dragged = new Set(graph.getElementState(id).includes("selected") ? graph.getNodeData().filter((n) => graph.getElementState(n.id).includes("selected")).map((n) => String(n.id)) : [id]);
+      // First ring follows at 0.5, second ring at 0.2; pinned nodes stay put.
+      const followers = new Map<string, number>();
+      const first = graph.getNeighborNodesData(id).map((n) => String(n.id)).filter((n) => !dragged.has(n) && !marksRef.current.pinned.has(n));
+      for (const n of first) followers.set(n, 0.5);
+      for (const n of first) {
+        for (const second of graph.getNeighborNodesData(n).map((m) => String(m.id))) {
+          if (!dragged.has(second) && !followers.has(second) && !marksRef.current.pinned.has(second)) followers.set(second, 0.2);
+        }
+      }
+      const [x, y] = graph.getElementPosition(id);
+      linkedDragRef.current = { anchor: id, last: [x, y], followers };
+    });
+    graph.on(NodeEvent.DRAG, () => {
+      const state = linkedDragRef.current;
+      if (!state) return;
+      const [x, y] = graph.getElementPosition(state.anchor);
+      const dx = x - state.last[0];
+      const dy = y - state.last[1];
+      state.last = [x, y];
+      if (dx === 0 && dy === 0) return;
+      const moves: Record<string, [number, number]> = {};
+      for (const [id, weight] of state.followers) moves[id] = [dx * weight, dy * weight];
+      void graph.translateElementBy(moves, false);
+    });
+    graph.on(NodeEvent.DRAG_END, () => {
+      linkedDragRef.current = null;
+      emitPositions();
+    });
     graph.on(CanvasEvent.CLICK, () => {
       if (Date.now() - lastNodeClickAt < 150) return;
       propsRef.current.onCanvasClick?.();
@@ -530,6 +571,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         if (nodes.some((node) => !positions[node.id])) await graph.layout();
         await graph.setElementState(statesFor(), false);
         emitPositions();
+      },
+      setDragMode(mode) {
+        dragModeRef.current = mode;
       },
       getSelectedIds() {
         const graph = graphRef.current;

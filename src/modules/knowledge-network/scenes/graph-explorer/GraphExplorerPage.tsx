@@ -48,6 +48,7 @@ import {
   clearCache,
   readCache,
   writeCache,
+  type DragMode,
   type ExplorerLayout,
   type ExplorerSettings,
   type ExplorerShape,
@@ -1003,6 +1004,14 @@ export function GraphExplorerScene() {
     void canvasRef.current?.setGrouping(conceptGrouping);
   }, [conceptGrouping, settings.groupByConceptGroup]);
 
+  const handleDragModeChange = useCallback(
+    (mode: DragMode) => {
+      updateSettings({ dragMode: mode });
+      canvasRef.current?.setDragMode(mode);
+    },
+    [updateSettings],
+  );
+
   const handleToggleSidebar = useCallback(() => {
     updateSettings({ sidebarCollapsed: !settingsRef.current.sidebarCollapsed });
   }, [updateSettings]);
@@ -1179,6 +1188,8 @@ export function GraphExplorerScene() {
           groupByConceptGroup={settings.groupByConceptGroup}
           onToggleGroup={handleToggleGroup}
           onRemoveSelected={() => void removeSelected()}
+          dragMode={settings.dragMode}
+          onDragModeChange={handleDragModeChange}
         />
         {lifecycleDown ? <Alert type="warning" showIcon banner message={t("knowledgeNetwork.graphExplorer.lifecycleUnavailable")} /> : null}
         {restored ? (
@@ -1206,6 +1217,7 @@ export function GraphExplorerScene() {
             shape={settings.shape}
             showNodeLabels={settings.showNodeLabels}
             showEdgeLabels={settings.showEdgeLabels}
+            dragMode={settings.dragMode}
             colorOf={colorOf}
             menuLabels={menuLabels}
             onNodeClick={setSelectedId}

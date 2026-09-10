@@ -23,7 +23,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
-import { LAYOUTS, SHAPES, type ExplorerLayout, type ExplorerShape } from "@/modules/knowledge-network/utils/graph-explorer-cache";
+import { LAYOUTS, SHAPES, type DragMode, type ExplorerLayout, type ExplorerShape } from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 import styles from "./ExplorerToolbar.module.css";
 
@@ -68,6 +68,8 @@ export type ExplorerToolbarProps = {
   groupByConceptGroup: boolean;
   onToggleGroup: (checked: boolean) => void;
   onRemoveSelected: () => void;
+  dragMode: DragMode;
+  onDragModeChange: (mode: DragMode) => void;
 };
 
 export function ExplorerToolbar(props: ExplorerToolbarProps) {
@@ -110,6 +112,8 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
     groupByConceptGroup,
     onToggleGroup,
     onRemoveSelected,
+    dragMode,
+    onDragModeChange,
   } = props;
 
   return (
@@ -138,6 +142,20 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
           value={shape}
           options={SHAPES.map((item) => ({ value: item, label: t(`knowledgeNetwork.graphExplorer.shapes.${item}`) }))}
           onChange={onShapeChange}
+        />
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.dragModeHelp")}>
+          <span className={styles.label}>{t("knowledgeNetwork.graphExplorer.toolbar.dragMode")}</span>
+        </Tooltip>
+        <Select
+          size="small"
+          className={styles.select}
+          data-testid="graph-explorer-drag-mode"
+          value={dragMode}
+          options={[
+            { value: "single", label: t("knowledgeNetwork.graphExplorer.toolbar.dragSingle") },
+            { value: "linked", label: t("knowledgeNetwork.graphExplorer.toolbar.dragLinked") },
+          ]}
+          onChange={onDragModeChange}
         />
         {canGroup ? (
           <>
