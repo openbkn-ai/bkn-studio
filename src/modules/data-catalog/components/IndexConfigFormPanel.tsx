@@ -32,7 +32,7 @@ import {
   type ResourceFeatureDraft,
 } from "@/modules/data-catalog/utils/resource-index-config";
 import {
-  extractRequestStatus,
+  indexConfigSaveConflictKey,
   isActiveBuildTask,
 } from "@/modules/data-catalog/utils/build-task-guards";
 import {
@@ -580,6 +580,7 @@ export function IndexConfigFormPanel({
         catalogId: detail.catalogId,
         category: detail.category,
         description: detail.description,
+        enabled: detail.enabled ?? true,
         expectedUpdateTime: detail.expectedUpdateTime,
         name: detail.name,
         sourceIdentifier: detail.sourceIdentifier,
@@ -592,11 +593,8 @@ export function IndexConfigFormPanel({
       message.success(t("dataCatalog.build.saveConfigSuccess"));
       onSaved?.();
     } catch (persistError) {
-      if (extractRequestStatus(persistError) === 409) {
-        setError(t("dataCatalog.build.configConflict"));
-      } else {
-        setError(extractRequestErrorMessage(persistError));
-      }
+      const conflictKey = indexConfigSaveConflictKey(persistError);
+      setError(conflictKey ? t(conflictKey) : extractRequestErrorMessage(persistError));
     } finally {
       setSaving(false);
     }

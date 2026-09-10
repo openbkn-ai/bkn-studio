@@ -9,6 +9,7 @@ import axios from "axios";
 import { describe, expect, it } from "vitest";
 
 import {
+  indexConfigSaveConflictKey,
   isActiveBuildTask,
   isBuildStartRejected,
 } from "@/modules/data-catalog/utils/build-task-guards";
@@ -69,5 +70,44 @@ describe("build-task-guards", () => {
     expect(isBuildStartRejected(make(422))).toBe(true);
     expect(isBuildStartRejected(make(500))).toBe(false);
     expect(isBuildStartRejected(new Error("plain"))).toBe(false);
+  });
+
+  it("maps index config save rejections by error_code, not by status", () => {
+    const make = (status: number, error_code?: string) =>
+      new axios.AxiosError(
+        "rejected",
+        undefined,
+        undefined,
+        undefined,
+        {
+          status,
+          statusText: "x",
+          headers: {},
+          config: {} as never,
+          data: error_code ? { error_code, description: "backend text" } : {},
+        },
+      );
+
+    expect(indexConfigSaveConflictKey(make(409, "VegaBackend.BuildTask.Exist"))).toBe(
+      "dataCatalog.build.configConflict",
+    );
+    expect(
+      indexConfigSaveConflictKey(make(409, "VegaBackend.BuildTask.HasRunningExecution")),
+    ).toBe("dataCatalog.build.configConflict");
+    expect(
+      indexConfigSaveConflictKey(make(409, "VegaBackend.DiscoverTask.ResourceRefreshInProgress")),
+    ).toBe("dataCatalog.build.configRefreshInProgress");
+    expect(indexConfigSaveConflictKey(make(409, "VegaBackend.Resource.UpdateConflict"))).toBe(
+      "dataCatalog.build.configStale",
+    );
+    // A 409 for an unrelated reason must surface the backend text instead of the build-task story.
+    expect(
+      indexConfigSaveConflictKey(make(409, "VegaBackend.Resource.EnabledFieldNotAllowed")),
+    ).toBeUndefined();
+    expect(indexConfigSaveConflictKey(make(409))).toBeUndefined();
+    expect(indexConfigSaveConflictKey(make(500, "VegaBackend.BuildTask.Exist"))).toBe(
+      "dataCatalog.build.configConflict",
+    );
+    expect(indexConfigSaveConflictKey(new Error("plain"))).toBeUndefined();
   });
 });

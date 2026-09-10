@@ -199,6 +199,44 @@ describe("resource.service · updateCatalogResource", () => {
       source_identifier: "orders",
     });
   });
+
+  it("echoes the resource enabled state so Vega does not read the omission as a state change", async () => {
+    putMock.mockResolvedValue({});
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "table",
+            enabled: false,
+            id: "res-1",
+            name: "orders",
+            schema_definition: [],
+          },
+        ],
+      },
+    });
+    const { updateCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const updated = await updateCatalogResource("res-1", {
+      catalogId: "cat-1",
+      category: "table",
+      description: "",
+      enabled: false,
+      expectedUpdateTime: 123,
+      name: "orders",
+      schema: [],
+      sourceIdentifier: "orders",
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/resources/res-1",
+      expect.objectContaining({ enabled: false, expected_update_time: 123 }),
+    );
+    expect(updated?.enabled).toBe(false);
+  });
 });
 
 describe("resource.service · mock update boundaries", () => {
