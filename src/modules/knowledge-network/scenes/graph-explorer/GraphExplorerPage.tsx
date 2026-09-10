@@ -1160,23 +1160,28 @@ export function GraphExplorerScene() {
     async (text: string, fallbackOt?: string): Promise<void> => {
       const typeIds = (detail?.object_types ?? []).map((item) => item.id);
       const parsed = parseIdList(text, typeIds, fallbackOt);
-      if (parsed.unknown.length > 0) {
+      // Ids that resolve are drawn; the rest are reported and skipped, because a list pasted from
+      // elsewhere often carries a few that this network does not know.
+      if (parsed.items.length === 0) {
         throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
       }
-      if (parsed.items.length === 0) return;
+      if (parsed.unknown.length > 0) {
+        message.warning(t("knowledgeNetwork.graphExplorer.browse.idsSkipped", { count: parsed.unknown.length, list: parsed.unknown.slice(0, 3).join(", ") }));
+      }
       const relations = detail?.relation_types ?? [];
       const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn, ctx) => {
         const otIds = [...new Set(parsed.items.map((item) => item.otId))];
         const metas = await loadMetas(otIds, turn);
-        for (const otId of otIds) {
-          const meta = metas[otId];
-          if (!meta || meta.primaryKeys.length !== 1) {
-            throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
-          }
+        // A composite-key object type cannot be looked up by a single key; skip it rather than
+        // refusing every other id in the list.
+        const usable = otIds.filter((otId) => metas[otId]?.primaryKeys.length === 1);
+        if (usable.length === 0) {
+          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: metas[otIds[0]]?.name ?? otIds[0] }));
         }
-        const collected = await collectSubgraphByIds(client, parsed.items, metas, relations, labelMap(), turn);
+        const items = parsed.items.filter((item) => usable.includes(item.otId));
+        const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap(), turn);
         ctx.raw = collected.raw;
-        return { nodes: collected.nodes, edges: collected.edges, requested: parsed.items.length };
+        return { nodes: collected.nodes, edges: collected.edges, requested: items.length };
       }, {
         rethrow: true,
         log: {
@@ -1206,8 +1211,8 @@ export function GraphExplorerScene() {
       const result = await runTurn(t("knowledgeNetwork.graphExplorer.turn.expandMany", { count: seeds.length }), async (turn, ctx) => {
         const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
         const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
-        ctx.raw = collected.raw.calls;
-        return { nodes: collected.nodes, edges: collected.edges };
+        ctx.raw = collected.raw;
+        return { nodes: collected.nodes, edges: collected.edges, failed: collected.failed ?? [] };
       }, {
         log: {
           kind: "expand",
@@ -1217,6 +1222,9 @@ export function GraphExplorerScene() {
         },
       });
       if (!result) return;
+      if (result.failed.length > 0) {
+        message.warning(t("knowledgeNetwork.graphExplorer.toast.expandPartial", { count: result.failed.length, list: result.failed.map((item) => item.objectType).slice(0, 3).join(", ") }));
+      }
       await addToCanvas(result.nodes, result.edges);
     },
     [addToCanvas, client, labelMap, loadMetas, message, networkId, runTurn, t],

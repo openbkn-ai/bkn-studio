@@ -561,7 +561,7 @@ export function keyValueFor(meta: ObjectTypeMeta, key: string): unknown {
 /* ============================ Loaders shared by the explorer page and the viewer ============================ */
 
 export type RelationEnds = { id: string; sourceId: string; targetId: string };
-export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown> };
+export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown>; failed?: { objectType: string; error: string }[] };
 
 const ID_BATCH = 50;
 const PATH_BATCH = 5;
@@ -639,6 +639,8 @@ export async function collectSubgraphByIds(
 /**
  * One-hop neighbours of many seed nodes: one explore_subgraph per object type with `pk in`
  * when the type has a single primary key, otherwise one call per seed on its full identity.
+ * An object type the backend refuses is recorded under `raw.failed` and skipped, so a broken
+ * relation type or binding costs only its own neighbours instead of the whole expansion.
  */
 export async function expandSeeds(
   client: GraphExplorerClient,
@@ -659,20 +661,25 @@ export async function expandSeeds(
     nodes.push(...sub.nodes);
     edges.push(...sub.edges);
   };
+  const failed: { objectType: string; error: string }[] = [];
   for (const [otId, list] of byOt) {
     const meta = metas[otId];
-    if (meta && meta.primaryKeys.length === 1) {
-      const pk = meta.primaryKeys[0];
-      const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-      collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
-      continue;
-    }
-    for (const node of list) {
-      const condition = identityCondition(node.identity);
-      if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+    try {
+      if (meta && meta.primaryKeys.length === 1) {
+        const pk = meta.primaryKeys[0];
+        const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
+        collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
+        continue;
+      }
+      for (const node of list) {
+        const condition = identityCondition(node.identity);
+        if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+      }
+    } catch (error) {
+      failed.push({ objectType: meta?.name ?? otId, error: friendlyError(error) });
     }
   }
-  return { nodes, edges, raw: { calls } };
+  return { nodes, edges, raw: { calls, failed }, failed };
 }
 
 export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[] {
