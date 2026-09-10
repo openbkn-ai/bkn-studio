@@ -538,6 +538,8 @@ export function buildKnSearchBody(knId: string, query: string, options: SearchOp
   return {
     query,
     kn_id: knId,
+    // REST kn_search returns schema only unless told otherwise; search_instance implies this.
+    only_schema: false,
     retrieval_config: { concept_retrieval: conceptRetrieval, semantic_instance_retrieval: semantic },
   };
 }

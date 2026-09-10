@@ -69,14 +69,14 @@ function layoutOptions(layout: ExplorerLayout): LayoutOptions {
     case "dagre":
       return { type: "dagre", rankdir: "TB", nodesep: 40, ranksep: 90 };
     case "radial":
-      return { type: "radial", unitRadius: 130, preventOverlap: true, nodeSize: 48 };
+      return { type: "radial", unitRadius: 140, preventOverlap: true, nodeSize: 64, nodeSpacing: 24 };
     case "circular":
       return { type: "circular" };
     case "grid":
-      return { type: "grid", preventOverlap: true, nodeSize: 48 };
+      return { type: "grid", preventOverlap: true, nodeSize: 64, nodeSpacing: 24 };
     case "force":
     default:
-      return { type: "force", preventOverlap: true, nodeSize: 48, linkDistance: 160 };
+      return { type: "force", preventOverlap: true, nodeSize: 64, nodeSpacing: 24, linkDistance: 180 };
   }
 }
 
@@ -262,10 +262,19 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     // owned by this element.
     (container as HTMLDivElement & { __g6Graph?: Graph }).__g6Graph = graph;
 
-    graph.on(NodeEvent.CLICK, (event: IElementEvent) => propsRef.current.onNodeClick?.(String(event.target.id)));
+    // A node click also bubbles a canvas click in some G6 builds; remember the node click so the
+    // canvas handler does not close the drawer the node just opened.
+    let lastNodeClickAt = 0;
+    graph.on(NodeEvent.CLICK, (event: IElementEvent) => {
+      lastNodeClickAt = Date.now();
+      propsRef.current.onNodeClick?.(String(event.target.id));
+    });
     graph.on(NodeEvent.DBLCLICK, (event: IElementEvent) => propsRef.current.onNodeDoubleClick?.(String(event.target.id)));
     graph.on(NodeEvent.DRAG_END, () => emitPositions());
-    graph.on(CanvasEvent.CLICK, () => propsRef.current.onCanvasClick?.());
+    graph.on(CanvasEvent.CLICK, () => {
+      if (Date.now() - lastNodeClickAt < 150) return;
+      propsRef.current.onCanvasClick?.();
+    });
     graph.on(GraphEvent.AFTER_LAYOUT, () => emitPositions());
 
     const needsLayout = initialNodes.some((node) => !initialPositions[node.id]);
@@ -316,13 +325,33 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           if (count > 0) anchor = [sx / count + SCATTER_RADIUS * 1.5, sy / count];
         }
         const stored = propsRef.current.initialPositions;
-        const nodeData = fresh.map((node, index) => {
+        // Spread the batch over concentric rings sized so neighbouring nodes keep ~70px apart:
+        // one ring of radius r fits about 2πr / 70 nodes; further rings step outwards.
+        const RING_GAP = 70;
+        const rings: { radius: number; slots: number }[] = [];
+        let remaining = fresh.filter((node) => !stored[node.id]).length;
+        let ringRadius = SCATTER_RADIUS;
+        while (remaining > 0) {
+          const slots = Math.max(6, Math.floor((2 * Math.PI * ringRadius) / RING_GAP));
+          rings.push({ radius: ringRadius, slots: Math.min(slots, remaining) });
+          remaining -= slots;
+          ringRadius += RING_GAP + 10;
+        }
+        let placed = 0;
+        const nodeData = fresh.map((node) => {
           const kept = stored[node.id];
           if (kept) return toNodeData(node, kept);
           if (!anchor) return toNodeData(node);
-          const angle = (2 * Math.PI * index) / Math.max(fresh.length, 1) + Math.random() * 0.4;
-          const radius = SCATTER_RADIUS + Math.random() * 60;
-          return toNodeData(node, { x: anchor[0] + Math.cos(angle) * radius, y: anchor[1] + Math.sin(angle) * radius });
+          let ringIndex = 0;
+          let offset = placed;
+          while (ringIndex < rings.length && offset >= rings[ringIndex].slots) {
+            offset -= rings[ringIndex].slots;
+            ringIndex += 1;
+          }
+          const ring = rings[Math.min(ringIndex, rings.length - 1)];
+          const angle = (2 * Math.PI * offset) / ring.slots + (ringIndex % 2) * (Math.PI / ring.slots);
+          placed += 1;
+          return toNodeData(node, { x: anchor[0] + Math.cos(angle) * ring.radius, y: anchor[1] + Math.sin(angle) * ring.radius });
         });
         const existingEdges = new Set(graph.getEdgeData().map((edge) => String(edge.id)));
         const edgeData = edges.filter((edge) => !existingEdges.has(edge.id)).map(toEdgeData);

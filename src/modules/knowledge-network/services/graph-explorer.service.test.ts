@@ -295,6 +295,7 @@ describe("kn_search routing", () => {
     ).toEqual({
       query: "q",
       kn_id: "kn1",
+      only_schema: false,
       retrieval_config: {
         concept_retrieval: { top_k: 3, object_types: ["a", "b", "c"], concept_groups: ["cg"] },
         semantic_instance_retrieval: {
