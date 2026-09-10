@@ -197,6 +197,9 @@ export function GraphView() {
     [base, params.kn, layout, counts],
   );
 
+  // The properties worth showing: the backend's own bookkeeping (_display, _instance_id, ...) is noise here.
+  const shownProps = selected ? Object.entries(selected.props).filter(([key]) => !key.startsWith("_")) : [];
+
   const changeLayout = (next: ExplorerLayout) => {
     setLayout(next);
     canvasRef.current?.setLayout(next);
@@ -270,22 +273,32 @@ export function GraphView() {
         {selected ? (
           <aside className={styles.panel} data-testid="graph-view-panel">
             <div className={styles.panelHead}>
-              <span>{selected.display}</span>
-              <button type="button" onClick={() => setSelected(null)}>
-                {t("knowledgeNetwork.graphExplorer.view.close")}
+              <span className={styles.chip} style={{ background: colorOf(selected.otId) }}>
+                {selected.otName}
+              </span>
+              <span className={styles.panelTitle} title={selected.display}>
+                {selected.display}
+              </span>
+              <button type="button" className={styles.close} title={t("knowledgeNetwork.graphExplorer.view.close")} aria-label={t("knowledgeNetwork.graphExplorer.view.close")} onClick={() => setSelected(null)}>
+                ×
               </button>
             </div>
-            <div className={styles.muted}>
-              {selected.otName} · {selected.id}
+            <div className={styles.panelId}>
+              <span className={styles.muted}>{t("knowledgeNetwork.graphExplorer.drawer.instanceId")}</span>
+              <code>{selected.id}</code>
             </div>
-            <dl>
-              {Object.entries(selected.props).map(([key, value]) => (
-                <div key={key} style={{ display: "contents" }}>
-                  <dt>{key}</dt>
-                  <dd>{stringifyValue(value)}</dd>
-                </div>
-              ))}
-            </dl>
+            {shownProps.length === 0 ? (
+              <p className={styles.muted}>{t("knowledgeNetwork.graphExplorer.drawer.empty")}</p>
+            ) : (
+              <dl className={styles.props}>
+                {shownProps.map(([key, value]) => (
+                  <div key={key} className={styles.propRow}>
+                    <dt title={key}>{key}</dt>
+                    <dd>{stringifyValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </aside>
         ) : null}
       </div>
