@@ -116,15 +116,15 @@ export function buildInstanceId(otId: string, primaryKeys: string[], identity: R
 
 /**
  * Label resolution chain: an explicit label property first, then
- * `_display` → `display_name` → `name` → `title` → `text_clean` → `text` → `id`
- * → first non-system property → node id.
+ * `_display` → `display_name` → `name` → `title` → `description` → `text_clean` → `text`
+ * → `id` → first non-system property → node id.
  *
  * `text_clean` comes before `text` because a network that carries both keeps the tidied wording
  * in the former and the raw extraction, markup and all, in the latter.
  */
 export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): string {
   if (labelKey && nonEmpty(props[labelKey])) return asString(props[labelKey]);
-  for (const key of [DISPLAY, "display_name", "name", "title", "text_clean", "text", "id"]) {
+  for (const key of [DISPLAY, "display_name", "name", "title", "description", "text_clean", "text", "id"]) {
     if (nonEmpty(props[key])) return asString(props[key]);
   }
   for (const [key, value] of Object.entries(props)) {

@@ -540,6 +540,8 @@ describe("pickDisplay", () => {
   it("keeps the configured and conventional names ahead of any text", () => {
     expect(pickDisplay({ name: "名称", text_clean: "正文" }, "a-1")).toBe("名称");
     expect(pickDisplay({ title: "标题", text_clean: "正文" }, "a-1")).toBe("标题");
+    expect(pickDisplay({ description: "说明", text_clean: "正文" }, "a-1")).toBe("说明");
+    expect(pickDisplay({ title: "标题", description: "说明" }, "a-1")).toBe("标题");
     expect(pickDisplay({ text_clean: "正文", note: "别的" }, "a-1", "note")).toBe("别的");
   });
 
