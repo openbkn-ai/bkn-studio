@@ -170,7 +170,7 @@ type GEdge = {
 - Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」（`exclude_object_types` / `concept_groups` / `max_instances_per_type` / `max_object_types`）+「召回融合（RRF）」面板（`enable_rrf_fusion` / `enable_knn_instance_retrieval` / `rrf_k` / `knn_weight` / `initial_candidate_count` / `min_direct_relevance` / `instance_rerank_mode`，每项带悬停说明）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。融合参数不在 `search_instance` 请求体里，任一偏离默认即改走 REST `/kn/kn_search` 并显式传 `only_schema:false`（该接口默认只回 schema），其余仍走 `search_instance`；面板底部提示当前走哪条。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
 - Tab「Cypher」：只写 `MATCH … [WHERE …]`（标签用对象类 id 或名称，关系带方向、只写一个关系类 id），页面按每个节点变量的主键自动补 `RETURN DISTINCT … LIMIT 200`，调 bkn-backend `POST /knowledge-networks/{kn_id}/cypher-queries`（REST，无需 `bkn_context`），把行还原为节点与边，再用 `query_object_instance` 按主键 `in` 批量回查补齐属性；可单个或「全部加入（含边）」。子集限制（RETURN 只能是属性、无变长关系）沿用后端契约。顶部「AI 生成」框：把本网络的对象类（含属性）与关系类（带方向）连同问题发给模型工厂默认大模型，要求只输出 MATCH/WHERE 片段；结果剥去代码块、解释与多余 RETURN，节点内联属性映射 `{a: 'x'}` 改写为 WHERE，填入编辑器供用户修改后运行；多个模型可切换。
-- Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。
+- Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。 同一 Tab 还有「按 ID 列表取子图」：粘贴多个实例 ID（`<对象类 id>-<主键值>`，即节点抽屉里的实例 ID；或先选对象类再贴裸主键值），页面按对象类分组用 `query_object_instance`（`pk in [...]`，每批 50）取实例，再对每条两端对象类都在集合内的关系类调 `query_instance_subgraph`（路径两端各带 `pk in` 条件），只保留两端都在集合内的边；单条关系类失败只记进历史不中断。
 - 对象类与属性下拉同时按显示名与 id 过滤。
 
 ### 7.2 画布
@@ -180,7 +180,7 @@ type GEdge = {
 - 单击节点 → 右侧抽屉列出全部属性；单击空白关闭抽屉。
 - 展开结果与已有节点、边按 id 合并；新节点围绕源节点按同心环撒开（每环按约 70px 间距算容量，满则外扩一环，并沿角度向外避让已有节点），不改动其他节点位置；工具栏「重新排列」才全局重新布局。布局参数 `nodeSize 64 / nodeSpacing 24` 防标签重叠。
 - 工具栏「节点名」「边名」开关控制标签显隐，随设置持久化。
-- 多选与批量移除：Shift+点击或 Shift+框选进入 `selected` 状态，拖动其中一个即整体移动；工具栏「移除所选」或 Delete/Backspace 移除全部选中节点。空白处拖动平移画布、滚轮缩放。
+- 多选与批量移除：Shift+点击或 Shift+框选进入 `selected` 状态（Shift 按住时 `drag-canvas` 让位给 `brush-select`，否则框画不出来），拖动其中一个即整体移动；工具栏「移除所选」或 Delete/Backspace 移除全部选中节点。空白处拖动平移画布、滚轮缩放。
 - 撤销：每次加入、移除、清空前记录一份画布快照（节点、边、位置），工具栏「撤销」或 Ctrl/⌘+Z 回退一步，最多保留 30 步；撤销走 `replaceAll` 整体重建，缺位置的节点补一次布局。
 - 执行历史：每次工具调用记录种类、标题、输入参数、后端原始返回（超过 10 万字符截断）、成功与否、耗时；抽屉内可复制输入/输出，展开与路径条目可「重跑」。仅存于当前页面内存，最多 100 条。
 - 导出图片：`graph.toDataURL({ mode: "overall", type: "image/png" })` 导出整图为 PNG 下载。
@@ -200,7 +200,7 @@ type GEdge = {
 
 ### 7.4 上限
 
-画布节点数超过 500 时，展开与加入操作被拒绝并提示先移除部分节点。阈值为常量，不做配置项。
+画布节点上限 500。超限的一批不会被拒绝：先把还能放的节点放上去，边随节点自然过滤，toast 说明有多少个没放上；移除节点后再展开可继续。阈值为常量，不做配置项。
 
 ## 8. 本地缓存
 
