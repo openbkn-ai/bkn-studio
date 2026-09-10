@@ -5,7 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
 import { REST_PREFIX, restPost, type BknCallScope, type ContextLoaderEnv, type McpAuth, type McpSession, type McpToolCallResult } from "./context-loader.service";
@@ -675,26 +674,6 @@ export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[
 
 export type CypherResult = { columns: { name: string; type?: string }[]; entries: Record<string, unknown>[] };
 
-/**
- * Runs a read-only Cypher query through bkn-backend. This is a plain REST call: the
- * endpoint is not part of the managed lifecycle surface, so no bkn_context is needed.
- * A failure is rethrown with the backend's JSON envelope as the message so friendlyError
- * can surface its description and detail.
- */
-export async function runCypherQuery(knId: string, query: string): Promise<CypherResult> {
-  try {
-    const response = await http.post<unknown>(`/bkn-backend/v1/knowledge-networks/${encodeURIComponent(knId)}/cypher-queries`, { query }, { skipErrorToast: true });
-    const data: unknown = response.data;
-    if (!isRecord(data)) throw new Error("cypher-queries did not return an object");
-    const columns = Array.isArray(data.columns) ? data.columns.filter(isRecord).map((c) => ({ name: stringifyValue(c.name), type: typeof c.type === "string" ? c.type : undefined })) : [];
-    const entries = Array.isArray(data.entries) ? data.entries.filter(isRecord) : [];
-    return { columns, entries };
-  } catch (error) {
-    const body = (error as { response?: { data?: unknown } })?.response?.data;
-    if (isRecord(body)) throw new Error(JSON.stringify(body));
-    throw error instanceof Error ? error : new Error(String(error));
-  }
-}
 
 /* ============================ MCP calls ============================ */
 
@@ -850,6 +829,8 @@ export type GraphExplorerClient = {
   searchInstances(query: string, scope?: BknCallScope | null, options?: SearchOptions): Promise<Rec>;
   queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
+  /** run_cypher: the network's own Cypher surface, compiled server-side into one read-only query. */
+  runCypher(query: string, scope?: BknCallScope | null): Promise<CypherResult>;
 };
 
 export function createGraphExplorerClient(session: McpSession, knId: string): GraphExplorerClient {
@@ -890,6 +871,14 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       if (offset > 0) args.offset = offset;
       const result = await session.callTool("query_object_instance", withContext(args, scope));
       return readPayload(result, "query_object_instance");
+    },
+    async runCypher(query, scope) {
+      const result = await session.callTool("run_cypher", withContext({ kn_id: knId, query, response_format: "json" }, scope));
+      const payload = readPayload(result, "run_cypher");
+      const columns = Array.isArray(payload.columns)
+        ? payload.columns.filter(isRecord).map((column) => ({ name: stringifyValue(column.name), type: typeof column.type === "string" ? column.type : undefined }))
+        : [];
+      return { columns, entries: Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [] };
     },
     async exploreSubgraph(request, scope) {
       const result = await session.callTool(

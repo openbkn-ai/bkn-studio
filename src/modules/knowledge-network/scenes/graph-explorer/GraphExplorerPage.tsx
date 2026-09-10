@@ -37,7 +37,6 @@ import {
   needsKnSearch,
   parseRelationPaths,
   relabel,
-  runCypherQuery,
   shortestChainTo,
   type ExpandDirection,
   type GEdge,
@@ -900,8 +899,6 @@ export function GraphExplorerScene() {
           no_nodes: "parseNoNodes",
           return_present: "parseReturn",
           unlabeled: "parseUnlabeled",
-          multiple_match: "parseMultipleMatch",
-          multiple_patterns: "parseMultiplePatterns",
         }[parsed.error];
         throw new Error(t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }));
       }
@@ -929,7 +926,7 @@ export function GraphExplorerScene() {
         return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
       });
       const query = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
-      const result = await runCypherQuery(networkId, query);
+      const result = await client.runCypher(query, turn);
       const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
       // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
       const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -947,7 +944,7 @@ export function GraphExplorerScene() {
       }
       return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length, query, raw: result };
     },
-    [client, detail, labelMap, loadMetas, networkId, t],
+    [client, detail, labelMap, loadMetas, t],
   );
 
   const handleCypher = useCallback(
@@ -963,7 +960,7 @@ export function GraphExplorerScene() {
         log: {
           kind: "cypher",
           title: fragment.trim().split("\n")[0],
-          input: { endpoint: "cypher-queries", kn_id: networkId, fragment, get query() { return sentQuery; } },
+          input: { tool: "run_cypher", kn_id: networkId, fragment, get query() { return sentQuery; } },
           summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows: value.rows, nodes: value.nodes.length, edges: value.edges.length }),
         graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
         },

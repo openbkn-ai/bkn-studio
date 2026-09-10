@@ -32,9 +32,30 @@ describe("parseCypherPattern", () => {
     expect(parsed.edges).toHaveLength(1);
   });
 
-  it("refuses what the backend subset refuses: several MATCH clauses or comma-separated patterns", () => {
-    expect(parseCypherPattern("MATCH (a:x)-[:r]->(b:y) MATCH (b)-[:s]->(c:z)")).toEqual({ error: "multiple_match" });
-    expect(parseCypherPattern("MATCH (t:teams)<-[:r1]-(pa:pa), (pa)-[:r2]->(p:players)")).toEqual({ error: "multiple_patterns" });
+  it("reads several paths, comma-separated or as more MATCH clauses", () => {
+    const many = parseCypherPattern("MATCH (a:x)-[:r]->(b:y) MATCH (b)-[:s]->(c:z)");
+    expect(isCypherParseError(many)).toBe(false);
+    expect((many as CypherPattern).edges).toEqual([
+      { from: "a", to: "b", relation: "r" },
+      { from: "b", to: "c", relation: "s" },
+    ]);
+    const comma = parseCypherPattern("MATCH (t:teams)<-[:r1]-(pa:appearances), (pa)-[:r2]->(p:players)");
+    expect(isCypherParseError(comma)).toBe(false);
+    expect((comma as CypherPattern).edges).toEqual([
+      { from: "pa", to: "t", relation: "r1" },
+      { from: "pa", to: "p", relation: "r2" },
+    ]);
+  });
+
+  it("takes an undirected relation and an inline property map", () => {
+    const undirected = parseCypherPattern("MATCH (a:x)-[:r]-(b:y)");
+    expect((undirected as CypherPattern).edges).toEqual([{ from: "a", to: "b", relation: "r" }]);
+    const inline = parseCypherPattern("MATCH (p:product {name: '问界M7'})-[:r]->(k:knowledge)");
+    expect(isCypherParseError(inline)).toBe(false);
+    expect((inline as CypherPattern).nodes).toEqual([
+      { variable: "p", label: "product" },
+      { variable: "k", label: "knowledge" },
+    ]);
   });
 
   it("rejects empty input, a RETURN clause, and unlabeled variables", () => {

@@ -19,11 +19,12 @@ export type CypherEdgeRef = { from: string; to: string; relation: string };
 export type CypherPattern = { nodes: CypherNodeRef[]; edges: CypherEdgeRef[]; body: string };
 
 export type CypherParseError = {
-  error: "empty" | "no_match" | "no_nodes" | "return_present" | "unlabeled" | "multiple_match" | "multiple_patterns";
+  error: "empty" | "no_match" | "no_nodes" | "return_present" | "unlabeled";
   detail?: string;
 };
 
-const NODE_RE = /\(\s*([A-Za-z_][\w]*)\s*(?::\s*([^\s:)]+))?\s*\)/g;
+/** A node pattern: variable, optional label, optional inline property map. */
+const NODE_RE = /\(\s*([A-Za-z_][\w]*)\s*(?::\s*([^\s:){]+))?\s*(\{[^}]*\})?\s*\)/g;
 const TAIL_RE = /\b(RETURN|ORDER\s+BY|SKIP|LIMIT)\b[\s\S]*$/i;
 
 /** Extracts node variables, labels and directed relationships from a MATCH [WHERE] fragment. */
@@ -32,11 +33,9 @@ export function parseCypherPattern(input: string): CypherPattern | CypherParseEr
   if (!trimmed) return { error: "empty" };
   if (TAIL_RE.test(trimmed)) return { error: "return_present" };
   const body = /^\s*MATCH\b/i.test(trimmed) ? trimmed : `MATCH ${trimmed}`;
-  // The backend subset compiles exactly one MATCH holding one continuous path: a second MATCH
-  // or a comma-separated pattern part is refused with 400, so say so before sending.
-  if ((body.match(/\bMATCH\b/gi) ?? []).length > 1) return { error: "multiple_match" };
+  // run_cypher accepts several MATCH clauses and comma-separated paths; two nodes only become an
+  // edge when what sits between them is a relation, so a comma or a new clause simply ends a chain.
   const matchOnly = body.replace(/\bWHERE\b[\s\S]*$/i, "");
-  if (/\)\s*,\s*\(/.test(matchOnly)) return { error: "multiple_patterns" };
   const nodes = new Map<string, string>();
   const positions: { variable: string; start: number; end: number }[] = [];
   for (const hit of matchOnly.matchAll(NODE_RE)) {
@@ -59,8 +58,12 @@ export function parseCypherPattern(input: string): CypherPattern | CypherParseEr
     const between = matchOnly.slice(positions[index].end, positions[index + 1].start);
     const forward = /^\s*-\s*\[\s*(?:\w+\s*)?:\s*([^\s\]]+)\s*\]\s*->\s*$/.exec(between);
     const backward = /^\s*<-\s*\[\s*(?:\w+\s*)?:\s*([^\s\]]+)\s*\]\s*-\s*$/.exec(between);
+    // Undirected `-[:R]-` is written as it reads; the canvas puts it back into the relation
+    // type's declared direction when the subgraph is merged.
+    const undirected = /^\s*-\s*\[\s*(?:\w+\s*)?:\s*([^\s\]]+)\s*\]\s*-\s*$/.exec(between);
     if (forward) edges.push({ from: positions[index].variable, to: positions[index + 1].variable, relation: forward[1] });
     else if (backward) edges.push({ from: positions[index + 1].variable, to: positions[index].variable, relation: backward[1] });
+    else if (undirected) edges.push({ from: positions[index].variable, to: positions[index + 1].variable, relation: undirected[1] });
     // Anything else (a comma, a new path) starts a new chain without an edge.
   }
   return { nodes: [...nodes].map(([variable, label]) => ({ variable, label })), edges, body };
