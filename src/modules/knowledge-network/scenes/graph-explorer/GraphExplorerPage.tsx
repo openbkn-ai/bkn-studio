@@ -49,6 +49,7 @@ import {
 import {
   DEFAULT_SETTINGS,
   clearCache,
+  layoutFromConfig,
   readCache,
   writeCache,
   type DragMode,
@@ -88,6 +89,13 @@ import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
 const CYPHER_ROW_LIMIT = 200;
+
+/** Deploy-time default layout, set in the runtime config file next to the bundle. */
+function runtimeGraphLayout(): unknown {
+  if (typeof window === "undefined") return null;
+  const runtime = (window as { __BKN_STUDIO_RUNTIME__?: { graphExplorer?: { layout?: unknown } } }).__BKN_STUDIO_RUNTIME__;
+  return runtime?.graphExplorer?.layout ?? null;
+}
 const EXPAND_SEED_LIMIT = 50;
 /** Tool calls one AI exploration may make before it has to answer. */
 const AI_MAX_STEPS = 10;
@@ -133,7 +141,11 @@ export function GraphExplorerScene() {
     return {
       link,
       snapshot: link ? null : cached,
-      settings: { ...(cached?.settings ?? DEFAULT_SETTINGS), ...(link?.layout ? { layout: link.layout } : {}) },
+      settings: {
+        // What the user last chose wins; a fresh canvas takes the deployment's default layout.
+        ...(cached?.settings ?? { ...DEFAULT_SETTINGS, layout: layoutFromConfig(runtimeGraphLayout()) ?? DEFAULT_SETTINGS.layout }),
+        ...(link?.layout ? { layout: link.layout } : {}),
+      },
     };
   });
   const snapshot = initial.snapshot;

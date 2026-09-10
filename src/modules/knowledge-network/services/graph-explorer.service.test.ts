@@ -531,6 +531,24 @@ describe("collectSubgraphByIds", () => {
   });
 });
 
+describe("pickDisplay", () => {
+  it("prefers the tidied text over the raw one", () => {
+    expect(pickDisplay({ text: "**原文** 带标记", text_clean: "原文带标记" }, "a-1")).toBe("原文带标记");
+    expect(pickDisplay({ text: "只有原文" }, "a-1")).toBe("只有原文");
+  });
+
+  it("keeps the configured and conventional names ahead of any text", () => {
+    expect(pickDisplay({ name: "名称", text_clean: "正文" }, "a-1")).toBe("名称");
+    expect(pickDisplay({ title: "标题", text_clean: "正文" }, "a-1")).toBe("标题");
+    expect(pickDisplay({ text_clean: "正文", note: "别的" }, "a-1", "note")).toBe("别的");
+  });
+
+  it("falls back to the id and then to the node id", () => {
+    expect(pickDisplay({ id: "abc" }, "a-1")).toBe("abc");
+    expect(pickDisplay({}, "a-1")).toBe("a-1");
+  });
+});
+
 describe("orientEdges", () => {
   const relations = new Map([
     ["rel_squads_tournament", { id: "rel_squads_tournament", sourceOtId: "squads", targetOtId: "tournaments" }],

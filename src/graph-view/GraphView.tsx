@@ -52,7 +52,7 @@ type Status = { kind: "loading" | "ready" | "error"; text: string };
  */
 export function GraphView() {
   const { t } = useTranslation();
-  const [params] = useState<ViewParams>(() => parseViewParams(combineLinkSource(window.location.search, window.location.hash), window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? ""));
+  const [params] = useState<ViewParams>(() => parseViewParams(combineLinkSource(window.location.search, window.location.hash), window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? "", window.__BKN_GRAPH_VIEW__?.layout));
   const [status, setStatus] = useState<Status>({ kind: "loading", text: "" });
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const [layout, setLayout] = useState<ExplorerLayout>(params.layout);
