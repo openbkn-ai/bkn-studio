@@ -545,6 +545,13 @@ describe("pickDisplay", () => {
     expect(pickDisplay({ text_clean: "正文", note: "别的" }, "a-1", "note")).toBe("别的");
   });
 
+  it("matches the property names whatever their case", () => {
+    expect(pickDisplay({ Title: "标题" }, "a-1")).toBe("标题");
+    expect(pickDisplay({ Description: "说明", Text: "正文" }, "a-1")).toBe("说明");
+    expect(pickDisplay({ TEXT: "原文", Text_Clean: "清洗后" }, "a-1")).toBe("清洗后");
+    expect(pickDisplay({ Note: "别的" }, "a-1", "note")).toBe("别的");
+  });
+
   it("falls back to the id and then to the node id", () => {
     expect(pickDisplay({ id: "abc" }, "a-1")).toBe("abc");
     expect(pickDisplay({}, "a-1")).toBe("a-1");

@@ -120,12 +120,23 @@ export function buildInstanceId(otId: string, primaryKeys: string[], identity: R
  * → `id` → first non-system property → node id.
  *
  * `text_clean` comes before `text` because a network that carries both keeps the tidied wording
- * in the former and the raw extraction, markup and all, in the latter.
+ * in the former and the raw extraction, markup and all, in the latter. Names are matched without
+ * regard to case, since one network writes `Title` where another writes `title`.
  */
+const LABEL_CHAIN = [DISPLAY, "display_name", "name", "title", "description", "text_clean", "text", "id"];
+
 export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): string {
   if (labelKey && nonEmpty(props[labelKey])) return asString(props[labelKey]);
-  for (const key of [DISPLAY, "display_name", "name", "title", "description", "text_clean", "text", "id"]) {
-    if (nonEmpty(props[key])) return asString(props[key]);
+  // Property name in lower case → its value, keeping the first spelling the row happens to carry.
+  const byLowerName = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(props)) {
+    const lower = key.toLowerCase();
+    if (!byLowerName.has(lower) || !nonEmpty(byLowerName.get(lower))) byLowerName.set(lower, value);
+  }
+  if (labelKey && nonEmpty(byLowerName.get(labelKey.toLowerCase()))) return asString(byLowerName.get(labelKey.toLowerCase()));
+  for (const key of LABEL_CHAIN) {
+    const value = byLowerName.get(key);
+    if (nonEmpty(value)) return asString(value);
   }
   for (const [key, value] of Object.entries(props)) {
     if (!key.startsWith(SYSTEM_PREFIX) && nonEmpty(value)) return asString(value);
