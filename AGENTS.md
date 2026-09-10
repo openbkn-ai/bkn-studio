@@ -50,4 +50,6 @@ pnpm exec vite build
 pnpm audit --prod
 ```
 
+Every required check, especially `pnpm exec vitest --run`, must finish with an observable successful exit code before committing. Starting a command, seeing partial output, a truncated log, or a terminal session that detaches before reporting completion is not evidence that the check passed. When the terminal cannot retain a long-running command's result, use an observable log and process/exit-status workflow; do not commit until the successful result is confirmed.
+
 For changes under `src/modules/execution-factory/**`, also run `pnpm test:execution-factory`, matching the path-scoped CI workflow. Report every command run and any CI-only check that was not practical to run locally.

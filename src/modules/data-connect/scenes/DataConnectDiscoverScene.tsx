@@ -566,7 +566,7 @@ export function DataConnectDiscoverScene({
       ellipsis: true,
       render: (value: string | undefined, record: DataConnectDiscoverTaskSummary) =>
         value ? (
-          <AppButton onClick={() => void navigate(`/data-directory/resource/${value}`)} type="link">
+          <AppButton onClick={() => void navigate(`/data-catalog/resource/${value}`)} type="link">
             {record.resourceName ?? value}
           </AppButton>
         ) : (

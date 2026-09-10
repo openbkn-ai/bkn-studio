@@ -24,10 +24,16 @@ const ResourceWorkspacePage = lazy(async () => {
   return { default: module.ResourceWorkspacePage };
 });
 
-const IndexBuildPage = lazy(async () => {
-  const module = await import("@/modules/data-catalog/pages/IndexBuildPage");
-  return { default: module.IndexBuildPage };
+const TaskManagementPage = lazy(async () => {
+  const module = await import("@/modules/data-catalog/pages/TaskManagementPage");
+  return { default: module.TaskManagementPage };
 });
+
+const dataCatalogConsole = {
+  descriptionKey: "dataCatalog.description",
+  menuKey: "data-catalog",
+  titleKey: "dataCatalog.title",
+};
 
 function withRouteLoading(permissions: string | string[], element: ReactNode) {
   return (
@@ -42,12 +48,12 @@ function withPublicRouteLoading(element: ReactNode) {
 }
 
 function LegacyDataCatalogRootRedirect() {
-  return <Navigate replace to="/data-directory" />;
+  return <Navigate replace to="/data-catalog" />;
 }
 
 function LegacyDataCatalogCatalogRedirect() {
   const { catalogId } = useParams();
-  return <Navigate replace to={`/data-directory/catalog/${catalogId ?? ""}`} />;
+  return <Navigate replace to={`/data-catalog/catalog/${catalogId ?? ""}`} />;
 }
 
 function LegacyDataCatalogResourceRedirect() {
@@ -56,36 +62,44 @@ function LegacyDataCatalogResourceRedirect() {
   return (
     <Navigate
       replace
-      to={`/data-directory/resource/${resourceId ?? ""}${location.search}`}
+      to={`/data-catalog/resource/${resourceId ?? ""}${location.search}`}
     />
   );
 }
 
+function LegacyTaskManagementRedirect() {
+  const location = useLocation();
+  return <Navigate replace to={`/task-management${location.search}`} />;
+}
+
 export const dataCatalogRoutes: RouteObject[] = [
   {
-    path: "data-directory",
+    path: "data-catalog",
     handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.title",
-      },
+      console: dataCatalogConsole,
     },
     element: withPublicRouteLoading(<DataCatalogPage />),
-  },
-  {
-    path: "data-directory/catalog/:catalogId",
-    handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.catalogDetailTitle",
+    children: [
+      {
+        element: <></>,
+        handle: { console: dataCatalogConsole },
+        index: true,
       },
-    },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage selectionType="catalog" />),
+      {
+        element: <></>,
+        path: "catalog/:catalogId",
+        handle: {
+          console: {
+            descriptionKey: "dataCatalog.description",
+            menuKey: "data-catalog",
+            titleKey: "dataCatalog.catalogDetailTitle",
+          },
+        },
+      },
+    ],
   },
   {
-    path: "data-directory/resource/:resourceId",
+    path: "data-catalog/resource/:resourceId",
     handle: {
       console: {
         descriptionKey: "dataCatalog.description",
@@ -96,27 +110,31 @@ export const dataCatalogRoutes: RouteObject[] = [
     element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <ResourceWorkspacePage />),
   },
   {
-    path: "data-catalog",
+    path: "data-directory",
     element: <LegacyDataCatalogRootRedirect />,
   },
   {
-    path: "data-catalog/catalog/:catalogId",
+    path: "data-directory/catalog/:catalogId",
     element: <LegacyDataCatalogCatalogRedirect />,
   },
   {
-    path: "data-catalog/resource/:resourceId",
+    path: "data-directory/resource/:resourceId",
     element: <LegacyDataCatalogResourceRedirect />,
   },
   {
-    path: "index-builds",
+    path: "task-management",
     handle: {
       console: {
         descriptionKey: "dataCatalog.indexBuildDescription",
-        menuKey: "index-builds",
+        menuKey: "task-management",
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withPublicRouteLoading(<IndexBuildPage />),
+    element: withPublicRouteLoading(<TaskManagementPage />),
+  },
+  {
+    path: "index-builds",
+    element: <LegacyTaskManagementRedirect />,
   },
 ];
 

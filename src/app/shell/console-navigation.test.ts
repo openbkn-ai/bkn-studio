@@ -113,7 +113,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(businessGroup?.children ?? [])).toEqual([
       "data-connection",
       "data-catalog",
-      "index-builds",
+      "task-management",
     ]);
   });
 

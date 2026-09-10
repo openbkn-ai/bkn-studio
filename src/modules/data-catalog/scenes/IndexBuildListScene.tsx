@@ -260,7 +260,7 @@ export function IndexBuildListScene() {
           <Tooltip title={label}>
             <button
               className={sceneStyles.textLink}
-              onClick={() => void navigate(`/data-directory/catalog/${catalogId}`)}
+              onClick={() => void navigate(`/data-catalog/catalog/${catalogId}`)}
               type="button"
             >
               <span className={sceneStyles.cellEllipsis}>{label}</span>
@@ -280,7 +280,7 @@ export function IndexBuildListScene() {
             <button
               className={sceneStyles.textLink}
               onClick={() => {
-                void navigate(`/data-directory/resource/${value}?tab=index`);
+                void navigate(`/data-catalog/resource/${value}?tab=index`);
               }}
               type="button"
             >

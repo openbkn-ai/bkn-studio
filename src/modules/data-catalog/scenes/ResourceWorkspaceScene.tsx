@@ -303,7 +303,7 @@ export function ResourceWorkspaceScene({
           action={
             <SceneBackButton
               onClick={() => {
-                void navigate("/data-directory");
+                void navigate("/data-catalog");
               }}
             />
           }
@@ -316,8 +316,8 @@ export function ResourceWorkspaceScene({
   }
 
   const backTarget = catalog
-    ? `/data-directory/catalog/${catalog.id}`
-    : "/data-directory";
+    ? `/data-catalog/catalog/${catalog.id}`
+    : "/data-catalog";
 
   return (
     <>
@@ -342,7 +342,7 @@ export function ResourceWorkspaceScene({
                     <button
                       className={styles.textLink}
                       onClick={() => {
-                        void navigate(`/data-directory/catalog/${catalog.id}`);
+                        void navigate(`/data-catalog/catalog/${catalog.id}`);
                       }}
                       type="button"
                     >

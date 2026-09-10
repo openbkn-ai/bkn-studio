@@ -81,15 +81,11 @@ export function DataCatalogScene({
   const loadCatalogs = useCallback(async () => {
     const [catalogResult, typeResult] = await Promise.all([
       listCatalogs(catalogListAllQuery()),
-      connectorTypes.length === 0
-        ? listDataConnectConnectorTypes()
-        : Promise.resolve(null),
+      listDataConnectConnectorTypes(),
     ]);
     setCatalogs(catalogResult.items);
-    if (typeResult) {
-      setConnectorTypes(typeResult);
-    }
-  }, [connectorTypes.length]);
+    setConnectorTypes(typeResult);
+  }, []);
 
   const loadCatalogSchemas = useCallback(async (catalogId: string) => {
     const catalog = await getCatalog(catalogId);
@@ -177,7 +173,7 @@ export function DataCatalogScene({
       return;
     }
     const target = catalogs.find((item) => item.type !== "logical") ?? catalogs[0];
-    void navigate(`/data-directory/catalog/${target.id}`, { replace: true });
+    void navigate(`/data-catalog/catalog/${target.id}`, { replace: true });
   }, [catalogs, loading, navigate, selection, suppressAutoSelect]);
 
   const discoveringCatalogIds = useMemo(() => {
@@ -206,7 +202,7 @@ export function DataCatalogScene({
         params.set("view", "config");
       }
       const query = params.toString();
-      void navigate(`/data-directory/resource/${resourceId}${query ? `?${query}` : ""}`);
+      void navigate(`/data-catalog/resource/${resourceId}${query ? `?${query}` : ""}`);
     },
     [navigate],
   );
@@ -261,7 +257,7 @@ export function DataCatalogScene({
           action={
             <AppButton
               onClick={() => {
-                void navigate("/data-directory");
+                void navigate("/data-catalog");
               }}
             >
               {t("dataCatalog.backToCatalog")}
@@ -335,7 +331,7 @@ export function DataCatalogScene({
             const next = new URLSearchParams(searchParams);
             next.delete("schema");
             setSearchParams(next, { replace: true });
-            void navigate(`/data-directory/catalog/${catalogId}`);
+            void navigate(`/data-catalog/catalog/${catalogId}`);
           }}
           onSelectScope={(scope) => {
             const next = new URLSearchParams(searchParams);

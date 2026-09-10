@@ -15,6 +15,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
+import { getSemanticUnderstandingWarnings } from "./semantic-understanding-warnings";
 import sharedStyles from "./shared.module.css";
 
 const EMPTY_VALUE = "-";
@@ -100,16 +101,6 @@ function getFieldDetails(value?: string): FieldApplyDetail[] {
     : [];
 }
 
-function getWarnings(...payloads: Array<string | undefined>): string[] {
-  for (const payload of payloads) {
-    const warnings = jsonObject(payload)?.warnings;
-    if (Array.isArray(warnings)) {
-      return warnings.filter((warning): warning is string => typeof warning === "string");
-    }
-  }
-  return [];
-}
-
 export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }: Props) {
   const { t } = useTranslation();
   const [task, setTask] = useState<SemanticUnderstandingTask | null>(null);
@@ -155,7 +146,7 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
   const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "completed" ? sharedStyles.taskSucceeded : task.status === "cancelled" || task.status === "pending" ? sharedStyles.taskPending : sharedStyles.taskRunning;
   const creator = task.creator.name || task.creator.id || EMPTY_VALUE;
   const quality = getQuality(task.confidenceDetailJson, task.resultJson);
-  const warnings = getWarnings(task.confidenceDetailJson, task.resultJson);
+  const warnings = getSemanticUnderstandingWarnings(t, task.confidenceDetailJson, task.resultJson);
   const fieldDetails = getFieldDetails(task.applyDetailJson);
 
   const fieldDetailColumns = [

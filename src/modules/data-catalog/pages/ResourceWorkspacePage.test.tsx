@@ -34,24 +34,24 @@ function LocationState() {
 describe("ResourceWorkspacePage", () => {
   it("normalizes the default detail tab and stores tab switches in the URL", async () => {
     render(
-      <MemoryRouter initialEntries={["/data-directory/resource/resource-1"]}>
+      <MemoryRouter initialEntries={["/data-catalog/resource/resource-1"]}>
         <Routes>
           <Route
             element={<><ResourceWorkspacePage /><LocationState /></>}
-            path="/data-directory/resource/:resourceId"
+            path="/data-catalog/resource/:resourceId"
           />
         </Routes>
       </MemoryRouter>,
     );
 
     expect(await screen.findByText(
-      "/data-directory/resource/resource-1?tab=detail",
+      "/data-catalog/resource/resource-1?tab=detail",
     )).toBeTruthy();
     expect(screen.getByTestId("active-tab").textContent).toBe("detail");
 
     fireEvent.click(screen.getByRole("button", { name: "preview" }));
     expect(screen.getByTestId("location").textContent).toBe(
-      "/data-directory/resource/resource-1?tab=preview",
+      "/data-catalog/resource/resource-1?tab=preview",
     );
     expect(screen.getByTestId("active-tab").textContent).toBe("preview");
   });

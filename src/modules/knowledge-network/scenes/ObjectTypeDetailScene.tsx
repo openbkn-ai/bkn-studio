@@ -1155,7 +1155,7 @@ export function ObjectTypeDetailScene() {
               <button
                 className={styles.cardHeaderLink}
                 onClick={() => {
-                  void navigate(`/data-directory/resource/${boundDataView.id}`);
+                  void navigate(`/data-catalog/resource/${boundDataView.id}`);
                 }}
                 type="button"
               >

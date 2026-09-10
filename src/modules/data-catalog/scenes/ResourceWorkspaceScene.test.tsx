@@ -33,7 +33,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("react-router-dom", () => ({
-  useLocation: () => ({ pathname: "/data-directory/resource/resource-1", search: "" }),
+  useLocation: () => ({ pathname: "/data-catalog/resource/resource-1", search: "" }),
   useNavigate: () => vi.fn(),
 }));
 

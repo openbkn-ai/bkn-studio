@@ -52,7 +52,7 @@ function LocationState() {
 describe("TaskManagementScene", () => {
   it("restores the active tab from the URL and updates it when switching tabs", () => {
     render(
-      <MemoryRouter initialEntries={["/index-builds?tab=semantic-understanding"]}>
+      <MemoryRouter initialEntries={["/task-management?tab=semantic-understanding"]}>
         <TaskManagementScene />
         <LocationState />
       </MemoryRouter>,
@@ -62,23 +62,23 @@ describe("TaskManagementScene", () => {
     expect(screen.getByText("semantic panel")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.indexBuild" }));
-    expect(screen.getByTestId("location").textContent).toBe("/index-builds?tab=index-build");
+    expect(screen.getByTestId("location").textContent).toBe("/task-management?tab=index-build");
     expect(screen.getByTestId("active-tab").textContent).toBe("index-build");
 
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.discover" }));
-    expect(screen.getByTestId("location").textContent).toBe("/index-builds?tab=discover");
+    expect(screen.getByTestId("location").textContent).toBe("/task-management?tab=discover");
     expect(screen.getByTestId("active-tab").textContent).toBe("discover");
   });
 
   it("normalizes a missing tab parameter to discover", async () => {
     render(
-      <MemoryRouter initialEntries={["/index-builds"]}>
+      <MemoryRouter initialEntries={["/task-management"]}>
         <TaskManagementScene />
         <LocationState />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("/index-builds?tab=discover")).toBeTruthy();
+    expect(await screen.findByText("/task-management?tab=discover")).toBeTruthy();
     expect(screen.getByTestId("active-tab").textContent).toBe("discover");
   });
 });

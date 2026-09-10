@@ -12,6 +12,7 @@ import { deriveStudioPermissions, flattenSafeGrants } from "@/framework/auth/per
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifest";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
+import { catalogDetailPermissions } from "@/modules/data-catalog/permissions";
 import { dataCatalogRoutes } from "@/modules/data-catalog/routes";
 
 type SafeGrant = { operations: string[]; resource: { id: string; type: string } };
@@ -56,13 +57,19 @@ describe("data-catalog permission points", () => {
    * deriveStudioPermissions filters against the manifest, so a guard asking for a point no module
    * declares is unsatisfiable — the route 403s for everyone, including users whose API calls would
    * have succeeded. That is what the resource-verb convergence (openbkn-ai/bkn-foundry#986) would
-   * have done to /index-builds had the gates been left on the table's own verbs.
+   * have done to /task-management had the gates been left on the table's own verbs.
    */
   it("every route guard asks only for points the manifest declares", () => {
     for (const path of guardedRoutePaths()) {
       for (const permission of guardPermissionsOf(path)) {
         expect(dataCatalogModuleManifest.permissions, `route ${path}`).toContain(permission);
       }
+    }
+  });
+
+  it("declares every permission required by the catalog detail view", () => {
+    for (const permission of catalogDetailPermissions) {
+      expect(dataCatalogModuleManifest.permissions, "catalog detail").toContain(permission);
     }
   });
 
@@ -85,22 +92,22 @@ describe("data-catalog permission points", () => {
     }
   });
 
-  it("the index-build menu entry and list route are public entry points", () => {
-    const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/index-builds");
+  it("the task-management menu entry and list route are public entry points", () => {
+    const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/task-management");
 
     expect(navigationItem?.permission).toBeUndefined();
     expect(navigationItem?.permissionMode).toBeUndefined();
-    expect(guardPermissionsOf("index-builds")).toEqual([]);
+    expect(guardPermissionsOf("task-management")).toEqual([]);
   });
 
-  it("a catalog task grant opens the index-build page", () => {
+  it("a catalog task grant opens the task-management page", () => {
     const permissions = permissionsOf([
       { resource: { type: "catalog", id: "*" }, operations: ["view_detail", "task_manage"] },
       { resource: { type: "resource", id: "*" }, operations: ["view_detail", "query_data"] },
     ]);
 
-    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
   });
 
   it("a table-only grant can enter the public catalog and build-task pages", () => {
@@ -108,15 +115,15 @@ describe("data-catalog permission points", () => {
       { resource: { type: "resource", id: "*" }, operations: ["view_detail", "query_data"] },
     ]);
 
-    expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
   });
 
   it("an ungranted user can enter public list pages", () => {
     const permissions = permissionsOf([]);
 
     expect(permissions).toEqual([]);
-    expect(canEnter(permissions, guardPermissionsOf("data-directory"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("index-builds"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
   });
 });
