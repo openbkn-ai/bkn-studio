@@ -12,7 +12,7 @@ import { DEFAULT_APP_BASENAME } from "@/app/router/app-basename";
 import { getStoredAccessToken } from "@/framework/auth/token-store";
 import { GraphCanvas, type GraphCanvasHandle } from "@/modules/knowledge-network/scenes/graph-explorer/GraphCanvas";
 import { OBJECT_TYPE_PALETTE, type MenuAction } from "@/modules/knowledge-network/scenes/graph-explorer/constants";
-import { buildShareUrl } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
+import { buildShareUrl, combineLinkSource } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
 import { createBknLifecycle, lifecycleEnv, memoryConversationStore, withManagedTurn, type BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { fetchKnDetail, type KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
 import {
@@ -52,7 +52,7 @@ type Status = { kind: "loading" | "ready" | "error"; text: string };
  */
 export function GraphView() {
   const { t } = useTranslation();
-  const [params] = useState<ViewParams>(() => parseViewParams(window.location.search, window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? ""));
+  const [params] = useState<ViewParams>(() => parseViewParams(combineLinkSource(window.location.search, window.location.hash), window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? ""));
   const [status, setStatus] = useState<Status>({ kind: "loading", text: "" });
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const [layout, setLayout] = useState<ExplorerLayout>(params.layout);
@@ -191,7 +191,11 @@ export function GraphView() {
     [t],
   );
   const studioUrl = useMemo(
-    () => buildShareUrl(`${base}${DEFAULT_APP_BASENAME}/knowledge-network/workspace/${params.kn}/graph-explorer`, [...nodesRef.current.keys()], { layout }).url,
+    () =>
+      buildShareUrl(`${base}${DEFAULT_APP_BASENAME}/knowledge-network/workspace/${params.kn}/graph-explorer`, [...nodesRef.current.keys()], {
+        layout,
+        objectTypeIds: (detailRef.current?.object_types ?? []).map((item) => item.id),
+      }).url,
     // The node set is what counts tracks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [base, params.kn, layout, counts],

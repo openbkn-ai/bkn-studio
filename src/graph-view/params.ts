@@ -25,8 +25,10 @@ export type ViewParams = {
 
 /**
  * `graph-view.html?kn=<network id>&ids=<instance id,…>[&expand=out|in|both][&layout=…][&token=…]`.
- * The token comes from the query first, then the deploy-time config, then whatever the caller
- * offers as a fallback (the Studio session cookie on the same host).
+ * `search` is the query string and the fragment together (see `combineLinkSource`), so a long id
+ * list can ride in the fragment and never reach the server's request line. Ids may also arrive
+ * grouped as `g=<object type>:<key,…>;…`. The token comes from the query first, then the
+ * deploy-time config, then whatever the caller offers as a fallback (the Studio session cookie).
  */
 export function parseViewParams(search: string, configToken?: string, fallbackToken = ""): ViewParams {
   const params = new URLSearchParams(search);

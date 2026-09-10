@@ -252,7 +252,7 @@ export const graphExplorerPart = {
       linkCopied: "链接已复制（{{count}} 个节点）",
       linkCopied_one: "链接已复制（{{count}} 个节点）",
       linkCopied_other: "链接已复制（{{count}} 个节点）",
-      linkTruncated: "链接只带了前 {{limit}} 个节点，{{dropped}} 个未包含",
+      linkTruncated: "链接太长，{{dropped}} 个节点未包含",
       deepLinkApplied: "已按链接还原子图",
       pathFound: "找到 {{hops}} 跳路径",
       pathNeedBoth: "请先在右键菜单里指定起点和终点",

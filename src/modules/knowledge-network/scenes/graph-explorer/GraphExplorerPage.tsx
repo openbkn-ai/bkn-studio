@@ -81,7 +81,7 @@ import {
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
 
 import { buildCondition } from "./condition-builder";
-import { SHARE_ID_LIMIT, buildShareUrl, parseDeepLink } from "./deep-link";
+import { buildShareUrl, combineLinkSource, parseDeepLink } from "./deep-link";
 import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
 import { buildExplorePrompt, conditionFrom, createExploreTools, runExploreAgent, type ExploreDeps, type ExplorePromptTexts, type ExploreStep } from "./explore-agent";
 import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
@@ -129,7 +129,7 @@ export function GraphExplorerScene() {
   // Snapshot read once; the canvas is seeded from it and the maps below are filled from it.
   // A link carrying ids or a Cypher fragment opens on a fresh canvas; the cached settings still apply.
   const [initial] = useState(() => {
-    const link = typeof window === "undefined" ? null : parseDeepLink(window.location.search);
+    const link = typeof window === "undefined" ? null : parseDeepLink(combineLinkSource(window.location.search, window.location.hash));
     const cached = readCache(networkId);
     return {
       link,
@@ -1245,6 +1245,8 @@ export function GraphExplorerScene() {
         message.error(friendlyError(error));
       } finally {
         setSearchParams(new URLSearchParams(), { replace: true });
+        // The ids ride in the fragment, which the router does not own.
+        if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
       }
     })();
   }, [addToCanvas, detail, expandMany, handleCypher, handleSubgraphByIds, initial.link, labelMap, message, setSearchParams, t]);
@@ -1252,12 +1254,15 @@ export function GraphExplorerScene() {
   const handleShare = useCallback(() => {
     const base = `${window.location.origin}${window.location.pathname}`;
     const ids = [...nodesRef.current.keys()];
-    const { url, dropped } = buildShareUrl(base, ids, { layout: settingsRef.current.layout });
+    const { url, dropped } = buildShareUrl(base, ids, {
+      layout: settingsRef.current.layout,
+      objectTypeIds: (detailRef.current?.object_types ?? []).map((item) => item.id),
+    });
     void navigator.clipboard
       .writeText(url)
       .then(() => {
         message.success(t("knowledgeNetwork.graphExplorer.toast.linkCopied", { count: ids.length - dropped }));
-        if (dropped > 0) message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { limit: SHARE_ID_LIMIT, dropped }));
+        if (dropped > 0) message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { dropped }));
       })
       .catch(() => undefined);
   }, [message, t]);

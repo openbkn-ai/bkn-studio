@@ -252,7 +252,7 @@ export const graphExplorerPart = {
       linkCopied: "Link copied ({{count}} nodes)",
       linkCopied_one: "Link copied ({{count}} node)",
       linkCopied_other: "Link copied ({{count}} nodes)",
-      linkTruncated: "The link carries only the first {{limit}} nodes; {{dropped}} were left out",
+      linkTruncated: "The link would be too long; {{dropped}} nodes were left out",
       deepLinkApplied: "Subgraph restored from the link",
       pathFound: "Found a {{hops}}-hop path",
       pathNeedBoth: "Set both a start and an end node from the context menu first",
