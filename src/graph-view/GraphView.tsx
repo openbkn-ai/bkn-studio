@@ -162,6 +162,10 @@ export function GraphView() {
       const collected = await withManagedTurn(lifecycle, t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn) => {
         const otIds = [...new Set(parsed.items.map((item) => item.otId))];
         const metas = await loadMetas(otIds, turn);
+        for (const otId of otIds) {
+          const meta = metas[otId];
+          if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+        }
         return collectSubgraphByIds(client, parsed.items, metas, data.relation_types, NO_LABELS, turn);
       });
       const added = await addToCanvas(collected.nodes, collected.edges);

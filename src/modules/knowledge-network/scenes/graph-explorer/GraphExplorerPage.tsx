@@ -139,7 +139,13 @@ export function GraphExplorerScene() {
   const edgesRef = useRef<Map<string, GEdge>>(new Map(snapshot?.edges.map((edge) => [edge.id, edge]) ?? []));
   const positionsRef = useRef<Record<string, NodePosition>>(snapshot?.positions ?? {});
   const [graphRev, setGraphRev] = useState(0);
-  const bump = useCallback(() => setGraphRev((value) => value + 1), []);
+  // After "clear cache" nothing is written again until the graph itself changes: moving a
+  // node or switching the layout must not quietly resurrect the copy the user just dropped.
+  const persistSuspendedRef = useRef(false);
+  const bump = useCallback(() => {
+    persistSuspendedRef.current = false;
+    setGraphRev((value) => value + 1);
+  }, []);
 
   const [settings, setSettings] = useState<ExplorerSettings>(initial.settings);
   const settingsRef = useRef(settings);
@@ -468,14 +474,15 @@ export function GraphExplorerScene() {
       // the other side, and later searches, skip the calls that would fail again.
       const walk = async (node: GNode, condition: KnCondition) => {
         let lastError: unknown = null;
-        const widest = Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS);
+        // Never below one hop: a one-hop failure is not a width problem and is not remembered.
+        const widest = Math.max(1, Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS));
         for (let hops = widest; hops >= 1; hops -= 1) {
           try {
             const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction: "bidirectional", pathLength: hops }, turn);
             return { payload, hops };
           } catch (error) {
             lastError = error;
-            hopCapRef.current.set(node.otId, hops - 1);
+            if (hops > 1) hopCapRef.current.set(node.otId, hops - 1);
           }
         }
         throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -741,7 +748,7 @@ export function GraphExplorerScene() {
   const saveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!networkId) return;
+    if (!networkId || persistSuspendedRef.current) return;
     const handle = window.setTimeout(() => {
       saveTimerRef.current = null;
       const positions: Record<string, NodePosition> = {};
@@ -770,6 +777,7 @@ export function GraphExplorerScene() {
     }
     clearCache(networkId);
     hopCapRef.current.clear();
+    persistSuspendedRef.current = true;
     setRestored(false);
     message.success(t("knowledgeNetwork.graphExplorer.toast.cacheCleared"));
   }, [message, networkId, t]);

@@ -326,7 +326,11 @@ export function SearchPanel({
       setSearchResults(await onSearch(text, { ...searchOptions, rerank: rrf.rerankMode === "on" }, rrf));
       setSearched(true);
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : String(error));
+      // Stale hits must not stay addable after a failed search; an empty message means a toast already said it.
+      setSearchResults([]);
+      setSearched(false);
+      const text = error instanceof Error ? error.message : String(error);
+      setSearchError(text || null);
     } finally {
       setSearching(false);
     }
@@ -341,7 +345,10 @@ export function SearchPanel({
       setQueryResults(await onQuery(otId, buildCondition(rows, loaded?.properties ?? [])));
       setQueried(true);
     } catch (error) {
-      setQueryError(error instanceof Error ? error.message : String(error));
+      setQueryResults([]);
+      setQueried(false);
+      const text = error instanceof Error ? error.message : String(error);
+      setQueryError(text || null);
     } finally {
       setQuerying(false);
     }

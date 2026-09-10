@@ -20,7 +20,7 @@ import {
   UndoOutlined,
 } from "@ant-design/icons";
 import { Badge, Button, Divider, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
@@ -264,10 +264,8 @@ type LabelPickerProps = Pick<ExplorerToolbarProps, "canvasObjectTypes" | "proper
 /** Two cascaded selects: object type, then the property to show as its label. */
 function LabelPicker(props: LabelPickerProps) {
   const { t } = useTranslation();
-  // Remount when the set of object types changes so the picker never points at a type that left the canvas.
   return (
     <LabelPickerInner
-      key={props.canvasObjectTypes.map((item) => item.id).join("|")}
       {...props}
       defaultLabel={t("knowledgeNetwork.graphExplorer.toolbar.labelDefault")}
     />
@@ -276,6 +274,10 @@ function LabelPicker(props: LabelPickerProps) {
 
 function LabelPickerInner({ canvasObjectTypes, propertyNamesByOt, labelByOt, onLabelChange, defaultLabel }: LabelPickerProps & { defaultLabel: string }) {
   const [otId, setOtId] = useState<string | undefined>(canvasObjectTypes[0]?.id);
+  // Only a type that left the canvas moves the selection; a type arriving keeps it where it is.
+  useEffect(() => {
+    if (!otId || !canvasObjectTypes.some((item) => item.id === otId)) setOtId(canvasObjectTypes[0]?.id);
+  }, [canvasObjectTypes, otId]);
   const names = otId ? propertyNamesByOt[otId] ?? [] : [];
   return (
     <>
