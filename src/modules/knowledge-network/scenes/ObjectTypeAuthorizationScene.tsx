@@ -60,6 +60,7 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { isMaskRuleValid } from "@/modules/knowledge-network/utils/mask-rule";
 import {
+  applyPropertySelectionBatch,
   basePropertyAccessLevel,
   propertyAccessRowState,
   summarizePropertyGrantChanges,
@@ -187,34 +188,39 @@ export function ObjectTypeAuthorizationScene() {
     [subjectId, subjectType],
   );
 
-  const loadPropertySnapshot = useCallback(
-    async (subject: PropertyGrantSubject) => {
-      if (!propertyAvailable) {
-        return;
-      }
-      setPropertyLoading(true);
-      try {
-        const snapshot = await listPropertyGrantSnapshot(subject, objectTypeRef);
-        setGrantSnapshot(snapshot);
-        setDraft(new Map());
-        setSelectedProperties([]);
-      } catch (error) {
-        setGrantSnapshot(null);
-        void message.error(extractRequestErrorMessage(error));
-      } finally {
-        setPropertyLoading(false);
-      }
-    },
-    [message, objectTypeRef, propertyAvailable],
-  );
-
   useEffect(() => {
-    if (selectedSubject) {
-      void loadPropertySnapshot(selectedSubject);
-    } else {
+    if (!selectedSubject || !propertyAvailable) {
       setGrantSnapshot(null);
+      setPropertyLoading(false);
+      return;
     }
-  }, [loadPropertySnapshot, selectedSubject]);
+
+    let cancelled = false;
+    setPropertyLoading(true);
+    void listPropertyGrantSnapshot(selectedSubject, objectTypeRef)
+      .then((snapshot) => {
+        if (!cancelled) {
+          setGrantSnapshot(snapshot);
+          setDraft(new Map());
+          setSelectedProperties([]);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setGrantSnapshot(null);
+          void message.error(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPropertyLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [message, objectTypeRef, propertyAvailable, selectedSubject]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -332,12 +338,15 @@ export function ObjectTypeAuthorizationScene() {
   };
 
   const applyBatch = (next: PropertyAccessSelection) => {
-    const names = new Set(selectedProperties.map(String));
-    for (const row of propertyRows) {
-      if (names.has(row.name)) {
-        setPropertySelection(row.name, next);
-      }
-    }
+    setDraft((current) =>
+      applyPropertySelectionBatch(
+        (detail?.dataProperties ?? []).map((property) => property.name),
+        selectedProperties.map(String),
+        next,
+        entryMap,
+        current,
+      ),
+    );
   };
 
   const invalidMaskedProperties = useMemo(
@@ -362,7 +371,7 @@ export function ObjectTypeAuthorizationScene() {
     ) {
       return;
     }
-    const summary = summarizePropertyGrantChanges(entryMap, draft);
+    const summary = summarizePropertyGrantChanges(baseLevel, entryMap, draft);
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: (

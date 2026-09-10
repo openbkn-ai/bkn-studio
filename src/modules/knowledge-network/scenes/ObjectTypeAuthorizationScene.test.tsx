@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -137,7 +137,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(screen.getByText("network-1 / object-1")).not.toBeNull();
   });
 
-  it("does not show an estimated-result warning when server decisions are unavailable", async () => {
+  it("renders clamped effective access when server decisions are unavailable", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
       conceptGroupIds: [],
@@ -182,9 +182,100 @@ describe("ObjectTypeAuthorizationScene", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Alice/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalled());
     expect(
-      (await screen.findAllByText("knowledgeNetwork.propertyAuthorizationColumnEffective")).length,
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationEstimatedResult")).toBeNull();
-    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationDecisionUnavailable")).toBeNull();
+      (await screen.findAllByText("knowledgeNetwork.propertyAuthorizationLevel.none")).length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it("keeps the latest subject snapshot when an earlier request finishes late", async () => {
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [{
+        displayKey: false,
+        displayName: "Email",
+        incrementalKey: false,
+        name: "email",
+        primaryKey: false,
+        type: "string",
+      }],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["modify"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+    mocks.listUsersPage.mockResolvedValue({
+      users: [
+        {
+          account: "alice",
+          accountType: "local",
+          email: "alice@example.com",
+          enabled: true,
+          id: "user-a",
+          name: "Alice",
+          roleIds: [],
+          telephone: "",
+        },
+        {
+          account: "bob",
+          accountType: "local",
+          email: "bob@example.com",
+          enabled: true,
+          id: "user-b",
+          name: "Bob",
+          roleIds: [],
+          telephone: "",
+        },
+      ],
+    });
+    let resolveAlice!: (value: unknown) => void;
+    let resolveBob!: (value: unknown) => void;
+    const aliceSnapshot = new Promise((resolve) => {
+      resolveAlice = resolve;
+    });
+    const bobSnapshot = new Promise((resolve) => {
+      resolveBob = resolve;
+    });
+    mocks.listPropertyGrantSnapshot
+      .mockImplementationOnce(() => aliceSnapshot)
+      .mockImplementationOnce(() => bobSnapshot);
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
+    fireEvent.click(await screen.findByRole("button", { name: /Alice/ }));
+    await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole("button", { name: /Bob/ }));
+    await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      resolveBob({
+        accessor: { id: "user-b", type: "user" },
+        entries: [{ level: "none", propertyName: "email" }],
+        objectTypeRef: "network-1/object-1",
+      });
+      await bobSnapshot;
+    });
+    await waitFor(() =>
+      expect(screen.getAllByText("knowledgeNetwork.propertyAuthorizationLevel.none").length).toBeGreaterThanOrEqual(3),
+    );
+
+    await act(async () => {
+      resolveAlice({
+        accessor: { id: "user-a", type: "user" },
+        entries: [{ level: "full", propertyName: "email" }],
+        objectTypeRef: "network-1/object-1",
+      });
+      await aliceSnapshot;
+    });
+    expect(screen.queryByText("knowledgeNetwork.propertyAuthorizationLevel.full")).toBeNull();
   });
 });

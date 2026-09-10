@@ -39,6 +39,29 @@ export function clampPropertyAccessLevel(
   return LEVEL_ORDER[base] <= LEVEL_ORDER[property] ? base : property;
 }
 
+export function applyPropertySelectionBatch(
+  propertyNames: readonly string[],
+  selectedProperties: readonly (number | string)[],
+  next: PropertyAccessSelection,
+  entries: ReadonlyMap<string, PropertyGrantEntry>,
+  currentDraft: ReadonlyMap<string, PropertyAccessSelection>,
+) {
+  const selectedNames = new Set(selectedProperties.map(String));
+  const result = new Map(currentDraft);
+  for (const name of propertyNames) {
+    if (!selectedNames.has(name)) {
+      continue;
+    }
+    const original = entries.get(name)?.level ?? "inherit";
+    if (next === original) {
+      result.delete(name);
+    } else {
+      result.set(name, next);
+    }
+  }
+  return result;
+}
+
 export function propertyMaskState(
   property: ObjectTypeDataProperty,
 ): "configured" | "missing" | "invalid" | "unsupported" {
@@ -60,8 +83,9 @@ export function propertyAccessRowState(
   draft: ReadonlyMap<string, PropertyAccessSelection>,
 ) {
   const entry = entries.get(property.name);
-  const explicit = draft.get(property.name) ?? entry?.level ?? "inherit";
-  const decision = decisions.get(property.name);
+  const draftLevel = draft.get(property.name);
+  const explicit = draftLevel ?? entry?.level ?? "inherit";
+  const decision = draftLevel === undefined ? decisions.get(property.name) : undefined;
   const maskState = propertyMaskState(property);
   let effective = decision?.level ?? clampPropertyAccessLevel(baseLevel, explicit);
   if (explicit === "masked" && maskState !== "configured") {
@@ -76,6 +100,7 @@ export function propertyAccessRowState(
 }
 
 export function summarizePropertyGrantChanges(
+  baseLevel: PropertyAccessLevel,
   entries: ReadonlyMap<string, PropertyGrantEntry>,
   draft: ReadonlyMap<string, PropertyAccessSelection>,
 ) {
@@ -84,16 +109,17 @@ export function summarizePropertyGrantChanges(
   let inherited = 0;
   let full = 0;
   for (const [name, next] of draft) {
-    const before = entries.get(name)?.level ?? "full";
+    const before = clampPropertyAccessLevel(baseLevel, entries.get(name)?.level ?? "inherit");
     if (next === "inherit") {
       inherited += 1;
     } else {
-      if (LEVEL_ORDER[next] > LEVEL_ORDER[before]) {
+      const after = clampPropertyAccessLevel(baseLevel, next);
+      if (LEVEL_ORDER[after] > LEVEL_ORDER[before]) {
         raised += 1;
-      } else if (LEVEL_ORDER[next] < LEVEL_ORDER[before]) {
+      } else if (LEVEL_ORDER[after] < LEVEL_ORDER[before]) {
         lowered += 1;
       }
-      if (next === "full") {
+      if (after === "full") {
         full += 1;
       }
     }

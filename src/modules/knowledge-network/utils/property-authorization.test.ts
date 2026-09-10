@@ -8,9 +8,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyPropertySelectionBatch,
   basePropertyAccessLevel,
   clampPropertyAccessLevel,
   propertyAccessRowState,
+  summarizePropertyGrantChanges,
 } from "@/modules/knowledge-network/utils/property-authorization";
 
 describe("property-authorization", () => {
@@ -43,5 +45,57 @@ describe("property-authorization", () => {
     );
     expect(state.effective).toBe("schema");
     expect(state.maskState).toBe("missing");
+  });
+
+  it("uses the draft selection instead of a stale server decision for the preview", () => {
+    const state = propertyAccessRowState(
+      {
+        displayKey: false,
+        displayName: "Email",
+        incrementalKey: false,
+        name: "email",
+        primaryKey: false,
+        type: "string",
+      },
+      "full",
+      new Map(),
+      new Map([["email", { level: "full", name: "email", source: "role" }]]),
+      new Map([["email", "none"]]),
+    );
+
+    expect(state.effective).toBe("none");
+    expect(state.source).toBe("property");
+  });
+
+  it("applies a batch to selected properties outside the current filtered rows", () => {
+    const draft = applyPropertySelectionBatch(
+      ["visible", "filtered-out", "not-selected"],
+      ["visible", "filtered-out"],
+      "schema",
+      new Map(),
+      new Map(),
+    );
+
+    expect([...draft]).toEqual([
+      ["visible", "schema"],
+      ["filtered-out", "schema"],
+    ]);
+  });
+
+  it("summarizes changes from inherited access using the actual base ceiling", () => {
+    expect(
+      summarizePropertyGrantChanges(
+        "schema",
+        new Map(),
+        new Map([["email", "schema"]]),
+      ),
+    ).toEqual({ full: 0, inherited: 0, lowered: 0, raised: 0, total: 1 });
+    expect(
+      summarizePropertyGrantChanges(
+        "full",
+        new Map(),
+        new Map([["email", "none"]]),
+      ),
+    ).toEqual({ full: 0, inherited: 0, lowered: 1, raised: 0, total: 1 });
   });
 });
