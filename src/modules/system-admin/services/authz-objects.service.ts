@@ -85,9 +85,13 @@ async function listOne(type: string, keyword: string): Promise<AuthorizableObjec
     .filter((object) => object.id);
 }
 
-// List authorizable objects by type in parallel; one type failing does not affect the others.
-export async function listDomainObjects(keyword = ""): Promise<AuthorizableObject[]> {
-  const settled = await Promise.allSettled(AUTHZ_OBJECT_TYPES.map((type) => listOne(type, keyword)));
+// List authorizable objects by type. A picker normally asks for one type only; listing every type
+// remains available for callers that genuinely need a cross-type search.
+export async function listDomainObjects(type?: string, keyword = ""): Promise<AuthorizableObject[]> {
+  const types = type && (AUTHZ_OBJECT_TYPES as readonly string[]).includes(type)
+    ? [type]
+    : AUTHZ_OBJECT_TYPES;
+  const settled = await Promise.allSettled(types.map((item) => listOne(item, keyword)));
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }
 

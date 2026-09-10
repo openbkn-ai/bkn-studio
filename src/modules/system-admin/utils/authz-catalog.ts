@@ -21,8 +21,6 @@ export const AUTHZ_OBJECT_TYPES = [
   "action_type",
   "metric",
   "risk_type",
-  "small_model",
-  "large_model",
   "operator",
   "tool_box",
   "mcp",
