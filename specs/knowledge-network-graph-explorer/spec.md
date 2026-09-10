@@ -160,7 +160,7 @@ type GEdge = {
 ### 6.6 查找路径
 
 - 用户在右键菜单指定起点 A、终点 B。
-- 两端各走一次 `explore_subgraph(path_length=3, bidirectional, limit=1)`；若下游拒绝（路径穿到没有已发布数据源的对象类时 ontology-query 返回 500），该侧依次收窄到 2、1 跳。先在起点侧的路径里直接找终点；找不到再把两侧路径在共同节点处拼接（meet in the middle），因此最远可达 6 跳，且一侧只能走 1 跳时仍能拼出 2 跳路径。
+- 两端各走一次 `explore_subgraph(path_length=3, bidirectional, limit=1)`；若下游拒绝（路径穿到没有已发布数据源的对象类时 ontology-query 返回 500），该侧依次收窄到 2、1 跳。先在起点侧的路径里直接找终点；找不到再把两侧路径在共同节点处拼接（meet in the middle），因此最远可达 6 跳，且一侧只能走 1 跳时仍能拼出 2 跳路径。被拒的跳数是对象类的性质（它的更大邻域必经坏掉的对象类），页面在本会话内按对象类记住后端接受过的最大跳数，另一侧与之后的路径查询从那里起步，不再重复注定失败的调用；「清缓存」一并忘掉。
 - 客户端遍历 `relation_paths`，取 `relations` 链中能到达 B 的最短一条（任一 relation 的 `source_object_id` 或 `target_object_id` 为 B 即视为到达，截断到该 relation）。
 - 路径上的节点与边加入画布并高亮；无结果时提示「6 跳内不连通」，若某侧被收窄则改为说明两侧各探到几跳、更远的查询被后端拒绝。
 
