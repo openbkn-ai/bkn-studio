@@ -374,7 +374,7 @@ export function ObjectTypeListPanel({
           <button
             className={styles.tableLink}
             onClick={() => {
-              void navigate(`/data-directory/resource/${resource.id}`);
+              void navigate(`/data-catalog/resource/${resource.id}`);
             }}
             title={resource.name || resource.id}
             type="button"
@@ -408,7 +408,7 @@ export function ObjectTypeListPanel({
           <button
             className={styles.tableLink}
             onClick={() => {
-              void navigate(`/data-directory/resource/${resourceId}?tab=index`);
+              void navigate(`/data-catalog/resource/${resourceId}?tab=index`);
             }}
             type="button"
           >

@@ -7,6 +7,6 @@
 
 import { TaskManagementScene } from "@/modules/data-catalog/scenes/TaskManagementScene";
 
-export function IndexBuildPage() {
+export function TaskManagementPage() {
   return <TaskManagementScene />;
 }

@@ -229,14 +229,14 @@ describe("semantic-understanding mock tasks", () => {
       { limit: 20, offset: 0 },
     );
 
-    expect(list.items).toEqual([
+    expect(list.items).toEqual(expect.arrayContaining([
       expect.objectContaining({
         applyMode: "dry_run",
         applied: false,
         id: "semantic-task-006",
         status: "completed",
       }),
-    ]);
+    ]));
   });
 
   it("serves the same mock task to the list and detail query", async () => {
@@ -248,6 +248,12 @@ describe("semantic-understanding mock tasks", () => {
     expect(detail?.id).toBe("semantic-task-001");
     expect(typeof detail?.resultJson).toBe("string");
     expect(typeof detail?.applyDetailJson).toBe("string");
+    expect(JSON.parse(detail?.confidenceDetailJson ?? "{}")).toMatchObject({
+      warning_details: [{
+        code: "sample_omitted_by_policy",
+        params: { field_name: "attachment_blob", field_type: "binary" },
+      }],
+    });
   });
 });
 

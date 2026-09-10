@@ -235,7 +235,7 @@ export function DiscoverTaskListPanel() {
       render: (value: string, record) => (
         <button
           className={styles.textLink}
-          onClick={() => void navigate(`/data-directory/catalog/${value}`)}
+          onClick={() => void navigate(`/data-catalog/catalog/${value}`)}
           type="button"
         >
           {record.catalogName ?? value}
@@ -251,7 +251,7 @@ export function DiscoverTaskListPanel() {
         value ? (
           <button
             className={styles.textLink}
-            onClick={() => void navigate(`/data-directory/resource/${value}`)}
+            onClick={() => void navigate(`/data-catalog/resource/${value}`)}
             type="button"
           >
             {record.resourceName ?? value}
@@ -410,7 +410,7 @@ export function SemanticUnderstandingTaskListPanel() {
       render: (value: string, record) => (
         <button
           className={styles.textLink}
-          onClick={() => void navigate(`/data-directory/catalog/${value}`)}
+          onClick={() => void navigate(`/data-catalog/catalog/${value}`)}
           type="button"
         >
           {record.catalogName ?? value}
@@ -426,7 +426,7 @@ export function SemanticUnderstandingTaskListPanel() {
         value ? (
           <button
             className={styles.textLink}
-            onClick={() => void navigate(`/data-directory/resource/${value}`)}
+            onClick={() => void navigate(`/data-catalog/resource/${value}`)}
             type="button"
           >
             {record.resourceName ?? value}
