@@ -165,6 +165,13 @@ export const dataCatalogZhCN = {
           unchanged: "无变更",
           skipped: "已跳过"
         },
+        warnings: {
+          sampleOmittedByPolicy: "字段 {{field}} 为{{type}}类型，样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
+          types: {
+            binary: "二进制",
+            other: "其他"
+          }
+        },
         mock: {
           customerCatalog: "CRM 主数据",
           phoneInsufficientSamplesWarning: "字段 phone 的样本值不足，未生成语义建议。",
