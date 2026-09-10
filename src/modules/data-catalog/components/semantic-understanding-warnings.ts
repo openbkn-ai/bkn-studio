@@ -17,7 +17,7 @@ type WarningDetail = {
 
 type PolicyOmission = {
   fieldName: string;
-  fieldType: string;
+  fieldType?: string;
 };
 
 const WARNING_FIELD_TYPE_KEYS: Record<string, string> = {
@@ -46,9 +46,13 @@ function parsePolicyOmissions(value: unknown): PolicyOmission[] {
     const fieldType = detail.params?.field_type;
     return detail.code === "sample_omitted_by_policy"
       && typeof fieldName === "string"
-      && fieldName.length > 0
-      && typeof fieldType === "string"
-      ? [{ fieldName, fieldType }]
+      && fieldName.trim().length > 0
+      ? [{
+          fieldName,
+          fieldType: typeof fieldType === "string" && fieldType.trim().length > 0
+            ? fieldType
+            : undefined,
+        }]
       : [];
   });
 }
@@ -60,20 +64,22 @@ export function getSemanticUnderstandingWarnings(
   const objects = payloads.map(jsonObject).filter((value) => value !== undefined);
   const omissions = objects.flatMap((object) => parsePolicyOmissions(object.warning_details));
   const messages = omissions.map(({ fieldName, fieldType }) => {
-    const typeKey = WARNING_FIELD_TYPE_KEYS[fieldType];
-    const localizedType = typeKey ? String(t(typeKey)) : fieldType;
-    return String(t(
-      "dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicy",
-      { field: fieldName, type: localizedType },
-    ));
+    const typeKey = fieldType ? WARNING_FIELD_TYPE_KEYS[fieldType] : undefined;
+    return typeKey
+      ? String(t(
+          "dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicy",
+          { field: fieldName, type: String(t(typeKey)) },
+        ))
+      : String(t(
+          "dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicyWithoutType",
+          { field: fieldName },
+        ));
   });
 
-  for (const object of objects) {
-    if (!Array.isArray(object.warnings)) continue;
-    for (const warning of object.warnings) {
-      if (typeof warning === "string") {
-        messages.push(warning);
-      }
+  const warnings = objects.find((object) => Array.isArray(object.warnings))?.warnings;
+  if (Array.isArray(warnings)) {
+    for (const warning of warnings) {
+      if (typeof warning === "string") messages.push(warning);
     }
   }
   return [...new Set(messages)];

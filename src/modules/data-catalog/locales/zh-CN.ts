@@ -167,6 +167,7 @@ export const dataCatalogZhCN = {
         },
         warnings: {
           sampleOmittedByPolicy: "字段 {{field}} 为{{type}}类型，样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
+          sampleOmittedByPolicyWithoutType: "字段 {{field}} 的样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
           types: {
             binary: "二进制",
             other: "其他"

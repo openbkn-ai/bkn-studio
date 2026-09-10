@@ -167,6 +167,7 @@ export const dataCatalogEnUS = {
         },
         warnings: {
           sampleOmittedByPolicy: "The {{field}} field has the {{type}} type. Its sample values were omitted by the safety policy. When interpreting this field, the system relies only on metadata such as the field name, type, and existing descriptions; any resulting judgment may have lower confidence than one supported by sample values.",
+          sampleOmittedByPolicyWithoutType: "The {{field}} field's sample values were omitted by the safety policy. When interpreting this field, the system relies only on metadata such as the field name, type, and existing descriptions; any resulting judgment may have lower confidence than one supported by sample values.",
           types: {
             binary: "binary",
             other: "other"

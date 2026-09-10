@@ -48,10 +48,35 @@ describe("semantic-understanding warnings", () => {
     ]);
   });
 
+  it("renders policy omissions without a known field type", async () => {
+    await i18n.changeLanguage("zh-CN");
+    for (const params of [
+      { field_name: "attachment_blob" },
+      { field_name: "attachment_blob", field_type: "custom_binary" },
+    ]) {
+      const payload = JSON.stringify({
+        warning_details: [{ code: "sample_omitted_by_policy", params }],
+      });
+
+      expect(getSemanticUnderstandingWarnings(i18n.t, payload)).toEqual([
+        "字段 attachment_blob 的样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
+      ]);
+    }
+  });
+
   it("keeps free-text warnings from legacy tasks", () => {
     const payload = JSON.stringify({ warnings: ["legacy warning"] });
 
     expect(getSemanticUnderstandingWarnings(i18n.t, payload)).toEqual(["legacy warning"]);
+  });
+
+  it("uses warnings from the first payload that contains them", () => {
+    const confidenceDetail = JSON.stringify({ warnings: ["confidence warning"] });
+    const result = JSON.stringify({ warnings: ["result warning"] });
+
+    expect(getSemanticUnderstandingWarnings(i18n.t, confidenceDetail, result)).toEqual([
+      "confidence warning",
+    ]);
   });
 
   it("keeps metadata evidence warnings for policy-omitted fields", () => {
