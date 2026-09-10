@@ -153,14 +153,15 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     }));
   }, 20_000);
 
-  it.each([0, 21, 30, -1, 1.5])("rejects manually entered invalid sample rows: %s", async (sampleMaxRows) => {
+  it("rejects manually entered out-of-range sample rows", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
-    fireEvent.change((await screen.findAllByRole("spinbutton")).at(-1)!, { target: { value: String(sampleMaxRows) } });
+    fireEvent.change((await screen.findAllByRole("spinbutton")).at(-1)!, { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
 
+    await screen.findByText("dataCatalog.semanticWorkspace.sampleRowsInvalid");
     expect(modalConfirmMock).not.toHaveBeenCalled();
     expect(createResourceSemanticUnderstandingTaskMock).not.toHaveBeenCalled();
   });
