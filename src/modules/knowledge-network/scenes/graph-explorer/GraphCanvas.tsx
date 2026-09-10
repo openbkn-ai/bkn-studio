@@ -130,7 +130,9 @@ function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptio
         nodeSpacing: NODE_GAP,
       };
     case "circular":
-      return { type: "circular" };
+      // Without nodeSpacing the layout sizes the ring to the viewport and stacks the nodes on it;
+      // given the node size it derives the radius from the circumference the nodes actually need.
+      return { type: "circular", nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "grid":
       return { type: "grid", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "force":
