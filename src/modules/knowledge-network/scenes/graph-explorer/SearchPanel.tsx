@@ -695,6 +695,7 @@ export function SearchPanel({
         <div className={styles.aiBox}>
           <Input.Search
             data-testid="graph-explorer-cypher-ai"
+            size="small"
             value={aiQuestion}
             disabled={disabled || aiGenerating}
             loading={aiGenerating}
