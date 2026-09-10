@@ -35,6 +35,8 @@ import {
   type GNode,
   type ObjectTypeMeta,
   orientEdges,
+  collectSubgraphByIds,
+  type GraphExplorerClient,
 } from "./graph-explorer.service";
 
 const supplier: ObjectTypeMeta = {
@@ -501,6 +503,31 @@ describe("friendlyError", () => {
   it("returns plain messages untouched", () => {
     expect(friendlyError(new Error("boom"))).toBe("boom");
     expect(friendlyError("text")).toBe("text");
+  });
+});
+
+describe("collectSubgraphByIds", () => {
+  const meta = { id: "a", name: "A", primaryKeys: ["id"], properties: [] };
+  const metas = { a: meta, b: { ...meta, id: "b", name: "B" } };
+  const relations = Array.from({ length: 6 }, (_, index) => ({ id: `rel${index}`, sourceId: "a", targetId: "b" }));
+
+  it("retries a failed batch one path at a time so one bad relation type costs only its own edges", async () => {
+    const calls: string[][] = [];
+    const client = {
+      queryInstances: vi.fn(() => Promise.resolve({ datas: [{ id: "1", _instance_identity: { id: "1" } }] })),
+      queryInstanceSubgraph: vi.fn((paths: { relation_types: { relation_type_id: string }[] }[]) => {
+        const names = paths.map((path) => path.relation_types[0].relation_type_id);
+        calls.push(names);
+        if (names.includes("rel3")) return Promise.reject(new Error("请求参数不合法"));
+        return Promise.resolve({ entries: [] });
+      }),
+    } as unknown as GraphExplorerClient;
+    const result = await collectSubgraphByIds(client, [{ otId: "a", key: "1" }, { otId: "b", key: "1" }], metas, relations, {}, null);
+    // First batch of five fails on rel3, so those five are retried alone; the sixth batch is fine.
+    expect(calls[0]).toEqual(["rel0", "rel1", "rel2", "rel3", "rel4"]);
+    expect(calls.slice(1, 6).map((names) => names[0])).toEqual(["rel0", "rel1", "rel2", "rel3", "rel4"]);
+    const failures = (result.raw.paths as { error?: string }[]).filter((entry) => entry.error);
+    expect(failures).toHaveLength(1);
   });
 });
 

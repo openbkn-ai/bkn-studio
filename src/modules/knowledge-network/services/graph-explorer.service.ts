@@ -569,9 +569,11 @@ const PATH_BATCH = 5;
 /**
  * Instances behind a parsed id list plus the relations among them: one `pk in` query per
  * object type (50 keys a batch), then one query_instance_subgraph path per relation type whose
- * two ends are both in the set, keeping only edges between resolved nodes. A failing relation
- * type is recorded under `raw.paths` and skipped rather than sinking the whole call. Every
- * object type involved must be in `metas` with exactly one primary key.
+ * two ends are both in the set, keeping only edges between resolved nodes. Paths travel in
+ * batches; when a batch fails its paths are retried one at a time, so a single relation type the
+ * backend refuses costs only its own edges instead of the whole batch's. What still fails is
+ * recorded under `raw.paths` and skipped rather than sinking the call. Every object type
+ * involved must be in `metas` with exactly one primary key.
  */
 export async function collectSubgraphByIds(
   client: GraphExplorerClient,
@@ -613,16 +615,23 @@ export async function collectSubgraphByIds(
     }));
   const edges: GEdge[] = [];
   const pathPayloads: unknown[] = [];
-  for (let start = 0; start < paths.length; start += PATH_BATCH) {
-    const batch = paths.slice(start, start + PATH_BATCH);
+  const collect = async (group: SubgraphPath[]): Promise<boolean> => {
     try {
-      const payload = await client.queryInstanceSubgraph(batch, scope);
+      const payload = await client.queryInstanceSubgraph(group, scope);
       pathPayloads.push(payload);
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
       for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
+      return true;
     } catch (error) {
-      pathPayloads.push({ error: friendlyError(error), paths: batch });
+      if (group.length === 1) pathPayloads.push({ error: friendlyError(error), paths: group });
+      return false;
     }
+  };
+  for (let start = 0; start < paths.length; start += PATH_BATCH) {
+    const batch = paths.slice(start, start + PATH_BATCH);
+    if (await collect(batch)) continue;
+    // One refused relation type must not cost the others their edges.
+    for (const single of batch) await collect([single]);
   }
   return { nodes, edges, raw: { instances, paths: pathPayloads } };
 }
