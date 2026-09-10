@@ -154,6 +154,8 @@ export function GraphExplorerScene() {
   const [restored, setRestored] = useState((snapshot?.nodes.length ?? 0) > 0);
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const undoRef = useRef<CanvasSnapshot[]>([]);
+  /** Widest explore_subgraph path_length the backend accepted per object type in this session. */
+  const hopCapRef = useRef(new Map<string, number>());
   const [undoCount, setUndoCount] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -447,14 +449,19 @@ export function GraphExplorerScene() {
       // is refused (a path that crosses an object type with no published data returns 500).
       // Joining the two walks at a shared node reaches up to six hops, and still finds a short
       // path when one side can only manage one hop.
+      // A refusal is a property of the object type (its wider neighbourhood crosses the broken
+      // type), so the widest hop count that worked is remembered per type for this session and
+      // the other side, and later searches, skip the calls that would fail again.
       const walk = async (node: GNode, condition: KnCondition) => {
         let lastError: unknown = null;
-        for (let hops = PATH_MAX_HOPS; hops >= 1; hops -= 1) {
+        const widest = Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS);
+        for (let hops = widest; hops >= 1; hops -= 1) {
           try {
             const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction: "bidirectional", pathLength: hops }, turn);
             return { payload, hops };
           } catch (error) {
             lastError = error;
+            hopCapRef.current.set(node.otId, hops - 1);
           }
         }
         throw lastError instanceof Error ? lastError : new Error(String(lastError));
@@ -747,6 +754,7 @@ export function GraphExplorerScene() {
       saveTimerRef.current = null;
     }
     clearCache(networkId);
+    hopCapRef.current.clear();
     setRestored(false);
     message.success(t("knowledgeNetwork.graphExplorer.toast.cacheCleared"));
   }, [message, networkId, t]);
