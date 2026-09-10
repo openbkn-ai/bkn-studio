@@ -69,3 +69,10 @@
 
 - [ ] 英文标题正文，目标 `release/0.1.4-yf`，附验证记录
 - [ ] `gh pr checks` 全绿
+
+## T10. 独立查看页（graph-view.html）
+
+- [x] `src/graph-view/`（入口、参数解析 + 单测、页面）、`public/graph-view.config.js`、Vite 双入口、nginx 不缓存 html 入口
+- [x] 页面「按 ID 取子图」与批量展开抽成 service 的 `collectSubgraphByIds` / `expandSeeds`，两处共用
+- [x] VM 实机：无 cookie 的新浏览器上下文 + `token` 参数打开、`expand=in` 与 `layout=radial` 生效、缺 token 时的提示
+

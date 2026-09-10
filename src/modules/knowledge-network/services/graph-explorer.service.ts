@@ -559,6 +559,114 @@ export function keyValueFor(meta: ObjectTypeMeta, key: string): unknown {
 }
 
 /** Keeps only the edges whose both ends are in the given node set. */
+/* ============================ Loaders shared by the explorer page and the viewer ============================ */
+
+export type RelationEnds = { id: string; sourceId: string; targetId: string };
+export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown> };
+
+const ID_BATCH = 50;
+const PATH_BATCH = 5;
+
+/**
+ * Instances behind a parsed id list plus the relations among them: one `pk in` query per
+ * object type (50 keys a batch), then one query_instance_subgraph path per relation type whose
+ * two ends are both in the set, keeping only edges between resolved nodes. A failing relation
+ * type is recorded under `raw.paths` and skipped rather than sinking the whole call. Every
+ * object type involved must be in `metas` with exactly one primary key.
+ */
+export async function collectSubgraphByIds(
+  client: GraphExplorerClient,
+  items: IdListItem[],
+  metas: Record<string, ObjectTypeMeta>,
+  relations: RelationEnds[],
+  labelByOt: Record<string, string>,
+  scope: BknCallScope | null,
+): Promise<CollectedSubgraph> {
+  const byOt = new Map<string, string[]>();
+  for (const item of items) byOt.set(item.otId, [...(byOt.get(item.otId) ?? []), item.key]);
+  const pkOf = (otId: string): string => {
+    const meta = metas[otId];
+    if (!meta || meta.primaryKeys.length !== 1) throw new Error(`object type ${otId} needs exactly one primary key`);
+    return meta.primaryKeys[0];
+  };
+  const keysOf = (otId: string) => (byOt.get(otId) ?? []).map((key) => keyValueFor(metas[otId], key));
+  const nodes: GNode[] = [];
+  const instances: Record<string, unknown[]> = {};
+  for (const [otId, keys] of byOt) {
+    const pk = pkOf(otId);
+    for (let start = 0; start < keys.length; start += ID_BATCH) {
+      const chunk = keys.slice(start, start + ID_BATCH).map((key) => keyValueFor(metas[otId], key));
+      const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, scope);
+      (instances[otId] ??= []).push(payload);
+      nodes.push(...fromQueryObjectInstance(metas[otId], payload, labelByOt[otId]));
+    }
+  }
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const paths: SubgraphPath[] = relations
+    .filter((relation) => byOt.has(relation.sourceId) && byOt.has(relation.targetId))
+    .map((relation) => ({
+      object_types: [
+        { id: relation.sourceId, condition: { field: pkOf(relation.sourceId), operation: "in", value: keysOf(relation.sourceId) } },
+        { id: relation.targetId, condition: { field: pkOf(relation.targetId), operation: "in", value: keysOf(relation.targetId) } },
+      ],
+      relation_types: [{ relation_type_id: relation.id, source_object_type_id: relation.sourceId, target_object_type_id: relation.targetId }],
+      limit: Math.min(1000, Math.max(10, keysOf(relation.sourceId).length)),
+    }));
+  const edges: GEdge[] = [];
+  const pathPayloads: unknown[] = [];
+  for (let start = 0; start < paths.length; start += PATH_BATCH) {
+    const batch = paths.slice(start, start + PATH_BATCH);
+    try {
+      const payload = await client.queryInstanceSubgraph(batch, scope);
+      pathPayloads.push(payload);
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
+    } catch (error) {
+      pathPayloads.push({ error: friendlyError(error), paths: batch });
+    }
+  }
+  return { nodes, edges, raw: { instances, paths: pathPayloads } };
+}
+
+/**
+ * One-hop neighbours of many seed nodes: one explore_subgraph per object type with `pk in`
+ * when the type has a single primary key, otherwise one call per seed on its full identity.
+ */
+export async function expandSeeds(
+  client: GraphExplorerClient,
+  seeds: GNode[],
+  metas: Record<string, ObjectTypeMeta>,
+  direction: ExpandDirection,
+  labelByOt: Record<string, string>,
+  scope: BknCallScope | null,
+): Promise<CollectedSubgraph> {
+  const byOt = new Map<string, GNode[]>();
+  for (const node of seeds) byOt.set(node.otId, [...(byOt.get(node.otId) ?? []), node]);
+  const nodes: GNode[] = [];
+  const edges: GEdge[] = [];
+  const calls: unknown[] = [];
+  const collect = (payload: Rec) => {
+    calls.push(payload);
+    const sub = fromExploreSubgraph(payload, labelByOt);
+    nodes.push(...sub.nodes);
+    edges.push(...sub.edges);
+  };
+  for (const [otId, list] of byOt) {
+    const meta = metas[otId];
+    if (meta && meta.primaryKeys.length === 1) {
+      const pk = meta.primaryKeys[0];
+      const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
+      collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
+      continue;
+    }
+    for (const node of list) {
+      const condition = identityCondition(node.identity);
+      if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+    }
+  }
+  return { nodes, edges, raw: { calls } };
+}
+
 export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[] {
   return edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
 }

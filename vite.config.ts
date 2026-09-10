@@ -205,6 +205,11 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rollupOptions: {
+        // Two pages: the Studio shell and the standalone graph viewer (graph-view.html).
+        input: {
+          main: path.resolve(projectRoot, "index.html"),
+          graphView: path.resolve(projectRoot, "graph-view.html"),
+        },
         output: {
           manualChunks(id) {
             if (!id.includes("node_modules")) {

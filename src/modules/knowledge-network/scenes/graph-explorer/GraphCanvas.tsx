@@ -66,6 +66,8 @@ export type GraphCanvasProps = {
   dragMode: DragMode;
   colorOf: (otId: string) => string;
   menuLabels: Record<MenuAction, string>;
+  /** Context-menu entries to offer; every action by default. */
+  menuActions?: MenuAction[];
   onNodeClick?: (id: string) => void;
   onNodeDoubleClick?: (id: string) => void;
   onCanvasClick?: () => void;
@@ -335,7 +337,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             const id = String(event.target.id);
             const labels = propsRef.current.menuLabels ?? menuLabels;
             const marks = marksRef.current;
-            return MENU_ORDER.map((action) => {
+            return (propsRef.current.menuActions ?? MENU_ORDER).map((action) => {
               // Toggle entries: a node that already carries the mark offers to clear it instead.
               let effective: MenuAction = action;
               if (action === "pin" && marks.pinned.has(id)) effective = "unpin";

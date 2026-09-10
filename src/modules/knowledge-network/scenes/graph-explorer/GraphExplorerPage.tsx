@@ -18,12 +18,13 @@ import {
   NODE_LIMIT,
   PATH_MAX_HOPS,
   capIncomingNodes,
-  edgesAmong,
+  collectSubgraphByIds,
   effectiveLabelsFrom,
   keyValueFor,
   parseIdList,
   createGraphExplorerClient,
   edgeFromRelation,
+  expandSeeds,
   fromExploreSubgraph,
   fromQueryObjectInstance,
   friendlyError,
@@ -1027,57 +1028,17 @@ export function GraphExplorerScene() {
       if (parsed.items.length === 0) return;
       const relations = detail?.relation_types ?? [];
       const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn, ctx) => {
-        const byOt = new Map<string, string[]>();
-        for (const item of parsed.items) byOt.set(item.otId, [...(byOt.get(item.otId) ?? []), item.key]);
-        const metas = await loadMetas([...byOt.keys()], turn);
-        // 1. Resolve the instances, one `in` query per object type (50 keys a batch).
-        const nodes: GNode[] = [];
-        const rawPayloads: Record<string, unknown[]> = {};
-        for (const [otId, keys] of byOt) {
+        const otIds = [...new Set(parsed.items.map((item) => item.otId))];
+        const metas = await loadMetas(otIds, turn);
+        for (const otId of otIds) {
           const meta = metas[otId];
           if (!meta || meta.primaryKeys.length !== 1) {
             throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
           }
-          const pk = meta.primaryKeys[0];
-          for (let start = 0; start < keys.length; start += 50) {
-            const chunk = keys.slice(start, start + 50).map((key) => keyValueFor(meta, key));
-            const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
-            (rawPayloads[otId] ??= []).push(payload);
-            nodes.push(...fromQueryObjectInstance(meta, payload, labelMap()[otId]));
-          }
         }
-        const nodeIds = new Set(nodes.map((node) => node.id));
-        // 2. Relations among the set: one path query per relation type whose ends are both present.
-        const edges: GEdge[] = [];
-        const keysOf = (otId: string) => {
-          const meta = metas[otId];
-          return (byOt.get(otId) ?? []).map((key) => keyValueFor(meta, key));
-        };
-        const paths = relations
-          .filter((relation) => byOt.has(relation.sourceId) && byOt.has(relation.targetId))
-          .map((relation) => ({
-            object_types: [
-              { id: relation.sourceId, condition: { field: metas[relation.sourceId].primaryKeys[0], operation: "in", value: keysOf(relation.sourceId) } },
-              { id: relation.targetId, condition: { field: metas[relation.targetId].primaryKeys[0], operation: "in", value: keysOf(relation.targetId) } },
-            ],
-            relation_types: [{ relation_type_id: relation.id, source_object_type_id: relation.sourceId, target_object_type_id: relation.targetId }],
-            limit: Math.min(1000, Math.max(10, keysOf(relation.sourceId).length)),
-          }));
-        const pathPayloads: unknown[] = [];
-        for (let start = 0; start < paths.length; start += 5) {
-          const batch = paths.slice(start, start + 5);
-          try {
-            const payload = await client.queryInstanceSubgraph(batch, turn);
-            pathPayloads.push(payload);
-            const entries = Array.isArray(payload.entries) ? payload.entries : [];
-            for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelMap()).edges, nodeIds));
-          } catch (error) {
-            // A dead binding on one relation type must not sink the whole subgraph.
-            pathPayloads.push({ error: friendlyError(error), paths: batch });
-          }
-        }
-        ctx.raw = { instances: rawPayloads, paths: pathPayloads };
-        return { nodes, edges, requested: parsed.items.length };
+        const collected = await collectSubgraphByIds(client, parsed.items, metas, relations, labelMap(), turn);
+        ctx.raw = collected.raw;
+        return { nodes: collected.nodes, edges: collected.edges, requested: parsed.items.length };
       }, {
         rethrow: true,
         log: {
@@ -1104,34 +1065,11 @@ export function GraphExplorerScene() {
       const seeds = ids.map((id) => nodesRef.current.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
       if (seeds.length === 0) return;
       if (ids.length > EXPAND_SEED_LIMIT) message.warning(t("knowledgeNetwork.graphExplorer.toast.expandSeedsCapped", { limit: EXPAND_SEED_LIMIT }));
-      const byOt = new Map<string, GNode[]>();
-      for (const node of seeds) byOt.set(node.otId, [...(byOt.get(node.otId) ?? []), node]);
       const result = await runTurn(t("knowledgeNetwork.graphExplorer.turn.expandMany", { count: seeds.length }), async (turn, ctx) => {
-        const metas = await loadMetas([...byOt.keys()], turn);
-        const nodes: GNode[] = [];
-        const edges: GEdge[] = [];
-        const raws: unknown[] = [];
-        const collect = (payload: Record<string, unknown>) => {
-          raws.push(payload);
-          const sub = fromExploreSubgraph(payload, labelMap());
-          nodes.push(...sub.nodes);
-          edges.push(...sub.edges);
-        };
-        for (const [otId, list] of byOt) {
-          const meta = metas[otId];
-          if (meta && meta.primaryKeys.length === 1) {
-            const pk = meta.primaryKeys[0];
-            const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-            collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, turn));
-            continue;
-          }
-          for (const node of list) {
-            const condition = identityCondition(node.identity);
-            if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, turn));
-          }
-        }
-        ctx.raw = raws;
-        return { nodes, edges };
+        const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
+        const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
+        ctx.raw = collected.raw.calls;
+        return { nodes: collected.nodes, edges: collected.edges };
       }, {
         log: {
           kind: "expand",
