@@ -782,9 +782,18 @@ export function needsKnSearch(rrf: RrfOptions | undefined): boolean {
   return (Object.keys(DEFAULT_RRF_OPTIONS) as (keyof RrfOptions)[]).some((key) => rrf[key] !== DEFAULT_RRF_OPTIONS[key]);
 }
 
+/** Defaults under the caller's options; a key given as undefined keeps its default instead of erasing it. */
+export function mergeSearchOptions(options: SearchOptions = {}): Required<SearchOptions> {
+  const merged: Required<SearchOptions> = { ...DEFAULT_SEARCH_OPTIONS };
+  for (const [key, value] of Object.entries(options) as [keyof SearchOptions, unknown][]) {
+    if (value !== undefined) (merged as Record<string, unknown>)[key] = value;
+  }
+  return merged;
+}
+
 /** Body of REST /kn/kn_search carrying the same scope as search_instance plus the fusion knobs. */
 export function buildKnSearchBody(knId: string, query: string, options: SearchOptions, rrf: RrfOptions): Rec {
-  const merged = { ...DEFAULT_SEARCH_OPTIONS, ...options };
+  const merged = mergeSearchOptions(options);
   const conceptRetrieval: Rec = { top_k: Math.max(merged.maxObjectTypes, merged.objectTypes.length) };
   if (merged.objectTypes.length > 0) conceptRetrieval.object_types = merged.objectTypes;
   if (merged.excludeObjectTypes.length > 0) conceptRetrieval.exclude_object_types = merged.excludeObjectTypes;
@@ -863,7 +872,7 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       return readPayload(result, "query_instance_subgraph");
     },
     async searchInstances(query, scope, options = {}) {
-      const merged = { ...DEFAULT_SEARCH_OPTIONS, ...options };
+      const merged = mergeSearchOptions(options);
       const args: Rec = { kn_id: knId, query, max_instances_per_type: merged.maxInstancesPerType, response_format: "json" };
       if (merged.objectTypes.length > 0) args.object_types = merged.objectTypes;
       if (merged.excludeObjectTypes.length > 0) args.exclude_object_types = merged.excludeObjectTypes;

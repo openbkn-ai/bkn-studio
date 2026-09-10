@@ -415,8 +415,11 @@ describe("createGraphExplorerClient", () => {
     await client.searchInstances("q", null);
     await client.searchInstances("q", null, { objectTypes: ["ot_a", "ot_b"] });
     await client.searchInstances("q", null, { excludeObjectTypes: ["ot_x"], conceptGroups: ["cg1"], maxInstancesPerType: 5, maxObjectTypes: 3, rerank: true });
+    // A key passed as undefined (an optional argument forwarded as is) must keep its default, not erase it.
+    await client.searchInstances("q", null, { objectTypes: undefined, maxInstancesPerType: 3 });
     expect(callTool.mock.calls[0][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json" });
     expect(callTool.mock.calls[1][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json", object_types: ["ot_a", "ot_b"] });
+    expect(callTool.mock.calls[3][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 3, response_format: "json" });
     expect(callTool.mock.calls[2][1]).toEqual({
       kn_id: "kn1",
       query: "q",
