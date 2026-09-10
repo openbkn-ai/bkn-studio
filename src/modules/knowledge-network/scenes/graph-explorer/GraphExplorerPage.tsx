@@ -66,7 +66,7 @@ import styles from "./GraphExplorerPage.module.css";
 import { HistoryDrawer } from "./HistoryDrawer";
 import { NodeDrawer } from "./NodeDrawer";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
-import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+import { createChatModel, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 
 import {
   newHistoryId,
@@ -83,12 +83,15 @@ import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network
 import { buildCondition } from "./condition-builder";
 import { SHARE_ID_LIMIT, buildShareUrl, parseDeepLink } from "./deep-link";
 import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
+import { buildExplorePrompt, conditionFrom, createExploreTools, runExploreAgent, type ExploreDeps, type ExplorePromptTexts, type ExploreStep } from "./explore-agent";
 import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
 import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
 const CYPHER_ROW_LIMIT = 200;
 const EXPAND_SEED_LIMIT = 50;
+/** Tool calls one AI exploration may make before it has to answer. */
+const AI_MAX_STEPS = 10;
 const UNKNOWN_COLOR = "#8c8c8c";
 
 type Highlight = { nodes: Set<string>; edges: Set<string> } | null;
@@ -376,32 +379,39 @@ export function GraphExplorerScene() {
    * Search hits carry a trimmed property set and no `_instance_identity`; fetch the full rows
    * so the label follows the display key and the drawer shows every property.
    */
-  const enrichNodes = useCallback(
-    async (nodes: GNode[]): Promise<GNode[]> => {
+  /** Fetches full rows for nodes that came without `_instance_identity` (search hits), inside the given turn. */
+  const enrichCore = useCallback(
+    async (nodes: GNode[], turn: BknTurn | null): Promise<GNode[]> => {
       const needs = nodes.filter((node) => !isRecord(node.props._instance_identity));
       if (needs.length === 0) return nodes;
       const byOt = new Map<string, GNode[]>();
       for (const node of needs) byOt.set(node.otId, [...(byOt.get(node.otId) ?? []), node]);
-      const enriched = await runTurn(t("knowledgeNetwork.graphExplorer.turn.enrich", { count: needs.length }), async (turn) => {
-        const metas = await loadMetas([...byOt.keys()], turn);
-        const out = new Map<string, GNode>();
-        for (const [otId, list] of byOt) {
-          const meta = metas[otId];
-          if (!meta || meta.primaryKeys.length !== 1) continue;
-          const pk = meta.primaryKeys[0];
-          const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-          for (let start = 0; start < keys.length; start += 50) {
-            const chunk = keys.slice(start, start + 50);
-            const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
-            for (const full of fromQueryObjectInstance(meta, payload, labelMap()[otId])) out.set(full.id, full);
-          }
+      const metas = await loadMetas([...byOt.keys()], turn);
+      const out = new Map<string, GNode>();
+      for (const [otId, list] of byOt) {
+        const meta = metas[otId];
+        if (!meta || meta.primaryKeys.length !== 1) continue;
+        const pk = meta.primaryKeys[0];
+        const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
+        for (let start = 0; start < keys.length; start += 50) {
+          const chunk = keys.slice(start, start + 50);
+          const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+          for (const full of fromQueryObjectInstance(meta, payload, labelMap()[otId])) out.set(full.id, full);
         }
-        return out;
-      });
-      if (!enriched) return nodes;
-      return nodes.map((node) => enriched.get(node.id) ?? node);
+      }
+      return nodes.map((node) => out.get(node.id) ?? node);
     },
-    [client, labelMap, loadMetas, runTurn, t],
+    [client, labelMap, loadMetas],
+  );
+
+  const enrichNodes = useCallback(
+    async (nodes: GNode[]): Promise<GNode[]> => {
+      const needs = nodes.filter((node) => !isRecord(node.props._instance_identity));
+      if (needs.length === 0) return nodes;
+      const enriched = await runTurn(t("knowledgeNetwork.graphExplorer.turn.enrich", { count: needs.length }), (turn) => enrichCore(nodes, turn));
+      return enriched ?? nodes;
+    },
+    [enrichCore, runTurn, t],
   );
 
   const handleAdd = useCallback(
@@ -877,8 +887,11 @@ export function GraphExplorerScene() {
     [client, detail, labelMap, loadMetas, networkId, runTurn, t],
   );
 
-  const handleCypher = useCallback(
-    async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
+  type CypherOutcome = { nodes: GNode[]; edges: GEdge[]; rows: number; query: string; raw: unknown };
+
+  /** Parses, resolves and runs a MATCH fragment inside the given turn; shared by the Cypher tab and the AI explorer. */
+  const cypherCore = useCallback(
+    async (fragment: string, turn: BknTurn | null): Promise<CypherOutcome> => {
       const parsed = parseCypherPattern(fragment);
       if (isCypherParseError(parsed)) {
         const key = {
@@ -906,36 +919,45 @@ export function GraphExplorerScene() {
         if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }));
         return { ...edge, relTypeId: found.id, relTypeName: found.name?.trim() || found.id };
       });
-      let sentQuery = "";
-      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn, ctx) => {
-        const metas = await loadMetas([...new Set(otIds)], turn);
-        const resolvedNodes: ResolvedNodeRef[] = parsed.nodes.map((node, index) => {
-          const otId = otIds[index];
-          const meta = metas[otId];
-          if (!meta || meta.primaryKeys.length === 0) {
-            throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
-          }
-          return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
-        });
-        sentQuery = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
-        const result = await runCypherQuery(networkId, sentQuery);
-        ctx.raw = result;
-        const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
-        // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
-        const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
-        for (const node of resolvedNodes) {
-          if (node.primaryKeys.length !== 1) continue;
-          const pk = node.primaryKeys[0];
-          const values = graph.nodes.filter((item) => item.otId === node.otId).map((item) => item.identity[pk]);
-          for (let start = 0; start < values.length; start += 50) {
-            const chunk = values.slice(start, start + 50);
-            const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
-            for (const full of fromQueryObjectInstance(metas[node.otId], payload, labelMap()[node.otId])) {
-              if (enriched.has(full.id)) enriched.set(full.id, full);
-            }
+      const metas = await loadMetas([...new Set(otIds)], turn);
+      const resolvedNodes: ResolvedNodeRef[] = parsed.nodes.map((node, index) => {
+        const otId = otIds[index];
+        const meta = metas[otId];
+        if (!meta || meta.primaryKeys.length === 0) {
+          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+        }
+        return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
+      });
+      const query = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
+      const result = await runCypherQuery(networkId, query);
+      const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
+      // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
+      const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
+      for (const node of resolvedNodes) {
+        if (node.primaryKeys.length !== 1) continue;
+        const pk = node.primaryKeys[0];
+        const values = graph.nodes.filter((item) => item.otId === node.otId).map((item) => item.identity[pk]);
+        for (let start = 0; start < values.length; start += 50) {
+          const chunk = values.slice(start, start + 50);
+          const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+          for (const full of fromQueryObjectInstance(metas[node.otId], payload, labelMap()[node.otId])) {
+            if (enriched.has(full.id)) enriched.set(full.id, full);
           }
         }
-        return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length };
+      }
+      return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length, query, raw: result };
+    },
+    [client, detail, labelMap, loadMetas, networkId, t],
+  );
+
+  const handleCypher = useCallback(
+    async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
+      let sentQuery = "";
+      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn, ctx) => {
+        const value = await cypherCore(fragment, turn);
+        sentQuery = value.query;
+        ctx.raw = value.raw;
+        return value;
       }, {
         rethrow: true,
         log: {
@@ -949,7 +971,7 @@ export function GraphExplorerScene() {
       if (!outcome) throw new Error("");
       return outcome;
     },
-    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
+    [cypherCore, networkId, runTurn, t],
   );
 
   const tokenProvider = useMemo<AgentTokenProvider>(
@@ -989,6 +1011,117 @@ export function GraphExplorerScene() {
       }
     },
     [base, cypherPromptTexts, detail, logCall, networkId, t, tokenProvider],
+  );
+
+  const explorePromptTexts = useMemo<ExplorePromptTexts>(() => {
+    const rules: unknown = t("knowledgeNetwork.graphExplorer.ai.prompt.rules", { returnObjects: true });
+    return {
+      intro: t("knowledgeNetwork.graphExplorer.ai.prompt.intro"),
+      rulesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.rulesHeader"),
+      rules: Array.isArray(rules) ? rules.filter((rule): rule is string => typeof rule === "string") : [],
+      propertiesLabel: t("knowledgeNetwork.graphExplorer.ai.prompt.propertiesLabel"),
+      objectTypesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.objectTypesHeader"),
+      relationTypesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.relationTypesHeader"),
+    };
+  }, [t]);
+
+  /**
+   * AI exploration: one managed turn in which the model calls search / filter / show / expand /
+   * Cypher tools; everything a tool draws lands on the canvas as it happens.
+   */
+  const handleAiExplore = useCallback(
+    async (question: string, modelName: string, onStep: (step: ExploreStep) => void, signal?: AbortSignal): Promise<{ text: string; steps: ExploreStep[] }> => {
+      if (!detail) throw new Error(t("knowledgeNetwork.graphExplorer.ai.notReady"));
+      const steps: ExploreStep[] = [];
+      const report = (step: ExploreStep) => {
+        steps.push(step);
+        onStep(step);
+      };
+      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.ai.turn", { question: question.trim().slice(0, 40) }), async (turn, ctx) => {
+        // Candidates the model has seen this run; expand accepts them even before they are drawn.
+        const known = new Map<string, GNode>();
+        const remember = (nodes: GNode[]) => {
+          for (const node of nodes) known.set(node.id, node);
+          return nodes;
+        };
+        const typeIds = detail.object_types.map((item) => item.id);
+        const deps: ExploreDeps = {
+          search: async (query, objectTypes, limit) => {
+            const payload = await client.searchInstances(query, turn, { objectTypes, maxInstancesPerType: limit });
+            const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
+            const needMeta = new Set<string>();
+            for (const hit of hits) if (isRecord(hit) && typeof hit.object_type_id === "string") needMeta.add(hit.object_type_id);
+            const metas = await loadMetas([...needMeta], turn);
+            return remember(await enrichCore(fromSearchInstance(payload, metas, labelMap()).nodes, turn));
+          },
+          query: async (otId, filters, limit) => {
+            const meta = (await loadMetas([otId], turn))[otId];
+            if (!meta) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: otId }));
+            const payload = await client.queryInstances(otId, conditionFrom(filters), limit, turn);
+            return remember(fromQueryObjectInstance(meta, payload, labelMap()[otId]));
+          },
+          show: async (ids) => {
+            const parsed = parseIdList(ids.join("\n"), typeIds);
+            if (parsed.items.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
+            const otIds = [...new Set(parsed.items.map((item) => item.otId))];
+            const metas = await loadMetas(otIds, turn);
+            for (const otId of otIds) {
+              const meta = metas[otId];
+              if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+            }
+            const collected = await collectSubgraphByIds(client, parsed.items, metas, detail.relation_types, labelMap(), turn);
+            remember(collected.nodes);
+            const added = (await addToCanvas(collected.nodes, collected.edges)) ?? { nodes: 0, edges: 0 };
+            return { nodes: collected.nodes, edges: collected.edges, added };
+          },
+          expand: async (ids, direction) => {
+            const seeds = ids.map((id) => nodesRef.current.get(id) ?? known.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
+            if (seeds.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.ai.unknownIds", { list: ids.slice(0, 5).join(", ") }));
+            const absent = seeds.filter((node) => !nodesRef.current.has(node.id));
+            if (absent.length > 0) await addToCanvas(absent, []);
+            const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
+            const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
+            remember(collected.nodes);
+            const added = (await addToCanvas(collected.nodes, collected.edges, seeds.length === 1 ? seeds[0].id : undefined)) ?? { nodes: 0, edges: 0 };
+            return { nodes: collected.nodes, edges: collected.edges, added };
+          },
+          cypher: async (match) => {
+            const value = await cypherCore(match, turn);
+            remember(value.nodes);
+            const added = (await addToCanvas(value.nodes, value.edges)) ?? { nodes: 0, edges: 0 };
+            return { nodes: value.nodes, edges: value.edges, rows: value.rows, added };
+          },
+          canvas: () => ({ nodes: [...nodesRef.current.values()], edges: [...edgesRef.current.values()] }),
+        };
+        const tools = createExploreTools(deps, report, {
+          found: (count) => t("knowledgeNetwork.graphExplorer.ai.step.found", { count }),
+          drawn: (nodes, edges) => t("knowledgeNetwork.graphExplorer.ai.step.drawn", { nodes, edges }),
+          rows: (rows, nodes, edges) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows, nodes, edges }),
+          failed: (message) => t("knowledgeNetwork.graphExplorer.ai.step.failed", { message }),
+        });
+        const result = await runExploreAgent({
+          model: createChatModel({ base, token: "", knId: networkId }, modelName, tokenProvider),
+          system: buildExplorePrompt(detail, explorePromptTexts),
+          question,
+          tools,
+          maxSteps: AI_MAX_STEPS,
+          signal,
+        });
+        ctx.raw = { answer: result.text, steps };
+        return { text: result.text, steps };
+      }, {
+        rethrow: true,
+        log: {
+          kind: "ai",
+          title: question.trim().split("\n")[0],
+          input: { model: modelName, question, max_steps: AI_MAX_STEPS },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.ai.summary", { steps: value.steps.length }),
+        },
+      });
+      if (!outcome) throw new Error("");
+      return outcome;
+    },
+    [addToCanvas, base, client, cypherCore, detail, enrichCore, explorePromptTexts, labelMap, loadMetas, networkId, runTurn, t, tokenProvider],
   );
 
   const handleAddGraph = useCallback(
@@ -1303,6 +1436,7 @@ export function GraphExplorerScene() {
         onAddGraph={handleAddGraph}
         cypherRowLimit={CYPHER_ROW_LIMIT}
         onGenerateCypher={llmModels.length > 0 && detail ? handleGenerateCypher : null}
+        onAiExplore={llmModels.length > 0 && detail ? handleAiExplore : null}
         cypherModels={llmModels}
         onAdd={handleAdd}
         canvasIds={canvasIds}

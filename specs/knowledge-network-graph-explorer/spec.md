@@ -221,6 +221,16 @@ type GEdge = {
 - 画布复用 `GraphCanvas`：右键只保留展开出/入/双向与移除（`menuActions` 属性），双击双向展开，单击右侧显示属性；顶栏有布局下拉、重新排列、适配、以及「在 Studio 中打开」（把当前节点拼成 7.3 的直达链接）。
 - 不做的事：无 Cypher、无本地缓存、无撤销/历史；标签只走后端 `_display` 链（不查 Studio 的对象类接口，因此不带固定令牌以外的第二套鉴权）。
 
+## 7.6 AI 探索
+
+Tab「AI 探索」：用户用自然语言说要看什么，模型在一个受管回合里循环调用工具、边找边画，最后给一句总结；每一步（工具名、参数、结果摘要、耗时、成败）实时列在面板里，可随时停止。
+
+- 实现：`explore-agent.ts` 用 `ai` 的 `generateText` + `tool`（JSON Schema 入参）+ `stopWhen: stepCountIs(10)`；模型来自 `listLlmModels`（与 Cypher 的 AI 生成共用下拉）。系统提示 = 角色与规则（locales `ai.prompt.*`）+ 对象类（id/名称/前 12 个属性）+ 关系类（source -> target）。
+- 工具面（都在页面的当前回合里执行，不另起回合）：`search_instances`（`search_instance`，只回候选）、`query_instances`（`query_object_instance` + AND 过滤，只回候选）、`show_instances`（`collectSubgraphByIds`，画）、`expand_neighbours`（`expandSeeds`，画；种子可以是画布上的或本轮见过的候选，不在画布上的先画上）、`run_cypher`（`cypherCore`，画）、`canvas_state`。工具失败以 `{error}` 作为结果交回模型，让它换路子，而不是中断整轮。
+- 给模型看的结果是压缩过的：每次最多 20 条（id/类型/标签/前 6 个属性、值截 60 字），边是 `a -[rel]-> b` 字符串。
+- 页面侧把「Cypher 执行」与「搜索命中补全」拆成不带回合的 `cypherCore` / `enrichCore`，Cypher Tab 与 AI 探索共用；执行历史记一条 `ai` 条目（输入 = 模型/问题/步数上限，输出 = 总结 + 全部步骤）。
+- 不做：路径查找工具（`findPath` 仍是独立回合）、多轮对话（每次运行独立）。
+
 ## 8. 本地缓存
 
 - key：`bkn-studio.graph-explorer.<kn_id>`

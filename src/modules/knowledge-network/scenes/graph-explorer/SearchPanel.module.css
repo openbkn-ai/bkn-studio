@@ -259,3 +259,36 @@
   justify-content: space-between;
   gap: 8px;
 }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.steps code {
+  font-size: 11px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--color-bg-page, #f3f4f6);
+}
+
+.stepFailed {
+  color: #b91c1c;
+}
+
+.answer {
+  margin: 0;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}
+

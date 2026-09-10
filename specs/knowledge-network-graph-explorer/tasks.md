@@ -76,3 +76,9 @@
 - [x] 页面「按 ID 取子图」与批量展开抽成 service 的 `collectSubgraphByIds` / `expandSeeds`，两处共用
 - [x] VM 实机：无 cookie 的新浏览器上下文 + `token` 参数打开、`expand=in` 与 `layout=radial` 生效、缺 token 时的提示
 
+## T11. AI 探索
+
+- [x] `explore-agent.ts`（提示词、工具面、结果压缩、失败回传）+ 单测
+- [x] 页面 `cypherCore` / `enrichCore` 抽离；`handleAiExplore` 在一个回合内跑完整个工具循环；SearchPanel 新 Tab
+- [ ] VM 实机：世界杯网一句话「找 1930 年的阵容并展开球队」跑通，步骤实时出现、画布有增量、历史有条目
+

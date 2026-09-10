@@ -7,7 +7,7 @@
 
 import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Checkbox, Collapse, Empty, Input, InputNumber, Select, Slider, Spin, Switch, Tabs, Tag, Tooltip, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/modules/knowledge-network/services/graph-explorer.service";
 
 import { OPERATORS_BY_KIND, buildCondition, propertyKind, type ConditionRow } from "./condition-builder";
+import type { ExploreStep } from "./explore-agent";
 import styles from "./SearchPanel.module.css";
 
 export type SearchPanelProps = {
@@ -47,6 +48,8 @@ export type SearchPanelProps = {
   cypherRowLimit: number;
   /** Turns a natural-language question into a MATCH fragment through the default LLM; null when no model is available. */
   onGenerateCypher: ((question: string, modelName: string) => Promise<string>) | null;
+  /** Lets the model explore with tools; every step is reported as it completes. Null when no model is available. */
+  onAiExplore: ((question: string, modelName: string, onStep: (step: ExploreStep) => void, signal: AbortSignal) => Promise<{ text: string; steps: ExploreStep[] }>) | null;
   /** Model factory LLMs offered for generation; the first is the default. */
   cypherModels: { name: string; isDefault?: boolean }[];
   onAdd: (nodes: GNode[]) => void;
@@ -167,6 +170,7 @@ export function SearchPanel({
   onAddGraph,
   cypherRowLimit,
   onGenerateCypher,
+  onAiExplore,
   cypherModels,
   onAdd,
   canvasIds,
@@ -174,12 +178,39 @@ export function SearchPanel({
   colorOf,
 }: SearchPanelProps) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"semantic" | "condition" | "browse" | "cypher">("semantic");
+  const [tab, setTab] = useState<"semantic" | "condition" | "browse" | "cypher" | "ai">("semantic");
 
   const [cypherText, setCypherText] = useState("");
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiModel, setAiModel] = useState<string | undefined>(undefined);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [exploreQuestion, setExploreQuestion] = useState("");
+  const [exploring, setExploring] = useState(false);
+  const [exploreSteps, setExploreSteps] = useState<ExploreStep[]>([]);
+  const [exploreAnswer, setExploreAnswer] = useState<string | null>(null);
+  const [exploreError, setExploreError] = useState<string | null>(null);
+  const exploreAbortRef = useRef<AbortController | null>(null);
+
+  const runExplore = async () => {
+    const question = exploreQuestion.trim();
+    if (!question || disabled || !onAiExplore || !effectiveAiModel) return;
+    const controller = new AbortController();
+    exploreAbortRef.current = controller;
+    setExploring(true);
+    setExploreError(null);
+    setExploreSteps([]);
+    setExploreAnswer(null);
+    try {
+      const result = await onAiExplore(question, effectiveAiModel, (step) => setExploreSteps((previous) => [...previous, step]), controller.signal);
+      setExploreAnswer(result.text || null);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      setExploreError(controller.signal.aborted ? t("knowledgeNetwork.graphExplorer.ai.stopped") : text || null);
+    } finally {
+      exploreAbortRef.current = null;
+      setExploring(false);
+    }
+  };
   const [cypherRunning, setCypherRunning] = useState(false);
 
   const effectiveAiModel = aiModel ?? cypherModels.find((model) => model.isDefault)?.name ?? cypherModels[0]?.name;
@@ -767,17 +798,73 @@ export function SearchPanel({
     </div>
   );
 
+  const aiPane = onAiExplore ? (
+    <div className={styles.pane}>
+      <Typography.Text type="secondary" className={styles.hint}>
+        {t("knowledgeNetwork.graphExplorer.ai.hint")}
+      </Typography.Text>
+      <Input.TextArea
+        data-testid="graph-explorer-ai-question"
+        value={exploreQuestion}
+        disabled={disabled || exploring}
+        autoSize={{ minRows: 2, maxRows: 6 }}
+        placeholder={t("knowledgeNetwork.graphExplorer.ai.placeholder")}
+        onChange={(event) => setExploreQuestion(event.target.value)}
+        onKeyDown={(event) => {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") void runExplore();
+        }}
+      />
+      <div className={styles.row}>
+        {cypherModels.length > 1 ? (
+          <Select
+            size="small"
+            className={styles.aiModel}
+            value={effectiveAiModel}
+            disabled={exploring}
+            options={cypherModels.map((model) => ({ value: model.name, label: model.name }))}
+            onChange={(value: string) => setAiModel(value)}
+          />
+        ) : null}
+        <Button type="primary" size="small" data-testid="graph-explorer-ai-run" loading={exploring} disabled={disabled || !exploreQuestion.trim()} onClick={() => void runExplore()}>
+          {t("knowledgeNetwork.graphExplorer.ai.run")}
+        </Button>
+        {exploring ? (
+          <Button size="small" data-testid="graph-explorer-ai-stop" onClick={() => exploreAbortRef.current?.abort()}>
+            {t("knowledgeNetwork.graphExplorer.ai.stop")}
+          </Button>
+        ) : null}
+      </div>
+      {exploreError ? <Alert className={styles.alert} type="error" showIcon message={exploreError} /> : null}
+      {exploreSteps.length > 0 ? (
+        <ol className={styles.steps} data-testid="graph-explorer-ai-steps">
+          {exploreSteps.map((step, index) => (
+            <li key={index} className={step.ok ? undefined : styles.stepFailed}>
+              <code>{step.tool}</code> {step.summary}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      {exploreAnswer ? (
+        <Typography.Paragraph className={styles.answer} data-testid="graph-explorer-ai-answer">
+          {exploreAnswer}
+        </Typography.Paragraph>
+      ) : null}
+      {!exploring && !exploreError && exploreSteps.length === 0 && !exploreAnswer ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("knowledgeNetwork.graphExplorer.ai.empty")} /> : null}
+    </div>
+  ) : null;
+
   return (
     <aside className={styles.panel}>
       <Tabs
         activeKey={tab}
-        onChange={(key) => setTab(key as "semantic" | "condition" | "browse" | "cypher")}
+        onChange={(key) => setTab(key as "semantic" | "condition" | "browse" | "cypher" | "ai")}
         className={styles.tabs}
         items={[
           { key: "semantic", label: t("knowledgeNetwork.graphExplorer.tabs.semantic"), children: semanticPane },
           { key: "condition", label: t("knowledgeNetwork.graphExplorer.tabs.condition"), children: conditionPane },
           { key: "browse", label: t("knowledgeNetwork.graphExplorer.tabs.browse"), children: browsePane },
           { key: "cypher", label: t("knowledgeNetwork.graphExplorer.tabs.cypher"), children: cypherPane },
+          ...(aiPane ? [{ key: "ai", label: t("knowledgeNetwork.graphExplorer.tabs.ai"), children: aiPane }] : []),
         ]}
       />
     </aside>
