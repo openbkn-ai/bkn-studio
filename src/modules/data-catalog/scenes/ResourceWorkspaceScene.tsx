@@ -34,7 +34,7 @@ import {
   resourceGateOf,
   sortTasks,
 } from "@/modules/data-catalog/lib/index-state";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   discoverCatalogResource,
@@ -107,9 +107,14 @@ export function ResourceWorkspaceScene({
         return;
       }
 
-      const [catalogRecord, taskList] = await Promise.all([
+      const [catalogRecord, latestTaskPage] = await Promise.all([
         getCatalog(detail.catalogId),
-        listBuildTasks({ resourceId }),
+        listBuildTaskPage({
+          direction: "desc",
+          limit: 1,
+          resourceId,
+          sort: "create_time",
+        }),
       ]);
 
       if (resourceVersionRef.current === resourceVersion) {
@@ -117,7 +122,7 @@ export function ResourceWorkspaceScene({
       }
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
-        setTasks(taskList);
+        setTasks(latestTaskPage.items);
       }
     } catch (error) {
       if (
@@ -222,6 +227,31 @@ export function ResourceWorkspaceScene({
       setResourceAction(null);
     }
   }, [message, resourceId, t]);
+
+  const confirmResourceDiscovery = useCallback(() => {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
+      okText: t("dataCatalog.resourceWorkspace.refreshMetadataConfirm"),
+      onOk: triggerResourceDiscovery,
+      title: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle"),
+    });
+  }, [modal, t, triggerResourceDiscovery]);
+
+  const confirmResourceEnabled = useCallback((enabled: boolean) => {
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t(enabled
+        ? "dataCatalog.resourceWorkspace.enableConfirmDescription"
+        : "dataCatalog.resourceWorkspace.disableConfirmDescription"),
+      okButtonProps: enabled ? undefined : { danger: true },
+      okText: t(enabled ? "common.enable" : "common.disable"),
+      onOk: () => updateResourceEnabled(enabled),
+      title: t(enabled
+        ? "dataCatalog.resourceWorkspace.enableConfirmTitle"
+        : "dataCatalog.resourceWorkspace.disableConfirmTitle"),
+    });
+  }, [modal, t, updateResourceEnabled]);
 
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
@@ -338,7 +368,7 @@ export function ResourceWorkspaceScene({
                 disabled={detailEditing}
                 icon={<ReloadOutlined />}
                 loading={resourceAction === "discover"}
-                onClick={() => void triggerResourceDiscovery()}
+                onClick={confirmResourceDiscovery}
               >
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
               </AppButton>
@@ -349,7 +379,7 @@ export function ResourceWorkspaceScene({
                 danger={resource.enabled !== false}
                 disabled={detailEditing}
                 loading={resourceAction === "enabled"}
-                onClick={() => void updateResourceEnabled(resource.enabled === false)}
+                onClick={() => confirmResourceEnabled(resource.enabled === false)}
                 type={resource.enabled === false ? "primary" : "default"}
                 variant={resource.enabled === false ? "solid" : undefined}
               >

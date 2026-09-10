@@ -21,17 +21,18 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { success: vi.fn() } }),
+  useAppServices: () => ({ message: { success: vi.fn() }, modal: { confirm: modalConfirmMock } }),
 }));
 
 const createBuildTaskMock = vi.hoisted(() => vi.fn());
-const listBuildTasksMock = vi.hoisted(() => vi.fn());
+const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
 const resumeBuildTaskMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn<(config: { onOk: () => Promise<void> }) => void>());
 
 vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   BuildTaskConflictError: class BuildTaskConflictError extends Error {},
   createBuildTask: createBuildTaskMock,
-  listBuildTasks: listBuildTasksMock,
+  listBuildTaskPage: listBuildTaskPageMock,
   resumeBuildTask: resumeBuildTaskMock,
 }));
 
@@ -65,9 +66,13 @@ const resource: CatalogResource = {
 describe("BuildTaskLaunchPanel", () => {
   beforeEach(() => {
     createBuildTaskMock.mockReset();
-    listBuildTasksMock.mockReset();
-    listBuildTasksMock.mockResolvedValue([]);
+    listBuildTaskPageMock.mockReset();
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     resumeBuildTaskMock.mockReset();
+    modalConfirmMock.mockReset();
+    modalConfirmMock.mockImplementation(({ onOk }) => {
+      void onOk();
+    });
   });
 
   it("keeps streaming disabled and exposes the persisted incremental batch entry", () => {
@@ -87,6 +92,25 @@ describe("BuildTaskLaunchPanel", () => {
     expect(screen.getByText("dataCatalog.build.executeIncremental")).toBeTruthy();
   });
 
+  it("loads only the latest active task for the resource", async () => {
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={resource}
+      />,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    }));
+  });
+
   it("does not issue a second start request after task creation", async () => {
     const onStarted = vi.fn();
     createBuildTaskMock.mockResolvedValue({ id: "task-running", status: "running" });
@@ -102,6 +126,10 @@ describe("BuildTaskLaunchPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
+    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.build.startBuildConfirmTitle",
+    }));
+
     await waitFor(() => {
       expect(createBuildTaskMock).toHaveBeenCalledWith({
         executeType: "full",
@@ -113,25 +141,40 @@ describe("BuildTaskLaunchPanel", () => {
     expect(onStarted).toHaveBeenCalledWith({ id: "task-running", status: "running" });
   });
 
-  it("blocks a build when the schema contains an other-type field", async () => {
-    const blockedResource: CatalogResource = {
+  it("requires confirmation before building with excluded schema fields", async () => {
+    const excludedFieldResource: CatalogResource = {
       ...resource,
-      schema: [...resource.schema, { name: "interests", originalType: "_text", type: "other" }],
+      schema: [
+        ...resource.schema,
+        { name: "attachment", originalType: "bytea", type: "binary" },
+        { name: "interests", originalType: "_text", type: "other" },
+      ],
     };
+
+    modalConfirmMock.mockImplementation(() => undefined);
 
     render(
       <BuildTaskLaunchPanel
         active
         onGoConfigure={vi.fn()}
         onStarted={vi.fn()}
-        resource={blockedResource}
+        resource={excludedFieldResource}
       />,
     );
 
-    expect(await screen.findByText("dataCatalog.build.unsupportedSchemaFields")).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }).getAttribute("disabled"),
-    ).not.toBeNull();
+    expect(await screen.findByText("dataCatalog.build.excludedSchemaFieldsHint")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
+
+    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.build.excludedSchemaFieldsConfirmTitle",
+    }));
     expect(createBuildTaskMock).not.toHaveBeenCalled();
+
+    await modalConfirmMock.mock.calls[0][0].onOk();
+    expect(createBuildTaskMock).toHaveBeenCalledWith({
+      executeType: "full",
+      mode: "batch",
+      resourceId: resource.id,
+    });
   });
 });

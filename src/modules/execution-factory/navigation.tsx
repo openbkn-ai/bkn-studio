@@ -12,12 +12,10 @@ import {
 } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
-import { executionFactoryViewPermissions } from "@/modules/execution-factory/permissions";
 
-// Every item declares required permissions so unauthorized users do not see sidebar entries that open to empty pages.
-// Execution Unit Management hosts functions, toolboxes, MCPs, and Skills, so any corresponding
-// view permission allows entry.
-// Sandbox runtime is limited to super administrators, matching backend #339 guards.
+// Navigation entries are product entry points. Execution Unit Management is always available and
+// the API filters the resources it returns. Sandbox runtime remains permission-gated because it is
+// an administrative runtime operation.
 export const executionFactoryNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory",
   items: [
@@ -26,8 +24,6 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionUnitManagement",
       icon: <ToolOutlined />,
       path: "/execution-factory/units",
-      permission: [...executionFactoryViewPermissions],
-      permissionMode: "any",
     },
     {
       key: "all-execution-units",

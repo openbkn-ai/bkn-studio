@@ -72,8 +72,6 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationRoleImpactCompact_other: "影响 {{count}} 名成员",
   propertyAuthorizationRoleImpact_one: "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
   propertyAuthorizationRoleImpact_other: "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
-  propertyAuthorizationEstimatedResult: "预估结果",
-  propertyAuthorizationDecisionUnavailable: "当前管理接口尚未返回服务端有效权限解析，页面按基础权限和当前主体显式配置显示预估结果；保存后的最终效果以服务端判定为准。",
   propertyAuthorizationSearchProperty: "搜索属性名称",
   propertyAuthorizationFilterAll: "全部状态",
   propertyAuthorizationFilterExplicit: "已配置",

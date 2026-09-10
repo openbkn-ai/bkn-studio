@@ -1,0 +1,101 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+export const capabilityPart = {
+  capabilityFunctionsTitle: "函数",
+  capabilityFunctionsDescription:
+    "挂载执行工厂的工具，供本知识网络的 Agent 与 SKILL 受管调用。绑定的是工具，工具集只是选择时的分组。",
+  capabilitySkillsTitle: "SKILLs",
+  capabilityMcpToolsTitle: "MCP",
+  capabilityMcpToolsDescription:
+    "挂载 MCP 服务里的工具。按工具名寻址，调用走 MCP 协议，与工具集里的函数、API 是两条链路。",
+  capabilityApisTitle: "API",
+  capabilityApisDescription:
+    "挂载执行工厂里 OpenAPI 工具集中的 API。与函数同属工具绑定，区别只在工具集是 OpenAPI 类还是代码函数类。",
+  capabilitySkillsDescription:
+    "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
+  capabilityManageInFactory: "去执行工厂管理",
+  capabilityUsageTipLabel: "使用说明",
+  capabilityUsageTipFunctions:
+    "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些函数，不需要在代码里配 URL 或 Token。函数本身的新建、改代码与发布仍在执行工厂。",
+  capabilityUsageTipMcpTools:
+    "挂载后，本网络的 Agent 与 SKILL 可调用这些 MCP 工具，调用经 MCP 代理下发。MCP 服务的注册与发布仍在执行工厂。",
+  capabilityUsageTipApis:
+    "挂载后，本网络的 Agent 与 SKILL 可按能力名受管调用这些 API，调用时自动带上身份与 Trace。API 的注册与发布仍在执行工厂。",
+  capabilityUsageTipSkills:
+    "挂载后，本网络检索技能时只会召回这里挂过的 SKILL；没挂的不可见也不可调用。SKILL 的导入、更新与发布仍在执行工厂。",
+  capabilityMountFunctions: "挂载函数",
+  capabilityMountApis: "挂载 API",
+  capabilityMountMcpTools: "挂载 MCP 工具",
+  capabilityMountSkills: "挂载 SKILL",
+  capabilityDetach: "解绑",
+  capabilityDetachSelected: "解绑所选",
+  capabilityDetachConfirmTitle: "确认解绑该能力？",
+  capabilityDetachConfirmContent:
+    "解绑后本知识网络不再能调用它，执行工厂中的资产本身不受影响。",
+  capabilityDetachSuccess: "已解绑",
+  capabilityMountSuccess: "已挂载 {{count}} 项",
+  capabilityMountSuccess_one: "已挂载 {{count}} 项",
+  capabilityMountSuccess_other: "已挂载 {{count}} 项",
+  capabilityMountNothingNew: "所选能力已全部挂载",
+  capabilityColumnName: "名称",
+  capabilityColumnBox: "工具集 / MCP 服务",
+  capabilityColumnStatus: "状态",
+  capabilityColumnMountKind: "挂载方式",
+  capabilityColumnReferences: "被引用",
+  capabilitySourceNotMounted: "未挂载",
+  capabilitySourceManual: "手动挂载",
+  capabilitySourceActionType: "行动类【{{names}}】",
+  capabilitySourceObjectType: "对象类【{{names}}】",
+  capabilityDetachBlockedHint: "该能力是被对象类或行动类引用才进来的，没有手动挂载可解绑。要移除请去改引用它的对象类或行动类。",
+  capabilityDetachKeptByReference: "已取消手动挂载；该能力仍被对象类或行动类引用，继续留在列表中。",
+  capabilityColumnComment: "备注",
+  capabilityColumnMountTime: "挂载时间",
+  capabilityStatusMissing: "已失效",
+  capabilityStatusEnabled: "已启用",
+  capabilityStatusDisabled: "已停用",
+  capabilityStatusPublished: "已发布",
+  capabilityStatusUnpublished: "未发布",
+  capabilityStatusOffline: "已下线",
+  capabilityStatusMissingHint: "执行工厂中的资产已删除，调用时不会命中，请解绑或重新挂载。",
+  capabilityMetadataUnavailable:
+    "执行工厂暂时不可达，名称与状态取不到；挂载关系本身完好，稍后刷新即可。",
+  capabilityBoxTopUpTitle: "{{boxName}}：{{mounted}}/{{total}} 个工具已挂载",
+  capabilityBoxTopUpAction: "补挂 {{count}} 个新增工具",
+  capabilityBoxTopUpAction_one: "补挂 {{count}} 个新增工具",
+  capabilityBoxTopUpAction_other: "补挂 {{count}} 个新增工具",
+  capabilityBoxMissing: "工具集已从执行工厂删除",
+  capabilityEmptyFunctions: "还没有挂载函数。点「挂载函数」从执行工厂的函数工具集中选。",
+  capabilityEmptyMcpTools: "还没有挂载 MCP 工具。点「挂载 MCP 工具」从执行工厂的 MCP 服务中选。",
+  capabilityEmptyApis: "还没有挂载 API。点「挂载 API」从执行工厂的 OpenAPI 工具集中选。",
+  capabilityEmptySkills: "还没有挂载 SKILL。点「挂载 SKILL」从平台技能中选。",
+  capabilitySearchPlaceholder: "搜索名称或 ID",
+  capabilityRefresh: "刷新",
+  capabilityPickerSkillTitle: "挂载 SKILL",
+  capabilityPickerFunctionTitle: "挂载函数",
+  capabilityPickerApiTitle: "挂载 API",
+  capabilityPickerMcpTitle: "挂载 MCP 工具",
+  capabilityPickerSearchPlaceholder: "搜索名称",
+  capabilityPickerSelected: "已选 {{count}} 项",
+  capabilityPickerMounted: "已挂载",
+  capabilityPickerSelectWholeBox: "整集挂载",
+  capabilityPickerSelectAll: "全选",
+  capabilityPickerBoxToolCount: "{{count}} 个工具",
+  capabilityPickerBoxToolCount_one: "{{count}} 个工具",
+  capabilityPickerBoxToolCount_other: "{{count}} 个工具",
+  capabilityPickerWholeBoxHint:
+    "整集挂载在写入时展开为该工具集当前全部工具；集内后续新增的工具不会自动挂载。",
+  capabilityPickerEmptySkills: "平台上还没有可挂载的 SKILL。",
+  capabilityPickerEmptyFunctions: "执行工厂里还没有可挂载的函数工具。",
+  capabilityPickerEmptyMcpTools: "执行工厂里还没有可挂载的 MCP 工具。",
+  capabilityPickerEmptyApis: "执行工厂里还没有可挂载的 API 工具。",
+  capabilityPickerConfirm: "挂载",
+  capabilityErrorTargetNotFound: "目标能力不存在，可能已在执行工厂中删除。",
+  capabilityErrorTargetNotAvailable: "目标能力尚未发布或已禁用，请先在执行工厂发布。",
+  capabilityErrorEmptyToolBox: "该工具集内没有可挂载的工具。",
+  capabilityErrorFactoryUnavailable: "执行工厂不可达，挂载未写入，请稍后重试。",
+} as const;

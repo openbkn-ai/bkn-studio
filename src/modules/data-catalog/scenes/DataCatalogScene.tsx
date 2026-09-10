@@ -19,17 +19,13 @@ import {
   type CatalogTreeSelection,
 } from "@/modules/data-catalog/components/CatalogTreePanel";
 import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFormDrawer";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
   isCatalogDiscovering,
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
-import type {
-  BuildTask,
-  CatalogDiscoverRecord,
-} from "@/modules/data-catalog/types/data-catalog";
+import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 import { catalogListAllQuery, getCatalog, listCatalogs, type CatalogRecord } from "@/shared/catalog";
@@ -65,7 +61,6 @@ export function DataCatalogScene({
 
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
-  const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -83,8 +78,6 @@ export function DataCatalogScene({
     return null;
   }, [catalogs, selection]);
 
-  const selectedCatalogId = selectedCatalog?.id;
-
   const loadCatalogs = useCallback(async () => {
     const [catalogResult, typeResult] = await Promise.all([
       listCatalogs(catalogListAllQuery()),
@@ -97,14 +90,6 @@ export function DataCatalogScene({
       setConnectorTypes(typeResult);
     }
   }, [connectorTypes.length]);
-
-  const loadCatalogTasks = useCallback(async (catalogId?: string) => {
-    if (!catalogId) {
-      setTasks([]);
-      return;
-    }
-    setTasks(await listBuildTasks({ catalogId }));
-  }, []);
 
   const loadCatalogSchemas = useCallback(async (catalogId: string) => {
     const catalog = await getCatalog(catalogId);
@@ -153,46 +138,18 @@ export function DataCatalogScene({
   useEffect(() => {
     return subscribeMockDb(() => {
       void loadAll();
-      if (selectedCatalogId) {
-        void loadCatalogTasks(selectedCatalogId);
-      }
       void loadDiscovers();
     });
-  }, [loadAll, loadCatalogTasks, loadDiscovers, selectedCatalogId]);
-
-  useEffect(() => {
-    if (loading) {
-      return;
-    }
-    if (!selectedCatalogId) {
-      setTasks([]);
-      return;
-    }
-
-    void loadCatalogTasks(selectedCatalogId);
-  }, [loadCatalogTasks, loading, selectedCatalogId]);
+  }, [loadAll, loadDiscovers]);
 
   const hasActiveWork = useMemo(
-    () =>
-      tasks.some(
-        (task) =>
-          task.status === "pending" ||
-          task.status === "running",
-      ) || discover.some((discover) => discover.status === "running"),
-    [discover, tasks],
+    () => discover.some((discover) => discover.status === "running"),
+    [discover],
   );
 
-  const pollActive = useCallback(async () => {
-    if (!selectedCatalogId) {
-      return;
-    }
-    try {
-      setTasks(await listBuildTasks({ catalogId: selectedCatalogId }));
-    } catch {
-      // ignore
-    }
+  const pollActive = useCallback(() => {
     void loadDiscovers();
-  }, [loadDiscovers, selectedCatalogId]);
+  }, [loadDiscovers]);
 
   useEffect(() => {
     if (useMock || !hasActiveWork) {
@@ -330,7 +287,6 @@ export function DataCatalogScene({
             catalog={selectedCatalog}
             onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
             onOpenResource={openResourceWorkspace}
-            tasks={tasks}
           />
         </Suspense>
       );
@@ -412,13 +368,10 @@ export function DataCatalogScene({
         catalogs={catalogs}
         defaultCatalogId={resourceDrawer.catalogId}
         onClose={() => setResourceDrawer({ open: false })}
-        onCreated={(resource) => {
-          void refreshResourceTotal();
-          if (selectedCatalogId) {
-            void loadCatalogTasks(selectedCatalogId);
-          }
-          openResourceWorkspace(resource.id);
-        }}
+          onCreated={(resource) => {
+            void refreshResourceTotal();
+            openResourceWorkspace(resource.id);
+          }}
         open={resourceDrawer.open}
       />
     </>

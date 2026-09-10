@@ -13,7 +13,8 @@ import { useNavigate } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import { loadAnalyzerCapabilities, findUnavailableAnalyzers, type AnalyzerCapabilitiesLoadState } from "@/modules/data-catalog/utils/analyzer-capabilities";
 import {
   getCatalogResource,
@@ -45,7 +46,6 @@ import {
   invalidKeyFields,
   isIncrementalField,
   isPrimaryKeyField,
-  unsupportedSchemaFields,
 } from "@/modules/data-catalog/lib/build-guards";
 
 import formStyles from "./BuildTaskFormPanel.module.css";
@@ -60,6 +60,7 @@ export type IndexConfigFormPanelProps = {
 };
 
 const INHERIT_VALUE = "__inherit__";
+const FEATURE_FIELDS_PAGE_SIZE = 10;
 
 function isChineseAnalyzer(analyzer: string): boolean {
   return /^(?:ik|hanlp)(?:_|$)/.test(analyzer.trim().toLowerCase());
@@ -152,6 +153,17 @@ export function IndexConfigFormPanel({
   const [error, setError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [featureFieldsPage, setFeatureFieldsPage] = useState(1);
+
+  const featureFieldsPageCount = Math.max(1, Math.ceil(schema.length / FEATURE_FIELDS_PAGE_SIZE));
+  const pagedFeatureFields = useMemo(
+    () => schema.slice((featureFieldsPage - 1) * FEATURE_FIELDS_PAGE_SIZE, featureFieldsPage * FEATURE_FIELDS_PAGE_SIZE),
+    [featureFieldsPage, schema],
+  );
+
+  useEffect(() => {
+    setFeatureFieldsPage((page) => Math.min(page, featureFieldsPageCount));
+  }, [featureFieldsPageCount]);
 
   useEffect(() => {
     if (!error) {
@@ -232,6 +244,7 @@ export function IndexConfigFormPanel({
     setOrphanSavedModel(null);
     setModels([]);
     setSchema(resource.schema);
+    setFeatureFieldsPage(1);
 
     const hydrateFromResource = (detail: CatalogResource) => {
       setSchema(detail.schema);
@@ -257,9 +270,14 @@ export function IndexConfigFormPanel({
       }
 
       try {
-        const tasks = await listBuildTasks({ resourceId: resource.id });
-        const running = tasks.find((task) => isActiveBuildTask(task)) ?? null;
-        setActiveTask(running);
+        const result = await listBuildTaskPage({
+          direction: "desc",
+          limit: 1,
+          resourceId: resource.id,
+          sort: "create_time",
+          statuses: ["pending", "running", "stopping"],
+        });
+        setActiveTask(result.items[0] ?? null);
       } catch {
         setActiveTask(null);
       }
@@ -624,8 +642,7 @@ export function IndexConfigFormPanel({
     primaryKeyFields.length > 0 &&
     incrementalFields.length > 0 &&
     invalidSavedPrimaryKeyFields.length === 0 &&
-    invalidSavedIncrementalFields.length === 0 &&
-    unsupportedSchemaFields(schema).length === 0;
+    invalidSavedIncrementalFields.length === 0;
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
   const normalizeFeatureDrafts = (
@@ -1176,7 +1193,7 @@ export function IndexConfigFormPanel({
                       </tr>
                     </thead>
                     <tbody>
-                      {schema.map((field) => {
+                      {pagedFeatureFields.map((field) => {
                         const canConfigureFeature = isFeatureConfigField(field.type);
                         const rowActive = featureCountOf(field.name) > 0;
                         const featureSummary = featureSummaryOf(field.name);
@@ -1236,6 +1253,15 @@ export function IndexConfigFormPanel({
                     </tbody>
                   </table>
                 </div>
+                {schema.length > FEATURE_FIELDS_PAGE_SIZE ? (
+                  <TablePaginationBar
+                    current={featureFieldsPage}
+                    onChange={setFeatureFieldsPage}
+                    pageSize={FEATURE_FIELDS_PAGE_SIZE}
+                    showSizeChanger={false}
+                    total={schema.length}
+                  />
+                ) : null}
               </>
             )}
           </div>

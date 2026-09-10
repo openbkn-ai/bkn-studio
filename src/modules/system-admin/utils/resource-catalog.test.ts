@@ -11,6 +11,7 @@ import i18n from "@/app/locales/i18n";
 import {
   operationLabel,
   operationsForType,
+  ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
 } from "@/modules/system-admin/utils/resource-catalog";
 
@@ -53,6 +54,46 @@ describe("resource-catalog", () => {
     ]);
   });
 
+  it("limits role grants to supported type-wide resource types", () => {
+    const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
+
+    for (const type of [
+      "agent",
+      "agent_tpl",
+      "connector_type",
+      "data_flow",
+      "risk_type",
+      "stream_data_pipeline",
+    ]) {
+      expect(roleGrantTypes).not.toContain(type);
+    }
+    expect(roleGrantTypes).toEqual(
+      expect.arrayContaining([
+        "concept_group",
+        "object_type",
+        "relation_type",
+        "action_type",
+        "metric",
+      ]),
+    );
+  });
+
+  it("uses the corrected names for catalog and resource", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("catalog")).toBe("数据目录");
+    expect(resourceTypeLabel("resource")).toBe("数据资源");
+  });
+
+  it("uses the execution-factory names for executable resource types", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("operator")).toBe("函数集");
+    expect(resourceTypeLabel("tool_box")).toBe("API 工具集");
+    expect(resourceTypeLabel("mcp")).toBe("MCP 服务");
+    expect(resourceTypeLabel("skill")).toBe("SKILL 包");
+  });
+
   it("offers task management only for action types among knowledge-network children", () => {
     for (const type of ["concept_group", "object_type", "relation_type", "metric", "risk_type"]) {
       expect(operationsForType(type).map((item) => item.key)).not.toContain("task_manage");
@@ -72,6 +113,10 @@ describe("resource-catalog", () => {
     ]) {
       expect(operationsForType(type).map((item) => item.key)).toContain("query_data");
     }
+  });
+
+  it("offers action execution on a knowledge network", () => {
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("execute");
   });
 
   it("localizes every knowledge-network child resource type in Chinese", async () => {

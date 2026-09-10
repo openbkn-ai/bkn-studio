@@ -29,3 +29,16 @@ export function filterAccessibleExecutionUnitTabs(
 ): ExecutionUnitTab[] {
   return tabs.filter((tab) => currentPermissions.includes(executionFactoryViewPermissionByTab[tab]));
 }
+
+/**
+ * The execution-unit entry remains visible to every signed-in user, but its list scene must not
+ * mount without at least one readable resource type. Otherwise the scene has no resolvable tab
+ * and would fall through to the Skill API with an undefined active tab.
+ */
+export function canAccessExecutionUnitManagement(
+  currentPermissions: readonly string[],
+): boolean {
+  return executionFactoryViewPermissions.some((permission) =>
+    currentPermissions.includes(permission),
+  );
+}

@@ -1,0 +1,77 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+/*
+ * Ant Design paints a dialog with colorBgElevated, which this app never overrides, so in dark mode
+ * a modal comes out neutral grey while the table and tree inside it use the navy container colour.
+ * Pin the dialog to the same surface token the rest of the console uses.
+ */
+.pickerModal :global(.ant-modal-content),
+.pickerModal :global(.ant-modal-header) {
+  background: var(--color-bg-surface);
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pickerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pickerSearch {
+  flex: 1 1 auto;
+}
+
+.pickerSelectAll {
+  flex: none;
+  white-space: nowrap;
+}
+
+.pickerTree {
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  padding: 8px;
+}
+
+.pickerNode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pickerNode > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerHint {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickerEmpty {
+  padding: 32px 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.pickerFooterInfo {
+  margin-inline-end: auto;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

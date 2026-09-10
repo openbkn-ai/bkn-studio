@@ -8,7 +8,7 @@
 import { DatabaseOutlined, EllipsisOutlined, KeyOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -27,23 +27,14 @@ import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creatio
 import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
-import {
-  indexStateOf,
-  isCatalogPhysical,
-} from "@/modules/data-catalog/lib/index-state";
+import { isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import type {
-  BuildTask,
-  CatalogResource,
-  ResourceDiscoverStatus,
-} from "@/modules/data-catalog/types/data-catalog";
+import type { CatalogResource, ResourceDiscoverStatus } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
-const INDEX_FILTERS = ["built", "none", "building", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
 const DISCOVER_STATUS_CLASSES: Record<ResourceDiscoverStatus, string> = {
@@ -54,13 +45,6 @@ const DISCOVER_STATUS_CLASSES: Record<ResourceDiscoverStatus, string> = {
   unchanged: styles.statusTagSuccess,
   updated: styles.statusTagProcessing,
 };
-
-function indexFilterBucket(key: string) {
-  if (key === "built") return "built";
-  if (key === "none") return "none";
-  if (key === "building" || key === "rebuilding") return "building";
-  return "failed";
-}
 
 function deriveDisplayName(resource: CatalogResource, connectorType: string) {
   const rawName = (resource.name ?? "").trim();
@@ -116,14 +100,12 @@ type CatalogDetailPanelProps = {
     tab?: "detail" | "index" | "preview" | "semantic-understanding",
     indexView?: "config",
   ) => void;
-  tasks: BuildTask[];
 };
 
 export function CatalogDetailPanel({
   catalog,
   onCreateResource,
   onOpenResource,
-  tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
@@ -133,7 +115,6 @@ export function CatalogDetailPanel({
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [indexFilter, setIndexFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [resources, setResources] = useState<CatalogResource[]>([]);
@@ -154,15 +135,13 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
-  const showIndexState = !catalog.internal;
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
   });
   const hasResourceQuery =
     resourceKeyword.trim().length > 0 ||
-    categoryFilter.length > 0 ||
-    (showIndexState && indexFilter.length > 0);
+    categoryFilter.length > 0;
   const canAuthorizeGrants = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.grant,
@@ -178,38 +157,11 @@ export function CatalogDetailPanel({
     canAuthorizeCatalog ||
     (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
-  const tasksByResource = useMemo(() => {
-    const map = new Map<string, BuildTask[]>();
-    tasks.forEach((task) => {
-      map.set(task.resourceId, [...(map.get(task.resourceId) ?? []), task]);
-    });
-    return map;
-  }, [tasks]);
-
-  const displayResources = useMemo(() => {
-    return resources.filter((resource) => {
-      if (showIndexState && indexFilter) {
-        const key = indexStateOf(
-          tasksByResource.get(resource.id) ?? [],
-          resource.localIndexStatus,
-        ).key;
-        if (indexFilterBucket(key) !== indexFilter) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [indexFilter, resources, showIndexState, tasksByResource]);
-
-  useEffect(() => {
-    if (!showIndexState && indexFilter) {
-      setIndexFilter("");
-    }
-  }, [indexFilter, showIndexState]);
+  const displayResources = resources;
 
   useEffect(() => {
     setPage(1);
-  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeSchema]);
+  }, [resourceKeyword, categoryFilter, catalog.id, activeSchema]);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,7 +259,7 @@ export function CatalogDetailPanel({
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
           <Tooltip
-            overlayClassName={styles.resourceNameTooltip}
+            classNames={{ root: styles.resourceNameTooltip }}
             title={tooltip}
           >
             <AppButton
@@ -372,25 +324,6 @@ export function CatalogDetailPanel({
       render: (value: number) =>
         value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
     },
-    ...(showIndexState
-      ? [
-          {
-            key: "indexState",
-            ellipsis: true,
-            title: t("dataCatalog.resource.indexState"),
-            width: 140,
-            render: (_: unknown, record: CatalogResource) => {
-              const state = indexStateOf(tasksByResource.get(record.id) ?? [], record.localIndexStatus);
-              const label = formatIndexStateLabel(state, t);
-              const className = state.key === "built" ? styles.statusTagSuccess
-                : state.key === "building" || state.key === "rebuilding" || state.key === "listening" ? styles.statusTagProcessing
-                  : state.key === "failed" || state.key === "failed-stale" ? styles.statusTagError
-                    : styles.statusTagNeutral;
-              return <Tag className={className}>{label}</Tag>;
-            },
-          },
-        ]
-      : []),
     {
       key: "actions",
       title: t("common.actions"),
@@ -570,25 +503,6 @@ export function CatalogDetailPanel({
                 value={categoryFilter}
               />
             </div>
-            {showIndexState ? (
-              <div className={styles.filterField}>
-                <span className={styles.filterLabel}>
-                  {t("dataCatalog.resource.indexState")}
-                </span>
-                <Select
-                  className={styles.filterSelect}
-                  onChange={(value) => setIndexFilter(value)}
-                  options={[
-                    { label: t("common.all"), value: "" },
-                    ...INDEX_FILTERS.map((key) => ({
-                      label: t(`dataCatalog.indexState.${key}`),
-                      value: key,
-                    })),
-                  ]}
-                  value={indexFilter}
-                />
-              </div>
-            ) : null}
             </div>
           </>
         ) : null}
@@ -669,7 +583,7 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={showIndexState && indexFilter ? displayResources.length : resourceTotal}
+          total={resourceTotal}
         />
       ) : null}
 

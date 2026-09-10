@@ -28,31 +28,41 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
   const { t } = useTranslation();
 
   const pauseOrResume = useCallback(
-    async (task: BuildTask) => {
+    (task: BuildTask) => {
       const isStreaming = task.mode === "streaming";
-      try {
-        if (ACTIVE_BUILD_TASK_STATUSES.has(task.status)) {
-          await pauseBuildTask(task.id);
-          message.success(
-            t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
-          );
-        } else {
-          await resumeBuildTask(task.id);
-          message.success(
-            t(isStreaming ? "dataCatalog.task.resumed" : "dataCatalog.task.buildResumed"),
+      const pausing = ACTIVE_BUILD_TASK_STATUSES.has(task.status);
+      const run = async () => {
+        try {
+          if (ACTIVE_BUILD_TASK_STATUSES.has(task.status)) {
+            await pauseBuildTask(task.id);
+            message.success(
+              t(isStreaming ? "dataCatalog.task.paused" : "dataCatalog.task.stopped"),
+            );
+          } else {
+            await resumeBuildTask(task.id);
+            message.success(
+              t(isStreaming ? "dataCatalog.task.resumed" : "dataCatalog.task.buildResumed"),
+            );
+          }
+          await onRefresh();
+        } catch (error) {
+          const resuming = !ACTIVE_BUILD_TASK_STATUSES.has(task.status);
+          void message.error(
+            resuming && isBuildStartRejected(error)
+              ? t("dataCatalog.task.startRejected")
+              : extractRequestErrorMessage(error),
           );
         }
-        await onRefresh();
-      } catch (error) {
-        const resuming = !ACTIVE_BUILD_TASK_STATUSES.has(task.status);
-        void message.error(
-          resuming && isBuildStartRejected(error)
-            ? t("dataCatalog.task.startRejected")
-            : extractRequestErrorMessage(error),
-        );
-      }
+      };
+      void modal.confirm({
+        cancelText: t("common.cancel"),
+        content: t(pausing ? "dataCatalog.task.pauseResumeConfirmPauseContent" : "dataCatalog.task.pauseResumeConfirmResumeContent"),
+        okText: t("common.confirm"),
+        onOk: run,
+        title: t(pausing ? "dataCatalog.task.pauseResumeConfirmPauseTitle" : "dataCatalog.task.pauseResumeConfirmResumeTitle"),
+      });
     },
-    [message, onRefresh, t],
+    [message, modal, onRefresh, t],
   );
 
   const retry = useCallback(

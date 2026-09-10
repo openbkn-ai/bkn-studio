@@ -51,13 +51,13 @@ describe("data catalog discover-status mocks", () => {
     ).toEqual([]);
   });
 
-  it("provides a 20-field index configuration demo with representative source types", () => {
+  it("provides a 20-field index configuration demo with supported and fallback source types", () => {
     const resource = mockResources.find((item) => item.id === "res-index-config-demo");
     expect(resource?.schema).toHaveLength(20);
     expect(new Set(resource?.schema.map((field) => field.type))).toEqual(new Set([
       "integer", "unsigned integer", "float", "decimal", "string", "text",
       "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
-      "json", "point", "shape",
+      "json", "other",
     ]));
   });
 

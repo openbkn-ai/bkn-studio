@@ -5,6 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import {
+  parseContentDispositionFilename,
+  triggerBrowserDownload,
+} from "@/framework/download/file-download";
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
 import {
@@ -12,6 +16,7 @@ import {
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
 import type {
+  KnowledgeNetworkExportFormat,
   KnowledgeNetworkImportMode,
   KnowledgeNetworkListQuery,
   KnowledgeNetworkListResult,
@@ -51,6 +56,11 @@ import {
   useMock,
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
+
+// The backend assembles the whole network — schema plus capability dependencies —
+// while the request is open, which outlasts the client's 30s default on a large
+// network. The other packaging exports in this repo settle on the same minute.
+const BKN_EXPORT_TIMEOUT_MS = 60_000;
 
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
@@ -268,13 +278,18 @@ export async function listKnowledgeNetworkRecentObjects(networkId: string) {
   return response.data.entries.map(mapRecentObject);
 }
 
-export async function exportKnowledgeNetwork(networkId: string) {
+export async function exportKnowledgeNetwork(
+  networkId: string,
+  format: KnowledgeNetworkExportFormat = "json",
+) {
   if (useMock) {
     const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
     if (!record) {
       throw new Error("Knowledge network not found");
     }
 
+    // The BKN package is assembled by the backend, so mock mode can only ever
+    // hand back the JSON view of the same network.
     downloadJsonFile(record.name, {
       id: record.id,
       code: record.identifier,
@@ -283,6 +298,21 @@ export async function exportKnowledgeNetwork(networkId: string) {
       color: record.color,
       tags: record.tags,
     });
+    return;
+  }
+
+  if (format === "bkn") {
+    const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
+      responseType: "blob",
+      timeout: BKN_EXPORT_TIMEOUT_MS,
+    });
+
+    triggerBrowserDownload(
+      response.data,
+      parseContentDispositionFilename(
+        response.headers["content-disposition"] as string | undefined,
+      ) ?? `${networkId}.tar`,
+    );
     return;
   }
 

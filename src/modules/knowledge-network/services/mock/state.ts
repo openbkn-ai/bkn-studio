@@ -11,6 +11,10 @@ import {
 } from "@/modules/knowledge-network/utils/action-type-execution";
 import type {
   ActionTypeAffect,
+  AttachCapabilityInput,
+  CapabilityBindingListQuery,
+  CapabilityBindingListResult,
+  CapabilityBindingRecord,
   ActionTypeCondition,
   ActionTypeExecutionConfig,
   ActionTypeExecutionLogDetail,
@@ -69,6 +73,10 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       actionTypesTotal: 7,
       conceptGroupsTotal: 6,
       metricsTotal: 9,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
     },
   },
   {
@@ -91,6 +99,10 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       actionTypesTotal: 5,
       conceptGroupsTotal: 4,
       metricsTotal: 6,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
     },
   },
   {
@@ -113,6 +125,10 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
       actionTypesTotal: 6,
       conceptGroupsTotal: 5,
       metricsTotal: 8,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
     },
   },
 ];
@@ -1139,12 +1155,127 @@ export const mockMetrics: Record<string, KnowledgeNetworkMetricRecord[]> = {
   ],
 };
 
+/**
+ * Mock capability bindings. Names stay empty on purpose: the real list gets them backfilled from
+ * the execution factory, and inventing them here would hide the fallback the panel has to render
+ * whenever that backfill is unavailable.
+ */
+export const mockCapabilityBindings: Record<string, CapabilityBindingRecord[]> = {};
+
+export function listMockCapabilities(
+  networkId: string,
+  query: CapabilityBindingListQuery = {},
+): CapabilityBindingListResult {
+  const all = mockCapabilityBindings[networkId] ?? [];
+  const filtered = all.filter(
+    (item) =>
+      (!query.type || item.capabilityType === query.type) &&
+      (!query.boxId || item.boxId === query.boxId),
+  );
+  const offset = query.offset ?? 0;
+  const limit = query.limit ?? filtered.length;
+  const boxes = new Map<string, { mounted: number; name: string }>();
+  filtered
+    .filter((item) => item.boundAsBox && item.boxId)
+    .forEach((item) => {
+      const summary = boxes.get(item.boxId) ?? { mounted: 0, name: item.boxName };
+      summary.mounted += 1;
+      boxes.set(item.boxId, summary);
+    });
+
+  return {
+    boxes: [...boxes.entries()].map(([boxId, summary]) => ({
+      boxId,
+      boxMissing: false,
+      boxName: summary.name,
+      mountedTools: summary.mounted,
+      totalTools: summary.mounted,
+      unmountedTools: 0,
+    })),
+    entries: filtered.slice(offset, offset + limit),
+    metadataAvailable: true,
+    totalCount: filtered.length,
+  };
+}
+
+export function attachMockCapabilities(
+  networkId: string,
+  inputs: AttachCapabilityInput[],
+  toolBoxKinds: ReadonlyMap<string, string> = new Map(),
+): CapabilityBindingRecord[] {
+  const existing = mockCapabilityBindings[networkId] ?? [];
+  const created: CapabilityBindingRecord[] = [];
+
+  inputs.forEach((input) => {
+    const boxId = input.boxId ?? "";
+    const capabilityId = input.capabilityId ?? "";
+    if (!capabilityId) {
+      return;
+    }
+
+    const duplicate = existing.some(
+      (item) =>
+        item.capabilityType === input.capabilityType &&
+        item.boxId === boxId &&
+        item.capabilityId === capabilityId,
+    );
+    if (duplicate) {
+      return;
+    }
+
+    const timestamp = formatTimestamp(Date.now());
+    created.push({
+      boundAsBox: input.allTools ?? false,
+      boxId,
+      boxName: "",
+      branch: "main",
+      capabilityId,
+      capabilityType: input.capabilityType,
+      comment: input.comment ?? "",
+      createTime: timestamp,
+      creatorName: "Local Admin",
+      description: "",
+      id: `binding-${crypto.randomUUID().slice(0, 8)}`,
+      metadataType:
+        input.capabilityType !== "function"
+          ? ""
+          : toolBoxKinds.get(boxId) === "openapi"
+            ? "openapi"
+            : "function",
+      name: "",
+      sources: [{ kind: input.allTools ? "box" : "manual", refs: [] }],
+      status: "",
+      updateTime: timestamp,
+      updaterName: "Local Admin",
+    });
+  });
+
+  mockCapabilityBindings[networkId] = [...created, ...existing];
+  syncKnowledgeNetworkStatistics(networkId);
+  return created;
+}
+
+export function detachMockCapabilities(networkId: string, bindingIds: string[]) {
+  const removing = new Set(bindingIds);
+  mockCapabilityBindings[networkId] = (mockCapabilityBindings[networkId] ?? []).filter(
+    (item) => !removing.has(item.id),
+  );
+  syncKnowledgeNetworkStatistics(networkId);
+}
+
 export function syncKnowledgeNetworkStatistics(networkId: string) {
   const objectTypeCount = (mockObjectTypes[networkId] ?? []).length;
   const conceptGroupCount = (mockConceptGroups[networkId] ?? []).length;
   const relationTypeCount = (mockRelationTypes[networkId] ?? []).length;
   const actionTypeCount = (mockActionTypes[networkId] ?? []).length;
   const metricCount = (mockMetrics[networkId] ?? []).length;
+  const bindings = mockCapabilityBindings[networkId] ?? [];
+  const skillCount = bindings.filter((item) => item.capabilityType === "skill").length;
+  const functionCount = bindings.filter((item) => item.capabilityType === "function").length;
+  const mcpToolCount = bindings.filter((item) => item.capabilityType === "mcp_tool").length;
+  // functions_total narrowed to code toolsets when apis_total arrived; the two together are every
+  // tool binding.
+  const apiCount = bindings.filter((item) => item.metadataType === "openapi").length;
 
   mockKnowledgeNetworks = mockKnowledgeNetworks.map((item) =>
     item.id === networkId
@@ -1156,8 +1287,12 @@ export function syncKnowledgeNetworkStatistics(networkId: string) {
             ...item.statistics,
             actionTypesTotal: actionTypeCount,
             conceptGroupsTotal: conceptGroupCount,
+            functionsTotal: functionCount - apiCount,
             metricsTotal: metricCount,
             objectTypesTotal: objectTypeCount,
+            skillsTotal: skillCount,
+            mcpToolsTotal: mcpToolCount,
+            apisTotal: apiCount,
             relationTypesTotal: relationTypeCount,
           },
         }

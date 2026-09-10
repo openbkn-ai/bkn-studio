@@ -78,7 +78,6 @@ function renderPanel(record: CatalogRecord) {
         catalog={record}
         onCreateResource={vi.fn()}
         onOpenResource={vi.fn()}
-        tasks={[]}
       />
     </MemoryRouter>,
   );

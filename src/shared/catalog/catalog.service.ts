@@ -98,6 +98,8 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
     params: {
       connector_type: query.connectorType || undefined,
       direction: "desc",
+      enabled: query.enabled,
+      health_check_status: query.healthStatus || undefined,
       limit: query.pageSize,
       name: query.keyword.trim() || undefined,
       offset: (query.page - 1) * query.pageSize,
@@ -108,11 +110,9 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
 
   const mapped = response.data.entries.map(mapBackendCatalogSummary);
   const filtered = filterCatalogs(mapped, query);
-  const usesClientTypeFilter = query.type && query.type !== "all";
-
   return {
     items: filtered,
-    total: usesClientTypeFilter ? filtered.length : response.data.total_count,
+    total: response.data.total_count,
   };
 }
 

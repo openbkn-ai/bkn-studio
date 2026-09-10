@@ -17,9 +17,16 @@ export type KnowledgeNetworkListQuery = {
 export type KnowledgeNetworkStatistics = {
   actionTypesTotal: number;
   conceptGroupsTotal: number;
+  /** Tool-level capability bindings; a whole-box mount counts once per expanded tool. */
+  functionsTotal: number;
+  /** Bindings to OpenAPI toolsets; functionsTotal counts the code ones. */
+  apisTotal: number;
+  /** Tools of MCP Servers bound to this network. */
+  mcpToolsTotal: number;
   metricsTotal: number;
   objectTypesTotal: number;
   relationTypesTotal: number;
+  skillsTotal: number;
 };
 
 export type KnowledgeNetworkRecord = {
@@ -87,3 +94,10 @@ export type KnowledgeNetworkPreviewGraph = {
 };
 
 export type KnowledgeNetworkImportMode = "ignore" | "overwrite";
+
+/**
+ * "json" downloads the backend's export view as a single JSON document.
+ * "bkn" downloads the BKN tar package defined by the BKN specification, which
+ * also carries the capability dependency section the JSON view leaves out.
+ */
+export type KnowledgeNetworkExportFormat = "bkn" | "json";

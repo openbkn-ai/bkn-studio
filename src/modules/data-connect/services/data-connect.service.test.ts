@@ -12,6 +12,7 @@ import i18n from "@/app/locales/i18n";
 
 const testCatalogConnectionMock = vi.hoisted(() => vi.fn());
 const testCatalogConnectionConfigMock = vi.hoisted(() => vi.fn());
+const listCatalogsMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
@@ -19,6 +20,7 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 vi.mock("@/shared/catalog", () => ({
+  listCatalogs: listCatalogsMock,
   testCatalogConnection: testCatalogConnectionMock,
   testCatalogConnectionConfig: testCatalogConnectionConfigMock,
 }));
@@ -53,6 +55,52 @@ describe("data-connect.service · test connection", () => {
         offset: 0,
         sort: "name",
       },
+    });
+  });
+
+  it("passes data-connection pagination and filters through to Vega", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 23 });
+    const { listDataConnectRecords } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(listDataConnectRecords({
+      connectorType: "postgresql",
+      keyword: "orders",
+      page: 2,
+      pageSize: 10,
+    })).resolves.toEqual({ items: [], total: 23 });
+
+    expect(listCatalogsMock).toHaveBeenCalledWith({
+      connectorType: "postgresql",
+      keyword: "orders",
+      page: 2,
+      pageSize: 10,
+      type: "physical",
+    });
+  });
+
+  it("passes status and health filters through to the catalog list", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
+    const { listDataConnectRecords } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await listDataConnectRecords({
+      enabled: false,
+      healthStatus: "offline",
+      keyword: "",
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(listCatalogsMock).toHaveBeenCalledWith({
+      enabled: false,
+      healthStatus: "offline",
+      keyword: "",
+      page: 1,
+      pageSize: 10,
+      type: "physical",
     });
   });
 

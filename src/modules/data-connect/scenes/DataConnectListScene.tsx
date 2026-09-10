@@ -33,7 +33,6 @@ import {
 } from "@/modules/data-connect/services/data-connect.service";
 import type { DataConnectConnectorType, DataConnectRecord } from "@/modules/data-connect/types/data-connect";
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
-import { formatCatalogTime } from "@/modules/data-connect/utils/format-catalog-time";
 import {
   DeleteImpactAlert,
   useDangerDelete,
@@ -122,6 +121,8 @@ export function DataConnectListScene({
   const debouncedKeyword = useDebouncedValue(pageState.keyword.trim());
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
+  const [selectedEnabled, setSelectedEnabled] = useState<boolean>();
+  const [selectedHealthStatus, setSelectedHealthStatus] = useState<DataConnectRecord["healthStatus"]>();
   const [items, setItems] = useState<DataConnectRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -147,8 +148,10 @@ export function DataConnectListScene({
       pageSize: query.pageSize,
       keyword: debouncedKeyword,
       connectorType: selectedConnectorType,
+      enabled: selectedEnabled,
+      healthStatus: selectedHealthStatus,
     }),
-    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType],
+    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType, selectedEnabled, selectedHealthStatus],
   );
 
   const connectorTypeMap = useMemo(
@@ -432,17 +435,6 @@ export function DataConnectListScene({
       ),
     },
     {
-      dataIndex: "updaterName",
-      title: t("dataConnect.updater"),
-      width: 120,
-    },
-    {
-      dataIndex: "updateTime",
-      title: t("dataConnect.updateTime"),
-      width: 176,
-      render: (value: DataConnectRecord["updateTime"]) => formatCatalogTime(value),
-    },
-    {
       key: "actions",
       title: t("common.actions"),
       align: "center",
@@ -494,6 +486,8 @@ export function DataConnectListScene({
                 onClick={() => {
                   reset();
                   setSelectedConnectorType(undefined);
+                  setSelectedEnabled(undefined);
+                  setSelectedHealthStatus(undefined);
                   void loadConnectorTypes();
                 }}
               >
@@ -527,6 +521,40 @@ export function DataConnectListScene({
                   })),
                 ]}
                 value={selectedConnectorType ?? ""}
+              />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>{t("common.status")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedEnabled(value === "" ? undefined : value === "true");
+                  setPagination(1, pageState.pageSize);
+                }}
+                options={[
+                  { label: t("dataConnect.categoryAll"), value: "" },
+                  { label: t("common.enabled"), value: "true" },
+                  { label: t("common.disabled"), value: "false" },
+                ]}
+                value={selectedEnabled === undefined ? "" : String(selectedEnabled)}
+              />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>{t("common.healthStatus")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedHealthStatus(value ? value as DataConnectRecord["healthStatus"] : undefined);
+                  setPagination(1, pageState.pageSize);
+                }}
+                options={[
+                  { label: t("dataConnect.categoryAll"), value: "" },
+                  ...(["healthy", "degraded", "unhealthy", "offline", "unchecked"] as const).map((value) => ({
+                    label: t(`dataConnect.healthStatuses.${value}`),
+                    value,
+                  })),
+                ]}
+                value={selectedHealthStatus ?? ""}
               />
             </div>
           </div>

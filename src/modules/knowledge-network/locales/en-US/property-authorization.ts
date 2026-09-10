@@ -67,8 +67,6 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationRoleImpactCompact_other: "Affects {{count}} members",
   propertyAuthorizationRoleImpact_one: "Changing this role may affect {{count}} member. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationRoleImpact_other: "Changing this role may affect {{count}} members. Direct user grants, other roles, and base permissions still participate in the final decision.",
-  propertyAuthorizationEstimatedResult: "Estimated result",
-  propertyAuthorizationDecisionUnavailable: "The management API does not yet return server-resolved effective permissions. This page shows an estimate from base access and the selected subject's explicit settings; the server remains authoritative after save.",
   propertyAuthorizationSearchProperty: "Search properties",
   propertyAuthorizationFilterAll: "All states",
   propertyAuthorizationFilterExplicit: "Configured",

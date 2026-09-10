@@ -129,7 +129,9 @@ export function filterCatalogs(items: CatalogRecord[], query: CatalogListQuery) 
       item.description.toLowerCase().includes(keyword);
     const matchesConnectorType =
       !query.connectorType || item.connectorType === query.connectorType;
+    const matchesEnabled = query.enabled === undefined || item.enabled === query.enabled;
+    const matchesHealthStatus = !query.healthStatus || item.healthStatus === query.healthStatus;
 
-    return matchesType && matchesKeyword && matchesConnectorType;
+    return matchesType && matchesKeyword && matchesConnectorType && matchesEnabled && matchesHealthStatus;
   });
 }

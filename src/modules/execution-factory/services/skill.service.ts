@@ -10,7 +10,7 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   sanitizeDownloadFilename,
   triggerBrowserDownload,
-} from "@/modules/execution-factory/utils/download-file";
+} from "@/framework/download/file-download";
 import type {
   SkillContentResult,
   SkillFilePreviewResult,

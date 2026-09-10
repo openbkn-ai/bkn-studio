@@ -833,32 +833,22 @@ export function ObjectTypeAuthorizationScene() {
                   value={propertyFilter}
                 />
               </div>
-              {!grantSnapshot?.decisions || selectedProperties.length ? (
+              {selectedProperties.length ? (
                 <div className={styles.matrixToolbarActions}>
-                  {!grantSnapshot?.decisions ? (
-                    <Tooltip title={t("knowledgeNetwork.propertyAuthorizationDecisionUnavailable")}>
-                      <span className={styles.estimatedResultHint} tabIndex={0}>
-                        <WarningOutlined />
-                        {t("knowledgeNetwork.propertyAuthorizationEstimatedResult")}
-                      </span>
-                    </Tooltip>
-                  ) : null}
-                  {selectedProperties.length ? (
-                    <div className={styles.batchBar}>
-                      <strong>{t("knowledgeNetwork.propertyAuthorizationSelected", { count: selectedProperties.length })}</strong>
-                      <Select
-                        onChange={applyBatch}
-                        options={LEVELS.filter((level) => level !== "inherit").map((level) => ({
-                          label: t(`knowledgeNetwork.propertyAuthorizationLevel.${level}`),
-                          value: level,
-                        }))}
-                        placeholder={t("knowledgeNetwork.propertyAuthorizationBatchSet")}
-                      />
-                      <AppButton onClick={() => applyBatch("inherit")}>
-                        {t("knowledgeNetwork.propertyAuthorizationRestoreInheritance")}
-                      </AppButton>
-                    </div>
-                  ) : null}
+                  <div className={styles.batchBar}>
+                    <strong>{t("knowledgeNetwork.propertyAuthorizationSelected", { count: selectedProperties.length })}</strong>
+                    <Select
+                      onChange={applyBatch}
+                      options={LEVELS.filter((level) => level !== "inherit").map((level) => ({
+                        label: t(`knowledgeNetwork.propertyAuthorizationLevel.${level}`),
+                        value: level,
+                      }))}
+                      placeholder={t("knowledgeNetwork.propertyAuthorizationBatchSet")}
+                    />
+                    <AppButton onClick={() => applyBatch("inherit")}>
+                      {t("knowledgeNetwork.propertyAuthorizationRestoreInheritance")}
+                    </AppButton>
+                  </div>
                 </div>
               ) : null}
             </div>

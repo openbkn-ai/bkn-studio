@@ -421,53 +421,12 @@ export function ContextLoaderIntegrationPanel({
     setMcpConfigKeyModalOpen(false);
   };
 
-  if (!op) {
-    return (
-      <div className={mainClassName}>
-        <aside className={styles.list}>
-          <div className={styles.listHead}>
-            <div>
-              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
-              <div className={styles.listMeta}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: 0 })}</div>
-            </div>
-            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
-              {toolsLoading ? <Spin size="small" /> : null}
-              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
-            </button>
-          </div>
-          <div className={styles.listSearch}>
-            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")} disabled />
-          </div>
-          <div className={styles.resEmpty}>
-            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
-            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
-          </div>
-        </aside>
-        <div className={styles.mcpWork}>
-          <section className={styles.req}>
-            <div className={styles.resEmpty}>
-              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
-              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
-              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
-                {toolsLoading ? <Spin size="small" /> : null}
-                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  const opDisplay = displayOf(op);
-  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [], truncated: false };
-  const outputSchema = currentTool ? schemaDocumentation(currentTool.outputSchema) : { fields: [], truncated: false };
-  const schemaOverview = currentTool?.description || op.summary;
-  const schemaExample = businessRequestExample(bodyText);
-
-  return (
-    <div className={mainClassName}>
-      {mode === "mcp" && showMcpConnect ? (
+  // The connect view is what someone opens when they cannot connect yet: the MCP address, the
+  // client config, the API-key entry. None of it depends on a selected op, so it is built before
+  // the no-op empty state and returned from both paths — otherwise tools/list failing would blank
+  // the one page that explains how to fix it.
+  const mcpConnectView =
+    mode === "mcp" && showMcpConnect ? (
         <section className={styles.mcpConnectPage}>
           <div className={styles.mcpConnectPanel}>
             <div className={styles.mcpConnectTitleBlock}>
@@ -557,7 +516,58 @@ export function ContextLoaderIntegrationPanel({
               <p className={styles.mcpConfigKeyModalHint}>{t("knowledgeNetwork.contextLoaderPanel.appKey.hint")}</p>
             </Modal>
           </section>
-      ) : (
+    ) : null;
+
+  if (!op) {
+    if (mcpConnectView) {
+      return <div className={mainClassName}>{mcpConnectView}</div>;
+    }
+    return (
+      <div className={mainClassName}>
+        <aside className={styles.list}>
+          <div className={styles.listHead}>
+            <div>
+              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
+              <div className={styles.listMeta}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: 0 })}</div>
+            </div>
+            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+              {toolsLoading ? <Spin size="small" /> : null}
+              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
+            </button>
+          </div>
+          <div className={styles.listSearch}>
+            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")} disabled />
+          </div>
+          <div className={styles.resEmpty}>
+            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
+            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
+          </div>
+        </aside>
+        <div className={styles.mcpWork}>
+          <section className={styles.req}>
+            <div className={styles.resEmpty}>
+              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
+              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
+              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+                {toolsLoading ? <Spin size="small" /> : null}
+                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  const opDisplay = displayOf(op);
+  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [], truncated: false };
+  const outputSchema = currentTool ? schemaDocumentation(currentTool.outputSchema) : { fields: [], truncated: false };
+  const schemaOverview = currentTool?.description || op.summary;
+  const schemaExample = businessRequestExample(bodyText);
+
+  return (
+    <div className={mainClassName}>
+      {mcpConnectView ?? (
         <>
       <aside className={styles.list}>
         <div className={styles.listHead}>

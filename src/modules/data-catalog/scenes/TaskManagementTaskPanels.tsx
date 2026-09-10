@@ -8,7 +8,7 @@
 import { DeleteOutlined, EllipsisOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -20,7 +20,6 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
-import { collectVisiblePage, pagerTotal } from "@/modules/data-catalog/lib/visible-page";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
@@ -119,12 +118,7 @@ export function DiscoverTaskListPanel() {
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  // Cursors into the raw space: the backend filters each page after reading it (#977). Held in a
-  // ref, not state — loading a page writes the next cursor, so as state it would re-create the
-  // loader that produced it and the effect below would load forever.
-  const offsetsRef = useRef<number[]>([0]);
-  const [hasMore, setHasMore] = useState(false);
-  const [rawTotal, setRawTotal] = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -138,24 +132,17 @@ export function DiscoverTaskListPanel() {
     setLoading(true);
     setError(null);
     try {
-      const result = await collectVisiblePage(
-        (offset, limit) =>
-          listDataConnectDiscoverTasks({
-            direction,
-            limit,
-            offset,
-            sort,
-            statuses: statuses.length === 0 ? undefined : statuses,
-            strategy,
-            triggerType,
-          }),
-        { pageSize, startOffset: offsetsRef.current[page - 1] ?? 0 },
-      );
+      const result = await listDataConnectDiscoverTasks({
+        direction,
+        page,
+        pageSize,
+        sort,
+        statuses: statuses.length === 0 ? undefined : statuses,
+        strategy,
+        triggerType,
+      });
       setTasks(result.items);
-      setRawTotal(result.rawTotal);
-      // A spent request budget is not the end of the list: the next page stays reachable.
-      setHasMore(!result.exhausted);
-      offsetsRef.current[page] = result.nextOffset;
+      setTotal(result.total);
     } catch (loadError) {
       setError(extractRequestErrorMessage(loadError));
     } finally {
@@ -328,14 +315,14 @@ export function DiscoverTaskListPanel() {
 
   return <TaskPanel>
     <div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div>
-    <TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
-    <Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />
+    <TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.discover.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} />
+    <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { setPage(1); setPageSize(nextSize); return; } setPage(nextPage); }} />
     {detailTaskId ? <DataConnectDiscoverTaskDrawer catalogs={catalogs} onClose={() => setDetailTaskId(null)} open schedules={schedules} taskId={detailTaskId} /> : null}
   </TaskPanel>;
 }
 
-async function listSemanticTasks(offset: number, limit: number, filters: SemanticTaskFilters) {
-  return listSemanticUnderstandingTasks(filters, { limit, offset });
+async function listSemanticTasks(page: number, pageSize: number, filters: SemanticTaskFilters) {
+  return listSemanticUnderstandingTasks(filters, { limit: pageSize, offset: (page - 1) * pageSize });
 }
 
 async function deleteSemanticTask(id: string) {
@@ -348,8 +335,7 @@ export function SemanticUnderstandingTaskListPanel() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<SemanticTask[]>([]);
   const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(10);
-  // Cursors into the raw space: the backend filters each page after reading it (#977).
-  const offsetsRef = useRef<number[]>([0]); const [hasMore, setHasMore] = useState(false); const [rawTotal, setRawTotal] = useState(0);
+  const [total, setTotal] = useState(0);
   const [scope, setScope] = useState<SemanticTask["scope"]>();
   const [statuses, setStatuses] = useState<SemanticTaskStatus[]>([]);
   const [applyMode, setApplyMode] = useState<string>();
@@ -366,12 +352,8 @@ export function SemanticUnderstandingTaskListPanel() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const result = await collectVisiblePage(
-        (offset, limit) => listSemanticTasks(offset, limit, { scope, statuses: statuses.length === 0 ? undefined : statuses, applyMode, applied, sort, direction }),
-        { pageSize, startOffset: offsetsRef.current[page - 1] ?? 0 },
-      );
-      setTasks(result.items); setRawTotal(result.rawTotal); setHasMore(!result.exhausted);
-      offsetsRef.current[page] = result.nextOffset;
+      const result = await listSemanticTasks(page, pageSize, { scope, statuses: statuses.length === 0 ? undefined : statuses, applyMode, applied, sort, direction });
+      setTasks(result.items); setTotal(result.total);
     } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); }
   }, [applied, applyMode, direction, page, pageSize, scope, sort, statuses]);
   useEffect(() => void load(), [load]);
@@ -517,21 +499,15 @@ export function SemanticUnderstandingTaskListPanel() {
       },
     },
   ];
-  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div><TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} rawTotal={rawTotal} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} loaded={tasks.length} hasMore={hasMore} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { offsetsRef.current = [0]; setPage(1); setPageSize(nextSize); return; } setPage(Math.min(nextPage, page + 1)); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
+  return <TaskPanel><div className={styles.operationBar}><Space className={styles.toolbarActions}><AppButton icon={<ReloadOutlined />} onClick={() => void load()}>{t("common.refresh")}</AppButton><PermissionGate permissions="catalog:task_manage"><AppButton danger disabled={batchDeleteTargets.length === 0} icon={<DeleteOutlined />} onClick={handleBatchDelete}>{batchDeleteTargets.length > 0 ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})` : t("dataCatalog.task.batchDelete")}</AppButton></PermissionGate></Space></div><TaskTable canSelect={canManageCatalogTasks} error={error} loading={loading} data={tasks} columns={columns} emptyTitle={t("dataCatalog.taskManagement.semantic.empty")} isSelectionDisabled={(task) => task.status === "pending" || task.status === "running"} onRetry={load} onTableChange={handleTableChange} selectedKeys={selectedKeys} onSelectionChange={setSelectedKeys} /><Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage, nextSize) => { setSelectedKeys([]); if (nextSize !== pageSize) { setPage(1); setPageSize(nextSize); return; } setPage(nextPage); }} />{detailTaskId ? <SemanticUnderstandingTaskDetailDrawer onClose={() => setDetailTaskId(null)} open taskId={detailTaskId} /> : null}</TaskPanel>;
 }
 
-function TaskTable<T extends { id: string; status: string }>({ canSelect, error, loading, data, columns, emptyTitle, isSelectionDisabled, rawTotal = 0, onRetry, onTableChange, selectedKeys, onSelectionChange }: { canSelect: boolean; error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; isSelectionDisabled: (task: T) => boolean; rawTotal?: number; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
+function TaskTable<T extends { id: string; status: string }>({ canSelect, error, loading, data, columns, emptyTitle, isSelectionDisabled, onRetry, onTableChange, selectedKeys, onSelectionChange }: { canSelect: boolean; error: string | null; loading: boolean; data: T[]; columns: ColumnsType<T>; emptyTitle: string; isSelectionDisabled: (task: T) => boolean; onRetry: () => void | Promise<void>; onTableChange?: TableProps<T>["onChange"]; selectedKeys?: string[]; onSelectionChange?: (keys: string[]) => void }) {
   const { t } = useTranslation();
-  // Tasks exist but none of them are visible: that is an authorization boundary, not an empty
-  // platform, and the two read identically unless the copy says so (#977).
-  const hidden = rawTotal > 0;
-  const title = hidden ? t("dataCatalog.task.emptyVisible") : emptyTitle;
-  const description = hidden ? t("dataCatalog.task.emptyUnauthorizedDescription") : emptyTitle;
-  return <TableSurface className={styles.tableSurface}>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : <AppTable columns={columns} dataSource={data} locale={{ emptyText: <EmptyStatePanel description={description} icon={<UnorderedListOutlined />} title={title} /> }} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={canSelect && selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)), getCheckboxProps: (task) => ({ disabled: isSelectionDisabled(task) }) } : undefined} tableLayout="fixed" />}</TableSurface>;
+  return <TableSurface className={styles.tableSurface}>{error ? <Alert action={<AppButton type="link" onClick={() => void onRetry()}>{t("common.retry")}</AppButton>} message={error} showIcon type="error" /> : <AppTable columns={columns} dataSource={data} locale={{ emptyText: <EmptyStatePanel description={emptyTitle} icon={<UnorderedListOutlined />} title={emptyTitle} /> }} loading={loading} onChange={onTableChange} pagination={false} rowKey="id" rowSelection={canSelect && selectedKeys && onSelectionChange ? { selectedRowKeys: selectedKeys, onChange: (keys) => onSelectionChange(keys.map(String)), getCheckboxProps: (task) => ({ disabled: isSelectionDisabled(task) }) } : undefined} tableLayout="fixed" />}</TableSurface>;
 }
 
-function Pagination({ page, pageSize, loaded, hasMore, onChange }: { page: number; pageSize: number; loaded: number; hasMore: boolean; onChange: (page: number, pageSize: number) => void }) {
+function Pagination({ page, pageSize, total, onChange }: { page: number; pageSize: number; total: number; onChange: (page: number, pageSize: number) => void }) {
   const { t } = useTranslation();
-  // The backend's count includes tasks this account cannot see, so it is never shown as a total.
-  return loaded > 0 || page > 1 || hasMore ? <TablePaginationBar current={page} pageSize={pageSize} total={pagerTotal({ hasMore, loaded, page, pageSize })} showSizeChanger showTotal={() => t("dataCatalog.task.visibleCount", { count: loaded })} onChange={onChange} /> : null;
+  return total > 0 || page > 1 ? <TablePaginationBar current={page} pageSize={pageSize} total={total} showSizeChanger showTotal={() => t("dataCatalog.task.totalCount", { count: total })} onChange={onChange} /> : null;
 }

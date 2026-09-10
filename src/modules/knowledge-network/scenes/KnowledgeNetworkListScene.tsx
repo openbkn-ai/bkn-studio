@@ -356,8 +356,8 @@ export function KnowledgeNetworkListScene({
                     onAuthorize={setAuthorizingRecord}
                     onDelete={openDelete}
                     onEdit={openEdit}
-                    onExport={(nextRecord) => {
-                      void exportKnowledgeNetwork(nextRecord.id).then(() => {
+                    onExport={(nextRecord, format) => {
+                      void exportKnowledgeNetwork(nextRecord.id, format).then(() => {
                         void message.success(t("knowledgeNetwork.exportSuccess"));
                       });
                     }}

@@ -49,7 +49,7 @@ describe("opSupportsTestData", () => {
     expect(opSupportsTestData("get_kn_detail")).toBe(true);
     expect(opSupportsTestData("query_instance_subgraph")).toBe(true);
     expect(opSupportsTestData("query_metric")).toBe(true);
-    expect(opSupportsTestData("find_skills")).toBe(false);
+    expect(opSupportsTestData("search_capabilities")).toBe(false);
     expect(opSupportsTestData("get_action_info")).toBe(false);
   });
 });

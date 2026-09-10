@@ -68,24 +68,24 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   "admin-user": "System user management",
   agent: "Agent",
   agent_tpl: "Agent template",
-  catalog: "Data connection / Catalog",
-  connector_type: "Connector type",
+  catalog: "Data directory",
+  connector_type: "Data connection",
   concept_group: "Concept group",
   data_flow: "Data flow",
   knowledge_network: "Knowledge network",
   large_model: "Large model",
-  mcp: "MCP",
+  mcp: "MCP service",
   metric: "Metric",
   object_type: "Object type",
-  operator: "Function",
+  operator: "Function set",
   resource: "Data resource",
   relation_type: "Relation type",
   risk_type: "Risk type",
   safe_admin: "bkn-safe management API",
-  skill: "Skill",
+  skill: "Skill package",
   small_model: "Small model",
   stream_data_pipeline: "Stream data pipeline",
-  tool_box: "Toolbox",
+  tool_box: "API toolset",
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
@@ -130,6 +130,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     "query_data",
     "authorize",
     "task_manage",
+    "execute",
   ]),
   resourceType("concept_group", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
   resourceType("object_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
@@ -176,6 +177,24 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("admin-audit", ["view"]),
   resourceType("safe_admin", ["manage"]),
 ];
+
+/**
+ * Roles grant type-wide capabilities. Keep unsupported or object-specific resource types out of
+ * the role editor without removing them from the canonical catalog: existing grants must remain
+ * readable, and object authorization still uses the full resource catalog where applicable.
+ */
+const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
+  "agent",
+  "agent_tpl",
+  "connector_type",
+  "data_flow",
+  "risk_type",
+  "stream_data_pipeline",
+]);
+
+export const ROLE_GRANT_RESOURCE_TYPES = RESOURCE_TYPES.filter(
+  (item) => !ROLE_GRANT_EXCLUDED_RESOURCE_TYPES.has(item.type),
+);
 
 const byType = new Map(RESOURCE_TYPES.map((item) => [item.type, item]));
 
