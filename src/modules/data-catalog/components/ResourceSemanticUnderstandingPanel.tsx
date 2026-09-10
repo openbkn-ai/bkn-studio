@@ -56,6 +56,7 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [sampleRowsError, setSampleRowsError] = useState<string | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [filtersResourceId, setFiltersResourceId] = useState(resource.id);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -191,7 +192,16 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
   useSemanticUnderstandingTaskFormDefaults(form, open);
 
   const start = async () => {
-    const values = await form.validateFields();
+    let values: CreateSemanticUnderstandingTaskPayload;
+    try {
+      values = await form.validateFields();
+    } catch (error) {
+      const errorFields = (error as { errorFields?: Array<{ errors: string[]; name: Array<string | number> }> }).errorFields;
+      const sampleRowsError = errorFields?.find((field) => field.name[0] === "sampleMaxRows")?.errors[0];
+      setSampleRowsError(sampleRowsError ?? null);
+      return;
+    }
+    setSampleRowsError(null);
     const { sampleMaxRows, ...taskValues } = values;
     const createTask = async () => {
       setCreating(true);
@@ -352,8 +362,24 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
         <Form.Item extra={t("dataCatalog.semanticWorkspace.includeSamplesHint")} name="includeSampleRows" valuePropName="checked">
           <Checkbox>{t("dataCatalog.semanticWorkspace.includeSamples")}</Checkbox>
         </Form.Item>
-        {includeSampleRows ? <Form.Item label={t("dataCatalog.semanticWorkspace.sampleRows")} name="sampleMaxRows" rules={[{ required: true }]}>
-          <InputNumber max={20} min={1} precision={0} style={{ width: "100%" }} />
+        {includeSampleRows ? <Form.Item
+          label={t("dataCatalog.semanticWorkspace.sampleRows")}
+          name="sampleMaxRows"
+          help={sampleRowsError}
+          validateStatus={sampleRowsError ? "error" : undefined}
+          rules={[
+            { required: true, message: t("dataCatalog.semanticWorkspace.sampleRowsRequired") },
+            {
+              validator: (_rule, value: number | null | undefined) => {
+                if (value == null) return Promise.resolve();
+                return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 20
+                  ? Promise.resolve()
+                  : Promise.reject(new Error(t("dataCatalog.semanticWorkspace.sampleRowsInvalid")));
+              },
+            },
+          ]}
+        >
+          <InputNumber max={20} min={1} onChange={() => setSampleRowsError(null)} precision={0} style={{ width: "100%" }} />
         </Form.Item> : null}
       </Form>
     </Modal>

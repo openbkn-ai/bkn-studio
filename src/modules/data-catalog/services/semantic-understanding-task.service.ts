@@ -154,6 +154,12 @@ export type CreateSemanticUnderstandingTaskPayload = {
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const mockNow = Date.now();
 
+function assertValidSemanticSampleMaxRows(value: number) {
+  if (!Number.isInteger(value) || value < 1 || value > 20) {
+    throw new RangeError("sampleMaxRows must be an integer between 1 and 20");
+  }
+}
+
 function semanticMockText(key: string) {
   return i18n.t(`dataCatalog.taskManagement.semantic.mock.${key}`);
 }
@@ -398,6 +404,7 @@ export async function createResourceSemanticUnderstandingTask(payload: CreateSem
   }
   const includeSampleRows = payload.includeSampleRows ?? false;
   const sampleMaxRows = payload.sampleMaxRows ?? 10;
+  if (includeSampleRows) assertValidSemanticSampleMaxRows(sampleMaxRows);
   const response = await http.post<{ id: string }>("/vega-backend/v1/semantic-understanding-tasks", {
     scope: "resource",
     resource_id: payload.resourceId,

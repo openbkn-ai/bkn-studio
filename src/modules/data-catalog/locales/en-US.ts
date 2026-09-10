@@ -193,7 +193,9 @@ export const dataCatalogEnUS = {
       confidenceThreshold: "Confidence threshold",
       includeSamples: "Include sample data",
       includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking.",
-      sampleRows: "Sample rows (1–20)"
+      sampleRows: "Sample rows (1–20)",
+      sampleRowsRequired: "Enter the number of sample rows.",
+      sampleRowsInvalid: "Enter an integer between 1 and 20."
     },
     emptyDescription: "Create and discover a connection first, then browse resources and build indexes here. If the platform already holds connections you cannot see here, access to their catalogs has not been granted to you.",
     backToCatalog: "Back to Data Catalog",
