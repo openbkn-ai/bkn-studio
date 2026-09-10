@@ -12,6 +12,7 @@ import { deriveStudioPermissions, flattenSafeGrants } from "@/framework/auth/per
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { dataCatalogModuleManifest } from "@/modules/data-catalog/module.manifest";
 import { dataCatalogNavigation } from "@/modules/data-catalog/navigation";
+import { catalogDetailPermissions } from "@/modules/data-catalog/permissions";
 import { dataCatalogRoutes } from "@/modules/data-catalog/routes";
 
 type SafeGrant = { operations: string[]; resource: { id: string; type: string } };
@@ -63,6 +64,12 @@ describe("data-catalog permission points", () => {
       for (const permission of guardPermissionsOf(path)) {
         expect(dataCatalogModuleManifest.permissions, `route ${path}`).toContain(permission);
       }
+    }
+  });
+
+  it("declares every permission required by the catalog detail view", () => {
+    for (const permission of catalogDetailPermissions) {
+      expect(dataCatalogModuleManifest.permissions, "catalog detail").toContain(permission);
     }
   });
 

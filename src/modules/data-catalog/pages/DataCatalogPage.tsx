@@ -10,9 +10,8 @@ import { Navigate, Outlet, useParams } from "react-router-dom";
 import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { catalogDetailPermissions } from "@/modules/data-catalog/permissions";
 import { DataCatalogScene } from "@/modules/data-catalog/scenes/DataCatalogScene";
-
-const catalogDetailPermissions = ["catalog:view_detail", "resource:view_detail"];
 
 export function DataCatalogPage() {
   const params = useParams<{ catalogId?: string }>();

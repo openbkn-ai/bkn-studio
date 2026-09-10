@@ -10,3 +10,6 @@ export const dataCatalogResourceStatusPermissions = [
   "resource:view_detail",
   "catalog:task_manage",
 ] as const;
+
+/** Permissions that allow the caller to open a catalog detail. */
+export const catalogDetailPermissions = ["catalog:view_detail", "resource:view_detail"];

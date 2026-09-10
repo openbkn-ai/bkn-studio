@@ -85,8 +85,8 @@ describe("resource.service · previewCatalogResource", () => {
       limit: 2,
       offset: 1,
     });
-    const first = result.rows[0]?.avatar_blob as { byte_length: number; data: string };
-    const second = result.rows[1]?.avatar_blob as { byte_length: number; data: string };
+    const first = result.rows[0]?.attachment_blob as { byte_length: number; data: string };
+    const second = result.rows[1]?.attachment_blob as { byte_length: number; data: string };
 
     expect(first.byte_length).toBeGreaterThanOrEqual(10);
     expect(first.byte_length).toBeLessThanOrEqual(60);
@@ -156,7 +156,7 @@ describe("resource.service · previewCatalogResource", () => {
       });
 
       expect(result.querySource).toBe("source");
-      const binaryValue = result.rows[0]?.avatar_blob as { byte_length?: unknown; mode?: unknown };
+      const binaryValue = result.rows[0]?.attachment_blob as { byte_length?: unknown; mode?: unknown };
       expect(binaryValue).toMatchObject({
         mode: "metadata",
       });

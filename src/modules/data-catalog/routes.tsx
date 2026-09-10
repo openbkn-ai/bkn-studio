@@ -29,6 +29,12 @@ const TaskManagementPage = lazy(async () => {
   return { default: module.TaskManagementPage };
 });
 
+const dataCatalogConsole = {
+  descriptionKey: "dataCatalog.description",
+  menuKey: "data-catalog",
+  titleKey: "dataCatalog.title",
+};
+
 function withRouteLoading(permissions: string | string[], element: ReactNode) {
   return (
     <RequirePermission mode="any" permissions={permissions}>
@@ -70,15 +76,15 @@ export const dataCatalogRoutes: RouteObject[] = [
   {
     path: "data-catalog",
     handle: {
-      console: {
-        descriptionKey: "dataCatalog.description",
-        menuKey: "data-catalog",
-        titleKey: "dataCatalog.title",
-      },
+      console: dataCatalogConsole,
     },
     element: withPublicRouteLoading(<DataCatalogPage />),
     children: [
-      { element: <></>, index: true },
+      {
+        element: <></>,
+        handle: { console: dataCatalogConsole },
+        index: true,
+      },
       {
         element: <></>,
         path: "catalog/:catalogId",
