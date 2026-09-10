@@ -5,9 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { McpSession, McpToolCallResult } from "./context-loader.service";
 import {
   DEFAULT_RRF_OPTIONS,
   buildInstanceId,
@@ -16,6 +15,7 @@ import {
   edgesAmong,
   effectiveLabelsFrom,
   keyValueFor,
+  knSearchInstances,
   meetInTheMiddle,
   needsKnSearch,
   parseIdList,
@@ -389,76 +389,169 @@ describe("kn_search routing", () => {
 });
 
 describe("createGraphExplorerClient", () => {
-  const ok = (structured: unknown): McpToolCallResult => ({ ok: true, text: "", latencyMs: 1, structured, isError: false });
+  const env = { base: "https://studio.example.com/", token: "", knId: "kn1" };
+  const auth = { getToken: () => "tok" };
+  const REST = "https://studio.example.com/api/agent-retrieval/v1/kn";
 
-  it("injects kn_id, bkn_context and response_format into every call", async () => {
-    const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue(ok({ objects: {}, relation_paths: [] }));
-    const client = createGraphExplorerClient({ callTool }, "kn1");
-    const scope = { nextContext: () => ({ conversation_id: "c", interaction_id: "i" }) };
-    await client.exploreSubgraph(
-      { sourceOtId: "ot_supplier", condition: { field: "supplier_id", operation: "==", value: 42 }, direction: "forward", pathLength: 1 },
-      scope,
-    );
-    expect(callTool).toHaveBeenCalledWith("explore_subgraph", {
-      kn_id: "kn1",
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Answers every request with `payload`; the spy records what each call sent. */
+  function mockFetch(payload: unknown, status = 200) {
+    return vi.spyOn(globalThis, "fetch").mockImplementation(() => Promise.resolve(new Response(typeof payload === "string" ? payload : JSON.stringify(payload), { status })));
+  }
+
+  function sent(spy: ReturnType<typeof mockFetch>, index = 0): { url: string; body: Record<string, unknown>; headers: Record<string, string> } {
+    const [url, init] = spy.mock.calls[index];
+    return { url: url as string, body: JSON.parse(init?.body as string) as Record<string, unknown>, headers: init?.headers as Record<string, string> };
+  }
+
+  it("posts get_object_types with kn_id and ids in the body", async () => {
+    const spy = mockFetch({ kn_id: "kn1", object_types: [{ id: "ot_a", name: "A", primary_keys: ["k"], data_properties: [{ name: "k", type: "string" }] }] });
+    const metas = await createGraphExplorerClient(env, auth).loadObjectTypes(["ot_a"]);
+    expect(sent(spy)).toMatchObject({ url: `${REST}/get_object_types?response_format=json`, body: { kn_id: "kn1", ids: ["ot_a"] } });
+    expect(sent(spy).headers).toMatchObject({ Authorization: "Bearer tok", "Content-Type": "application/json" });
+    expect(metas).toEqual([{ id: "ot_a", name: "A", primaryKeys: ["k"], properties: [{ name: "k", displayName: undefined, type: "string" }] }]);
+  });
+
+  it("skips get_object_types when no id is asked for", async () => {
+    const spy = mockFetch({ object_types: [] });
+    await expect(createGraphExplorerClient(env, auth).loadObjectTypes([])).resolves.toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("puts kn_id in the query string of query_instance_subgraph", async () => {
+    const spy = mockFetch({ entries: [] });
+    const paths = [{ object_types: [{ id: "a" }, { id: "b" }], relation_types: [{ relation_type_id: "r", source_object_type_id: "a", target_object_type_id: "b" }] }];
+    await createGraphExplorerClient(env, auth).queryInstanceSubgraph(paths);
+    expect(sent(spy)).toMatchObject({ url: `${REST}/query_instance_subgraph?kn_id=kn1&response_format=json`, body: { relation_type_paths: paths } });
+    expect(Object.keys(sent(spy).body)).toEqual(["relation_type_paths"]);
+  });
+
+  it("puts kn_id in the query string of explore_subgraph and the walk in the body", async () => {
+    const spy = mockFetch({ objects: {}, relation_paths: [] });
+    await createGraphExplorerClient(env, auth).exploreSubgraph({
+      sourceOtId: "ot_supplier",
+      condition: { field: "supplier_id", operation: "==", value: 42 },
+      direction: "forward",
+      pathLength: 2,
+    });
+    expect(sent(spy).url).toBe(`${REST}/explore_subgraph?kn_id=kn1&response_format=json`);
+    expect(sent(spy).body).toEqual({
       source_object_type_id: "ot_supplier",
       direction: "forward",
-      path_length: 1,
+      path_length: 2,
       condition: { field: "supplier_id", operation: "==", value: 42 },
       limit: 1,
-      response_format: "json",
-      bkn_context: { conversation_id: "c", interaction_id: "i" },
     });
   });
 
   it("limits search_instance to the chosen object types", async () => {
-    const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue(ok({ nodes: [] }));
-    const client = createGraphExplorerClient({ callTool }, "kn1");
-    await client.searchInstances("q", null);
-    await client.searchInstances("q", null, { objectTypes: ["ot_a", "ot_b"] });
-    await client.searchInstances("q", null, { excludeObjectTypes: ["ot_x"], conceptGroups: ["cg1"], maxInstancesPerType: 5, maxObjectTypes: 3, rerank: true });
+    const spy = mockFetch({ nodes: [] });
+    const client = createGraphExplorerClient(env, auth);
+    await client.searchInstances("q");
+    await client.searchInstances("q", { objectTypes: ["ot_a", "ot_b"] });
+    await client.searchInstances("q", { excludeObjectTypes: ["ot_x"], conceptGroups: ["cg1"], maxInstancesPerType: 5, maxObjectTypes: 3, rerank: true });
     // A key passed as undefined (an optional argument forwarded as is) must keep its default, not erase it.
-    await client.searchInstances("q", null, { objectTypes: undefined, maxInstancesPerType: 3 });
-    expect(callTool.mock.calls[0][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json" });
-    expect(callTool.mock.calls[1][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, response_format: "json", object_types: ["ot_a", "ot_b"] });
-    expect(callTool.mock.calls[3][1]).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 3, response_format: "json" });
-    expect(callTool.mock.calls[2][1]).toEqual({
+    await client.searchInstances("q", { objectTypes: undefined, maxInstancesPerType: 3 });
+    expect(sent(spy, 0).url).toBe(`${REST}/search_instance?response_format=json`);
+    expect(sent(spy, 0).body).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20 });
+    expect(sent(spy, 1).body).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 20, object_types: ["ot_a", "ot_b"] });
+    expect(sent(spy, 2).body).toEqual({
       kn_id: "kn1",
       query: "q",
       max_instances_per_type: 5,
-      response_format: "json",
       exclude_object_types: ["ot_x"],
       concept_groups: ["cg1"],
       max_object_types: 3,
       rerank: true,
     });
+    expect(sent(spy, 3).body).toEqual({ kn_id: "kn1", query: "q", max_instances_per_type: 3 });
   });
 
-  it("passes paging through to query_object_instance only when offset is positive", async () => {
-    const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue(ok({ datas: [] }));
-    const client = createGraphExplorerClient({ callTool }, "kn1");
-    await client.queryInstances("ot_a", null, 50, null, 0);
-    await client.queryInstances("ot_a", null, 50, null, 50);
-    expect(callTool.mock.calls[0][1]).toEqual({ kn_id: "kn1", ot_id: "ot_a", limit: 50, response_format: "json" });
-    expect(callTool.mock.calls[1][1]).toEqual({ kn_id: "kn1", ot_id: "ot_a", limit: 50, response_format: "json", offset: 50 });
+  it("puts kn_id and ot_id in the query string of query_object_instance and pages only when offset is positive", async () => {
+    const spy = mockFetch({ datas: [] });
+    const client = createGraphExplorerClient(env, auth);
+    await client.queryInstances("ot_a", null, 50, 0);
+    await client.queryInstances("ot_a", { field: "k", operation: "in", value: [1, 2] }, 2, 50);
+    expect(sent(spy, 0).url).toBe(`${REST}/query_object_instance?kn_id=kn1&ot_id=ot_a&response_format=json`);
+    expect(sent(spy, 0).body).toEqual({ limit: 50 });
+    expect(sent(spy, 1).body).toEqual({ limit: 2, condition: { field: "k", operation: "in", value: [1, 2] }, offset: 50 });
   });
 
-  it("falls back to the text body and unwraps a data envelope", async () => {
-    const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue({
-      ok: true,
-      text: JSON.stringify({ data: { object_types: [{ id: "ot_a", name: "A", primary_keys: ["k"] }] } }),
-      latencyMs: 1,
-      isError: false,
-    });
-    const client = createGraphExplorerClient({ callTool }, "kn1");
-    const metas = await client.loadObjectTypes(["ot_a"]);
+  it("posts run_cypher with kn_id and the query in the body and keeps only well-formed rows", async () => {
+    const spy = mockFetch({ columns: [{ name: "a", type: "node" }, { name: 7 }], entries: [{ a: 1 }, "junk"] });
+    const result = await createGraphExplorerClient(env, auth).runCypher("MATCH (a:x) RETURN a");
+    expect(sent(spy)).toMatchObject({ url: `${REST}/run_cypher?response_format=json`, body: { kn_id: "kn1", query: "MATCH (a:x) RETURN a" } });
+    expect(result).toEqual({ columns: [{ name: "a", type: "node" }, { name: "7", type: undefined }], entries: [{ a: 1 }] });
+  });
+
+  it("never sends bkn_context or a body response_format, so no interaction is opened", async () => {
+    const spy = mockFetch({ entries: [], object_types: [], nodes: [], datas: [], objects: {}, columns: [] });
+    const client = createGraphExplorerClient(env, auth);
+    await client.loadObjectTypes(["ot_a"]);
+    await client.queryInstanceSubgraph([]);
+    await client.exploreSubgraph({ sourceOtId: "a", condition: { field: "k", operation: "==", value: 1 }, direction: "backward", pathLength: 1 });
+    await client.searchInstances("q");
+    await client.queryInstances("a", null, 10);
+    await client.runCypher("MATCH (a:x)");
+    expect(spy).toHaveBeenCalledTimes(6);
+    for (let index = 0; index < 6; index += 1) {
+      const { url, body } = sent(spy, index);
+      expect(body).not.toHaveProperty("bkn_context");
+      expect(body).not.toHaveProperty("response_format");
+      expect(url).not.toContain("bkn_context");
+    }
+  });
+
+  it("unwraps a data envelope", async () => {
+    mockFetch({ data: { object_types: [{ id: "ot_a", name: "A", primary_keys: ["k"] }] } });
+    const metas = await createGraphExplorerClient(env, auth).loadObjectTypes(["ot_a"]);
     expect(metas).toEqual([{ id: "ot_a", name: "A", primaryKeys: ["k"], properties: [] }]);
   });
 
-  it("surfaces tool errors as exceptions", async () => {
-    const callTool = vi.fn<McpSession["callTool"]>().mockResolvedValue({ ok: true, text: "boom", latencyMs: 1, isError: true });
-    const client = createGraphExplorerClient({ callTool }, "kn1");
-    await expect(client.searchInstances("x")).rejects.toThrow("boom");
+  it("surfaces the error body of a failed call so friendlyError can read it", async () => {
+    const envelope = JSON.stringify({ description: "调用依赖服务异常", details: "boom" });
+    mockFetch(envelope, 500);
+    const error = await createGraphExplorerClient(env, auth).searchInstances("x").catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(envelope);
+    expect(friendlyError(error)).toBe("调用依赖服务异常：boom");
+  });
+
+  it("names the tool and status when a failed call has no body", async () => {
+    mockFetch("", 502);
+    await expect(createGraphExplorerClient(env, auth).exploreSubgraph({ sourceOtId: "a", condition: { field: "k", operation: "==", value: 1 }, direction: "forward", pathLength: 1 })).rejects.toThrow(
+      "explore_subgraph failed (502)",
+    );
+  });
+
+  it("retries once with a refreshed token after 401", async () => {
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("", { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ nodes: [] }), { status: 200 }));
+    await createGraphExplorerClient(env, { getToken: () => "old", refresh: () => Promise.resolve("new") }).searchInstances("q");
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(sent(spy, 1).headers).toMatchObject({ Authorization: "Bearer new" });
+  });
+});
+
+describe("knSearchInstances", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("posts the fusion body to kn_search without bkn_context", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ nodes: [], object_types: [] }), { status: 200 }));
+    const rrf = { ...DEFAULT_RRF_OPTIONS, rrfK: 30 };
+    await knSearchInstances({ base: "https://studio.example.com", token: "t", knId: "kn1" }, undefined, "q", {}, rrf);
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("https://studio.example.com/api/agent-retrieval/v1/kn/kn_search?response_format=json");
+    const body = JSON.parse(init?.body as string) as Record<string, unknown>;
+    expect(body).toEqual(buildKnSearchBody("kn1", "q", {}, rrf));
+    expect(body).not.toHaveProperty("bkn_context");
   });
 });
 
@@ -522,7 +615,7 @@ describe("collectSubgraphByIds", () => {
         return Promise.resolve({ entries: [] });
       }),
     } as unknown as GraphExplorerClient;
-    const result = await collectSubgraphByIds(client, [{ otId: "a", key: "1" }, { otId: "b", key: "1" }], metas, relations, {}, null);
+    const result = await collectSubgraphByIds(client, [{ otId: "a", key: "1" }, { otId: "b", key: "1" }], metas, relations, {});
     // First batch of five fails on rel3, so those five are retried alone; the sixth batch is fine.
     expect(calls[0]).toEqual(["rel0", "rel1", "rel2", "rel3", "rel4"]);
     expect(calls.slice(1, 6).map((names) => names[0])).toEqual(["rel0", "rel1", "rel2", "rel3", "rel4"]);

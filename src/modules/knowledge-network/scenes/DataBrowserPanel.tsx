@@ -11,14 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  createBknLifecycle,
-  lifecycleEnv,
-  memoryConversationStore,
-  withManagedTurn,
-  type BknLifecycle,
-} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import {
-  fetchKnDetail,
+  fetchKnDetailRest,
   fetchObjectInstances,
   type ContextLoaderEnv,
   type KnDetail,
@@ -58,7 +51,6 @@ function ObjectTypeCard({
   copy,
   env,
   auth,
-  lifecycle,
 }: {
   ot: KnObjectType;
   onFillField: (key: string, value: string) => void;
@@ -71,8 +63,6 @@ function ObjectTypeCard({
   env: ContextLoaderEnv;
   /** Used to refresh tokens automatically on 401 through OAuth renewal. */
   auth?: McpAuth;
-  /** Panel-level managed lifecycle because sample-row preview is also a managed business call. */
-  lifecycle: BknLifecycle;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -92,9 +82,7 @@ function ObjectTypeCard({
     if (next && previewRows === null && !previewLoading) {
       setPreviewLoading(true);
       setPreviewError(null);
-      withManagedTurn(lifecycle, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewTurn", { id: ot.id }), (turn) =>
-        fetchObjectInstances(env, ot.id, 5, auth, undefined, turn ?? undefined),
-      )
+      fetchObjectInstances(env, ot.id, 5, auth)
         .then((rows) => setPreviewRows(rows))
         .catch((error) =>
           setPreviewError(error instanceof Error ? error.message : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewFailed")),
@@ -296,19 +284,6 @@ export function DataBrowserPanel({
   const [reloadKey, setReloadKey] = useState(0);
   const loadedRef = useRef(false);
 
-  /**
-   * Data Browser reads get_kn_detail and query_object_instance through managed business tools. They
-   * require bkn_context or Context Loader rejects them. This is not a chat, so one session lasts for this mount.
-   */
-  const lifecycle = useMemo(
-    () =>
-      createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, {
-        agentName: "bkn-agent-data-browser",
-        conversationStore: memoryConversationStore(),
-      }),
-    [env.base, env.knId, auth],
-  );
-
   // Lazy load schema on the first Data Browser tab visit, then keep it to preserve preview and filter context.
   useEffect(() => {
     if (!active || loadedRef.current) return;
@@ -318,9 +293,8 @@ export function DataBrowserPanel({
     const timeoutId = window.setTimeout(() => controller.abort(), DETAIL_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
-    withManagedTurn(lifecycle, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadStructureTurn"), (turn) =>
-      fetchKnDetail(env, auth, controller.signal, turn ?? undefined),
-    )
+    // Plain REST reads: browsing the schema is not an agent turn, so no interaction is opened.
+    fetchKnDetailRest(env, auth, controller.signal)
       .then((data) => {
         if (!cancelled) setDetail(data);
       })
@@ -345,7 +319,7 @@ export function DataBrowserPanel({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [active, auth, env, reloadKey, lifecycle, t]);
+  }, [active, auth, env, reloadKey, t]);
 
   const reload = () => {
     loadedRef.current = false;
@@ -524,7 +498,6 @@ export function DataBrowserPanel({
                       copy={copy}
                       env={env}
                       auth={auth}
-                      lifecycle={lifecycle}
                     />
                   ))}
                 </div>

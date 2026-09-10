@@ -12,8 +12,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { createBknLifecycle, lifecycleEnv, memoryConversationStore, withManagedTurn, type BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import { fetchKnDetail, type KnDetail, type McpAuth } from "@/modules/knowledge-network/services/context-loader.service";
+import { fetchKnDetailRest, type KnDetail, type McpAuth } from "@/modules/knowledge-network/services/context-loader.service";
 import {
   NODE_LIMIT,
   PATH_MAX_HOPS,
@@ -123,15 +122,8 @@ export function GraphExplorerScene() {
     }),
     [runtimeConfig],
   );
-  const lifecycle = useMemo(
-    () =>
-      createBknLifecycle(lifecycleEnv(base, networkId), auth, {
-        agentName: "bkn-agent-graph-explorer",
-        conversationStore: memoryConversationStore(),
-      }),
-    [base, networkId, auth],
-  );
-  const client = useMemo(() => createGraphExplorerClient(lifecycle.session, networkId), [lifecycle, networkId]);
+  // Plain REST calls: a click here is not an agent turn, so no interaction is opened for it.
+  const client = useMemo(() => createGraphExplorerClient({ base, token: "", knId: networkId }, auth), [auth, base, networkId]);
 
   // Snapshot read once; the canvas is seeded from it and the maps below are filled from it.
   // A link carrying ids or a Cypher fragment opens on a fresh canvas; the cached settings still apply.
@@ -172,7 +164,6 @@ export function GraphExplorerScene() {
   const [highlight, setHighlight] = useState<Highlight>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [lifecycleDown, setLifecycleDown] = useState(false);
   const [restored, setRestored] = useState((snapshot?.nodes.length ?? 0) > 0);
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const undoRef = useRef<CanvasSnapshot[]>([]);
@@ -233,10 +224,10 @@ export function GraphExplorerScene() {
     setSettings(updated);
   }, []);
 
-  /* ------------------------------ managed turns ------------------------------ */
+  /* ------------------------------ calls ------------------------------ */
 
   /** What a call records in the history drawer; `raw` is filled by the closure with the backend payload. */
-  type TurnLog<T> = {
+  type CallLog<T> = {
     kind: HistoryKind;
     title: string;
     input: unknown;
@@ -245,30 +236,28 @@ export function GraphExplorerScene() {
     /** The subgraph in the result, when the call produced one; kept on the entry for "send to canvas". */
     graph?: (value: T) => HistoryEntry["graph"];
   };
-  type TurnContext = { raw?: unknown };
+  type CallContext = { raw?: unknown };
 
   const logCall = useCallback((entry: Omit<HistoryEntry, "id" | "at">) => {
     setHistory((previous) => pushHistory(previous, { ...entry, id: newHistoryId(), at: Date.now() }));
   }, []);
 
-  const runTurn = useCallback(
+  /** Runs one user action: busy flag, history entry, and an error toast unless the caller rethrows. */
+  const runCall = useCallback(
     async <T,>(
-      question: string,
-      run: (turn: BknTurn | null, ctx: TurnContext) => Promise<T>,
-      options: { rethrow?: boolean; log?: TurnLog<T> } = {},
+      run: (ctx: CallContext) => Promise<T>,
+      options: { rethrow?: boolean; log?: CallLog<T> } = {},
     ): Promise<T | undefined> => {
       setBusy(true);
-      const ctx: TurnContext = {};
+      const ctx: CallContext = {};
       const started = performance.now();
       try {
-        const value = await withManagedTurn(lifecycle, question, (turn) => run(turn, ctx));
-        if (lifecycle.unsupported()) setLifecycleDown(true);
+        const value = await run(ctx);
         if (options.log) {
           logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? value, ok: true, ms: Math.round(performance.now() - started), summary: options.log.summarize(value), rerun: options.log.rerun, graph: options.log.graph?.(value) });
         }
         return value;
       } catch (error) {
-        if (lifecycle.unsupported()) setLifecycleDown(true);
         const text = friendlyError(error);
         if (options.log) {
           logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? text, ok: false, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.failed"), rerun: options.log.rerun });
@@ -281,7 +270,7 @@ export function GraphExplorerScene() {
         setBusy(false);
       }
     },
-    [lifecycle, logCall, message, t],
+    [logCall, message, t],
   );
 
   const rememberForUndo = useCallback(() => {
@@ -290,22 +279,25 @@ export function GraphExplorerScene() {
   }, []);
 
   const loadMetas = useCallback(
-    async (ids: string[], turn: BknTurn | null): Promise<Record<string, ObjectTypeMeta>> => {
+    async (ids: string[]): Promise<Record<string, ObjectTypeMeta>> => {
       const missing = ids.filter((id) => !metaRef.current[id]);
       if (missing.length === 0) return metaRef.current;
-      const loaded = await client.loadObjectTypes(missing, turn);
+      const loaded = await client.loadObjectTypes(missing);
       // The display property is configured on the object type definition in bkn-backend;
-      // Context Loader does not carry it, so ask Studio's own service, best effort.
-      const displayKeys = await Promise.all(
-        missing.map((id) =>
-          getKnowledgeNetworkObjectTypeDetail(networkId, id)
-            .then((item) => item?.displayKey ?? "")
-            .catch(() => ""),
-        ),
-      );
-      const keyById = new Map(missing.map((id, index) => [id, displayKeys[index]]));
+      // Context Loader does not carry it, so ask Studio's own service, best effort. The same
+      // definition supplies the property display names, which REST get_object_types leaves out.
+      const definitions = await Promise.all(missing.map((id) => getKnowledgeNetworkObjectTypeDetail(networkId, id).catch(() => null)));
+      const definitionById = new Map(missing.map((id, index) => [id, definitions[index]]));
       const next = { ...metaRef.current };
-      for (const meta of loaded) next[meta.id] = { ...meta, displayKey: keyById.get(meta.id) || undefined };
+      for (const meta of loaded) {
+        const definition = definitionById.get(meta.id);
+        const displayNames = new Map((definition?.dataProperties ?? []).map((property) => [property.name, property.displayName]));
+        const properties = meta.properties.map((property) => {
+          const displayName = property.displayName || displayNames.get(property.name);
+          return displayName ? { ...property, displayName } : property;
+        });
+        next[meta.id] = { ...meta, properties, displayKey: definition?.displayKey || undefined };
+      }
       metaRef.current = next;
       setMetaByOt(next);
       // Nodes already on the canvas pick up the display key they were missing.
@@ -326,31 +318,27 @@ export function GraphExplorerScene() {
   const ensureMeta = useCallback(
     async (otId: string): Promise<ObjectTypeMeta | null> => {
       if (metaRef.current[otId]) return metaRef.current[otId];
-      const metas = await runTurn(t("knowledgeNetwork.graphExplorer.turn.schema"), (turn) => loadMetas([otId], turn));
+      const metas = await runCall(() => loadMetas([otId]));
       return metas?.[otId] ?? null;
     },
-    [loadMetas, runTurn, t],
+    [loadMetas, runCall],
   );
 
   // Object type list for the filter tab.
   useEffect(() => {
     if (!networkId) return;
     let cancelled = false;
-    void withManagedTurn(lifecycle, t("knowledgeNetwork.graphExplorer.turn.schema"), (turn) =>
-      fetchKnDetail({ base, token: "", knId: networkId }, auth, undefined, turn ?? undefined),
-    )
+    void fetchKnDetailRest({ base, token: "", knId: networkId }, auth)
       .then((data) => {
         if (cancelled) return;
         detailRef.current = data;
         setDetail(data);
       })
-      .catch(() => {
-        if (!cancelled && lifecycle.unsupported()) setLifecycleDown(true);
-      });
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [auth, base, lifecycle, networkId, t]);
+  }, [auth, base, networkId]);
 
   /* ------------------------------ graph mutations ------------------------------ */
 
@@ -390,14 +378,14 @@ export function GraphExplorerScene() {
    * Search hits carry a trimmed property set and no `_instance_identity`; fetch the full rows
    * so the label follows the display key and the drawer shows every property.
    */
-  /** Fetches full rows for nodes that came without `_instance_identity` (search hits), inside the given turn. */
+  /** Fetches full rows for nodes that came without `_instance_identity` (search hits). */
   const enrichCore = useCallback(
-    async (nodes: GNode[], turn: BknTurn | null): Promise<GNode[]> => {
+    async (nodes: GNode[]): Promise<GNode[]> => {
       const needs = nodes.filter((node) => !isRecord(node.props._instance_identity));
       if (needs.length === 0) return nodes;
       const byOt = new Map<string, GNode[]>();
       for (const node of needs) byOt.set(node.otId, [...(byOt.get(node.otId) ?? []), node]);
-      const metas = await loadMetas([...byOt.keys()], turn);
+      const metas = await loadMetas([...byOt.keys()]);
       const out = new Map<string, GNode>();
       for (const [otId, list] of byOt) {
         const meta = metas[otId];
@@ -406,7 +394,7 @@ export function GraphExplorerScene() {
         const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
         for (let start = 0; start < keys.length; start += 50) {
           const chunk = keys.slice(start, start + 50);
-          const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+          const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length);
           for (const full of fromQueryObjectInstance(meta, payload, labelMap()[otId])) out.set(full.id, full);
         }
       }
@@ -419,10 +407,10 @@ export function GraphExplorerScene() {
     async (nodes: GNode[]): Promise<GNode[]> => {
       const needs = nodes.filter((node) => !isRecord(node.props._instance_identity));
       if (needs.length === 0) return nodes;
-      const enriched = await runTurn(t("knowledgeNetwork.graphExplorer.turn.enrich", { count: needs.length }), (turn) => enrichCore(nodes, turn));
+      const enriched = await runCall(() => enrichCore(nodes));
       return enriched ?? nodes;
     },
-    [enrichCore, runTurn, t],
+    [enrichCore, runCall],
   );
 
   const handleAdd = useCallback(
@@ -447,10 +435,9 @@ export function GraphExplorerScene() {
         return;
       }
       const input = { tool: "explore_subgraph", kn_id: networkId, source_object_type_id: node.otId, direction, path_length: 1, condition, limit: 1 };
-      const result = await runTurn(
-        t("knowledgeNetwork.graphExplorer.turn.expand", { label: node.display }),
-        async (turn, ctx) => {
-          const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction, pathLength: 1 }, turn);
+      const result = await runCall(
+        async (ctx) => {
+          const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction, pathLength: 1 });
           ctx.raw = payload;
           return fromExploreSubgraph(payload, labelMap());
         },
@@ -469,7 +456,7 @@ export function GraphExplorerScene() {
       const added = await addToCanvas(result.nodes, result.edges, id);
       if (added && added.nodes === 0 && added.edges === 0) message.info(t("knowledgeNetwork.graphExplorer.toast.noNeighbors"));
     },
-    [addToCanvas, client, labelMap, message, networkId, runTurn, t],
+    [addToCanvas, client, labelMap, message, networkId, runCall, t],
   );
 
   const findPath = useCallback(async () => {
@@ -485,7 +472,7 @@ export function GraphExplorerScene() {
       message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: conditionA ? end.otName : start.otName }));
       return;
     }
-    const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.turn.path"), async (turn, ctx) => {
+    const outcome = await runCall(async (ctx) => {
       // Each side walks as wide as the backend allows: three hops, narrowing when a wider query
       // is refused (a path that crosses an object type with no published data returns 500).
       // Joining the two walks at a shared node reaches up to six hops, and still finds a short
@@ -499,7 +486,7 @@ export function GraphExplorerScene() {
         const widest = Math.max(1, Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS));
         for (let hops = widest; hops >= 1; hops -= 1) {
           try {
-            const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction: "bidirectional", pathLength: hops }, turn);
+            const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction: "bidirectional", pathLength: hops });
             return { payload, hops };
           } catch (error) {
             lastError = error;
@@ -562,7 +549,7 @@ export function GraphExplorerScene() {
       edges: new Set(edges.map((edge) => edge.id)),
     });
     message.success(t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: outcome.chain.length }));
-  }, [addToCanvas, client, labelMap, message, networkId, orient, pathEnd, pathStart, runTurn, t]);
+  }, [addToCanvas, client, labelMap, message, networkId, orient, pathEnd, pathStart, runCall, t]);
 
   const removeNodes = useCallback(
     async (ids: string[]) => {
@@ -808,11 +795,11 @@ export function GraphExplorerScene() {
   const handleSearch = useCallback(
     async (query: string, options: SearchOptions, rrf: RrfOptions): Promise<GNode[]> => {
       const viaKnSearch = needsKnSearch(rrf);
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.search", { query }), async (turn, ctx) => {
-        // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep the MCP tool.
+      const nodes = await runCall(async (ctx) => {
+        // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep search_instance.
         const payload = viaKnSearch
-          ? await knSearchInstances({ base, token: "", knId: networkId }, auth, query, options, rrf, turn)
-          : await client.searchInstances(query, turn, options);
+          ? await knSearchInstances({ base, token: "", knId: networkId }, auth, query, options, rrf)
+          : await client.searchInstances(query, options);
         ctx.raw = payload;
         const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
         const needMeta = new Set<string>();
@@ -821,7 +808,7 @@ export function GraphExplorerScene() {
           const props = isRecord(hit.properties) ? hit.properties : {};
           if (typeof props._instance_id !== "string") needMeta.add(hit.object_type_id);
         }
-        const metas = await loadMetas([...needMeta], turn);
+        const metas = await loadMetas([...needMeta]);
         const mapped = fromSearchInstance(payload, metas, labelMap());
         for (const skipped of mapped.skipped) {
           message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: skipped.otName }));
@@ -839,16 +826,16 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [auth, base, client, labelMap, loadMetas, message, networkId, runTurn, t],
+    [auth, base, client, labelMap, loadMetas, message, networkId, runCall, t],
   );
 
   const handleQuery = useCallback(
     async (otId: string, condition: KnCondition | null): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.turn.query", { ot: otName }), async (turn, ctx) => {
-        const metas = await loadMetas([otId], turn);
+      const nodes = await runCall(async (ctx) => {
+        const metas = await loadMetas([otId]);
         const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
-        const payload = await client.queryInstances(otId, condition, 50, turn);
+        const payload = await client.queryInstances(otId, condition, 50);
         ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
       }, {
@@ -863,14 +850,14 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runCall, t],
   );
 
   const handleLocate = useCallback(
     async (otId: string, rawKey: string): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.locateTurn", { ot: otName }), async (turn, ctx) => {
-        const metas = await loadMetas([otId], turn);
+      const nodes = await runCall(async (ctx) => {
+        const metas = await loadMetas([otId]);
         const meta = metas[otId];
         if (!meta || meta.primaryKeys.length === 0) {
           throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: otName }));
@@ -880,7 +867,7 @@ export function GraphExplorerScene() {
         const rows = meta.primaryKeys.map((field, index) => ({ field, operator: "==", value: values[index] ?? "" }));
         const condition = buildCondition(rows, meta.properties);
         if (!condition) return [];
-        const payload = await client.queryInstances(otId, condition, 10, turn);
+        const payload = await client.queryInstances(otId, condition, 10);
         ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
       }, {
@@ -895,14 +882,14 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runCall, t],
   );
 
   type CypherOutcome = { nodes: GNode[]; edges: GEdge[]; rows: number; query: string; raw: unknown };
 
-  /** Parses, resolves and runs a MATCH fragment inside the given turn; shared by the Cypher tab and the AI explorer. */
+  /** Parses, resolves and runs a MATCH fragment; shared by the Cypher tab and the AI explorer. */
   const cypherCore = useCallback(
-    async (fragment: string, turn: BknTurn | null): Promise<CypherOutcome> => {
+    async (fragment: string): Promise<CypherOutcome> => {
       const parsed = parseCypherPattern(fragment);
       if (isCypherParseError(parsed)) {
         const key = {
@@ -928,7 +915,7 @@ export function GraphExplorerScene() {
         if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }));
         return { ...edge, relTypeId: found.id, relTypeName: found.name?.trim() || found.id };
       });
-      const metas = await loadMetas([...new Set(otIds)], turn);
+      const metas = await loadMetas([...new Set(otIds)]);
       const resolvedNodes: ResolvedNodeRef[] = parsed.nodes.map((node, index) => {
         const otId = otIds[index];
         const meta = metas[otId];
@@ -938,7 +925,7 @@ export function GraphExplorerScene() {
         return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
       });
       const query = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
-      const result = await client.runCypher(query, turn);
+      const result = await client.runCypher(query);
       const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
       // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
       const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -948,7 +935,7 @@ export function GraphExplorerScene() {
         const values = graph.nodes.filter((item) => item.otId === node.otId).map((item) => item.identity[pk]);
         for (let start = 0; start < values.length; start += 50) {
           const chunk = values.slice(start, start + 50);
-          const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+          const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length);
           for (const full of fromQueryObjectInstance(metas[node.otId], payload, labelMap()[node.otId])) {
             if (enriched.has(full.id)) enriched.set(full.id, full);
           }
@@ -962,8 +949,8 @@ export function GraphExplorerScene() {
   const handleCypher = useCallback(
     async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
       let sentQuery = "";
-      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.cypher.turn"), async (turn, ctx) => {
-        const value = await cypherCore(fragment, turn);
+      const outcome = await runCall(async (ctx) => {
+        const value = await cypherCore(fragment);
         sentQuery = value.query;
         ctx.raw = value.raw;
         return value;
@@ -980,7 +967,7 @@ export function GraphExplorerScene() {
       if (!outcome) throw new Error("");
       return outcome;
     },
-    [cypherCore, networkId, runTurn, t],
+    [cypherCore, networkId, runCall, t],
   );
 
   const tokenProvider = useMemo<AgentTokenProvider>(
@@ -1035,7 +1022,7 @@ export function GraphExplorerScene() {
   }, [t]);
 
   /**
-   * AI exploration: one managed turn in which the model calls search / filter / show / expand /
+   * AI exploration: one run in which the model calls search / filter / show / expand /
    * Cypher tools; everything a tool draws lands on the canvas as it happens.
    */
   const handleAiExplore = useCallback(
@@ -1046,7 +1033,7 @@ export function GraphExplorerScene() {
         steps.push(step);
         onStep(step);
       };
-      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.ai.turn", { question: question.trim().slice(0, 40) }), async (turn, ctx) => {
+      const outcome = await runCall(async (ctx) => {
         // Candidates the model has seen this run; expand accepts them even before they are drawn.
         const known = new Map<string, GNode>();
         const remember = (nodes: GNode[]) => {
@@ -1056,29 +1043,29 @@ export function GraphExplorerScene() {
         const typeIds = detail.object_types.map((item) => item.id);
         const deps: ExploreDeps = {
           search: async (query, objectTypes, limit) => {
-            const payload = await client.searchInstances(query, turn, { objectTypes, maxInstancesPerType: limit });
+            const payload = await client.searchInstances(query, { objectTypes, maxInstancesPerType: limit });
             const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
             const needMeta = new Set<string>();
             for (const hit of hits) if (isRecord(hit) && typeof hit.object_type_id === "string") needMeta.add(hit.object_type_id);
-            const metas = await loadMetas([...needMeta], turn);
-            return remember(await enrichCore(fromSearchInstance(payload, metas, labelMap()).nodes, turn));
+            const metas = await loadMetas([...needMeta]);
+            return remember(await enrichCore(fromSearchInstance(payload, metas, labelMap()).nodes));
           },
           query: async (otId, filters, limit) => {
-            const meta = (await loadMetas([otId], turn))[otId];
+            const meta = (await loadMetas([otId]))[otId];
             if (!meta) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: otId }));
-            const payload = await client.queryInstances(otId, conditionFrom(filters), limit, turn);
+            const payload = await client.queryInstances(otId, conditionFrom(filters), limit);
             return remember(fromQueryObjectInstance(meta, payload, labelMap()[otId]));
           },
           show: async (ids) => {
             const parsed = parseIdList(ids.join("\n"), typeIds);
             if (parsed.items.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
             const otIds = [...new Set(parsed.items.map((item) => item.otId))];
-            const metas = await loadMetas(otIds, turn);
+            const metas = await loadMetas(otIds);
             for (const otId of otIds) {
               const meta = metas[otId];
               if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
             }
-            const collected = await collectSubgraphByIds(client, parsed.items, metas, detail.relation_types, labelMap(), turn);
+            const collected = await collectSubgraphByIds(client, parsed.items, metas, detail.relation_types, labelMap());
             remember(collected.nodes);
             const added = (await addToCanvas(collected.nodes, collected.edges)) ?? { nodes: 0, edges: 0 };
             return { nodes: collected.nodes, edges: collected.edges, added };
@@ -1088,14 +1075,14 @@ export function GraphExplorerScene() {
             if (seeds.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.ai.unknownIds", { list: ids.slice(0, 5).join(", ") }));
             const absent = seeds.filter((node) => !nodesRef.current.has(node.id));
             if (absent.length > 0) await addToCanvas(absent, []);
-            const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
-            const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
+            const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
+            const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
             remember(collected.nodes);
             const added = (await addToCanvas(collected.nodes, collected.edges, seeds.length === 1 ? seeds[0].id : undefined)) ?? { nodes: 0, edges: 0 };
             return { nodes: collected.nodes, edges: collected.edges, added };
           },
           cypher: async (match) => {
-            const value = await cypherCore(match, turn);
+            const value = await cypherCore(match);
             remember(value.nodes);
             const added = (await addToCanvas(value.nodes, value.edges)) ?? { nodes: 0, edges: 0 };
             return { nodes: value.nodes, edges: value.edges, rows: value.rows, added };
@@ -1130,7 +1117,7 @@ export function GraphExplorerScene() {
       if (!outcome) throw new Error("");
       return outcome;
     },
-    [addToCanvas, base, client, cypherCore, detail, enrichCore, explorePromptTexts, labelMap, loadMetas, networkId, runTurn, t, tokenProvider],
+    [addToCanvas, base, client, cypherCore, detail, enrichCore, explorePromptTexts, labelMap, loadMetas, networkId, runCall, t, tokenProvider],
   );
 
   const handleAddGraph = useCallback(
@@ -1147,10 +1134,10 @@ export function GraphExplorerScene() {
     async (otId: string, offset: number): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
       const page = Math.floor(offset / BROWSE_PAGE_SIZE) + 1;
-      const nodes = await runTurn(t("knowledgeNetwork.graphExplorer.browse.turn", { ot: otName, page }), async (turn, ctx) => {
-        const metas = await loadMetas([otId], turn);
+      const nodes = await runCall(async (ctx) => {
+        const metas = await loadMetas([otId]);
         const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
-        const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, turn, offset);
+        const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, offset);
         ctx.raw = payload;
         return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
       }, {
@@ -1165,7 +1152,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runCall, t],
   );
 
   const handleSubgraphByIds = useCallback(
@@ -1181,9 +1168,9 @@ export function GraphExplorerScene() {
         message.warning(t("knowledgeNetwork.graphExplorer.browse.idsSkipped", { count: parsed.unknown.length, list: parsed.unknown.slice(0, 3).join(", ") }));
       }
       const relations = detail?.relation_types ?? [];
-      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn, ctx) => {
+      const outcome = await runCall(async (ctx) => {
         const otIds = [...new Set(parsed.items.map((item) => item.otId))];
-        const metas = await loadMetas(otIds, turn);
+        const metas = await loadMetas(otIds);
         // A composite-key object type cannot be looked up by a single key; skip it rather than
         // refusing every other id in the list.
         const usable = otIds.filter((otId) => metas[otId]?.primaryKeys.length === 1);
@@ -1191,7 +1178,7 @@ export function GraphExplorerScene() {
           throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: metas[otIds[0]]?.name ?? otIds[0] }));
         }
         const items = parsed.items.filter((item) => usable.includes(item.otId));
-        const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap(), turn);
+        const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap());
         ctx.raw = collected.raw;
         return { nodes: collected.nodes, edges: collected.edges, requested: items.length };
       }, {
@@ -1211,7 +1198,7 @@ export function GraphExplorerScene() {
       if (missing > 0) message.warning(t("knowledgeNetwork.graphExplorer.browse.idsMissing", { count: missing }));
       message.success(t("knowledgeNetwork.graphExplorer.browse.idsDone", { nodes: outcome.nodes.length, edges: outcome.edges.length }));
     },
-    [addToCanvas, client, detail, labelMap, loadMetas, message, networkId, runTurn, t],
+    [addToCanvas, client, detail, labelMap, loadMetas, message, networkId, runCall, t],
   );
 
   /** Expands many nodes one hop at once: one explore_subgraph per object type with `pk in`. */
@@ -1220,9 +1207,9 @@ export function GraphExplorerScene() {
       const seeds = ids.map((id) => nodesRef.current.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
       if (seeds.length === 0) return;
       if (ids.length > EXPAND_SEED_LIMIT) message.warning(t("knowledgeNetwork.graphExplorer.toast.expandSeedsCapped", { limit: EXPAND_SEED_LIMIT }));
-      const result = await runTurn(t("knowledgeNetwork.graphExplorer.turn.expandMany", { count: seeds.length }), async (turn, ctx) => {
-        const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
-        const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
+      const result = await runCall(async (ctx) => {
+        const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
+        const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
         ctx.raw = collected.raw;
         return { nodes: collected.nodes, edges: collected.edges, failed: collected.failed ?? [] };
       }, {
@@ -1239,7 +1226,7 @@ export function GraphExplorerScene() {
       }
       await addToCanvas(result.nodes, result.edges);
     },
-    [addToCanvas, client, labelMap, loadMetas, message, networkId, runTurn, t],
+    [addToCanvas, client, labelMap, loadMetas, message, networkId, runCall, t],
   );
 
   // Apply the URL once the object types are known: ids and/or a Cypher fragment, optional expansion, then a clean layout.
@@ -1445,7 +1432,7 @@ export function GraphExplorerScene() {
   );
 
   const selectedNode = selectedId ? nodesRef.current.get(selectedId) ?? null : null;
-  const disabled = lifecycleDown || !networkId;
+  const disabled = !networkId;
 
   return (
     <div className={styles.root}>
@@ -1525,7 +1512,6 @@ export function GraphExplorerScene() {
           dragMode={settings.dragMode}
           onDragModeChange={handleDragModeChange}
         />
-        {lifecycleDown ? <Alert type="warning" showIcon banner message={t("knowledgeNetwork.graphExplorer.lifecycleUnavailable")} /> : null}
         {restored ? (
           <Alert
             type="info"
