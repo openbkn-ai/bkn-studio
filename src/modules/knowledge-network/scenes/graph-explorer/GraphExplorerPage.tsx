@@ -17,6 +17,10 @@ import { fetchKnDetail, type KnDetail, type McpAuth } from "@/modules/knowledge-
 import {
   NODE_LIMIT,
   PATH_MAX_HOPS,
+  capIncomingNodes,
+  edgesAmong,
+  keyValueFor,
+  parseIdList,
   createGraphExplorerClient,
   edgeFromRelation,
   fromExploreSubgraph,
@@ -284,13 +288,15 @@ export function GraphExplorerScene() {
 
   const addToCanvas = useCallback(
     async (incomingNodes: GNode[], incomingEdges: GEdge[], anchorId?: string): Promise<{ nodes: number; edges: number } | null> => {
-      const fresh = incomingNodes.filter((node) => !nodesRef.current.has(node.id));
-      if (nodesRef.current.size + fresh.length > NODE_LIMIT) {
-        message.warning(t("knowledgeNetwork.graphExplorer.toast.limitReached", { limit: NODE_LIMIT }));
-        return null;
+      // Over the limit the batch is cut to what still fits, never refused outright: partial data on
+      // the canvas beats a warning and nothing. Edges to dropped nodes fall out in mergeGraph.
+      const capped = capIncomingNodes(incomingNodes, new Set(nodesRef.current.keys()), NODE_LIMIT);
+      if (capped.dropped > 0) {
+        message.warning(t("knowledgeNetwork.graphExplorer.toast.limitTruncated", { limit: NODE_LIMIT, dropped: capped.dropped }));
       }
+      if (capped.nodes.length === 0 && incomingNodes.length > 0) return null;
       rememberForUndo();
-      const { addedNodes, addedEdges } = mergeGraph(nodesRef.current, edgesRef.current, { nodes: incomingNodes, edges: incomingEdges });
+      const { addedNodes, addedEdges } = mergeGraph(nodesRef.current, edgesRef.current, { nodes: capped.nodes, edges: incomingEdges });
       if (addedNodes.length === 0 && addedEdges.length === 0) {
         undoRef.current.pop();
         setUndoCount(undoRef.current.length);
@@ -885,6 +891,86 @@ export function GraphExplorerScene() {
     [client, detail, loadMetas, networkId, runTurn, t],
   );
 
+  const handleSubgraphByIds = useCallback(
+    async (text: string, fallbackOt?: string): Promise<void> => {
+      const typeIds = (detail?.object_types ?? []).map((item) => item.id);
+      const parsed = parseIdList(text, typeIds, fallbackOt);
+      if (parsed.unknown.length > 0) {
+        throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
+      }
+      if (parsed.items.length === 0) return;
+      const relations = detail?.relation_types ?? [];
+      const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn, ctx) => {
+        const byOt = new Map<string, string[]>();
+        for (const item of parsed.items) byOt.set(item.otId, [...(byOt.get(item.otId) ?? []), item.key]);
+        const metas = await loadMetas([...byOt.keys()], turn);
+        // 1. Resolve the instances, one `in` query per object type (50 keys a batch).
+        const nodes: GNode[] = [];
+        const rawPayloads: Record<string, unknown[]> = {};
+        for (const [otId, keys] of byOt) {
+          const meta = metas[otId];
+          if (!meta || meta.primaryKeys.length !== 1) {
+            throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+          }
+          const pk = meta.primaryKeys[0];
+          for (let start = 0; start < keys.length; start += 50) {
+            const chunk = keys.slice(start, start + 50).map((key) => keyValueFor(meta, key));
+            const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, turn);
+            (rawPayloads[otId] ??= []).push(payload);
+            nodes.push(...fromQueryObjectInstance(meta, payload, settingsRef.current.labelByOt[otId]));
+          }
+        }
+        const nodeIds = new Set(nodes.map((node) => node.id));
+        // 2. Relations among the set: one path query per relation type whose ends are both present.
+        const edges: GEdge[] = [];
+        const keysOf = (otId: string) => {
+          const meta = metas[otId];
+          return (byOt.get(otId) ?? []).map((key) => keyValueFor(meta, key));
+        };
+        const paths = relations
+          .filter((relation) => byOt.has(relation.sourceId) && byOt.has(relation.targetId))
+          .map((relation) => ({
+            object_types: [
+              { id: relation.sourceId, condition: { field: metas[relation.sourceId].primaryKeys[0], operation: "in", value: keysOf(relation.sourceId) } },
+              { id: relation.targetId, condition: { field: metas[relation.targetId].primaryKeys[0], operation: "in", value: keysOf(relation.targetId) } },
+            ],
+            relation_types: [{ relation_type_id: relation.id, source_object_type_id: relation.sourceId, target_object_type_id: relation.targetId }],
+            limit: Math.min(1000, Math.max(10, keysOf(relation.sourceId).length)),
+          }));
+        const pathPayloads: unknown[] = [];
+        for (let start = 0; start < paths.length; start += 5) {
+          const batch = paths.slice(start, start + 5);
+          try {
+            const payload = await client.queryInstanceSubgraph(batch, turn);
+            pathPayloads.push(payload);
+            const entries = Array.isArray(payload.entries) ? payload.entries : [];
+            for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, settingsRef.current.labelByOt).edges, nodeIds));
+          } catch (error) {
+            // A dead binding on one relation type must not sink the whole subgraph.
+            pathPayloads.push({ error: friendlyError(error), paths: batch });
+          }
+        }
+        ctx.raw = { instances: rawPayloads, paths: pathPayloads };
+        return { nodes, edges, requested: parsed.items.length };
+      }, {
+        rethrow: true,
+        log: {
+          kind: "ids",
+          title: `${parsed.items.length} ids`,
+          input: { tools: ["query_object_instance", "query_instance_subgraph"], kn_id: networkId, ids: parsed.items },
+          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.nodes", { nodes: value.nodes.length, edges: value.edges.length }),
+        },
+      });
+      if (!outcome) return;
+      const added = await addToCanvas(outcome.nodes, outcome.edges);
+      if (added === null) return;
+      const missing = outcome.requested - outcome.nodes.length;
+      if (missing > 0) message.warning(t("knowledgeNetwork.graphExplorer.browse.idsMissing", { count: missing }));
+      message.success(t("knowledgeNetwork.graphExplorer.browse.idsDone", { nodes: outcome.nodes.length, edges: outcome.edges.length }));
+    },
+    [addToCanvas, client, detail, loadMetas, message, networkId, runTurn, t],
+  );
+
   /* ------------------------------ grouping, sidebar, keyboard ------------------------------ */
 
   const conceptGrouping = useMemo<ConceptGrouping | null>(() => {
@@ -1032,6 +1118,7 @@ export function GraphExplorerScene() {
         onLocate={handleLocate}
         onQuery={handleQuery}
         onBrowse={handleBrowse}
+        onSubgraphByIds={handleSubgraphByIds}
         onCypher={handleCypher}
         onAddGraph={handleAddGraph}
         cypherRowLimit={CYPHER_ROW_LIMIT}

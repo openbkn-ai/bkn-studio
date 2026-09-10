@@ -341,6 +341,28 @@ export function mergeGraph(
   return { addedNodes, addedEdges };
 }
 
+/**
+ * Keeps nodes already on the canvas plus as many new ones as still fit under the limit.
+ * Returns how many new nodes were dropped so the caller can say so.
+ */
+export function capIncomingNodes(incoming: GNode[], existing: ReadonlySet<string>, limit: number): { nodes: GNode[]; dropped: number } {
+  const room = Math.max(0, limit - existing.size);
+  const kept: GNode[] = [];
+  let fresh = 0;
+  let dropped = 0;
+  for (const node of incoming) {
+    if (existing.has(node.id)) {
+      kept.push(node);
+      continue;
+    }
+    if (fresh < room) {
+      kept.push(node);
+      fresh += 1;
+    } else dropped += 1;
+  }
+  return { nodes: kept, dropped };
+}
+
 /** Re-resolves labels after the user changes the label property for an object type. */
 export function relabel(nodes: Iterable<GNode>, labelByOt: Record<string, string>): GNode[] {
   const out: GNode[] = [];
@@ -419,6 +441,57 @@ function lastJsonObject(text: string): string {
     }
   }
   return "";
+}
+
+/* ============================ Subgraph from an id list ============================ */
+
+export type IdListItem = { otId: string; key: string };
+export type IdListParse = { items: IdListItem[]; unknown: string[] };
+
+/**
+ * Parses pasted ids, one per line or comma-separated. A line shaped like `<ot_id>-<key>`
+ * (the explorer's instance id) is resolved against the known object types with the longest
+ * matching prefix; anything else is a raw primary-key value for `fallbackOt`, or unknown
+ * when no object type is selected.
+ */
+export function parseIdList(text: string, objectTypeIds: string[], fallbackOt?: string): IdListParse {
+  const items: IdListItem[] = [];
+  const unknown: string[] = [];
+  const seen = new Set<string>();
+  const prefixes = [...objectTypeIds].sort((a, b) => b.length - a.length);
+  for (const raw of text.split(/[\n,;，；]+/)) {
+    const token = raw.trim();
+    if (!token) continue;
+    const prefix = prefixes.find((id) => token.startsWith(`${id}-`) && token.length > id.length + 1);
+    let item: IdListItem | null = null;
+    if (prefix) item = { otId: prefix, key: token.slice(prefix.length + 1) };
+    else if (fallbackOt) item = { otId: fallbackOt, key: token };
+    if (!item) {
+      unknown.push(token);
+      continue;
+    }
+    const dedupe = `${item.otId}|${item.key}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+    items.push(item);
+  }
+  return { items, unknown };
+}
+
+/** Splits a single-key instance id tail back into a typed value: numbers stay numbers when the key type says so. */
+export function keyValueFor(meta: ObjectTypeMeta, key: string): unknown {
+  const pk = meta.primaryKeys[0];
+  const type = (meta.properties.find((property) => property.name === pk)?.type ?? "").toLowerCase();
+  if (/(int|long|float|double|decimal|number|numeric|real|bigint|short)/.test(type)) {
+    const numeric = Number(key);
+    if (Number.isFinite(numeric) && key.trim() !== "") return numeric;
+  }
+  return key;
+}
+
+/** Keeps only the edges whose both ends are in the given node set. */
+export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[] {
+  return edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
 }
 
 /* ============================ Cypher (bkn-backend) ============================ */
@@ -575,8 +648,17 @@ export async function knSearchInstances(
   return payload;
 }
 
+export type SubgraphPathNode = { id: string; condition?: KnCondition; limit?: number };
+export type SubgraphPath = {
+  object_types: SubgraphPathNode[];
+  relation_types: { relation_type_id: string; source_object_type_id: string; target_object_type_id: string }[];
+  limit?: number;
+};
+
 export type GraphExplorerClient = {
   loadObjectTypes(ids: string[], scope?: BknCallScope | null): Promise<ObjectTypeMeta[]>;
+  /** query_instance_subgraph over explicit relation-type paths; returns the raw payload with `entries`. */
+  queryInstanceSubgraph(paths: SubgraphPath[], scope?: BknCallScope | null): Promise<Rec>;
   searchInstances(query: string, scope?: BknCallScope | null, options?: SearchOptions): Promise<Rec>;
   queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
@@ -593,6 +675,13 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       const payload = readPayload(result, "get_object_types");
       const list = Array.isArray(payload.object_types) ? payload.object_types : [];
       return list.map(objectTypeMetaFrom).filter((meta): meta is ObjectTypeMeta => meta !== null);
+    },
+    async queryInstanceSubgraph(paths, scope) {
+      const result = await session.callTool(
+        "query_instance_subgraph",
+        withContext({ kn_id: knId, relation_type_paths: paths, response_format: "json" }, scope),
+      );
+      return readPayload(result, "query_instance_subgraph");
     },
     async searchInstances(query, scope, options = {}) {
       const merged = { ...DEFAULT_SEARCH_OPTIONS, ...options };

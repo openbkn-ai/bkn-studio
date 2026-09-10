@@ -38,6 +38,8 @@ export type SearchPanelProps = {
   onQuery: (otId: string, condition: KnCondition | null) => Promise<GNode[]>;
   /** Lists instances of one object type without a filter, `offset` rows in. */
   onBrowse: (otId: string, offset: number) => Promise<GNode[]>;
+  /** Resolves pasted ids to instances plus the relations among them and puts them on the canvas. */
+  onSubgraphByIds: (text: string, fallbackOt?: string) => Promise<void>;
   /** Runs a MATCH / WHERE fragment through Cypher and returns the rebuilt subgraph plus the row count. */
   onCypher: (fragment: string) => Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }>;
   /** Adds nodes together with the edges among them. */
@@ -147,6 +149,7 @@ export function SearchPanel({
   onLocate,
   onQuery,
   onBrowse,
+  onSubgraphByIds,
   onCypher,
   onAddGraph,
   cypherRowLimit,
@@ -215,6 +218,21 @@ export function SearchPanel({
   const [browseExhausted, setBrowseExhausted] = useState(false);
 
   const [locateKey, setLocateKey] = useState("");
+  const [idsText, setIdsText] = useState("");
+  const [idsRunning, setIdsRunning] = useState(false);
+
+  const runIds = async () => {
+    if (!idsText.trim() || disabled) return;
+    setIdsRunning(true);
+    setBrowseError(null);
+    try {
+      await onSubgraphByIds(idsText, browseOt);
+    } catch (error) {
+      setBrowseError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIdsRunning(false);
+    }
+  };
 
   const runLocate = async () => {
     const raw = locateKey.trim();
@@ -635,6 +653,20 @@ export function SearchPanel({
           {t("knowledgeNetwork.graphExplorer.browse.more")}
         </Button>
       ) : null}
+      <div className={styles.aiBox}>
+        <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.browse.idsTitle")}</Typography.Text>
+        <Input.TextArea
+          data-testid="graph-explorer-ids"
+          value={idsText}
+          disabled={disabled}
+          autoSize={{ minRows: 3, maxRows: 8 }}
+          placeholder={t("knowledgeNetwork.graphExplorer.browse.idsPlaceholder")}
+          onChange={(event) => setIdsText(event.target.value)}
+        />
+        <Button type="primary" data-testid="graph-explorer-ids-run" loading={idsRunning} disabled={disabled || !idsText.trim()} onClick={() => void runIds()}>
+          {t("knowledgeNetwork.graphExplorer.browse.idsRun")}
+        </Button>
+      </div>
     </div>
   );
 

@@ -12,7 +12,11 @@ import {
   DEFAULT_RRF_OPTIONS,
   buildInstanceId,
   buildKnSearchBody,
+  capIncomingNodes,
+  edgesAmong,
+  keyValueFor,
   needsKnSearch,
+  parseIdList,
   createGraphExplorerClient,
   fromExploreSubgraph,
   fromQueryObjectInstance,
@@ -278,6 +282,46 @@ describe("relabel", () => {
   it("recomputes display with the new label map", () => {
     const [n] = relabel([{ id: "x", otId: "ot", otName: "ot", identity: {}, display: "old", props: { _display: "d", city: "c" } }], { ot: "city" });
     expect(n.display).toBe("c");
+  });
+});
+
+describe("capIncomingNodes", () => {
+  const node = (id: string): GNode => ({ id, otId: "ot", otName: "ot", identity: {}, display: id, props: {} });
+
+  it("fills the remaining room and reports what was dropped, keeping already-present nodes", () => {
+    const result = capIncomingNodes([node("a"), node("x"), node("y"), node("z")], new Set(["a", "b"]), 4);
+    expect(result.nodes.map((n) => n.id)).toEqual(["a", "x", "y"]);
+    expect(result.dropped).toBe(1);
+    expect(capIncomingNodes([node("q")], new Set(["a"]), 1)).toEqual({ nodes: [], dropped: 1 });
+  });
+});
+
+describe("parseIdList", () => {
+  it("resolves instance ids by the longest object type prefix and falls back to the selected type", () => {
+    const parsed = parseIdList("product-e68c\nproduct_line-7, knowledge-abc;knowledge-abc\n12345\n", ["product", "product_line", "knowledge"], "block");
+    expect(parsed.items).toEqual([
+      { otId: "product", key: "e68c" },
+      { otId: "product_line", key: "7" },
+      { otId: "knowledge", key: "abc" },
+      { otId: "block", key: "12345" },
+    ]);
+    expect(parsed.unknown).toEqual([]);
+  });
+
+  it("reports raw keys as unknown when no object type is selected", () => {
+    expect(parseIdList("12345\nproduct-x", ["product"])).toEqual({ items: [{ otId: "product", key: "x" }], unknown: ["12345"] });
+  });
+});
+
+describe("keyValueFor / edgesAmong", () => {
+  it("types numeric keys and keeps strings", () => {
+    expect(keyValueFor({ id: "a", name: "a", primaryKeys: ["k"], properties: [{ name: "k", type: "integer" }] }, "42")).toBe(42);
+    expect(keyValueFor({ id: "a", name: "a", primaryKeys: ["k"], properties: [{ name: "k", type: "string" }] }, "42")).toBe("42");
+  });
+
+  it("keeps only edges with both ends in the set", () => {
+    const edge = (s: string, t: string): GEdge => ({ id: `${s}|r|${t}`, source: s, target: t, relTypeId: "r", relTypeName: "r" });
+    expect(edgesAmong([edge("a", "b"), edge("a", "z")], new Set(["a", "b"])).map((e) => e.id)).toEqual(["a|r|b"]);
   });
 });
 

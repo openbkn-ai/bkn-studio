@@ -256,7 +256,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       // Empty-canvas drag pans, wheel zooms; shift+click or shift+drag selects several nodes,
       // and dragging one selected node moves the whole selection.
       behaviors: [
-        "drag-canvas",
+        // Shift+drag is the brush; without this drag-canvas swallows the gesture and no box appears.
+        { type: "drag-canvas", key: "drag-canvas", enable: (event: { shiftKey?: boolean }) => !event.shiftKey },
         "zoom-canvas",
         { type: "drag-element", key: "drag-element" },
         { type: "click-select", key: "click-select", multiple: true, trigger: ["shift"] },
