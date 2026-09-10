@@ -53,7 +53,7 @@ export const systemAdminModuleManifest = {
     {
       id: "system-admin.object-authorization",
       exportName: "ObjectAuthorizationScene",
-      description: "Grant a specific object (data connection / Catalog, knowledge network, small model) directly to a user or department, on top of role permissions. Authorization is at the whole-object level (e.g. a whole Catalog, not individual resources). List-style with an overview page (all / by object / by member).",
+      description: "Grant a specific object (data connection / Catalog, knowledge network, small model) directly to a user, on top of role permissions. Authorization is at the whole-object level (e.g. a whole Catalog, not individual resources). List-style with an overview page (all / by object / by member).",
       inputs: [],
     },
     {
