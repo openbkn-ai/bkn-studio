@@ -512,6 +512,8 @@ export const mockObjectTypeLogicMetricModels: ObjectTypeLogicMetricModelRecord[]
 export function cloneDataProperties(properties: ObjectTypeDataProperty[]) {
   return properties.map((item) => ({
     ...item,
+    mappedField: item.mappedField ? { ...item.mappedField } : undefined,
+    maskRule: item.maskRule ? { ...item.maskRule } : undefined,
   }));
 }
 

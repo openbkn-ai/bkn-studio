@@ -8,6 +8,8 @@
 import type { RouteObject } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireCapability } from "@/framework/entitlement/RequireCapability";
 import {
   ActionTypeCreatePage,
   ActionTypeDetailPage,
@@ -21,6 +23,7 @@ import {
   MetricDetailPage,
   MetricEditPage,
   ObjectTypeCreatePage,
+  ObjectTypeAuthorizationPage,
   ObjectTypeDetailPage,
   ObjectTypeEditPage,
   RelationTypeCreatePage,
@@ -188,6 +191,16 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.objectTypeDetailTitle",
     },
     <ObjectTypeDetailPage />,
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization",
+    {
+      descriptionKey: "knowledgeNetwork.propertyAuthorizationDescription",
+      titleKey: "knowledgeNetwork.propertyAuthorizationAction",
+    },
+    <RequireCapability capability={CAPABILITIES.PERM_OBJECT_LEVEL}>
+      <ObjectTypeAuthorizationPage />
+    </RequireCapability>,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/relation-types/create",

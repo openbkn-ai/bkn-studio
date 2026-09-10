@@ -25,7 +25,6 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import {
   readPositiveInteger,
@@ -88,8 +87,6 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [authorizingRecord, setAuthorizingRecord] =
-    useState<KnowledgeNetworkObjectTypeRecord | null>(null);
   const boundResourceIds = useMemo(
     () => items.map((item) => item.dataSource?.id),
     [items],
@@ -287,7 +284,9 @@ export function ObjectTypeListPanel({
     }
 
     if (key === "authorize") {
-      setAuthorizingRecord(record);
+      void navigate(
+        `/knowledge-network/workspace/${networkId}/object-types/${record.id}/authorization`,
+      );
       return;
     }
 
@@ -644,13 +643,6 @@ export function ObjectTypeListPanel({
         </div>
       ) : null}
       </section>
-      <KnowledgeNetworkObjectAuthorizeDrawer
-        networkId={networkId}
-        objectType="object_type"
-        onClose={() => setAuthorizingRecord(null)}
-        open={Boolean(authorizingRecord)}
-        record={authorizingRecord}
-      />
     </>
   );
 }
