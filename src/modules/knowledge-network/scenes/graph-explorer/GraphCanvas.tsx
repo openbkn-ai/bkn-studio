@@ -12,6 +12,7 @@ import { stringifyValue, type GEdge, type GNode } from "@/modules/knowledge-netw
 import type { DragMode, ExplorerLayout, ExplorerShape, NodePosition } from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 import { MENU_ORDER, type MenuAction } from "./constants";
+import { chainPositions } from "./chain-layout";
 import { RING_NODE_SPACING, ringPositions } from "./ring-layout";
 import styles from "./GraphCanvas.module.css";
 
@@ -111,6 +112,34 @@ class RingsLayout extends BaseLayout {
 
 register(ExtensionCategory.LAYOUT, "rings", RingsLayout);
 
+/**
+ * Each connected part on its own band, running left to right along the relations. Exploring an
+ * id list tends to produce several short chains that share no node, and a force layout scatters
+ * them; this lets a path read as a line.
+ */
+class ChainsLayout extends BaseLayout {
+  public id = "chains";
+
+  public execute(model: GraphData): Promise<GraphData> {
+    const nodes = model.nodes ?? [];
+    const edges = model.edges ?? [];
+    const points = chainPositions(
+      nodes.map((node) => String(node.id)),
+      edges.map((edge) => ({ source: String(edge.source), target: String(edge.target) })),
+    );
+    return Promise.resolve({
+      nodes: nodes.map((node) => {
+        const point = points.get(String(node.id));
+        return { ...node, style: { ...node.style, x: point?.x ?? 0, y: point?.y ?? 0 } };
+      }),
+      edges,
+      combos: model.combos ?? [],
+    });
+  }
+}
+
+register(ExtensionCategory.LAYOUT, "chains", ChainsLayout);
+
 /** Ring radius that fits `count` nodes side by side at NODE_DIAMETER plus the given gap. */
 function ringRadiusFor(count: number, gap: number = NODE_GAP): number {
   return (count * (NODE_DIAMETER + gap)) / (2 * Math.PI);
@@ -143,6 +172,8 @@ function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptio
   const stats = graph ? degreeStats(graph) : { count: 0, degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
   const clampRadius = (count: number) => Math.min(900, Math.max(180, ringRadiusFor(count)));
   switch (layout) {
+    case "chain":
+      return { type: "chains" };
     case "dagre":
       return { type: "dagre", rankdir: "TB", nodesep: 40, ranksep: 90 };
     case "radial":

@@ -232,6 +232,7 @@ export const graphExplorerPart = {
     },
     layouts: {
       force: "Force",
+      chain: "Chains",
       dagre: "Hierarchical",
       radial: "Radial",
       circular: "Circular",

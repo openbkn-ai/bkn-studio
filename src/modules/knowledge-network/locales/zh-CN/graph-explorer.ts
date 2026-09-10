@@ -232,6 +232,7 @@ export const graphExplorerPart = {
     },
     layouts: {
       force: "力导向",
+      chain: "路径",
       dagre: "层次",
       radial: "辐射",
       circular: "环形",
