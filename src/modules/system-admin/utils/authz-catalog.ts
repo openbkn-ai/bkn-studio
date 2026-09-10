@@ -29,6 +29,17 @@ export const AUTHZ_OBJECT_TYPES = [
   "skill",
 ] as const;
 
+/** Types whose concrete instances can currently be listed and selected for a new object grant. */
+export const AUTHZ_OBJECT_PICKER_TYPES = [
+  "catalog",
+  "resource",
+  "knowledge_network",
+  "operator",
+  "tool_box",
+  "mcp",
+  "skill",
+] as const;
+
 /** Type-level operations hidden by the object-grant UI because they are meaningless on concrete instances. */
 export const HIDDEN_INSTANCE_OPS = new Set(["create"]);
 
@@ -36,6 +47,12 @@ export type AuthzObjectType = (typeof AUTHZ_OBJECT_TYPES)[number];
 
 export function isAuthzObjectType(type: string): type is AuthzObjectType {
   return (AUTHZ_OBJECT_TYPES as readonly string[]).includes(type);
+}
+
+export type AuthzObjectPickerType = (typeof AUTHZ_OBJECT_PICKER_TYPES)[number];
+
+export function isAuthzObjectPickerType(type: string): type is AuthzObjectPickerType {
+  return (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type);
 }
 
 /** Object-type dropdown options ({value, label}). */

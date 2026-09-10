@@ -1550,6 +1550,17 @@
   width: 100%;
 }
 
+.createObjectPickerRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.createObjectTypeSelect,
+.createObjectSelect {
+  min-width: 0;
+}
+
 .createSummaryBox {
   display: grid;
   gap: 10px;
@@ -1673,6 +1684,12 @@
     margin-left: 0;
     padding-top: 8px;
     border-top: 1px solid var(--admin-color-border-soft);
+  }
+}
+
+@media (max-width: 720px) {
+  .createObjectPickerRow {
+    grid-template-columns: 1fr;
   }
 }
 

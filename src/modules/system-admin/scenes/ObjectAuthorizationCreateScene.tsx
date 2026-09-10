@@ -24,7 +24,11 @@ import {
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
-import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
+import {
+  AUTHZ_OBJECT_PICKER_TYPES,
+  HIDDEN_INSTANCE_OPS,
+  isAuthzObjectPickerType,
+} from "@/modules/system-admin/utils/authz-catalog";
 import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
@@ -41,6 +45,12 @@ function parseObjValue(value?: string): { objId: string; objType: string } | nul
 }
 
 const GRANT_LIST_PATH = "/system/authorizations";
+
+const OBJECT_TYPE_GROUPS = [
+  { key: "data", types: ["catalog", "resource"] },
+  { key: "knowledge", types: ["knowledge_network"] },
+  { key: "execution", types: ["operator", "tool_box", "mcp", "skill"] },
+] as const;
 
 type ObjectGrantLocationState = {
   objectGrantReturnTo?: string;
@@ -79,9 +89,19 @@ export function ObjectAuthorizationCreateScene() {
   const deepLinkedObject = parseObjValue(searchParams.get("object") ?? undefined)
     ? (searchParams.get("object") ?? undefined)
     : undefined;
-  const [objectValue, setObjectValue] = useState<string | undefined>(deepLinkedObject);
+  const deepLinkedType = parseObjValue(deepLinkedObject)?.objType;
+  const supportedDeepLinkedType = deepLinkedType && isAuthzObjectPickerType(deepLinkedType)
+    ? deepLinkedType
+    : undefined;
+  const supportedDeepLinkedObject = supportedDeepLinkedType
+    ? deepLinkedObject
+    : undefined;
+  const [objectValue, setObjectValue] = useState<string | undefined>(supportedDeepLinkedObject);
+  const [objectType, setObjectType] = useState<string | undefined>(supportedDeepLinkedType);
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
+  const [objectLoading, setObjectLoading] = useState(false);
+  const [objectLoadRevision, setObjectLoadRevision] = useState(0);
 
   const selectedObject = useMemo(() => {
     const parsed = parseObjValue(objectValue);
@@ -106,40 +126,70 @@ export function ObjectAuthorizationCreateScene() {
     return operationsForType(selectedObject.objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key));
   }, [selectedObject]);
 
-  const load = useCallback(async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [objList, userList] = await Promise.all([listAuthorizableObjects(), listUsers()]);
-      // A deep link can name an object the picker's first page never loaded. Resolve its name so the
-      // field reads like a table rather than `resource::d9pc...`, and keep it selectable.
-      const linked = parseObjValue(deepLinkedObject);
-      const alreadyListed =
-        !linked || objList.some((item) => item.type === linked.objType && item.id === linked.objId);
-      if (!alreadyListed) {
-        const [resolved] = await resolveGrantNames([
-          {
-            accessorId: "",
-            objId: linked.objId,
-            objName: linked.objId,
-            objType: linked.objType,
-            operations: [],
-          },
-        ]);
-        objList.push({ id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType });
-      }
-      setObjects(objList);
-      setUsers(userList);
+      setUsers(await listUsers());
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [deepLinkedObject]);
+  }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    if (!objectType) {
+      setObjects([]);
+      return;
+    }
+    let cancelled = false;
+    setObjectLoading(true);
+    setLoadError(null);
+    void listAuthorizableObjects(objectType)
+      .then(async (listed) => {
+        const linked = parseObjValue(deepLinkedObject);
+        const alreadyListed =
+          !linked || listed.some((item) => item.type === linked.objType && item.id === linked.objId);
+        if (linked && linked.objType === objectType && !alreadyListed) {
+          const [resolved] = await resolveGrantNames([
+            {
+              accessorId: "",
+              objId: linked.objId,
+              objName: linked.objId,
+              objType: linked.objType,
+              operations: [],
+            },
+          ]);
+          listed = [...listed, { id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType }];
+        }
+        if (!cancelled) {
+          setObjects(listed);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setObjectLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deepLinkedObject, objectLoadRevision, objectType]);
+
+  const retryLoad = () => {
+    void loadUsers();
+    setObjectLoadRevision((revision) => revision + 1);
+  };
 
   useEffect(() => {
     if (!selectedObject || !ops.length) {
@@ -155,21 +205,25 @@ export function ObjectAuthorizationCreateScene() {
     });
   }, [ops, selectedObject]);
 
-  const objectOptions = useMemo(() => {
-    const byType = new Map<string, AuthorizableObject[]>();
-    for (const obj of objects) {
-      const list = byType.get(obj.type) ?? [];
-      list.push(obj);
-      byType.set(obj.type, list);
-    }
-    return [...byType.entries()].map(([type, list]) => ({
-      label: resourceTypeLabel(type),
-      options: list.map((obj) => ({
+  const objectOptions = useMemo(
+    () =>
+      objects.map((obj) => ({
         label: obj.sub ? `${obj.name} (${obj.sub})` : obj.name,
         value: `${obj.type}::${obj.id}`,
       })),
-    }));
-  }, [objects]);
+    [objects],
+  );
+
+  const objectTypeOptions = useMemo(
+    () =>
+      OBJECT_TYPE_GROUPS.map((group) => ({
+        label: t(`systemAdmin.objectGrants.objectTypeGroups.${group.key}`),
+        options: group.types
+          .filter((type) => (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type))
+          .map((type) => ({ label: resourceTypeLabel(type), value: type })),
+      })),
+    [t],
+  );
 
   // bkn-safe accepts only user accessors on /admin/object-grants: a department id is answered with
   // 400 BknSafe.InvalidRequest, in every payload shape, and no department-scoped endpoint exists.
@@ -257,7 +311,7 @@ export function ObjectAuthorizationCreateScene() {
       {loadError ? (
         <Alert
           action={
-            <AppButton onClick={() => void load()} type="link">
+            <AppButton onClick={retryLoad} type="link">
               {t("common.retry")}
             </AppButton>
           }
@@ -279,15 +333,32 @@ export function ObjectAuthorizationCreateScene() {
                 </h3>
               </div>
               <div className={styles.createPanelBody}>
-                <Select
-                  allowClear
-                  onChange={(value) => setObjectValue(value)}
-                  optionFilterProp="label"
-                  options={objectOptions}
-                  placeholder={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
-                  showSearch
-                  value={objectValue}
-                />
+                <div className={styles.createObjectPickerRow}>
+                  <Select
+                    allowClear
+                    className={styles.createObjectTypeSelect}
+                    onChange={(value) => {
+                      setObjectType(value);
+                      setObjectValue(undefined);
+                      setOpKeys([]);
+                    }}
+                    options={objectTypeOptions}
+                    placeholder={t("systemAdmin.objectGrants.pickerObjectTypePlaceholder")}
+                    value={objectType}
+                  />
+                  <Select
+                    allowClear
+                    className={styles.createObjectSelect}
+                    disabled={!objectType}
+                    loading={objectLoading}
+                    onChange={(value) => setObjectValue(value)}
+                    optionFilterProp="label"
+                    options={objectOptions}
+                    placeholder={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
+                    showSearch
+                    value={objectValue}
+                  />
+                </div>
                 {selectedObject ? (
                   <div className={styles.createSummaryBox}>
                     <div className={styles.nameCell}>

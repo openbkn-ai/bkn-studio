@@ -267,8 +267,7 @@ export async function listAuthorizableObjects(objType?: string): Promise<Authori
   if (useMock) {
     return wait(authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })));
   }
-  const objects = await listDomainObjects();
-  return objType ? objects.filter((item) => item.type === objType) : objects;
+  return listDomainObjects(objType);
 }
 
 export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {

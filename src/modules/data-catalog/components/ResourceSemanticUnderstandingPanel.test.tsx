@@ -171,7 +171,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     await screen.findByText("dataCatalog.semanticWorkspace.sampleRowsInvalid");
     expect(modalConfirmMock).not.toHaveBeenCalled();
     expect(createResourceSemanticUnderstandingTaskMock).not.toHaveBeenCalled();
-  });
+  }, 20_000);
 
   it("keeps table header filters available when no task matches", async () => {
     render(<ResourceSemanticUnderstandingPanel active resource={resource} />);

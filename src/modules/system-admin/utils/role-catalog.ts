@@ -29,7 +29,7 @@ type RoleClassification = RoleIdentity & Pick<AdminRole, "source">;
 const BUILTIN_ROLE_FALLBACK_DESCRIPTIONS: Record<BuiltinRoleKey, string> = {
   admin: "System administrator for operations, users, and departments.",
   audit: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
-  network_builder: "Business network builder for data, knowledge, models, and execution factory assets.",
+  network_builder: "Business network builder for data, knowledge, and execution factory assets.",
   normal_user: "Regular user for viewing, querying, executing, and invoking module capabilities.",
   security: "Security administrator for roles, authorization, and account security.",
   super_admin: "Built-in hidden and controlled role with full platform permissions.",
