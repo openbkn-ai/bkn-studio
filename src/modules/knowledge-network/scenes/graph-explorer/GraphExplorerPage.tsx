@@ -55,7 +55,11 @@ import { OBJECT_TYPE_PALETTE, type MenuAction } from "./constants";
 import { GraphCanvas, type CanvasMarks, type GraphCanvasHandle } from "./GraphCanvas";
 import styles from "./GraphExplorerPage.module.css";
 import { NodeDrawer } from "./NodeDrawer";
+import { listLlmModels } from "@/modules/model-resources/services/llm.service";
+import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+
 import { buildCondition } from "./condition-builder";
+import { generateCypherFragment } from "./cypher-ai";
 import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
 import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
@@ -116,6 +120,25 @@ export function GraphExplorerScene() {
   const [lifecycleDown, setLifecycleDown] = useState(false);
   const [restored, setRestored] = useState((snapshot?.nodes.length ?? 0) > 0);
   const [detail, setDetail] = useState<KnDetail | null>(null);
+  const [llmModels, setLlmModels] = useState<{ name: string; isDefault?: boolean }[]>([]);
+
+  // Model factory LLMs for Cypher generation; an empty list hides the AI box.
+  useEffect(() => {
+    let cancelled = false;
+    listLlmModels({ page: 1, size: 100 })
+      .then((result) => {
+        if (cancelled) return;
+        const models = result.items.map((item) => ({ name: item.modelName, isDefault: item.default }));
+        models.sort((a, b) => Number(Boolean(b.isDefault)) - Number(Boolean(a.isDefault)));
+        setLlmModels(models);
+      })
+      .catch(() => {
+        if (!cancelled) setLlmModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [metaByOt, setMetaByOt] = useState<Record<string, ObjectTypeMeta>>({});
   const metaRef = useRef(metaByOt);
   metaRef.current = metaByOt;
@@ -617,6 +640,27 @@ export function GraphExplorerScene() {
     [client, detail, loadMetas, networkId, runTurn, t],
   );
 
+  const tokenProvider = useMemo<AgentTokenProvider>(
+    () => ({
+      getToken: () => runtimeConfig.auth.tokenManager.getAccessToken() ?? "",
+      refresh: () => runtimeConfig.auth.tokenManager.refreshAccessToken(),
+    }),
+    [runtimeConfig],
+  );
+
+  const handleGenerateCypher = useCallback(
+    async (question: string, modelName: string): Promise<string> => {
+      if (!detail) return "";
+      setBusy(true);
+      try {
+        return await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [base, detail, networkId, tokenProvider],
+  );
+
   const handleAddGraph = useCallback(
     (nodes: GNode[], edges: GEdge[]) => {
       void addToCanvas(nodes, edges).then((added) => {
@@ -715,6 +759,8 @@ export function GraphExplorerScene() {
         onCypher={handleCypher}
         onAddGraph={handleAddGraph}
         cypherRowLimit={CYPHER_ROW_LIMIT}
+        onGenerateCypher={llmModels.length > 0 && detail ? handleGenerateCypher : null}
+        cypherModels={llmModels}
         onAdd={handleAdd}
         canvasIds={canvasIds}
         disabled={disabled}

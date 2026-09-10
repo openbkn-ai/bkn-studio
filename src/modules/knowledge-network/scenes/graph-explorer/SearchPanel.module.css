@@ -191,6 +191,33 @@
   color: var(--color-text-secondary, #8c8c8c);
 }
 
+.aiBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--color-bg-page, #fafafa);
+}
+
+.aiMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.aiHint {
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.aiModel {
+  width: 160px;
+}
+
 .conditionActions {
   display: flex;
   justify-content: space-between;

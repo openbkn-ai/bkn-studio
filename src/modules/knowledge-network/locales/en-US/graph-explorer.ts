@@ -30,6 +30,12 @@ export const graphExplorerPart = {
       unknownLabel: "Object type \"{{label}}\" does not exist",
       unknownRelation: "Relation type \"{{relation}}\" does not exist",
       turn: "Graph explorer: Cypher query",
+      aiPlaceholder: "Describe the relationship in one sentence, e.g. which blocks does 问界M7 cite",
+      aiGenerate: "Generate with AI",
+      aiHint: "The default LLM writes a MATCH pattern from this network's object and relation types; edit it before running if needed.",
+      aiNoModel: "No LLM is available in the model factory",
+      aiEmpty: "The model did not produce a usable MATCH pattern",
+      aiModel: "Model",
     },
     browse: {
       hint: "Pick an object type and list its instances directly; choose your own starting points.",

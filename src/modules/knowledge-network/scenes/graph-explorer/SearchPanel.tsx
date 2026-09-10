@@ -43,6 +43,10 @@ export type SearchPanelProps = {
   /** Adds nodes together with the edges among them. */
   onAddGraph: (nodes: GNode[], edges: GEdge[]) => void;
   cypherRowLimit: number;
+  /** Turns a natural-language question into a MATCH fragment through the default LLM; null when no model is available. */
+  onGenerateCypher: ((question: string, modelName: string) => Promise<string>) | null;
+  /** Model factory LLMs offered for generation; the first is the default. */
+  cypherModels: { name: string; isDefault?: boolean }[];
   onAdd: (nodes: GNode[]) => void;
   canvasIds: ReadonlySet<string>;
   disabled: boolean;
@@ -146,6 +150,8 @@ export function SearchPanel({
   onCypher,
   onAddGraph,
   cypherRowLimit,
+  onGenerateCypher,
+  cypherModels,
   onAdd,
   canvasIds,
   disabled,
@@ -155,7 +161,36 @@ export function SearchPanel({
   const [tab, setTab] = useState<"semantic" | "condition" | "browse" | "cypher">("semantic");
 
   const [cypherText, setCypherText] = useState("");
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiModel, setAiModel] = useState<string | undefined>(undefined);
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [cypherRunning, setCypherRunning] = useState(false);
+
+  const effectiveAiModel = aiModel ?? cypherModels.find((model) => model.isDefault)?.name ?? cypherModels[0]?.name;
+
+  const runGenerate = async () => {
+    const question = aiQuestion.trim();
+    if (!question || disabled || !onGenerateCypher) return;
+    if (!effectiveAiModel) {
+      setCypherError(t("knowledgeNetwork.graphExplorer.cypher.aiNoModel"));
+      return;
+    }
+    setAiGenerating(true);
+    setCypherError(null);
+    try {
+      const fragment = await onGenerateCypher(question, effectiveAiModel);
+      if (!fragment) {
+        setCypherError(t("knowledgeNetwork.graphExplorer.cypher.aiEmpty"));
+        return;
+      }
+      setCypherText(fragment);
+      setCypherGraph(null);
+    } catch (error) {
+      setCypherError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAiGenerating(false);
+    }
+  };
   const [cypherError, setCypherError] = useState<string | null>(null);
   const [cypherGraph, setCypherGraph] = useState<{ nodes: GNode[]; edges: GEdge[]; rows: number } | null>(null);
 
@@ -602,6 +637,34 @@ export function SearchPanel({
   const cypherPane = (
     <div className={styles.pane}>
       <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.cypher.hint", { limit: cypherRowLimit })}</Typography.Text>
+      {onGenerateCypher ? (
+        <div className={styles.aiBox}>
+          <Input.Search
+            data-testid="graph-explorer-cypher-ai"
+            value={aiQuestion}
+            disabled={disabled || aiGenerating}
+            loading={aiGenerating}
+            enterButton={t("knowledgeNetwork.graphExplorer.cypher.aiGenerate")}
+            placeholder={t("knowledgeNetwork.graphExplorer.cypher.aiPlaceholder")}
+            onChange={(event) => setAiQuestion(event.target.value)}
+            onSearch={() => void runGenerate()}
+          />
+          <div className={styles.aiMeta}>
+            <Typography.Text type="secondary" className={styles.aiHint}>
+              {t("knowledgeNetwork.graphExplorer.cypher.aiHint")}
+            </Typography.Text>
+            {cypherModels.length > 1 ? (
+              <Select
+                size="small"
+                className={styles.aiModel}
+                value={effectiveAiModel}
+                options={cypherModels.map((model) => ({ value: model.name, label: model.name }))}
+                onChange={(value: string) => setAiModel(value)}
+              />
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <Input.TextArea
         data-testid="graph-explorer-cypher"
         value={cypherText}

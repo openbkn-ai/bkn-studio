@@ -337,6 +337,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           remaining -= slots;
           ringRadius += RING_GAP + 10;
         }
+        // Everything already on the canvas counts as an obstacle for the new ring positions.
+        const taken: [number, number][] = graph
+          .getNodeData()
+          .map((item) => [item.style?.x, item.style?.y] as [unknown, unknown])
+          .filter((pair): pair is [number, number] => typeof pair[0] === "number" && typeof pair[1] === "number");
+        const MIN_GAP = 56;
+        const clear = (x: number, y: number) => taken.every(([tx, ty]) => Math.hypot(tx - x, ty - y) >= MIN_GAP);
         let placed = 0;
         const nodeData = fresh.map((node) => {
           const kept = stored[node.id];
@@ -351,7 +358,17 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           const ring = rings[Math.min(ringIndex, rings.length - 1)];
           const angle = (2 * Math.PI * offset) / ring.slots + (ringIndex % 2) * (Math.PI / ring.slots);
           placed += 1;
-          return toNodeData(node, { x: anchor[0] + Math.cos(angle) * ring.radius, y: anchor[1] + Math.sin(angle) * ring.radius });
+          // Walk outwards along the same angle until the spot is free of existing nodes.
+          let radius = ring.radius;
+          let x = anchor[0] + Math.cos(angle) * radius;
+          let y = anchor[1] + Math.sin(angle) * radius;
+          for (let step = 0; step < 12 && !clear(x, y); step += 1) {
+            radius += RING_GAP;
+            x = anchor[0] + Math.cos(angle) * radius;
+            y = anchor[1] + Math.sin(angle) * radius;
+          }
+          taken.push([x, y]);
+          return toNodeData(node, { x, y });
         });
         const existingEdges = new Set(graph.getEdgeData().map((edge) => String(edge.id)));
         const edgeData = edges.filter((edge) => !existingEdges.has(edge.id)).map(toEdgeData);

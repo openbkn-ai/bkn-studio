@@ -30,6 +30,12 @@ export const graphExplorerPart = {
       unknownLabel: "对象类「{{label}}」不存在",
       unknownRelation: "关系类「{{relation}}」不存在",
       turn: "图探索：Cypher 查询",
+      aiPlaceholder: "用一句话描述要找的关系，例如：问界M7 引用了哪些原文块",
+      aiGenerate: "AI 生成",
+      aiHint: "由默认大模型按本网络的对象类与关系类生成 MATCH 模式，生成后可手改再运行。",
+      aiNoModel: "模型工厂里没有可用的大模型",
+      aiEmpty: "模型没有给出可用的 MATCH 模式",
+      aiModel: "模型",
     },
     browse: {
       hint: "选一个对象类，直接列出它的实例，自己挑起点。",
