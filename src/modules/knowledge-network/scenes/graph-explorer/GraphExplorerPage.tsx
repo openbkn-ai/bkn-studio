@@ -59,7 +59,7 @@ import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 
 import { buildCondition } from "./condition-builder";
-import { generateCypherFragment } from "./cypher-ai";
+import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
 import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
 import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
@@ -650,17 +650,29 @@ export function GraphExplorerScene() {
     [runtimeConfig],
   );
 
+  const cypherPromptTexts = useMemo<CypherPromptTexts>(() => {
+    const rules: unknown = t("knowledgeNetwork.graphExplorer.cypher.prompt.rules", { returnObjects: true });
+    return {
+      intro: t("knowledgeNetwork.graphExplorer.cypher.prompt.intro"),
+      rulesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.rulesHeader"),
+      rules: Array.isArray(rules) ? rules.filter((rule): rule is string => typeof rule === "string") : [],
+      propertiesLabel: t("knowledgeNetwork.graphExplorer.cypher.prompt.propertiesLabel"),
+      objectTypesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.objectTypesHeader"),
+      relationTypesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.relationTypesHeader"),
+    };
+  }, [t]);
+
   const handleGenerateCypher = useCallback(
     async (question: string, modelName: string): Promise<string> => {
       if (!detail) return "";
       setBusy(true);
       try {
-        return await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question);
+        return await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question, cypherPromptTexts);
       } finally {
         setBusy(false);
       }
     },
-    [base, detail, networkId, tokenProvider],
+    [base, cypherPromptTexts, detail, networkId, tokenProvider],
   );
 
   const handleAddGraph = useCallback(

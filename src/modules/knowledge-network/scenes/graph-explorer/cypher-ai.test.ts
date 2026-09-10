@@ -7,7 +7,16 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildCypherPrompt, extractCypherFragment, inlineMapsToWhere } from "./cypher-ai";
+import { buildCypherPrompt, extractCypherFragment, inlineMapsToWhere, type CypherPromptTexts } from "./cypher-ai";
+
+const texts: CypherPromptTexts = {
+  intro: "INTRO",
+  rulesHeader: "RULES",
+  rules: ["only MATCH", "no RETURN"],
+  propertiesLabel: "props",
+  objectTypesHeader: "OBJECTS",
+  relationTypesHeader: "RELATIONS",
+};
 
 describe("buildCypherPrompt", () => {
   it("lists object types with properties and directed relation types", () => {
@@ -17,11 +26,13 @@ describe("buildCypherPrompt", () => {
         relation_types: [{ id: "knowledge_cites_block", name: "引用原文块", sourceId: "knowledge", targetId: "block" }],
       },
       "  问界M7 引用了哪些原文块  ",
+      texts,
     );
-    expect(system).toContain("- knowledge（知识） — 抽取的知识");
-    expect(system).toContain("属性: id:string, title");
+    expect(system).toContain("- knowledge (知识) - 抽取的知识");
+    expect(system).toContain("props: id:string, title");
     expect(system).toContain("(knowledge)-[:knowledge_cites_block]->(block)");
-    expect(system).toContain("不要写 RETURN");
+    expect(system).toContain("1. only MATCH\n2. no RETURN");
+    expect(system.startsWith("INTRO\n\nRULES\n")).toBe(true);
     expect(user).toBe("问界M7 引用了哪些原文块");
   });
 });

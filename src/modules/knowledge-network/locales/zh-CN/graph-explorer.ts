@@ -36,6 +36,23 @@ export const graphExplorerPart = {
       aiNoModel: "模型工厂里没有可用的大模型",
       aiEmpty: "模型没有给出可用的 MATCH 模式",
       aiModel: "模型",
+      prompt: {
+        intro: "你是知识网络图查询助手。把用户的自然语言问题改写成一段 openCypher 的 MATCH 模式，只输出模式本身。",
+        rulesHeader: "硬性规则：",
+        rules: [
+          "只写 MATCH … 与可选的 WHERE …；绝对不要写 RETURN、ORDER BY、SKIP、LIMIT，也不要解释。",
+          "每个节点必须带变量和标签：(k:knowledge)。标签只能用下面列出的对象类 id。",
+          "关系必须带方向且只写一个关系类 id：-[:rel_id]-> 或 <-[:rel_id]-。方向以关系类定义的 source -> target 为准。",
+          "不支持变长关系（*1..3）、可选匹配、聚合、函数。WHERE 只能是 变量.属性 与字面量的 = <> < > <= >= 比较，用 AND 连接。",
+          "节点里不要写属性映射（禁止 (p:product {name: 'x'})），过滤一律放到 WHERE：(p:product) … WHERE p.name = 'x'。",
+          "属性名只能用下面列出的属性名。",
+          "= 是精确匹配，库里的名称往往是完整长名。用户只给简称时不要对名称字段写 = 过滤：优先用编码/id 类属性，或者不加过滤、只给出关系模式，让用户在画布上再筛。",
+          "只用一行或几行纯文本输出，不要 Markdown 代码块。",
+        ],
+        propertiesLabel: "属性",
+        objectTypesHeader: "对象类：",
+        relationTypesHeader: "关系类（方向为 source -> target）：",
+      },
     },
     browse: {
       hint: "选一个对象类，直接列出它的实例，自己挑起点。",

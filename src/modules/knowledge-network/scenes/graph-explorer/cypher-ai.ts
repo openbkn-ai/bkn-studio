@@ -10,39 +10,47 @@ import { generateText } from "ai";
 import { createChatModel, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
 import type { ContextLoaderEnv, KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
 
+/** Localised wording of the generation prompt; the structure is fixed, the text comes from the locale files. */
+export type CypherPromptTexts = {
+  intro: string;
+  rulesHeader: string;
+  rules: string[];
+  propertiesLabel: string;
+  objectTypesHeader: string;
+  relationTypesHeader: string;
+};
+
 /**
  * Prompt for turning a natural-language question into the MATCH / WHERE fragment the
  * explorer accepts. The schema goes in as ids with display names so the model can use
  * either; the output contract mirrors parseCypherPattern's expectations.
  */
-export function buildCypherPrompt(detail: Pick<KnDetail, "object_types" | "relation_types">, question: string): { system: string; user: string } {
+export function buildCypherPrompt(
+  detail: Pick<KnDetail, "object_types" | "relation_types">,
+  question: string,
+  texts: CypherPromptTexts,
+): { system: string; user: string } {
   const objectLines = detail.object_types.map((item) => {
     const props = (item.data_properties ?? [])
       .slice(0, 12)
       .map((property) => `${property.name}${property.type ? `:${property.type}` : ""}`)
       .join(", ");
-    return `- ${item.id}（${item.name?.trim() || item.id}）${item.comment ? ` — ${item.comment.slice(0, 80)}` : ""}${props ? `\n  属性: ${props}` : ""}`;
+    const comment = item.comment ? ` - ${item.comment.slice(0, 80)}` : "";
+    return `- ${item.id} (${item.name?.trim() || item.id})${comment}${props ? `\n  ${texts.propertiesLabel}: ${props}` : ""}`;
   });
   const relationLines = detail.relation_types.map(
-    (item) => `- ${item.id}（${item.name?.trim() || item.id}）: (${item.sourceId})-[:${item.id}]->(${item.targetId})`,
+    (item) => `- ${item.id} (${item.name?.trim() || item.id}): (${item.sourceId})-[:${item.id}]->(${item.targetId})`,
   );
   const system = [
-    "你是知识网络图查询助手。把用户的自然语言问题改写成一段 openCypher 的 MATCH 模式，只输出模式本身。",
+    texts.intro,
     "",
-    "硬性规则：",
-    "1. 只写 MATCH … 与可选的 WHERE …；绝对不要写 RETURN、ORDER BY、SKIP、LIMIT，也不要解释。",
-    "2. 每个节点必须带变量和标签：(k:knowledge)。标签只能用下面列出的对象类 id。",
-    "3. 关系必须带方向且只写一个关系类 id：-[:rel_id]-> 或 <-[:rel_id]-。方向以关系类定义的 source -> target 为准。",
-    "4. 不支持变长关系（*1..3）、可选匹配、聚合、函数。WHERE 只能是 变量.属性 与字面量的 = <> < > <= >= 比较，用 AND 连接。",
-    "4b. 节点里不要写属性映射（禁止 (p:product {name: 'x'})），过滤一律放到 WHERE：(p:product) … WHERE p.name = 'x'。",
-    "5. 属性名只能用下面列出的属性名。",
-    "6. = 是精确匹配，库里的名称往往是完整长名（如「问界M7 2024款1.5T智驾四驱Pro版6座」）。用户只给简称时不要对名称字段写 = 过滤：优先用编码/id 类属性，或者不加过滤、只给出关系模式，让用户在画布上再筛。",
-    "7. 只用一行或几行纯文本输出，不要 Markdown 代码块。",
+    texts.rulesHeader,
+    ...texts.rules.map((rule, index) => `${index + 1}. ${rule}`),
     "",
-    "对象类：",
+    texts.objectTypesHeader,
     ...objectLines,
     "",
-    "关系类（方向为 source -> target）：",
+    texts.relationTypesHeader,
     ...relationLines,
   ].join("\n");
   return { system, user: question.trim() };
@@ -119,9 +127,10 @@ export async function generateCypherFragment(
   modelName: string,
   detail: Pick<KnDetail, "object_types" | "relation_types">,
   question: string,
+  texts: CypherPromptTexts,
   signal?: AbortSignal,
 ): Promise<string> {
-  const prompt = buildCypherPrompt(detail, question);
+  const prompt = buildCypherPrompt(detail, question, texts);
   const result = await generateText({
     model: createChatModel(env, modelName, tokenProvider),
     system: prompt.system,

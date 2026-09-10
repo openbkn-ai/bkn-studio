@@ -36,6 +36,23 @@ export const graphExplorerPart = {
       aiNoModel: "No LLM is available in the model factory",
       aiEmpty: "The model did not produce a usable MATCH pattern",
       aiModel: "Model",
+      prompt: {
+        intro: "You are a knowledge-network graph query assistant. Rewrite the user's question as one openCypher MATCH pattern and output the pattern only.",
+        rulesHeader: "Hard rules:",
+        rules: [
+          "Write only MATCH … and an optional WHERE …; never write RETURN, ORDER BY, SKIP or LIMIT, and do not explain.",
+          "Every node needs a variable and a label: (k:knowledge). Labels must be object type ids from the list below.",
+          "Relationships must be directed and name exactly one relation type id: -[:rel_id]-> or <-[:rel_id]-. The direction follows the relation type's source -> target.",
+          "No variable-length relationships (*1..3), optional matches, aggregation or functions. WHERE only compares variable.property with a literal using = <> < > <= >=, joined by AND.",
+          "Do not put property maps inside nodes (never (p:product {name: 'x'})); filter in WHERE instead: (p:product) … WHERE p.name = 'x'.",
+          "Property names must come from the list below.",
+          "= is an exact match and stored names are often long full names. When the user gives a short name, do not filter the name with =: prefer code/id properties, or leave the filter out and return only the pattern so the user can narrow on the canvas.",
+          "Output plain text on one or a few lines, no Markdown code fences.",
+        ],
+        propertiesLabel: "properties",
+        objectTypesHeader: "Object types:",
+        relationTypesHeader: "Relation types (direction is source -> target):",
+      },
     },
     browse: {
       hint: "Pick an object type and list its instances directly; choose your own starting points.",
