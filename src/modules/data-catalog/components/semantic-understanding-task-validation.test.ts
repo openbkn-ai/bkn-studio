@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { isValidSemanticUnderstandingSampleRows } from "./semantic-understanding-task-validation";
+import {
+  isValidSemanticUnderstandingSampleRows,
+  parseSemanticUnderstandingSampleRowsInput,
+} from "./semantic-understanding-task-validation";
 
 describe("isValidSemanticUnderstandingSampleRows", () => {
   it.each([1, 20])("accepts valid sample row limits: %s", (value) => {
@@ -16,5 +19,17 @@ describe("isValidSemanticUnderstandingSampleRows", () => {
 
   it.each([0, 21, 30, -1, 1.5, Number.NaN, undefined])("rejects invalid sample row limits: %s", (value) => {
     expect(isValidSemanticUnderstandingSampleRows(value)).toBe(false);
+  });
+});
+
+describe("parseSemanticUnderstandingSampleRowsInput", () => {
+  it.each([
+    ["", undefined],
+    ["1", 1],
+    ["30", 30],
+    ["1.5", 1.5],
+    ["invalid", undefined],
+  ])("parses %j as %j", (input, expected) => {
+    expect(parseSemanticUnderstandingSampleRowsInput(input)).toBe(expected);
   });
 });

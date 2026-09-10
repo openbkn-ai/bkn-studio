@@ -14,3 +14,9 @@ export function isValidSemanticUnderstandingSampleRows(value: unknown): value is
     value >= MIN_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS &&
     value <= MAX_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS;
 }
+
+export function parseSemanticUnderstandingSampleRowsInput(value: string): number | undefined {
+  if (value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}

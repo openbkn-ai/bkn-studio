@@ -39,6 +39,7 @@ import {
   isValidSemanticUnderstandingSampleRows,
   MAX_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS,
   MIN_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS,
+  parseSemanticUnderstandingSampleRowsInput,
 } from "./semantic-understanding-task-validation";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -389,7 +390,8 @@ export function ResourceSemanticUnderstandingPanel({ active, resource }: { activ
             min={MIN_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS}
             onChange={() => setSampleRowsError(null)}
             onInput={(value) => {
-              form.setFieldValue("sampleMaxRows", value === "" ? undefined : Number(value));
+              const parsed = parseSemanticUnderstandingSampleRowsInput(value);
+              if (value === "" || parsed !== undefined) form.setFieldValue("sampleMaxRows", parsed);
             }}
             precision={0}
             style={{ width: "100%" }}
