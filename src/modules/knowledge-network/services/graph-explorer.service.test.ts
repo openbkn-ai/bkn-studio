@@ -34,6 +34,7 @@ import {
   type GEdge,
   type GNode,
   type ObjectTypeMeta,
+  orientEdges,
 } from "./graph-explorer.service";
 
 const supplier: ObjectTypeMeta = {
@@ -497,5 +498,28 @@ describe("friendlyError", () => {
   it("returns plain messages untouched", () => {
     expect(friendlyError(new Error("boom"))).toBe("boom");
     expect(friendlyError("text")).toBe("text");
+  });
+});
+
+describe("orientEdges", () => {
+  const relations = new Map([
+    ["rel_squads_tournament", { id: "rel_squads_tournament", sourceOtId: "squads", targetOtId: "tournaments" }],
+    ["rel_person_person", { id: "rel_person_person", sourceOtId: "person", targetOtId: "person" }],
+  ]);
+  const otOf = (id: string) => id.split("-")[0];
+  const edge = (source: string, rel: string, target: string) => ({ id: `${source}|${rel}|${target}`, source, target, relTypeId: rel, relTypeName: rel });
+
+  it("swaps an edge reported against its declared direction and rebuilds its id", () => {
+    const [out] = orientEdges([edge("tournaments-1", "rel_squads_tournament", "squads-10")], relations, otOf);
+    expect(out).toMatchObject({ id: "squads-10|rel_squads_tournament|tournaments-1", source: "squads-10", target: "tournaments-1" });
+  });
+
+  it("keeps edges already in the declared direction, self-relations and unknown relation types", () => {
+    const kept = [
+      edge("squads-10", "rel_squads_tournament", "tournaments-1"),
+      edge("person-2", "rel_person_person", "person-1"),
+      edge("tournaments-1", "rel_unknown", "squads-10"),
+    ];
+    expect(orientEdges(kept, relations, otOf)).toEqual(kept);
   });
 });

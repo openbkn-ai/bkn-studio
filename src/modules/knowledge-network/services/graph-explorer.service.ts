@@ -260,6 +260,28 @@ export function fromExploreSubgraph(payload: unknown, labelByOt: Record<string, 
   return result;
 }
 
+export type RelationTypeMeta = { id: string; sourceOtId: string; targetOtId: string };
+
+/**
+ * ontology-query reports each relation in the direction it was walked, so a hop taken against
+ * the relation's declared direction (a backward expansion, the far half of a two-sided path)
+ * arrives with source and target swapped. This puts such an edge back into its declared
+ * direction so one relation always has one id and one arrow on the canvas. Only relation types
+ * between two different object types can be told apart; self-relations are left as reported.
+ */
+export function orientEdges(
+  edges: GEdge[],
+  relations: ReadonlyMap<string, RelationTypeMeta>,
+  otOf: (nodeId: string) => string | undefined,
+): GEdge[] {
+  return edges.map((edge) => {
+    const meta = relations.get(edge.relTypeId);
+    if (!meta || meta.sourceOtId === meta.targetOtId) return edge;
+    if (otOf(edge.source) !== meta.targetOtId || otOf(edge.target) !== meta.sourceOtId) return edge;
+    return { ...edge, id: `${edge.target}|${edge.relTypeId}|${edge.source}`, source: edge.target, target: edge.source };
+  });
+}
+
 export function edgeFromRelation(relation: RelationRef): GEdge {
   return {
     id: `${relation.source_object_id}|${relation.relation_type_id}|${relation.target_object_id}`,

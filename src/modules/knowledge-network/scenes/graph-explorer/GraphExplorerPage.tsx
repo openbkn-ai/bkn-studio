@@ -32,6 +32,7 @@ import {
   knSearchInstances,
   meetInTheMiddle,
   mergeGraph,
+  orientEdges,
   needsKnSearch,
   parseRelationPaths,
   relabel,
@@ -156,6 +157,8 @@ export function GraphExplorerScene() {
   const undoRef = useRef<CanvasSnapshot[]>([]);
   /** Widest explore_subgraph path_length the backend accepted per object type in this session. */
   const hopCapRef = useRef(new Map<string, number>());
+  /** The network's definition, for the declared direction of each relation type. */
+  const detailRef = useRef<KnDetail | null>(null);
   const [undoCount, setUndoCount] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -316,7 +319,9 @@ export function GraphExplorerScene() {
       fetchKnDetail({ base, token: "", knId: networkId }, auth, undefined, turn ?? undefined),
     )
       .then((data) => {
-        if (!cancelled) setDetail(data);
+        if (cancelled) return;
+        detailRef.current = data;
+        setDetail(data);
       })
       .catch(() => {
         if (!cancelled && lifecycle.unsupported()) setLifecycleDown(true);
@@ -328,8 +333,16 @@ export function GraphExplorerScene() {
 
   /* ------------------------------ graph mutations ------------------------------ */
 
+  /** Edges as they should sit on the canvas: in each relation type's declared direction. */
+  const orient = useCallback((edges: GEdge[], nodes: GNode[]) => {
+    const relations = new Map((detailRef.current?.relation_types ?? []).map((item) => [item.id, { id: item.id, sourceOtId: item.sourceId, targetOtId: item.targetId }]));
+    const incoming = new Map(nodes.map((node) => [node.id, node.otId]));
+    return orientEdges(edges, relations, (id) => incoming.get(id) ?? nodesRef.current.get(id)?.otId);
+  }, []);
+
   const addToCanvas = useCallback(
-    async (incomingNodes: GNode[], incomingEdges: GEdge[], anchorId?: string): Promise<{ nodes: number; edges: number } | null> => {
+    async (incomingNodes: GNode[], rawEdges: GEdge[], anchorId?: string): Promise<{ nodes: number; edges: number } | null> => {
+      const incomingEdges = orient(rawEdges, incomingNodes);
       // Over the limit the batch is cut to what still fits, never refused outright: partial data on
       // the canvas beats a warning and nothing. Edges to dropped nodes fall out in mergeGraph.
       const capped = capIncomingNodes(incomingNodes, new Set(nodesRef.current.keys()), NODE_LIMIT);
@@ -349,7 +362,7 @@ export function GraphExplorerScene() {
       bump();
       return { nodes: addedNodes.length, edges: addedEdges.length };
     },
-    [assignColors, bump, message, rememberForUndo, t],
+    [assignColors, bump, message, rememberForUndo, t, orient],
   );
 
   /**
@@ -428,7 +441,7 @@ export function GraphExplorerScene() {
       const added = await addToCanvas(result.nodes, result.edges, id);
       if (added && added.nodes === 0 && added.edges === 0) message.info(t("knowledgeNetwork.graphExplorer.toast.noNeighbors"));
     },
-    [addToCanvas, client, message, networkId, runTurn, t],
+    [addToCanvas, client, labelMap, message, networkId, runTurn, t],
   );
 
   const findPath = useCallback(async () => {
@@ -498,6 +511,7 @@ export function GraphExplorerScene() {
             ? t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: value.chain.length })
             : t("knowledgeNetwork.graphExplorer.toast.pathNotFound", { hops: value.reached.a + value.reached.b }),
         rerun: { kind: "path" },
+        graph: (value) => (value.chain ? { nodes: value.nodes, edges: orient(value.chain.map(edgeFromRelation), value.nodes) } : undefined),
       },
     });
     if (!outcome) return;
@@ -511,7 +525,7 @@ export function GraphExplorerScene() {
       );
       return;
     }
-    const edges = outcome.chain.map(edgeFromRelation);
+    const edges = orient(outcome.chain.map(edgeFromRelation), outcome.nodes);
     const added = await addToCanvas(outcome.nodes, edges, start.id);
     if (added === null) return;
     setHighlight({
@@ -519,7 +533,7 @@ export function GraphExplorerScene() {
       edges: new Set(edges.map((edge) => edge.id)),
     });
     message.success(t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: outcome.chain.length }));
-  }, [addToCanvas, client, labelMap, message, networkId, pathEnd, pathStart, runTurn, t]);
+  }, [addToCanvas, client, labelMap, message, networkId, orient, pathEnd, pathStart, runTurn, t]);
 
   const removeNodes = useCallback(
     async (ids: string[]) => {
@@ -795,7 +809,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [auth, base, client, loadMetas, message, networkId, runTurn, t],
+    [auth, base, client, labelMap, loadMetas, message, networkId, runTurn, t],
   );
 
   const handleQuery = useCallback(
@@ -819,7 +833,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
   );
 
   const handleLocate = useCallback(
@@ -851,7 +865,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
   );
 
   const handleCypher = useCallback(
@@ -926,7 +940,7 @@ export function GraphExplorerScene() {
       if (!outcome) throw new Error("");
       return outcome;
     },
-    [client, detail, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
   );
 
   const tokenProvider = useMemo<AgentTokenProvider>(
@@ -1000,7 +1014,7 @@ export function GraphExplorerScene() {
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
-    [client, detail, loadMetas, networkId, runTurn, t],
+    [client, detail, labelMap, loadMetas, networkId, runTurn, t],
   );
 
   const handleSubgraphByIds = useCallback(
@@ -1081,7 +1095,7 @@ export function GraphExplorerScene() {
       if (missing > 0) message.warning(t("knowledgeNetwork.graphExplorer.browse.idsMissing", { count: missing }));
       message.success(t("knowledgeNetwork.graphExplorer.browse.idsDone", { nodes: outcome.nodes.length, edges: outcome.edges.length }));
     },
-    [addToCanvas, client, detail, loadMetas, message, networkId, runTurn, t],
+    [addToCanvas, client, detail, labelMap, loadMetas, message, networkId, runTurn, t],
   );
 
   /** Expands many nodes one hop at once: one explore_subgraph per object type with `pk in`. */
@@ -1154,7 +1168,7 @@ export function GraphExplorerScene() {
         setSearchParams(new URLSearchParams(), { replace: true });
       }
     })();
-  }, [addToCanvas, detail, expandMany, handleCypher, handleSubgraphByIds, initial.link, message, setSearchParams, t]);
+  }, [addToCanvas, detail, expandMany, handleCypher, handleSubgraphByIds, initial.link, labelMap, message, setSearchParams, t]);
 
   const handleShare = useCallback(() => {
     const base = `${window.location.origin}${window.location.pathname}`;
