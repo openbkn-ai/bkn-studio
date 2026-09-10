@@ -5,13 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CanvasEvent, Graph, GraphEvent, NodeEvent, type EdgeData, type IElementEvent, type LayoutOptions, type NodeData } from "@antv/g6";
+import { BaseLayout, CanvasEvent, ExtensionCategory, Graph, GraphEvent, NodeEvent, register, type EdgeData, type GraphData, type IElementEvent, type LayoutOptions, type NodeData } from "@antv/g6";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 import { stringifyValue, type GEdge, type GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
 import type { DragMode, ExplorerLayout, ExplorerShape, NodePosition } from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 import { MENU_ORDER, type MenuAction } from "./constants";
+import { RING_NODE_SPACING, ringPositions } from "./ring-layout";
 import styles from "./GraphCanvas.module.css";
 
 /** Visual marks layered on top of the data: path endpoints, pinned nodes, and a highlighted chain. */
@@ -89,6 +90,27 @@ const SINGLE_RING_MAX_RADIUS = 1200;
 /** Neighbours on a ring sit side by side, so they need less room than a force layout leaves. */
 const RING_GAP = 8;
 
+/**
+ * Concentric rings, registered as a layout G6 can run. The built-in circular layout draws one
+ * ring however many nodes it holds, and the concentric layout groups by degree, which puts a
+ * star's identical leaves back on a single ring; this fills rings from the inside out.
+ */
+class RingsLayout extends BaseLayout {
+  public id = "rings";
+
+  public execute(model: GraphData): Promise<GraphData> {
+    const nodes = model.nodes ?? [];
+    const points = ringPositions(nodes.length, RING_NODE_SPACING);
+    return Promise.resolve({
+      nodes: nodes.map((node, index) => ({ ...node, style: { ...node.style, x: points[index]?.x ?? 0, y: points[index]?.y ?? 0 } })),
+      edges: model.edges ?? [],
+      combos: model.combos ?? [],
+    });
+  }
+}
+
+register(ExtensionCategory.LAYOUT, "rings", RingsLayout);
+
 /** Ring radius that fits `count` nodes side by side at NODE_DIAMETER plus the given gap. */
 function ringRadiusFor(count: number, gap: number = NODE_GAP): number {
   return (count * (NODE_DIAMETER + gap)) / (2 * Math.PI);
@@ -138,11 +160,13 @@ function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptio
       // Without nodeSpacing the layout sizes the ring to the viewport and stacks the nodes on it;
       // given the node size it derives the radius from the circumference the nodes actually need.
       // One ring only while it still fits a screen: past that the ring is thousands of pixels
-      // across with an empty middle, so the nodes go into concentric rings instead.
+      // across with an empty middle, so the nodes go into concentric rings instead (see
+      // RingsLayout; the library's own concentric layout groups by degree and would not split
+      // a star's identical leaves).
       if (ringRadiusFor(stats.count, RING_GAP) <= SINGLE_RING_MAX_RADIUS) {
         return { type: "circular", nodeSize: NODE_DIAMETER, nodeSpacing: RING_GAP };
       }
-      return { type: "concentric", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: RING_GAP, sortBy: "degree" };
+      return { type: "rings" };
     case "grid":
       return { type: "grid", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "force":
