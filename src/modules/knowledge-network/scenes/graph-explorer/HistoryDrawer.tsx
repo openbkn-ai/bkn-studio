@@ -48,6 +48,7 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onClear
       ) : (
         <Collapse
           size="small"
+          className={styles.list}
           items={entries.map((entry) => ({
             key: entry.id,
             label: (

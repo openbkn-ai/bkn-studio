@@ -620,7 +620,9 @@ export function SearchPanel({
 
   const browsePane = (
     <div className={styles.pane}>
-      <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.browse.hint")}</Typography.Text>
+      <Typography.Text type="secondary" className={styles.hint}>
+        {t("knowledgeNetwork.graphExplorer.browse.hint")}
+      </Typography.Text>
       <Select
         className={styles.fullWidth}
         data-testid="graph-explorer-browse-ot"
@@ -685,7 +687,9 @@ export function SearchPanel({
 
   const cypherPane = (
     <div className={styles.pane}>
-      <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.cypher.hint", { limit: cypherRowLimit })}</Typography.Text>
+      <Typography.Text type="secondary" className={styles.hint}>
+        {t("knowledgeNetwork.graphExplorer.cypher.hint", { limit: cypherRowLimit })}
+      </Typography.Text>
       {onGenerateCypher ? (
         <div className={styles.aiBox}>
           <Input.Search

@@ -6,26 +6,31 @@
  */
 
 .head {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  grid-template-areas:
+    "time kind title"
+    "time kind summary";
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
+  row-gap: 2px;
   min-width: 0;
 }
 
 .time {
+  grid-area: time;
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--color-text-secondary, #8c8c8c);
-  flex: 0 0 auto;
 }
 
 .kind {
+  grid-area: kind;
   margin: 0;
-  flex: 0 0 auto;
 }
 
 .title {
-  flex: 1;
+  grid-area: title;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -34,9 +39,19 @@
 }
 
 .summary {
-  flex: 0 0 auto;
+  grid-area: summary;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   color: var(--color-text-secondary, #8c8c8c);
+}
+
+/* The collapse header itself must let its label shrink, or the grid never gets a bound. */
+.list :global(.ant-collapse-header-text) {
+  min-width: 0;
+  flex: 1;
 }
 
 .body {
