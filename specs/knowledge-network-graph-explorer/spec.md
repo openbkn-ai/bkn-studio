@@ -218,6 +218,7 @@ type GEdge = {
 - 入口：`/studio/graph-view.html?kn=<网络 id>&ids=<实例 id,…>[&expand=out|in|both][&layout=force|dagre|radial|circular|grid][&token=…]`。它是 Vite 的第二个页面入口（`graph-view.html` → `src/graph-view/`），随 Studio 一起构建、由同一个 nginx 直接按文件提供。
 - 令牌：`token` 查询参数 → 部署时替换的 `graph-view.config.js`（`window.__BKN_GRAPH_VIEW__ = { token }`，与 `config.js` 同一套「换文件不重建」的做法）→ 同主机上已登录 Studio 的会话 cookie。三者都没有时页面直接提示，不发请求。令牌进 URL 会留在日志与历史里，长期使用应走配置文件。
 - 行为：`get_kn_detail` 取定义 → `parseIdList` 按最长对象类前缀识别 id → `collectSubgraphByIds`（与页面「按 ID 列表取子图」共用，`query_object_instance` `pk in` 每批 50 + 每条两端都在集合内的关系类一条 `query_instance_subgraph`）→ 可选 `expandSeeds` 一跳展开（与页面批量展开共用）→ 重新布局并适配。每次调用都是受管回合（`bkn-agent-graph-view`）。
+- 画布左下角有图例：画布上每个对象类一行，色点、名称与节点数，按数量排序，超出高度可滚动。
 - 画布复用 `GraphCanvas`：右键只保留展开出/入/双向与移除（`menuActions` 属性），双击双向展开，单击右侧显示属性；顶栏有布局下拉、重新排列、适配、以及「在 Studio 中打开」（把当前节点拼成 7.3 的直达链接）。
 - 不做的事：无 Cypher、无本地缓存、无撤销/历史；标签只走后端 `_display` 链（不查 Studio 的对象类接口，因此不带固定令牌以外的第二套鉴权）。
 

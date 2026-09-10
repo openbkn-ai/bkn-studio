@@ -190,3 +190,46 @@
   padding: 4px 8px;
   overflow-wrap: anywhere;
 }
+
+.legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  max-height: 45%;
+  overflow: auto;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legendName {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendCount {
+  margin-left: auto;
+  padding-left: 8px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+

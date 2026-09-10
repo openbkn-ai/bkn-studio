@@ -201,6 +201,19 @@ export function GraphView() {
     [base, params.kn, layout, counts],
   );
 
+  /** One row per object type on the canvas, so the node colours can be read. Recomputed as the graph changes. */
+  const legend = useMemo(() => {
+    const seen = new Map<string, { name: string; count: number }>();
+    for (const node of nodesRef.current.values()) {
+      const entry = seen.get(node.otId);
+      if (entry) entry.count += 1;
+      else seen.set(node.otId, { name: node.otName || node.otId, count: 1 });
+    }
+    return [...seen].map(([otId, item]) => ({ otId, ...item })).sort((a, b) => b.count - a.count);
+    // The node map is a ref; counts is what changes when the graph does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [counts]);
+
   // The properties worth showing: the backend's own bookkeeping (_display, _instance_id, ...) is noise here.
   const shownProps = selected ? Object.entries(selected.props).filter(([key]) => !key.startsWith("_")) : [];
 
@@ -274,6 +287,17 @@ export function GraphView() {
             }}
           />
         </div>
+        {legend.length > 0 ? (
+          <div className={styles.legend} data-testid="graph-view-legend">
+            {legend.map((item) => (
+              <div key={item.otId} className={styles.legendRow} title={item.otId}>
+                <span className={styles.dot} style={{ background: colorOf(item.otId) }} />
+                <span className={styles.legendName}>{item.name}</span>
+                <span className={styles.legendCount}>{item.count}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {selected ? (
           <aside className={styles.panel} data-testid="graph-view-panel">
             <div className={styles.panelHead}>
