@@ -39,11 +39,10 @@ import {
   REST_CONTEXT_LOADER_OPS,
   buildCurl,
   buildTestData,
-  createMcpSession,
   exampleBodyText,
-  fetchMcpObjectTypes,
-  fetchKnDetail,
+  fetchKnDetailRest,
   fetchObjectInstances,
+  fetchObjectTypes,
   pickQueryableObjectType,
   requestDataAssistantKindOf,
   listMcpTools,
@@ -333,8 +332,8 @@ export function ExperienceScene({
     [authMode, appKey, runtimeConfig],
   );
   /**
-   * Managed lifecycle for the console. This is not chat: each Send Request or
-   * Fill Test Data action is one interaction. Memory store resets on refresh.
+   * Managed lifecycle for the console. This is not chat: each Send Request is one
+   * interaction, emulating an agent's managed call. Memory store resets on refresh.
    */
   const lifecycle = useMemo(
     () =>
@@ -533,15 +532,12 @@ export function ExperienceScene({
     fillControllerRef.current = controller;
     setFillingTest(true);
     try {
-      // Fetching schema/sample rows also goes through /kn/* and shares one managed interaction.
-      const fill = await withManagedTurn(
-        lifecycle,
-        t("knowledgeNetwork.contextLoaderPanel.experience.fillTestTurn", { id: op.id }),
-        async (turn) => {
+      // Schema and sample rows are helper reads over plain REST; only Send Request is a managed call.
+      const fill = await (async () => {
         const detail =
           knDetailRef.current?.knId === knId
             ? knDetailRef.current.detail
-            : await fetchKnDetail(env, tokenProvider, controller.signal, turn ?? undefined);
+            : await fetchKnDetailRest(env, tokenProvider, controller.signal);
         if (fillSequence !== fillSequenceRef.current) return null;
         knDetailRef.current = { knId, detail };
 
@@ -564,12 +560,7 @@ export function ExperienceScene({
             );
             return null;
           }
-          const objectTypes = await fetchMcpObjectTypes(
-            createMcpSession(env, tokenProvider),
-            knId,
-            [metricOwner.id],
-            turn ?? undefined,
-          );
+          const objectTypes = await fetchObjectTypes(env, [metricOwner.id], tokenProvider, controller.signal);
           if (fillSequence !== fillSequenceRef.current) return null;
           ot = objectTypes.find((item) => item.id === metricOwner.id) ?? objectTypes[0] ?? null;
           if (!ot?.related_metrics?.length) {
@@ -582,13 +573,12 @@ export function ExperienceScene({
           }
         }
         if (op.id === "query_object_instance" && ot) {
-          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider, controller.signal, turn ?? undefined);
+          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider, controller.signal);
           if (fillSequence !== fillSequenceRef.current) return null;
           sampleRow = rows[0] ?? null;
         }
         return buildTestData(op, mode, knId, detail, ot, sampleRow);
-        },
-      );
+      })();
       if (!fill || fillSequence !== fillSequenceRef.current) return;
       setBodyText(fill.body);
       setBodyError(null);
@@ -613,7 +603,7 @@ export function ExperienceScene({
         setFillingTest(false);
       }
     }
-  }, [env, op, mode, knId, message, tokenProvider, lifecycle, t]);
+  }, [env, op, mode, knId, message, tokenProvider, t]);
 
   // Whether the current op fetches by object type, controlling data-browser fill action visibility.
   const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
@@ -631,12 +621,7 @@ export function ExperienceScene({
         }
         let sampleRow: Record<string, unknown> | null = null;
         if (op.id === "query_object_instance") {
-          const rows = await withManagedTurn(
-            lifecycle,
-            t("knowledgeNetwork.contextLoaderPanel.experience.previewRowsTurn", { id: ot.id }),
-            (turn) =>
-              fetchObjectInstances(env, ot.id, 1, tokenProvider, undefined, turn ?? undefined),
-          );
+          const rows = await fetchObjectInstances(env, ot.id, 1, tokenProvider);
           sampleRow = rows[0] ?? null;
         }
         const detail = knDetailRef.current?.detail ?? { id: knId, object_types: [], concept_groups: [], relation_types: [] };
@@ -658,7 +643,7 @@ export function ExperienceScene({
         );
       }
     },
-    [env, op, mode, knId, message, tokenProvider, lifecycle, t],
+    [env, op, mode, knId, message, tokenProvider, t],
   );
 
   // Data-browser relation card fills relation_type_paths for query_instance_subgraph.

@@ -7,7 +7,7 @@
 
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
-import { REST_PREFIX, restPost, type BknCallScope, type ContextLoaderEnv, type McpAuth, type McpSession, type McpToolCallResult } from "./context-loader.service";
+import { REST_PREFIX, restPost, type ContextLoaderEnv, type McpAuth } from "./context-loader.service";
 
 /* ============================ Graph model ============================ */
 
@@ -599,7 +599,6 @@ export async function collectSubgraphByIds(
   metas: Record<string, ObjectTypeMeta>,
   relations: RelationEnds[],
   labelByOt: Record<string, string>,
-  scope: BknCallScope | null,
 ): Promise<CollectedSubgraph> {
   const byOt = new Map<string, string[]>();
   for (const item of items) byOt.set(item.otId, [...(byOt.get(item.otId) ?? []), item.key]);
@@ -615,7 +614,7 @@ export async function collectSubgraphByIds(
     const pk = pkOf(otId);
     for (let start = 0; start < keys.length; start += ID_BATCH) {
       const chunk = keys.slice(start, start + ID_BATCH).map((key) => keyValueFor(metas[otId], key));
-      const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length, scope);
+      const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length);
       (instances[otId] ??= []).push(payload);
       nodes.push(...fromQueryObjectInstance(metas[otId], payload, labelByOt[otId]));
     }
@@ -635,7 +634,7 @@ export async function collectSubgraphByIds(
   const pathPayloads: unknown[] = [];
   const collect = async (group: SubgraphPath[]): Promise<boolean> => {
     try {
-      const payload = await client.queryInstanceSubgraph(group, scope);
+      const payload = await client.queryInstanceSubgraph(group);
       pathPayloads.push(payload);
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
       for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
@@ -666,7 +665,6 @@ export async function expandSeeds(
   metas: Record<string, ObjectTypeMeta>,
   direction: ExpandDirection,
   labelByOt: Record<string, string>,
-  scope: BknCallScope | null,
 ): Promise<CollectedSubgraph> {
   const byOt = new Map<string, GNode[]>();
   for (const node of seeds) byOt.set(node.otId, [...(byOt.get(node.otId) ?? []), node]);
@@ -686,12 +684,12 @@ export async function expandSeeds(
       if (meta && meta.primaryKeys.length === 1) {
         const pk = meta.primaryKeys[0];
         const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-        collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
+        collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }));
         continue;
       }
       for (const node of list) {
         const condition = identityCondition(node.identity);
-        if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+        if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }));
       }
     } catch (error) {
       failed.push({ objectType: meta?.name ?? otId, error: friendlyError(error) });
@@ -709,31 +707,38 @@ export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[
 export type CypherResult = { columns: { name: string; type?: string }[]; entries: Record<string, unknown>[] };
 
 
-/* ============================ MCP calls ============================ */
+/* ============================ REST calls ============================ */
 
-function readPayload(result: McpToolCallResult, tool: string): Rec {
-  if (!result.ok || result.isError || result.rpcError) {
-    throw new Error(result.rpcError?.message || result.text || `${tool} failed`);
-  }
-  let payload: unknown = result.structured;
-  if (!isRecord(payload)) {
-    try {
-      payload = parsePrecisionSafeJSON(result.text);
-    } catch {
-      throw new Error(`${tool} did not return JSON`);
-    }
+/**
+ * Posts to one Context Loader capability route and returns its JSON object. These are page
+ * clicks, not agent turns, so no bkn_context is sent: the capability surface runs such a call
+ * ad hoc without opening an interaction. Query-string parameters come first so the URL reads
+ * the way the route expects them (kn_id / ot_id), then response_format.
+ */
+async function postCapability(
+  env: ContextLoaderEnv,
+  auth: McpAuth | undefined,
+  tool: string,
+  query: Record<string, string>,
+  body: Rec,
+): Promise<Rec> {
+  const base = env.base.replace(/\/+$/, "");
+  const params = new URLSearchParams({ ...query, response_format: "json" });
+  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/${tool}?${params.toString()}`, body);
+  const text = await response.text();
+  if (!response.ok) throw new Error(text || `${tool} failed (${response.status})`);
+  let payload: unknown;
+  try {
+    payload = parsePrecisionSafeJSON(text);
+  } catch {
+    throw new Error(`${tool} did not return JSON`);
   }
   if (!isRecord(payload)) throw new Error(`${tool} did not return an object`);
-  // Some tools wrap the business payload under `data`.
+  // Some routes wrap the business payload under `data`.
   if (isRecord(payload.data) && !("nodes" in payload) && !("datas" in payload) && !("objects" in payload)) {
     return payload.data;
   }
   return payload;
-}
-
-function withContext(args: Rec, scope?: BknCallScope | null): Rec {
-  const context = scope?.nextContext();
-  return context ? { ...args, bkn_context: context } : args;
 }
 
 export type ExploreRequest = {
@@ -767,7 +772,7 @@ export const DEFAULT_SEARCH_OPTIONS: Required<SearchOptions> = {
 /**
  * Fusion knobs of the semantic instance recall. search_instance does not accept them; they
  * live in kn_search's retrieval_config.semantic_instance_retrieval, so any non-default value
- * routes the search through REST /kn/kn_search instead of the MCP tool.
+ * routes the search through /kn/kn_search instead of /kn/search_instance.
  */
 export type RrfOptions = {
   enableRrfFusion: boolean;
@@ -830,23 +835,15 @@ export function buildKnSearchBody(knId: string, query: string, options: SearchOp
   };
 }
 
-/** Runs kn_search over REST with the managed context and returns its payload (nodes + object_types). */
+/** Runs kn_search over REST and returns its payload (nodes + object_types). */
 export async function knSearchInstances(
   env: ContextLoaderEnv,
   auth: McpAuth | undefined,
   query: string,
   options: SearchOptions,
   rrf: RrfOptions,
-  scope?: BknCallScope | null,
 ): Promise<Rec> {
-  const base = env.base.replace(/\/+$/, "");
-  const body = withContext(buildKnSearchBody(env.knId, query, options, rrf), scope);
-  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/kn_search`, body);
-  const text = await response.text();
-  if (!response.ok) throw new Error(text || `kn_search failed (${response.status})`);
-  const payload = parsePrecisionSafeJSON(text);
-  if (!isRecord(payload)) throw new Error("kn_search did not return an object");
-  return payload;
+  return postCapability(env, auth, "kn_search", {}, buildKnSearchBody(env.knId, query, options, rrf));
 }
 
 export type SubgraphPathNode = { id: string; condition?: KnCondition; limit?: number };
@@ -857,80 +854,67 @@ export type SubgraphPath = {
 };
 
 export type GraphExplorerClient = {
-  loadObjectTypes(ids: string[], scope?: BknCallScope | null): Promise<ObjectTypeMeta[]>;
+  loadObjectTypes(ids: string[]): Promise<ObjectTypeMeta[]>;
   /** query_instance_subgraph over explicit relation-type paths; returns the raw payload with `entries`. */
-  queryInstanceSubgraph(paths: SubgraphPath[], scope?: BknCallScope | null): Promise<Rec>;
-  searchInstances(query: string, scope?: BknCallScope | null, options?: SearchOptions): Promise<Rec>;
-  queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
-  exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
+  queryInstanceSubgraph(paths: SubgraphPath[]): Promise<Rec>;
+  searchInstances(query: string, options?: SearchOptions): Promise<Rec>;
+  queryInstances(otId: string, condition: KnCondition | null, limit: number, offset?: number): Promise<Rec>;
+  exploreSubgraph(request: ExploreRequest): Promise<Rec>;
   /** run_cypher: the network's own Cypher surface, compiled server-side into one read-only query. */
-  runCypher(query: string, scope?: BknCallScope | null): Promise<CypherResult>;
+  runCypher(query: string): Promise<CypherResult>;
 };
 
-export function createGraphExplorerClient(session: McpSession, knId: string): GraphExplorerClient {
+/** Graph explorer calls over Context Loader's REST capability routes for the network in `env.knId`. */
+export function createGraphExplorerClient(env: ContextLoaderEnv, auth: McpAuth | undefined): GraphExplorerClient {
+  const knId = env.knId;
+  const post = (tool: string, query: Record<string, string>, body: Rec) => postCapability(env, auth, tool, query, body);
   return {
-    async loadObjectTypes(ids, scope) {
+    async loadObjectTypes(ids) {
       if (ids.length === 0) return [];
-      const result = await session.callTool(
-        "get_object_types",
-        withContext({ kn_id: knId, ids, response_format: "json" }, scope),
-      );
-      const payload = readPayload(result, "get_object_types");
+      const payload = await post("get_object_types", {}, { kn_id: knId, ids });
       const list = Array.isArray(payload.object_types) ? payload.object_types : [];
       return list.map(objectTypeMetaFrom).filter((meta): meta is ObjectTypeMeta => meta !== null);
     },
-    async queryInstanceSubgraph(paths, scope) {
-      const result = await session.callTool(
-        "query_instance_subgraph",
-        withContext({ kn_id: knId, relation_type_paths: paths, response_format: "json" }, scope),
-      );
-      return readPayload(result, "query_instance_subgraph");
+    queryInstanceSubgraph(paths) {
+      return post("query_instance_subgraph", { kn_id: knId }, { relation_type_paths: paths });
     },
-    async searchInstances(query, scope, options = {}) {
+    searchInstances(query, options = {}) {
       const merged = mergeSearchOptions(options);
-      const args: Rec = { kn_id: knId, query, max_instances_per_type: merged.maxInstancesPerType, response_format: "json" };
-      if (merged.objectTypes.length > 0) args.object_types = merged.objectTypes;
-      if (merged.excludeObjectTypes.length > 0) args.exclude_object_types = merged.excludeObjectTypes;
-      if (merged.conceptGroups.length > 0) args.concept_groups = merged.conceptGroups;
+      const body: Rec = { kn_id: knId, query, max_instances_per_type: merged.maxInstancesPerType };
+      if (merged.objectTypes.length > 0) body.object_types = merged.objectTypes;
+      if (merged.excludeObjectTypes.length > 0) body.exclude_object_types = merged.excludeObjectTypes;
+      if (merged.conceptGroups.length > 0) body.concept_groups = merged.conceptGroups;
       // The cap is strict: pinned object types must never be cut off by it.
       const maxObjectTypes = Math.max(merged.maxObjectTypes, merged.objectTypes.length);
-      if (maxObjectTypes !== DEFAULT_SEARCH_OPTIONS.maxObjectTypes) args.max_object_types = maxObjectTypes;
-      if (merged.rerank) args.rerank = true;
-      const result = await session.callTool("search_instance", withContext(args, scope));
-      return readPayload(result, "search_instance");
+      if (maxObjectTypes !== DEFAULT_SEARCH_OPTIONS.maxObjectTypes) body.max_object_types = maxObjectTypes;
+      if (merged.rerank) body.rerank = true;
+      return post("search_instance", {}, body);
     },
-    async queryInstances(otId, condition, limit, scope, offset = 0) {
-      const args: Rec = { kn_id: knId, ot_id: otId, limit, response_format: "json" };
-      if (condition) args.condition = condition;
-      if (offset > 0) args.offset = offset;
-      const result = await session.callTool("query_object_instance", withContext(args, scope));
-      return readPayload(result, "query_object_instance");
+    queryInstances(otId, condition, limit, offset = 0) {
+      const body: Rec = { limit };
+      if (condition) body.condition = condition;
+      if (offset > 0) body.offset = offset;
+      return post("query_object_instance", { kn_id: knId, ot_id: otId }, body);
     },
-    async runCypher(query, scope) {
-      const result = await session.callTool("run_cypher", withContext({ kn_id: knId, query, response_format: "json" }, scope));
-      const payload = readPayload(result, "run_cypher");
+    async runCypher(query) {
+      const payload = await post("run_cypher", {}, { kn_id: knId, query });
       const columns = Array.isArray(payload.columns)
         ? payload.columns.filter(isRecord).map((column) => ({ name: stringifyValue(column.name), type: typeof column.type === "string" ? column.type : undefined }))
         : [];
       return { columns, entries: Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [] };
     },
-    async exploreSubgraph(request, scope) {
-      const result = await session.callTool(
+    exploreSubgraph(request) {
+      return post(
         "explore_subgraph",
-        withContext(
-          {
-            kn_id: knId,
-            source_object_type_id: request.sourceOtId,
-            direction: request.direction,
-            path_length: request.pathLength,
-            condition: request.condition,
-            limit: request.limit ?? 1,
-            response_format: "json",
-          },
-          scope,
-        ),
+        { kn_id: knId },
+        {
+          source_object_type_id: request.sourceOtId,
+          direction: request.direction,
+          path_length: request.pathLength,
+          condition: request.condition,
+          limit: request.limit ?? 1,
+        },
       );
-      return readPayload(result, "explore_subgraph");
     },
   };
 }
