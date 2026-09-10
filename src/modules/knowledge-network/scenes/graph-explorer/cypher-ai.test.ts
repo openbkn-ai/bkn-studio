@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildCypherPrompt, extractCypherFragment } from "./cypher-ai";
+import { buildCypherPrompt, extractCypherFragment, inlineMapsToWhere } from "./cypher-ai";
 
 describe("buildCypherPrompt", () => {
   it("lists object types with properties and directed relation types", () => {
@@ -33,5 +33,15 @@ describe("extractCypherFragment", () => {
     );
     expect(extractCypherFragment("MATCH (p:product) LIMIT 5;")).toBe("MATCH (p:product)");
     expect(extractCypherFragment("(p:product)")).toBe("(p:product)");
+  });
+
+  it("moves inline property maps into the WHERE clause", () => {
+    expect(inlineMapsToWhere("MATCH (p:product {name: '问界M7'})<-[:knowledge_about_product]-(k:knowledge)")).toBe(
+      "MATCH (p:product)<-[:knowledge_about_product]-(k:knowledge)\nWHERE p.name = '问界M7'",
+    );
+    expect(inlineMapsToWhere("MATCH (p:product {name: 'a, b', seats: 5})-[:r]->(k:knowledge) WHERE k.title <> ''")).toBe(
+      "MATCH (p:product)-[:r]->(k:knowledge) WHERE p.name = 'a, b' AND p.seats = 5 AND k.title <> ''",
+    );
+    expect(inlineMapsToWhere("MATCH (p:product)")).toBe("MATCH (p:product)");
   });
 });

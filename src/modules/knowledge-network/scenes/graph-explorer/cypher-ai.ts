@@ -34,8 +34,10 @@ export function buildCypherPrompt(detail: Pick<KnDetail, "object_types" | "relat
     "2. 每个节点必须带变量和标签：(k:knowledge)。标签只能用下面列出的对象类 id。",
     "3. 关系必须带方向且只写一个关系类 id：-[:rel_id]-> 或 <-[:rel_id]-。方向以关系类定义的 source -> target 为准。",
     "4. 不支持变长关系（*1..3）、可选匹配、聚合、函数。WHERE 只能是 变量.属性 与字面量的 = <> < > <= >= 比较，用 AND 连接。",
+    "4b. 节点里不要写属性映射（禁止 (p:product {name: 'x'})），过滤一律放到 WHERE：(p:product) … WHERE p.name = 'x'。",
     "5. 属性名只能用下面列出的属性名。",
-    "6. 只用一行或几行纯文本输出，不要 Markdown 代码块。",
+    "6. = 是精确匹配，库里的名称往往是完整长名（如「问界M7 2024款1.5T智驾四驱Pro版6座」）。用户只给简称时不要对名称字段写 = 过滤：优先用编码/id 类属性，或者不加过滤、只给出关系模式，让用户在画布上再筛。",
+    "7. 只用一行或几行纯文本输出，不要 Markdown 代码块。",
     "",
     "对象类：",
     ...objectLines,
@@ -54,7 +56,61 @@ export function extractCypherFragment(text: string): string {
   const start = body.search(/\bMATCH\b/i);
   if (start > 0) body = body.slice(start);
   body = body.replace(/\b(RETURN|ORDER\s+BY|SKIP|LIMIT)\b[\s\S]*$/i, "").trim();
-  return body.replace(/;+\s*$/, "").trim();
+  return inlineMapsToWhere(body.replace(/;+\s*$/, "").trim());
+}
+
+/**
+ * Rewrites `(v:Label {a: 'x', b: 2})` into `(v:Label)` plus `v.a = 'x' AND v.b = 2` in the WHERE
+ * clause. Models reach for the inline form even when told not to, and the backend subset only
+ * accepts WHERE comparisons.
+ */
+export function inlineMapsToWhere(fragment: string): string {
+  const conditions: string[] = [];
+  const stripped = fragment.replace(/\(\s*([A-Za-z_]\w*)\s*:\s*([^\s{)]+)\s*\{([^}]*)\}\s*\)/g, (_match, variable: string, label: string, body: string) => {
+    for (const pair of splitTopLevel(body)) {
+      const colon = pair.indexOf(":");
+      if (colon < 0) continue;
+      const key = pair.slice(0, colon).trim().replace(/^[`'"]|[`'"]$/g, "");
+      const value = pair.slice(colon + 1).trim();
+      if (key && value) conditions.push(`${variable}.${key} = ${value}`);
+    }
+    return `(${variable}:${label})`;
+  });
+  if (conditions.length === 0) return stripped;
+  const where = /\bWHERE\b/i.exec(stripped);
+  if (where) {
+    const head = stripped.slice(0, where.index + where[0].length);
+    const tail = stripped.slice(where.index + where[0].length).trim();
+    return `${head} ${conditions.join(" AND ")}${tail ? ` AND ${tail}` : ""}`;
+  }
+  return `${stripped}\nWHERE ${conditions.join(" AND ")}`;
+}
+
+/** Splits `a: 'x, y', b: 2` on commas that are outside quotes. */
+function splitTopLevel(text: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let quote: string | null = null;
+  for (const char of text) {
+    if (quote) {
+      current += char;
+      if (char === quote) quote = null;
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ",") {
+      if (current.trim()) parts.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
 }
 
 export async function generateCypherFragment(

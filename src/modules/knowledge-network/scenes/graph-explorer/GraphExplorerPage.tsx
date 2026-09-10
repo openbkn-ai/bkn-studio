@@ -173,7 +173,7 @@ export function GraphExplorerScene() {
   /* ------------------------------ managed turns ------------------------------ */
 
   const runTurn = useCallback(
-    async <T,>(question: string, run: (turn: BknTurn | null) => Promise<T>): Promise<T | undefined> => {
+    async <T,>(question: string, run: (turn: BknTurn | null) => Promise<T>, rethrow = false): Promise<T | undefined> => {
       setBusy(true);
       try {
         const value = await withManagedTurn(lifecycle, question, run);
@@ -181,6 +181,8 @@ export function GraphExplorerScene() {
         return value;
       } catch (error) {
         if (lifecycle.unsupported()) setLifecycleDown(true);
+        // Panels with their own error area ask for the readable message instead of a toast.
+        if (rethrow) throw new Error(friendlyError(error));
         message.error(friendlyError(error));
         return undefined;
       } finally {
@@ -633,7 +635,7 @@ export function GraphExplorerScene() {
           }
         }
         return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length };
-      });
+      }, true);
       if (!outcome) throw new Error("");
       return outcome;
     },
