@@ -204,6 +204,7 @@ type BackendResource = {
   category?: string;
   column_count?: number;
   description?: string;
+  enabled?: boolean;
   id: string;
   index_config?: BackendIndexConfig | null;
   last_discover_status?: string;
@@ -287,6 +288,7 @@ function mapResource(item: BackendResource): CatalogResource {
     category: normalizeCategory(item.category, item.logic_type),
     sourceIdentifier: item.source_identifier ?? "",
     description: item.description ?? "",
+    enabled: item.enabled ?? true,
     schema: (item.schema_definition ?? []).map(mapSchemaField),
     indexConfig: mapIndexConfigFromBackend(item.index_config),
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
@@ -539,6 +541,8 @@ export async function updateCatalogResource(
     catalog_id: input.catalogId,
     category: input.category,
     description: input.description,
+    // Vega treats a missing `enabled` as `false` and answers 409 when that differs from the stored state.
+    ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
     name: input.name,
     schema_definition: input.schema.map(mapSchemaFieldUpdateToBackend),
     index_config: mapIndexConfigToBackend(input.indexConfig),

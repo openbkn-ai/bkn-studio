@@ -1250,7 +1250,7 @@ function knDetailFromMcpPayload(payload: unknown, fallbackId: string): KnDetail 
  * Fetches knowledge-network detail for the data browser and test-data fill.
  */
 /** REST POST with fresh Bearer injection and one retry after 401. */
-async function restPost(
+export async function restPost(
   env: ContextLoaderEnv,
   auth: McpAuth | undefined,
   url: string,

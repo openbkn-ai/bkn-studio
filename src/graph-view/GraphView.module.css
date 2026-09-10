@@ -1,0 +1,124 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.control select,
+.header button {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.header button:hover,
+.control select:hover {
+  border-color: #2563eb;
+}
+
+.header a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.notes {
+  padding: 4px 12px;
+  background: #fffbeb;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+}
+
+.error {
+  padding: 8px 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  border-bottom: 1px solid #fecaca;
+}
+
+.body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.canvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.panel {
+  width: 300px;
+  overflow: auto;
+  border-left: 1px solid #e5e7eb;
+  padding: 10px 12px;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.panel dl {
+  display: grid;
+  grid-template-columns: minmax(80px, 40%) 1fr;
+  gap: 4px 8px;
+  margin: 0;
+}
+
+.panel dt {
+  color: #6b7280;
+  overflow-wrap: anywhere;
+}
+
+.panel dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

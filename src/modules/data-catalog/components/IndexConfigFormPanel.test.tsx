@@ -142,6 +142,7 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => {
       expect(updateCatalogResourceMock).toHaveBeenCalledWith("resource-1", expect.objectContaining({
         description: semanticResource.description,
+        enabled: true,
         expectedUpdateTime: semanticResource.expectedUpdateTime,
         name: semanticResource.name,
         schema: [expect.objectContaining({

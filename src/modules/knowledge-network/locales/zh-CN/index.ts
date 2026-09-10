@@ -14,6 +14,7 @@ import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
+import { graphExplorerPart } from "./graph-explorer";
 import { knDiffPart } from "./kn-diff";
 
 export const knowledgeNetworkZhCN = {
@@ -27,6 +28,7 @@ export const knowledgeNetworkZhCN = {
     ...metricPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
+    ...graphExplorerPart,
     ...knDiffPart,
   },
 } as const;

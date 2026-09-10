@@ -1,0 +1,79 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px 10px;
+  min-height: 40px;
+  overflow: visible;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-surface, #fff);
+  flex-wrap: wrap;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+}
+
+/* Every control in the bar is the antd "small" height so one row lines up. */
+.group :global(.ant-space-item) {
+  display: flex;
+  align-items: center;
+  height: 24px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+
+.select {
+  width: 104px;
+}
+
+.selectWide {
+  width: 150px;
+}
+
+/* Count badges hang over the top-right corner; keep them off the next control. */
+.group :global(.ant-badge) {
+  margin-right: 4px;
+}
+
+.divider {
+  height: 20px;
+  margin: 0 2px;
+}
+
+.pathTag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  margin: 0;
+  padding: 0 8px;
+  line-height: 22px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pathTag :global(.ant-tag-close-icon) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stats {
+  font-size: 12px;
+}

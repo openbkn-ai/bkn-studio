@@ -6,6 +6,7 @@
  */
 
 import {
+  ApartmentOutlined,
   ApiOutlined,
   ClockCircleOutlined,
   CopyOutlined,
@@ -22,7 +23,7 @@ import { Empty, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useHref, useNavigate } from "react-router-dom";
 
 import { formatNumber } from "@/framework/i18n/format";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -67,6 +68,7 @@ export function WorkspaceOverviewSection({
 }: WorkspaceOverviewSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const graphExplorerHref = useHref(`/knowledge-network/workspace/${networkId}/graph-explorer`);
   const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   // Judged on the record's own operations, not on a platform permission point. bkn-backend writes
@@ -178,6 +180,13 @@ export function WorkspaceOverviewSection({
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>
           <div className={styles.overviewHeaderTitleRight}>
+            <AppButton
+              data-testid="open-graph-explorer"
+              icon={<ApartmentOutlined />}
+              onClick={() => window.open(graphExplorerHref, "_blank", "noopener,noreferrer")}
+            >
+              {t("knowledgeNetwork.graphExplorer.openAction")}
+            </AppButton>
             {canAuthorize ? (
               <AppButton
                 disabled={!detail}

@@ -61,6 +61,8 @@ export type CatalogResource = {
   /** Field count from a detail schema or list summary; null when the list response omits it. */
   columnCount: number | null;
   description: string;
+  /** Access state reported by Vega. Resource updates must echo it back: the backend rejects a PUT whose `enabled` differs. */
+  enabled?: boolean;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
@@ -93,6 +95,8 @@ export type ResourceCreateInput = {
   catalogId: string;
   category: ResourceCategory;
   description: string;
+  /** Echo the current access state on update; omit only when the caller has no resource detail. */
+  enabled?: boolean;
   indexConfig?: ResourceIndexConfig;
   name: string;
   schema: ResourceSchemaField[];

@@ -356,6 +356,10 @@ export const dataCatalogEnUS = {
         "This resource already has an active build task. Wait for it to finish or stop it before saving config or starting a new build.",
       configConflict:
         "An active build task blocks index config updates. Stop the task, then save again.",
+      configRefreshInProgress:
+        "A metadata refresh is in progress and blocks index config updates. Wait for it to finish, then save again.",
+      configStale:
+        "Someone else changed this resource, so this save was not applied. Reload the page and save again.",
       startRejected:
         "Could not start this task (config may have changed, or a newer successful build exists). Save the latest config under Configure Index, then create a new build.",
       created: "Build task created: {{id}}",
