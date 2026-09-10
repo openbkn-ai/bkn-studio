@@ -116,14 +116,17 @@ export function buildInstanceId(otId: string, primaryKeys: string[], identity: R
 
 /**
  * Label resolution chain: an explicit label property first, then
- * `_display` → `display_name` → `name` → `title` → `description` → `text_clean` → `text`
- * → `id` → first non-system property → node id.
+ * `_display` → `display_name` → `name` → `title` → `topic` → `description` → `text_clean`
+ * → `text` → `id` → first non-system property → node id.
+ *
+ * `topic` sits with the titles: rows such as benchmark items carry no name, and their topic is
+ * the short heading while the description is a sentence or more.
  *
  * `text_clean` comes before `text` because a network that carries both keeps the tidied wording
  * in the former and the raw extraction, markup and all, in the latter. Names are matched without
  * regard to case, since one network writes `Title` where another writes `title`.
  */
-const LABEL_CHAIN = [DISPLAY, "display_name", "name", "title", "description", "text_clean", "text", "id"];
+const LABEL_CHAIN = [DISPLAY, "display_name", "name", "title", "topic", "description", "text_clean", "text", "id"];
 
 export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): string {
   if (labelKey && nonEmpty(props[labelKey])) return asString(props[labelKey]);

@@ -542,6 +542,9 @@ describe("pickDisplay", () => {
     expect(pickDisplay({ title: "标题", text_clean: "正文" }, "a-1")).toBe("标题");
     expect(pickDisplay({ description: "说明", text_clean: "正文" }, "a-1")).toBe("说明");
     expect(pickDisplay({ title: "标题", description: "说明" }, "a-1")).toBe("标题");
+    expect(pickDisplay({ topic: "主题", description: "说明", text_clean: "正文" }, "a-1")).toBe("主题");
+    expect(pickDisplay({ title: "标题", topic: "主题" }, "a-1")).toBe("标题");
+    expect(pickDisplay({ Topic: "主题", Description: "说明" }, "a-1")).toBe("主题");
     expect(pickDisplay({ text_clean: "正文", note: "别的" }, "a-1", "note")).toBe("别的");
   });
 
