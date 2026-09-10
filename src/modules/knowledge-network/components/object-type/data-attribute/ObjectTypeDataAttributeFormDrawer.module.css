@@ -11,6 +11,168 @@
   justify-content: flex-end;
 }
 
+.maskRuleSection {
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 12px;
+  margin: 18px 0 14px;
+  padding: 16px;
+}
+
+.maskRuleHeading {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.maskRuleHeading h3 {
+  color: var(--color-text-primary);
+  font-size: 15px;
+  line-height: 22px;
+  margin: 0;
+}
+
+.maskRuleHeading p {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  margin: 4px 0 0;
+}
+
+.maskRuleGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.emailMaskRuleGrid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  margin-bottom: 10px;
+}
+
+.maskRuleTypeField {
+  margin-bottom: 14px;
+}
+
+.maskRuleFields {
+  margin-top: 2px;
+}
+
+.maskRuleFields :global(.ant-form-item) {
+  margin-bottom: 12px;
+}
+
+.maskRuleFields > :global(.ant-form-item:last-child),
+.maskRuleGrid :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.maskRuleGrid :global(.ant-input-number) {
+  width: 100%;
+}
+
+.maskRuleInlineField :global(.ant-form-item-row) {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: max-content minmax(64px, 1fr);
+}
+
+.maskRuleInlineField :global(.ant-form-item-label) {
+  overflow: visible;
+  padding: 0;
+}
+
+.maskRuleInlineField :global(.ant-form-item-label > label) {
+  height: auto;
+  white-space: nowrap;
+}
+
+.maskRuleInlineField :global(.ant-form-item-control) {
+  min-width: 0;
+}
+
+.maskPreview {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 58%),
+    var(--color-bg-layout);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 10px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.maskPreviewHeading,
+.maskPreviewRow {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+
+.maskPreviewHeading {
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.maskPreviewHeading > :last-child {
+  justify-self: end;
+}
+
+.maskPreviewReady,
+.maskPreviewPending {
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.maskPreviewReady {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.maskPreviewPending {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.maskPreviewRow {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.maskPreviewRow strong {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  overflow-wrap: anywhere;
+}
+
+.maskPreview p {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 520px) {
+  .maskRuleGrid {
+    gap: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .emailMaskRuleGrid {
+    margin-bottom: 0;
+  }
+
+  .maskRuleGrid :global(.ant-form-item) {
+    margin-bottom: 12px;
+  }
+}
+
 .switchGroup {
   margin-top: 8px;
 }

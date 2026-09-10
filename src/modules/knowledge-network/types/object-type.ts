@@ -71,11 +71,48 @@ export type ObjectTypeResourceField = {
   type: string;
 };
 
+export type ObjectTypeFixedMaskRule = {
+  kind: "fixed";
+  replacement: string;
+};
+
+export type ObjectTypePartialMaskRule = {
+  keepEnd: number;
+  keepStart: number;
+  kind: "partial";
+  replacement: string;
+};
+
+export type ObjectTypeEmailMaskRule = {
+  kind: "email";
+  localKeepStart: number;
+  preserveDomain: boolean;
+  replacement: string;
+};
+
+export type ObjectTypeRoundMaskRule = {
+  kind: "round";
+  step: number;
+};
+
+export type ObjectTypeDateGranularityMaskRule = {
+  granularity: "year" | "month" | "day" | "hour";
+  kind: "date_granularity";
+};
+
+export type ObjectTypeMaskRule =
+  | ObjectTypeFixedMaskRule
+  | ObjectTypePartialMaskRule
+  | ObjectTypeEmailMaskRule
+  | ObjectTypeRoundMaskRule
+  | ObjectTypeDateGranularityMaskRule;
+
 export type ObjectTypeDataProperty = {
   comment?: string;
   displayKey: boolean;
   displayName: string;
   incrementalKey: boolean;
+  maskRule?: ObjectTypeMaskRule;
   mappedField?: ObjectTypeMappedField;
   name: string;
   primaryKey: boolean;

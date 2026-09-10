@@ -27,7 +27,6 @@ import {
   getObjectTypeProxyReadFailureTranslationKeys,
   type ObjectTypeProxyReadFailure,
 } from "@/modules/knowledge-network/utils/object-type-proxy-read-error";
-import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
@@ -194,7 +193,6 @@ export function ObjectTypeDetailScene() {
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [propertyType, setPropertyType] = useState<"data" | "logic">("data");
   const [keyword, setKeyword] = useState("");
   const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
@@ -2029,8 +2027,12 @@ export function ObjectTypeDetailScene() {
               },
               {
                 key: "authorize",
-                label: t("knowledgeNetwork.authorizeAction"),
-                onClick: () => setAuthorizeOpen(true),
+                label: t("knowledgeNetwork.propertyAuthorizationAction"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization`,
+                  );
+                },
                 operation: "authorize",
               },
               {
@@ -2081,13 +2083,6 @@ export function ObjectTypeDetailScene() {
           </section>
         </div>
       </KnowledgeNetworkResourceConfigShell>
-      <KnowledgeNetworkObjectAuthorizeDrawer
-        networkId={networkId}
-        objectType="object_type"
-        onClose={() => setAuthorizeOpen(false)}
-        open={authorizeOpen}
-        record={detail}
-      />
     </>
   );
 }

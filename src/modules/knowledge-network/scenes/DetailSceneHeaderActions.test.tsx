@@ -197,12 +197,17 @@ describe("knowledge network detail scene headers", () => {
     expect(await screen.findByText("Order")).not.toBeNull();
     expect(screen.getByTestId("detail-shell").dataset.loading).toBe("false");
     expect(screen.getByText("common.edit")).not.toBeNull();
-    expect(screen.getByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.propertyAuthorizationAction")).not.toBeNull();
     expect(screen.getByText("common.delete")).not.toBeNull();
 
     fireEvent.click(screen.getByText("common.edit"));
     expect(mocks.navigate).toHaveBeenCalledWith(
       "/knowledge-network/workspace/network-1/object-types/object-1/edit",
+    );
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.propertyAuthorizationAction"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/knowledge-network/workspace/network-1/object-types/object-1/authorization",
     );
 
     fireEvent.click(screen.getByText("common.delete"));

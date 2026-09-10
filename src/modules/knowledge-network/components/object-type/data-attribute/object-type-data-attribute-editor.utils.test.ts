@@ -427,6 +427,23 @@ describe("areDataPropertiesEqual", () => {
 
     expect(areDataPropertiesEqual(left, right)).toBe(false);
   });
+
+  it("returns false when the mask rule changes", () => {
+    const left = [
+      createProperty({
+        maskRule: { kind: "partial", keepStart: 3, keepEnd: 2, replacement: "*" },
+        name: "mobile",
+      }),
+    ];
+    const right = [
+      createProperty({
+        maskRule: { kind: "partial", keepStart: 3, keepEnd: 4, replacement: "*" },
+        name: "mobile",
+      }),
+    ];
+
+    expect(areDataPropertiesEqual(left, right)).toBe(false);
+  });
 });
 
 describe("areDataSourcesEqual", () => {

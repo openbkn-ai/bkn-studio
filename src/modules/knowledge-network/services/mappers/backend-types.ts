@@ -64,6 +64,17 @@ export type BackendDataProperty = {
     type?: string;
   };
   name: string;
+  mask_rule?:
+    | { kind: "fixed"; replacement: string }
+    | { kind: "partial"; keep_start: number; keep_end: number; replacement: string }
+    | {
+        kind: "email";
+        local_keep_start: number;
+        preserve_domain: boolean;
+        replacement: string;
+      }
+    | { kind: "round"; step: number }
+    | { kind: "date_granularity"; granularity: "year" | "month" | "day" | "hour" };
   original_name?: string;
   type?: string;
 };

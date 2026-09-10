@@ -23,6 +23,7 @@ import type {
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
+  ObjectTypeMaskRule,
   ObjectTypeSmallModel,
   RelationTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -126,6 +127,9 @@ export function mapDataProperty(
     displayKey: name === meta.displayKey,
     displayName,
     incrementalKey: false,
+    maskRule: item.mask_rule
+      ? mapMaskRuleFromBackend(item.mask_rule)
+      : undefined,
     mappedField: item.mapped_field
       ? {
           displayName: item.mapped_field.display_name ?? item.mapped_field.name ?? "",
@@ -137,6 +141,55 @@ export function mapDataProperty(
     primaryKey: meta.primaryKeys.includes(name),
     type: item.type ?? "string",
   };
+}
+
+function mapMaskRuleFromBackend(
+  rule: NonNullable<BackendDataProperty["mask_rule"]>,
+): ObjectTypeMaskRule {
+  switch (rule.kind) {
+    case "partial":
+      return {
+        keepEnd: rule.keep_end,
+        keepStart: rule.keep_start,
+        kind: rule.kind,
+        replacement: rule.replacement,
+      };
+    case "email":
+      return {
+        kind: rule.kind,
+        localKeepStart: rule.local_keep_start,
+        preserveDomain: rule.preserve_domain,
+        replacement: rule.replacement,
+      };
+    default:
+      return rule;
+  }
+}
+
+function mapMaskRuleToBackend(
+  rule: ObjectTypeMaskRule | undefined,
+): BackendDataProperty["mask_rule"] {
+  if (!rule) {
+    return undefined;
+  }
+  switch (rule.kind) {
+    case "partial":
+      return {
+        keep_end: rule.keepEnd,
+        keep_start: rule.keepStart,
+        kind: rule.kind,
+        replacement: rule.replacement,
+      };
+    case "email":
+      return {
+        kind: rule.kind,
+        local_keep_start: rule.localKeepStart,
+        preserve_domain: rule.preserveDomain,
+        replacement: rule.replacement,
+      };
+    default:
+      return rule;
+  }
 }
 
 export function mapLogicProperty(item: BackendLogicProperty): ObjectTypeLogicProperty {
@@ -198,6 +251,7 @@ export function toBackendDataProperty(property: ObjectTypeDataProperty): Backend
   return {
     comment: property.comment,
     display_name: property.displayName,
+    mask_rule: mapMaskRuleToBackend(property.maskRule),
     mapped_field: property.mappedField
       ? {
           display_name: property.mappedField.displayName,

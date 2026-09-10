@@ -21,6 +21,7 @@ import {
   MetricDetailPage,
   MetricEditPage,
   ObjectTypeCreatePage,
+  ObjectTypeAuthorizationPage,
   ObjectTypeDetailPage,
   ObjectTypeEditPage,
   RelationTypeCreatePage,
@@ -220,6 +221,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       titleKey: "knowledgeNetwork.objectTypeDetailTitle",
     },
     <ObjectTypeDetailPage />,
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization",
+    {
+      descriptionKey: "knowledgeNetwork.propertyAuthorizationDescription",
+      titleKey: "knowledgeNetwork.propertyAuthorizationAction",
+    },
+    <ObjectTypeAuthorizationPage />,
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/relation-types/create",

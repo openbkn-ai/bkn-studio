@@ -353,6 +353,7 @@ export function areDataPropertiesEqual(
       item.name === other.name &&
       item.primaryKey === other.primaryKey &&
       item.type === other.type &&
+      JSON.stringify(item.maskRule) === JSON.stringify(other.maskRule) &&
       areMappedFieldsEqual(item.mappedField, other.mappedField)
     );
   });
