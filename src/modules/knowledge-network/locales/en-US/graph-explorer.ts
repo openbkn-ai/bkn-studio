@@ -149,6 +149,7 @@ export const graphExplorerPart = {
       relayout: "Rearrange",
       undo: "Undo last step (Ctrl/⌘+Z)",
       export: "Export image (PNG)",
+      share: "Copy link (opens with this canvas)",
       history: "Call history",
       collapseSidebar: "Collapse sidebar",
       expandSidebar: "Expand sidebar",
@@ -186,7 +187,12 @@ export const graphExplorerPart = {
     },
     toast: {
       noNeighbors: "This node has no neighbours in that direction",
-      pathNotFound: "Not connected within 3 hops",
+      pathNotFound: "Not connected within {{hops}} hops",
+      pathNotFoundLimited: "Explored only {{a}} hops from the start and {{b}} from the end, still not connected (wider queries were refused by the backend)",
+      expandSeedsCapped: "At most {{limit}} nodes are expanded at once; the rest were skipped",
+      linkCopied: "Link copied ({{count}} nodes)",
+      linkTruncated: "The link carries only the first {{limit}} nodes; {{dropped}} were left out",
+      deepLinkApplied: "Subgraph restored from the link",
       pathFound: "Found a {{hops}}-hop path",
       pathNeedBoth: "Set both a start and an end node from the context menu first",
       limitReached: "The canvas has reached the limit of {{limit}} nodes; remove some first",
@@ -212,6 +218,7 @@ export const graphExplorerPart = {
       output: "Output",
       copy: "Copy",
       rerun: "Run again",
+      sendToCanvas: "Send to canvas",
       kinds: {
         search: "Semantic search",
         query: "Filter query",
@@ -244,6 +251,8 @@ export const graphExplorerPart = {
       expand: "Graph explorer: expand {{label}}",
       path: "Graph explorer: find path",
       schema: "Graph explorer: load object type definitions",
+      enrich: "Graph explorer: fetch properties for {{count}} instances",
+      expandMany: "Graph explorer: expand {{count}} nodes",
     },
     restore: {
       clear: "Clear",

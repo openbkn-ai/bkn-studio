@@ -52,6 +52,12 @@ export type HistoryEntry = {
   summary: string;
   /** Data needed to run the same call again, when the entry supports it. */
   rerun?: { kind: "expand"; id: string; direction: "forward" | "backward" | "bidirectional" } | { kind: "path" };
+  /**
+   * The subgraph this call produced, kept so it can be put on the canvas again later without
+   * re-running the call — a result that was reviewed and dismissed, or one from before an undo.
+   * Absent when the call produced no graph (a path search, a failed call).
+   */
+  graph?: { nodes: GNode[]; edges: GEdge[] };
 };
 
 export const HISTORY_LIMIT = 100;

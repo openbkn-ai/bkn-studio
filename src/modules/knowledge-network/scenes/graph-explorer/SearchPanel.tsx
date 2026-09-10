@@ -653,6 +653,21 @@ export function SearchPanel({
         {t("knowledgeNetwork.graphExplorer.browse.load")}
       </Button>
       {browseError ? <Alert className={styles.alert} type="error" showIcon message={browseError} /> : null}
+      {/* Above the candidate list: pasting a list of ids is a starting point, not a refinement of the rows below. */}
+      <div className={styles.aiBox}>
+        <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.browse.idsTitle")}</Typography.Text>
+        <Input.TextArea
+          data-testid="graph-explorer-ids"
+          value={idsText}
+          disabled={disabled}
+          autoSize={{ minRows: 3, maxRows: 8 }}
+          placeholder={t("knowledgeNetwork.graphExplorer.browse.idsPlaceholder")}
+          onChange={(event) => setIdsText(event.target.value)}
+        />
+        <Button type="primary" data-testid="graph-explorer-ids-run" loading={idsRunning} disabled={disabled || !idsText.trim()} onClick={() => void runIds()}>
+          {t("knowledgeNetwork.graphExplorer.browse.idsRun")}
+        </Button>
+      </div>
       <Spin spinning={browsing}>
         <ResultList
           nodes={browseResults}
@@ -668,20 +683,6 @@ export function SearchPanel({
           {t("knowledgeNetwork.graphExplorer.browse.more")}
         </Button>
       ) : null}
-      <div className={styles.aiBox}>
-        <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.browse.idsTitle")}</Typography.Text>
-        <Input.TextArea
-          data-testid="graph-explorer-ids"
-          value={idsText}
-          disabled={disabled}
-          autoSize={{ minRows: 3, maxRows: 8 }}
-          placeholder={t("knowledgeNetwork.graphExplorer.browse.idsPlaceholder")}
-          onChange={(event) => setIdsText(event.target.value)}
-        />
-        <Button type="primary" data-testid="graph-explorer-ids-run" loading={idsRunning} disabled={disabled || !idsText.trim()} onClick={() => void runIds()}>
-          {t("knowledgeNetwork.graphExplorer.browse.idsRun")}
-        </Button>
-      </div>
     </div>
   );
 

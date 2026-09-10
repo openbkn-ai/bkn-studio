@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CopyOutlined, RedoOutlined } from "@ant-design/icons";
+import { CopyOutlined, RedoOutlined, SendOutlined } from "@ant-design/icons";
 import { Button, Collapse, Drawer, Empty, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +19,8 @@ export type HistoryDrawerProps = {
   onClose: () => void;
   onCopy: (text: string) => void;
   onRerun: (entry: HistoryEntry) => void;
+  /** Puts the entry's recorded subgraph on the canvas again, without re-running the call. */
+  onSendToCanvas: (entry: HistoryEntry) => void;
   onClear: () => void;
 };
 
@@ -28,7 +30,7 @@ function formatTime(at: number): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onClear }: HistoryDrawerProps) {
+export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendToCanvas, onClear }: HistoryDrawerProps) {
   const { t } = useTranslation();
   return (
     <Drawer
@@ -70,6 +72,11 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onClear
                 <div className={styles.sectionHead}>
                   <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.history.input")}</Typography.Text>
                   <span className={styles.actions}>
+                    {entry.graph && entry.graph.nodes.length > 0 ? (
+                      <Button size="small" type="primary" ghost icon={<SendOutlined />} data-testid="graph-explorer-history-send" onClick={() => onSendToCanvas(entry)}>
+                        {t("knowledgeNetwork.graphExplorer.history.sendToCanvas")}
+                      </Button>
+                    ) : null}
                     {entry.rerun ? (
                       <Button size="small" icon={<RedoOutlined />} onClick={() => onRerun(entry)}>
                         {t("knowledgeNetwork.graphExplorer.history.rerun")}

@@ -149,6 +149,7 @@ export const graphExplorerPart = {
       relayout: "重新排列",
       undo: "撤销上一步（Ctrl/⌘+Z）",
       export: "导出图片（PNG）",
+      share: "复制链接（打开即还原当前画布）",
       history: "执行历史",
       collapseSidebar: "收起左栏",
       expandSidebar: "展开左栏",
@@ -186,7 +187,12 @@ export const graphExplorerPart = {
     },
     toast: {
       noNeighbors: "该节点在此方向没有邻居",
-      pathNotFound: "3 跳内不连通",
+      pathNotFound: "{{hops}} 跳内不连通",
+      pathNotFoundLimited: "起点侧只探到 {{a}} 跳、终点侧 {{b}} 跳，仍不连通（更远的查询被后端拒绝）",
+      expandSeedsCapped: "一次最多展开 {{limit}} 个节点，其余未展开",
+      linkCopied: "链接已复制（{{count}} 个节点）",
+      linkTruncated: "链接只带了前 {{limit}} 个节点，{{dropped}} 个未包含",
+      deepLinkApplied: "已按链接还原子图",
       pathFound: "找到 {{hops}} 跳路径",
       pathNeedBoth: "请先在右键菜单里指定起点和终点",
       limitReached: "画布节点已达 {{limit}} 个上限，请先移除部分节点",
@@ -212,6 +218,7 @@ export const graphExplorerPart = {
       output: "输出",
       copy: "复制",
       rerun: "重跑",
+      sendToCanvas: "发送到画布",
       kinds: {
         search: "语义搜索",
         query: "条件查询",
@@ -244,6 +251,8 @@ export const graphExplorerPart = {
       expand: "图探索：展开 {{label}}",
       path: "图探索：查找路径",
       schema: "图探索：加载对象类定义",
+      enrich: "图探索：补全 {{count}} 个实例的属性",
+      expandMany: "图探索：批量展开 {{count}} 个节点",
     },
     restore: {
       clear: "清除",

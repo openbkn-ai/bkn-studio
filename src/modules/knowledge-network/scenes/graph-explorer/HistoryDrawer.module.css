@@ -7,6 +7,8 @@
 
 .head {
   display: grid;
+  width: 100%;
+  max-width: 100%;
   grid-template-columns: max-content max-content minmax(0, 1fr);
   grid-template-areas:
     "time kind title"
@@ -48,10 +50,18 @@
   color: var(--color-text-secondary, #8c8c8c);
 }
 
-/* The collapse header itself must let its label shrink, or the grid never gets a bound. */
+/* The collapse header itself must let its label shrink, or the grid never gets a bound. antd
+   gives the label `flex: auto`, whose implicit min-width is the content's own width — a long
+   Cypher title then pushes past the drawer instead of getting the ellipsis. `flex: 1 1 0` plus
+   min-width: 0 and overflow: hidden is what actually bounds it. */
+.list :global(.ant-collapse-header) {
+  min-width: 0;
+}
+
 .list :global(.ant-collapse-header-text) {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0;
+  overflow: hidden;
 }
 
 .body {
