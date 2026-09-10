@@ -10,6 +10,7 @@ import {
   CompressOutlined,
   DeleteOutlined,
   HistoryOutlined,
+  LinkOutlined,
   MenuFoldOutlined,
   MinusCircleOutlined,
   MenuUnfoldOutlined,
@@ -61,6 +62,7 @@ export type ExplorerToolbarProps = {
   undoCount: number;
   onUndo: () => void;
   onExport: () => void;
+  onShare: () => void;
   historyCount: number;
   onToggleHistory: () => void;
   /** Concept groups exist on this network, so grouping can be offered. */
@@ -106,6 +108,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
     undoCount,
     onUndo,
     onExport,
+    onShare,
     historyCount,
     onToggleHistory,
     canGroup,
@@ -175,6 +178,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         <Tag
           color="green"
           className={styles.pathTag}
+          title={pathStart?.display}
           closable={pathStart !== null}
           onClose={(event) => {
             event.preventDefault();
@@ -186,6 +190,7 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         <Tag
           color="red"
           className={styles.pathTag}
+          title={pathEnd?.display}
           closable={pathEnd !== null}
           onClose={(event) => {
             event.preventDefault();
@@ -225,6 +230,9 @@ export function ExplorerToolbar(props: ExplorerToolbarProps) {
         </Tooltip>
         <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.export")}>
           <Button size="small" data-testid="graph-explorer-export" icon={<PictureOutlined />} disabled={nodeCount === 0} onClick={onExport} />
+        </Tooltip>
+        <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.share")}>
+          <Button size="small" data-testid="graph-explorer-share" icon={<LinkOutlined />} disabled={nodeCount === 0} onClick={onShare} />
         </Tooltip>
         <Tooltip title={t("knowledgeNetwork.graphExplorer.toolbar.history")}>
           <Badge count={historyCount} size="small" offset={[-2, 2]} overflowCount={99} color="#8c8c8c">

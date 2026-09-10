@@ -14,7 +14,9 @@ import {
   buildKnSearchBody,
   capIncomingNodes,
   edgesAmong,
+  effectiveLabelsFrom,
   keyValueFor,
+  meetInTheMiddle,
   needsKnSearch,
   parseIdList,
   createGraphExplorerClient,
@@ -257,6 +259,32 @@ describe("shortestChainTo", () => {
   it("returns null when the target is unreachable or equals the start", () => {
     expect(shortestChainTo(paths, "ot_supplier-42", "ot_missing")).toBeNull();
     expect(shortestChainTo(paths, "ot_supplier-42", "ot_supplier-42")).toBeNull();
+  });
+});
+
+describe("meetInTheMiddle", () => {
+  const rel = (id: string, s: string, t: string) => ({ relation_type_id: id, relation_type_name: id, source_object_id: s, target_object_id: t });
+  it("joins a chain from each side at the first shared node, keeping relation directions", () => {
+    const fromA = [{ relations: [rel("r1", "A", "T")] }];
+    const fromB = [{ relations: [rel("r2", "B", "T")] }];
+    expect(meetInTheMiddle(fromA, "A", fromB, "B")).toEqual([rel("r1", "A", "T"), rel("r2", "B", "T")]);
+  });
+  it("prefers the shortest total and handles a direct hit from B's side", () => {
+    const fromA = [{ relations: [rel("r1", "A", "X"), rel("r2", "X", "Y"), rel("r3", "Y", "Z")] }];
+    const fromB = [{ relations: [rel("r4", "B", "Z")] }, { relations: [rel("r5", "B", "A")] }];
+    expect(meetInTheMiddle(fromA, "A", fromB, "B")).toEqual([rel("r5", "B", "A")]);
+  });
+  it("returns null when the explorations never touch", () => {
+    expect(meetInTheMiddle([{ relations: [rel("r", "A", "X")] }], "A", [{ relations: [rel("r", "B", "Y")] }], "B")).toBeNull();
+    expect(meetInTheMiddle([], "A", [], "A")).toBeNull();
+  });
+});
+
+describe("effectiveLabelsFrom", () => {
+  it("takes the display key per type and lets the user override it", () => {
+    const metas = { a: { id: "a", name: "a", primaryKeys: ["k"], properties: [], displayKey: "title" }, b: { id: "b", name: "b", primaryKeys: ["k"], properties: [] } };
+    expect(effectiveLabelsFrom(metas, { b: "code", a: "name" })).toEqual({ a: "name", b: "code" });
+    expect(effectiveLabelsFrom(metas, {})).toEqual({ a: "title" });
   });
 });
 

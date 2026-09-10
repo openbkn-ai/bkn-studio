@@ -80,19 +80,72 @@ function truncate(text: string): string {
   return text.length > LABEL_MAX ? `${text.slice(0, LABEL_MAX - 1)}…` : text;
 }
 
-function layoutOptions(layout: ExplorerLayout): LayoutOptions {
+const NODE_DIAMETER = 64;
+const NODE_GAP = 24;
+/** Ring radius that fits `count` nodes side by side at NODE_DIAMETER + NODE_GAP. */
+function ringRadiusFor(count: number): number {
+  return (count * (NODE_DIAMETER + NODE_GAP)) / (2 * Math.PI);
+}
+
+/** Degree per node and the busiest node, read from the current graph data. */
+function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string | null; maxDegree: number } {
+  const degree = new Map<string, number>();
+  for (const edge of graph.getEdgeData()) {
+    degree.set(String(edge.source), (degree.get(String(edge.source)) ?? 0) + 1);
+    degree.set(String(edge.target), (degree.get(String(edge.target)) ?? 0) + 1);
+  }
+  let hubId: string | null = null;
+  let maxDegree = 0;
+  for (const [id, value] of degree) {
+    if (value > maxDegree) {
+      maxDegree = value;
+      hubId = id;
+    }
+  }
+  return { degree, hubId, maxDegree };
+}
+
+/**
+ * Layout options tuned for the shapes exploration produces: stars with one hub and dozens of
+ * leaves, and batches of unrelated instances. Edge length grows with the busier endpoint's
+ * degree so a hub's leaves get a ring they fit on; radial takes the same radius per level.
+ */
+function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptions {
+  const stats = graph ? degreeStats(graph) : { degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
+  const clampRadius = (count: number) => Math.min(900, Math.max(180, ringRadiusFor(count)));
   switch (layout) {
     case "dagre":
       return { type: "dagre", rankdir: "TB", nodesep: 40, ranksep: 90 };
     case "radial":
-      return { type: "radial", unitRadius: 140, preventOverlap: true, nodeSize: 64, nodeSpacing: 24 };
+      return {
+        type: "radial",
+        unitRadius: clampRadius(stats.maxDegree),
+        focusNode: stats.hubId ?? undefined,
+        preventOverlap: true,
+        strictRadial: false,
+        maxPreventOverlapIteration: 300,
+        nodeSize: NODE_DIAMETER,
+        nodeSpacing: NODE_GAP,
+      };
     case "circular":
       return { type: "circular" };
     case "grid":
-      return { type: "grid", preventOverlap: true, nodeSize: 64, nodeSpacing: 24 };
+      return { type: "grid", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "force":
     default:
-      return { type: "force", preventOverlap: true, nodeSize: 64, nodeSpacing: 24, linkDistance: 180 };
+      // d3-force: a real 2D simulation. Collide keeps nodes apart, link length follows the
+      // busier endpoint's degree, and a weak link strength lets collide push a crowded ring
+      // outwards into shells instead of stacking leaves.
+      return {
+        type: "d3-force",
+        link: {
+          distance: (edge: { source: string; target: string }) => clampRadius(Math.max(stats.degree.get(String(edge.source)) ?? 0, stats.degree.get(String(edge.target)) ?? 0)),
+          strength: 0.3,
+        },
+        manyBody: { strength: -160, distanceMax: 700 },
+        collide: { radius: NODE_DIAMETER / 2 + NODE_GAP / 2, strength: 1, iterations: 3 },
+        alphaDecay: 0.03,
+      };
   }
 }
 
@@ -134,7 +187,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   // Linked drag: neighbours of the dragged node (not themselves dragged) and how much they follow.
   const linkedDragRef = useRef<{ anchor: string; last: [number, number]; followers: Map<string, number> } | null>(null);
   const comboFor = (otId: string): string | undefined => groupingRef.current?.comboByOt[otId];
-  const activeLayout = (): LayoutOptions => (groupingRef.current ? COMBO_LAYOUT : layoutOptions(layoutRef.current));
+  const activeLayout = (): LayoutOptions => (groupingRef.current ? COMBO_LAYOUT : layoutOptions(layoutRef.current, graphRef.current));
 
   const readPositions = useCallback((): Record<string, NodePosition> => {
     const graph = graphRef.current;
@@ -257,7 +310,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           labelAutoRotate: true,
         },
       },
-      layout: layoutOptions(layout),
+      layout: layoutOptions(layout, null),
       // Empty-canvas drag pans, wheel zooms; shift+click or shift+drag selects several nodes,
       // and dragging one selected node moves the whole selection.
       behaviors: [
@@ -506,7 +559,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       },
       setLayout(layout) {
         layoutRef.current = layout;
-        graphRef.current?.setLayout(groupingRef.current ? COMBO_LAYOUT : layoutOptions(layout));
+        graphRef.current?.setLayout(groupingRef.current ? COMBO_LAYOUT : layoutOptions(layout, graphRef.current));
       },
       async setShape(shape) {
         await readyRef.current;

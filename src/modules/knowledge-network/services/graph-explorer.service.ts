@@ -41,6 +41,8 @@ export type ObjectTypeMeta = {
   name: string;
   primaryKeys: string[];
   properties: PropertyMeta[];
+  /** Display property configured on the object type definition (bkn-backend), when known. */
+  displayKey?: string;
 };
 
 export type ExpandDirection = "forward" | "backward" | "bidirectional";
@@ -316,6 +318,51 @@ export function shortestChainTo(paths: RelationPath[], startId: string, targetId
   return best;
 }
 
+/** Shortest relation chain from `start` to every node its paths reach; `start` itself maps to []. */
+function chainsFrom(paths: RelationPath[], start: string): Map<string, RelationRef[]> {
+  const best = new Map<string, RelationRef[]>([[start, []]]);
+  for (const path of paths) {
+    for (let index = 0; index < path.relations.length; index += 1) {
+      const relation = path.relations[index];
+      const prefix = path.relations.slice(0, index + 1);
+      for (const id of [relation.source_object_id, relation.target_object_id]) {
+        const known = best.get(id);
+        if (!known || prefix.length < known.length) best.set(id, prefix);
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Joins two explorations, one from each endpoint, at a shared node. explore_subgraph caps a
+ * single walk at three hops; meeting in the middle finds paths up to twice that. The chain is
+ * ordered start → meeting node → end; every relation keeps its own direction.
+ */
+export function meetInTheMiddle(pathsA: RelationPath[], a: string, pathsB: RelationPath[], b: string): RelationRef[] | null {
+  if (!a || !b || a === b) return null;
+  const fromA = chainsFrom(pathsA, a);
+  const fromB = chainsFrom(pathsB, b);
+  let best: RelationRef[] | null = null;
+  for (const [node, chainA] of fromA) {
+    const chainB = fromB.get(node);
+    if (!chainB) continue;
+    const joined = [...chainA, ...[...chainB].reverse()];
+    if (joined.length === 0) continue;
+    if (!best || joined.length < best.length) best = joined;
+  }
+  return best;
+}
+
+/** Display keys from object type definitions, overridden by the user's per-type label choice. */
+export function effectiveLabelsFrom(metas: Record<string, ObjectTypeMeta>, overrides: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [id, meta] of Object.entries(metas)) {
+    if (meta.displayKey) out[id] = meta.displayKey;
+  }
+  return { ...out, ...overrides };
+}
+
 /**
  * Merges incoming nodes and edges into the canvas maps in place. Edges are only kept when
  * both endpoints are present after the merge, so a dangling relation never produces a
@@ -551,6 +598,8 @@ export type ExploreRequest = {
   condition: KnCondition;
   direction: ExpandDirection;
   pathLength: number;
+  /** Start-instance cap; explore_subgraph pages the start set, not the paths. Defaults to 1. */
+  limit?: number;
 };
 
 /** Tunables of search_instance exposed in the semantic tab; empty lists and defaults are omitted from the call. */
@@ -713,7 +762,7 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
             direction: request.direction,
             path_length: request.pathLength,
             condition: request.condition,
-            limit: 1,
+            limit: request.limit ?? 1,
             response_format: "json",
           },
           scope,
