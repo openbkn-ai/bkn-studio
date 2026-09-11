@@ -17,14 +17,11 @@ import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network
 import type { MetricDataQuerySceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import {
   getKnowledgeNetworkMetric,
-  getKnowledgeNetworkObjectTypeDetail,
-  listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import { toMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
+import { toPublishedMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
 
 import styles from "./MetricDetailScene.module.css";
 
@@ -42,7 +39,6 @@ export function MetricDataQueryScene({
   const metricId = metricIdProp ?? params.metricId ?? "";
   const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
-  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,22 +55,9 @@ export function MetricDataQueryScene({
       setError(null);
 
       try {
-        const [metricResult, objectTypeResult] = await Promise.all([
-          getKnowledgeNetworkMetric(networkId, metricId),
-          listKnowledgeNetworkObjectTypes(networkId),
-        ]);
+        const metricResult = await getKnowledgeNetworkMetric(networkId, metricId);
         setDetail(metricResult);
-        setObjectTypes(objectTypeResult);
-
-        if (metricResult?.scopeType === "object_type" && metricResult.scopeRef) {
-          const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
-            networkId,
-            metricResult.scopeRef,
-          );
-          setPropertyOptions(toMetricPropertyOptions(objectTypeDetail?.dataProperties ?? []));
-        } else {
-          setPropertyOptions([]);
-        }
+        setPropertyOptions(metricResult ? toPublishedMetricPropertyOptions(metricResult) : []);
       } catch (nextError) {
         setError(extractRequestErrorMessage(nextError));
       } finally {
@@ -116,7 +99,7 @@ export function MetricDataQueryScene({
         metricId={detail.id}
         metricName={detail.name}
         networkId={networkId}
-        objectTypes={objectTypes}
+        objectTypes={[]}
         propertyOptions={propertyOptions}
       />
     </KnowledgeNetworkResourceConfigShell>

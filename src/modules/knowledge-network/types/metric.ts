@@ -113,14 +113,23 @@ export type MetricTimeDimension = {
   property: string;
 };
 
+export type MetricDependencyProperty = {
+  comment?: string;
+  displayName?: string;
+  name: string;
+  type?: string;
+};
+
 export type KnowledgeNetworkMetricRecord = {
   calculationFormula: MetricCalculationFormula;
+  dependencyProperties?: MetricDependencyProperty[];
   description: string;
   id: string;
   metricType: KnowledgeNetworkMetricType;
   name: string;
   operations?: string[];
   scopeRef: string;
+  scopeName?: string;
   scopeType: KnowledgeNetworkMetricScopeType;
   tags: string[];
   timeDimension?: MetricTimeDimension;

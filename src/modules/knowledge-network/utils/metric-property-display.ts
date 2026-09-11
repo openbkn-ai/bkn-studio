@@ -12,8 +12,26 @@ import {
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   ActionTypeCondition,
+  KnowledgeNetworkMetricRecord,
   ObjectTypeDataProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
+
+export function toPublishedMetricPropertyOptions(
+  metric: KnowledgeNetworkMetricRecord,
+): RelationTypePropertyOption[] {
+  if (metric.dependencyProperties?.length) {
+    return metric.dependencyProperties.map((property) => ({
+      comment: property.comment,
+      displayName: property.displayName || property.name,
+      label: property.displayName || property.name,
+      name: property.name,
+      type: property.type || "string",
+      value: property.name,
+    }));
+  }
+
+  return [];
+}
 
 export function toMetricPropertyOptions(
   properties: ObjectTypeDataProperty[],

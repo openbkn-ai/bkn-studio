@@ -50,7 +50,9 @@ const mockKnowledgeNetworkOperations = [
 ];
 
 /** Local Studio mock data follows the same per-instance child contract as bkn-safe. */
-export const mockKnowledgeNetworkChildOperations = [...mockKnowledgeNetworkOperations];
+export const mockKnowledgeNetworkChildOperations = mockKnowledgeNetworkOperations.map((operation) =>
+  operation === "data_query" ? "query_data" : operation,
+);
 
 export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
   {
