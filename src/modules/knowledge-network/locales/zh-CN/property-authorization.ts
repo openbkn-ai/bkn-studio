@@ -58,6 +58,8 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationDeleteGrant: "删除授权",
   propertyAuthorizationDeleteGrantTitle: "删除用户授权",
   propertyAuthorizationDeleteGrantConfirm: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+  propertyAuthorizationDeleteGrantConfirm_one: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+  propertyAuthorizationDeleteGrantConfirm_other: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
   propertyAuthorizationDeleteGrantSuccess: "授权已删除",
   propertyAuthorizationDeleteGrantUnavailable: "当前没有可直接删除的授权来源",
   propertyAuthorizationDeleteSourceTitle: "删除授权来源",
