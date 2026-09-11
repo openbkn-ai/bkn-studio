@@ -489,7 +489,7 @@ type BackendEffectiveDecision = {
 
 function mapGrantRecord(item: BackendGrantRecord, accessorId: string): GrantRecord {
   return {
-    active: item.active === true,
+    active: item.active !== false,
     accessorId: item.accessor_id ?? accessorId,
     authoritySource: item.authority_source ?? "system",
     effect: item.effect ?? "allow",
