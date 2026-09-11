@@ -20,8 +20,10 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { executionFactoryViewPermissionByTab } from "@/modules/execution-factory/permissions";
 import { CapabilityMountModal } from "@/modules/knowledge-network/components/capability/CapabilityMountModal";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
@@ -60,6 +62,14 @@ const TITLE_KEY = {
   mcp: "McpTools",
   skill: "Skills",
 } as const;
+
+/** Permission enforced by the concrete execution-factory detail route for each row kind. */
+const DETAIL_VIEW_PERMISSION: Record<CapabilitySectionKind, string> = {
+  api: "execution-factory:tool:view",
+  function: "execution-factory:tool:view",
+  mcp: "execution-factory:mcp:view",
+  skill: "execution-factory:skill:view",
+};
 
 /**
  * The execution factory reports two status vocabularies: a tool is enabled/disabled, a SKILL, a
@@ -147,7 +157,7 @@ export function CapabilityListPanel({
 }: CapabilityListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize(`capability-${kind}`);
@@ -164,6 +174,15 @@ export function CapabilityListPanel({
       : "function";
   const toolKind: "api" | "function" | undefined =
     kind === "api" || kind === "function" ? kind : undefined;
+  const factoryTab = isSkill ? "skill" : isMcp ? "mcp" : "toolbox";
+  const canViewExecutionFactory = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: executionFactoryViewPermissionByTab[factoryTab],
+  });
+  const canViewCapabilityDetail = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: DETAIL_VIEW_PERMISSION[kind],
+  });
 
   const filtered = useMemo(() => {
     const trimmed = keyword.trim().toLowerCase();
@@ -278,18 +297,24 @@ export function CapabilityListPanel({
       dataIndex: "name",
       key: "name",
       title: t("knowledgeNetwork.capabilityColumnName"),
-      // The id is shown only when it is all there is: a name plus its id underneath is noise on a
-      // page where every row already links to the asset itself.
-      render: (_: string, record) => (
-        <AppButton
-          onClick={() => {
-            void navigate(executionFactoryPath(record));
-          }}
-          type="link"
-        >
-          {record.name || record.capabilityId}
-        </AppButton>
-      ),
+      // The id is shown only when it is all there is: a name plus its id underneath is noise. The
+      // asset becomes a link only when the matching execution-factory detail route is accessible.
+      render: (_: string, record) => {
+        const label = record.name || record.capabilityId;
+
+        return canViewCapabilityDetail ? (
+          <AppButton
+            onClick={() => {
+              void navigate(executionFactoryPath(record));
+            }}
+            type="link"
+          >
+            {label}
+          </AppButton>
+        ) : (
+          <span>{label}</span>
+        );
+      },
     },
     ...(isSkill
       ? []
@@ -411,22 +436,24 @@ export function CapabilityListPanel({
               />
             </Tooltip>
           </h2>
-          <AppButton
-            className={panelStyles.manageLink}
-            icon={<ExportOutlined />}
-            onClick={() => {
-              void navigate(
-                isSkill
-                  ? "/execution-factory/units?activeTab=skill"
-                  : isMcp
-                    ? "/execution-factory/units?activeTab=mcp"
-                    : "/execution-factory/units?activeTab=toolbox",
-              );
-            }}
-            type="link"
-          >
-            {t("knowledgeNetwork.capabilityManageInFactory")}
-          </AppButton>
+          {canViewExecutionFactory ? (
+            <AppButton
+              className={panelStyles.manageLink}
+              icon={<ExportOutlined />}
+              onClick={() => {
+                void navigate(
+                  isSkill
+                    ? "/execution-factory/units?activeTab=skill"
+                    : isMcp
+                      ? "/execution-factory/units?activeTab=mcp"
+                      : "/execution-factory/units?activeTab=toolbox",
+                );
+              }}
+              type="link"
+            >
+              {t("knowledgeNetwork.capabilityManageInFactory")}
+            </AppButton>
+          ) : null}
         </div>
 
         {data.metadataAvailable ? null : (
@@ -535,7 +562,11 @@ export function CapabilityListPanel({
           {filtered.length === 0 ? (
             <Empty
               className={styles.emptyPanel}
-              description={t(`knowledgeNetwork.capabilityEmpty${TITLE_KEY[kind]}`)}
+              description={t(
+                data.entries.length > 0
+                  ? "knowledgeNetwork.capabilitySearchNoResult"
+                  : `knowledgeNetwork.${canModify ? "capabilityEmpty" : "capabilityNoVisible"}${TITLE_KEY[kind]}`,
+              )}
             />
           ) : (
             <Table
