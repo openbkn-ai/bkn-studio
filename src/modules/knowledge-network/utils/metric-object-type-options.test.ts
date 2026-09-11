@@ -8,7 +8,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
-import { mergeBoundObjectTypeOption } from "@/modules/knowledge-network/utils/metric-object-type-options";
+import {
+  filterMetricObjectTypeOptions,
+  mergeBoundObjectTypeOption,
+} from "@/modules/knowledge-network/utils/metric-object-type-options";
 
 function objectType(id: string, name = id): KnowledgeNetworkObjectTypeRecord {
   return {
@@ -26,6 +29,15 @@ function objectType(id: string, name = id): KnowledgeNetworkObjectTypeRecord {
 }
 
 describe("metric-object-type-options", () => {
+  it("keeps only object types usable for metric dependencies", () => {
+    const allowed = objectType("allowed");
+    allowed.operations = ["view_detail", "query_data"];
+    const viewOnly = objectType("view-only");
+    viewOnly.operations = ["view_detail"];
+
+    expect(filterMetricObjectTypeOptions([allowed, viewOnly])).toEqual([allowed]);
+  });
+
   it("keeps the current options when the bound object type is already loaded", () => {
     const options = [objectType("ot-1")];
 

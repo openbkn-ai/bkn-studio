@@ -12,8 +12,53 @@ import {
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   ActionTypeCondition,
+  KnowledgeNetworkMetricRecord,
   ObjectTypeDataProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
+
+export function toPublishedMetricPropertyOptions(
+  metric: KnowledgeNetworkMetricRecord,
+): RelationTypePropertyOption[] {
+  if (metric.dependencyProperties?.length) {
+    return metric.dependencyProperties.map((property) => ({
+      comment: property.comment,
+      displayName: property.displayName || property.name,
+      label: property.displayName || property.name,
+      name: property.name,
+      type: property.type || "string",
+      value: property.name,
+    }));
+  }
+
+  const names = new Set<string>();
+  const add = (value?: string) => {
+    const normalized = value?.trim();
+    if (normalized && normalized !== "__value") {
+      names.add(normalized);
+    }
+  };
+  const collectCondition = (condition?: ActionTypeCondition) => {
+    if (!condition) {
+      return;
+    }
+    add(condition.field);
+    condition.subConditions?.forEach(collectCondition);
+  };
+  add(metric.timeDimension?.property);
+  add(metric.calculationFormula.aggregation.property);
+  metric.calculationFormula.groupBy?.forEach(add);
+  metric.calculationFormula.analysisDimensions?.forEach(add);
+  add(metric.calculationFormula.orderBy?.property);
+  collectCondition(metric.calculationFormula.condition);
+
+  return [...names].map((name) => ({
+    displayName: name,
+    label: name,
+    name,
+    type: name === metric.timeDimension?.property ? "datetime" : "string",
+    value: name,
+  }));
+}
 
 export function toMetricPropertyOptions(
   properties: ObjectTypeDataProperty[],

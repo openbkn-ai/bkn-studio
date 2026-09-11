@@ -276,6 +276,14 @@ export type BackendMetricCondition = {
   value_from?: "const";
 };
 
+export type BackendMetricDependencyProperty = {
+  comment?: string;
+  condition_operations?: string[];
+  display_name?: string;
+  name: string;
+  type?: string;
+};
+
 export type BackendMetric = {
   calculation_formula?: {
     aggregation?: {
@@ -296,6 +304,7 @@ export type BackendMetric = {
     }>;
   };
   analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
+  dependency_properties?: BackendMetricDependencyProperty[];
   comment?: string;
   creator?: BackendAccountInfo | string;
   id: string;
@@ -303,6 +312,7 @@ export type BackendMetric = {
   name: string;
   operations?: string[];
   scope_ref?: string;
+  scope_name?: string;
   scope_type?: KnowledgeNetworkMetricRecord["scopeType"];
   tags?: string[];
   time_dimension?: {

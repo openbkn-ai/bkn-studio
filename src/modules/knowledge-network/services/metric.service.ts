@@ -14,6 +14,7 @@ import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-netwo
 import type {
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkMetricRecord,
+  MetricDependencyProperty,
   MetricDataQueryParams,
   MetricDataQueryResult,
   MetricListQuery,
@@ -22,6 +23,7 @@ import type {
 import type {
   BackendListResponse,
   BackendMetric,
+  BackendMetricDependencyProperty,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import {
   mapMetric,
@@ -31,6 +33,7 @@ import {
 import {
   mockMetrics,
   mockKnowledgeNetworkChildOperations,
+  buildMockObjectTypeDetail,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
@@ -174,6 +177,39 @@ export async function getKnowledgeNetworkMetric(networkId: string, metricId: str
 
     throw error;
   }
+}
+
+function mapMetricDependencyProperty(
+  property: BackendMetricDependencyProperty,
+): MetricDependencyProperty {
+  return {
+    comment: property.comment,
+    displayName: property.display_name,
+    name: property.name,
+    type: property.type,
+  };
+}
+
+export async function getKnowledgeNetworkMetricDependencyProperties(
+  networkId: string,
+  objectTypeId: string,
+): Promise<MetricDependencyProperty[]> {
+  if (useMock) {
+    const properties = buildMockObjectTypeDetail(networkId, objectTypeId)?.dataProperties ?? [];
+    return wait(
+      properties.map((property) => ({
+        comment: property.comment,
+        displayName: property.displayName,
+        name: property.name,
+        type: property.type,
+      })),
+    );
+  }
+
+  const response = await http.get<{ entries: BackendMetricDependencyProperty[] }>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics/dependency-properties/${objectTypeId}`,
+  );
+  return response.data.entries.map(mapMetricDependencyProperty);
 }
 
 export async function createKnowledgeNetworkMetric(

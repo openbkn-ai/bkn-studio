@@ -7,6 +7,17 @@
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
+const METRIC_OBJECT_TYPE_OPERATIONS = ["view_detail", "query_data"];
+
+export function filterMetricObjectTypeOptions(
+  objectTypes: KnowledgeNetworkObjectTypeRecord[],
+): KnowledgeNetworkObjectTypeRecord[] {
+  return objectTypes.filter((objectType) => {
+    const operations = new Set(objectType.operations ?? []);
+    return METRIC_OBJECT_TYPE_OPERATIONS.every((operation) => operations.has(operation));
+  });
+}
+
 export function createFallbackObjectTypeOption(objectTypeId: string): KnowledgeNetworkObjectTypeRecord {
   return {
     color: "#2f54eb",

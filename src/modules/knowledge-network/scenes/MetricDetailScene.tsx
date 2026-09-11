@@ -23,13 +23,10 @@ import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAcc
 import {
   deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
-  getKnowledgeNetworkObjectTypeDetail,
-  listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   formatMetricUnitLabel,
@@ -41,7 +38,7 @@ import {
   formatSemanticOrderByLabel,
   formatSemanticPropertyList,
   resolvePropertyDisplayName,
-  toMetricPropertyOptions,
+  toPublishedMetricPropertyOptions,
 } from "@/modules/knowledge-network/utils/metric-property-display";
 
 import styles from "./MetricDetailScene.module.css";
@@ -61,7 +58,6 @@ export function MetricDetailScene({
   const metricId = metricIdProp ?? params.metricId ?? "";
   const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
-  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,22 +107,9 @@ export function MetricDetailScene({
     setError(null);
 
     try {
-      const [metricResult, objectTypeResult] = await Promise.all([
-        getKnowledgeNetworkMetric(networkId, metricId),
-        listKnowledgeNetworkObjectTypes(networkId),
-      ]);
+      const metricResult = await getKnowledgeNetworkMetric(networkId, metricId);
       setDetail(metricResult);
-      setObjectTypes(objectTypeResult);
-
-      if (metricResult?.scopeType === "object_type" && metricResult.scopeRef) {
-        const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
-          networkId,
-          metricResult.scopeRef,
-        );
-        setPropertyOptions(toMetricPropertyOptions(objectTypeDetail?.dataProperties ?? []));
-      } else {
-        setPropertyOptions([]);
-      }
+      setPropertyOptions(metricResult ? toPublishedMetricPropertyOptions(metricResult) : []);
     } catch (nextError) {
       setError(extractRequestErrorMessage(nextError));
     } finally {
@@ -153,7 +136,7 @@ export function MetricDetailScene({
     return <Alert message={error ?? t("common.notFound")} showIcon type="error" />;
   }
 
-  const boundObjectTypeName = resolveMetricBoundObjectTypeName(detail, objectTypes);
+  const boundObjectTypeName = resolveMetricBoundObjectTypeName(detail, []);
   const formula = detail.calculationFormula;
 
   return (
@@ -333,7 +316,7 @@ export function MetricDetailScene({
               metricId={detail.id}
               metricName={detail.name}
               networkId={networkId}
-              objectTypes={objectTypes}
+              objectTypes={[]}
               propertyOptions={propertyOptions}
             />
           )}

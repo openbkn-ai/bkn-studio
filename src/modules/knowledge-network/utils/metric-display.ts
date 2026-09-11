@@ -13,12 +13,15 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 export function resolveMetricBoundObjectTypeName(
-  metric: Pick<KnowledgeNetworkMetricRecord, "scopeRef" | "scopeType">,
+  metric: Pick<KnowledgeNetworkMetricRecord, "scopeName" | "scopeRef" | "scopeType">,
   objectTypes: KnowledgeNetworkObjectTypeRecord[],
   emptyLabel = "--",
 ): string {
   if (metric.scopeType === "object_type") {
-    return objectTypes.find((item) => item.id === metric.scopeRef)?.name ?? metric.scopeRef ?? emptyLabel;
+    return metric.scopeName?.trim()
+      || objectTypes.find((item) => item.id === metric.scopeRef)?.name
+      || metric.scopeRef
+      || emptyLabel;
   }
 
   return metric.scopeRef || emptyLabel;
