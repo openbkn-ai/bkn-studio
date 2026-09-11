@@ -63,6 +63,14 @@ const TITLE_KEY = {
   skill: "Skills",
 } as const;
 
+/** Permission enforced by the concrete execution-factory detail route for each row kind. */
+const DETAIL_VIEW_PERMISSION: Record<CapabilitySectionKind, string> = {
+  api: "execution-factory:tool:view",
+  function: "execution-factory:tool:view",
+  mcp: "execution-factory:mcp:view",
+  skill: "execution-factory:skill:view",
+};
+
 /**
  * The execution factory reports two status vocabularies: a tool is enabled/disabled, a SKILL, a
  * toolset and an MCP Server are published/unpublish/offline. Both reach the binding row untranslated,
@@ -170,6 +178,10 @@ export function CapabilityListPanel({
   const canViewExecutionFactory = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: executionFactoryViewPermissionByTab[factoryTab],
+  });
+  const canViewCapabilityDetail = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: DETAIL_VIEW_PERMISSION[kind],
   });
 
   const filtered = useMemo(() => {
@@ -285,18 +297,24 @@ export function CapabilityListPanel({
       dataIndex: "name",
       key: "name",
       title: t("knowledgeNetwork.capabilityColumnName"),
-      // The id is shown only when it is all there is: a name plus its id underneath is noise on a
-      // page where every row already links to the asset itself.
-      render: (_: string, record) => (
-        <AppButton
-          onClick={() => {
-            void navigate(executionFactoryPath(record));
-          }}
-          type="link"
-        >
-          {record.name || record.capabilityId}
-        </AppButton>
-      ),
+      // The id is shown only when it is all there is: a name plus its id underneath is noise. The
+      // asset becomes a link only when the matching execution-factory detail route is accessible.
+      render: (_: string, record) => {
+        const label = record.name || record.capabilityId;
+
+        return canViewCapabilityDetail ? (
+          <AppButton
+            onClick={() => {
+              void navigate(executionFactoryPath(record));
+            }}
+            type="link"
+          >
+            {label}
+          </AppButton>
+        ) : (
+          <span>{label}</span>
+        );
+      },
     },
     ...(isSkill
       ? []
@@ -545,7 +563,9 @@ export function CapabilityListPanel({
             <Empty
               className={styles.emptyPanel}
               description={t(
-                `knowledgeNetwork.${canModify ? "capabilityEmpty" : "capabilityNoVisible"}${TITLE_KEY[kind]}`,
+                data.entries.length > 0
+                  ? "knowledgeNetwork.capabilitySearchNoResult"
+                  : `knowledgeNetwork.${canModify ? "capabilityEmpty" : "capabilityNoVisible"}${TITLE_KEY[kind]}`,
               )}
             />
           ) : (

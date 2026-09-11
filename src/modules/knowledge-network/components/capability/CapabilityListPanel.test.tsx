@@ -5,12 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { CapabilityBindingListResult } from "@/modules/knowledge-network/types/knowledge-network";
 
 const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
   permissions: { current: [] as string[] },
 }));
 
@@ -21,7 +22,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mocks.navigate,
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -73,21 +74,56 @@ afterAll(() => {
 
 afterEach(() => {
   cleanup();
+  mocks.navigate.mockReset();
   mocks.permissions.current = [];
 });
 
-function renderPanel(kind: CapabilitySectionKind, canModify = false) {
+function renderPanel(
+  kind: CapabilitySectionKind,
+  canModify = false,
+  data: CapabilityBindingListResult = emptyData,
+) {
   return render(
     <CapabilityListPanel
       canDelete={false}
       canModify={canModify}
-      data={emptyData}
+      data={data}
       kind={kind}
       onDetach={vi.fn()}
       onMount={vi.fn()}
       onRefresh={vi.fn()}
     />,
   );
+}
+
+function dataFor(kind: CapabilitySectionKind): CapabilityBindingListResult {
+  return {
+    ...emptyData,
+    entries: [
+      {
+        boundAsBox: false,
+        boxId: kind === "skill" ? "" : "box-1",
+        boxName: kind === "skill" ? "" : "Demo box",
+        branch: "main",
+        capabilityId: "capability-1",
+        capabilityType:
+          kind === "skill" ? "skill" : kind === "mcp" ? "mcp_tool" : "function",
+        comment: "",
+        createTime: "2026-09-11",
+        creatorName: "Tester",
+        description: "",
+        id: "binding-1",
+        metadataType:
+          kind === "api" ? "openapi" : kind === "function" ? "function" : "",
+        name: "Visible capability",
+        sources: [],
+        status: "enabled",
+        updateTime: "2026-09-11",
+        updaterName: "Tester",
+      },
+    ],
+    totalCount: 1,
+  };
 }
 
 describe("CapabilityListPanel restricted empty state", () => {
@@ -108,6 +144,17 @@ describe("CapabilityListPanel restricted empty state", () => {
     expect(screen.getByText("knowledgeNetwork.capabilityMountFunctions")).not.toBeNull();
   });
 
+  it("uses a search-specific empty state when existing rows do not match", () => {
+    renderPanel("function", false, dataFor("function"));
+
+    fireEvent.change(screen.getByPlaceholderText("knowledgeNetwork.capabilitySearchPlaceholder"), {
+      target: { value: "not-present" },
+    });
+
+    expect(screen.getByText("knowledgeNetwork.capabilitySearchNoResult")).not.toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.capabilityNoVisibleFunctions")).toBeNull();
+  });
+
   it.each([
     ["function", "execution-factory:toolbox:view"],
     ["api", "execution-factory:toolbox:view"],
@@ -121,5 +168,31 @@ describe("CapabilityListPanel restricted empty state", () => {
     mocks.permissions.current = [permission];
     renderPanel(kind);
     expect(screen.getByText("knowledgeNetwork.capabilityManageInFactory")).not.toBeNull();
+  });
+
+  it.each([
+    [
+      "function",
+      "execution-factory:tool:view",
+      "/execution-factory/toolboxes/box-1/tools/capability-1/edit",
+    ],
+    [
+      "api",
+      "execution-factory:tool:view",
+      "/execution-factory/toolboxes/box-1/tools/capability-1/edit",
+    ],
+    ["mcp", "execution-factory:mcp:view", "/execution-factory/mcp/box-1"],
+    ["skill", "execution-factory:skill:view", "/execution-factory/skills/capability-1"],
+  ] as const)("links a %s row only with %s", (kind, permission, expectedPath) => {
+    renderPanel(kind, false, dataFor(kind));
+    expect(screen.queryByRole("button", { name: "Visible capability" })).toBeNull();
+    expect(screen.getByText("Visible capability").tagName).toBe("SPAN");
+    cleanup();
+
+    mocks.permissions.current = [permission];
+    renderPanel(kind, false, dataFor(kind));
+    fireEvent.click(screen.getByRole("button", { name: "Visible capability" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith(expectedPath);
   });
 });

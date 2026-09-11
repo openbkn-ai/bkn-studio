@@ -77,6 +77,7 @@ export const capabilityPart = {
   capabilityNoVisibleMcpTools: "暂无可查看的 MCP 工具。",
   capabilityNoVisibleApis: "暂无可查看的 API。",
   capabilityNoVisibleSkills: "暂无可查看的 SKILL。",
+  capabilitySearchNoResult: "没有匹配的能力。",
   capabilitySearchPlaceholder: "搜索名称或 ID",
   capabilityRefresh: "刷新",
   capabilityPickerSkillTitle: "挂载 SKILL",

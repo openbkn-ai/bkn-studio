@@ -82,6 +82,7 @@ export const capabilityPart = {
   capabilityNoVisibleMcpTools: "No MCP tool is available to view.",
   capabilityNoVisibleApis: "No API is available to view.",
   capabilityNoVisibleSkills: "No SKILL is available to view.",
+  capabilitySearchNoResult: "No matching capabilities found.",
   capabilitySearchPlaceholder: "Search name or ID",
   capabilityRefresh: "Refresh",
   capabilityPickerSkillTitle: "Mount SKILL",
