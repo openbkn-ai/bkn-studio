@@ -8,11 +8,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const networkAuthorize = vi.hoisted(() => ({ current: true }));
+const networkAuthorize = vi.hoisted(() => ({ current: true, networkId: "" }));
 
 vi.mock("react-router-dom", () => ({ useParams: () => ({ networkId: "network-1" }) }));
 vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
-  useKnowledgeNetworkCanOperate: () => networkAuthorize.current,
+  useKnowledgeNetworkCanOperate: (networkId: string) => {
+    networkAuthorize.networkId = networkId;
+    return networkAuthorize.current;
+  },
 }));
 
 import { KnowledgeNetworkResourceDetailActions } from "./KnowledgeNetworkResourceDetailActions";
@@ -96,5 +99,23 @@ describe("KnowledgeNetworkResourceDetailActions", () => {
     );
     expect(screen.queryByRole("button", { name: /Authorize/ })).toBeNull();
     networkAuthorize.current = true;
+  });
+
+  it("uses an explicit network id when a host mounts the scene outside the route", () => {
+    render(
+      <KnowledgeNetworkResourceDetailActions
+        actions={[{
+          key: "authorize",
+          label: "Authorize",
+          onClick: vi.fn(),
+          operation: "authorize",
+        }]}
+        networkId="host-network"
+        record={{ operations: ["view_detail"] }}
+      />,
+    );
+
+    expect(networkAuthorize.networkId).toBe("host-network");
+    expect(screen.getByRole("button", { name: /Authorize/ })).not.toBeNull();
   });
 });

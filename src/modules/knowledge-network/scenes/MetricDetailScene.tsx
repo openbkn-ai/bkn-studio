@@ -187,6 +187,7 @@ export function MetricDetailScene({
                 operation: "delete",
               },
             ]}
+            networkId={networkId}
             record={detail}
           />
         }

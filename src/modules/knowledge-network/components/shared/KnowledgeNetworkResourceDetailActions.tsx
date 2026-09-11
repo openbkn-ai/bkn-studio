@@ -29,14 +29,17 @@ export type KnowledgeNetworkResourceDetailAction = {
 
 type KnowledgeNetworkResourceDetailActionsProps = {
   actions: KnowledgeNetworkResourceDetailAction[];
+  networkId?: string;
   record: OperationRecord;
 };
 
 export function KnowledgeNetworkResourceDetailActions({
   actions,
+  networkId: networkIdProp,
   record,
 }: KnowledgeNetworkResourceDetailActionsProps) {
-  const { networkId = "" } = useParams<{ networkId: string }>();
+  const { networkId: routeNetworkId = "" } = useParams<{ networkId: string }>();
+  const networkId = networkIdProp ?? routeNetworkId;
   const networkAuthorized = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const visibleActions = actions.filter((action) =>
     action.operation === "authorize"
