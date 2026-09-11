@@ -301,7 +301,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
           </div>
         );
       },
-      title: t("knowledgeNetwork.objectTypeBindResource"),
+      title: t("knowledgeNetwork.objectTypeBoundResource"),
       width: 350,
     },
     {

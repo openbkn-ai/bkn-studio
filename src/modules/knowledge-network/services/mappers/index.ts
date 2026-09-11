@@ -317,7 +317,7 @@ export function buildBackendObjectTypePayload(
     data_properties: dataProperties.map(toBackendDataProperty),
     data_source: input.dataSource
       ? {
-          type: input.dataSource.type ?? "resource",
+          type: "resource",
           id: input.dataSource.id,
           name: input.dataSource.name,
         }
@@ -441,7 +441,9 @@ export function mapConceptGroupDetail(item: BackendConceptGroup): ConceptGroupDe
 
 export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRelationTypeRecord {
   const mappingMode =
-    item.mapping_mode === "data_view" || item.type === "data_view" ? "resource" : "direct";
+    item.mapping_mode === "indirect" || item.type === "indirect"
+      ? "resource"
+      : "direct";
 
   return {
     id: item.id,

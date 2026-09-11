@@ -82,7 +82,7 @@ export type BackendDataProperty = {
 export type BackendDataSource = {
   id: string;
   name?: string;
-  type: "data_view" | "resource";
+  type: "resource";
 };
 
 export type BackendLogicParameter = {
@@ -201,7 +201,7 @@ export type BackendRelationType = {
   color?: string;
   comment?: string;
   id: string;
-  mapping_mode?: "direct" | "data_view";
+  mapping_mode?: "direct" | "indirect";
   mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
   name: string;
   operations?: string[];
@@ -216,7 +216,7 @@ export type BackendRelationType = {
     name?: string;
   };
   target_object_type_id?: string;
-  type?: "direct" | "data_view";
+  type?: "direct" | "indirect";
   update_time?: number;
   updater?: BackendAccountInfo;
 };
