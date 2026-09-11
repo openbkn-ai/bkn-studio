@@ -88,4 +88,26 @@ describe("object-grant backend contract", () => {
     ]);
     expect(result.deniedOperations).toEqual(["modify"]);
   });
+
+  it("treats a source without an active flag as active", () => {
+    const result = mapObjectGrantEntry({
+      accessor_id: "user-1",
+      grants: [{
+        accessor_id: "user-1",
+        authority_source: "admin_authz",
+        effect: "allow",
+        grant_id: "grant-without-active",
+        inherited: false,
+        operation: "view_detail",
+        policy_source: "professional_rule",
+      }],
+      operations: ["view_detail"],
+      resource: { id: "catalog-1", type: "catalog" },
+    });
+
+    expect(result.grants?.[0]).toEqual(expect.objectContaining({
+      active: true,
+      grantId: "grant-without-active",
+    }));
+  });
 });

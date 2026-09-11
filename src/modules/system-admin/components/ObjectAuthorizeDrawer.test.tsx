@@ -299,6 +299,31 @@ describe("ObjectAuthorizeDrawer source records", () => {
     });
   });
 
+  it("does not downgrade an unknown capability snapshot to the Community bundle", async () => {
+    mocks.useCapability.mockReturnValue("unknown");
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({})])],
+    });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+        prefillGranteeId="u-new"
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("professional-edition-gate")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /full_business_access/ })).toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.newGrantTitle")).toBeNull();
+    expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
+  });
+
   it("gates child-resource authorization instead of offering the Community bundle", async () => {
     mocks.useCapability.mockReturnValue("not-licensed");
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });

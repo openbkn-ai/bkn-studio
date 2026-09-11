@@ -228,6 +228,63 @@ describe("ObjectTypeAuthorizationScene", () => {
     }));
   });
 
+  it("disables deletion when a legacy grant has no stable revocable source id", async () => {
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["view_detail"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+    const alice = {
+      account: "alice",
+      accountType: "local",
+      email: "alice@example.com",
+      enabled: true,
+      id: "user-1",
+      name: "Alice",
+      roleIds: [],
+      telephone: "",
+    };
+    mocks.listUsersPage.mockResolvedValue({ users: [alice] });
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [alice],
+      grants: [{
+        accessorId: "user-1",
+        grants: [],
+        objId: "network-1/object-1",
+        objName: "Customer",
+        objSub: "network-1",
+        objType: "object_type",
+        operations: ["view_detail"],
+      }],
+    });
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    const row = (await screen.findByText("Alice")).closest("tr");
+    const deleteButton = within(row as HTMLElement)
+      .getByText("systemAdmin.objectGrants.deleteGrant")
+      .closest("button") as HTMLButtonElement;
+    expect(deleteButton.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(deleteButton);
+
+    expect(mocks.appServices.modal.confirm).not.toHaveBeenCalled();
+    expect(mocks.revokeObjectGrantForObject).not.toHaveBeenCalled();
+    expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
+  });
+
   it("allows a built-in administrator's ordinary object permission to be changed", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",

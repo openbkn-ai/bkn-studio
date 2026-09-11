@@ -716,6 +716,9 @@ export function ObjectTypeAuthorizationScene() {
       return;
     }
     const sources = revocableSourcesForGrant(grant);
+    if (!sources.length) {
+      return;
+    }
     const grantee = userMap.get(grant.accessorId);
     void modal.confirm({
       cancelText: t("common.cancel"),
@@ -728,12 +731,8 @@ export function ObjectTypeAuthorizationScene() {
       onOk: async () => {
         setBaseBusy(true);
         try {
-          if (sources.length) {
-            for (const source of sources) {
-              await revokeObjectGrantForObject(source.grantId);
-            }
-          } else {
-            await upsertObjectGrantForObject({ ...grant, effect: "allow", operations: [] });
+          for (const source of sources) {
+            await revokeObjectGrantForObject(source.grantId);
           }
           setSourceAccessorId(undefined);
           await loadBase();
@@ -987,7 +986,8 @@ export function ObjectTypeAuthorizationScene() {
       key: "actions",
       render: (_value, grant) => {
         const protectedGrant = isProtectedBaseGrant(grant);
-        const deleteDisabled = baseBusy || !canRevoke || protectedGrant;
+        const hasRevocableSource = revocableSourcesForGrant(grant).length > 0;
+        const deleteDisabled = baseBusy || !canRevoke || protectedGrant || !hasRevocableSource;
         return (
           <div className={styles.grantActions}>
             <AppButton
@@ -999,7 +999,11 @@ export function ObjectTypeAuthorizationScene() {
             </AppButton>
             <span aria-hidden className={styles.grantActionDivider} />
             <Tooltip
-              title={protectedGrant ? t("systemAdmin.objectGrants.delegateLocked") : undefined}
+              title={protectedGrant
+                ? t("systemAdmin.objectGrants.delegateLocked")
+                : !hasRevocableSource
+                  ? t("systemAdmin.objectGrants.deleteGrantUnavailable")
+                  : undefined}
             >
               <span>
                 <AppButton

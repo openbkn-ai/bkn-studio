@@ -111,7 +111,8 @@ export function ObjectAuthorizeDrawer({
 }: ObjectAuthorizeDrawerProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
-  const fineGrained = useCapability(CAPABILITIES.PERM_FINE_GRAINED) === "available";
+  const fineGrainedState = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
+  const fineGrained = fineGrainedState === "available";
   const enterpriseAvailable = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL) === "available";
   // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
   // who has access to an object is legitimate for read-only reviewers. Guard each write control,
@@ -1060,7 +1061,15 @@ export function ObjectAuthorizeDrawer({
     </>
   );
 
-  const content = !fineGrained && !isCommunityObjectGrantType(objType) ? (
+  const content = fineGrainedState === "unknown" ? (
+    <RequireEdition
+      capability={CAPABILITIES.PERM_FINE_GRAINED}
+      minEdition="professional"
+      mountLockedContent={false}
+    >
+      {grantOverview}
+    </RequireEdition>
+  ) : !fineGrained && !isCommunityObjectGrantType(objType) ? (
     <RequireEdition
       capability={CAPABILITIES.PERM_FINE_GRAINED}
       minEdition="professional"
