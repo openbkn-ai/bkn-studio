@@ -29,16 +29,20 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
     expandedKeys = [],
     onExpand,
     onSelect,
+    treeData = [],
   }: {
     expandedKeys?: Key[];
     onExpand?: (keys: Key[]) => void;
     onSelect?: (keys: Key[]) => void;
+    treeData?: Array<{ key: Key }>;
   }) => (
     <>
       <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
+      <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
       <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
       <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
       <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
+      <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">load more logical catalogs</button>
       <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
     </>
   ),
@@ -57,7 +61,6 @@ describe("CatalogTreePanel", () => {
     render(
       <CatalogTreePanel
         catalogs={[]}
-        connectorTypes={[]}
         discoveringCatalogIds={[]}
         onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
@@ -70,6 +73,41 @@ describe("CatalogTreePanel", () => {
     expect(screen.queryByLabelText("dataCatalog.tree.addLogical")).toBeNull();
     expect(screen.queryByLabelText("dataCatalog.catalog.goScan")).toBeNull();
     expect(screen.queryByLabelText("dataCatalog.catalog.goConnection")).toBeNull();
+  });
+
+  it("keeps both root groups visible when a search has no matches", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        discoveringCatalogIds={[]}
+        keyword="missing"
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("tree-keys").textContent).toBe("group:physical,group:logical");
+  });
+
+  it("keeps matching physical connector groups collapsed until the user loads them", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        connectorTypeStats={[{ catalogCount: 1, catalogType: "physical", connectorType: "postgresql" }]}
+        discoveringCatalogIds={[]}
+        keyword="orders"
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("expanded-keys").textContent).not.toContain("connector:postgresql");
   });
 
   it("loads physical catalog schemas only when its node is expanded", async () => {
@@ -100,7 +138,6 @@ describe("CatalogTreePanel", () => {
     };
     const props: ComponentProps<typeof CatalogTreePanel> = {
       catalogs: [catalog],
-      connectorTypes: [],
       discoveringCatalogIds: [],
       onLoadCatalogSchemas,
       onRefresh: vi.fn(),
@@ -149,7 +186,6 @@ describe("CatalogTreePanel", () => {
     render(
       <CatalogTreePanel
         catalogs={[catalog]}
-        connectorTypes={[]}
         discoveringCatalogIds={[]}
         onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
@@ -162,6 +198,54 @@ describe("CatalogTreePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "select connector" }));
 
     expect(screen.getByTestId("expanded-keys").textContent).toContain("connector:postgresql");
+  });
+
+  it("loads the next page for logical catalogs", () => {
+    const onLoadCatalogsByConnectorType = vi.fn().mockResolvedValue(undefined);
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "logical-orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "logical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        connectorTypeStats={[{ catalogCount: 2, catalogType: "logical", connectorType: "" }]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onLoadCatalogsByConnectorType={onLoadCatalogsByConnectorType}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "load more logical catalogs" }));
+    fireEvent.click(screen.getByRole("button", { name: "load more logical catalogs" }));
+
+    expect(onLoadCatalogsByConnectorType).toHaveBeenCalledWith("", 1);
+    expect(onLoadCatalogsByConnectorType).toHaveBeenCalledTimes(1);
   });
 
   it("expands a catalog and loads its schemas when its title is selected", async () => {
@@ -195,7 +279,6 @@ describe("CatalogTreePanel", () => {
     render(
       <CatalogTreePanel
         catalogs={[catalog]}
-        connectorTypes={[]}
         discoveringCatalogIds={[]}
         onLoadCatalogSchemas={onLoadCatalogSchemas}
         onRefresh={vi.fn()}

@@ -26,13 +26,18 @@ import {
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
-import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
-import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
-import { catalogListAllQuery, getCatalog, listCatalogs, type CatalogRecord } from "@/shared/catalog";
+import {
+  getCatalog,
+  listCatalogConnectorTypeStats,
+  listCatalogs,
+  type CatalogConnectorTypeStat,
+  type CatalogRecord,
+} from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const CATALOG_PAGE_SIZE = 100;
 
 const CatalogDetailPanel = lazy(
   () => import("@/modules/data-catalog/components/CatalogDetailPanel"),
@@ -60,7 +65,11 @@ export function DataCatalogScene({
   });
 
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
-  const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
+  const [catalogKeyword, setCatalogKeyword] = useState("");
+  const [catalogSearchInput, setCatalogSearchInput] = useState("");
+  const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
+  const [connectorTypeStats, setConnectorTypeStats] = useState<CatalogConnectorTypeStat[]>([]);
+  const [selectedCatalogLoadingId, setSelectedCatalogLoadingId] = useState<string | null>(null);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -70,6 +79,8 @@ export function DataCatalogScene({
     open: boolean;
   }>({ open: false });
   const [resourceTotal, setResourceTotal] = useState(0);
+  const initialLoadRef = useRef(false);
+  const catalogQueryGeneration = useRef(0);
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
@@ -77,15 +88,57 @@ export function DataCatalogScene({
     }
     return null;
   }, [catalogs, selection]);
+  const selectedCatalogRequestIds = useRef(new Set<string>());
+  const selectedCatalogIdRef = useRef<string | null>(null);
 
-  const loadCatalogs = useCallback(async () => {
-    const [catalogResult, typeResult] = await Promise.all([
-      listCatalogs(catalogListAllQuery()),
-      listDataConnectConnectorTypes(),
+  useEffect(() => {
+    selectedCatalogIdRef.current = selection?.type === "catalog" ? selection.id : null;
+  }, [selection]);
+
+  const loadCatalogs = useCallback(async (
+    keyword = "",
+    preservePhysicalCatalogs = true,
+    generation = catalogQueryGeneration.current,
+    applyKeyword = false,
+  ) => {
+    const [logicalCatalogResult, statsResult] = await Promise.all([
+      listCatalogs({ keyword, page: 1, pageSize: CATALOG_PAGE_SIZE, type: "logical" }),
+      listCatalogConnectorTypeStats(keyword),
     ]);
-    setCatalogs(catalogResult.items);
-    setConnectorTypes(typeResult);
+    if (generation !== catalogQueryGeneration.current) {
+      return false;
+    }
+    setCatalogs((current) => [
+      ...(preservePhysicalCatalogs ? current.filter((catalog) => catalog.type !== "logical") : []),
+      ...logicalCatalogResult.items,
+    ]);
+    if (applyKeyword) {
+      setCatalogKeyword(keyword);
+    }
+    setConnectorTypeStats(statsResult);
+    return true;
   }, []);
+
+  const loadCatalogsByConnectorType = useCallback(async (connectorType: string, offset = 0) => {
+    const generation = catalogQueryGeneration.current;
+    const type = connectorType ? "physical" : "logical";
+    const result = await listCatalogs({
+      connectorType,
+      keyword: catalogKeyword,
+      page: offset / CATALOG_PAGE_SIZE + 1,
+      pageSize: CATALOG_PAGE_SIZE,
+      type,
+    });
+    if (generation !== catalogQueryGeneration.current) {
+      return;
+    }
+    setCatalogs((current) => [
+      ...current.filter((catalog) =>
+        offset > 0 || catalog.type !== type || (type === "physical" && catalog.connectorType !== connectorType),
+      ),
+      ...result.items,
+    ]);
+  }, [catalogKeyword]);
 
   const loadCatalogSchemas = useCallback(async (catalogId: string) => {
     const catalog = await getCatalog(catalogId);
@@ -100,16 +153,49 @@ export function DataCatalogScene({
   }, []);
 
   const loadAll = useCallback(async () => {
+    const generation = catalogQueryGeneration.current;
     setLoadError(null);
     try {
-      await loadCatalogs();
+      await loadCatalogs(catalogKeyword, true, generation);
       await refreshResourceTotal();
     } catch (error) {
-      setLoadError(extractRequestErrorMessage(error));
+      if (generation === catalogQueryGeneration.current) {
+        setLoadError(extractRequestErrorMessage(error));
+      }
     } finally {
-      setLoading(false);
+      if (generation === catalogQueryGeneration.current) {
+        setLoading(false);
+      }
     }
-  }, [loadCatalogs, refreshResourceTotal]);
+  }, [catalogKeyword, loadCatalogs, refreshResourceTotal]);
+
+  const handleCatalogSearch = useCallback(() => {
+    if (catalogSearchLoading) {
+      return;
+    }
+    const keyword = catalogSearchInput;
+    const generation = catalogQueryGeneration.current + 1;
+    catalogQueryGeneration.current = generation;
+    setLoadError(null);
+    setCatalogSearchLoading(true);
+    void loadCatalogs(keyword, false, generation, true)
+      .then((applied) => {
+        if (applied && selection?.type === "catalog") {
+          void navigate("/data-catalog", { replace: true });
+        }
+      })
+      .catch((error) => {
+        if (generation === catalogQueryGeneration.current) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (generation === catalogQueryGeneration.current) {
+          setCatalogSearchLoading(false);
+          setLoading(false);
+        }
+      });
+  }, [catalogSearchInput, catalogSearchLoading, loadCatalogs, navigate, selection]);
 
   const loadDiscovers = useCallback(async () => {
     if (!selectedCatalog) {
@@ -124,8 +210,53 @@ export function DataCatalogScene({
   }, [selectedCatalog]);
 
   useEffect(() => {
+    if (initialLoadRef.current) {
+      return;
+    }
+    initialLoadRef.current = true;
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (selection?.type !== "catalog") {
+      return;
+    }
+    if (catalogs.some((catalog) => catalog.id === selection.id)) {
+      setSelectedCatalogLoadingId(null);
+      return;
+    }
+    if (selectedCatalogRequestIds.current.has(selection.id)) {
+      return;
+    }
+    selectedCatalogRequestIds.current.add(selection.id);
+    setSelectedCatalogLoadingId(selection.id);
+    const generation = catalogQueryGeneration.current;
+    void getCatalog(selection.id)
+      .then((catalog) => {
+        if (
+          !catalog ||
+          generation !== catalogQueryGeneration.current ||
+          selectedCatalogIdRef.current !== selection.id
+        ) {
+          return;
+        }
+        setCatalogs((current) => (
+          current.some((item) => item.id === catalog.id) ? current : [...current, catalog]
+        ));
+      })
+      .catch((error) => {
+        if (
+          generation === catalogQueryGeneration.current &&
+          selectedCatalogIdRef.current === selection.id
+        ) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        selectedCatalogRequestIds.current.delete(selection.id);
+        setSelectedCatalogLoadingId((current) => current === selection.id ? null : current);
+      });
+  }, [catalogs, selection]);
 
   useEffect(() => {
     void loadDiscovers();
@@ -189,6 +320,9 @@ export function DataCatalogScene({
     }
     return ids;
   }, [catalogs, discover, selectedCatalog]);
+  const hasPhysicalCatalogs = connectorTypeStats.some(
+    (stat) => stat.catalogType === "physical" && stat.catalogCount > 0,
+  );
 
   const openResourceWorkspace = useCallback(
     (
@@ -231,23 +365,11 @@ export function DataCatalogScene({
       );
     }
 
-    if (catalogs.length === 0) {
+    if (selection?.type === "catalog" && selectedCatalogLoadingId === selection.id) {
       return (
-        <EmptyStatePanel
-          action={
-            <AppButton
-              onClick={() => {
-                void navigate("/data-connect/new");
-              }}
-              type="primary"
-            >
-              {t("dataCatalog.tree.newConnection")}
-            </AppButton>
-          }
-          description={t("dataCatalog.emptyDescription")}
-          icon={<DatabaseOutlined />}
-          title={t("dataCatalog.tree.empty")}
-        />
+        <div className={styles.placeholder}>
+          <Spin />
+        </div>
       );
     }
 
@@ -266,6 +388,44 @@ export function DataCatalogScene({
           description=""
           icon={<DatabaseOutlined />}
           title={t("dataCatalog.catalog.notFound")}
+        />
+      );
+    }
+
+    if (catalogs.length === 0) {
+      if (hasPhysicalCatalogs) {
+        return (
+          <EmptyStatePanel
+            description={t("dataCatalog.catalog.selectPhysicalDescription")}
+            icon={<DatabaseOutlined />}
+            title={t("dataCatalog.title")}
+          />
+        );
+      }
+      if (catalogKeyword.trim()) {
+        return (
+          <EmptyStatePanel
+            description=""
+            icon={<DatabaseOutlined />}
+            title={t("dataCatalog.tree.noCatalogMatch")}
+          />
+        );
+      }
+      return (
+        <EmptyStatePanel
+          action={
+            <AppButton
+              onClick={() => {
+                void navigate("/data-connect/new");
+              }}
+              type="primary"
+            >
+              {t("dataCatalog.tree.newConnection")}
+            </AppButton>
+          }
+          description={t("dataCatalog.emptyDescription")}
+          icon={<DatabaseOutlined />}
+          title={t("dataCatalog.tree.empty")}
         />
       );
     }
@@ -320,13 +480,19 @@ export function DataCatalogScene({
       <div className={[styles.explorer, treeCollapsed ? styles.explorerCollapsed : ""].join(" ")}>
         <CatalogTreePanel
           catalogs={catalogs}
+          keyword={catalogKeyword}
+          searchLoading={catalogSearchLoading}
+          searchValue={catalogSearchInput}
+          connectorTypeStats={connectorTypeStats}
           activeSchema={activeSchema}
-          connectorTypes={connectorTypes}
           collapsed={treeCollapsed}
           onRefresh={async () => {
             await loadAll();
           }}
           onLoadCatalogSchemas={loadCatalogSchemas}
+          onLoadCatalogsByConnectorType={loadCatalogsByConnectorType}
+          onSearch={handleCatalogSearch}
+          onSearchChange={setCatalogSearchInput}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
             next.delete("schema");

@@ -76,6 +76,17 @@ describe("catalog.service · listCatalogs", () => {
     expect(lastParams()).toMatchObject({ type: undefined });
   });
 
+  it("passes the keyword to connector type statistics", async () => {
+    const { listCatalogConnectorTypeStats } = await import("@/shared/catalog/catalog.service");
+
+    await listCatalogConnectorTypeStats("orders");
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs/stats/by-connector-type",
+      { params: { name: "orders" } },
+    );
+  });
+
 });
 
 describe("catalog.service · deletion preflight", () => {

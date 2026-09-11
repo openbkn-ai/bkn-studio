@@ -33,12 +33,14 @@ type BusinessTreePanelProps = {
   headerClassName?: string;
   headerActions?: ReactNode;
   searchPlaceholder?: string;
+  searchLoading?: boolean;
   searchValue?: string;
   scrollBody?: boolean;
   title: ReactNode;
   titleClassName?: string;
   treeScrollClassName?: string;
   onExpandPanel?: () => void;
+  onSearch?: () => void;
   onSearchChange?: (value: string) => void;
 };
 
@@ -59,12 +61,14 @@ export function BusinessTreePanel({
   headerClassName,
   headerActions,
   searchPlaceholder,
+  searchLoading = false,
   searchValue,
   scrollBody = true,
   title,
   titleClassName,
   treeScrollClassName,
   onExpandPanel,
+  onSearch,
   onSearchChange,
 }: BusinessTreePanelProps) {
   if (collapsed) {
@@ -93,13 +97,25 @@ export function BusinessTreePanel({
       </div>
 
       {typeof onSearchChange === "function" ? (
-        <Input
-          allowClear
-          className={styles.search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={searchPlaceholder}
-          value={searchValue}
-        />
+        typeof onSearch === "function" ? (
+          <Input.Search
+            allowClear
+            className={styles.search}
+            loading={searchLoading}
+            onChange={(event) => onSearchChange(event.target.value)}
+            onSearch={onSearch}
+            placeholder={searchPlaceholder}
+            value={searchValue}
+          />
+        ) : (
+          <Input
+            allowClear
+            className={styles.search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder={searchPlaceholder}
+            value={searchValue}
+          />
+        )
       ) : null}
 
       <div className={[styles.body, bodyClassName].filter(Boolean).join(" ")}>
