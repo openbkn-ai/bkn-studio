@@ -186,7 +186,7 @@ export function OverviewOntologyBlock({
 
       const label = canLoadResourceIndexStates
         ? resourceIndexLoading
-          ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+          ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
           : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
         : entity.hasIndex
           ? t("knowledgeNetwork.previewIndexed")

@@ -14,6 +14,23 @@ import {
 } from "@/modules/knowledge-network/services/mappers";
 
 describe("object type tool logic property mapper", () => {
+  it("writes object data sources as resources", () => {
+    expect(
+      buildBackendObjectTypePayload(
+        {
+          color: "#1677ff",
+          conceptGroupIds: [],
+          dataProperties: [],
+          dataSource: { id: "resource-1", name: "Orders", type: "resource" },
+          description: "",
+          name: "Order",
+          tags: [],
+        },
+        [],
+      ).data_source,
+    ).toEqual({ id: "resource-1", name: "Orders", type: "resource" });
+  });
+
   it("maps toolbox identifiers and result path from backend", () => {
     expect(
       mapLogicProperty({

@@ -398,7 +398,7 @@ export function ObjectTypeListPanel({
 
         const label = canLoadResourceIndexStates
           ? resourceBuildTasksLoading
-            ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+            ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
             : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
           : record.hasIndex
             ? t("knowledgeNetwork.previewIndexed")

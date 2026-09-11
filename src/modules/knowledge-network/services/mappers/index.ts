@@ -441,7 +441,9 @@ export function mapConceptGroupDetail(item: BackendConceptGroup): ConceptGroupDe
 
 export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRelationTypeRecord {
   const mappingMode =
-    item.mapping_mode === "data_view" || item.type === "data_view" ? "resource" : "direct";
+    item.mapping_mode === "indirect" || item.type === "indirect"
+      ? "resource"
+      : "direct";
 
   return {
     id: item.id,

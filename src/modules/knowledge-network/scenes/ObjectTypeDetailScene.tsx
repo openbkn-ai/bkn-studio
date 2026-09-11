@@ -1149,7 +1149,7 @@ export function ObjectTypeDetailScene() {
         <section className={styles.summaryDataSource}>
           <div className={styles.overviewCardHeader}>
             <h3 className={styles.overviewSectionTitle}>
-              {t("knowledgeNetwork.objectTypeBoundDataView")}
+              {t("knowledgeNetwork.objectTypeDataSource")}
             </h3>
             {boundDataView ? (
               <button
@@ -1168,24 +1168,24 @@ export function ObjectTypeDetailScene() {
             <div className={styles.dataViewFields}>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewName")}
+                  {t("knowledgeNetwork.objectTypeResourceName")}
                 </span>
                 <span className={styles.dataViewValue}>{boundDataView.name || "--"}</span>
               </div>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewResourceId")}
+                  {t("knowledgeNetwork.objectTypeResourceId")}
                 </span>
                 <span className={styles.dataViewCode}>{boundDataView.id || "--"}</span>
               </div>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewIndexState")}
+                  {t("knowledgeNetwork.objectTypeResourceIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
                   {canLoadResourceIndexStates
                     ? resourceBuildTasksLoading
-                      ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
+                      ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
                       : formatResourceIndexStateLabel(resourceLocalIndexStatus, t)
                     : detail.hasIndex
                       ? t("knowledgeNetwork.previewIndexed")
@@ -1195,7 +1195,7 @@ export function ObjectTypeDetailScene() {
             </div>
           ) : (
             <span className={styles.placeholder}>
-              {t("knowledgeNetwork.objectTypeBoundDataViewEmpty")}
+              {t("knowledgeNetwork.objectTypeDataSourceEmpty")}
             </span>
           )}
         </section>
@@ -1667,7 +1667,7 @@ export function ObjectTypeDetailScene() {
         {dataSection === "instance" ? (
           <>
             {!boundDataView ? (
-              <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
+          <Empty description={t("knowledgeNetwork.objectTypeDataSourceEmpty")} />
             ) : previewError ? (
               <Alert
                 action={(

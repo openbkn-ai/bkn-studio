@@ -43,13 +43,13 @@ export type BackendRelationTypeCreateEntry = {
   color?: string;
   comment?: string;
   id?: string;
-  mapping_mode?: "direct" | "data_view";
+  mapping_mode?: "direct" | "indirect";
   mapping_rules?: BackendRelationTypeMappingRules;
   name: string;
   source_object_type_id: string;
   tags?: string[];
   target_object_type_id: string;
-  type?: "direct" | "data_view";
+  type?: "direct" | "indirect";
 };
 
 export type BackendRelationTypeUpdatePayload = BackendRelationTypeCreateEntry;
@@ -200,7 +200,7 @@ function appendMappingRules(
 export function toBackendRelationTypeCreateEntry(
   input: KnowledgeNetworkRelationTypeMutationPayload,
 ): BackendRelationTypeCreateEntry {
-  const mappingMode = input.mappingMode === "resource" ? "data_view" : "direct";
+  const mappingMode = input.mappingMode === "resource" ? "indirect" : "direct";
 
   const payload: BackendRelationTypeCreateEntry = {
     branch: "main",

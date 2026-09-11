@@ -55,7 +55,7 @@ export function OntologyInspectorPanel({
     }
     if (localIndexStatusByResourceId) {
       if (resourceIndexLoading) {
-        return t("knowledgeNetwork.objectTypeDataViewIndexLoading");
+        return t("knowledgeNetwork.objectTypeResourceIndexLoading");
       }
       return formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t);
     }
