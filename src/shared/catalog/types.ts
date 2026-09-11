@@ -116,3 +116,9 @@ export type CatalogListResult = {
   items: CatalogRecord[];
   total: number;
 };
+
+export type CatalogConnectorTypeStat = {
+  catalogType: "logical" | "physical";
+  connectorType: string;
+  catalogCount: number;
+};

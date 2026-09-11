@@ -8,6 +8,7 @@
 export type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
   CatalogDeletionImpact,
   CatalogDeletionTaskImpact,
@@ -34,6 +35,7 @@ export {
   getCatalogHealthCheckSchedule,
   getCatalog,
   listCatalogs,
+  listCatalogConnectorTypeStats,
   previewCatalogDeletion,
   setCatalogEnabled,
   testCatalogConnection,

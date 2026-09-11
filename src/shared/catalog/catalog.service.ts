@@ -32,6 +32,7 @@ import {
 import type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
   CatalogDeletionImpact,
   CatalogDeletionTaskImpact,
@@ -46,6 +47,12 @@ import type {
 type ListResponse<T> = {
   entries: T[];
   total_count: number;
+};
+
+type BackendCatalogConnectorTypeStat = {
+  catalog_type: "logical" | "physical";
+  connector_type: string;
+  catalog_count: number;
 };
 
 type BackendCatalogHealthCheckSchedule = {
@@ -114,6 +121,38 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
     items: filtered,
     total: response.data.total_count,
   };
+}
+
+export async function listCatalogConnectorTypeStats(keyword = ""): Promise<CatalogConnectorTypeStat[]> {
+  if (useMock) {
+    const counts = new Map<string, number>();
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    for (const catalog of getMockCatalogs()) {
+      if (normalizedKeyword && !catalog.name.toLowerCase().includes(normalizedKeyword)) {
+        continue;
+      }
+      const key = `${catalog.type}:${catalog.connectorType}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return wait([...counts.entries()].map(([key, catalogCount]) => {
+      const [catalogType, connectorType] = key.split(":", 2);
+      return {
+        catalogType: catalogType as CatalogConnectorTypeStat["catalogType"],
+        connectorType,
+        catalogCount,
+      };
+    }));
+  }
+
+  const response = await http.get<{ entries: BackendCatalogConnectorTypeStat[] }>(
+    "/vega-backend/v1/catalogs/stats/by-connector-type",
+    { params: { name: keyword.trim() || undefined } },
+  );
+  return response.data.entries.map((entry) => ({
+    catalogType: entry.catalog_type,
+    connectorType: entry.connector_type,
+    catalogCount: entry.catalog_count,
+  }));
 }
 
 export async function getCatalog(id: string) {
