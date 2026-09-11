@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import { mockKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/mock/state";
 import {
   filterMetricObjectTypeOptions,
   mergeBoundObjectTypeOption,
@@ -36,6 +37,15 @@ describe("metric-object-type-options", () => {
     viewOnly.operations = ["view_detail"];
 
     expect(filterMetricObjectTypeOptions([allowed, viewOnly])).toEqual([allowed]);
+  });
+
+  it("keeps object types with wildcard or mock child operations", () => {
+    const wildcard = objectType("wildcard");
+    wildcard.operations = ["*"];
+    const mock = objectType("mock");
+    mock.operations = mockKnowledgeNetworkChildOperations;
+
+    expect(filterMetricObjectTypeOptions([wildcard, mock])).toEqual([wildcard, mock]);
   });
 
   it("keeps the current options when the bound object type is already loaded", () => {

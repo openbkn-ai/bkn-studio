@@ -58,6 +58,24 @@ describe("metric-property-display", () => {
     ]);
   });
 
+  it("does not invent field types when dependency metadata is unavailable", () => {
+    expect(
+      toPublishedMetricPropertyOptions({
+        calculationFormula: { aggregation: { aggr: "sum", property: "amount" } },
+        description: "",
+        id: "metric-1",
+        metricType: "atomic",
+        name: "Sales",
+        scopeRef: "orders",
+        scopeType: "object_type",
+        tags: [],
+        timeDimension: { defaultRangePolicy: "last_24h", property: "created_at" },
+        updateTime: "",
+        updaterName: "",
+      }),
+    ).toEqual([]);
+  });
+
   it("maps metric analysis dimensions to semantic fields", () => {
     expect(
       mapMetricAnalysisDimensionFields(["qty", "status"], [

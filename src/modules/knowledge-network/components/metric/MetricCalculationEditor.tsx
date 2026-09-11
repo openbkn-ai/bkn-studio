@@ -32,6 +32,7 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./MetricCalculationEditor.module.css";
 
@@ -106,13 +107,16 @@ export function MetricCalculationEditor({
   const analysisDimensions = Form.useWatch(["calculationFormula", "analysisDimensions"], form) as
     | string[]
     | undefined;
-  const canLoadObjectTypeDetail = objectTypes.some(
-    (objectType) => objectType.id === objectTypeId && objectType.operations?.includes("view_detail"),
+  const canLoadDependencyProperties = objectTypes.some(
+    (objectType) =>
+      objectType.id === objectTypeId
+      && hasKnowledgeNetworkRecordOperation(objectType, "view_detail"),
   );
 
   useEffect(() => {
-    if (!objectTypeId || !networkId || !canLoadObjectTypeDetail) {
+    if (!objectTypeId || !networkId || !canLoadDependencyProperties) {
       setProperties(fallbackProperties);
+      setLoadingProperties(false);
       return;
     }
 
@@ -148,7 +152,7 @@ export function MetricCalculationEditor({
     return () => {
       active = false;
     };
-  }, [canLoadObjectTypeDetail, fallbackProperties, networkId, objectTypeId]);
+  }, [canLoadDependencyProperties, fallbackProperties, networkId, objectTypeId]);
 
   const timeProperties = useMemo(
     () => properties.filter((item) => isMetricTimePropertyType(item.type)),

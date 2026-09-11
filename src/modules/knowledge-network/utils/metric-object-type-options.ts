@@ -6,16 +6,18 @@
  */
 
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 const METRIC_OBJECT_TYPE_OPERATIONS = ["view_detail", "query_data"];
 
 export function filterMetricObjectTypeOptions(
   objectTypes: KnowledgeNetworkObjectTypeRecord[],
 ): KnowledgeNetworkObjectTypeRecord[] {
-  return objectTypes.filter((objectType) => {
-    const operations = new Set(objectType.operations ?? []);
-    return METRIC_OBJECT_TYPE_OPERATIONS.every((operation) => operations.has(operation));
-  });
+  return objectTypes.filter((objectType) =>
+    METRIC_OBJECT_TYPE_OPERATIONS.every((operation) =>
+      hasKnowledgeNetworkRecordOperation(objectType, operation),
+    ),
+  );
 }
 
 export function createFallbackObjectTypeOption(objectTypeId: string): KnowledgeNetworkObjectTypeRecord {
