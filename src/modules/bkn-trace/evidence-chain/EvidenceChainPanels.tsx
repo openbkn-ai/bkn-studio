@@ -123,8 +123,9 @@ function TechnicalRecords({ nodes, onSelect }: { nodes: ChainNode[]; onSelect: (
   return <details className={styles.technicalRecords}><summary>{t("bknTrace.evidenceChain.technicalRecords", { count: nodes.length })}</summary><p>{t("bknTrace.evidenceChain.technicalRecordsDescription")}</p><div>{nodes.map(node => <button key={node.id} onClick={() => onSelect(node)}><span>{node.label}</span><small>{t(`bknTrace.evidenceChain.status.${node.status ?? "unknown"}`)}</small></button>)}</div></details>;
 }
 
-function derivationInputLabel(label: string): string {
-  return ({ instant:"数据时点", include_substitute:"包含替代料", caliber:"统计口径", demand_end:"要求交付日期", demand_qty:"需求数量" } as Record<string,string>)[label] ?? label;
+function derivationInputLabel(label: string, translate: (key: string) => string): string {
+  const key = ({ instant: "instant", include_substitute: "includeSubstitute", caliber: "caliber", demand_end: "demandEnd", demand_qty: "demandQuantity" } as Record<string, string>)[label];
+  return key ? translate(`bknTrace.evidenceChain.derivation.${key}`) : label;
 }
 
 function EvidencePaths({ claims, selectedId, select, graph, metadata, setMetadata, onNode, onEdge }: { claims: ChainClaim[]; selectedId?: string; select:(id:string)=>void; graph:ChainGraph; metadata:boolean; setMetadata:(value:boolean)=>void; onNode:(node:ChainNode)=>void; onEdge:(edge:ChainEdge)=>void }) {
@@ -133,26 +134,26 @@ function EvidencePaths({ claims, selectedId, select, graph, metadata, setMetadat
   const [expanded, setExpanded] = useState(() => new Set(initial ? [initial] : []));
   useEffect(() => { if (selectedId) setExpanded(current => current.has(selectedId) ? current : new Set([...current, selectedId])); }, [selectedId]);
   return <div className={styles.evidencePaths}>
-    <p className={styles.executionIntro}>按答案结论查看业务对象、实际处理、组成数据与证据边界。</p>
+    <p className={styles.executionIntro}>{t("bknTrace.evidenceChain.evidenceIntro")}</p>
     {claims.map(claim => {
       const derivation = claim.derivation;
-      return <details key={claim.id} role="region" aria-label={`${claim.label}的解释路径`} className={styles.evidenceClaim} open={expanded.has(claim.id)}>
+      return <details key={claim.id} role="region" aria-label={t("bknTrace.evidenceChain.claimPath", { label: claim.label })} className={styles.evidenceClaim} open={expanded.has(claim.id)}>
         <summary onClick={event => { event.preventDefault(); select(claim.id); setExpanded(current => { const next = new Set(current); if (next.has(claim.id)) next.delete(claim.id); else next.add(claim.id); return next; }); }}>
-          <div><small>{claim.role === "scope" ? "回答范围" : "答案结论"}</small><h4>{claim.label}</h4><span>{claim.objectLabel}</span></div><strong>{claim.value}</strong><em>{t(`bknTrace.evidenceChain.status.${claim.status}`)}</em>
+          <div><small>{t(claim.role === "scope" ? "bknTrace.evidenceChain.answerScope" : "bknTrace.evidenceChain.answerConclusion")}</small><h4>{claim.label}</h4><span>{claim.objectLabel}</span></div><strong>{claim.value}</strong><em>{t(`bknTrace.evidenceChain.status.${claim.status}`)}</em>
         </summary>
         <div className={styles.derivationBody}>
           <div className={styles.derivationPath}>
-            <section><small>业务对象与条件</small><h5>{claim.objectLabel ?? "已记录对象"}</h5>{derivation?.inputs.map(item => <BusinessValue key={`${item.label}:${item.value}`} node={{id:item.label,label:derivationInputLabel(item.label),value:item.value,kind:"field"}} />)}</section>
-            <b>→</b><section className={styles.derivationProcess}><small>业务处理</small><h5>{derivation?.processName || "已记录业务处理"}</h5></section>
-            <b>→</b><section className={styles.derivationResult}><small>{derivation?.method === "sum" ? "独立核验" : derivation?.method === "distinct_count" ? "返回组成" : "记录结果"}</small><h5>{derivation?.formula || `${claim.label} = ${claim.value ?? ""}`}</h5></section>
-            <b>→</b><section className={styles.derivationConclusion}><small>{claim.role === "scope" ? "答案采用的范围" : "答案采用的结论"}</small><h5>{claim.label}</h5><strong>{claim.value}</strong></section>
+            <section><small>{t("bknTrace.evidenceChain.objectAndConditions")}</small><h5>{claim.objectLabel ?? t("bknTrace.evidenceChain.recordedObject")}</h5>{derivation?.inputs.map(item => <BusinessValue key={`${item.label}:${item.value}`} node={{id:item.label,label:derivationInputLabel(item.label, t),value:item.value,kind:"field"}} />)}</section>
+            <b>→</b><section className={styles.derivationProcess}><small>{t("bknTrace.evidenceChain.businessProcessing")}</small><h5>{derivation?.processName || t("bknTrace.evidenceChain.recordedProcessing")}</h5></section>
+            <b>→</b><section className={styles.derivationResult}><small>{t(`bknTrace.evidenceChain.derivation.${derivation?.method === "sum" ? "independentVerification" : derivation?.method === "distinct_count" ? "returnedComponents" : "recordedResult"}`)}</small><h5>{derivation?.formula || `${claim.label} = ${claim.value ?? ""}`}</h5></section>
+            <b>→</b><section className={styles.derivationConclusion}><small>{t(claim.role === "scope" ? "bknTrace.evidenceChain.adoptedScope" : "bknTrace.evidenceChain.adoptedConclusion")}</small><h5>{claim.label}</h5><strong>{claim.value}</strong></section>
           </div>
-          {derivation?.components.length ? <details className={styles.componentDetails}><summary>{derivation.method === "sum" ? `查看 ${derivation.components.length} 项分仓核验` : `查看 ${derivation.components.length} 个产品`}</summary><div>{derivation.components.map((item,index) => <div key={`${item.label}:${item.value}:${index}`}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div></details> : null}
-          {derivation?.boundary && <p className={styles.evidenceBoundary}><strong>证据边界：</strong>{derivation.boundary}</p>}
+          {derivation?.components.length ? <details className={styles.componentDetails}><summary>{t(derivation.method === "sum" ? "bknTrace.evidenceChain.viewWarehouseChecks" : "bknTrace.evidenceChain.viewProducts", { count: derivation.components.length })}</summary><div>{derivation.components.map((item,index) => <div key={`${item.label}:${item.value}:${index}`}><span>{item.label}</span><strong>{item.value}</strong></div>)}</div></details> : null}
+          {derivation?.boundary && <p className={styles.evidenceBoundary}><strong>{t("bknTrace.evidenceChain.evidenceBoundary")}</strong>{derivation.boundary}</p>}
         </div>
       </details>;
     })}
-    <details className={styles.rawEvidence}><summary>查看完整记录事实（排障）</summary><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={undefined} onSelect={onNode} onEdge={onEdge} /></details>
+    <details className={styles.rawEvidence}><summary>{t("bknTrace.evidenceChain.rawEvidence")}</summary><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={undefined} onSelect={onNode} onEdge={onEdge} /></details>
   </div>;
 }
 
