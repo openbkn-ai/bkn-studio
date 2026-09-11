@@ -317,7 +317,7 @@ export function buildBackendObjectTypePayload(
     data_properties: dataProperties.map(toBackendDataProperty),
     data_source: input.dataSource
       ? {
-          type: input.dataSource.type ?? "resource",
+          type: "resource",
           id: input.dataSource.id,
           name: input.dataSource.name,
         }

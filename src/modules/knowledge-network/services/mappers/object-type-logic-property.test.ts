@@ -31,6 +31,29 @@ describe("object type tool logic property mapper", () => {
     ).toEqual({ id: "resource-1", name: "Orders", type: "resource" });
   });
 
+  it("does not write a legacy data source type from untyped input", () => {
+    const legacyDataSource = { id: "resource-1", name: "Orders", type: "data_view" } as unknown as {
+      id: string;
+      name: string;
+      type: "resource";
+    };
+
+    expect(
+      buildBackendObjectTypePayload(
+        {
+          color: "#1677ff",
+          conceptGroupIds: [],
+          dataProperties: [],
+          dataSource: legacyDataSource,
+          description: "",
+          name: "Order",
+          tags: [],
+        },
+        [],
+      ).data_source,
+    ).toEqual({ id: "resource-1", name: "Orders", type: "resource" });
+  });
+
   it("maps toolbox identifiers and result path from backend", () => {
     expect(
       mapLogicProperty({

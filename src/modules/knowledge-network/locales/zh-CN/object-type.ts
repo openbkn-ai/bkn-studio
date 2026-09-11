@@ -16,7 +16,7 @@ export const objecttypePart = {
     objectTypeBatchDeleteDescription_one: "确认删除选中的 {{count}} 个对象类吗？该操作不可撤销。",
     objectTypeBatchDeleteDescription_other: "确认删除选中的 {{count}} 个对象类吗？该操作不可撤销。",
     objectTypeBatchDeleteTitle: "批量删除对象类",
-    objectTypeBindResource: "绑定资源",
+    objectTypeBoundResource: "已绑定资源",
     objectTypeDataSource: "数据来源",
     objectTypeDataSourceEmpty: "当前对象类暂未绑定资源。",
     objectTypeClearAllProperties: "清空全部",

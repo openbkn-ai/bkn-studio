@@ -19,7 +19,7 @@ export const objecttypePart = {
     objectTypeBatchDeleteDescription_other:
       "Delete the selected {{count}} object types? This action cannot be undone.",
     objectTypeBatchDeleteTitle: "Delete object types",
-    objectTypeBindResource: "Bind resource",
+    objectTypeBoundResource: "Bound resource",
     objectTypeDataSource: "Data source",
     objectTypeDataSourceEmpty: "No resource bound yet.",
     objectTypeClearAllProperties: "Clear all",
