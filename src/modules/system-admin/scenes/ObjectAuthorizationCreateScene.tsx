@@ -18,6 +18,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -340,6 +341,23 @@ export function ObjectAuthorizationCreateScene() {
       setSaving(false);
     }
   };
+
+  if (fineGrainedCapability === "unknown") {
+    return (
+      <section
+        className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}
+        data-page="object-authz-create"
+      >
+        <RequireEdition
+          capability={CAPABILITIES.PERM_FINE_GRAINED}
+          minEdition="professional"
+          mountLockedContent={false}
+        >
+          <div />
+        </RequireEdition>
+      </section>
+    );
+  }
 
   return (
     <section

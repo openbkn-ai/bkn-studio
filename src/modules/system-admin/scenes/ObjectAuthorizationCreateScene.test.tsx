@@ -35,6 +35,10 @@ vi.mock("@/framework/entitlement/use-entitlement", () => ({
   useCapability: () => capability.current,
 }));
 
+vi.mock("@/framework/entitlement/RequireEdition", () => ({
+  RequireEdition: () => <div>entitlement-state-unknown</div>,
+}));
+
 vi.mock("@/modules/system-admin/services/admin.service", () => ({
   listUsers: listUsersMock,
 }));
@@ -219,5 +223,20 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
       objSub: undefined,
       objType: "catalog",
     });
+  });
+
+  it("does not downgrade an unknown capability snapshot to Community grant creation", async () => {
+    capability.current = "unknown";
+
+    render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+
+    expect(screen.getByText("entitlement-state-unknown")).not.toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.modeCommunityTitle")).toBeNull();
+    expect(screen.queryByRole("button", { name: /full_business_access/ })).toBeNull();
+    expect(screen.queryByRole("button", {
+      name: "systemAdmin.objectGrants.confirmGrant",
+    })).toBeNull();
+    expect(upsertObjectGrantMock).not.toHaveBeenCalled();
   });
 });
