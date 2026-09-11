@@ -43,7 +43,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(1);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(3);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(4);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
@@ -62,6 +62,7 @@ describe("capability catalog", () => {
 
     expect(served.sort()).toEqual([
       "connector_certified",
+      "perm_fine_grained",
       "perm_object_level",
       "rbac_basic",
     ]);

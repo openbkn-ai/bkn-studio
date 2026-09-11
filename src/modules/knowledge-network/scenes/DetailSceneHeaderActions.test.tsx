@@ -58,6 +58,10 @@ vi.mock("@/modules/knowledge-network/hooks/useAccountDirectory", () => ({
   useResolvedUpdaterName: (name?: string) => name || "--",
 }));
 
+vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
+  useKnowledgeNetworkCanOperate: () => true,
+}));
+
 vi.mock(
   "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState",
   () => ({
@@ -148,7 +152,7 @@ describe("knowledge network detail scene headers", () => {
       name: "Update order",
       objectTypeId: "object-1",
       objectTypeName: "Order",
-      operations: ["modify", "task_manage", "authorize", "delete"],
+      operations: ["view_detail", "modify", "execute", "delete"],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
       updaterName: "admin",
@@ -184,7 +188,7 @@ describe("knowledge network detail scene headers", () => {
       incrementalKey: "",
       logicProperties: [],
       name: "Order",
-      operations: ["modify", "authorize", "delete"],
+      operations: ["view_detail", "modify", "delete"],
       primaryKeys: [],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
@@ -357,7 +361,7 @@ describe("knowledge network detail scene headers", () => {
       id: "relation-1",
       mappingMode: "direct",
       name: "Contains",
-      operations: ["modify", "authorize", "delete"],
+      operations: ["view_detail", "modify", "delete"],
       propertyMappings: [],
       resourceMappings: [],
       sourceObjectTypeId: "object-1",
@@ -395,7 +399,7 @@ describe("knowledge network detail scene headers", () => {
       id: "metric-1",
       metricType: "atomic",
       name: "Order count",
-      operations: ["modify", "authorize", "delete"],
+      operations: ["view_detail", "modify", "delete"],
       scopeRef: "subgraph-1",
       scopeType: "subgraph",
       tags: [],

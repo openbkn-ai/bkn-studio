@@ -15,10 +15,11 @@ import {
   FunctionOutlined,
   KeyOutlined,
   PlusOutlined,
+  QuestionCircleOutlined,
   ReloadOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Empty, Input, Segmented, Select, Tag, Tooltip } from "antd";
+import { Alert, Dropdown, Empty, Input, Popover, Segmented, Select, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
@@ -26,6 +27,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -40,7 +43,6 @@ import {
   type AuthzGroup,
   listObjectGrantsPage,
   listObjectGroups,
-  revokeObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
@@ -50,8 +52,11 @@ import {
   getCachedUserSync,
   hydrateUserLookup,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
-import { AUTHZ_OBJECT_TYPES, authzObjectTypeOptions } from "@/modules/system-admin/utils/authz-catalog";
-import { isSelfAuthorizeLockout } from "@/modules/system-admin/utils/object-grant-guards";
+import {
+  authzObjectTypeOptions,
+  COMMUNITY_OBJECT_GRANT_TYPES,
+  FINE_GRAINED_OBJECT_FILTER_TYPES,
+} from "@/modules/system-admin/utils/authz-catalog";
 import { operationLabel, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
@@ -84,7 +89,8 @@ const grantKey = (grant: ObjectGrant) =>
 export function ObjectAuthorizationScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const fineGrained = useCapability(CAPABILITIES.PERM_FINE_GRAINED) === "available";
+  const { runtimeConfig } = useAppServices();
   const canRevokeGrant = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.revoke,
@@ -94,7 +100,6 @@ export function ObjectAuthorizationScene() {
     requiredPermissions: authzPoints.grant,
   });
   const canManageGrants = canGrant || canRevokeGrant;
-  const currentUserId = runtimeConfig.currentUser.id;
   const { pageState, setPagination } = usePageState();
 
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
@@ -194,7 +199,13 @@ export function ObjectAuthorizationScene() {
     () => new Map(departments.map((item) => [item.id, item])),
     [departments],
   );
-  const objectTypeOptions = useMemo(() => authzObjectTypeOptions(), []);
+  const visibleObjectTypes = fineGrained
+    ? FINE_GRAINED_OBJECT_FILTER_TYPES
+    : COMMUNITY_OBJECT_GRANT_TYPES;
+  const objectTypeOptions = useMemo(
+    () => authzObjectTypeOptions(visibleObjectTypes),
+    [visibleObjectTypes],
+  );
 
   const resolveGrantee = useCallback(
     (id: string) => {
@@ -325,18 +336,30 @@ export function ObjectAuthorizationScene() {
   );
 
   const opChips = useCallback((grant: ObjectGrant) => {
-    const visibleOperations = grant.operations.slice(0, 3);
-    const hiddenCount = grant.operations.length - visibleOperations.length;
-    const hiddenLabels = grant.operations
+    if (grant.bundle) {
+      return <Tag color="blue">{t("systemAdmin.objectGrants.fullBundleName")}</Tag>;
+    }
+    const decisions = grant.effectiveDecisions?.length
+      ? grant.effectiveDecisions
+      : [
+          ...grant.operations.map((operation) => ({ decision: "allow" as const, operation })),
+          ...(grant.deniedOperations ?? []).map((operation) => ({ decision: "deny" as const, operation })),
+        ];
+    const visibleDecisions = decisions.slice(0, 3);
+    const hiddenCount = decisions.length - visibleDecisions.length;
+    const hiddenLabels = decisions
       .slice(3)
-      .map((operation) => operationLabel(grant.objType, operation))
+      .map((decision) => operationLabel(grant.objType, decision.operation))
       .join(" / ");
 
     return (
       <span className={styles.chipRow}>
-        {visibleOperations.map((operation) => (
-          <Tag className={styles.permChip} key={`${grantKey(grant)}:${operation}`}>
-            {operationLabel(grant.objType, operation)}
+        {visibleDecisions.map((decision) => (
+          <Tag
+            color={decision.decision === "deny" ? "red" : "green"}
+            key={`${grantKey(grant)}:${decision.operation}:${decision.decision}`}
+          >
+            {operationLabel(grant.objType, decision.operation)}
           </Tag>
         ))}
         {hiddenCount > 0 ? (
@@ -346,59 +369,10 @@ export function ObjectAuthorizationScene() {
         ) : null}
       </span>
     );
-  }, []);
-
-  const confirmRevoke = useCallback(
-    (grant: ObjectGrant) => {
-      const grantee = resolveGrantee(grant.accessorId);
-      void modal.confirm({
-        title: t("systemAdmin.objectGrants.revokeTitle"),
-        content: t("systemAdmin.objectGrants.revokeConfirm", {
-          name: grantee.label,
-          object: grant.objName,
-        }),
-        okText: t("systemAdmin.objectGrants.revoke"),
-        cancelText: t("common.cancel"),
-        okButtonProps: { danger: true },
-        onOk: async () => {
-          try {
-            await revokeObjectGrant(grant.accessorId, grant.objType, grant.objId);
-            setGrants((prev) =>
-              prev.filter(
-                (item) =>
-                  !(
-                    item.accessorId === grant.accessorId &&
-                    item.objType === grant.objType &&
-                    item.objId === grant.objId
-                  ),
-              ),
-            );
-            setTotal((prev) => Math.max(0, prev - 1));
-            setSummary((prev) => ({
-              grants: Math.max(0, prev.grants - 1),
-              objects: prev.objects,
-              grantees: prev.grantees,
-            }));
-            message.success(t("systemAdmin.objectGrants.toast.revoked"));
-          } catch (error) {
-            void message.error(extractRequestErrorMessage(error));
-          }
-        },
-      });
-    },
-    [message, modal, resolveGrantee, t],
-  );
+  }, [t]);
 
   const buildGrantActionMenu = useCallback(
     (grant: ObjectGrant): MenuProps => {
-      // Revoking here deletes the row outright, stranding a caller who holds no admin-authz:grant
-      // on their own `authorize` exactly as the drawer's remove control would. The drawer locks that
-      // row; this menu is the list's own way to the same DELETE, and refuses it on the same terms.
-      const selfAuthorizeLocked = isSelfAuthorizeLockout({
-        currentUserId,
-        grant,
-        isAdminGrantor: canGrant,
-      });
       return {
         items: [
           {
@@ -409,20 +383,6 @@ export function ObjectAuthorizationScene() {
                 : "systemAdmin.objectGrants.viewDetail",
             ),
           },
-          canRevokeGrant
-            ? {
-                danger: true,
-                disabled: selfAuthorizeLocked,
-                key: "revoke",
-                label: selfAuthorizeLocked ? (
-                  <Tooltip title={t("systemAdmin.objectGrants.selfAuthorizeLocked")}>
-                    <span>{t("systemAdmin.objectGrants.revoke")}</span>
-                  </Tooltip>
-                ) : (
-                  t("systemAdmin.objectGrants.revoke")
-                ),
-              }
-            : null,
         ].filter(Boolean),
         onClick: ({ key, domEvent }) => {
           domEvent.stopPropagation();
@@ -433,18 +393,11 @@ export function ObjectAuthorizationScene() {
               sub: grant.objSub,
               type: grant.objType,
             });
-            return;
-          }
-          if (key === "revoke") {
-            if (selfAuthorizeLocked) {
-              return;
-            }
-            confirmRevoke(grant);
           }
         },
       };
     },
-    [canGrant, canManageGrants, canRevokeGrant, confirmRevoke, currentUserId, openDrawer, t],
+    [canManageGrants, openDrawer, t],
   );
 
   const columns: ColumnsType<ObjectGrant> = useMemo(() => [
@@ -619,7 +572,7 @@ export function ObjectAuthorizationScene() {
           </div>
           <div className={styles.statCard}>
             <span className={styles.statLabel}>{t("systemAdmin.objectGrants.stats.types")}</span>
-            <span className={styles.statValue}>{AUTHZ_OBJECT_TYPES.length}</span>
+            <span className={styles.statValue}>{visibleObjectTypes.length}</span>
           </div>
         </div>
 
@@ -652,6 +605,34 @@ export function ObjectAuthorizationScene() {
               ]}
               value={view}
             />
+            <Popover
+              content={(
+                <div className={styles.permissionHelpContent}>
+                  <p>
+                    {t("systemAdmin.objectGrants.calloutPrefix")}
+                    <AppButton
+                      className={styles.actionLink}
+                      onClick={() => void navigate("/system/roles")}
+                      type="link"
+                    >
+                      {t("systemAdmin.roles.title")}
+                    </AppButton>
+                    {t("systemAdmin.objectGrants.calloutSuffix")}
+                  </p>
+                </div>
+              )}
+              placement="bottomLeft"
+              title={t("systemAdmin.objectGrants.permissionHelp")}
+              trigger="click"
+            >
+              <AppButton
+                className={styles.permissionHelpButton}
+                icon={<QuestionCircleOutlined />}
+                type="text"
+              >
+                {t("systemAdmin.objectGrants.permissionHelp")}
+              </AppButton>
+            </Popover>
           </div>
 
           <div className={[styles.toolbarFilters, styles.filtersInline].join(" ")}>
@@ -664,6 +645,7 @@ export function ObjectAuthorizationScene() {
             />
             <Select
               allowClear
+              aria-label={t("systemAdmin.objectGrants.filterObjType")}
               className={styles.filterSelect}
               onChange={(value) => setObjTypeFilter(value)}
               options={objectTypeOptions}
@@ -686,22 +668,6 @@ export function ObjectAuthorizationScene() {
               value={granteeType}
             />
           </div>
-        </div>
-
-        <div className={[styles.calloutBox, styles.sectionCallout].join(" ")}>
-          <KeyOutlined />
-          <span>
-            {t("systemAdmin.objectGrants.calloutPrefix")}
-            <AppButton
-              className={styles.actionLink}
-              onClick={() => void navigate("/system/roles")}
-              style={{ fontSize: 13 }}
-              type="link"
-            >
-              {t("systemAdmin.roles.title")}
-            </AppButton>
-            {t("systemAdmin.objectGrants.calloutSuffix")}
-          </span>
         </div>
 
         {loadError ? (

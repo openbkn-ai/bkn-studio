@@ -40,6 +40,21 @@ export const AUTHZ_OBJECT_PICKER_TYPES = [
   "skill",
 ] as const;
 
+/** Community grants apply only to top-level business resources, never child resources. */
+export const COMMUNITY_OBJECT_GRANT_TYPES = [
+  "catalog",
+  "knowledge_network",
+  "operator",
+  "tool_box",
+  "mcp",
+  "skill",
+] as const;
+
+/** Filterable grant types for the fine-grained editions; retired model grants stay readable only. */
+export const FINE_GRAINED_OBJECT_FILTER_TYPES = AUTHZ_OBJECT_TYPES.filter(
+  (type) => type !== "small_model" && type !== "large_model",
+);
+
 /** Type-level operations hidden by the object-grant UI because they are meaningless on concrete instances. */
 export const HIDDEN_INSTANCE_OPS = new Set(["create"]);
 
@@ -55,7 +70,13 @@ export function isAuthzObjectPickerType(type: string): type is AuthzObjectPicker
   return (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type);
 }
 
-/** Object-type dropdown options ({value, label}). */
-export function authzObjectTypeOptions(): Array<{ label: string; value: string }> {
-  return AUTHZ_OBJECT_TYPES.map((type) => ({ label: resourceTypeLabel(type), value: type }));
+export function isCommunityObjectGrantType(type: string) {
+  return (COMMUNITY_OBJECT_GRANT_TYPES as readonly string[]).includes(type);
+}
+
+/** Object-type dropdown options ({value, label}) for a caller-selected edition catalogue. */
+export function authzObjectTypeOptions(
+  types: readonly string[] = AUTHZ_OBJECT_TYPES,
+): Array<{ label: string; value: string }> {
+  return types.map((type) => ({ label: resourceTypeLabel(type), value: type }));
 }

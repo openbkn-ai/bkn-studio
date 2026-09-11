@@ -8,45 +8,56 @@
 import {
   ApiOutlined,
   AppstoreOutlined,
+  ArrowLeftOutlined,
   BulbOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FunctionOutlined,
+  InfoCircleOutlined,
   LockOutlined,
   PlusOutlined,
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Drawer, Empty, Select, Spin, Tag, Tooltip } from "antd";
+import { Drawer, Empty, Select, Spin, Table, Tag, Tooltip } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import {
-  isDelegateProtectedGrant,
-  isSelfAuthorizeLockout,
-} from "@/modules/system-admin/utils/object-grant-guards";
-import { chipTogglePoint } from "@/modules/system-admin/utils/authz-actions";
 import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
   listObjectGrantsForObject,
+  listEnterpriseObjectGrants,
   revokeObjectGrantForObject,
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
-import type { ObjectGrant } from "@/modules/system-admin/types/authz";
+import type { EffectiveDecision, EnterpriseObjectGrant, GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 import {
   getCachedDepartments,
   getCachedUserSync,
   hydrateUserLookup,
   primeUserLookupCache,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
-import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
+import {
+  HIDDEN_INSTANCE_OPS,
+  isCommunityObjectGrantType,
+} from "@/modules/system-admin/utils/authz-catalog";
+import {
+  isDelegateProtectedGrant,
+  isSelfAuthorizeLockout,
+} from "@/modules/system-admin/utils/object-grant-guards";
 import {
   operationsForType,
   resourceTypeLabel,
@@ -68,9 +79,6 @@ type ObjectAuthorizeDrawerProps = {
   objType: string;
   /** Optionally preselect the grantee during creation. */
   prefillGranteeId?: string;
-  /** Grant list already loaded by the parent; when provided, do not fetch all grants again. */
-  allGrants?: ObjectGrant[];
-  onGrantsChange?: (grants: ObjectGrant[]) => void;
   onChanged?: () => void;
   onClose: () => void;
   open: boolean;
@@ -88,19 +96,7 @@ const OBJ_ICON: Record<string, ReactNode> = {
   skill: <BulbOutlined />,
 };
 
-function filterObjectGrants(grants: ObjectGrant[], objType: string, objId: string) {
-  return grants.filter((grant) => grant.objType === objType && grant.objId === objId);
-}
-
-function mergeObjectGrants(
-  allGrants: ObjectGrant[],
-  objType: string,
-  objId: string,
-  objectGrants: ObjectGrant[],
-) {
-  const others = allGrants.filter((grant) => !(grant.objType === objType && grant.objId === objId));
-  return [...others, ...objectGrants];
-}
+const FULL_BUSINESS_ACCESS = "full_business_access" as const;
 
 export function ObjectAuthorizeDrawer({
   objectAuthorized = false,
@@ -109,14 +105,14 @@ export function ObjectAuthorizeDrawer({
   objSub,
   objType,
   prefillGranteeId,
-  allGrants,
-  onGrantsChange,
   onChanged,
   onClose,
   open,
 }: ObjectAuthorizeDrawerProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
+  const fineGrained = useCapability(CAPABILITIES.PERM_FINE_GRAINED) === "available";
+  const enterpriseAvailable = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL) === "available";
   // The drawer is a complete write panel for grants, operation changes, and revocation, but seeing
   // who has access to an object is legitimate for read-only reviewers. Guard each write control,
   // rather than blocking access to the drawer.
@@ -145,12 +141,15 @@ export function ObjectAuthorizeDrawer({
   const canRevoke = objectAuthorized || isAdminRevoker;
   const canManageGrants = canGrant || canRevoke;
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
+  const [enterpriseGrants, setEnterpriseGrants] = useState<EnterpriseObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
   const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState<string>();
+  const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [candidateKeyword, setCandidateKeyword] = useState("");
+  const [sourceAccessorId, setSourceAccessorId] = useState<string>();
   const debouncedCandidateKeyword = useDebouncedValue(candidateKeyword.trim(), 300);
   const [candidateUserOptions, setCandidateUserOptions] = useState<
     Array<{ label: string; value: string }>
@@ -169,6 +168,43 @@ export function ObjectAuthorizeDrawer({
       ),
     [isAdminGrantor, objType, objectAuthorized],
   );
+
+  const candidateRequirements = useMemo(
+    () =>
+      ops.flatMap((requirement) => {
+        const dependents = ops.filter(
+          (operation) =>
+            candidateOperations.includes(operation.key) &&
+            operation.requires.includes(requirement.key),
+        );
+        return dependents.length > 0 ? [{ dependents, requirement }] : [];
+      }),
+    [candidateOperations, ops],
+  );
+
+  const toggleCandidateOperation = (operationKey: string) => {
+    setCandidateOperations((current) => {
+      if (current.includes(operationKey)) {
+        const requiredBySelection = ops.some(
+          (operation) =>
+            current.includes(operation.key) && operation.requires.includes(operationKey),
+        );
+        return requiredBySelection
+          ? current
+          : current.filter((candidateOperation) => candidateOperation !== operationKey);
+      }
+      const requirements = ops.find((operation) => operation.key === operationKey)?.requires ?? [];
+      return [...new Set([...current, ...requirements, operationKey])];
+    });
+  };
+
+  const selectAllCandidateOperations = () => {
+    setCandidateOperations(ops.map((operation) => operation.key));
+  };
+
+  const clearCandidateOperations = () => {
+    setCandidateOperations([]);
+  };
 
   // Best-effort: departments and user details come from admin-path endpoints. Those reads now admit
   // the holder of `authorize` on a concrete object as well as the platform administrator, so an
@@ -192,38 +228,28 @@ export function ObjectAuthorizeDrawer({
       primeUserLookupCache(accounts);
       setGrants(grantList);
       await syncLookup(grantList.map((grant) => grant.accessorId));
+      if (enterpriseAvailable) {
+        setEnterpriseGrants(await listEnterpriseObjectGrants({ resourceId: objId, resourceType: objType }));
+      } else {
+        setEnterpriseGrants([]);
+      }
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
       setLoading(false);
     }
-  }, [message, objId, objType, syncLookup]);
-
-  const applyLocalGrants = useCallback(
-    (nextObjectGrants: ObjectGrant[]) => {
-      setGrants(nextObjectGrants);
-      if (allGrants && onGrantsChange) {
-        onGrantsChange(mergeObjectGrants(allGrants, objType, objId, nextObjectGrants));
-      }
-    },
-    [allGrants, objId, objType, onGrantsChange],
-  );
+  }, [enterpriseAvailable, message, objId, objType, syncLookup]);
 
   useEffect(() => {
     if (!open) {
       return;
     }
     setCandidate(prefillGranteeId);
+    setCandidateOperations([]);
     setCandidateKeyword("");
-    if (allGrants) {
-      const filtered = filterObjectGrants(allGrants, objType, objId);
-      setGrants(filtered);
-      setLoading(false);
-      void syncLookup(filtered.map((grant) => grant.accessorId));
-      return;
-    }
+    setSourceAccessorId(undefined);
     void loadRemote();
-  }, [allGrants, loadRemote, objId, objType, open, prefillGranteeId, syncLookup]);
+  }, [loadRemote, open, prefillGranteeId]);
 
   useEffect(() => {
     if (!open) {
@@ -270,14 +296,6 @@ export function ObjectAuthorizeDrawer({
     [departments],
   );
 
-  const isProtected = useCallback(
-    (id: string) => {
-      void lookupRevision;
-      return getCachedUserSync(id)?.builtin === true;
-    },
-    [lookupRevision],
-  );
-
   const resolveGrantee = useCallback(
     (id: string) => {
       void lookupRevision;
@@ -294,58 +312,75 @@ export function ObjectAuthorizeDrawer({
     [deptMap, lookupRevision],
   );
 
+  const grantProtection = useCallback(
+    (grant: ObjectGrant) => {
+      const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtectedGrant(grant);
+      const selfAuthorizeLocked = isSelfAuthorizeLockout({
+        currentUserId,
+        grant,
+        isAdminGrantor,
+      });
+      return {
+        eraseLocked: delegateLocked || selfAuthorizeLocked,
+        sourceWriteLocked: delegateLocked,
+        reason: delegateLocked
+            ? t("systemAdmin.objectGrants.delegateLocked")
+            : selfAuthorizeLocked
+              ? t("systemAdmin.objectGrants.selfAuthorizeLocked")
+              : undefined,
+        selfAuthorizeLocked,
+      };
+    },
+    [currentUserId, isAdminGrantor, isPlatformAuthzAdmin, t],
+  );
+
+  const visibleGrants = useMemo(
+    () => fineGrained
+      ? grants
+      : grants.filter(
+          (grant) => grant.bundle === FULL_BUSINESS_ACCESS ||
+            (grant.grants ?? []).some(
+              (source) => source.active && source.policySource === "community_bundle",
+            ),
+        ),
+    [fineGrained, grants],
+  );
+
   const hasProtectedGrant = useMemo(
-    () => grants.some((grant) => isProtected(grant.accessorId)),
-    [grants, isProtected],
+    () => visibleGrants.some((grant) => grantProtection(grant).eraseLocked),
+    [grantProtection, visibleGrants],
   );
 
   // Users only — the backend rejects department accessors (see ObjectAuthorizationCreateScene).
   // Departments are still resolved for display, since older grants may name one.
   const candidates = useMemo(() => {
-    const taken = new Set(grants.map((grant) => grant.accessorId));
-    const userOptions = candidateUserOptions.filter((option) => !taken.has(option.value));
-    return [{ label: t("systemAdmin.objectGrants.granteeUser"), options: userOptions }];
-  }, [candidateUserOptions, grants, t]);
-
-  const targetOf = (grant: ObjectGrant) => ({
-    accessorId: grant.accessorId,
-    objType: grant.objType,
-    objId: grant.objId,
-    objName: grant.objName,
-    objSub: grant.objSub,
-  });
+    return [{ label: t("systemAdmin.objectGrants.granteeUser"), options: candidateUserOptions }];
+  }, [candidateUserOptions, t]);
 
   const handleAdd = async () => {
     if (!candidate) {
       void message.error(t("systemAdmin.objectGrants.pickGranteeFirst"));
       return;
     }
-    const defaultOp = ops.find((op) => /view|display|list/.test(op.key))?.key ?? ops[0]?.key;
-    if (!defaultOp) {
+    if (!candidateOperations.length) {
       return;
     }
     setBusy(true);
     try {
       await upsertObjectGrantForObject({
         accessorId: candidate,
+        ...(fineGrained
+          ? { effect: "allow" as const, operations: candidateOperations }
+          : { bundle: FULL_BUSINESS_ACCESS }),
         objType,
         objId,
         objName,
         objSub,
-        operations: [defaultOp],
       });
       message.success(t("systemAdmin.objectGrants.toast.granteeAdded"));
       setCandidate(undefined);
-      const nextGrant: ObjectGrant = {
-        accessorId: candidate,
-        objType,
-        objId,
-        objName,
-        objSub,
-        operations: [defaultOp],
-      };
-      const nextGrants = [...grants.filter((grant) => grant.accessorId !== candidate), nextGrant];
-      applyLocalGrants(nextGrants);
+      setCandidateOperations([]);
+      await loadRemote();
       await hydrateUserLookup([candidate]);
       setLookupRevision((revision) => revision + 1);
       onChanged?.();
@@ -356,54 +391,102 @@ export function ObjectAuthorizeDrawer({
     }
   };
 
-  const toggleOp = async (grant: ObjectGrant, opKey: string) => {
-    const next = grant.operations.includes(opKey)
-      ? grant.operations.filter((op) => op !== opKey)
-      : [...grant.operations, opKey];
-    const commit = async () => {
-      setBusy(true);
-      try {
-        await upsertObjectGrantForObject({ ...targetOf(grant), operations: next });
-        const nextGrants = next.length
-          ? grants.map((item) =>
-              item.accessorId === grant.accessorId ? { ...item, operations: next } : item,
-            )
-          : grants.filter((item) => item.accessorId !== grant.accessorId);
-        applyLocalGrants(nextGrants);
-        onChanged?.();
-      } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
-      } finally {
-        setBusy(false);
+  const decisionsForGrant = (grant: ObjectGrant): EffectiveDecision[] =>
+    grant.effectiveDecisions?.length
+      ? grant.effectiveDecisions
+      : grant.operations.map((operation) => ({
+          basis: "direct" as const,
+          decision: "allow" as const,
+          operation,
+          requires: [],
+        }));
+
+  const revocableSourcesForGrant = (grant?: ObjectGrant) =>
+    (grant?.grants ?? []).filter((source) => {
+      if (!grant) {
+        return false;
       }
-    };
-    if (!next.length) {
-      void modal.confirm({
-        title: t("systemAdmin.objectGrants.removeGrantTitle"),
-        content: t("systemAdmin.objectGrants.removeLastOpConfirm"),
-        okText: t("common.delete"),
-        cancelText: t("common.cancel"),
-        okButtonProps: { danger: true },
-        onOk: commit,
-      });
-      return;
-    }
-    await commit();
+      const protection = grantProtection(grant);
+      return source.active && !source.inherited && source.policySource !== "role_permission" &&
+        Boolean(source.grantId) && !protection.sourceWriteLocked &&
+        !(protection.selfAuthorizeLocked && source.operation === "authorize");
+    });
+
+  const dependentOperationsForGrant = (grant: ObjectGrant | undefined, requirementKey: string) => {
+    const allowedOperations = new Set(
+      grant ? decisionsForGrant(grant)
+        .filter((decision) => decision.decision === "allow")
+        .map((decision) => decision.operation) : [],
+    );
+    return ops.filter(
+      (operation) =>
+        allowedOperations.has(operation.key) && operation.requires.includes(requirementKey),
+    );
   };
 
-  const handleRemove = (grant: ObjectGrant) => {
+  const handleDeleteGrant = (grant: ObjectGrant) => {
+    if (grantProtection(grant).eraseLocked) {
+      return;
+    }
+    const sources = revocableSourcesForGrant(grant).sort(
+      (left, right) =>
+        dependentOperationsForGrant(grant, left.operation).length -
+        dependentOperationsForGrant(grant, right.operation).length,
+    );
+    if (!canRevoke || !sources.length) {
+      return;
+    }
     const grantee = resolveGrantee(grant.accessorId);
     void modal.confirm({
-      title: t("systemAdmin.objectGrants.removeGrantTitle"),
-      content: t("systemAdmin.objectGrants.removeGrantConfirm", { name: grantee.name }),
-      okText: t("common.delete"),
+      cancelText: t("common.cancel"),
+      content: t("systemAdmin.objectGrants.deleteGrantConfirm", {
+        count: sources.length,
+        name: grantee.name,
+      }),
+      okButtonProps: { danger: true },
+      okText: t("systemAdmin.objectGrants.deleteGrant"),
+      onOk: async () => {
+        setBusy(true);
+        try {
+          for (const source of sources) {
+            await revokeObjectGrantForObject(source.grantId);
+          }
+          setSourceAccessorId(undefined);
+          message.success(t("systemAdmin.objectGrants.toast.revoked"));
+          await loadRemote();
+          onChanged?.();
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+        } finally {
+          setBusy(false);
+        }
+      },
+      title: t("systemAdmin.objectGrants.deleteGrantTitle"),
+    });
+  };
+
+  const handleRevokeSource = (grant: ObjectGrant | undefined, source: GrantRecord) => {
+    if (!grant || dependentOperationsForGrant(grant, source.operation).length) {
+      return;
+    }
+    const grantee = resolveGrantee(grant.accessorId);
+    void modal.confirm({
+      title: t("systemAdmin.objectGrants.deleteSourceTitle"),
+      content: t("systemAdmin.objectGrants.deleteSourceConfirm", {
+        effect: t(`systemAdmin.objectGrants.effect.${source.effect}`),
+        grantId: source.grantId,
+        name: grantee.name,
+        operation: source.operation,
+        source: t(`systemAdmin.objectGrants.source.${source.policySource}`),
+      }),
+      okText: t("systemAdmin.objectGrants.deleteGrant"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await revokeObjectGrantForObject(grant.accessorId, grant.objType, grant.objId);
+          await revokeObjectGrantForObject(source.grantId);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
-          applyLocalGrants(grants.filter((item) => item.accessorId !== grant.accessorId));
+          await loadRemote();
           onChanged?.();
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
@@ -412,15 +495,314 @@ export function ObjectAuthorizeDrawer({
     });
   };
 
-  return (
-    <Drawer
-      destroyOnClose
-      onClose={onClose}
-      open={open}
-      rootClassName={styles.adminOverlay}
-      title={t("systemAdmin.objectGrants.drawerTitle", { name: objName })}
-      width={720}
-    >
+  const sourceGrant = grants.find((grant) => grant.accessorId === sourceAccessorId);
+  const grantColumns: ColumnsType<ObjectGrant> = [
+    {
+      dataIndex: "accessorId",
+      key: "grantee",
+      render: (accessorId: string) => {
+        const grantee = resolveGrantee(accessorId);
+        const grant = grants.find((candidateGrant) => candidateGrant.accessorId === accessorId);
+        const protection = grant ? grantProtection(grant) : undefined;
+        return (
+          <div className={styles.authzSubjectCell}>
+            <span className={styles.authzAvatar}>
+              {grantee.type === "department" ? <AppstoreOutlined /> : <UserOutlined />}
+            </span>
+            <span>
+              <strong>{grantee.name}</strong>
+              <small>{grantee.sub}</small>
+            </span>
+            {protection?.eraseLocked ? (
+              <Tooltip title={protection.reason}>
+                <LockOutlined />
+              </Tooltip>
+            ) : null}
+          </div>
+        );
+      },
+      title: t("systemAdmin.objectGrants.columns.grantee"),
+      width: 210,
+    },
+    ...(fineGrained
+      ? [{
+          key: "effectivePermissions",
+          render: (_value: unknown, grant: ObjectGrant) => {
+            const decisions = new Map(
+              decisionsForGrant(grant).map((decision) => [decision.operation, decision]),
+            );
+            const effectiveOperations = ops.flatMap((operation) => {
+              const decision = decisions.get(operation.key);
+              return decision ? [{ decision, operation }] : [];
+            });
+            return effectiveOperations.length ? (
+              <div className={styles.authzPermissionSummary}>
+                {effectiveOperations.map(({ decision, operation }) => {
+                  const decisionLabel = t(
+                    decision.decision === "allow"
+                      ? "systemAdmin.objectGrants.permissionAllowed"
+                      : "systemAdmin.objectGrants.permissionDenied",
+                  );
+                  return (
+                    <Tooltip
+                      key={operation.key}
+                      title={`${operation.key} · ${decisionLabel} · ${t(`systemAdmin.objectGrants.basis.${decision.basis}`)}`}
+                    >
+                      <span
+                        aria-label={`${operation.label}: ${decisionLabel}`}
+                        className={[
+                          styles.authzPermissionChip,
+                          styles[`authzPermissionChip_${decision.decision}`],
+                        ].join(" ")}
+                      >
+                        {decision.decision === "allow"
+                          ? <CheckCircleOutlined />
+                          : <CloseCircleOutlined />}
+                        <span>{operation.label}</span>
+                      </span>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className={styles.authzMutedMark}>
+                {t("systemAdmin.objectGrants.permissionNotGranted")}
+              </span>
+            );
+          },
+          title: t("systemAdmin.objectGrants.effectivePermissions"),
+        }]
+      : [{
+          key: "bundle",
+          render: () => (
+            <div className={styles.authzPermissionSummary}>
+              <span
+                className={[
+                  styles.authzPermissionChip,
+                  styles.authzPermissionChip_allow,
+                ].join(" ")}
+              >
+                <CheckCircleOutlined />
+                <span>{t("systemAdmin.objectGrants.fullBundleName")}</span>
+              </span>
+            </div>
+          ),
+          title: t("systemAdmin.objectGrants.effectivePermissions"),
+        }]),
+    {
+      key: "sources",
+      render: (_value, grant) => {
+        const activeSources = (grant.grants ?? []).filter((source) => source.active);
+        const sourceLabels = [
+          ...new Set(activeSources.map((source) =>
+            t(`systemAdmin.objectGrants.source.${source.policySource}`),
+          )),
+        ];
+        return activeSources.length ? (
+          <AppButton
+            className={styles.authzSourceSummary}
+            onClick={() => setSourceAccessorId(grant.accessorId)}
+            size="small"
+            type="link"
+          >
+            <strong>{t("systemAdmin.objectGrants.sourceCount", { count: activeSources.length })}</strong>
+            <small>{sourceLabels.join(" / ")}</small>
+          </AppButton>
+        ) : (
+          <span className={styles.authzMutedMark}>—</span>
+        );
+      },
+      title: t("systemAdmin.objectGrants.grantSource"),
+      width: 150,
+    },
+    {
+      key: "actions",
+      render: (_value, grant) => {
+        const protection = grantProtection(grant);
+        const deleteDisabled = busy || !canRevoke || protection.eraseLocked ||
+          !revocableSourcesForGrant(grant).length;
+        return (
+          <div className={styles.authzRowActions}>
+            <AppButton
+              onClick={() => setSourceAccessorId(grant.accessorId)}
+              size="small"
+              type="link"
+            >
+              {t("common.viewDetails")}
+            </AppButton>
+            <span aria-hidden className={styles.authzActionDivider} />
+            <Tooltip
+              title={deleteDisabled
+                ? protection.reason ?? t("systemAdmin.objectGrants.deleteGrantUnavailable")
+                : undefined}
+            >
+              <span>
+                <AppButton
+                  danger
+                  disabled={deleteDisabled}
+                  onClick={() => handleDeleteGrant(grant)}
+                  size="small"
+                  type="link"
+                >
+                  {t("systemAdmin.objectGrants.deleteGrant")}
+                </AppButton>
+              </span>
+            </Tooltip>
+          </div>
+        );
+      },
+      title: t("common.actions"),
+      width: 156,
+    },
+  ];
+
+  const activeSourceRecords = (sourceGrant?.grants ?? []).filter((source) => source.active);
+  const sourceColumns: ColumnsType<GrantRecord> = [
+    {
+      key: "operation",
+      render: (_value, source) => {
+        const operation = ops.find((candidateOperation) =>
+          candidateOperation.key === source.operation);
+        return (
+          <div className={styles.authzSourceOperationCell}>
+            <strong>{operation?.label ?? source.operation}</strong>
+            <code>{source.operation}</code>
+          </div>
+        );
+      },
+      title: t("systemAdmin.objectGrants.columns.operations"),
+      width: 148,
+    },
+    {
+      dataIndex: "effect",
+      key: "effect",
+      render: (effect: GrantRecord["effect"]) => (
+        <Tag color={effect === "allow" ? "green" : "red"}>
+          {t(`systemAdmin.objectGrants.effect.${effect}`)}
+        </Tag>
+      ),
+      title: t("systemAdmin.objectGrants.sourceDecision"),
+      width: 84,
+    },
+    {
+      dataIndex: "policySource",
+      key: "source",
+      render: (policySource: GrantRecord["policySource"]) =>
+        t(`systemAdmin.objectGrants.source.${policySource}`),
+      title: t("systemAdmin.objectGrants.grantSource"),
+      width: 132,
+    },
+    {
+      dataIndex: "authoritySource",
+      key: "grantedBy",
+      render: (authoritySource: GrantRecord["authoritySource"]) =>
+        t(`systemAdmin.objectGrants.authority.${authoritySource}`),
+      title: t("systemAdmin.objectGrants.columns.grantedBy"),
+      width: 132,
+    },
+    {
+      dataIndex: "grantId",
+      ellipsis: true,
+      key: "grantId",
+      render: (grantId: string) => <code>{grantId}</code>,
+      title: t("systemAdmin.objectGrants.grantId"),
+    },
+    {
+      align: "right",
+      key: "actions",
+      render: (_value, source) => {
+        const operation = ops.find((candidateOperation) =>
+          candidateOperation.key === source.operation);
+        const revocable = canRevoke && revocableSourcesForGrant(sourceGrant)
+          .some((candidateSource) => candidateSource.grantId === source.grantId);
+        const blockingDependents = dependentOperationsForGrant(
+          sourceGrant,
+          source.operation,
+        );
+        const deletionBlocked = blockingDependents.length > 0;
+        return revocable ? (
+          <Tooltip
+            title={deletionBlocked
+              ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
+                  dependents: blockingDependents
+                    .map((candidateOperation) => candidateOperation.label)
+                    .join("、"),
+                  requirement: operation?.label ?? source.operation,
+                })
+              : undefined}
+          >
+            <span>
+              <AppButton
+                danger
+                disabled={deletionBlocked}
+                onClick={() => handleRevokeSource(sourceGrant, source)}
+                size="small"
+                type="link"
+              >
+                {t("systemAdmin.objectGrants.deleteGrant")}
+              </AppButton>
+            </span>
+          </Tooltip>
+        ) : (
+          <span className={styles.authzSourceReadOnly}>
+            {t("systemAdmin.objectGrants.readOnlySource")}
+          </span>
+        );
+      },
+      title: t("common.actions"),
+      width: 112,
+    },
+  ];
+
+  const drawerTitle = sourceGrant ? (
+    <div className={styles.authzDrillTitle}>
+      <AppButton
+        aria-label={t("common.back")}
+        icon={<ArrowLeftOutlined />}
+        onClick={() => setSourceAccessorId(undefined)}
+        size="small"
+        type="text"
+      />
+      <span>
+        {t("systemAdmin.objectGrants.sourceDrawerTitle", {
+          name: resolveGrantee(sourceGrant.accessorId).name,
+        })}
+      </span>
+    </div>
+  ) : t("systemAdmin.objectGrants.drawerTitle", { name: objName });
+
+  const sourceDetails = sourceGrant ? (
+    <div className={styles.authzSourceView}>
+      <div className={styles.authzSourceOverview}>
+        <div className={styles.authzSourceOverviewHeader}>
+          <strong>{t("systemAdmin.objectGrants.sourceRecords")}</strong>
+          <span>
+            {t("systemAdmin.objectGrants.sourceRecordCount", {
+              count: activeSourceRecords.length,
+            })}
+          </span>
+        </div>
+        <div className={styles.authzSourceHint}>
+          <InfoCircleOutlined />
+          <span>{t("systemAdmin.objectGrants.sourceDrawerDescription")}</span>
+        </div>
+      </div>
+      <Table<GrantRecord>
+        className={styles.authzSourceTable}
+        columns={sourceColumns}
+        dataSource={activeSourceRecords}
+        locale={{ emptyText: t("systemAdmin.objectGrants.sourceEmpty") }}
+        pagination={false}
+        rowKey="grantId"
+        scroll={{ x: 820 }}
+        size="small"
+        tableLayout="fixed"
+      />
+    </div>
+  ) : null;
+
+  const grantOverview = (
+    <>
       <div className={styles.authzObjHead}>
         <span className={styles.authzAvatar}>{OBJ_ICON[objType] ?? <AppstoreOutlined />}</span>
         <div className={styles.authzObjMeta}>
@@ -432,202 +814,272 @@ export function ObjectAuthorizeDrawer({
         </div>
         <div className={styles.authzObjStats}>
           <span className={styles.authzObjStat}>
-            <strong>{grants.length}</strong>
-            <span>{t("systemAdmin.objectGrants.granteeUser")}</span>
+            <strong>{visibleGrants.length}</strong>
+            <span>{t("systemAdmin.objectGrants.authorizedUserStat")}</span>
           </span>
           <span className={styles.authzObjStat}>
-            <strong>{ops.length}</strong>
-            <span>{t("systemAdmin.objectGrants.columns.operations")}</span>
+            <strong>{fineGrained ? ops.length : 1}</strong>
+            <span>{t("systemAdmin.objectGrants.grantableOperationStat")}</span>
           </span>
         </div>
       </div>
 
-      <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
-        <span>
-          {canManageGrants
-            ? t("systemAdmin.objectGrants.drawerHint")
-            : t("systemAdmin.objectGrants.drawerReadOnly")}
-        </span>
-      </div>
-
-      {canGrant ? (
-      <section className={styles.createPanel}>
-        <div className={styles.createPanelHead}>
-          <h3 className={styles.createPanelTitle}>{t("systemAdmin.objectGrants.add")}</h3>
-          <p className={styles.createPanelDesc}>{t("systemAdmin.objectGrants.addGranteePlaceholder")}</p>
+      {!canManageGrants ? (
+        <div className={[styles.calloutBox, styles.sectionCalloutBottom].join(" ")}>
+          <span>{t("systemAdmin.objectGrants.drawerReadOnly")}</span>
         </div>
-        <div className={styles.createPanelBody}>
-          <div className={styles.grantAddRow}>
-            <Select
-              filterOption={false}
-              loading={loading || candidateSearchLoading}
-              notFoundContent={candidateSearchLoading ? <Spin size="small" /> : null}
-              onChange={setCandidate}
-              onSearch={setCandidateKeyword}
-              options={candidates}
-              placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-              showSearch
-              style={{ flex: 1, minWidth: 220 }}
-              value={candidate}
-            />
-            <AppButton icon={<PlusOutlined />} loading={busy} onClick={() => void handleAdd()} type="primary">
-              {t("systemAdmin.objectGrants.add")}
-            </AppButton>
-          </div>
-        </div>
-      </section>
       ) : null}
 
-      {loading ? (
-        <div className={styles.createLoading}>
-          <Spin />
-        </div>
-      ) : grants.length ? (
-        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
-          <div className={styles.createPanelHead}>
-            <h3 className={styles.createPanelTitle}>
-              {t(
-                canManageGrants
-                  ? "systemAdmin.objectGrants.manage"
-                  : "systemAdmin.objectGrants.viewDetail",
-              )}
-            </h3>
-            <p className={styles.createPanelDesc}>
-              {t(
-                canManageGrants
-                  ? "systemAdmin.objectGrants.drawerHint"
-                  : "systemAdmin.objectGrants.drawerReadOnly",
-              )}
-            </p>
-          </div>
-          <div className={styles.createPanelBody}>
-            {hasProtectedGrant ? (
-              <div className={[styles.calloutBox, styles.calloutWarn].join(" ")}>
-                <LockOutlined />
-                <span>{t("systemAdmin.objectGrants.adminLocked")}</span>
+      {canGrant ? (
+        <section className={styles.authzGrantComposer}>
+          <header className={styles.authzGrantComposerHead}>
+            <strong>{t("systemAdmin.objectGrants.newGrantTitle")}</strong>
+            <span>
+              {t("systemAdmin.objectGrants.selectedOperationCount", {
+                selected: candidateOperations.length,
+                total: fineGrained ? ops.length : 1,
+              })}
+            </span>
+          </header>
+          <div className={styles.authzGrantForm}>
+            <div className={[styles.authzGrantField, styles.authzGrantUserField].join(" ")}>
+              <label htmlFor="object-grant-user">
+                {t("systemAdmin.objectGrants.grantUserLabel")}
+              </label>
+              <Select
+                aria-label={t("systemAdmin.objectGrants.grantUserLabel")}
+                filterOption={false}
+                id="object-grant-user"
+                loading={loading || candidateSearchLoading}
+                notFoundContent={candidateSearchLoading ? <Spin size="small" /> : null}
+                onChange={setCandidate}
+                onSearch={setCandidateKeyword}
+                options={candidates}
+                placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
+                showSearch
+                value={candidate}
+              />
+            </div>
+            <div className={styles.authzGrantField}>
+              <div className={styles.authzGrantFieldHead}>
+                <span className={styles.authzGrantFieldLabel}>
+                  {t("systemAdmin.objectGrants.grantOperationsLabel")}
+                </span>
+                {fineGrained ? (
+                  <div className={styles.authzGrantFieldActions}>
+                    <AppButton
+                      disabled={!ops.length || candidateOperations.length === ops.length}
+                      onClick={selectAllCandidateOperations}
+                      size="small"
+                      type="link"
+                    >
+                      {t("systemAdmin.objectGrants.selectAllOperations")}
+                    </AppButton>
+                    <AppButton
+                      disabled={!candidateOperations.length}
+                      onClick={clearCandidateOperations}
+                      size="small"
+                      type="link"
+                    >
+                      {t("systemAdmin.objectGrants.clearOperations")}
+                    </AppButton>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-            <div className={styles.authzList}>
-              {grants.map((grant) => {
-                const builtinLocked = isProtected(grant.accessorId);
-                const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtectedGrant(grant);
-                const selfAuthorizeLocked = isSelfAuthorizeLockout({
-                  currentUserId,
-                  grant,
-                  isAdminGrantor,
-                });
-                // Two locks of different reach. bkn-safe refuses a delegate any write against these
-                // rows, so that one takes the whole card. The self-lockout is about what the caller
-                // could undo, and only the erasing directions can strand them: dropping the row, or
-                // unchecking `authorize` on it. Adding operations to their own row still goes
-                // through — POST sends the union and leaves `authorize` standing.
-                const locked = builtinLocked || delegateLocked;
-                const eraseLocked = locked || selfAuthorizeLocked;
-                const grantee = resolveGrantee(grant.accessorId);
-                return (
-                  <div className={styles.authzCard} key={grant.accessorId}>
-                    <div className={styles.authzCardHead}>
-                      <span className={styles.authzWho}>
-                        <span className={styles.authzAvatar}>
-                          {grantee.type === "department" ? <AppstoreOutlined /> : <UserOutlined />}
-                        </span>
-                        <span className={styles.authzWhoName}>{grantee.name}</span>
-                        {grantee.sub ? <span className={styles.authzWhoSub}>{grantee.sub}</span> : null}
-                        <Tag className={styles.granteeTag}>
-                          {grantee.type === "department"
-                            ? t("systemAdmin.objectGrants.granteeDept")
-                            : t("systemAdmin.objectGrants.granteeUser")}
-                        </Tag>
-                      </span>
-                      {eraseLocked ? (
-                        <Tooltip
-                          title={t(
-                            builtinLocked
-                              ? "systemAdmin.objectGrants.adminLocked"
-                              : delegateLocked
-                                ? "systemAdmin.objectGrants.delegateLocked"
-                                : "systemAdmin.objectGrants.selfAuthorizeLocked",
-                          )}
-                        >
-                          <span className={styles.subText}>
-                            <LockOutlined />
-                          </span>
-                        </Tooltip>
-                      ) : (
-                        canRevoke ? (
-                          <AppButton
-                            className={[styles.actionLink, styles.actionDanger].join(" ")}
-                            onClick={() => handleRemove(grant)}
-                            type="link"
-                          >
-                            {t("systemAdmin.objectGrants.remove")}
-                          </AppButton>
-                        ) : null
-                      )}
-                    </div>
-                    <div className={styles.chipGroup}>
-                      {ops.map((op) => {
-                        const selected = grant.operations.includes(op.key);
-                        // Checking and unchecking send different backend actions (see chipTogglePoint),
-                        // so evaluate permissions by direction: grant-only users can add operations
-                        // but not remove the last one, while revoke-only users have the inverse access.
-                        const point = chipTogglePoint(selected, grant.operations.length);
-                        const allowed =
-                          point === authzPoints.revoke ? canRevoke : canGrant;
-                        return (
+              {fineGrained ? (
+                <div
+                  aria-label={t("systemAdmin.objectGrants.grantOperationsLabel")}
+                  className={styles.authzGrantOperations}
+                  role="group"
+                >
+                  {ops.map((operation) => {
+                    const selected = candidateOperations.includes(operation.key);
+                    const required = candidateRequirements.some(
+                      ({ requirement }) => requirement.key === operation.key,
+                    );
+                    return (
+                      <Tooltip key={operation.key} title={operation.key}>
                         <button
-                          className={[
-                            styles.chipOpt,
-                            selected ? styles.chipOptSelected : "",
-                          ].join(" ")}
-                          disabled={
-                            busy ||
-                            locked ||
-                            (selfAuthorizeLocked && op.key === "authorize") ||
-                            !allowed
-                          }
-                          key={op.key}
-                          onClick={() => void toggleOp(grant, op.key)}
+                          aria-label={`${operation.label} (${operation.key})`}
+                          aria-pressed={selected}
+                          className={selected
+                            ? styles.authzGrantOperationSelected
+                            : styles.authzGrantOperation}
+                          onClick={() => toggleCandidateOperation(operation.key)}
                           type="button"
                         >
-                          <span className={styles.chipCode}>{op.label}</span>
-                          <span className={styles.chipType}>{op.key}</span>
+                          {operation.label}
+                          {required ? <LockOutlined className={styles.authzGrantLock} /> : null}
                         </button>
-                        );
-                      })}
-                    </div>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <div
+                    aria-label={t("systemAdmin.objectGrants.grantOperationsLabel")}
+                    className={[
+                      styles.authzGrantOperations,
+                      styles.authzGrantOperationsSingle,
+                    ].join(" ")}
+                    role="group"
+                  >
+                    <Tooltip title={FULL_BUSINESS_ACCESS}>
+                      <button
+                        aria-label={`${t("systemAdmin.objectGrants.fullBundleName")} (${FULL_BUSINESS_ACCESS})`}
+                        aria-pressed={candidateOperations.includes(FULL_BUSINESS_ACCESS)}
+                        className={candidateOperations.includes(FULL_BUSINESS_ACCESS)
+                          ? styles.authzGrantOperationSelected
+                          : styles.authzGrantOperation}
+                        onClick={() => setCandidateOperations((current) =>
+                          current.includes(FULL_BUSINESS_ACCESS) ? [] : [FULL_BUSINESS_ACCESS])}
+                        type="button"
+                      >
+                        {t("systemAdmin.objectGrants.fullBundleName")}
+                      </button>
+                    </Tooltip>
                   </div>
-                );
-              })}
+                  <span className={styles.authzBundleHint}>
+                    {t("systemAdmin.objectGrants.fullBundleScope")}
+                  </span>
+                </>
+              )}
             </div>
+            <footer className={styles.authzGrantFooter}>
+              <span aria-live="polite">
+                {!candidate
+                  ? t("systemAdmin.objectGrants.grantNeedsUser")
+                  : !candidateOperations.length
+                    ? t(fineGrained
+                      ? "systemAdmin.objectGrants.grantNeedsOperation"
+                      : "systemAdmin.objectGrants.grantNeedsBundle")
+                    : fineGrained
+                      ? t("systemAdmin.objectGrants.grantReady", {
+                          count: candidateOperations.length,
+                        })
+                      : t("systemAdmin.objectGrants.grantBundleReady")}
+              </span>
+              <AppButton
+                disabled={!candidate || !candidateOperations.length}
+                icon={<PlusOutlined />}
+                loading={busy}
+                onClick={() => void handleAdd()}
+                type="primary"
+              >
+                {t("systemAdmin.objectGrants.addGrant")}
+              </AppButton>
+            </footer>
           </div>
+          {candidateRequirements.length > 0 ? (
+            <div className={styles.authzGrantNotice}>
+              <InfoCircleOutlined />
+              <div>
+                {candidateRequirements.map(({ dependents, requirement }) => (
+                  <div key={requirement.key}>
+                    {t("systemAdmin.objectGrants.requiredSelectionNotice", {
+                      dependents: dependents.map((operation) => operation.label).join("、"),
+                      requirement: requirement.label,
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
-      ) : (
-        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
-          <div className={styles.createPanelHead}>
-            <h3 className={styles.createPanelTitle}>
-              {t(
-                canManageGrants
-                  ? "systemAdmin.objectGrants.manage"
-                  : "systemAdmin.objectGrants.viewDetail",
-              )}
-            </h3>
-            <p className={styles.createPanelDesc}>
-              {t(
-                canManageGrants
-                  ? "systemAdmin.objectGrants.drawerHint"
-                  : "systemAdmin.objectGrants.drawerReadOnly",
-              )}
-            </p>
+      ) : null}
+
+      <section className={styles.authzGrantMatrix}>
+        <header className={styles.authzGrantMatrixHead}>
+          <div>
+            <strong>{t("systemAdmin.objectGrants.grantDetails")}</strong>
+            <span>{t("systemAdmin.objectGrants.grantUserCount", { count: visibleGrants.length })}</span>
           </div>
-          <div className={styles.createPanelBody}>
+          {!canManageGrants ? <span>{t("systemAdmin.objectGrants.drawerReadOnly")}</span> : null}
+        </header>
+        {hasProtectedGrant ? (
+          <div className={styles.authzMatrixNotice}>
+            <LockOutlined />
+            <span>{t("systemAdmin.objectGrants.protectedGrantNotice")}</span>
+          </div>
+        ) : null}
+        {loading || visibleGrants.length ? (
+          <Table<ObjectGrant>
+            className={styles.authzGrantTable}
+            columns={grantColumns}
+            dataSource={visibleGrants}
+            loading={loading}
+            pagination={false}
+            rowKey="accessorId"
+            size="small"
+            tableLayout="fixed"
+          />
+        ) : (
+          <div className={styles.authzGrantEmpty}>
             <Empty
               description={t("systemAdmin.objectGrants.drawerEmpty")}
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
+            <span>{t("systemAdmin.objectGrants.drawerEmptyHelp")}</span>
+          </div>
+        )}
+      </section>
+
+      {enterpriseAvailable && enterpriseGrants.length ? (
+        <section className={[styles.createPanel, styles.sectionCallout].join(" ")}>
+          <div className={styles.createPanelHead}>
+            <h3 className={styles.createPanelTitle}>
+              {t("systemAdmin.objectGrants.enterpriseRulesTitle")}
+            </h3>
+            <p className={styles.createPanelDesc}>
+              {t("systemAdmin.objectGrants.enterpriseRulesDescription")}
+            </p>
+          </div>
+          <div className={styles.createPanelBody}>
+            <div className={styles.sourceList}>
+              {enterpriseGrants.map((rule) => (
+                <div className={styles.sourceRow} key={rule.grantId}>
+                  <Tag color={rule.effect === "allow" ? "green" : "red"}>
+                    {t(`systemAdmin.objectGrants.effect.${rule.effect}`)}
+                  </Tag>
+                  <span className={styles.sourceOperation}>{rule.operation}</span>
+                  <span>{rule.classification}</span>
+                  <span>{t(`systemAdmin.objectGrants.enterpriseState.${rule.activationState}`)}</span>
+                  <code>{rule.ruleId}</code>
+                  <span className={styles.sourceReadOnly}>
+                    {rule.runtimeEligible
+                      ? t("systemAdmin.objectGrants.runtimeEligible")
+                      : t("systemAdmin.objectGrants.runtimeInactive")}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
-      )}
+      ) : null}
+    </>
+  );
+
+  const content = !fineGrained && !isCommunityObjectGrantType(objType) ? (
+    <RequireEdition
+      capability={CAPABILITIES.PERM_FINE_GRAINED}
+      minEdition="professional"
+      mountLockedContent={false}
+    >
+      {grantOverview}
+    </RequireEdition>
+  ) : sourceDetails ?? grantOverview;
+
+  return (
+    <Drawer
+      destroyOnClose
+      onClose={onClose}
+      open={open}
+      rootClassName={styles.adminOverlay}
+      title={drawerTitle}
+      width="min(1040px, 100vw)"
+    >
+      {content}
     </Drawer>
   );
 }

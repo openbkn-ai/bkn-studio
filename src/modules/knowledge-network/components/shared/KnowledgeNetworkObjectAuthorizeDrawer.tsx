@@ -6,6 +6,7 @@
  */
 
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   knowledgeNetworkChildAuthorizationId,
   type KnowledgeNetworkChildResourceType,
@@ -36,13 +37,14 @@ export function KnowledgeNetworkObjectAuthorizeDrawer({
   open,
   record,
 }: KnowledgeNetworkObjectAuthorizeDrawerProps) {
+  const networkAuthorized = useKnowledgeNetworkCanOperate(networkId, "authorize");
   if (!open || !record || !networkId) {
     return null;
   }
 
   return (
     <ObjectAuthorizeDrawer
-      objectAuthorized={hasKnowledgeNetworkRecordOperation(record, "authorize")}
+      objectAuthorized={networkAuthorized && hasKnowledgeNetworkRecordOperation(record, "view_detail")}
       objId={knowledgeNetworkChildAuthorizationId(networkId, record.id)}
       objName={record.name}
       objSub={networkName ?? networkId}

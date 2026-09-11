@@ -25,8 +25,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   deleteKnowledgeNetworkMetrics,
   listKnowledgeNetworkMetrics,
@@ -84,6 +86,7 @@ export function MetricListPanel({
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [tableMetrics, setTableMetrics] = useState(metrics);
   const [tableLoading, setTableLoading] = useState(Boolean(loading));
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
@@ -237,8 +240,15 @@ export function MetricListPanel({
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
-            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+          ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{
+                key: "authorize",
+                label: (
+                  <KnowledgeNetworkAuthorizationActionLabel>
+                    {t("knowledgeNetwork.authorizeAction")}
+                  </KnowledgeNetworkAuthorizationActionLabel>
+                ),
+              }]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]

@@ -26,9 +26,11 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   getKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -68,6 +70,7 @@ export function ConceptGroupListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState("");
   const [selectedTag, setSelectedTag] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
@@ -254,8 +257,15 @@ export function ConceptGroupListPanel({
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
-            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+          ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{
+                key: "authorize",
+                label: (
+                  <KnowledgeNetworkAuthorizationActionLabel>
+                    {t("knowledgeNetwork.authorizeAction")}
+                  </KnowledgeNetworkAuthorizationActionLabel>
+                ),
+              }]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]

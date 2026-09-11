@@ -24,9 +24,11 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import type {
   KnowledgeNetworkActionTypeKind,
@@ -78,6 +80,7 @@ export function ActionTypeListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { modal } = useAppServices();
+  const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState("");
   const [actionKindFilter, setActionKindFilter] = useState<"all" | KnowledgeNetworkActionTypeKind>(
     "all",
@@ -256,11 +259,18 @@ export function ActionTypeListPanel({
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "task_manage")
+          ...(hasKnowledgeNetworkRecordOperation(record, "execute")
             ? [{ key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") }]
             : []),
-          ...(hasKnowledgeNetworkRecordOperation(record, "authorize")
-            ? [{ key: "authorize", label: t("knowledgeNetwork.authorizeAction") }]
+          ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{
+                key: "authorize",
+                label: (
+                  <KnowledgeNetworkAuthorizationActionLabel>
+                    {t("knowledgeNetwork.authorizeAction")}
+                  </KnowledgeNetworkAuthorizationActionLabel>
+                ),
+              }]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]

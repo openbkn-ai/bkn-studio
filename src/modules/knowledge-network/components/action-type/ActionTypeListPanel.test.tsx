@@ -31,6 +31,10 @@ vi.mock("@/modules/knowledge-network/components/shared/usePersistentPageSize", (
   usePersistentPageSize: () => [10, vi.fn()],
 }));
 
+vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
+  useKnowledgeNetworkCanOperate: () => true,
+}));
+
 import { ActionTypeListPanel } from "./ActionTypeListPanel";
 
 const originalMatchMedia = window.matchMedia;
@@ -57,7 +61,7 @@ afterEach(() => {
 });
 
 describe("ActionTypeListPanel menu access", () => {
-  it("exposes execution management only with task-manage access", async () => {
+  it("exposes execution management only with execute access", async () => {
     render(
       <ActionTypeListPanel
         canDelete={false}
@@ -71,7 +75,7 @@ describe("ActionTypeListPanel menu access", () => {
             name: "Update order",
             objectTypeId: "object-1",
             objectTypeName: "Order",
-            operations: ["task_manage"],
+            operations: ["execute"],
             tags: [],
             updateTime: "2026-08-20 10:00:00",
             updaterName: "admin",
@@ -93,7 +97,7 @@ describe("ActionTypeListPanel menu access", () => {
     expect(screen.queryByText("knowledgeNetwork.authorizeAction")).toBeNull();
   });
 
-  it("exposes configure permissions only for action types with authorize", async () => {
+  it("uses root authorize plus child view for the configure-permissions entry", async () => {
     render(
       <ActionTypeListPanel
         canDelete={false}
@@ -107,7 +111,7 @@ describe("ActionTypeListPanel menu access", () => {
             name: "Update order",
             objectTypeId: "object-1",
             objectTypeName: "Order",
-            operations: ["authorize"],
+            operations: ["view_detail"],
             tags: [],
             updateTime: "2026-08-20 10:00:00",
             updaterName: "admin",
@@ -123,5 +127,6 @@ describe("ActionTypeListPanel menu access", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.actions" }));
 
     expect(await screen.findByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
+    expect(screen.getByText("common.entitlement.editionsShort.professional")).not.toBeNull();
   });
 });
