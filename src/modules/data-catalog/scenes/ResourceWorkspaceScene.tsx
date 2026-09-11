@@ -9,7 +9,7 @@ import { DatabaseOutlined, KeyOutlined, ReloadOutlined } from "@ant-design/icons
 import { Alert, Space, Spin, Tabs } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -26,6 +26,7 @@ import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-qu
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
@@ -69,7 +70,6 @@ export function ResourceWorkspaceScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
-  const location = useLocation();
   // Reading this table's rows is granted on the table itself; its management verbs live on the
   // owning catalog (openbkn-ai/bkn-foundry#986). Shown to whoever may issue grants at all.
   const canAuthorizeGrants = hasPermissions({
@@ -83,6 +83,7 @@ export function ResourceWorkspaceScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailEditing, setDetailEditing] = useState(false);
   const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const previousTabRef = useRef(tab);
   const resourceVersionRef = useRef(0);
   const loadRequestIdRef = useRef(0);
@@ -389,14 +390,13 @@ export function ResourceWorkspaceScene({
             {canAuthorizeGrants && !catalog?.internal ? (
               <AppButton
                 icon={<KeyOutlined />}
-                onClick={() => {
-                  void navigate(
-                    `/system/authorizations/new?object=${encodeURIComponent(`resource::${resource.id}`)}`,
-                    { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
-                  );
-                }}
+                onClick={() => setAuthorizeOpen(true)}
               >
                 {t("dataCatalog.catalog.authorize")}
+                <EditionBadge
+                  capability={CAPABILITIES.PERM_FINE_GRAINED}
+                  edition="professional"
+                />
               </AppButton>
             ) : null}
           </Space>
@@ -544,6 +544,14 @@ export function ResourceWorkspaceScene({
           onChange={handleTabChange}
         />
       </section>
+      <ObjectAuthorizeDrawer
+        objId={resource.id}
+        objName={resource.name}
+        objSub={catalog?.name}
+        objType="resource"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+      />
     </>
   );
 }

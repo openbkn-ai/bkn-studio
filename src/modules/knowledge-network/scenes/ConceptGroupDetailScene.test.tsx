@@ -36,6 +36,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
+  useKnowledgeNetworkCanOperate: () => true,
   useKnowledgeNetworkOperationAccessState: () => ({
     access: { modify: true },
     isLoading: false,
@@ -109,7 +110,7 @@ describe("ConceptGroupDetailScene", () => {
       relationTypes: [],
       tags: [],
       updateTime: "2026-08-20 16:09:36",
-      operations: ["query_data", "modify", "authorize", "delete"],
+      operations: ["view_detail", "query_data", "modify", "delete"],
     });
 
     render(<ConceptGroupDetailScene />);

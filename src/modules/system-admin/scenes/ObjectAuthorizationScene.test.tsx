@@ -5,119 +5,117 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ObjectGrant } from "@/modules/system-admin/types/authz";
 
 const listObjectGrantsPageMock = vi.hoisted(() => vi.fn());
-const revokeObjectGrantMock = vi.hoisted(() => vi.fn());
-const appServices = vi.hoisted(() => ({
-  message: { error: vi.fn(), success: vi.fn() },
-  modal: { confirm: vi.fn() },
-  runtimeConfig: { currentUser: { id: "u-owner", permissions: [] as string[] } },
-}));
-
+const capability = vi.hoisted((): { current: string } => ({ current: "available" }));
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ i18n: { language: "zh-CN" }, t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
-
-vi.mock("react-router-dom", () => ({
-  useNavigate: () => vi.fn(),
-}));
-
+vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => appServices,
+  useAppServices: () => ({
+    runtimeConfig: { currentUser: { id: "u-admin", permissions: ["admin-authz:grant", "admin-authz:revoke"] } },
+  }),
 }));
-
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useCapability: () => capability.current,
+}));
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
   listObjectGrantsPage: listObjectGrantsPageMock,
   listObjectGroups: vi.fn(() => Promise.resolve({ groups: [], total: 0 })),
-  revokeObjectGrant: revokeObjectGrantMock,
 }));
-
 vi.mock("@/modules/system-admin/services/authz-objects.service", () => ({
   resolveGrantNames: (grants: ObjectGrant[]) => Promise.resolve(grants),
 }));
-
 vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
   getCachedDepartments: vi.fn(() => Promise.resolve([])),
   getCachedUserSync: vi.fn(() => undefined),
   hydrateUserLookup: vi.fn(() => Promise.resolve(undefined)),
-  primeUserLookupCache: vi.fn(),
 }));
-
-// The drawer has loaders of its own and is covered by its own suite; the list page's action menu is
-// what this file is about.
 vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
   ObjectAuthorizeDrawer: () => null,
 }));
 
 import { ObjectAuthorizationScene } from "./ObjectAuthorizationScene";
 
-function grant(accessorId: string, operations: string[]): ObjectGrant {
-  return {
-    accessorId,
-    objId: `catalog-${accessorId}`,
-    objName: `conn_${accessorId}`,
-    objType: "catalog",
-    operations,
-  };
-}
-
-/** Opens the action menu on the row at `index` and returns its revoke item. */
-async function openRevokeItem(index: number) {
-  const triggers = screen.getAllByLabelText("systemAdmin.objectGrants.columns.actions");
-  fireEvent.click(triggers[index]);
-  await act(async () => {});
-  const label = screen.getByText("systemAdmin.objectGrants.revoke");
-  const item = label.closest("li");
-  if (!item) {
-    throw new Error("revoke menu item not rendered");
-  }
-  return item;
-}
-
-describe("ObjectAuthorizationScene revoke action", () => {
+describe("ObjectAuthorizationScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    appServices.runtimeConfig.currentUser.id = "u-owner";
-    appServices.runtimeConfig.currentUser.permissions = [
-      "admin-authz:view",
-      "admin-authz:revoke",
-    ];
+    capability.current = "available";
     listObjectGrantsPageMock.mockResolvedValue({
-      grants: [grant("u-owner", ["view_detail", "authorize"]), grant("u-mate", ["view_detail"])],
-      total: 2,
-      summary: { grants: 2, objects: 2, grantees: 2 },
+      grants: [{
+        accessorId: "u-mate",
+        deniedOperations: ["modify"],
+        effectiveDecisions: [{ basis: "direct", decision: "deny", operation: "modify", requires: [] }],
+        objId: "catalog-1",
+        objName: "Customer catalog",
+        objType: "catalog",
+        operations: ["view_detail"],
+      }],
+      summary: { grantees: 1, grants: 1, objects: 1 },
+      total: 1,
     });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(),
-      addListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-      matches: false,
-      media: query,
-      onchange: null,
-      removeEventListener: vi.fn(),
-      removeListener: vi.fn(),
+      addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(), matches: false,
+      media: query, onchange: null, removeEventListener: vi.fn(), removeListener: vi.fn(),
     }));
   });
 
-  // This menu reaches the same DELETE the drawer's remove control does. Without the guard a caller
-  // holding no `admin-authz:grant` could drop their own `authorize` here and land outside the
-  // object with nothing in the UI to undo it.
-  it("refuses to revoke the caller's own authorize row", async () => {
+  it("shows server decisions and keeps aggregate rows free of destructive revoke actions", async () => {
     render(<ObjectAuthorizationScene />);
     await act(async () => {});
 
-    expect((await openRevokeItem(0)).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByText("systemAdmin.objectGrants.calloutPrefix", { exact: false }))
+      .toBeNull();
+    fireEvent.click(screen.getByRole("button", {
+      name: /systemAdmin\.objectGrants\.permissionHelp$/,
+    }));
+    expect(await screen.findByText("systemAdmin.objectGrants.calloutPrefix", { exact: false }))
+      .not.toBeNull();
+    expect(screen.getByText("修改")).not.toBeNull();
+    const [actions] = screen.getAllByLabelText("systemAdmin.objectGrants.columns.actions");
+    fireEvent.click(actions);
+    await act(async () => {});
+    expect(screen.queryByText("systemAdmin.objectGrants.revoke")).toBeNull();
+    expect(screen.getByText("systemAdmin.objectGrants.manage")).not.toBeNull();
   });
 
-  it("leaves someone else's row revocable", async () => {
+  it("shows fine-grained child types but omits retired model resources", async () => {
     render(<ObjectAuthorizationScene />);
     await act(async () => {});
 
-    expect((await openRevokeItem(1)).getAttribute("aria-disabled")).not.toBe("true");
+    fireEvent.mouseDown(screen.getByRole("combobox", {
+      name: "systemAdmin.objectGrants.filterObjType",
+    }));
+    const options = within(await screen.findByRole("listbox"));
+
+    expect(options.getByRole("option", { name: "数据目录" })).not.toBeNull();
+    expect(options.getByRole("option", { name: "数据资源" })).not.toBeNull();
+    expect(options.queryByRole("option", { name: "小模型" })).toBeNull();
+    expect(options.queryByRole("option", { name: "大模型" })).toBeNull();
+  });
+
+  it("limits Community filters to top-level authorizable resources", async () => {
+    capability.current = "not-installed";
+    render(<ObjectAuthorizationScene />);
+    await act(async () => {});
+
+    const typeFilter = screen.getByRole("combobox", {
+      name: "systemAdmin.objectGrants.filterObjType",
+    });
+    fireEvent.mouseDown(typeFilter);
+    const options = within(await screen.findByRole("listbox"));
+
+    expect(options.getByRole("option", { name: "数据目录" })).not.toBeNull();
+    expect(options.getByRole("option", { name: "知识网络" })).not.toBeNull();
+    expect(options.queryByRole("option", { name: "数据资源" })).toBeNull();
+    expect(options.queryByRole("option", { name: "对象类" })).toBeNull();
+    expect(options.queryByRole("option", { name: "小模型" })).toBeNull();
+    expect(options.queryByRole("option", { name: "大模型" })).toBeNull();
   });
 });

@@ -8,6 +8,16 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+const networkAuthorize = vi.hoisted(() => ({ current: true, networkId: "" }));
+
+vi.mock("react-router-dom", () => ({ useParams: () => ({ networkId: "network-1" }) }));
+vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => ({
+  useKnowledgeNetworkCanOperate: (networkId: string) => {
+    networkAuthorize.networkId = networkId;
+    return networkAuthorize.current;
+  },
+}));
+
 import { KnowledgeNetworkResourceDetailActions } from "./KnowledgeNetworkResourceDetailActions";
 
 describe("KnowledgeNetworkResourceDetailActions", () => {
@@ -62,5 +72,50 @@ describe("KnowledgeNetworkResourceDetailActions", () => {
 
     expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
+  });
+
+  it("uses network authorize plus child view instead of child authorize", () => {
+    const action = {
+      key: "authorize",
+      label: "Authorize",
+      onClick: vi.fn(),
+      operation: "authorize",
+    };
+    const { rerender } = render(
+      <KnowledgeNetworkResourceDetailActions
+        actions={[action]}
+        record={{ operations: ["view_detail"] }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Authorize/ })).not.toBeNull();
+    expect(screen.getByText("common.entitlement.editionsShort.professional")).not.toBeNull();
+
+    networkAuthorize.current = false;
+    rerender(
+      <KnowledgeNetworkResourceDetailActions
+        actions={[action]}
+        record={{ operations: ["view_detail", "authorize"] }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Authorize/ })).toBeNull();
+    networkAuthorize.current = true;
+  });
+
+  it("uses an explicit network id when a host mounts the scene outside the route", () => {
+    render(
+      <KnowledgeNetworkResourceDetailActions
+        actions={[{
+          key: "authorize",
+          label: "Authorize",
+          onClick: vi.fn(),
+          operation: "authorize",
+        }]}
+        networkId="host-network"
+        record={{ operations: ["view_detail"] }}
+      />,
+    );
+
+    expect(networkAuthorize.networkId).toBe("host-network");
+    expect(screen.getByRole("button", { name: /Authorize/ })).not.toBeNull();
   });
 });

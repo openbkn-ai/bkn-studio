@@ -22,7 +22,9 @@
 export const CAPABILITIES = {
   /** 自定义角色/部门/权限的写入面。专业档起。 */
   RBAC_BASIC: "rbac_basic",
-  /** 对象级授权与高级角色控制(显式 deny、有效期)。企业档起。 */
+  /** 对象细粒度授权、显式 allow / deny 与来源级撤销。专业档起。 */
+  PERM_FINE_GRAINED: "perm_fine_grained",
+  /** 企业对象规则兼容层与属性级权限。企业档起。 */
   PERM_OBJECT_LEVEL: "perm_object_level",
   /**
    * 业务溯源:证据链、数据溯源、业务语义图、Resolver、交互式追溯与导出。企业档起。

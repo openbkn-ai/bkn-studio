@@ -10,6 +10,8 @@ import i18n from "@/app/locales/i18n";
 export type OperationDef = {
   key: string;
   label: string;
+  /** Authoring prerequisite. Effective availability still comes exclusively from bkn-safe. */
+  requires: string[];
 };
 
 export type ResourceTypeDef = {
@@ -89,18 +91,16 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
-// Only action types expose a task-management surface in Studio. The other knowledge-network child
-// resources may inherit this operation in bkn-safe, but offering it in the grant drawer would create
-// a permission with no user-facing capability.
+// Child resources delegate sharing through the knowledge-network root. They never carry
+// `authorize` or `task_manage`; action execution is expressed by `execute`.
 const KNOWLEDGE_NETWORK_CHILD_AUTHZ = [
   "view_detail",
   "create",
   "modify",
   "delete",
   "query_data",
-  "authorize",
 ];
-const ACTION_TYPE_AUTHZ = [...KNOWLEDGE_NETWORK_CHILD_AUTHZ, "task_manage", "execute"];
+const ACTION_TYPE_AUTHZ = [...KNOWLEDGE_NETWORK_CHILD_AUTHZ, "execute"];
 // A data connection owns its tables: creating, editing and building one is judged on the catalog,
 // not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
 // lists match the operations bkn-safe actually stores on these types.
@@ -222,7 +222,19 @@ export function operationsForType(type: string): OperationDef[] {
   return (byType.get(type)?.operations ?? []).map((op) => ({
     key: op,
     label: operationLabel(type, op),
+    requires: requiredOperationsFor(type, op),
   }));
+}
+
+export function requiredOperationsFor(type: string, operation: string): string[] {
+  const operations = byType.get(type)?.operations ?? [];
+  const viewOperation = ["view_detail", "view", "display", "list"].find((candidate) =>
+    operations.includes(candidate),
+  );
+  if (!viewOperation || operation === viewOperation || operation === "create") {
+    return [];
+  }
+  return [viewOperation];
 }
 
 function operationFallbackLabel(op: string): string {

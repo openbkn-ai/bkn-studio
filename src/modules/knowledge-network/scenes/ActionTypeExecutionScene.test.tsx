@@ -22,7 +22,7 @@ const translate = vi.hoisted(
 const mocks = vi.hoisted(() => ({
   accessState: {
     current: {
-      access: { modify: false, task_manage: true },
+      access: { modify: false },
       isLoading: false,
     },
   },
@@ -142,7 +142,7 @@ afterAll(() => {
 });
 beforeEach(() => {
   mocks.accessState.current = {
-    access: { modify: false, task_manage: true },
+    access: { modify: false },
     isLoading: false,
   };
   mocks.permissions.current = [];
@@ -206,7 +206,7 @@ describe("ActionTypeExecutionScene review regressions", () => {
   it("does not flash the readonly warning while modify access is loading", async () => {
     mocks.search.current = "tab=config";
     mocks.accessState.current = {
-      access: { modify: false, task_manage: false },
+      access: { modify: false },
       isLoading: true,
     };
     mocks.getDetail.mockResolvedValue(createDetail({ type: "manual" }));

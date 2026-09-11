@@ -5,213 +5,416 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ObjectGrant } from "@/modules/system-admin/types/authz";
+import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 
-const listObjectGrantsForObjectMock = vi.hoisted(() => vi.fn());
-const listUsersPageMock = vi.hoisted(() => vi.fn());
-// One stable object, as the real context provides: the drawer's loaders are memoized on `message`,
-// so a fresh literal per render would re-fire the load effect forever.
+const mocks = vi.hoisted(() => ({
+  getCachedUserSync: vi.fn(),
+  listObjectGrantsForObject: vi.fn(),
+  listUsersPage: vi.fn(),
+  revokeObjectGrantForObject: vi.fn(),
+  upsertObjectGrantForObject: vi.fn(),
+  useCapability: vi.fn(),
+}));
 const appServices = vi.hoisted(() => ({
   message: { error: vi.fn(), success: vi.fn() },
   modal: { confirm: vi.fn() },
-  runtimeConfig: { currentUser: { id: "u-owner", permissions: [] as string[] } },
+  runtimeConfig: {
+    currentUser: { id: "u-admin", permissions: ["admin-authz:grant", "admin-authz:revoke"] },
+  },
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ i18n: { language: "zh-CN" }, t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) =>
+      key === "systemAdmin.objectGrants.selectedOperationCount"
+        ? `${key}:${String(options?.selected)}/${String(options?.total)}`
+        : key,
+  }),
 }));
-
-vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => appServices,
+vi.mock("@/framework/context/use-app-services", () => ({ useAppServices: () => appServices }));
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useCapability: mocks.useCapability,
 }));
-
-vi.mock("@/modules/system-admin/services/authz.service", () => ({
-  listObjectGrantsForObject: listObjectGrantsForObjectMock,
-  revokeObjectGrantForObject: vi.fn(),
-  upsertObjectGrantForObject: vi.fn(),
+vi.mock("@/framework/entitlement/RequireEdition", () => ({
+  RequireEdition: ({ children }: { children: ReactNode }) =>
+    mocks.useCapability() === "available" ? children : <div>professional-edition-gate</div>,
 }));
-
 vi.mock("@/modules/system-admin/services/admin.service", () => ({
-  listUsersPage: listUsersPageMock,
+  listUsersPage: mocks.listUsersPage,
 }));
-
+vi.mock("@/modules/system-admin/services/authz.service", () => ({
+  listEnterpriseObjectGrants: vi.fn(() => Promise.resolve([])),
+  listObjectGrantsForObject: mocks.listObjectGrantsForObject,
+  revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
+  upsertObjectGrantForObject: mocks.upsertObjectGrantForObject,
+}));
 vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
   getCachedDepartments: vi.fn(() => Promise.resolve([])),
-  getCachedUserSync: vi.fn(() => undefined),
+  getCachedUserSync: mocks.getCachedUserSync,
   hydrateUserLookup: vi.fn(() => Promise.resolve(undefined)),
   primeUserLookupCache: vi.fn(),
 }));
 
 import { ObjectAuthorizeDrawer } from "./ObjectAuthorizeDrawer";
 
-const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
-
-function grant(accessorId: string, operations: string[]): ObjectGrant {
+function source(overrides: Partial<GrantRecord>): GrantRecord {
   return {
-    accessorId,
-    objId: "catalog-1",
-    objName: "nb_test_conn",
-    objType: "catalog",
-    operations,
+    active: true,
+    accessorId: "u-mate",
+    authoritySource: "admin_authz",
+    effect: "allow",
+    grantId: "grant-direct-view",
+    inherited: false,
+    operation: "view_detail",
+    policySource: "professional_rule",
+    ...overrides,
   };
 }
 
-function renderDrawer({ objectAuthorized = true } = {}) {
-  return render(
-    <ObjectAuthorizeDrawer
-      objectAuthorized={objectAuthorized}
-      objId="catalog-1"
-      objName="nb_test_conn"
-      objType="catalog"
-      onClose={vi.fn()}
-      open
-    />,
-  );
+function grant(records: GrantRecord[], overrides: Partial<ObjectGrant> = {}): ObjectGrant {
+  const operations = [...new Set(records
+    .filter((record) => record.active && record.effect === "allow")
+    .map((record) => record.operation))];
+  return {
+    accessorId: "u-mate",
+    effectiveDecisions: operations.map((operation) => ({
+      basis: "direct",
+      decision: "allow",
+      operation,
+      requires: [],
+    })),
+    grants: records,
+    objId: "catalog-1",
+    objName: "Customer catalog",
+    objType: "catalog",
+    operations,
+    ...overrides,
+  };
 }
 
-/** The lock icon marks a row the caller may not erase; each card renders one at most. */
-function lockedCardCount() {
-  return document.querySelectorAll('[aria-label="lock"]').length;
-}
-
-/** The operation chip for `opKey` on the card of the grantee rendered under `granteeName`. */
-function findChip(granteeName: string, opKey: string) {
-  // authzWhoName -> authzWho -> authzCardHead -> authzCard
-  const card = screen.getByText(granteeName).closest("div")?.parentElement;
-  return [...(card?.querySelectorAll("button") ?? [])].find((button) =>
-    button.textContent?.includes(opKey),
-  );
-}
-
-function chipOn(granteeName: string, opKey: string) {
-  const chip = findChip(granteeName, opKey);
-  if (!chip) {
-    throw new Error(`no ${opKey} chip on the ${granteeName} card`);
+function rowDeleteButton(accessorId: string) {
+  const row = screen.getByText(accessorId).closest("tr");
+  if (!row) {
+    throw new Error(`Unable to find the grant row for ${accessorId}`);
   }
-  return chip;
+  return within(row)
+    .getByText("systemAdmin.objectGrants.deleteGrant")
+    .closest("button") as HTMLButtonElement;
 }
 
-describe("ObjectAuthorizeDrawer rows a delegate may not write", () => {
+describe("ObjectAuthorizeDrawer source records", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    appServices.runtimeConfig.currentUser.id = "u-owner";
-    appServices.runtimeConfig.currentUser.permissions = [];
-    listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
-    listObjectGrantsForObjectMock.mockResolvedValue({
-      accounts: [],
-      grants: [
-        grant("u-owner", ["view_detail", "authorize"]),
-        grant(PUBLIC_ACCESSOR_ID, ["view_detail"]),
-        grant("u-mate", ["view_detail"]),
-      ],
-    });
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(),
-      addListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-      matches: false,
-      media: query,
-      onchange: null,
-      removeEventListener: vi.fn(),
-      removeListener: vi.fn(),
-    }));
-  });
-
-  // bkn-safe's protectAuthorizeHolder refuses a non-administrator write against an `authorize`
-  // holder — the caller's own row included — and against the public-access row. Offering the
-  // controls anyway means a click that can only 403.
-  it("locks the authorize holder and the public row for an owner", async () => {
-    renderDrawer();
-    await act(async () => {});
-
-    expect(lockedCardCount()).toBe(2);
-    // The ordinary grant stays editable: that is what the owner opened the drawer for.
-    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(1);
-  });
-
-  it("leaves every row writable for a platform administrator", async () => {
+    mocks.useCapability.mockReturnValue("available");
+    mocks.getCachedUserSync.mockReturnValue(undefined);
+    appServices.runtimeConfig.currentUser.id = "u-admin";
     appServices.runtimeConfig.currentUser.permissions = [
       "admin-authz:grant",
       "admin-authz:revoke",
     ];
-    renderDrawer();
-    await act(async () => {});
-
-    expect(lockedCardCount()).toBe(0);
-    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(3);
+    mocks.listUsersPage.mockResolvedValue({ total: 0, users: [] });
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(), matches: false,
+      media: query, onchange: null, removeEventListener: vi.fn(), removeListener: vi.fn(),
+    }));
   });
 
-  // The two admin-authz points are configured separately, and the platform authorization page does
-  // not pass objectAuthorized. A role holding revoke alone is still an administrator to bkn-safe,
-  // so the rows stay removable — reading administrator status off the grant point alone took the
-  // remove control away from them.
-  it("leaves every row removable for a revoke-only administrator", async () => {
-    appServices.runtimeConfig.currentUser.id = "u-admin";
-    appServices.runtimeConfig.currentUser.permissions = [
-      "admin-authz:view",
-      "admin-authz:revoke",
-    ];
-    renderDrawer({ objectAuthorized: false });
-    await act(async () => {});
-
-    expect(lockedCardCount()).toBe(0);
-    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(3);
-  });
-
-  // Restoring `authorize` is a grant, and a revoke-only administrator holds no grant point: dropping
-  // it from their own row would leave them outside the object with no control here to undo it. The
-  // rows they can put back stay open.
-  it("keeps a revoke-only administrator from dropping their own authorize", async () => {
-    appServices.runtimeConfig.currentUser.permissions = [
-      "admin-authz:view",
-      "admin-authz:revoke",
-    ];
-    renderDrawer();
-    await act(async () => {});
-
-    expect(lockedCardCount()).toBe(1);
-    // Their own row is the locked one; the public row and the ordinary grant stay removable.
-    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(2);
-    // Only the erasing direction is pinned. Adding an operation to their own row is a POST of the
-    // union and leaves `authorize` standing, so the rest of the card stays live. (#518 already
-    // keeps the `authorize` chip itself off this surface — offering it would be a grant.)
-    expect(findChip("u-owner", "authorize")).toBeUndefined();
-    expect(chipOn("u-owner", "modify").disabled).toBe(false);
-  });
-
-  // Unchecking the last operation on a row is a DELETE, so it runs on the revoke point — the one
-  // route by which a chip, not the remove control, can erase an `authorize`-only row. The platform
-  // authorization page passes no objectAuthorized, which is where that chip renders.
-  it("pins an authorize-only row of the caller's own", async () => {
-    appServices.runtimeConfig.currentUser.permissions = [
-      "admin-authz:view",
-      "admin-authz:revoke",
-    ];
-    listObjectGrantsForObjectMock.mockResolvedValue({
+  it("renders the backend effective decision instead of merging source operations", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant("u-owner", ["authorize"]), grant("u-mate", ["authorize"])],
+      grants: [grant(
+        [
+          source({}),
+          source({ grantId: "role-view", inherited: true, policySource: "role_permission" }),
+        ],
+        {
+          effectiveDecisions: [{
+            basis: "direct",
+            decision: "deny",
+            deniedRequirement: "view_detail",
+            operation: "modify",
+            requires: ["view_detail"],
+          }],
+        },
+      )],
     });
-    renderDrawer({ objectAuthorized: false });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
     await act(async () => {});
 
-    expect(lockedCardCount()).toBe(1);
-    expect(chipOn("u-owner", "authorize").disabled).toBe(true);
-    // Someone else's authorize-only row is still theirs to revoke, and that is what the point is
-    // for — so this proves the lock reads the accessor, not the caller's missing grant point.
-    expect(chipOn("u-mate", "authorize").disabled).toBe(false);
+    expect(screen.getByLabelText(/systemAdmin\.objectGrants\.permissionDenied/)).not.toBeNull();
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getAllByText("systemAdmin.objectGrants.readOnlySource")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "common.back" }));
+    expect(screen.getByText("systemAdmin.objectGrants.grantDetails")).not.toBeNull();
   });
 
-  // The same caller holding the grant point can restore what they drop, so nothing is locked.
-  it("leaves the caller's own authorize row open once they hold the grant point", async () => {
-    appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant"];
-    renderDrawer();
+  it("revokes one direct source by stable grant_id", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [grant([source({})])] });
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
     await act(async () => {});
 
-    expect(lockedCardCount()).toBe(0);
-    expect(screen.getAllByText("systemAdmin.objectGrants.remove")).toHaveLength(3);
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    const deleteActions = screen.getAllByText("systemAdmin.objectGrants.deleteGrant");
+    fireEvent.click(deleteActions.at(-1) as HTMLElement);
+    const config = appServices.modal.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await config.onOk();
+
+    expect(mocks.revokeObjectGrantForObject).toHaveBeenCalledWith("grant-direct-view");
+  });
+
+  it("allows ordinary direct grants for a built-in administrator to be revoked", async () => {
+    mocks.getCachedUserSync.mockImplementation((id: string) => id === "u-admin"
+      ? {
+          account: "local-admin",
+          accountType: "local",
+          builtin: true,
+          email: "",
+          enabled: true,
+          id,
+          name: "Local Admin",
+          roleIds: [],
+          telephone: "",
+        }
+      : undefined);
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant(
+        [source({ accessorId: "u-admin", grantId: "grant-admin-view" })],
+        { accessorId: "u-admin" },
+      )],
+    });
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await act(async () => {});
+
+    const deleteButton = rowDeleteButton("Local Admin");
+    expect(deleteButton.disabled).toBe(false);
+    fireEvent.click(deleteButton);
+    const config = appServices.modal.confirm.mock.calls[0]?.[0] as {
+      onOk: () => Promise<void>;
+    };
+    await config.onOk();
+
+    expect(mocks.revokeObjectGrantForObject).toHaveBeenCalledWith("grant-admin-view");
+  });
+
+  it("keeps prerequisites selected in the explicit operation picker", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    const viewOperation = screen.getByRole("button", { name: /view_detail/ });
+    fireEvent.click(screen.getByRole("button", { name: /modify/ }));
+
+    expect(viewOperation.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(viewOperation);
+    expect(viewOperation.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("renders a stable permission summary and a dedicated empty state", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+    render(<ObjectAuthorizeDrawer objId="resource-1" objName="Orders" objType="resource" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(screen.getByText("systemAdmin.objectGrants.newGrantTitle")).not.toBeNull();
+    expect(screen.getByText("systemAdmin.objectGrants.drawerEmptyHelp")).not.toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it("requires explicit full business access selection in community mode", async () => {
+    mocks.useCapability.mockReturnValue("not-licensed");
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [
+        grant([], { accessorId: "empty-admin", operations: [] }),
+        grant(
+          [source({
+            accessorId: "u-community",
+            grantId: "community-bundle-1",
+            operation: "full_business_access",
+            policySource: "community_bundle",
+          })],
+          {
+            accessorId: "u-community",
+            bundle: "full_business_access",
+            operations: ["full_business_access"],
+          },
+        ),
+      ],
+    });
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+        prefillGranteeId="u-new"
+      />,
+    );
+    await act(async () => {});
+
+    const bundleButton = screen.getByRole("button", { name: /full_business_access/ });
+    const addButton = screen.getByRole("button", {
+      name: /systemAdmin\.objectGrants\.addGrant/,
+    });
+    expect(bundleButton.getAttribute("aria-pressed")).toBe("false");
+    expect(addButton.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("systemAdmin.objectGrants.grantNeedsBundle")).not.toBeNull();
+    expect(screen.getByText(
+      "systemAdmin.objectGrants.selectedOperationCount:0/1",
+    )).not.toBeNull();
+    expect(screen.queryByText("empty-admin")).toBeNull();
+    expect(screen.getByText("systemAdmin.objectGrants.effectivePermissions")).not.toBeNull();
+
+    fireEvent.click(bundleButton);
+
+    expect(bundleButton.getAttribute("aria-pressed")).toBe("true");
+    expect(addButton.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByText("systemAdmin.objectGrants.grantBundleReady")).not.toBeNull();
+    fireEvent.click(addButton);
+    await act(async () => {});
+
+    expect(mocks.upsertObjectGrantForObject).toHaveBeenCalledWith({
+      accessorId: "u-new",
+      bundle: "full_business_access",
+      objId: "catalog-1",
+      objName: "Customer catalog",
+      objSub: undefined,
+      objType: "catalog",
+    });
+  });
+
+  it("does not downgrade an unknown capability snapshot to the Community bundle", async () => {
+    mocks.useCapability.mockReturnValue("unknown");
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({})])],
+    });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+        prefillGranteeId="u-new"
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("professional-edition-gate")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /full_business_access/ })).toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.newGrantTitle")).toBeNull();
+    expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
+  });
+
+  it("gates child-resource authorization instead of offering the Community bundle", async () => {
+    mocks.useCapability.mockReturnValue("not-licensed");
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
+
+    render(
+      <ObjectAuthorizeDrawer
+        objId="network-1/action-1"
+        objName="Submit order"
+        objType="action_type"
+        onClose={vi.fn()}
+        open
+      />,
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("professional-edition-gate")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /full_business_access/ })).toBeNull();
+  });
+
+  it("blocks deleting a prerequisite source while an allowed operation depends on it", async () => {
+    const dependentGrant = grant([
+      source({}),
+      source({ grantId: "grant-direct-modify", operation: "modify" }),
+    ]);
+    dependentGrant.effectiveDecisions = [
+      { basis: "direct", decision: "allow", operation: "view_detail", requires: [] },
+      {
+        basis: "direct",
+        decision: "allow",
+        operation: "modify",
+        requires: ["view_detail"],
+      },
+    ];
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [dependentGrant] });
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    const deleteActions = screen.getAllByText("systemAdmin.objectGrants.deleteGrant");
+    expect((deleteActions[0].closest("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((deleteActions[1].closest("button") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("protects public and authorize-holder rows from delegate deletion", async () => {
+    const publicAccessorId = "00000000-0000-0000-0000-000000000000";
+    appServices.runtimeConfig.currentUser.id = "u-owner";
+    appServices.runtimeConfig.currentUser.permissions = [];
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [
+        grant(
+          [source({ accessorId: "u-owner", grantId: "owner-authorize", operation: "authorize" })],
+          { accessorId: "u-owner" },
+        ),
+        grant(
+          [source({ accessorId: publicAccessorId, grantId: "public-view" })],
+          { accessorId: publicAccessorId },
+        ),
+        grant([source({})]),
+      ],
+    });
+
+    render(<ObjectAuthorizeDrawer objectAuthorized objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(rowDeleteButton("u-owner").disabled).toBe(true);
+    expect(rowDeleteButton(publicAccessorId).disabled).toBe(true);
+    expect(rowDeleteButton("u-mate").disabled).toBe(false);
+  });
+
+  it("prevents a revoke-only administrator from deleting their own authorize row", async () => {
+    appServices.runtimeConfig.currentUser.id = "u-owner";
+    appServices.runtimeConfig.currentUser.permissions = ["admin-authz:revoke"];
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [
+        grant(
+          [source({ accessorId: "u-owner", grantId: "owner-authorize", operation: "authorize" })],
+          { accessorId: "u-owner" },
+        ),
+        grant(
+          [source({ grantId: "mate-authorize", operation: "authorize" })],
+          { accessorId: "u-mate" },
+        ),
+      ],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(rowDeleteButton("u-owner").disabled).toBe(true);
+    expect(rowDeleteButton("u-mate").disabled).toBe(false);
   });
 });

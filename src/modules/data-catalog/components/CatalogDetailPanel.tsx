@@ -10,7 +10,7 @@ import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuPro
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
@@ -110,7 +110,6 @@ export function CatalogDetailPanel({
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
@@ -123,6 +122,7 @@ export function CatalogDetailPanel({
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const [nameColumnWidth, setNameColumnWidth] = useState(() => {
     try {
       const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
@@ -389,7 +389,18 @@ export function CatalogDetailPanel({
         }
         if (canAuthorizeGrants && !catalog.internal) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
-          moreItems.push({ key: "authorize", label: t("dataCatalog.catalog.authorize") });
+          moreItems.push({
+            key: "authorize",
+            label: (
+              <span className="console-tab-with-tier">
+                {t("dataCatalog.catalog.authorize")}
+                <EditionBadge
+                  capability={CAPABILITIES.PERM_FINE_GRAINED}
+                  edition="professional"
+                />
+              </span>
+            ),
+          });
         }
         if (!catalog.internal) {
           moreItems.push({
@@ -423,10 +434,7 @@ export function CatalogDetailPanel({
                     return;
                   }
                   if (key === "authorize") {
-                    void navigate(
-                      `/system/authorizations/new?object=${encodeURIComponent(`resource::${record.id}`)}`,
-                      { state: { objectGrantReturnTo: `${location.pathname}${location.search}` } },
-                    );
+                    setAuthorizeResource(record);
                     return;
                   }
                   if (key === "semantic-understanding") {
@@ -595,6 +603,16 @@ export function CatalogDetailPanel({
         onClose={() => setAuthorizeOpen(false)}
         open={authorizeOpen}
       />
+      {authorizeResource ? (
+        <ObjectAuthorizeDrawer
+          objId={authorizeResource.id}
+          objName={deriveDisplayName(authorizeResource, catalog.connectorType)}
+          objSub={catalog.name}
+          objType="resource"
+          onClose={() => setAuthorizeResource(null)}
+          open
+        />
+      ) : null}
     </section>
   );
 }

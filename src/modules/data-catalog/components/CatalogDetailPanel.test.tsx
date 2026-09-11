@@ -167,4 +167,38 @@ describe("CatalogDetailPanel authorize entry", () => {
 
     expect(await screen.findByText("common.disabled")).toBeTruthy();
   });
+
+  it("opens the shared authorization drawer for an individual data resource", async () => {
+    currentPermissions.value = ["admin-authz:grant"];
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "none",
+          name: "customers",
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    fireEvent.click(await screen.findByRole("menuitem", {
+      name: /dataCatalog\.catalog\.authorize/,
+    }));
+
+    expect(screen.getByTestId("authorize-drawer")).toBeTruthy();
+    expect(drawerProps.value?.objType).toBe("resource");
+    expect(drawerProps.value?.objId).toBe("resource-1");
+    expect(drawerProps.value?.objName).toBe("customers");
+  });
 });

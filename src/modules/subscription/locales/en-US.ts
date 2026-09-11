@@ -34,9 +34,13 @@ export const subscriptionEnUS = {
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
+      perm_fine_grained: {
+        description: "Per-object allow and deny decisions with source-level revocation",
+        name: "Fine-grained object authorization",
+      },
       perm_object_level: {
-        description: "Object-level authorization and advanced role control",
-        name: "Object-level authorization",
+        description: "Enterprise object-rule compatibility and property-level controls",
+        name: "Enterprise object rules",
       },
       rbac_basic: {
         description: "Custom departments, roles and permission control",

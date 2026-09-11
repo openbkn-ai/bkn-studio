@@ -17,6 +17,8 @@ const subscribeMockDbMock = vi.hoisted(() => vi.fn());
 const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
 const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
 const modalConfirmMock = vi.hoisted(() => vi.fn());
+const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
+const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 
 vi.mock("antd", () => ({
   Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
@@ -41,7 +43,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: modalConfirmMock },
-    runtimeConfig: { currentUser: { permissions: [] } },
+    runtimeConfig: { currentUser: { permissions: currentPermissions.value } },
   }),
 }));
 
@@ -78,6 +80,12 @@ vi.mock("@/modules/data-catalog/components/ResourcePreviewPanel", () => ({ Resou
 vi.mock("@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel", () => ({
   ResourceSemanticUnderstandingPanel: () => <div data-testid="semantic-panel" />,
 }));
+vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
+  ObjectAuthorizeDrawer: (props: Record<string, unknown>) => {
+    drawerProps.value = props;
+    return props.open ? <div data-testid="authorize-drawer" /> : null;
+  },
+}));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   discoverCatalogResource: discoverCatalogResourceMock,
@@ -112,6 +120,8 @@ const staleResource: CatalogResource = {
 describe("ResourceWorkspaceScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentPermissions.value = [];
+    drawerProps.value = null;
     getCatalogMock.mockResolvedValue({ id: "catalog-1", name: "Catalog" });
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     subscribeMockDbMock.mockImplementation(() => () => {});
@@ -139,6 +149,28 @@ describe("ResourceWorkspaceScene", () => {
       resourceId: staleResource.id,
       sort: "create_time",
     }));
+  });
+
+  it("opens the shared authorization drawer from the resource workspace", async () => {
+    currentPermissions.value = ["admin-authz:grant"];
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    fireEvent.click(await screen.findByText("dataCatalog.catalog.authorize"));
+
+    expect(screen.getByTestId("authorize-drawer")).toBeTruthy();
+    expect(drawerProps.value?.objType).toBe("resource");
+    expect(drawerProps.value?.objId).toBe("resource-1");
+    expect(drawerProps.value?.objName).toBe("orders");
   });
 
   it("confirms metadata refresh and resource availability changes before creating requests", async () => {

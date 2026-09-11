@@ -30,7 +30,8 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
-      perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
+      perm_fine_grained: { description: "按对象和操作配置允许、拒绝与来源级撤销", name: "细粒度对象授权" },
+      perm_object_level: { description: "企业对象规则兼容层与属性级权限", name: "企业对象规则" },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
         bullets: {

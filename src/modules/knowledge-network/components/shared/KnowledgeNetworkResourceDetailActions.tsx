@@ -7,8 +7,11 @@
 
 import type { ButtonProps } from "antd";
 import type { ReactNode } from "react";
+import { useParams } from "react-router-dom";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 type OperationRecord = {
@@ -26,15 +29,22 @@ export type KnowledgeNetworkResourceDetailAction = {
 
 type KnowledgeNetworkResourceDetailActionsProps = {
   actions: KnowledgeNetworkResourceDetailAction[];
+  networkId?: string;
   record: OperationRecord;
 };
 
 export function KnowledgeNetworkResourceDetailActions({
   actions,
+  networkId: networkIdProp,
   record,
 }: KnowledgeNetworkResourceDetailActionsProps) {
+  const { networkId: routeNetworkId = "" } = useParams<{ networkId: string }>();
+  const networkId = networkIdProp ?? routeNetworkId;
+  const networkAuthorized = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const visibleActions = actions.filter((action) =>
-    hasKnowledgeNetworkRecordOperation(record, action.operation),
+    action.operation === "authorize"
+      ? networkAuthorized && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+      : hasKnowledgeNetworkRecordOperation(record, action.operation),
   );
 
   if (visibleActions.length === 0) {
@@ -50,7 +60,11 @@ export function KnowledgeNetworkResourceDetailActions({
           onClick={action.onClick}
           type={action.type}
         >
-          {action.label}
+          {action.operation === "authorize" ? (
+            <KnowledgeNetworkAuthorizationActionLabel>
+              {action.label}
+            </KnowledgeNetworkAuthorizationActionLabel>
+          ) : action.label}
         </AppButton>
       ))}
     </>

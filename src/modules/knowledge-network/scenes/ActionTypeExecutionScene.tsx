@@ -47,6 +47,7 @@ import type {
   ActionTypeExecutionConfig,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { getActionTypeDynamicParameters } from "@/modules/knowledge-network/utils/action-type-dynamic-params";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import {
   getActionSourceDisplayName,
   getReadableActionSourceDisplayName,
@@ -57,7 +58,7 @@ import styles from "./KnowledgeNetworkResourceConfigScene.module.css";
 
 type ExecutionTab = "run" | "config" | "tasks";
 
-const ACTION_TYPE_EXECUTION_OPERATIONS = ["modify", "task_manage"] as const;
+const ACTION_TYPE_EXECUTION_OPERATIONS = ["modify"] as const;
 
 export function ActionTypeExecutionScene() {
   const { t } = useTranslation();
@@ -99,7 +100,7 @@ export function ActionTypeExecutionScene() {
       ACTION_TYPE_EXECUTION_OPERATIONS,
     );
   const canModify = operationAccess.modify;
-  const canTaskManage = operationAccess.task_manage;
+  const canExecute = detail ? hasKnowledgeNetworkRecordOperation(detail, "execute") : false;
   const actionSource = detail?.executionConfig.actionSource;
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -254,7 +255,7 @@ export function ActionTypeExecutionScene() {
   };
 
   const executeNow = async (dynamicParams?: Record<string, unknown>) => {
-    if (!detail || !canTaskManage) {
+    if (!detail || !canExecute) {
       return false;
     }
 
@@ -337,7 +338,7 @@ export function ActionTypeExecutionScene() {
         </Descriptions>
         <div className={styles.executionActionBar}>
           <AppButton
-            disabled={isPermissionLoading || !canTaskManage}
+            disabled={isPermissionLoading || !canExecute}
             icon={<PlayCircleOutlined />}
             loading={executing}
             onClick={handleExecuteNow}
@@ -472,7 +473,7 @@ export function ActionTypeExecutionScene() {
               {activeTab === "tasks" && detail ? (
                 <ActionTypeTaskManagementPanel
                   actionTypeId={actionTypeId}
-                  canManage={canTaskManage}
+                  canManage={canExecute}
                   networkId={networkId}
                   refreshToken={taskRefreshToken}
                 />

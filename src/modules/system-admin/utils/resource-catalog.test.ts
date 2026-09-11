@@ -94,12 +94,15 @@ describe("resource-catalog", () => {
     expect(resourceTypeLabel("skill")).toBe("SKILL 包");
   });
 
-  it("offers task management only for action types among knowledge-network children", () => {
-    for (const type of ["concept_group", "object_type", "relation_type", "metric", "risk_type"]) {
-      expect(operationsForType(type).map((item) => item.key)).not.toContain("task_manage");
+  it("keeps authorize and task_manage off every knowledge-network child", () => {
+    for (const type of ["concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
+      const operations = operationsForType(type).map((item) => item.key);
+      expect(operations).not.toContain("authorize");
+      expect(operations).not.toContain("task_manage");
     }
 
-    expect(operationsForType("action_type").map((item) => item.key)).toContain("task_manage");
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("authorize");
+    expect(operationsForType("action_type").map((item) => item.key)).toContain("execute");
   });
 
   it("offers data querying for every knowledge-network child type", () => {
@@ -117,6 +120,11 @@ describe("resource-catalog", () => {
 
   it("offers action execution on a knowledge network", () => {
     expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("execute");
+  });
+
+  it("marks view as the authoring prerequisite of mutating operations", () => {
+    expect(operationsForType("action_type").find((item) => item.key === "execute")?.requires)
+      .toEqual(["view_detail"]);
   });
 
   it("localizes every knowledge-network child resource type in Chinese", async () => {

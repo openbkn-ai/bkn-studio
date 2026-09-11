@@ -148,7 +148,7 @@ export function ActionTypeDetailScene() {
                     `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/execution`,
                   );
                 },
-                operation: "task_manage",
+                operation: "execute",
               },
               {
                 key: "authorize",

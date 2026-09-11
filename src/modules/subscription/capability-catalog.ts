@@ -71,6 +71,8 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
   { category: "permission", key: CAPABILITIES.RBAC_BASIC,
     reportedByEndpoint: true, minEdition: "professional" },
+  { category: "permission", key: CAPABILITIES.PERM_FINE_GRAINED,
+    reportedByEndpoint: true, minEdition: "professional" },
   {
     category: "dataConnect",
     key: "connector_certified",
