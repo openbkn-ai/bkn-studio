@@ -233,6 +233,9 @@ export function CatalogTreePanel({
   }, [activeSchema, selectedCatalogId]);
 
   const query = keyword.trim().toLowerCase();
+  const catalogCount = connectorTypeStats.length > 0
+    ? connectorTypeStats.reduce((total, stat) => total + stat.catalogCount, 0)
+    : catalogs.length;
 
   const physicalCatalogs = useMemo(
     () =>
@@ -661,7 +664,7 @@ export function CatalogTreePanel({
         footer={
           <span>
             {t("dataCatalog.tree.summary", {
-              catalogCount: catalogs.length as never,
+              catalogCount: catalogCount as never,
               resourceCount: resourceCount as never,
             })}
           </span>

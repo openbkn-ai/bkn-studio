@@ -122,10 +122,11 @@ export function DataCatalogScene({
   const loadCatalogsByConnectorType = useCallback(async (connectorType: string, offset = 0) => {
     const generation = catalogQueryGeneration.current;
     const type = connectorType ? "physical" : "logical";
+    const pageOffset = Math.floor(offset / CATALOG_PAGE_SIZE) * CATALOG_PAGE_SIZE;
     const result = await listCatalogs({
       connectorType,
       keyword: catalogKeyword,
-      page: offset / CATALOG_PAGE_SIZE + 1,
+      page: pageOffset / CATALOG_PAGE_SIZE + 1,
       pageSize: CATALOG_PAGE_SIZE,
       type,
     });
@@ -134,7 +135,7 @@ export function DataCatalogScene({
     }
     setCatalogs((current) => [
       ...current.filter((catalog) =>
-        offset > 0 || catalog.type !== type || (type === "physical" && catalog.connectorType !== connectorType),
+        pageOffset > 0 || catalog.type !== type || (type === "physical" && catalog.connectorType !== connectorType),
       ),
       ...result.items,
     ]);
@@ -169,11 +170,11 @@ export function DataCatalogScene({
     }
   }, [catalogKeyword, loadCatalogs, refreshResourceTotal]);
 
-  const handleCatalogSearch = useCallback(() => {
+  const handleCatalogSearch = useCallback((searchKeyword = catalogSearchInput) => {
     if (catalogSearchLoading) {
       return;
     }
-    const keyword = catalogSearchInput;
+    const keyword = searchKeyword;
     const generation = catalogQueryGeneration.current + 1;
     catalogQueryGeneration.current = generation;
     setLoadError(null);

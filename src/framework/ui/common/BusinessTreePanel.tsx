@@ -40,7 +40,7 @@ type BusinessTreePanelProps = {
   titleClassName?: string;
   treeScrollClassName?: string;
   onExpandPanel?: () => void;
-  onSearch?: () => void;
+  onSearch?: (value: string) => void;
   onSearchChange?: (value: string) => void;
 };
 

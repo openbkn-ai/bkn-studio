@@ -31,7 +31,7 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
     keyword: string;
     onLoadCatalogsByConnectorType: (connectorType: string, offset?: number) => Promise<void>;
     onRefresh: () => Promise<void>;
-    onSearch: () => void;
+    onSearch: (keyword?: string) => void;
     onSearchChange: (keyword: string) => void;
     onSelectCatalog: (catalogId: string) => void;
   }) => (
@@ -42,7 +42,8 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
       <button onClick={() => void onLoadCatalogsByConnectorType("postgresql")} type="button">load physical</button>
       <button onClick={() => void onRefresh()} type="button">refresh catalogs</button>
       <button onClick={() => onSearchChange("orders")} type="button">enter search keyword</button>
-      <button onClick={onSearch} type="button">search catalogs</button>
+      <button onClick={() => onSearch()} type="button">search catalogs</button>
+      <button onClick={() => onSearch("")} type="button">clear search catalogs</button>
     </>
   ),
 }));
@@ -184,6 +185,23 @@ describe("DataCatalogScene", () => {
 
     await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith("catalog-1"));
     await waitFor(() => expect(screen.getByTestId("selected-catalog-id").textContent).toBe("catalog-1"));
+
+    listCatalogsMock.mockImplementation((query: CatalogListQuery) => Promise.resolve(
+      query.type === "physical"
+        ? { items: [catalog], total: 1 }
+        : { items: [], total: 0 },
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "load physical" }));
+
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
+      connectorType: "postgresql",
+      keyword: "",
+      page: 1,
+      pageSize: 100,
+      type: "physical",
+    }));
+    expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1");
   });
 
   it("filters catalog statistics with the current search keyword", async () => {
@@ -200,6 +218,25 @@ describe("DataCatalogScene", () => {
     await waitFor(() => expect(listCatalogConnectorTypeStatsMock).toHaveBeenCalledWith("orders"));
     expect(listCatalogsMock).toHaveBeenCalledWith({
       keyword: "orders",
+      page: 1,
+      pageSize: 100,
+      type: "logical",
+    });
+  });
+
+  it("uses the value supplied by the search control when clearing a pending keyword", async () => {
+    render(
+      <MemoryRouter initialEntries={["/data-catalog"]}>
+        <DataCatalogScene selection={null} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "enter search keyword" }));
+    fireEvent.click(screen.getByRole("button", { name: "clear search catalogs" }));
+
+    await waitFor(() => expect(listCatalogConnectorTypeStatsMock).toHaveBeenLastCalledWith(""));
+    expect(listCatalogsMock).toHaveBeenLastCalledWith({
+      keyword: "",
       page: 1,
       pageSize: 100,
       type: "logical",

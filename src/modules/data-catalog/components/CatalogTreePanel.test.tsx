@@ -13,7 +13,12 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ i18n: { language: "zh-CN" }, t: (key: string) => key }),
+  useTranslation: () => ({
+    i18n: { language: "zh-CN" },
+    t: (key: string, values?: { catalogCount?: number }) => (
+      key === "dataCatalog.tree.summary" ? `catalogs:${values?.catalogCount}` : key
+    ),
+  }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -46,10 +51,11 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
       <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
     </>
   ),
-  BusinessTreePanel: ({ children, headerActions }: { children: ReactNode; headerActions: ReactNode }) => (
+  BusinessTreePanel: ({ children, footer, headerActions }: { children: ReactNode; footer?: ReactNode; headerActions: ReactNode }) => (
     <div>
       {headerActions}
       {children}
+      <output data-testid="catalog-summary">{footer}</output>
     </div>
   ),
 }));
@@ -108,6 +114,26 @@ describe("CatalogTreePanel", () => {
     );
 
     expect(screen.getByTestId("expanded-keys").textContent).not.toContain("connector:postgresql");
+  });
+
+  it("uses statistics for the catalog total instead of the loaded page size", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        connectorTypeStats={[
+          { catalogCount: 250, catalogType: "physical", connectorType: "postgresql" },
+          { catalogCount: 3, catalogType: "logical", connectorType: "" },
+        ]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-summary").textContent).toBe("catalogs:253");
   });
 
   it("loads physical catalog schemas only when its node is expanded", async () => {
