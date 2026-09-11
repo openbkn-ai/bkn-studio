@@ -133,12 +133,22 @@ export function DataCatalogScene({
     if (generation !== catalogQueryGeneration.current) {
       return;
     }
-    setCatalogs((current) => [
-      ...current.filter((catalog) =>
+    setCatalogs((current) => {
+      const next = [
+        ...current.filter((catalog) =>
         pageOffset > 0 || catalog.type !== type || (type === "physical" && catalog.connectorType !== connectorType),
-      ),
-      ...result.items,
-    ]);
+        ),
+        ...result.items,
+      ];
+      const catalogIDs = new Set<string>();
+      return next.filter((catalog) => {
+        if (catalogIDs.has(catalog.id)) {
+          return false;
+        }
+        catalogIDs.add(catalog.id);
+        return true;
+      });
+    });
   }, [catalogKeyword]);
 
   const loadCatalogSchemas = useCallback(async (catalogId: string) => {

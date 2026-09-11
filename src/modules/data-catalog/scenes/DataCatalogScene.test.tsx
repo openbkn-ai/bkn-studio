@@ -40,6 +40,7 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
       <output data-testid="catalog-keyword">{keyword}</output>
       <button onClick={() => onSelectCatalog("catalog-1")} type="button">select catalog</button>
       <button onClick={() => void onLoadCatalogsByConnectorType("postgresql")} type="button">load physical</button>
+      <button onClick={() => void onLoadCatalogsByConnectorType("postgresql", 101)} type="button">load more physical</button>
       <button onClick={() => void onRefresh()} type="button">refresh catalogs</button>
       <button onClick={() => onSearchChange("orders")} type="button">enter search keyword</button>
       <button onClick={() => onSearch()} type="button">search catalogs</button>
@@ -202,6 +203,55 @@ describe("DataCatalogScene", () => {
       type: "physical",
     }));
     expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1");
+  });
+
+  it("does not duplicate a deep-linked physical catalog when loading its later page", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...catalog,
+      id: `first-${index}`,
+      name: `first-${index}`,
+    }));
+    const secondPage = [catalog, ...Array.from({ length: 99 }, (_, index) => ({
+      ...catalog,
+      id: `second-${index}`,
+      name: `second-${index}`,
+    }))];
+    listCatalogsMock.mockImplementation((query: CatalogListQuery) => Promise.resolve(
+      query.type !== "physical"
+        ? { items: [], total: 0 }
+        : query.page === 1
+          ? { items: firstPage, total: 250 }
+          : { items: secondPage, total: 250 },
+    ));
+    listCatalogConnectorTypeStatsMock.mockResolvedValue([{
+      catalogCount: 250,
+      catalogType: "physical",
+      connectorType: "postgresql",
+    }]);
+    getCatalogMock.mockResolvedValue(catalog);
+
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1"));
+    fireEvent.click(screen.getByRole("button", { name: "load physical" }));
+    await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent?.split(",")).toHaveLength(101));
+
+    fireEvent.click(screen.getByRole("button", { name: "load more physical" }));
+    await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent?.split(",")).toHaveLength(200));
+
+    const catalogIDs = screen.getByTestId("catalog-ids").textContent?.split(",") ?? [];
+    expect(catalogIDs.filter((id) => id === "catalog-1")).toHaveLength(1);
+    expect(listCatalogsMock).toHaveBeenCalledWith({
+      connectorType: "postgresql",
+      keyword: "",
+      page: 2,
+      pageSize: 100,
+      type: "physical",
+    });
   });
 
   it("filters catalog statistics with the current search keyword", async () => {
