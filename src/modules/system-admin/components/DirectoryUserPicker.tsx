@@ -13,7 +13,7 @@ import {
 } from "@ant-design/icons";
 import { Avatar, Empty, Input, Select, Spin, Tree, TreeSelect } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
@@ -100,7 +100,7 @@ function buildDepartmentTree(
       key: department.id,
       title: (
         <span className={styles.departmentTitle}>
-          <span>{department.name}</span>
+          <span title={department.name}>{department.name}</span>
           {typeof count === "number" ? <small>{memberCountLabel(count)}</small> : null}
         </span>
       ),
@@ -154,13 +154,19 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   const [knownUsers, setKnownUsers] = useState<Record<string, AdminUser>>(() =>
     mergeUsers({}, initialUsers));
   const [userLoading, setUserLoading] = useState(false);
+  const [moreUsersLoading, setMoreUsersLoading] = useState(false);
+  const [loadedUserCount, setLoadedUserCount] = useState(initialUsers.length);
   const [userTotal, setUserTotal] = useState(initialUsers.length);
-  const [userResultTruncated, setUserResultTruncated] = useState(false);
+  const [hasMoreUsers, setHasMoreUsers] = useState(false);
   const requestSequence = useRef(0);
   const active = inline || open;
 
   const departments = providedDepartments ?? loadedDepartments;
-  const disabledIdSet = useMemo(() => new Set(disabledUserIds), [disabledUserIds]);
+  const disabledUserIdsKey = disabledUserIds.join("\u0000");
+  const disabledIdSet = useMemo(
+    () => new Set(disabledUserIdsKey ? disabledUserIdsKey.split("\u0000") : []),
+    [disabledUserIdsKey],
+  );
 
   useEffect(() => {
     setKnownUsers((current) => mergeUsers(current, initialUsers));
@@ -176,7 +182,7 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     }
     setDepartmentLoading(true);
     void Promise.resolve()
-      .then(() => listDepartments())
+      .then(() => listDepartments({ skipErrorToast: true }))
       .then(setLoadedDepartments)
       .catch(() => setLoadedDepartments([]))
       .finally(() => {
@@ -189,27 +195,17 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     if (!active) {
       return;
     }
-    const canUseInitialUsers =
-      !debouncedSearch && activeDepartmentId === ALL_DEPARTMENTS && initialUsers.length > 0;
-    if (canUseInitialUsers) {
-      const filtered = initialUsers.filter((user) => !disabledIdSet.has(user.id));
-      setVisibleUsers(filtered);
-      setUserTotal(filtered.length);
-      setUserResultTruncated(false);
-      setUserLoading(false);
-      return;
-    }
-
     const sequence = ++requestSequence.current;
     setUserLoading(true);
-    setUserResultTruncated(false);
+    setMoreUsersLoading(false);
+    setHasMoreUsers(false);
     void Promise.resolve()
       .then(() => listUsersPage(
         {
-          departmentId: activeDepartmentId !== ALL_DEPARTMENTS && (inline || !debouncedSearch)
+          departmentId: activeDepartmentId !== ALL_DEPARTMENTS
             ? activeDepartmentId
             : undefined,
-          includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS && (inline || !debouncedSearch),
+          includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
           limit: USER_PAGE_LIMIT,
           offset: 0,
           search: debouncedSearch || undefined,
@@ -223,14 +219,16 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
         const users = result.users.filter((user) => !disabledIdSet.has(user.id));
         setVisibleUsers(users);
         setKnownUsers((current) => mergeUsers(current, users));
+        setLoadedUserCount(result.users.length);
         setUserTotal(Math.max(users.length, result.total));
-        setUserResultTruncated(result.total > result.users.length);
+        setHasMoreUsers(result.users.length > 0 && result.total > result.users.length);
       })
       .catch(() => {
         if (sequence === requestSequence.current) {
           setVisibleUsers([]);
+          setLoadedUserCount(0);
           setUserTotal(0);
-          setUserResultTruncated(false);
+          setHasMoreUsers(false);
         }
       })
       .finally(() => {
@@ -243,9 +241,58 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     activeDepartmentId,
     debouncedSearch,
     disabledIdSet,
-    disabledUserIds.length,
-    initialUsers,
-    inline,
+  ]);
+
+  const loadMoreUsers = useCallback(() => {
+    if (!active || !hasMoreUsers || userLoading || moreUsersLoading) {
+      return;
+    }
+    const sequence = requestSequence.current;
+    const offset = loadedUserCount;
+    setMoreUsersLoading(true);
+    void Promise.resolve()
+      .then(() => listUsersPage(
+        {
+          departmentId: activeDepartmentId !== ALL_DEPARTMENTS
+            ? activeDepartmentId
+            : undefined,
+          includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
+          limit: USER_PAGE_LIMIT,
+          offset,
+          search: debouncedSearch || undefined,
+        },
+        { skipErrorToast: true },
+      ))
+      .then((result) => {
+        if (sequence !== requestSequence.current) {
+          return;
+        }
+        const users = result.users.filter((user) => !disabledIdSet.has(user.id));
+        setVisibleUsers((current) => {
+          const existingIds = new Set(current.map((user) => user.id));
+          return [...current, ...users.filter((user) => !existingIds.has(user.id))];
+        });
+        setKnownUsers((current) => mergeUsers(current, users));
+        const nextOffset = offset + result.users.length;
+        setLoadedUserCount(nextOffset);
+        setUserTotal((current) => Math.max(current, result.total));
+        setHasMoreUsers(result.users.length > 0 && result.total > nextOffset);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (sequence === requestSequence.current) {
+          setMoreUsersLoading(false);
+        }
+      });
+  }, [
+    active,
+    activeDepartmentId,
+    debouncedSearch,
+    disabledIdSet,
+    hasMoreUsers,
+    loadedUserCount,
+    moreUsersLoading,
+    userLoading,
   ]);
 
   useEffect(() => {
@@ -317,11 +364,24 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   };
 
   const activeDepartment = departments.find((department) => department.id === activeDepartmentId);
-  const panelTitle = inline
-    ? t("systemAdmin.userPicker.users")
-    : debouncedSearch
+  const searchHint = activeDepartment
+    ? t("systemAdmin.userPicker.searchWithinDepartment", { department: activeDepartment.name })
+    : t("systemAdmin.userPicker.searchAllUsers");
+  const panelTitle = activeDepartment?.name
+    ?? (debouncedSearch
       ? t("systemAdmin.userPicker.searchResults")
-      : activeDepartment?.name ?? t("systemAdmin.userPicker.allUsers");
+      : inline ? t("systemAdmin.userPicker.users") : t("systemAdmin.userPicker.allUsers"));
+  const resultSummary = disabledUserIds.length > 0
+    ? hasMoreUsers || loadedUserCount < userTotal
+      ? t("systemAdmin.userPicker.loadedSelectableCount", { count: visibleUsers.length })
+      : t("systemAdmin.userPicker.resultCount", { count: visibleUsers.length })
+    : hasMoreUsers || loadedUserCount < userTotal
+    ? t("systemAdmin.userPicker.resultRange", {
+      count: userTotal,
+      from: 1,
+      to: loadedUserCount,
+    })
+    : t("systemAdmin.userPicker.resultCount", { count: userTotal });
   const inlineDepartmentTree = useMemo<DirectoryTreeNode[]>(() => [
     {
       key: ALL_DEPARTMENTS,
@@ -367,11 +427,11 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
           />
           <Input
             allowClear
-            aria-label={t("systemAdmin.userPicker.searchInlineHint")}
+            aria-label={searchHint}
             className={styles.searchInput}
             disabled={disabled}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("systemAdmin.userPicker.searchInlineHint")}
+            placeholder={searchHint}
             prefix={<SearchOutlined aria-hidden />}
             value={search}
           />
@@ -380,11 +440,11 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
         <div className={styles.panelHeader}>
           <Input
             allowClear
-            aria-label={t("systemAdmin.userPicker.searchHint")}
+            aria-label={searchHint}
             className={styles.searchInput}
             disabled={disabled}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={t("systemAdmin.userPicker.searchHint")}
+            placeholder={searchHint}
             prefix={<SearchOutlined aria-hidden />}
             value={search}
           />
@@ -435,7 +495,7 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
           <div className={styles.memberPaneHead}>
             <div>
               <strong>{panelTitle}</strong>
-              <span>{t("systemAdmin.userPicker.resultCount", { count: userTotal })}</span>
+              <span>{resultSummary}</span>
             </div>
             {multiple && selectedIds.length ? (
               <span className={styles.selectedCount}>
@@ -443,7 +503,17 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
               </span>
             ) : null}
           </div>
-          <div aria-busy={panelBusy} className={styles.memberList} role="listbox">
+          <div
+            aria-busy={panelBusy || moreUsersLoading}
+            className={styles.memberList}
+            onScroll={(event) => {
+              const { clientHeight, scrollHeight, scrollTop } = event.currentTarget;
+              if (scrollTop + clientHeight >= scrollHeight - 32) {
+                loadMoreUsers();
+              }
+            }}
+            role="listbox"
+          >
             {panelBusy ? (
               <div className={styles.loadingState}><Spin size="small" /></div>
             ) : visibleUsers.length ? visibleUsers.map((user) => {
@@ -480,9 +550,19 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
               />
             )}
           </div>
-          {userResultTruncated ? (
+          {hasMoreUsers || moreUsersLoading ? (
             <div className={styles.resultHint}>
-              {t("systemAdmin.userPicker.refineSearch", { count: USER_PAGE_LIMIT })}
+              <span>{t("systemAdmin.userPicker.loadMoreHint")}</span>
+              <button
+                className={styles.loadMoreButton}
+                disabled={moreUsersLoading}
+                onClick={loadMoreUsers}
+                type="button"
+              >
+                {moreUsersLoading
+                  ? t("systemAdmin.userPicker.loadingMore")
+                  : t("systemAdmin.userPicker.loadMore")}
+              </button>
             </div>
           ) : null}
         </section>

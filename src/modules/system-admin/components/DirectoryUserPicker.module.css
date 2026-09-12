@@ -6,7 +6,7 @@
  */
 
 .pickerPanel {
-  width: min(680px, calc(100vw - 32px));
+  width: min(720px, calc(100vw - 32px));
   overflow: hidden;
   color: var(--admin-color-text, var(--color-text-primary));
   background: var(--admin-color-surface, var(--color-bg-surface));
@@ -65,8 +65,8 @@
 
 .panelBody {
   display: grid;
-  grid-template-columns: minmax(190px, 0.78fr) minmax(320px, 1.6fr);
-  height: 360px;
+  grid-template-columns: 232px minmax(0, 1fr);
+  height: 400px;
   min-height: 0;
 }
 
@@ -111,9 +111,12 @@
 }
 
 .organizationPane {
+  display: flex;
   min-width: 0;
+  min-height: 0;
   padding: 10px 8px;
-  overflow: auto;
+  flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid var(--admin-color-border-soft, var(--color-divider));
   background: var(--admin-color-surface-subtle, var(--color-fill-secondary));
 }
@@ -155,7 +158,12 @@
 }
 
 .organizationPane :global(.ant-tree) {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
   background: transparent;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .organizationPane :global(.ant-tree-node-content-wrapper) {
@@ -235,6 +243,8 @@
   min-height: 0;
   padding: 6px;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .member,
@@ -326,6 +336,32 @@
   font-size: 11px;
 }
 
+.resultHint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.loadMoreButton {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  color: var(--admin-color-primary, var(--color-primary-600));
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.loadMoreButton:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.loadMoreButton:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
 .fallbackHint {
   display: flex;
   align-items: center;
@@ -339,7 +375,7 @@
   }
 
   .panelBody {
-    grid-template-columns: 142px minmax(220px, 1fr);
+    grid-template-columns: 166px minmax(220px, 1fr);
   }
 
   .departmentTitle small {

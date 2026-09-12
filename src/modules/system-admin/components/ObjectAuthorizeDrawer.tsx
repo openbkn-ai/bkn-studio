@@ -207,7 +207,7 @@ export function ObjectAuthorizeDrawer({
   // this drawer displays. A failure still costs a label rather than the screen.
   const syncLookup = useCallback(async (accessorIds: string[]) => {
     try {
-      setDepartments(await getCachedDepartments());
+      setDepartments(await getCachedDepartments({ skipErrorToast: true }));
       await hydrateUserLookup(accessorIds);
     } catch {
       // Leave whatever the cache already holds.
@@ -796,6 +796,7 @@ export function ObjectAuthorizeDrawer({
               </label>
               <DirectoryUserPicker
                 ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
+                departments={departments}
                 id="object-grant-user"
                 loading={loading}
                 onChange={setCandidate}

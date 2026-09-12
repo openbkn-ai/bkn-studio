@@ -18,6 +18,10 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
       const count = options?.count;
+      const department = options?.department;
+      if (typeof department === "string") {
+        return `${key}:${department}`;
+      }
       return typeof count === "number" ? `${key}:${count}` : key;
     },
   }),
@@ -69,6 +73,17 @@ const users = [
   },
 ];
 
+const thirdUser = {
+  account: "zoe.lin",
+  accountType: "local",
+  email: "",
+  enabled: true,
+  id: "user-3",
+  name: "Zoe Lin",
+  roleIds: [],
+  telephone: "",
+};
+
 describe("DirectoryUserPicker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,6 +108,7 @@ describe("DirectoryUserPicker", () => {
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
     expect(await screen.findByText("Engineering")).not.toBeNull();
+    expect(mocks.listDepartments).toHaveBeenCalledWith({ skipErrorToast: true });
     fireEvent.click(screen.getByText("Engineering"));
 
     await waitFor(() => {
@@ -133,18 +149,23 @@ describe("DirectoryUserPicker", () => {
     expect(onChange).toHaveBeenLastCalledWith(["user-1", "user-2"]);
   });
 
-  it("searches across the organization from the popup search input", async () => {
+  it("keeps the selected organization as the search scope", async () => {
     render(<DirectoryUserPicker ariaLabel="授权用户" onChange={vi.fn()} />);
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
+    fireEvent.click(await screen.findByText("Engineering"));
     const searchInput = await screen.findByRole("textbox", {
-      name: "systemAdmin.userPicker.searchHint",
+      name: "systemAdmin.userPicker.searchWithinDepartment:Engineering",
     });
     fireEvent.change(searchInput, { target: { value: "Yanqiu" } });
 
     await waitFor(() => {
       expect(mocks.listUsersPage).toHaveBeenCalledWith(
-        expect.objectContaining({ search: "Yanqiu" }),
+        expect.objectContaining({
+          departmentId: "engineering",
+          includeSubtree: true,
+          search: "Yanqiu",
+        }),
         { skipErrorToast: true },
       );
     });
@@ -162,15 +183,46 @@ describe("DirectoryUserPicker", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
     expect(await screen.findByRole("option", { name: /Mubai Li/ })).not.toBeNull();
     expect(screen.queryByText("systemAdmin.userPicker.refineSearch:100")).toBeNull();
+    expect(screen.getByText("systemAdmin.userPicker.resultCount:1")).not.toBeNull();
   });
 
-  it("shows the truncation hint when the server result exceeds the returned page", async () => {
+  it("shows the loaded range and an explicit fallback when more users are available", async () => {
     mocks.listUsersPage.mockResolvedValue({ total: 101, users });
     render(<DirectoryUserPicker ariaLabel="授权用户" onChange={vi.fn()} />);
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
 
-    expect(await screen.findByText("systemAdmin.userPicker.refineSearch:100")).not.toBeNull();
+    expect(await screen.findByRole("button", {
+      name: "systemAdmin.userPicker.loadMore",
+    })).not.toBeNull();
+    expect(screen.getByText("systemAdmin.userPicker.resultRange:101")).not.toBeNull();
+  });
+
+  it("loads the next page when the user list reaches its bottom", async () => {
+    mocks.listUsersPage
+      .mockResolvedValueOnce({ total: 3, users })
+      .mockResolvedValueOnce({ total: 3, users: [thirdUser] });
+    render(<DirectoryUserPicker ariaLabel="授权用户" onChange={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
+    const listbox = await screen.findByRole("listbox");
+    Object.defineProperties(listbox, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 400 },
+      scrollTop: { configurable: true, value: 180 },
+    });
+    fireEvent.scroll(listbox);
+
+    await waitFor(() => {
+      expect(mocks.listUsersPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ limit: 100, offset: 2 }),
+        { skipErrorToast: true },
+      );
+    });
+    expect(await screen.findByRole("option", { name: /Zoe Lin/ })).not.toBeNull();
+    expect(screen.queryByRole("button", {
+      name: "systemAdmin.userPicker.loadMore",
+    })).toBeNull();
   });
 
   it("renders compact organization and search controls above the inline user list", async () => {
@@ -188,7 +240,7 @@ describe("DirectoryUserPicker", () => {
       name: "systemAdmin.userPicker.organizationScope",
     })).not.toBeNull();
     expect(screen.getByRole("textbox", {
-      name: "systemAdmin.userPicker.searchInlineHint",
+      name: "systemAdmin.userPicker.searchAllUsers",
     })).not.toBeNull();
     expect(await screen.findByRole("option", { name: /Mubai Li/ })).not.toBeNull();
   });

@@ -1086,6 +1086,14 @@ select {
   width: 100%;
 }
 
+@media (max-width: 1000px) {
+  .knowledge-workspace-main,
+  .knowledge-workspace-main > .ant-app,
+  .knowledge-workspace-scene-host {
+    overflow: auto;
+  }
+}
+
 .workspace-toolbar-main {
   display: flex;
   align-items: center;

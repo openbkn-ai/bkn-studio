@@ -507,7 +507,7 @@ describe("ObjectTypeAuthorizationScene", () => {
       { skipErrorToast: true },
     ));
     expect(await screen.findByRole("textbox", {
-      name: "systemAdmin.userPicker.searchInlineHint",
+      name: "systemAdmin.userPicker.searchAllUsers",
     })).not.toBeNull();
   });
 
