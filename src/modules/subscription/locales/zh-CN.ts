@@ -80,7 +80,7 @@ export const subscriptionZhCN = {
       modelingTypes: "对象、关系、行动与指标建模",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",
-      topLevelGrants: "按知识网络、Catalog 等顶层资源整体授权,固定权限包",
+      topLevelGrants: "知识网络、Catalog 等顶层资源的整体授权",
     },
     categories: {
       modeling: "知识网络建模",

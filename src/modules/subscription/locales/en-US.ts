@@ -83,8 +83,7 @@ export const subscriptionEnUS = {
       modelingTypes: "Object, relation, action and metric modelling",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
-      topLevelGrants:
-        "Grants on top-level resources only (knowledge networks, catalogs) as a fixed permission bundle",
+      topLevelGrants: "Grants on whole top-level resources (knowledge networks, catalogs)",
     },
     categories: {
       modeling: "Knowledge modelling",
