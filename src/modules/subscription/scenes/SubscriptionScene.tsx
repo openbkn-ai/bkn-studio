@@ -18,6 +18,7 @@ import {
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { capabilityBullets } from "@/modules/subscription/capability-bullets";
 import {
   CAPABILITY_CATEGORIES,
   capabilitiesByCategory,
@@ -194,8 +195,8 @@ export function SubscriptionScene() {
 
               <ul className={styles.planFeats}>
                 {plan.edition === "community" ? (
-                  // 卡片只放前四条,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
-                  COMMUNITY_CAPABILITIES.slice(0, 4).map((entry) => (
+                  // 卡片只放标了 onCard 的行,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
+                  COMMUNITY_CAPABILITIES.filter((entry) => entry.onCard).map((entry) => (
                     <li key={entry.id}>
                       <CheckOutlined className={styles.tick} />
                       <span>{t(`subscription.community.${entry.id}`)}</span>
@@ -213,12 +214,30 @@ export function SubscriptionScene() {
                     </span>
                   </li>
                 )}
-                {introduced.map((entry) => (
-                  <li key={entry.key}>
-                    <CheckOutlined className={styles.tick} />
-                    <span>{t(`subscription.capabilities.${entry.key}.name`)}</span>
-                  </li>
-                ))}
+                {/*
+                  能力名下面铺卖点:登记表的名字太短(「细粒度对象授权」),说不清这一档比
+                  上一档细在哪——资源粒度、操作粒度、行列权限、审计各进一步。卖点与升级
+                  弹窗同一份文案。
+                */}
+                {introduced.map((entry) => {
+                  const bullets = capabilityBullets(t, entry.key);
+
+                  return (
+                    <li key={entry.key}>
+                      <CheckOutlined className={styles.tick} />
+                      <span>
+                        {t(`subscription.capabilities.${entry.key}.name`)}
+                        {bullets.length > 0 ? (
+                          <ul className={styles.planFeatDetail}>
+                            {bullets.map((text) => (
+                              <li key={text}>{text}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
 
               {/*

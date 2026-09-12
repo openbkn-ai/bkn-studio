@@ -35,10 +35,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
   }),
 }));
 
-vi.mock("@/framework/entitlement/EditionBadge", () => ({
-  EditionBadge: () => null,
-}));
-
 vi.mock("@/framework/permission/PermissionGate", () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => children,
 }));

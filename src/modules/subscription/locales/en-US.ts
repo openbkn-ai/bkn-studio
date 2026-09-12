@@ -35,23 +35,31 @@ export const subscriptionEnUS = {
         name: "Advanced data connectivity",
       },
       perm_fine_grained: {
+        bullets: {
+          b1: "Grants down to sub-resources: inside a knowledge network and per Resource under a catalog",
+          b2: "View, query, modify, delete and execute configured per operation",
+          b3: "Explicit sub-resource exceptions: direct allow or direct deny",
+          b4: "Full resource-authorization audit",
+        },
         description: "Per-object allow and deny decisions with source-level revocation",
         name: "Fine-grained object authorization",
       },
       perm_object_level: {
+        bullets: {
+          b1: "Row-level permissions on object types",
+          b2: "Column-level permissions on object types, four property tiers",
+          b3: "Data masking",
+          b4: "Audit of row and column permission changes",
+        },
         description: "Enterprise object-rule compatibility and property-level controls",
         name: "Enterprise object rules",
       },
       rbac_basic: {
+        bullets: { b1: "Custom roles and departments instead of the built-in roles only" },
         description: "Custom departments, roles and permission control",
         name: "Custom roles and permissions",
       },
       semantic_task: {
-        bullets: {
-          b1: "Infers the business meaning of columns and fills in semantic descriptions in bulk",
-          b2: "Results are scored by confidence; apply to empty fields only, or overwrite",
-          b3: "Runs as a task with progress, per-field results and an apply history",
-        },
         description: "Authoring and execution of business-semantic understanding tasks",
         name: "Semantic understanding tasks",
       },
@@ -64,16 +72,19 @@ export const subscriptionEnUS = {
      */
     community: {
       actionSandbox: "Action execution in a secure sandbox",
+      basicAudit: "Basic activity audit",
       cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
       commonSources: "Common databases, OpenSearch and CSV ingestion",
       indexing: "Data discovery, batch indexing and vectorisation",
-      localAuth: "Local sign-in, user management and basic activity records",
+      localAuth: "Local sign-in with user, department and built-in role management",
       mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
       modelingSurfaces:
         "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
       modelingTypes: "Object, relation, action and metric modelling",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
+      topLevelGrants:
+        "Grants on top-level resources only (knowledge networks, catalogs) as a fixed permission bundle",
     },
     categories: {
       modeling: "Knowledge modelling",

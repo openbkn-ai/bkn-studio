@@ -91,10 +91,12 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.1.3",
   },
   {
+    // 2026-09 起降到社区档:语义理解任务随社区版免费开放,数据目录侧不再挂徽标和蒙版。
+    // 与 bkn_trace 同一种情况——留在表里只为让对比矩阵显示「三档都有」,不是付费项。
     category: "semantic",
     key: "semantic_task",
     reportedByEndpoint: false,
-    minEdition: "professional",
+    minEdition: "community",
     sinceVersion: "0.1.3",
   },
   { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,

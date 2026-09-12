@@ -29,7 +29,6 @@ import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/compo
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
-import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import {
   indexStateOf,
   resourceGateOf,
@@ -514,28 +513,10 @@ export function ResourceWorkspaceScene({
               : [
                   {
                     key: "semantic-understanding",
-                    /*
-                      页签上直接挂档位徽标:这一片整体是付费能力,进去之后才发现要买,不如在
-                      入口处就说清。徽标在证与镜像都满足时自己消失。
-                    */
-                    label: (
-                      <span className="console-tab-with-tier">
-                        {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
-                        <EditionBadge
-                          capability={CAPABILITIES.SEMANTIC_TASK}
-                          edition="professional"
-                        />
-                      </span>
-                    ),
+                    label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
                     children: (
                       <div className={styles.tabPanel}>
-                        {/* 整片盖蒙版而不是只拦「新建任务」:列表本身也是这项能力的一部分。 */}
-                        <RequireEdition
-                          capability={CAPABILITIES.SEMANTIC_TASK}
-                          minEdition="professional"
-                        >
-                          <ResourceSemanticUnderstandingPanel active={tab === "semantic-understanding"} resource={resource} />
-                        </RequireEdition>
+                        <ResourceSemanticUnderstandingPanel active={tab === "semantic-understanding"} resource={resource} />
                       </div>
                     ),
                   },

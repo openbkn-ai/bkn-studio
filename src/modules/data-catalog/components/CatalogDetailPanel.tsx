@@ -405,12 +405,7 @@ export function CatalogDetailPanel({
         if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
-            label: (
-              <span className="console-tab-with-tier">
-                {t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding")}
-                <EditionBadge capability={CAPABILITIES.SEMANTIC_TASK} edition="professional" />
-              </span>
-            ),
+            label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
           });
         }
 

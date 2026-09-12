@@ -32,8 +32,8 @@ type RequireEditionProps = {
 /**
  * 整页守卫。放行条件与档位徽标闭嘴的条件同一个:`capabilitySatisfied`。
  *
- * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现、语义理解在数据目录侧,
- * bkn-safe 的那份清单里从来没有它们(ee-design.md §6「A 答不了 B」)。这类能力核实不了
+ * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现,bkn-safe 的那份清单里
+ * 从来没有它(ee-design.md §6「A 答不了 B」)。这类能力核实不了
  * 镜像,判据退到证书:档位够就放行。前端核实不了别人的包,不等于那个包没装——把「核实
  * 不了」当「没装」,买了企业版证、也换了企业版包的客户会被自己付过钱的功能挡在门外。
  *
