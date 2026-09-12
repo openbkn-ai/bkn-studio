@@ -92,6 +92,30 @@ describe("EvidenceChainPanels", () => {
     expect(screen.getByText("搜索工具")).toBeInTheDocument();
   });
 
+  it("keeps the recorded function output when an answer claim has a different value", () => {
+    const recorded: EvidenceChainView = {
+      ...view,
+      claims: [{ id: "claim", label: "仓库数量", value: "29", status: "located", nodeIds: ["fact"] }],
+      execution: { nodes: [
+        { id: "metric", label: "可用库存指标", kind: "calculation", role: "process" },
+        { id: "scope", label: "库存范围", value: "全网", kind: "object", role: "input" },
+        { id: "output", label: "可用库存", value: "100,508,026.49", kind: "field", role: "output" },
+      ], edges: [{ id: "in", source: "scope", target: "metric", label: "作为输入", kind: "execution" }, { id: "out", source: "metric", target: "output", label: "返回", kind: "execution" }] },
+      evidence: { nodes: [{ id: "source", label: "指标返回", kind: "source", executionNodeId: "metric" }, { id: "fact", label: "仓库数量", value: "29", kind: "field", role: "fact" }], edges: [] },
+    };
+    render(<EvidenceChainPanels view={recorded} initialPanel="execution" />);
+    const flow = screen.getByRole("region", { name: "可用库存业务处理" });
+    expect(within(flow).getAllByText("100,508,026.49")).toHaveLength(2);
+    expect(within(flow).queryByText("29")).not.toBeInTheDocument();
+  });
+
+  it("does not invent a calculation path when only a located return value was recorded", () => {
+    render(<EvidenceChainPanels view={{ ...view, claims: [{ id: "stock", label: "库存", value: "906", status: "located", nodeIds: ["date"] }] }} />);
+    const claim = screen.getByRole("region", { name: "库存的解释路径" });
+    expect(within(claim).getByText("证据边界：")).toBeVisible();
+    expect(within(claim).queryByText("已记录的业务处理")).not.toBeInTheDocument();
+  });
+
   it("shows each answer-producing process as an input-to-result business flow", () => {
     const semantic: EvidenceChainView = { ...view, execution: { nodes: [
       { id:"inventory", label:"计算业务指标", kind:"calculation", role:"process", status:"completed" },
@@ -291,7 +315,7 @@ describe("EvidenceChainPanels", () => {
     render(<EvidenceChainPanels view={{ ...view, answer: "Changed answer" }} />);
     expect(screen.queryByRole("button", { name: "24 days" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Stock/ }));
-    expect(screen.getByText("该结论尚未绑定依据，不能从相同数值推断来源。")).toBeInTheDocument();
+    expect(screen.getAllByText("该结论尚未绑定依据，不能从相同数值推断来源。")).toHaveLength(2);
   });
   it("clears selection when interaction changes and distinguishes missing answer", () => {
     const { rerender } = render(<EvidenceChainPanels view={view} />);

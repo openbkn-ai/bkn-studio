@@ -279,6 +279,7 @@ export function BusinessProvenanceScene() {
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
+  const needsProjection = view === "timeline" || view === "knowledge";
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
   const [knowledgeSelection, setKnowledgeSelection] = useState<KnowledgeSelection>();
   const [loading, setLoading] = useState(true);
@@ -327,7 +328,7 @@ export function BusinessProvenanceScene() {
     return () => { current = false; };
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
-    if (!selectedInteraction || view === "evidence" || view === "execution") {
+    if (!selectedInteraction || !needsProjection) {
       setProjection(undefined);
       setDetailOperation(undefined);
       setKnowledgeSelection(undefined);
@@ -371,7 +372,7 @@ export function BusinessProvenanceScene() {
       })
       .finally(() => { if (current) setInteractionDetailLoading(false); });
     return () => { current = false; };
-  }, [interactionReload, selectedInteraction, view]);
+  }, [interactionReload, needsProjection, selectedInteraction]);
 
   const groups = useMemo(() => projection ? knowledgeGroups(projection) : [], [projection]);
   const selectedKnowledgeCalls = useMemo(() => {
