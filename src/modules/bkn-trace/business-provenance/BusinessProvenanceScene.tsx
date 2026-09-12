@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
 import i18n from "@/app/locales/i18n";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import {
@@ -28,7 +29,7 @@ import {
 } from "@/modules/bkn-trace/business-provenance/business-provenance.service";
 import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css";
 
-type View = "timeline" | "knowledge";
+type View = "timeline" | "knowledge" | "evidence" | "execution";
 type KnowledgeSelection = { network: string; elementId: string; elementName: string };
 type AgentSuggestion = { id?: string; category?: string; location?: string; problem?: string; sourceEvidence?: string; verificationEvidence?: string; change?: string; acceptance?: string };
 type AgentAdvice = { verdicts: Record<string, string | undefined>; conclusion?: string; suggestions: AgentSuggestion[]; notEvaluable?: string };
@@ -278,6 +279,7 @@ export function BusinessProvenanceScene() {
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
+  const needsProjection = view === "timeline" || view === "knowledge";
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
   const [knowledgeSelection, setKnowledgeSelection] = useState<KnowledgeSelection>();
   const [loading, setLoading] = useState(true);
@@ -326,7 +328,10 @@ export function BusinessProvenanceScene() {
     return () => { current = false; };
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
-    if (!selectedInteraction) {
+    if (!selectedInteraction || !needsProjection) {
+      setProjection(undefined);
+      setDetailOperation(undefined);
+      setKnowledgeSelection(undefined);
       setInteractionDetailLoading(false);
       setInteractionDetailError(false);
       setProjectionUnavailable(false);
@@ -367,7 +372,7 @@ export function BusinessProvenanceScene() {
       })
       .finally(() => { if (current) setInteractionDetailLoading(false); });
     return () => { current = false; };
-  }, [interactionReload, selectedInteraction]);
+  }, [interactionReload, needsProjection, selectedInteraction]);
 
   const groups = useMemo(() => projection ? knowledgeGroups(projection) : [], [projection]);
   const selectedKnowledgeCalls = useMemo(() => {
@@ -485,13 +490,13 @@ export function BusinessProvenanceScene() {
         <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
+        <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); setKnowledgeSelection(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }, { label: bpText("views.evidence"), value: "evidence" }, { label: bpText("views.execution"), value: "execution" }]} />
+        {(view === "evidence" || view === "execution") && selectedInteraction && !interactionListLoading ? <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel={view} onPanelChange={setView} /> : interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
           <section className={styles.interactionSummary}>
             <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
             <div className={styles.sourceTexts}><div><h4>{bpText("rounds.inputOriginal")}</h4><p>{selectedInteraction?.questionPreview || bpText("inputNotRecorded")}</p></div><div><h4>{bpText("rounds.outputOriginal")}</h4><p>{selectedInteraction?.resultPreview || bpText("resultNotRecorded")}</p></div></div>
             <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
           </section>
-          <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }]} />
           {view === "timeline" ? <section className={styles.timeline}>
             <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
             {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
@@ -504,14 +509,14 @@ export function BusinessProvenanceScene() {
                 <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>{bpText("operation.detail")}</Button>
               </article>
             </div>)}
-          </section> : <section className={styles.knowledgeCanvas}>
+          </section> : view === "knowledge" ? <section className={styles.knowledgeCanvas}>
             <p className={styles.knowledgePath}>{bpText("knowledge.path")}</p>
             {groups.length ? groups.map(([network, elements]) => <div className={styles.knowledgeGrid} key={network}>
               <section className={styles.knowledgeColumn}><h3><span>1</span>{bpText("knowledge.network")}</h3><article className={styles.networkCard}><b>{network}</b><small>{network}</small></article><p className={styles.candidateNote}>{bpText("knowledge.observedOnly")}</p></section>
               <section className={styles.knowledgeColumn}><h3><span>2</span>{bpText("knowledge.observed")}</h3>{elements.map((element) => <button key={`${element.kind}:${element.id}`} className={knowledgeSelection?.elementId === element.id ? styles.knowledgeSelected : ""} onClick={() => setKnowledgeSelection({ network, elementId: element.id, elementName: element.name })}><b>{element.name}</b><small>{elementKindText(element.kind)} · {bpText("knowledge.deterministicCalls", { count: element.operationIds.length })}</small></button>)}</section>
               <section className={styles.knowledgeColumn}><h3><span>3</span>{bpText("knowledge.relations")}</h3>{projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).length ? projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).map((relation) => <article className={styles.contextCard} key={relation.id}><b>{relation.name || relation.id}</b><small>{bpText("knowledge.contextOnly")}</small></article>) : <p className={styles.emptyContext}>{bpText("knowledge.noContext")}</p>}</section>
             </div>) : <Empty description={bpText("knowledge.empty")} />}
-          </section>}
+          </section> : null}
         </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>

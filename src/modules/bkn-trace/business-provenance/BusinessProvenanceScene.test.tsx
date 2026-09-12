@@ -18,6 +18,8 @@ const getInteractions = vi.hoisted(() => vi.fn());
 const getInteraction = vi.hoisted(() => vi.fn());
 const getMarkdown = vi.hoisted(() => vi.fn());
 const streamAnalysis = vi.hoisted(() => vi.fn());
+vi.mock("@/modules/bkn-trace/evidence-chain/CurrentExplanationPanel", () => ({ CurrentExplanationPanel: ({ interactionId, panel }: { interactionId: string; panel?: string }) => <div>saved-evidence:{interactionId}:{panel}</div> }));
+
 const getAnalysisHistory = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/bkn-trace/business-provenance/business-provenance.service", () => ({
@@ -71,6 +73,30 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     await waitFor(() => expect(getConversations).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-linked" })));
     await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-linked" })));
     expect(await screen.findByText("关联轮次")).not.toBeNull();
+  });
+
+  it("keeps evidence and execution beside the existing time and knowledge views", async () => {
+    window.history.replaceState({}, "", "/observability/business-provenance?conversation_id=conv-linked");
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-linked", questionPreview: "关联会话", interactionCount: 2 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-one", questionPreview: "问题甲" }, { interactionId: "int-two", questionPreview: "问题乙" }], total: 2 });
+    getInteraction.mockResolvedValue({ interactionId: "int-one", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+    render(<BusinessProvenanceScene />);
+    await waitFor(() => expect(getInteraction).toHaveBeenCalledWith("int-one"));
+    expect(await screen.findByText("时间链视图")).toBeTruthy();
+    expect(screen.getByText("知识网络视图")).toBeTruthy();
+    fireEvent.click(screen.getByText("证据链"));
+    expect(await screen.findByText("saved-evidence:int-one:evidence")).toBeTruthy();
+    getInteraction.mockClear(); getMarkdown.mockClear(); getAnalysisHistory.mockClear();
+    fireEvent.click(screen.getByText("问题乙"));
+    expect(await screen.findByText("saved-evidence:int-two:evidence")).toBeTruthy();
+    expect(screen.queryByText("0 次调用")).toBeNull();
+    expect(getInteraction).not.toHaveBeenCalled();
+    expect(getMarkdown).not.toHaveBeenCalled();
+    expect(getAnalysisHistory).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("执行链路"));
+    expect(await screen.findByText("saved-evidence:int-two:execution")).toBeTruthy();
+    fireEvent.click(screen.getByText("时间链视图"));
+    await waitFor(() => expect(getInteraction).toHaveBeenCalledWith("int-two"));
   });
 
   it("does not invent a semantic round number when the API omits it", async () => {
