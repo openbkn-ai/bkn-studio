@@ -33,6 +33,33 @@ describe("EvidenceChainPanels", () => {
     expect(within(total).getByText("答案结论")).toBeInTheDocument();
     expect(within(scope).getByText("回答范围")).toBeInTheDocument();
   });
+  it("does not present a single-conclusion diagnostic entry while showing all conclusions", () => {
+    render(<EvidenceChainPanels view={view} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看全部结论" }));
+    expect(screen.queryByRole("button", { name: /查看与.*Delay.*相关的记录事实/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "查看本轮全部记录（排障）" })).toBeInTheDocument();
+  });
+  it("resolves an all-interaction diagnostic edge against the all-facts graph", () => {
+    const multipleClaims: EvidenceChainView = {
+      ...view,
+      claims: [
+        { ...view.claims[0], nodeIds: ["delay"] },
+        { ...view.claims[1], nodeIds: ["stock"] },
+      ],
+      evidence: {
+        nodes: [
+          ...view.evidence.nodes,
+          { id: "stock-source", label: "Stock source", kind: "source" },
+          { id: "stock", label: "Stock fact", kind: "field", value: "0" },
+        ],
+        edges: [...view.evidence.edges, { id: "stock-return", source: "stock-source", target: "stock", label: "Stock returned", kind: "value" }],
+      },
+    };
+    render(<EvidenceChainPanels view={multipleClaims} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看本轮全部记录（排障）" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stock returned" }));
+    expect(screen.getByRole("complementary", { name: "关系详情" })).toHaveTextContent("Stock source → Stock fact");
+  });
   it("explains conclusions with independently collapsible business steps and details", () => {
     const explained: EvidenceChainView = {
       ...view,
@@ -56,9 +83,14 @@ describe("EvidenceChainPanels", () => {
     fireEvent.click(within(products).getAllByText("使用产品数")[0]);
     expect(products).toHaveAttribute("open");
     expect(within(products).getByText("物料反查产品")).toBeVisible();
-    expect(screen.getByRole("region", {name:"依据图谱"})).not.toBeVisible();
-    fireEvent.click(screen.getByText("查看完整记录事实（排障）"));
-    expect(screen.getByRole("region", {name:"依据图谱"})).toBeVisible();
+    expect(screen.queryByRole("region", {name:"依据图谱"})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "可用库存 906" }));
+    fireEvent.click(screen.getByRole("button", { name: /查看与.*可用库存.*相关的记录事实/ }));
+    const claimFacts = screen.getByRole("region", {name:"依据图谱"});
+    expect(within(claimFacts).getByText("可用库存")).toBeVisible();
+    expect(within(claimFacts).queryByText("使用产品数")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "查看本轮全部记录（排障）" }));
+    expect(within(screen.getByRole("region", {name:"本轮完整记录事实"})).getByText("使用产品数")).toBeVisible();
   });
   it("opens execution on the operation that produced an answer conclusion", () => {
     const semantic: EvidenceChainView = {
@@ -202,6 +234,7 @@ describe("EvidenceChainPanels", () => {
   it("keeps explicitly returned relationship paths in object scope with localized labels", () => {
     const relationView: EvidenceChainView = { ...view, claims: [{ id:"material", label:"Required material", value:"Material B", status:"located", nodeIds:["b"] }], evidence: {nodes:[{id:"a",label:"Product A",kind:"object"},{id:"b",label:"Material B",kind:"object"},{id:"r",label:"Recorded BOM relation",kind:"relation",role:"process"}],edges:[{id:"from",source:"a",target:"r",label:"Uses",kind:"relation"},{id:"to",source:"r",target:"b",label:"Component",kind:"relation"}]}};
     render(<EvidenceChainPanels view={relationView} />);
+    fireEvent.click(screen.getByText(/^查看与/));
     const graph = screen.getByRole("region", {name:"依据图谱"});
     expect(within(graph).getByText("业务关系")).toBeInTheDocument();
     expect(within(graph).getByText("Material B")).toBeInTheDocument();
@@ -260,6 +293,7 @@ describe("EvidenceChainPanels", () => {
   it("opens semantic edge details and keeps metadata hidden until requested", () => {
     const evidence = { ...view.evidence, edges: [...view.evidence.edges, { id: "ctx", source: "unrelated", target: "date", label: "Business context", kind: "context" as const, technical: "context-pointer" }] };
     render(<EvidenceChainPanels view={{ ...view, evidence }} />);
+    fireEvent.click(screen.getByText(/^查看与/));
     expect(screen.queryByRole("button", { name: "Business context" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Date difference" }));
     expect(screen.getByRole("complementary", { name: "关系详情" })).toHaveTextContent("来自已记录的关系或明确引用");
@@ -271,6 +305,7 @@ describe("EvidenceChainPanels", () => {
   it("navigates source to execution and back only through supplied references", () => {
     const evidence = { ...view.evidence, nodes: view.evidence.nodes.map(n => n.id === "date" ? { ...n, kind: "source" as const, executionNodeId: "call" } : n) };
     render(<EvidenceChainPanels view={{ ...view, evidence }} />);
+    fireEvent.click(screen.getByText(/^查看与/));
     fireEvent.click(screen.getByRole("button", { name: /Available date/ }));
     fireEvent.click(screen.getByRole("button", { name: "在执行链路中查看 →" }));
     expect(screen.getByRole("button", { name: "执行链路" })).toHaveAttribute("aria-pressed", "true");
@@ -280,6 +315,7 @@ describe("EvidenceChainPanels", () => {
   });
   it("does not offer execution navigation without a recorded source reference", () => {
     render(<EvidenceChainPanels view={view} />);
+    fireEvent.click(screen.getByText(/^查看与/));
     fireEvent.click(screen.getByRole("button", { name: /Available date/ }));
     expect(screen.queryByRole("button", { name: "在执行链路中查看 →" })).not.toBeInTheDocument();
   });
@@ -291,12 +327,14 @@ describe("EvidenceChainPanels", () => {
     const cyclic = { ...view.evidence, edges: [...view.evidence.edges, { id: "back", source: "delay", target: "date", label: "Recorded reverse link" }] };
     render(<EvidenceChainPanels view={{ ...view, answer: "😀24 days", evidence: cyclic, claims: [{ ...view.claims[0], answerRange: { start: 1, end: 8, exact: "24 days" } }] }} />);
     fireEvent.click(screen.getByRole("button", { name: "24 days" }));
+    fireEvent.click(screen.getByText(/^查看与/));
     expect(screen.getByText("Available date")).toBeInTheDocument();
     expect(screen.queryByText("Unrelated material")).not.toBeInTheDocument();
   });
   it("opens only explicit upstream evidence for a bound answer fragment", () => {
     render(<EvidenceChainPanels view={view} />);
     fireEvent.click(screen.getByRole("button", { name: "24 days" }));
+    fireEvent.click(screen.getByText(/^查看与/));
     const graph = screen.getByRole("region", { name: "依据图谱" });
     expect(within(graph).getByText("Available date")).toBeInTheDocument();
     expect(within(graph).queryByText("Unrelated material")).not.toBeInTheDocument();

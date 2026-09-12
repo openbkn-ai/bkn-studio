@@ -127,10 +127,13 @@ function derivationInputLabel(label: string, translate: (key: string) => string)
   return key ? translate(`bknTrace.evidenceChain.derivation.${key}`) : label;
 }
 
-function EvidencePaths({ claims, selectedId, select, graph, metadata, setMetadata, onNode, onEdge }: { claims: ChainClaim[]; selectedId?: string; select:(id:string)=>void; graph:ChainGraph; metadata:boolean; setMetadata:(value:boolean)=>void; onNode:(node:ChainNode)=>void; onEdge:(edge:ChainEdge)=>void }) {
+function EvidencePaths({ claims, selectedId, select, graph, allGraph, metadata, setMetadata, onNode, onEdge }: { claims: ChainClaim[]; selectedId?: string; select:(id:string)=>void; graph:ChainGraph; allGraph:ChainGraph; metadata:boolean; setMetadata:(value:boolean)=>void; onNode:(node:ChainNode)=>void; onEdge:(edge:ChainEdge)=>void }) {
   const { t } = useTranslation();
   const initial = selectedId ?? claims[0]?.id;
+  const selectedClaim = selectedId ? claims.find(claim => claim.id === selectedId) : undefined;
   const [expanded, setExpanded] = useState(() => new Set(initial ? [initial] : []));
+  const [claimFactsOpen, setClaimFactsOpen] = useState(false);
+  const [allFactsOpen, setAllFactsOpen] = useState(false);
   useEffect(() => { if (selectedId) setExpanded(current => current.has(selectedId) ? current : new Set([...current, selectedId])); }, [selectedId]);
   return <div className={styles.evidencePaths}>
     <p className={styles.executionIntro}>{t("bknTrace.evidenceChain.evidenceIntro")}</p>
@@ -152,7 +155,12 @@ function EvidencePaths({ claims, selectedId, select, graph, metadata, setMetadat
         </> : <p className={styles.evidenceBoundary}><strong>{t("bknTrace.evidenceChain.evidenceBoundary")}</strong>{claim.detail ?? t(`bknTrace.evidenceChain.explain.${claim.status}`)}</p>}</div>
       </details>;
     })}
-    <details className={styles.rawEvidence}><summary>{t("bknTrace.evidenceChain.rawEvidence")}</summary><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={undefined} onSelect={onNode} onEdge={onEdge} /></details>
+    {selectedClaim && <section className={styles.rawEvidence}>
+      <button type="button" className={styles.rawEvidenceToggle} aria-expanded={claimFactsOpen} onClick={() => setClaimFactsOpen(open => !open)}>{t("bknTrace.evidenceChain.rawEvidenceForClaim", { claim: selectedClaim.label })}</button>
+      {claimFactsOpen && <><p className={styles.rawEvidenceScope}>{t("bknTrace.evidenceChain.rawEvidenceScope", { claim: selectedClaim.label })}</p><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={undefined} onSelect={onNode} onEdge={onEdge} /></>}</section>}
+    <section className={styles.rawEvidence}>
+      <button type="button" className={styles.rawEvidenceToggle} aria-expanded={allFactsOpen} onClick={() => setAllFactsOpen(open => !open)}>{t("bknTrace.evidenceChain.rawEvidenceAll")}</button>
+      {allFactsOpen && <><p className={styles.rawEvidenceScope}>{t("bknTrace.evidenceChain.rawEvidenceAllScope")}</p><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={allGraph} title={t("bknTrace.evidenceChain.allFactsGraph")} mode="evidence" selectedId={undefined} onSelect={onNode} onEdge={onEdge} /></>}</section>
   </div>;
 }
 
@@ -161,7 +169,7 @@ function Panels({ view, initialPanel = "evidence", panel: controlledPanel, onPan
   const [localPanel, setLocalPanel] = useState<"evidence" | "execution">(initialPanel);
   const panel = controlledPanel ?? localPanel;
   const setPanel = (next: "evidence" | "execution") => { setLocalPanel(next); onPanelChange?.(next); };
-  const [claimId, setClaimId] = useState<string>();
+  const [claimId, setClaimId] = useState<string | undefined>(() => view.claims[0]?.id);
   const [node, setNode] = useState<ChainNode>();
   const [edge, setEdge] = useState<ChainEdge>();
   const [metadata, setMetadata] = useState(false);
@@ -171,7 +179,9 @@ function Panels({ view, initialPanel = "evidence", panel: controlledPanel, onPan
   const claim = view.claims.find(c => c.id === claimId);
   const selectClaim = (id: string) => { setClaimId(id); setPanel("evidence"); setNode(undefined); setEdge(undefined); };
   const fullGraph = claim ? upstream(view.evidence, claim.nodeIds) : factMode ? { nodes: [], edges: [] } : view.evidence;
-  const graph = metadata ? fullGraph : { nodes: fullGraph.nodes.filter(n => (n.role !== "context" || n.kind === "object")), edges: fullGraph.edges.filter(e => e.kind !== "key" && e.kind !== "context" && fullGraph.nodes.some(n => n.id === e.source && (n.role !== "context" || n.kind === "object")) && fullGraph.nodes.some(n => n.id === e.target && (n.role !== "context" || n.kind === "object"))) };
+  const visibleGraph = (candidate: ChainGraph): ChainGraph => metadata ? candidate : { nodes: candidate.nodes.filter(n => (n.role !== "context" || n.kind === "object")), edges: candidate.edges.filter(e => e.kind !== "key" && e.kind !== "context" && candidate.nodes.some(n => n.id === e.source && (n.role !== "context" || n.kind === "object")) && candidate.nodes.some(n => n.id === e.target && (n.role !== "context" || n.kind === "object"))) };
+  const graph = visibleGraph(fullGraph);
+  const allGraph = visibleGraph(view.evidence);
   const objectLabels = [...new Set(view.claims.map(c => c.objectLabel ?? t("bknTrace.evidenceChain.otherConclusions")))];
   const selectedExecution = node?.executionNodeId ? view.execution.nodes.find(n => n.id === node.executionNodeId) : undefined;
   const relatedClaims = panel === "execution" && node ? view.claims.filter(c => upstream(view.evidence, c.nodeIds).nodes.some(n => n.executionNodeId === node.id)) : [];
@@ -192,10 +202,10 @@ function Panels({ view, initialPanel = "evidence", panel: controlledPanel, onPan
     {panel === "evidence" && factMode ? <section className={styles.unbound}><h3>{t("bknTrace.evidenceChain.unboundTitle")}</h3><p>{t("bknTrace.evidenceChain.unboundDescription")}</p><button className={styles.sourceLink} onClick={() => setPanel("execution")}>{t("bknTrace.evidenceChain.viewRecordedExecution")}</button></section> : <section className={styles.graphCard}>
     <header className={styles.graphHeading}><div><small>{t("bknTrace.evidenceChain.path")}</small><h3>{claim && panel === "evidence" ? claim.label : t(panel === "execution" ? "bknTrace.evidenceChain.execution" : "bknTrace.evidenceChain.recordedFacts")}</h3></div>{claim && panel === "evidence" && <span className={styles.badge}>{t(`bknTrace.evidenceChain.status.${claim.status}`)}</span>}</header>
     {claim && panel === "evidence" && <div className={styles.scope}><p>{claim.detail ?? t(`bknTrace.evidenceChain.explain.${claim.status}`)}</p><button onClick={() => { setClaimId(undefined); setNode(undefined); setEdge(undefined); }}>{t("bknTrace.evidenceChain.showAll")}</button></div>}
-    {panel === "execution" ? <ExecutionFlows graph={view.execution} preferredProcessId={preferredProcessId} selectedId={executionId} onSelect={n => { setExecutionId(n.id); setNode(n); setEdge(undefined); }} /> : view.claims.length ? <EvidencePaths claims={view.claims} selectedId={claimId} select={selectClaim} graph={graph} metadata={metadata} setMetadata={setMetadata} onNode={n => { setNode(n); setEdge(undefined); }} onEdge={e => { setEdge(e); setNode(undefined); }} /> : <><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={node?.id} onSelect={n => { setNode(n); setEdge(undefined); }} onEdge={e => { setEdge(e); setNode(undefined); }} /><p className={styles.scope}>{t("bknTrace.evidenceChain.graphNotice")}</p></>}
+    {panel === "execution" ? <ExecutionFlows graph={view.execution} preferredProcessId={preferredProcessId} selectedId={executionId} onSelect={n => { setExecutionId(n.id); setNode(n); setEdge(undefined); }} /> : view.claims.length ? <EvidencePaths claims={view.claims} selectedId={claimId} select={selectClaim} graph={graph} allGraph={allGraph} metadata={metadata} setMetadata={setMetadata} onNode={n => { setNode(n); setEdge(undefined); }} onEdge={e => { setEdge(e); setNode(undefined); }} /> : <><div className={styles.toolbar}><span>{t("bknTrace.evidenceChain.interactHint")}</span><label><input type="checkbox" checked={metadata} onChange={event => setMetadata(event.target.checked)} />{t("bknTrace.evidenceChain.metadata")}</label></div><Graph graph={graph} title={t("bknTrace.evidenceChain.evidenceGraph")} mode="evidence" selectedId={node?.id} onSelect={n => { setNode(n); setEdge(undefined); }} onEdge={e => { setEdge(e); setNode(undefined); }} /><p className={styles.scope}>{t("bknTrace.evidenceChain.graphNotice")}</p></>}
     </section>}
     {node && <aside className={styles.inspector} aria-label={t("bknTrace.evidenceChain.detail")}><button onClick={() => setNode(undefined)}>{t("bknTrace.evidenceChain.close")}</button><small>{t(`bknTrace.evidenceChain.kind.${node.kind}`)}</small><h3>{node.label}</h3><p className={styles.detailValue}>{node.value}</p><p>{node.detail ?? t("bknTrace.evidenceChain.noDetail")}</p>{selectedExecution && <button className={styles.sourceLink} onClick={() => { setExecutionId(selectedExecution.id); setPanel("execution"); setNode(selectedExecution); setEdge(undefined); }}>{t("bknTrace.evidenceChain.viewExecution")}</button>}{relatedClaims.map(c => <button key={c.id} className={styles.sourceLink} onClick={() => selectClaim(c.id)}>{t("bknTrace.evidenceChain.returnClaim", { label: c.label })}</button>)}{node.technical && <details><summary>{t("bknTrace.evidenceChain.technical")}</summary><pre>{node.technical}</pre></details>}</aside>}
-    {edge && <aside className={styles.inspector} aria-label={t("bknTrace.evidenceChain.edgeDetail")}><button onClick={() => setEdge(undefined)}>{t("bknTrace.evidenceChain.close")}</button><small>{t("bknTrace.evidenceChain.edgeDetail")}</small><h3>{edge.label}</h3><p>{fullGraph.nodes.find(n => n.id === edge.source)?.label} → {fullGraph.nodes.find(n => n.id === edge.target)?.label}</p>{edge.role && <p>{edge.role}</p>}<p>{edge.detail ?? t(edge.kind === "key" || edge.kind === "context" || edge.kind === "object" ? "bknTrace.evidenceChain.metadataBoundary" : "bknTrace.evidenceChain.edgeBoundary")}</p>{edge.technical && <details><summary>{t("bknTrace.evidenceChain.technical")}</summary><pre>{edge.technical}</pre></details>}</aside>}
+    {edge && <aside className={styles.inspector} aria-label={t("bknTrace.evidenceChain.edgeDetail")}><button onClick={() => setEdge(undefined)}>{t("bknTrace.evidenceChain.close")}</button><small>{t("bknTrace.evidenceChain.edgeDetail")}</small><h3>{edge.label}</h3><p>{view.evidence.nodes.find(n => n.id === edge.source)?.label} → {view.evidence.nodes.find(n => n.id === edge.target)?.label}</p>{edge.role && <p>{edge.role}</p>}<p>{edge.detail ?? t(edge.kind === "key" || edge.kind === "context" || edge.kind === "object" ? "bknTrace.evidenceChain.metadataBoundary" : "bknTrace.evidenceChain.edgeBoundary")}</p>{edge.technical && <details><summary>{t("bknTrace.evidenceChain.technical")}</summary><pre>{edge.technical}</pre></details>}</aside>}
     </div></div>
   </div></ViewportPortal>;
 }
