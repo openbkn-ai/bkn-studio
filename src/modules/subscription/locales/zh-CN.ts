@@ -9,6 +9,10 @@
  * `capabilities.*` 的中文名与描述逐字取自 license-server 的登记表 seed
  * (`server/internal/store/capabilities.go`)——那是签进客户证书、也是客户在门户上
  * 看到的同一份文案。两边不一致会让客户拿着证书对不上产品页。
+ *
+ * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用。权限三项的条目
+ * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行列权限 / 脱敏 / 审计),
+ * 矩阵改了这里要跟着改。
  */
 export const subscriptionZhCN = {
   subscription: {
@@ -30,15 +34,26 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
-      perm_fine_grained: { description: "按对象和操作配置允许、拒绝与来源级撤销", name: "细粒度对象授权" },
-      perm_object_level: { description: "企业对象规则兼容层与属性级权限", name: "企业对象规则" },
+      perm_fine_grained: {
+        bullets: {
+          b1: "查看、查询、修改、删除、执行分别授权",
+          b2: "显式例外(直接授权或拒绝)与完整授权审计",
+        },
+        description: "按对象和操作配置允许、拒绝与来源级撤销",
+        name: "细粒度对象授权",
+      },
+      perm_object_level: {
+        bullets: {
+          b1: "对象类行权限",
+          b2: "对象类列权限,属性分四档",
+          b3: "数据脱敏",
+          b4: "行列权限变更审计",
+        },
+        description: "企业对象规则兼容层与属性级权限",
+        name: "企业对象规则",
+      },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
-        bullets: {
-          b1: "自动识别字段业务含义,批量补齐对象类与属性的语义描述",
-          b2: "结果按置信度分档,支持只补空值或全量覆盖两种落库方式",
-          b3: "任务化执行,可查看进度、结果明细与应用记录",
-        },
         description: "面向业务语义的理解任务编排与执行",
         name: "语义理解任务",
       },
@@ -49,15 +64,17 @@ export const subscriptionZhCN = {
      */
     community: {
       actionSandbox: "行动运行与安全沙箱环境",
+      basicAudit: "基础操作审计",
       cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
       commonSources: "常用数据库、OpenSearch 与 CSV 接入",
       indexing: "数据发现、批量索引与向量化",
-      localAuth: "本地登录、用户管理与基础操作记录",
+      localAuth: "本地登录,用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
       modelingTypes: "对象、关系、行动与指标建模",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",
+      topLevelGrants: "知识网络、Catalog 等顶层资源的整体授权",
     },
     categories: {
       modeling: "知识网络建模",

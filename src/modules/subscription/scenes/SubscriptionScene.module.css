@@ -200,6 +200,20 @@
   line-height: 1.6;
 }
 
+/* 能力名下的卖点。不用勾号:勾号说「这一档有」,卖点说「有到什么程度」,层级要分开。 */
+.planFeatDetail {
+  margin: 4px 0 0;
+  padding: 0 0 0 14px;
+  list-style: disc;
+  color: var(--admin-color-muted, #6b7280);
+  font-size: 12px;
+}
+
+.planFeats .planFeatDetail li {
+  display: list-item;
+  line-height: 1.5;
+}
+
 .tick {
   /* 图标基线比文字略高,压 2px 才和首行文字齐平。 */
   margin-top: 2px;

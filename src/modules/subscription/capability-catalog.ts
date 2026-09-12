@@ -91,10 +91,17 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     sinceVersion: "0.1.3",
   },
   {
+    // 2026-09-12 起按社区档在售:语义理解任务随社区版免费开放,数据目录侧不再挂徽标和蒙版。
+    // 与 bkn_trace 同一种情况——留在表里只为让对比矩阵显示「三档都有」,不是付费项。
+    //
+    // 上游登记表(license-server `store/capabilities.go` seed)此刻仍是 professional,产品页
+    // 先行。这里改的是展示与前端门控,不改证书:社区档能力的放行不看证(`capabilitySatisfied`
+    // 对 community 恒真),已签发的专业证里多一个 semantic_task 也不会让谁被拦。上游应按
+    // #21 处理 bkn_trace 的方式把这一行撤出登记表——社区能力不登记(`ee-features.md`)。
     category: "semantic",
     key: "semantic_task",
     reportedByEndpoint: false,
-    minEdition: "professional",
+    minEdition: "community",
     sinceVersion: "0.1.3",
   },
   { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,

@@ -18,6 +18,7 @@ import {
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { capabilityBullets } from "@/modules/subscription/capability-bullets";
 import {
   CAPABILITY_CATEGORIES,
   capabilitiesByCategory,
@@ -194,8 +195,8 @@ export function SubscriptionScene() {
 
               <ul className={styles.planFeats}>
                 {plan.edition === "community" ? (
-                  // 卡片只放前四条,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
-                  COMMUNITY_CAPABILITIES.slice(0, 4).map((entry) => (
+                  // 卡片只放标了 onCard 的行,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
+                  COMMUNITY_CAPABILITIES.filter((entry) => entry.onCard).map((entry) => (
                     <li key={entry.id}>
                       <CheckOutlined className={styles.tick} />
                       <span>{t(`subscription.community.${entry.id}`)}</span>
@@ -213,12 +214,32 @@ export function SubscriptionScene() {
                     </span>
                   </li>
                 )}
-                {introduced.map((entry) => (
-                  <li key={entry.key}>
-                    <CheckOutlined className={styles.tick} />
-                    <span>{t(`subscription.capabilities.${entry.key}.name`)}</span>
-                  </li>
-                ))}
+                {/*
+                  只给权限类能力铺卖点:这页的主题是「权限边界、审计与合规随版本递进」,
+                  登记表的名字(「细粒度对象授权」)说不清这一档比上一档细在哪——操作粒度、
+                  显式例外、行列权限、审计各进一步,卡片得把这几句写出来。其他能力(连接器)
+                  的卖点留给升级弹窗,铺上卡片只会把它拉成一页说明书。文案与弹窗同一份。
+                */}
+                {introduced.map((entry) => {
+                  const bullets =
+                    entry.category === "permission" ? capabilityBullets(t, entry.key) : [];
+
+                  return (
+                    <li key={entry.key}>
+                      <CheckOutlined className={styles.tick} />
+                      <span>
+                        {t(`subscription.capabilities.${entry.key}.name`)}
+                        {bullets.length > 0 ? (
+                          <ul className={styles.planFeatDetail}>
+                            {bullets.map((text) => (
+                              <li key={text}>{text}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
 
               {/*
