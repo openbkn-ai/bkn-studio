@@ -8,6 +8,7 @@
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
+  parseContentDispositionFilename,
   sanitizeDownloadFilename,
   triggerBrowserDownload,
 } from "@/framework/download/file-download";
@@ -406,9 +407,8 @@ export async function downloadSkillPackage(
   );
 
   const contentDisposition = response.headers["content-disposition"] as string | undefined;
-  const filenameMatch = contentDisposition?.match(/filename="?([^";]+)"?/i);
   const filename =
-    filenameMatch?.[1] ??
+    parseContentDispositionFilename(contentDisposition) ??
     `${sanitizeDownloadFilename(displayName ?? skillId, skillId)}.zip`;
 
   triggerBrowserDownload(response.data, filename);
