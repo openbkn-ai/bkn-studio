@@ -36,10 +36,8 @@ export const subscriptionZhCN = {
       },
       perm_fine_grained: {
         bullets: {
-          b1: "授权到子资源:知识网络内部资源与 Catalog 下的 Resource",
-          b2: "查看、查询、修改、删除、执行按操作分别配置",
-          b3: "显式子资源例外:直接授权或直接拒绝",
-          b4: "完整的资源授权审计",
+          b1: "查看、查询、修改、删除、执行分别授权",
+          b2: "显式例外(直接授权或拒绝)与完整授权审计",
         },
         description: "按对象和操作配置允许、拒绝与来源级撤销",
         name: "细粒度对象授权",
@@ -54,11 +52,7 @@ export const subscriptionZhCN = {
         description: "企业对象规则兼容层与属性级权限",
         name: "企业对象规则",
       },
-      rbac_basic: {
-        bullets: { b1: "自定义角色与部门,不再限于系统内置角色" },
-        description: "自定义部门、角色和权限控制",
-        name: "自定义角色与权限",
-      },
+      rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
         description: "面向业务语义的理解任务编排与执行",
         name: "语义理解任务",

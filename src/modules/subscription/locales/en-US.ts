@@ -36,10 +36,8 @@ export const subscriptionEnUS = {
       },
       perm_fine_grained: {
         bullets: {
-          b1: "Grants down to sub-resources: inside a knowledge network and per Resource under a catalog",
-          b2: "View, query, modify, delete and execute configured per operation",
-          b3: "Explicit sub-resource exceptions: direct allow or direct deny",
-          b4: "Full resource-authorization audit",
+          b1: "View, query, modify, delete and execute granted separately",
+          b2: "Explicit exceptions (direct allow or deny) and full authorization audit",
         },
         description: "Per-object allow and deny decisions with source-level revocation",
         name: "Fine-grained object authorization",
@@ -55,7 +53,6 @@ export const subscriptionEnUS = {
         name: "Enterprise object rules",
       },
       rbac_basic: {
-        bullets: { b1: "Custom roles and departments instead of the built-in roles only" },
         description: "Custom departments, roles and permission control",
         name: "Custom roles and permissions",
       },

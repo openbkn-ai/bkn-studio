@@ -215,12 +215,14 @@ export function SubscriptionScene() {
                   </li>
                 )}
                 {/*
-                  能力名下面铺卖点:登记表的名字太短(「细粒度对象授权」),说不清这一档比
-                  上一档细在哪——资源粒度、操作粒度、行列权限、审计各进一步。卖点与升级
-                  弹窗同一份文案。
+                  只给权限类能力铺卖点:这页的主题是「权限边界、审计与合规随版本递进」,
+                  登记表的名字(「细粒度对象授权」)说不清这一档比上一档细在哪——操作粒度、
+                  显式例外、行列权限、审计各进一步,卡片得把这几句写出来。其他能力(连接器)
+                  的卖点留给升级弹窗,铺上卡片只会把它拉成一页说明书。文案与弹窗同一份。
                 */}
                 {introduced.map((entry) => {
-                  const bullets = capabilityBullets(t, entry.key);
+                  const bullets =
+                    entry.category === "permission" ? capabilityBullets(t, entry.key) : [];
 
                   return (
                     <li key={entry.key}>
