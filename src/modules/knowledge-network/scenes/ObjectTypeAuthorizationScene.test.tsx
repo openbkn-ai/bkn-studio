@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
     modal: { confirm: vi.fn() },
     runtimeConfig: { currentUser: { permissions: [] } },
   },
+  getUser: vi.fn(),
   getDetail: vi.fn(),
+  listDepartments: vi.fn(),
   listEnterpriseObjectGrants: vi.fn(),
   listObjectGrantsForObject: vi.fn(),
   listPropertyGrantSnapshot: vi.fn(),
@@ -78,6 +80,8 @@ vi.mock("@/modules/knowledge-network/services/property-authorization.service", (
 }));
 
 vi.mock("@/modules/system-admin/services/admin.service", () => ({
+  getUser: mocks.getUser,
+  listDepartments: mocks.listDepartments,
   listRoles: mocks.listRoles,
   listUsersPage: mocks.listUsersPage,
 }));
@@ -159,8 +163,10 @@ describe("ObjectTypeAuthorizationScene", () => {
       entries: [],
       objectTypeRef: "network-1/object-1",
     });
+    mocks.getUser.mockResolvedValue(null);
+    mocks.listDepartments.mockResolvedValue([]);
     mocks.listRoles.mockResolvedValue([]);
-    mocks.listUsersPage.mockResolvedValue({ users: [] });
+    mocks.listUsersPage.mockResolvedValue({ total: 0, users: [] });
   });
 
   it("uses the standard page loading indicator while the initial detail is loading", () => {
@@ -211,7 +217,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", {
       name: "systemAdmin.objectGrants.grantUserLabel",
     }));
-    fireEvent.click(await screen.findByText("Alice（alice）"));
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     fireEvent.click(screen.getByRole("button", { name: "view_detail" }));
     fireEvent.click(screen.getByRole("button", {
       name: /systemAdmin\.objectGrants\.addGrant/,
@@ -389,7 +395,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", {
       name: "systemAdmin.objectGrants.grantUserLabel",
     }));
-    fireEvent.click(await screen.findByText("Alice（alice）"));
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     fireEvent.click(screen.getByRole("button", {
       name: /systemAdmin\.objectGrants\.addGrant/,
     }));
@@ -398,7 +404,9 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(mocks.upsertObjectGrantForObject).not.toHaveBeenCalled();
     mocks.revokeObjectGrantForObject.mockClear();
 
-    const refreshedRow = (await screen.findByText("Alice")).closest("tr");
+    const refreshedRow = (await screen.findAllByText("Alice"))
+      .map((element) => element.closest("tr"))
+      .find((element): element is HTMLTableRowElement => Boolean(element));
     const deleteButton = within(refreshedRow as HTMLElement)
       .getByText("systemAdmin.objectGrants.deleteGrant")
       .closest("button") as HTMLButtonElement;
@@ -443,6 +451,7 @@ describe("ObjectTypeAuthorizationScene", () => {
       updaterName: "",
     });
     mocks.listUsersPage.mockResolvedValue({
+      total: 1,
       users: [{
         account: "alice",
         accountType: "local",
@@ -458,11 +467,48 @@ describe("ObjectTypeAuthorizationScene", () => {
     render(<ObjectTypeAuthorizationScene />);
 
     fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
-    fireEvent.click(await screen.findByRole("button", { name: /Alice/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalled());
     expect(
       (await screen.findAllByText("knowledgeNetwork.propertyAuthorizationLevel.none")).length,
     ).toBeGreaterThanOrEqual(2);
+  });
+
+  it("uses the shared organization directory when choosing a property-permission user", async () => {
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["view_detail"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
+    expect(await screen.findByRole("group", {
+      name: "knowledgeNetwork.propertyAuthorizationSelectUser",
+    })).not.toBeNull();
+
+    await waitFor(() => expect(mocks.listDepartments).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.listUsersPage).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 100, offset: 0 }),
+      { skipErrorToast: true },
+    ));
+    expect(await screen.findByRole("textbox", {
+      name: "systemAdmin.userPicker.searchInlineHint",
+    })).not.toBeNull();
   });
 
   it("keeps the Enterprise property tab visible and shows the standard upgrade gate", async () => {
@@ -575,6 +621,7 @@ describe("ObjectTypeAuthorizationScene", () => {
       updaterName: "",
     });
     mocks.listUsersPage.mockResolvedValue({
+      total: 2,
       users: [
         {
           account: "alice",
@@ -613,9 +660,9 @@ describe("ObjectTypeAuthorizationScene", () => {
     render(<ObjectTypeAuthorizationScene />);
 
     fireEvent.click(await screen.findByText("knowledgeNetwork.propertyAuthorizationTabProperty"));
-    fireEvent.click(await screen.findByRole("button", { name: /Alice/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /Alice/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(1));
-    fireEvent.click(await screen.findByRole("button", { name: /Bob/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /Bob/ }));
     await waitFor(() => expect(mocks.listPropertyGrantSnapshot).toHaveBeenCalledTimes(2));
 
     await act(async () => {

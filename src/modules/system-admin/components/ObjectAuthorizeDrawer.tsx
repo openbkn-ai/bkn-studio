@@ -21,7 +21,7 @@ import {
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Drawer, Empty, Select, Spin, Table, Tag, Tooltip } from "antd";
+import { Drawer, Empty, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,12 +30,10 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import { useCapability } from "@/framework/entitlement/use-entitlement";
-import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import { listUsersPage } from "@/modules/system-admin/services/admin.service";
 import {
   listObjectGrantsForObject,
   listEnterpriseObjectGrants,
@@ -64,6 +62,8 @@ import {
 } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
+
+import { DirectoryUserPicker } from "./DirectoryUserPicker";
 
 type ObjectAuthorizeDrawerProps = {
   /**
@@ -149,13 +149,7 @@ export function ObjectAuthorizeDrawer({
   const [busy, setBusy] = useState(false);
   const [candidate, setCandidate] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
-  const [candidateKeyword, setCandidateKeyword] = useState("");
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
-  const debouncedCandidateKeyword = useDebouncedValue(candidateKeyword.trim(), 300);
-  const [candidateUserOptions, setCandidateUserOptions] = useState<
-    Array<{ label: string; value: string }>
-  >([]);
-  const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
 
   // `authorize` is offered only to platform administrators. bkn-safe refuses it from anyone else —
   // a delegate that could pass `authorize` on would mint further delegates, and only an
@@ -247,50 +241,9 @@ export function ObjectAuthorizeDrawer({
     }
     setCandidate(prefillGranteeId);
     setCandidateOperations([]);
-    setCandidateKeyword("");
     setSourceAccessorId(undefined);
     void loadRemote();
   }, [loadRemote, open, prefillGranteeId]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    let cancelled = false;
-    setCandidateSearchLoading(true);
-    // Nothing typed lists the first page rather than nothing, which is how every other grantee
-    // picker in the console behaves (role members, department members, the administrator's
-    // authorization page). This drawer was the exception only because the owner surface could not
-    // reach the directory at all and had to use a per-object endpoint that made search mandatory;
-    // now that an object owner may read it, opening the field shows people again.
-    void listUsersPage({ limit: 20, search: debouncedCandidateKeyword || undefined }, { skipErrorToast: true })
-      .then((result) => result.users)
-      .then((users) => {
-        if (cancelled) {
-          return;
-        }
-        primeUserLookupCache(users);
-        setCandidateUserOptions(
-          users.map((user) => ({
-            value: user.id,
-            label: `${user.name}（${user.account}）`,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCandidateUserOptions([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setCandidateSearchLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedCandidateKeyword, objId, objType, open]);
 
   const deptMap = useMemo(
     () => new Map(departments.map((department) => [department.id, department])),
@@ -351,12 +304,6 @@ export function ObjectAuthorizeDrawer({
     () => visibleGrants.some((grant) => grantProtection(grant).eraseLocked),
     [grantProtection, visibleGrants],
   );
-
-  // Users only — the backend rejects department accessors (see ObjectAuthorizationCreateScene).
-  // Departments are still resolved for display, since older grants may name one.
-  const candidates = useMemo(() => {
-    return [{ label: t("systemAdmin.objectGrants.granteeUser"), options: candidateUserOptions }];
-  }, [candidateUserOptions, t]);
 
   const handleAdd = async () => {
     if (!candidate) {
@@ -847,17 +794,12 @@ export function ObjectAuthorizeDrawer({
               <label htmlFor="object-grant-user">
                 {t("systemAdmin.objectGrants.grantUserLabel")}
               </label>
-              <Select
-                aria-label={t("systemAdmin.objectGrants.grantUserLabel")}
-                filterOption={false}
+              <DirectoryUserPicker
+                ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
                 id="object-grant-user"
-                loading={loading || candidateSearchLoading}
-                notFoundContent={candidateSearchLoading ? <Spin size="small" /> : null}
+                loading={loading}
                 onChange={setCandidate}
-                onSearch={setCandidateKeyword}
-                options={candidates}
                 placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-                showSearch
                 value={candidate}
               />
             </div>
@@ -1086,7 +1028,7 @@ export function ObjectAuthorizeDrawer({
       open={open}
       rootClassName={styles.adminOverlay}
       title={drawerTitle}
-      width="min(1040px, 100vw)"
+      width="min(920px, calc(100vw - 24px))"
     >
       {content}
     </Drawer>

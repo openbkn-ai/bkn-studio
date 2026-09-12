@@ -23,6 +23,7 @@ import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { listUsers } from "@/modules/system-admin/services/admin.service";
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
@@ -255,22 +256,6 @@ export function ObjectAuthorizationCreateScene() {
     [fineGrained, t],
   );
 
-  // bkn-safe accepts only user accessors on /admin/object-grants: a department id is answered with
-  // 400 BknSafe.InvalidRequest, in every payload shape, and no department-scoped endpoint exists.
-  // Offering departments here only produced an unexplained failure at submit time.
-  const granteeOptions = useMemo(
-    () => [
-      {
-        label: t("systemAdmin.objectGrants.granteeUser"),
-        options: users.map((user) => ({
-          value: user.id,
-          label: `${user.name} (${user.account})`,
-        })),
-      },
-    ],
-    [t, users],
-  );
-
   const toggleOp = (opKey: string) => {
     setOpKeys((prev) => {
       if (prev.includes(opKey)) {
@@ -487,15 +472,13 @@ export function ObjectAuthorizationCreateScene() {
                     <p>{t("systemAdmin.objectGrants.createPageGranteeHint")}</p>
                   </div>
                 </div>
-                <Select
-                  aria-label={t("systemAdmin.objectGrants.pickerGranteePlaceholder")}
+                <DirectoryUserPicker
+                  ariaLabel={t("systemAdmin.objectGrants.pickerGranteePlaceholder")}
                   className={styles.authzCreateSubjectSelect}
+                  initialUsers={users}
                   mode="multiple"
-                  onChange={(value) => setGranteeIds(value)}
-                  optionFilterProp="label"
-                  options={granteeOptions}
+                  onChange={setGranteeIds}
                   placeholder={t("systemAdmin.objectGrants.pickerGranteePlaceholder")}
-                  showSearch
                   value={granteeIds}
                 />
               </div>

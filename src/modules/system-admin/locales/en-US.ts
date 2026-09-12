@@ -7,6 +7,25 @@
 
 export const systemAdminEnUS = {
   systemAdmin: {
+    userPicker: {
+      allOrganizations: "All organizations",
+      allUsers: "All users",
+      disabledUser: "Disabled",
+      empty: "No matching users",
+      loadingOrganization: "Loading organization…",
+      memberCount: "{{count}} people",
+      organization: "Organization",
+      organizationScope: "Organization scope",
+      organizationUnavailable: "No organization data is available. Showing the searchable user list instead.",
+      refineSearch: "This user list is large, so only the first {{count}} users are shown. Search by name or account to narrow the results.",
+      resultCount: "{{count}} users",
+      searchHint: "Search by name or account across departments",
+      searchInlineHint: "Search name or account…",
+      searchResults: "Organization-wide results",
+      searchingAll: "Searching the organization for “{{keyword}}”",
+      selectedCount: "{{count}} selected",
+      users: "Users",
+    },
     resourceCatalog: {
       operations: {
         "*": "All operations",

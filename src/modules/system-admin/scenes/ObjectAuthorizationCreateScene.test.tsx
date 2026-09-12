@@ -170,7 +170,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
-    fireEvent.click(await screen.findByText("Mubai Li (li.mubai)"));
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
     expect(screen.getByText("systemAdmin.objectGrants.summaryReady")).not.toBeNull();
     expect(confirmButton.hasAttribute("disabled")).toBe(false);
@@ -198,7 +198,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
-    fireEvent.click(await screen.findByText("Mubai Li (li.mubai)"));
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
     const confirmButton = screen.getByRole("button", {
       name: "systemAdmin.objectGrants.confirmGrant",

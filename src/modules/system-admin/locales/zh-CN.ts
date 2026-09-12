@@ -7,6 +7,25 @@
 
 export const systemAdminZhCN = {
   systemAdmin: {
+    userPicker: {
+      allOrganizations: "全部组织",
+      allUsers: "全部用户",
+      disabledUser: "已停用",
+      empty: "没有匹配的用户",
+      loadingOrganization: "正在加载组织架构…",
+      memberCount: "{{count}} 人",
+      organization: "组织架构",
+      organizationScope: "组织范围",
+      organizationUnavailable: "当前未提供组织架构，已切换为用户搜索列表。",
+      refineSearch: "当前用户较多，列表仅展示前 {{count}} 位；可输入姓名或账号继续筛选。",
+      resultCount: "{{count}} 位用户",
+      searchHint: "输入姓名或账号可跨部门搜索",
+      searchInlineHint: "搜索姓名或账号…",
+      searchResults: "全组织搜索结果",
+      searchingAll: "正在全组织中搜索“{{keyword}}”",
+      selectedCount: "已选 {{count}} 人",
+      users: "用户",
+    },
     resourceCatalog: {
       operations: {
         "*": "全部操作",

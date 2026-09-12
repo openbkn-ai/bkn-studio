@@ -17,7 +17,6 @@ import {
   deleteUserQuotas,
   listUserQuotas,
   saveUserQuotas,
-  searchAssignableUsers,
 } from "@/modules/model-resources/services/quota.service";
 import type { ModelQuota, UserQuotaRecord } from "@/modules/model-resources/types/quota";
 import {
@@ -25,6 +24,8 @@ import {
   isQuotaConfigured,
   QUOTA_NUM_TYPE_OPTIONS,
 } from "@/modules/model-resources/utils/quota-display";
+import { DirectoryUserPicker } from "@/modules/system-admin";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 
 import styles from "./QuotaUserModal.module.css";
 
@@ -47,8 +48,8 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
   const [outputRemain, setOutputRemain] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [userOptions, setUserOptions] = useState<{ value: string; label: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>();
+  const [selectedUser, setSelectedUser] = useState<AdminUser>();
 
   const numTypeOptions = useMemo(
     () =>
@@ -58,16 +59,6 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       })),
     [t],
   );
-
-  const loadUsers = useCallback(async () => {
-    const users = await searchAssignableUsers();
-    const assignedIds = new Set(items.map((item) => item.userId));
-    setUserOptions(
-      users
-        .filter((user) => !assignedIds.has(user.userId))
-        .map((user) => ({ value: user.userId, label: user.userName })),
-    );
-  }, [items]);
 
   const loadData = useCallback(async () => {
     if (!record) {
@@ -97,14 +88,6 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
     void loadData();
   }, [loadData, open, record]);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    void loadUsers();
-  }, [loadUsers, open]);
-
   const updateItem = (userId: string, patch: Partial<EditableUserQuota>) => {
     setItems((current) =>
       current.map((item) => (item.userId === userId ? { ...item, ...patch } : item)),
@@ -116,8 +99,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       return;
     }
 
-    const option = userOptions.find((item) => item.value === selectedUserId);
-    if (!option) {
+    if (!selectedUser) {
       return;
     }
 
@@ -130,7 +112,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       ...current,
       {
         userId: selectedUserId,
-        userName: option.label,
+        userName: selectedUser.name || selectedUser.account || selectedUser.id,
         modelQuotaId: record.confId,
         inputTokens: undefined,
         outputTokens: undefined,
@@ -139,6 +121,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       },
     ]);
     setSelectedUserId(undefined);
+    setSelectedUser(undefined);
   };
 
   const handleRemove = (userId: string) => {
@@ -242,24 +225,13 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       ) : null}
 
       <section className={styles.toolbarPanel}>
-        <Select
-          allowClear
+        <DirectoryUserPicker
           className={styles.userSelect}
-          options={userOptions}
+          disabledUserIds={items.map((item) => item.userId)}
+          onChange={(userId) => setSelectedUserId(userId)}
+          onUsersChange={(users) => setSelectedUser(users[0])}
           placeholder={t("modelResources.quotas.userModal.selectUser")}
-          showSearch
           value={selectedUserId}
-          onChange={setSelectedUserId}
-          onSearch={(value) => {
-            void searchAssignableUsers(value).then((users) => {
-              const assignedIds = new Set(items.map((item) => item.userId));
-              setUserOptions(
-                users
-                  .filter((user) => !assignedIds.has(user.userId))
-                  .map((user) => ({ value: user.userId, label: user.userName })),
-              );
-            });
-          }}
         />
         <AppButton onClick={handleAddUser}>{t("modelResources.quotas.userModal.addUser")}</AppButton>
       </section>
