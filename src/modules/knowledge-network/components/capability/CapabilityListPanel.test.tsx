@@ -22,6 +22,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
+  useLocation: () => ({ pathname: "/knowledge-network/kn-1/capabilities", search: "?kind=all" }),
   useNavigate: () => mocks.navigate,
 }));
 
@@ -193,6 +194,9 @@ describe("CapabilityListPanel restricted empty state", () => {
     renderPanel(kind, false, dataFor(kind));
     fireEvent.click(screen.getByRole("button", { name: "Visible capability" }));
 
-    expect(mocks.navigate).toHaveBeenCalledWith(expectedPath);
+    // The detail scene's back button must return to this list, not to its own list page (#386).
+    expect(mocks.navigate).toHaveBeenCalledWith(expectedPath, {
+      state: { returnTo: "/knowledge-network/kn-1/capabilities?kind=all" },
+    });
   });
 });

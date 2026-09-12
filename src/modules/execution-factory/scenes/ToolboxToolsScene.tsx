@@ -171,12 +171,9 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       return;
     }
 
-    if (window.history.length > 1) {
-      void navigate(-1);
-      return;
-    }
-
     // Toolboxes split into API and function views; return to the one containing the toolbox.
+    // Always go there explicitly: `navigate(-1)` re-entered the tool config page that had just
+    // sent the visitor here (#386), and leaves the app when this page was the first one opened.
     const viewQuery = `&toolboxView=${isFunctionToolbox ? "function" : "openapi"}`;
     void navigate(
       catalogContext

@@ -20,7 +20,7 @@ import {
 import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { McpDetailSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -43,6 +43,7 @@ import {
   listMcpTools,
 } from "@/modules/execution-factory/services/mcp.service";
 import type { McpDetail, McpProxyTool, McpStatus } from "@/modules/execution-factory/types/mcp";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { buildMcpToolCapabilityManifest } from "@/modules/execution-factory/utils/capability-manifest";
 import {
   formatOptionalTimestamp,
@@ -77,6 +78,7 @@ function resolveModeLabel(mode: McpDetail["mode"], t: (key: string) => string) {
 export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
   const [record, setRecord] = useState<McpDetail | null>(null);
@@ -144,15 +146,14 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
       return;
     }
 
-    if (window.history.length > 1) {
-      void navigate(-1);
-      return;
-    }
-
+    // A knowledge network's capability list links here and names itself in location state; every
+    // other entry returns to the list. Not `navigate(-1)`: it cannot tell a direct hit apart and
+    // leaves the app when this page was the first one opened (#386).
     void navigate(
-      catalogContext
-        ? "/execution-factory/catalog?activeTab=mcp"
-        : "/execution-factory/units?activeTab=mcp",
+      readReturnTo(location.state) ??
+        (catalogContext
+          ? "/execution-factory/catalog?activeTab=mcp"
+          : "/execution-factory/units?activeTab=mcp"),
     );
   };
 
