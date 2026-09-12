@@ -39,6 +39,27 @@ describe("EvidenceChainPanels", () => {
     expect(screen.queryByRole("button", { name: /查看与.*Delay.*相关的记录事实/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看本轮全部记录（排障）" })).toBeInTheDocument();
   });
+  it("resolves an all-interaction diagnostic edge against the all-facts graph", () => {
+    const multipleClaims: EvidenceChainView = {
+      ...view,
+      claims: [
+        { ...view.claims[0], nodeIds: ["delay"] },
+        { ...view.claims[1], nodeIds: ["stock"] },
+      ],
+      evidence: {
+        nodes: [
+          ...view.evidence.nodes,
+          { id: "stock-source", label: "Stock source", kind: "source" },
+          { id: "stock", label: "Stock fact", kind: "field", value: "0" },
+        ],
+        edges: [...view.evidence.edges, { id: "stock-return", source: "stock-source", target: "stock", label: "Stock returned", kind: "value" }],
+      },
+    };
+    render(<EvidenceChainPanels view={multipleClaims} />);
+    fireEvent.click(screen.getByRole("button", { name: "查看本轮全部记录（排障）" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stock returned" }));
+    expect(screen.getByRole("complementary", { name: "关系详情" })).toHaveTextContent("Stock source → Stock fact");
+  });
   it("explains conclusions with independently collapsible business steps and details", () => {
     const explained: EvidenceChainView = {
       ...view,
