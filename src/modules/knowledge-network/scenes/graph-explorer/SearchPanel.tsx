@@ -856,6 +856,7 @@ export function SearchPanel({
   return (
     <aside className={styles.panel}>
       <Tabs
+        size="small"
         activeKey={tab}
         onChange={(key) => setTab(key as "semantic" | "condition" | "browse" | "cypher" | "ai")}
         className={styles.tabs}

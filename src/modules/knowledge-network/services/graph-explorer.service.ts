@@ -5,7 +5,6 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { http } from "@/framework/request/http";
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
 import { REST_PREFIX, restPost, type BknCallScope, type ContextLoaderEnv, type McpAuth, type McpSession, type McpToolCallResult } from "./context-loader.service";
@@ -117,12 +116,30 @@ export function buildInstanceId(otId: string, primaryKeys: string[], identity: R
 
 /**
  * Label resolution chain: an explicit label property first, then
- * `_display` → `display_name` → `name` → `id` → first non-system property → node id.
+ * `_display` → `display_name` → `name` → `title` → `topic` → `description` → `text_clean`
+ * → `text` → `id` → first non-system property → node id.
+ *
+ * `topic` sits with the titles: rows such as benchmark items carry no name, and their topic is
+ * the short heading while the description is a sentence or more.
+ *
+ * `text_clean` comes before `text` because a network that carries both keeps the tidied wording
+ * in the former and the raw extraction, markup and all, in the latter. Names are matched without
+ * regard to case, since one network writes `Title` where another writes `title`.
  */
+const LABEL_CHAIN = [DISPLAY, "display_name", "name", "title", "topic", "description", "text_clean", "text", "id"];
+
 export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): string {
   if (labelKey && nonEmpty(props[labelKey])) return asString(props[labelKey]);
-  for (const key of [DISPLAY, "display_name", "name", "id"]) {
-    if (nonEmpty(props[key])) return asString(props[key]);
+  // Property name in lower case → its value, keeping the first spelling the row happens to carry.
+  const byLowerName = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(props)) {
+    const lower = key.toLowerCase();
+    if (!byLowerName.has(lower) || !nonEmpty(byLowerName.get(lower))) byLowerName.set(lower, value);
+  }
+  if (labelKey && nonEmpty(byLowerName.get(labelKey.toLowerCase()))) return asString(byLowerName.get(labelKey.toLowerCase()));
+  for (const key of LABEL_CHAIN) {
+    const value = byLowerName.get(key);
+    if (nonEmpty(value)) return asString(value);
   }
   for (const [key, value] of Object.entries(props)) {
     if (!key.startsWith(SYSTEM_PREFIX) && nonEmpty(value)) return asString(value);
@@ -562,7 +579,7 @@ export function keyValueFor(meta: ObjectTypeMeta, key: string): unknown {
 /* ============================ Loaders shared by the explorer page and the viewer ============================ */
 
 export type RelationEnds = { id: string; sourceId: string; targetId: string };
-export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown> };
+export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown>; failed?: { objectType: string; error: string }[] };
 
 const ID_BATCH = 50;
 const PATH_BATCH = 5;
@@ -570,9 +587,11 @@ const PATH_BATCH = 5;
 /**
  * Instances behind a parsed id list plus the relations among them: one `pk in` query per
  * object type (50 keys a batch), then one query_instance_subgraph path per relation type whose
- * two ends are both in the set, keeping only edges between resolved nodes. A failing relation
- * type is recorded under `raw.paths` and skipped rather than sinking the whole call. Every
- * object type involved must be in `metas` with exactly one primary key.
+ * two ends are both in the set, keeping only edges between resolved nodes. Paths travel in
+ * batches; when a batch fails its paths are retried one at a time, so a single relation type the
+ * backend refuses costs only its own edges instead of the whole batch's. What still fails is
+ * recorded under `raw.paths` and skipped rather than sinking the call. Every object type
+ * involved must be in `metas` with exactly one primary key.
  */
 export async function collectSubgraphByIds(
   client: GraphExplorerClient,
@@ -614,16 +633,23 @@ export async function collectSubgraphByIds(
     }));
   const edges: GEdge[] = [];
   const pathPayloads: unknown[] = [];
-  for (let start = 0; start < paths.length; start += PATH_BATCH) {
-    const batch = paths.slice(start, start + PATH_BATCH);
+  const collect = async (group: SubgraphPath[]): Promise<boolean> => {
     try {
-      const payload = await client.queryInstanceSubgraph(batch, scope);
+      const payload = await client.queryInstanceSubgraph(group, scope);
       pathPayloads.push(payload);
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
       for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
+      return true;
     } catch (error) {
-      pathPayloads.push({ error: friendlyError(error), paths: batch });
+      if (group.length === 1) pathPayloads.push({ error: friendlyError(error), paths: group });
+      return false;
     }
+  };
+  for (let start = 0; start < paths.length; start += PATH_BATCH) {
+    const batch = paths.slice(start, start + PATH_BATCH);
+    if (await collect(batch)) continue;
+    // One refused relation type must not cost the others their edges.
+    for (const single of batch) await collect([single]);
   }
   return { nodes, edges, raw: { instances, paths: pathPayloads } };
 }
@@ -631,6 +657,8 @@ export async function collectSubgraphByIds(
 /**
  * One-hop neighbours of many seed nodes: one explore_subgraph per object type with `pk in`
  * when the type has a single primary key, otherwise one call per seed on its full identity.
+ * An object type the backend refuses is recorded under `raw.failed` and skipped, so a broken
+ * relation type or binding costs only its own neighbours instead of the whole expansion.
  */
 export async function expandSeeds(
   client: GraphExplorerClient,
@@ -651,20 +679,25 @@ export async function expandSeeds(
     nodes.push(...sub.nodes);
     edges.push(...sub.edges);
   };
+  const failed: { objectType: string; error: string }[] = [];
   for (const [otId, list] of byOt) {
     const meta = metas[otId];
-    if (meta && meta.primaryKeys.length === 1) {
-      const pk = meta.primaryKeys[0];
-      const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-      collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
-      continue;
-    }
-    for (const node of list) {
-      const condition = identityCondition(node.identity);
-      if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+    try {
+      if (meta && meta.primaryKeys.length === 1) {
+        const pk = meta.primaryKeys[0];
+        const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
+        collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }, scope));
+        continue;
+      }
+      for (const node of list) {
+        const condition = identityCondition(node.identity);
+        if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }, scope));
+      }
+    } catch (error) {
+      failed.push({ objectType: meta?.name ?? otId, error: friendlyError(error) });
     }
   }
-  return { nodes, edges, raw: { calls } };
+  return { nodes, edges, raw: { calls, failed }, failed };
 }
 
 export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[] {
@@ -675,26 +708,6 @@ export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[
 
 export type CypherResult = { columns: { name: string; type?: string }[]; entries: Record<string, unknown>[] };
 
-/**
- * Runs a read-only Cypher query through bkn-backend. This is a plain REST call: the
- * endpoint is not part of the managed lifecycle surface, so no bkn_context is needed.
- * A failure is rethrown with the backend's JSON envelope as the message so friendlyError
- * can surface its description and detail.
- */
-export async function runCypherQuery(knId: string, query: string): Promise<CypherResult> {
-  try {
-    const response = await http.post<unknown>(`/bkn-backend/v1/knowledge-networks/${encodeURIComponent(knId)}/cypher-queries`, { query }, { skipErrorToast: true });
-    const data: unknown = response.data;
-    if (!isRecord(data)) throw new Error("cypher-queries did not return an object");
-    const columns = Array.isArray(data.columns) ? data.columns.filter(isRecord).map((c) => ({ name: stringifyValue(c.name), type: typeof c.type === "string" ? c.type : undefined })) : [];
-    const entries = Array.isArray(data.entries) ? data.entries.filter(isRecord) : [];
-    return { columns, entries };
-  } catch (error) {
-    const body = (error as { response?: { data?: unknown } })?.response?.data;
-    if (isRecord(body)) throw new Error(JSON.stringify(body));
-    throw error instanceof Error ? error : new Error(String(error));
-  }
-}
 
 /* ============================ MCP calls ============================ */
 
@@ -850,6 +863,8 @@ export type GraphExplorerClient = {
   searchInstances(query: string, scope?: BknCallScope | null, options?: SearchOptions): Promise<Rec>;
   queryInstances(otId: string, condition: KnCondition | null, limit: number, scope?: BknCallScope | null, offset?: number): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest, scope?: BknCallScope | null): Promise<Rec>;
+  /** run_cypher: the network's own Cypher surface, compiled server-side into one read-only query. */
+  runCypher(query: string, scope?: BknCallScope | null): Promise<CypherResult>;
 };
 
 export function createGraphExplorerClient(session: McpSession, knId: string): GraphExplorerClient {
@@ -890,6 +905,14 @@ export function createGraphExplorerClient(session: McpSession, knId: string): Gr
       if (offset > 0) args.offset = offset;
       const result = await session.callTool("query_object_instance", withContext(args, scope));
       return readPayload(result, "query_object_instance");
+    },
+    async runCypher(query, scope) {
+      const result = await session.callTool("run_cypher", withContext({ kn_id: knId, query, response_format: "json" }, scope));
+      const payload = readPayload(result, "run_cypher");
+      const columns = Array.isArray(payload.columns)
+        ? payload.columns.filter(isRecord).map((column) => ({ name: stringifyValue(column.name), type: typeof column.type === "string" ? column.type : undefined }))
+        : [];
+      return { columns, entries: Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [] };
     },
     async exploreSubgraph(request, scope) {
       const result = await session.callTool(

@@ -9,7 +9,7 @@ import type { GEdge, GNode } from "@/modules/knowledge-network/services/graph-ex
 
 export const CACHE_VERSION = 1;
 
-export type ExplorerLayout = "force" | "dagre" | "radial" | "circular" | "grid";
+export type ExplorerLayout = "force" | "chain" | "dagre" | "radial" | "circular" | "grid";
 export type ExplorerShape = "circle" | "rect" | "diamond" | "ellipse" | "hexagon" | "star";
 /** single: only the dragged node moves; linked: its neighbours follow with a decaying pull. */
 export type DragMode = "single" | "linked";
@@ -50,7 +50,16 @@ export const DEFAULT_SETTINGS: ExplorerSettings = {
   dragMode: "single",
 };
 
-export const LAYOUTS: ExplorerLayout[] = ["force", "dagre", "radial", "circular", "grid"];
+export const LAYOUTS: ExplorerLayout[] = ["force", "chain", "dagre", "radial", "circular", "grid"];
+
+/**
+ * A layout name a deployment can set, so an environment whose graphs are mostly chains opens on
+ * 路径 without every link carrying it. Anything not in LAYOUTS is ignored rather than trusted.
+ */
+export function layoutFromConfig(value: unknown): ExplorerLayout | null {
+  const name = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return (LAYOUTS as string[]).includes(name) ? (name as ExplorerLayout) : null;
+}
 export const SHAPES: ExplorerShape[] = ["circle", "rect", "diamond", "ellipse", "hexagon", "star"];
 
 export function cacheKey(knId: string): string {

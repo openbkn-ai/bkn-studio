@@ -37,7 +37,6 @@ import {
   needsKnSearch,
   parseRelationPaths,
   relabel,
-  runCypherQuery,
   shortestChainTo,
   type ExpandDirection,
   type GEdge,
@@ -50,6 +49,7 @@ import {
 import {
   DEFAULT_SETTINGS,
   clearCache,
+  layoutFromConfig,
   readCache,
   writeCache,
   type DragMode,
@@ -81,7 +81,7 @@ import {
 import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
 
 import { buildCondition } from "./condition-builder";
-import { SHARE_ID_LIMIT, buildShareUrl, parseDeepLink } from "./deep-link";
+import { buildShareUrl, combineLinkSource, parseDeepLink } from "./deep-link";
 import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
 import { buildExplorePrompt, conditionFrom, createExploreTools, runExploreAgent, type ExploreDeps, type ExplorePromptTexts, type ExploreStep } from "./explore-agent";
 import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
@@ -89,6 +89,13 @@ import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
 const CYPHER_ROW_LIMIT = 200;
+
+/** Deploy-time default layout, set in the runtime config file next to the bundle. */
+function runtimeGraphLayout(): unknown {
+  if (typeof window === "undefined") return null;
+  const runtime = (window as { __BKN_STUDIO_RUNTIME__?: { graphExplorer?: { layout?: unknown } } }).__BKN_STUDIO_RUNTIME__;
+  return runtime?.graphExplorer?.layout ?? null;
+}
 const EXPAND_SEED_LIMIT = 50;
 /** Tool calls one AI exploration may make before it has to answer. */
 const AI_MAX_STEPS = 10;
@@ -129,12 +136,16 @@ export function GraphExplorerScene() {
   // Snapshot read once; the canvas is seeded from it and the maps below are filled from it.
   // A link carrying ids or a Cypher fragment opens on a fresh canvas; the cached settings still apply.
   const [initial] = useState(() => {
-    const link = typeof window === "undefined" ? null : parseDeepLink(window.location.search);
+    const link = typeof window === "undefined" ? null : parseDeepLink(combineLinkSource(window.location.search, window.location.hash));
     const cached = readCache(networkId);
     return {
       link,
       snapshot: link ? null : cached,
-      settings: { ...(cached?.settings ?? DEFAULT_SETTINGS), ...(link?.layout ? { layout: link.layout } : {}) },
+      settings: {
+        // What the user last chose wins; a fresh canvas takes the deployment's default layout.
+        ...(cached?.settings ?? { ...DEFAULT_SETTINGS, layout: layoutFromConfig(runtimeGraphLayout()) ?? DEFAULT_SETTINGS.layout }),
+        ...(link?.layout ? { layout: link.layout } : {}),
+      },
     };
   });
   const snapshot = initial.snapshot;
@@ -900,8 +911,6 @@ export function GraphExplorerScene() {
           no_nodes: "parseNoNodes",
           return_present: "parseReturn",
           unlabeled: "parseUnlabeled",
-          multiple_match: "parseMultipleMatch",
-          multiple_patterns: "parseMultiplePatterns",
         }[parsed.error];
         throw new Error(t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }));
       }
@@ -929,7 +938,7 @@ export function GraphExplorerScene() {
         return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
       });
       const query = buildCypherQuery(parsed, resolvedNodes, CYPHER_ROW_LIMIT);
-      const result = await runCypherQuery(networkId, query);
+      const result = await client.runCypher(query, turn);
       const graph = cypherRowsToGraph(result.entries, resolvedNodes, resolvedEdges);
       // Rows carry primary keys only; fetch the instances so labels and the drawer show real properties.
       const enriched = new Map(graph.nodes.map((node) => [node.id, node]));
@@ -947,7 +956,7 @@ export function GraphExplorerScene() {
       }
       return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length, query, raw: result };
     },
-    [client, detail, labelMap, loadMetas, networkId, t],
+    [client, detail, labelMap, loadMetas, t],
   );
 
   const handleCypher = useCallback(
@@ -963,7 +972,7 @@ export function GraphExplorerScene() {
         log: {
           kind: "cypher",
           title: fragment.trim().split("\n")[0],
-          input: { endpoint: "cypher-queries", kn_id: networkId, fragment, get query() { return sentQuery; } },
+          input: { tool: "run_cypher", kn_id: networkId, fragment, get query() { return sentQuery; } },
           summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows: value.rows, nodes: value.nodes.length, edges: value.edges.length }),
         graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
         },
@@ -1163,23 +1172,28 @@ export function GraphExplorerScene() {
     async (text: string, fallbackOt?: string): Promise<void> => {
       const typeIds = (detail?.object_types ?? []).map((item) => item.id);
       const parsed = parseIdList(text, typeIds, fallbackOt);
-      if (parsed.unknown.length > 0) {
+      // Ids that resolve are drawn; the rest are reported and skipped, because a list pasted from
+      // elsewhere often carries a few that this network does not know.
+      if (parsed.items.length === 0) {
         throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
       }
-      if (parsed.items.length === 0) return;
+      if (parsed.unknown.length > 0) {
+        message.warning(t("knowledgeNetwork.graphExplorer.browse.idsSkipped", { count: parsed.unknown.length, list: parsed.unknown.slice(0, 3).join(", ") }));
+      }
       const relations = detail?.relation_types ?? [];
       const outcome = await runTurn(t("knowledgeNetwork.graphExplorer.browse.idsTurn", { count: parsed.items.length }), async (turn, ctx) => {
         const otIds = [...new Set(parsed.items.map((item) => item.otId))];
         const metas = await loadMetas(otIds, turn);
-        for (const otId of otIds) {
-          const meta = metas[otId];
-          if (!meta || meta.primaryKeys.length !== 1) {
-            throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
-          }
+        // A composite-key object type cannot be looked up by a single key; skip it rather than
+        // refusing every other id in the list.
+        const usable = otIds.filter((otId) => metas[otId]?.primaryKeys.length === 1);
+        if (usable.length === 0) {
+          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: metas[otIds[0]]?.name ?? otIds[0] }));
         }
-        const collected = await collectSubgraphByIds(client, parsed.items, metas, relations, labelMap(), turn);
+        const items = parsed.items.filter((item) => usable.includes(item.otId));
+        const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap(), turn);
         ctx.raw = collected.raw;
-        return { nodes: collected.nodes, edges: collected.edges, requested: parsed.items.length };
+        return { nodes: collected.nodes, edges: collected.edges, requested: items.length };
       }, {
         rethrow: true,
         log: {
@@ -1209,8 +1223,8 @@ export function GraphExplorerScene() {
       const result = await runTurn(t("knowledgeNetwork.graphExplorer.turn.expandMany", { count: seeds.length }), async (turn, ctx) => {
         const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))], turn);
         const collected = await expandSeeds(client, seeds, metas, direction, labelMap(), turn);
-        ctx.raw = collected.raw.calls;
-        return { nodes: collected.nodes, edges: collected.edges };
+        ctx.raw = collected.raw;
+        return { nodes: collected.nodes, edges: collected.edges, failed: collected.failed ?? [] };
       }, {
         log: {
           kind: "expand",
@@ -1220,6 +1234,9 @@ export function GraphExplorerScene() {
         },
       });
       if (!result) return;
+      if (result.failed.length > 0) {
+        message.warning(t("knowledgeNetwork.graphExplorer.toast.expandPartial", { count: result.failed.length, list: result.failed.map((item) => item.objectType).slice(0, 3).join(", ") }));
+      }
       await addToCanvas(result.nodes, result.edges);
     },
     [addToCanvas, client, labelMap, loadMetas, message, networkId, runTurn, t],
@@ -1245,6 +1262,8 @@ export function GraphExplorerScene() {
         message.error(friendlyError(error));
       } finally {
         setSearchParams(new URLSearchParams(), { replace: true });
+        // The ids ride in the fragment, which the router does not own.
+        if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
       }
     })();
   }, [addToCanvas, detail, expandMany, handleCypher, handleSubgraphByIds, initial.link, labelMap, message, setSearchParams, t]);
@@ -1252,12 +1271,15 @@ export function GraphExplorerScene() {
   const handleShare = useCallback(() => {
     const base = `${window.location.origin}${window.location.pathname}`;
     const ids = [...nodesRef.current.keys()];
-    const { url, dropped } = buildShareUrl(base, ids, { layout: settingsRef.current.layout });
+    const { url, dropped } = buildShareUrl(base, ids, {
+      layout: settingsRef.current.layout,
+      objectTypeIds: (detailRef.current?.object_types ?? []).map((item) => item.id),
+    });
     void navigator.clipboard
       .writeText(url)
       .then(() => {
         message.success(t("knowledgeNetwork.graphExplorer.toast.linkCopied", { count: ids.length - dropped }));
-        if (dropped > 0) message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { limit: SHARE_ID_LIMIT, dropped }));
+        if (dropped > 0) message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { dropped }));
       })
       .catch(() => undefined);
   }, [message, t]);
@@ -1371,6 +1393,12 @@ export function GraphExplorerScene() {
     }
     return [...seen].map(([id, name]) => ({ id, name }));
   }, [graphRev]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** One row per object type on the canvas, so the node colours can be read. */
+  const legend = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const node of nodesRef.current.values()) counts.set(node.otId, (counts.get(node.otId) ?? 0) + 1);
+    return canvasObjectTypes.map((item) => ({ ...item, count: counts.get(item.id) ?? 0 })).sort((a, b) => b.count - a.count);
+  }, [canvasObjectTypes]);
   const propertyNamesByOt = useMemo(() => {
     const out: Record<string, string[]> = {};
     for (const { id } of canvasObjectTypes) {
@@ -1535,6 +1563,17 @@ export function GraphExplorerScene() {
           {nodesRef.current.size === 0 ? (
             <div className={styles.emptyHint}>
               <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.emptyCanvas")}</Typography.Text>
+            </div>
+          ) : null}
+          {legend.length > 0 ? (
+            <div className={styles.legend} data-testid="graph-explorer-legend">
+              {legend.map((item) => (
+                <div key={item.id} className={styles.legendRow} title={item.id}>
+                  <span className={styles.legendDot} style={{ background: colorOf(item.id) }} />
+                  <span className={styles.legendName}>{item.name}</span>
+                  <span className={styles.legendCount}>{item.count}</span>
+                </div>
+              ))}
             </div>
           ) : null}
           {busy ? (

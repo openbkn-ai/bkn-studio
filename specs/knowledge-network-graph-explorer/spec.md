@@ -21,7 +21,7 @@ Studio 目前只能以表格形式浏览知识网络实例（Data Browser），�
 
 ## 3. 非目标
 
-- Cypher 只用于选点与取子图：后端子集的 RETURN 只能返回属性、不支持变长关系，路径查找仍走 `explore_subgraph`。
+- Cypher 只用于选点与取子图：`run_cypher` 的 RETURN 只能返回属性、不支持变长关系，路径查找仍走 `explore_subgraph`。
 - 不做真正的最短路径算法：后端 openCypher 子集明确不支持变长关系（bkn-backend `logics/cypher/analyze.go:221`），ontology-query 也没有最短路接口。本期用 `explore_subgraph` 的 3 跳探索在客户端筛出最短链。
 - 不展示边属性：ontology-query 返回的 `Relation` 只有 `relation_type_id / relation_type_name / source_object_id / target_object_id`（`interfaces/knowledge_network.go:133-138`），没有 `properties`。边标签固定为关系类名。
 - 不做多人共享或服务端保存；缓存只在本地。
@@ -170,7 +170,7 @@ type GEdge = {
 
 - Tab「语义搜索」：可选的对象类多选（限定 `search_instance` 的 `object_types`，不选则全网）+「高级参数」（`exclude_object_types` / `concept_groups` / `max_instances_per_type` / `max_object_types`）+「召回融合（RRF）」面板（`enable_rrf_fusion` / `enable_knn_instance_retrieval` / `rrf_k` / `knn_weight` / `initial_candidate_count` / `min_direct_relevance` / `instance_rerank_mode`，每项带悬停说明）+ 输入框 + 回车；结果列出标签与对象类名；单条「加入画布」，或勾选后批量加入。空结果时展示后端 `message`。融合参数不在 `search_instance` 请求体里，任一偏离默认即改走 REST `/kn/kn_search` 并显式传 `only_schema:false`（该接口默认只回 schema），其余仍走 `search_instance`；面板底部提示当前走哪条。
 - Tab「条件查询」：对象类下拉 → 属性 / 算子 / 值 的条件行（可加多行，`and` 组合）→ 查询；算子按属性类型给出（`== != > >= < <= like in`），不涉及索引算子。结果同上。
-- Tab「Cypher」：只写 `MATCH … [WHERE …]`（标签用对象类 id 或名称，关系带方向、只写一个关系类 id），页面按每个节点变量的主键自动补 `RETURN DISTINCT … LIMIT 200`，调 bkn-backend `POST /knowledge-networks/{kn_id}/cypher-queries`（REST，无需 `bkn_context`），把行还原为节点与边，再用 `query_object_instance` 按主键 `in` 批量回查补齐属性；可单个或「全部加入（含边）」。子集限制（RETURN 只能是属性、无变长关系）沿用后端契约。顶部「AI 生成」框：把本网络的对象类（含属性）与关系类（带方向）连同问题发给模型工厂默认大模型，要求只输出 MATCH/WHERE 片段；结果剥去代码块、解释与多余 RETURN，节点内联属性映射 `{a: 'x'}` 改写为 WHERE，填入编辑器供用户修改后运行；多个模型可切换。
+- Tab「Cypher」：只写 `MATCH … [WHERE …]`（标签用对象类 id 或名称，关系只写一个关系类 id，可带方向也可无向），页面按每个节点变量的主键自动补 `RETURN DISTINCT … LIMIT 200`，调 Context Loader 的 MCP 工具 `run_cypher`（与其余调用同一个受管回合，因此也认 `bak_` AppKey），把行还原为节点与边，再用 `query_object_instance` 按主键 `in` 批量回查补齐属性；可单个或「全部加入（含边）」。`run_cypher` 的子集比 bkn-backend 的 `cypher-queries` 宽：允许多条路径（逗号并列或多个 MATCH）、无向关系、节点内联属性、`IN`/`IS NULL`/`OR`/`NOT`、聚合与 `ORDER BY`/`SKIP`；仍不支持 OPTIONAL MATCH、WITH、UNION、变长关系、`RETURN n`、函数与算术，一条模式最多 8 段关系。顶部「AI 生成」框：把本网络的对象类（含属性）与关系类（带方向）连同问题发给模型工厂默认大模型，要求只输出 MATCH/WHERE 片段；结果剥去代码块、解释与多余 RETURN，填入编辑器供用户修改后运行；多个模型可切换。
 - Tab「浏览」（自由探索）：对象类下拉 → 「列出实例」不带条件分页列出（每页 50，「加载更多」按 `offset` 翻页），供用户自己挑起点；同一 Tab 提供「按主键定位」：输入主键值（复合主键按主键顺序逗号分隔）→ `query_object_instance` 精确匹配。 同一 Tab 还有「按 ID 列表取子图」：粘贴多个实例 ID（`<对象类 id>-<主键值>`，即节点抽屉里的实例 ID；或先选对象类再贴裸主键值），页面按对象类分组用 `query_object_instance`（`pk in [...]`，每批 50）取实例，再对每条两端对象类都在集合内的关系类调 `query_instance_subgraph`（路径两端各带 `pk in` 条件），只保留两端都在集合内的边；单条关系类失败只记进历史不中断。
 - 对象类与属性下拉同时按显示名与 id 过滤。
 
@@ -186,8 +186,11 @@ type GEdge = {
 - 结果列表带「全选」（只选未在画布上的），配合「加入所选」批量加入；Cypher 结果批量加入时连同其间的边。
 - 「浏览」Tab 底部「按 ID 列表取子图」：粘贴实例 ID（`<对象类>-<主键>`）或选定对象类后的裸主键；按对象类用 `query_object_instance`（`pk in`，每批 50）取实例，再对两端对象类都在集合内的每条关系类调 `query_instance_subgraph`（两端带 `pk in` 条件）取其间的边；单条关系类失败只记入历史。
 - 超过 500 节点上限时不再整批拒绝：先放入还能放的，toast 说明有多少没放上；边随节点自然过滤。
-- URL 直达：`?ids=<实例 ID,…>&cypher=<MATCH 片段>&expand=out|in|both&layout=…`。带 `ids` 或 `cypher` 的链接在空画布上打开（缓存里的设置仍生效，`layout` 可覆盖），对象类清单就绪后依次执行：按 ID 取子图 → 运行 Cypher 并全部加入 → 对画布上全部节点一跳展开（每对象类一次 `explore_subgraph`，`pk in`，起点最多 50 个）→ 重新布局；执行完把参数从地址栏去掉。工具栏「复制链接」把当前画布的节点 ID（最多 300 个）与布局拼成这样的链接写入剪贴板。
+- URL 直达：`#ids=<实例 ID,…>&g=<对象类>:<主键,…>;…&cypher=<MATCH 片段>&expand=out|in|both&layout=…`。参数从查询串与片段两处一起读（片段优先），写出去时一律放片段：片段不会发给服务器，nginx 对请求行的限制（实测超过约 8200 字符返回 414）就碰不到，而页面照样读得到全部 ID。`g` 是按对象类分组的写法，共同前缀只写一次，500 个节点从约 13500 字符压到约 3500。带 `ids` 或 `cypher` 的链接在空画布上打开（缓存里的设置仍生效，`layout` 可覆盖），对象类清单就绪后依次执行：按 ID 取子图 → 运行 Cypher 并全部加入 → 对画布上全部节点一跳展开（每对象类一次 `explore_subgraph`，`pk in`，起点最多 50 个）→ 重新布局；执行完把参数从地址栏去掉。工具栏「复制链接」把当前画布的节点 ID 与布局拼成这样的链接写入剪贴板（整条 URL 超过 30000 字符才截断）。
 - 「加入画布」前对来自语义搜索的节点（缺 `_instance_identity`）按对象类用 `query_object_instance`（`pk in`）补全整行，标签与抽屉才有完整属性。
+- 画布左下角图例：每个对象类一行，色点、名称与节点数，按数量排序；探索页与看图页都有。
+- 默认布局可在部署时配置：Studio 侧 `config.js` 写 `window.__BKN_STUDIO_RUNTIME__ = { graphExplorer: { layout: "chain" } }`，看图页侧 `graph-view.config.js` 写 `window.__BKN_GRAPH_VIEW__ = { layout: "chain" }`。优先级是链接上的 `layout` > 用户自己选过的（探索页存在本地缓存里）> 部署默认 > 力导向；不在布局清单里的值忽略。
+- 布局「路径」把每个连通部分单独放一条带：按关系方向从左到右分列（没有入边的节点在第 0 列），同列节点竖排并在带内居中，带与带之间留空。按 ID 取子图常得到若干互不相连的短链，力导向会把它们揉成一团，这个布局让每条路径成为一条直线。
 - 布局：力导向实为 `d3-force`（碰撞半径 44，边长按两端较大度数换算成能容纳其叶子的环半径、钉在 180–900，link 强度 0.3 让拥挤的环外溢成多层）；辐射的每层半径同样按最大度数换算，聚焦度数最大的节点、非严格环。G6 自带的 `force` 会把星形的叶子挤在一个环上、把孤立节点排成一条横线，故弃用。
 - 多选与批量移除：Shift+点击或 Shift+框选进入 `selected` 状态（Shift 按住时 `drag-canvas` 让位给 `brush-select`，否则框画不出来），拖动其中一个即整体移动；工具栏「移除所选」或 Delete/Backspace 移除全部选中节点。空白处拖动平移画布、滚轮缩放。
 - 撤销：每次加入、移除、清空前记录一份画布快照（节点、边、位置），工具栏「撤销」或 Ctrl/⌘+Z 回退一步，最多保留 30 步；撤销走 `replaceAll` 整体重建，缺位置的节点补一次布局。
@@ -218,6 +221,7 @@ type GEdge = {
 - 入口：`/studio/graph-view.html?kn=<网络 id>&ids=<实例 id,…>[&expand=out|in|both][&layout=force|dagre|radial|circular|grid][&token=…]`。它是 Vite 的第二个页面入口（`graph-view.html` → `src/graph-view/`），随 Studio 一起构建、由同一个 nginx 直接按文件提供。
 - 令牌：`token` 查询参数 → 部署时替换的 `graph-view.config.js`（`window.__BKN_GRAPH_VIEW__ = { token }`，与 `config.js` 同一套「换文件不重建」的做法）→ 同主机上已登录 Studio 的会话 cookie。三者都没有时页面直接提示，不发请求。令牌进 URL 会留在日志与历史里，长期使用应走配置文件。
 - 行为：`get_kn_detail` 取定义 → `parseIdList` 按最长对象类前缀识别 id → `collectSubgraphByIds`（与页面「按 ID 列表取子图」共用，`query_object_instance` `pk in` 每批 50 + 每条两端都在集合内的关系类一条 `query_instance_subgraph`）→ 可选 `expandSeeds` 一跳展开（与页面批量展开共用）→ 重新布局并适配。每次调用都是受管回合（`bkn-agent-graph-view`）。
+- 画布左下角有图例：画布上每个对象类一行，色点、名称与节点数，按数量排序，超出高度可滚动。
 - 画布复用 `GraphCanvas`：右键只保留展开出/入/双向与移除（`menuActions` 属性），双击双向展开，单击右侧显示属性；顶栏有布局下拉、重新排列、适配、以及「在 Studio 中打开」（把当前节点拼成 7.3 的直达链接）。
 - 不做的事：无 Cypher、无本地缓存、无撤销/历史；标签只走后端 `_display` 链（不查 Studio 的对象类接口，因此不带固定令牌以外的第二套鉴权）。
 

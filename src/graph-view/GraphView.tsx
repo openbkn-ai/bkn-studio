@@ -12,7 +12,7 @@ import { DEFAULT_APP_BASENAME } from "@/app/router/app-basename";
 import { getStoredAccessToken } from "@/framework/auth/token-store";
 import { GraphCanvas, type GraphCanvasHandle } from "@/modules/knowledge-network/scenes/graph-explorer/GraphCanvas";
 import { OBJECT_TYPE_PALETTE, type MenuAction } from "@/modules/knowledge-network/scenes/graph-explorer/constants";
-import { buildShareUrl } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
+import { buildShareUrl, combineLinkSource } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
 import { createBknLifecycle, lifecycleEnv, memoryConversationStore, withManagedTurn, type BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { fetchKnDetail, type KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
 import {
@@ -52,7 +52,7 @@ type Status = { kind: "loading" | "ready" | "error"; text: string };
  */
 export function GraphView() {
   const { t } = useTranslation();
-  const [params] = useState<ViewParams>(() => parseViewParams(window.location.search, window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? ""));
+  const [params] = useState<ViewParams>(() => parseViewParams(combineLinkSource(window.location.search, window.location.hash), window.__BKN_GRAPH_VIEW__?.token, getStoredAccessToken() ?? "", window.__BKN_GRAPH_VIEW__?.layout));
   const [status, setStatus] = useState<Status>({ kind: "loading", text: "" });
   const [detail, setDetail] = useState<KnDetail | null>(null);
   const [layout, setLayout] = useState<ExplorerLayout>(params.layout);
@@ -191,11 +191,31 @@ export function GraphView() {
     [t],
   );
   const studioUrl = useMemo(
-    () => buildShareUrl(`${base}${DEFAULT_APP_BASENAME}/knowledge-network/workspace/${params.kn}/graph-explorer`, [...nodesRef.current.keys()], { layout }).url,
+    () =>
+      buildShareUrl(`${base}${DEFAULT_APP_BASENAME}/knowledge-network/workspace/${params.kn}/graph-explorer`, [...nodesRef.current.keys()], {
+        layout,
+        objectTypeIds: (detailRef.current?.object_types ?? []).map((item) => item.id),
+      }).url,
     // The node set is what counts tracks.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [base, params.kn, layout, counts],
   );
+
+  /** One row per object type on the canvas, so the node colours can be read. Recomputed as the graph changes. */
+  const legend = useMemo(() => {
+    const seen = new Map<string, { name: string; count: number }>();
+    for (const node of nodesRef.current.values()) {
+      const entry = seen.get(node.otId);
+      if (entry) entry.count += 1;
+      else seen.set(node.otId, { name: node.otName || node.otId, count: 1 });
+    }
+    return [...seen].map(([otId, item]) => ({ otId, ...item })).sort((a, b) => b.count - a.count);
+    // The node map is a ref; counts is what changes when the graph does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [counts]);
+
+  // The properties worth showing: the backend's own bookkeeping (_display, _instance_id, ...) is noise here.
+  const shownProps = selected ? Object.entries(selected.props).filter(([key]) => !key.startsWith("_")) : [];
 
   const changeLayout = (next: ExplorerLayout) => {
     setLayout(next);
@@ -267,25 +287,46 @@ export function GraphView() {
             }}
           />
         </div>
+        {legend.length > 0 ? (
+          <div className={styles.legend} data-testid="graph-view-legend">
+            {legend.map((item) => (
+              <div key={item.otId} className={styles.legendRow} title={item.otId}>
+                <span className={styles.dot} style={{ background: colorOf(item.otId) }} />
+                <span className={styles.legendName}>{item.name}</span>
+                <span className={styles.legendCount}>{item.count}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {selected ? (
           <aside className={styles.panel} data-testid="graph-view-panel">
             <div className={styles.panelHead}>
-              <span>{selected.display}</span>
-              <button type="button" onClick={() => setSelected(null)}>
-                {t("knowledgeNetwork.graphExplorer.view.close")}
+              <span className={styles.chip} style={{ background: colorOf(selected.otId) }}>
+                {selected.otName}
+              </span>
+              <span className={styles.panelTitle} title={selected.display}>
+                {selected.display}
+              </span>
+              <button type="button" className={styles.close} title={t("knowledgeNetwork.graphExplorer.view.close")} aria-label={t("knowledgeNetwork.graphExplorer.view.close")} onClick={() => setSelected(null)}>
+                ×
               </button>
             </div>
-            <div className={styles.muted}>
-              {selected.otName} · {selected.id}
+            <div className={styles.panelId}>
+              <span className={styles.muted}>{t("knowledgeNetwork.graphExplorer.drawer.instanceId")}</span>
+              <code>{selected.id}</code>
             </div>
-            <dl>
-              {Object.entries(selected.props).map(([key, value]) => (
-                <div key={key} style={{ display: "contents" }}>
-                  <dt>{key}</dt>
-                  <dd>{stringifyValue(value)}</dd>
-                </div>
-              ))}
-            </dl>
+            {shownProps.length === 0 ? (
+              <p className={styles.muted}>{t("knowledgeNetwork.graphExplorer.drawer.empty")}</p>
+            ) : (
+              <dl className={styles.props}>
+                {shownProps.map(([key, value]) => (
+                  <div key={key} className={styles.propRow}>
+                    <dt title={key}>{key}</dt>
+                    <dd>{stringifyValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </aside>
         ) : null}
       </div>

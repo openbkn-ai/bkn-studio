@@ -165,7 +165,7 @@ test("graph explorer end to end", async ({ page, context }) => {
   const seedValue = String(seed.identity[seedField]);
 
   // 3. Filter query for the same instance → id converges, stays 1 node.
-  await explorer.getByRole("tab", { name: /条件查询|Filter query/ }).click();
+  await explorer.getByRole("tab", { name: /^(条件|条件查询|Filter|Filter query)$/ }).click();
   await pickOption(explorer, "graph-explorer-ot-select", OT || seed.otId);
   await pickOption(explorer, "graph-explorer-cond-field", seedField);
   await (await editable(explorer, "graph-explorer-cond-value")).fill(seedValue);

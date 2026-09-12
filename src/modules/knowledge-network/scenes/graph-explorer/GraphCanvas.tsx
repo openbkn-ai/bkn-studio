@@ -5,13 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CanvasEvent, Graph, GraphEvent, NodeEvent, type EdgeData, type IElementEvent, type LayoutOptions, type NodeData } from "@antv/g6";
+import { BaseLayout, CanvasEvent, ExtensionCategory, Graph, GraphEvent, NodeEvent, register, type EdgeData, type GraphData, type IElementEvent, type LayoutOptions, type NodeData } from "@antv/g6";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 import { stringifyValue, type GEdge, type GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
 import type { DragMode, ExplorerLayout, ExplorerShape, NodePosition } from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 import { MENU_ORDER, type MenuAction } from "./constants";
+import { chainPositions } from "./chain-layout";
+import { RING_NODE_SPACING, ringPositions } from "./ring-layout";
 import styles from "./GraphCanvas.module.css";
 
 /** Visual marks layered on top of the data: path endpoints, pinned nodes, and a highlighted chain. */
@@ -84,13 +86,67 @@ function truncate(text: string): string {
 
 const NODE_DIAMETER = 64;
 const NODE_GAP = 24;
-/** Ring radius that fits `count` nodes side by side at NODE_DIAMETER + NODE_GAP. */
-function ringRadiusFor(count: number): number {
-  return (count * (NODE_DIAMETER + NODE_GAP)) / (2 * Math.PI);
+/** Above this the single ring stops fitting a screen and concentric rings take over. */
+const SINGLE_RING_MAX_RADIUS = 1200;
+/** Neighbours on a ring sit side by side, so they need less room than a force layout leaves. */
+const RING_GAP = 8;
+
+/**
+ * Concentric rings, registered as a layout G6 can run. The built-in circular layout draws one
+ * ring however many nodes it holds, and the concentric layout groups by degree, which puts a
+ * star's identical leaves back on a single ring; this fills rings from the inside out.
+ */
+class RingsLayout extends BaseLayout {
+  public id = "rings";
+
+  public execute(model: GraphData): Promise<GraphData> {
+    const nodes = model.nodes ?? [];
+    const points = ringPositions(nodes.length, RING_NODE_SPACING);
+    return Promise.resolve({
+      nodes: nodes.map((node, index) => ({ ...node, style: { ...node.style, x: points[index]?.x ?? 0, y: points[index]?.y ?? 0 } })),
+      edges: model.edges ?? [],
+      combos: model.combos ?? [],
+    });
+  }
+}
+
+register(ExtensionCategory.LAYOUT, "rings", RingsLayout);
+
+/**
+ * Each connected part on its own band, running left to right along the relations. Exploring an
+ * id list tends to produce several short chains that share no node, and a force layout scatters
+ * them; this lets a path read as a line.
+ */
+class ChainsLayout extends BaseLayout {
+  public id = "chains";
+
+  public execute(model: GraphData): Promise<GraphData> {
+    const nodes = model.nodes ?? [];
+    const edges = model.edges ?? [];
+    const points = chainPositions(
+      nodes.map((node) => String(node.id)),
+      edges.map((edge) => ({ source: String(edge.source), target: String(edge.target) })),
+    );
+    return Promise.resolve({
+      nodes: nodes.map((node) => {
+        const point = points.get(String(node.id));
+        return { ...node, style: { ...node.style, x: point?.x ?? 0, y: point?.y ?? 0 } };
+      }),
+      edges,
+      combos: model.combos ?? [],
+    });
+  }
+}
+
+register(ExtensionCategory.LAYOUT, "chains", ChainsLayout);
+
+/** Ring radius that fits `count` nodes side by side at NODE_DIAMETER plus the given gap. */
+function ringRadiusFor(count: number, gap: number = NODE_GAP): number {
+  return (count * (NODE_DIAMETER + gap)) / (2 * Math.PI);
 }
 
 /** Degree per node and the busiest node, read from the current graph data. */
-function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string | null; maxDegree: number } {
+function degreeStats(graph: Graph): { count: number; degree: Map<string, number>; hubId: string | null; maxDegree: number } {
   const degree = new Map<string, number>();
   for (const edge of graph.getEdgeData()) {
     degree.set(String(edge.source), (degree.get(String(edge.source)) ?? 0) + 1);
@@ -104,7 +160,7 @@ function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string
       hubId = id;
     }
   }
-  return { degree, hubId, maxDegree };
+  return { count: graph.getNodeData().length, degree, hubId, maxDegree };
 }
 
 /**
@@ -113,9 +169,11 @@ function degreeStats(graph: Graph): { degree: Map<string, number>; hubId: string
  * degree so a hub's leaves get a ring they fit on; radial takes the same radius per level.
  */
 function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptions {
-  const stats = graph ? degreeStats(graph) : { degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
+  const stats = graph ? degreeStats(graph) : { count: 0, degree: new Map<string, number>(), hubId: null, maxDegree: 0 };
   const clampRadius = (count: number) => Math.min(900, Math.max(180, ringRadiusFor(count)));
   switch (layout) {
+    case "chain":
+      return { type: "chains" };
     case "dagre":
       return { type: "dagre", rankdir: "TB", nodesep: 40, ranksep: 90 };
     case "radial":
@@ -130,7 +188,16 @@ function layoutOptions(layout: ExplorerLayout, graph: Graph | null): LayoutOptio
         nodeSpacing: NODE_GAP,
       };
     case "circular":
-      return { type: "circular" };
+      // Without nodeSpacing the layout sizes the ring to the viewport and stacks the nodes on it;
+      // given the node size it derives the radius from the circumference the nodes actually need.
+      // One ring only while it still fits a screen: past that the ring is thousands of pixels
+      // across with an empty middle, so the nodes go into concentric rings instead (see
+      // RingsLayout; the library's own concentric layout groups by degree and would not split
+      // a star's identical leaves).
+      if (ringRadiusFor(stats.count, RING_GAP) <= SINGLE_RING_MAX_RADIUS) {
+        return { type: "circular", nodeSize: NODE_DIAMETER, nodeSpacing: RING_GAP };
+      }
+      return { type: "rings" };
     case "grid":
       return { type: "grid", preventOverlap: true, nodeSize: NODE_DIAMETER, nodeSpacing: NODE_GAP };
     case "force":
