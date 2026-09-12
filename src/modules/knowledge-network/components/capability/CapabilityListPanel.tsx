@@ -17,13 +17,14 @@ import { Alert, Empty, Input, Table, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { executionFactoryViewPermissionByTab } from "@/modules/execution-factory/permissions";
+import { buildReturnToState } from "@/modules/execution-factory/utils/back-navigation";
 import { CapabilityMountModal } from "@/modules/knowledge-network/components/capability/CapabilityMountModal";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import {
@@ -157,6 +158,7 @@ export function CapabilityListPanel({
 }: CapabilityListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { message, modal, runtimeConfig } = useAppServices();
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
@@ -305,7 +307,8 @@ export function CapabilityListPanel({
         return canViewCapabilityDetail ? (
           <AppButton
             onClick={() => {
-              void navigate(executionFactoryPath(record));
+              // The detail scene's back button returns here rather than to its own list page.
+              void navigate(executionFactoryPath(record), { state: buildReturnToState(location) });
             }}
             type="link"
           >

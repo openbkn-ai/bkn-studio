@@ -8,7 +8,7 @@
 import { Alert, Form, Input, Spin } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ToolDetailSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -32,6 +32,7 @@ import type {
   ToolRunLogEntry,
 } from "@/modules/execution-factory/types/tool";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 import { parseOpenApiEndpointDetail } from "@/modules/execution-factory/utils/openapi-detail";
 
@@ -52,6 +53,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [form] = Form.useForm<ToolFormValues>();
   const [loading, setLoading] = useState(true);
@@ -115,15 +117,14 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
       return;
     }
 
-    // Return where the visitor came from — a knowledge network's capability list links straight
-    // here, and sending it to the toolset's tool list strands them in another module. Skill and MCP
-    // detail already do this; the fixed path stays as the fallback for a direct hit.
-    if (window.history.length > 1) {
-      void navigate(-1);
-      return;
-    }
-
-    void navigate(`/execution-factory/toolboxes/${boxId}/tools`);
+    // The toolset's tool list is this page's parent. A knowledge network's capability list links
+    // straight here and says so in location state, since sending it to the tool list would strand
+    // it in another module. Neither case may use `navigate(-1)`: the tool list answered its own
+    // back the same way and the two pages bounced between each other (#386). `replace` keeps this
+    // page out of the history stack so the browser's back from the parent does not land here.
+    void navigate(readReturnTo(location.state) ?? `/execution-factory/toolboxes/${boxId}/tools`, {
+      replace: true,
+    });
   };
 
   const handleSubmit = async () => {
