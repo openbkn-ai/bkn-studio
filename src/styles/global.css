@@ -954,8 +954,9 @@ select {
 .knowledge-workspace-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   background: var(--color-bg-page);
   width: 100%;
 }
@@ -965,7 +966,7 @@ select {
 }
 
 .knowledge-workspace-shell-immersive .knowledge-workspace-main {
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .knowledge-workspace-topbar {
@@ -1062,6 +1063,7 @@ select {
   flex: 1;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -1071,6 +1073,7 @@ select {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
 }
 
@@ -1079,7 +1082,16 @@ select {
   flex: 1;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
+}
+
+@media (max-width: 1000px) {
+  .knowledge-workspace-main,
+  .knowledge-workspace-main > .ant-app,
+  .knowledge-workspace-scene-host {
+    overflow: auto;
+  }
 }
 
 .workspace-toolbar-main {

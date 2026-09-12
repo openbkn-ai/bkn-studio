@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listAuthorizableObjectsMock = vi.hoisted(() => vi.fn());
 const listUsersMock = vi.hoisted(() => vi.fn());
+const listUsersPageMock = vi.hoisted(() => vi.fn());
 const upsertObjectGrantMock = vi.hoisted(() => vi.fn());
 const capability = vi.hoisted((): { current: string } => ({ current: "available" }));
 
@@ -40,7 +41,10 @@ vi.mock("@/framework/entitlement/RequireEdition", () => ({
 }));
 
 vi.mock("@/modules/system-admin/services/admin.service", () => ({
+  getUser: vi.fn(),
+  listDepartments: vi.fn(() => Promise.resolve([])),
   listUsers: listUsersMock,
+  listUsersPage: listUsersPageMock,
 }));
 
 vi.mock("@/modules/system-admin/services/authz.service", () => ({
@@ -59,6 +63,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     vi.clearAllMocks();
     capability.current = "available";
     listUsersMock.mockResolvedValue([]);
+    listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
     listAuthorizableObjectsMock.mockResolvedValue([
       { id: "catalog-1", name: "Customer data", type: "catalog" },
     ]);
@@ -150,6 +155,10 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     listUsersMock.mockResolvedValue([
       { account: "li.mubai", id: "user-1", name: "Mubai Li" },
     ]);
+    listUsersPageMock.mockResolvedValue({
+      total: 1,
+      users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
+    });
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
 
@@ -170,7 +179,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
-    fireEvent.click(await screen.findByText("Mubai Li (li.mubai)"));
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
     expect(screen.getByText("systemAdmin.objectGrants.summaryReady")).not.toBeNull();
     expect(confirmButton.hasAttribute("disabled")).toBe(false);
@@ -181,6 +190,10 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     listUsersMock.mockResolvedValue([
       { account: "li.mubai", id: "user-1", name: "Mubai Li" },
     ]);
+    listUsersPageMock.mockResolvedValue({
+      total: 1,
+      users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
+    });
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
 
@@ -198,7 +211,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
-    fireEvent.click(await screen.findByText("Mubai Li (li.mubai)"));
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
     const confirmButton = screen.getByRole("button", {
       name: "systemAdmin.objectGrants.confirmGrant",

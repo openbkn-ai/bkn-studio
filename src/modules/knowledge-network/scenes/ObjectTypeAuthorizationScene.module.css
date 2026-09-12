@@ -10,6 +10,9 @@
   --authz-ink: var(--color-text-primary);
   --authz-muted: var(--color-text-secondary);
 
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
   min-width: 0;
 }
 
@@ -27,7 +30,7 @@
 .panel {
   background: var(--color-bg-raised);
   min-height: 520px;
-  padding: 24px;
+  padding: 20px;
 }
 
 .basePanel {
@@ -55,7 +58,7 @@
   display: flex;
   gap: 24px;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .panelIntro h2,
@@ -296,6 +299,21 @@
   padding-top: 12px;
 }
 
+@media (min-width: 1101px) {
+  .baseGrantForm {
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .baseGrantUserField {
+    max-width: none;
+  }
+
+  .baseGrantFooter {
+    grid-column: 1 / -1;
+  }
+}
+
 .baseGrantFooter > span {
   color: var(--authz-muted);
   font-size: 12px;
@@ -442,7 +460,7 @@
 .propertyWorkspace {
   background: var(--color-bg-raised);
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 288px minmax(0, 1fr);
   min-height: 620px;
 }
 
@@ -473,6 +491,13 @@
 
 .subjectRail > :global(.ant-input-affix-wrapper) {
   margin-bottom: 10px;
+}
+
+.subjectUserPicker {
+  flex: 0 0 auto;
+  height: clamp(400px, calc(100dvh - 300px), 540px);
+  min-height: 400px;
+  width: 100%;
 }
 
 .subjectList {
@@ -537,6 +562,10 @@
 .subjectChevron {
   color: var(--color-text-muted);
   font-size: 18px;
+}
+
+.subjectListEmpty {
+  margin-block: 24px;
 }
 
 .matrixArea {
@@ -798,7 +827,7 @@
 
 @media (max-width: 1100px) {
   .propertyWorkspace {
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
   }
 
   .subjectSummary {

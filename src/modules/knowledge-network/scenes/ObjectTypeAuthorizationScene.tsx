@@ -43,6 +43,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { DirectoryUserPicker } from "@/modules/system-admin";
 import { ObjectTypeDataAttributeFormDrawer } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeFormDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
@@ -112,10 +113,6 @@ const PROPERTY_PAGE_SIZE = 50;
 
 function mergeUsers(primary: AdminUser[], secondary: AdminUser[]) {
   return [...new Map([...primary, ...secondary].map((user) => [user.id, user])).values()];
-}
-
-function userLabel(user: AdminUser) {
-  return user.name ? `${user.name}（${user.account}）` : user.account || user.id;
 }
 
 function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
@@ -562,13 +559,10 @@ export function ObjectTypeAuthorizationScene() {
     },
   ];
 
-  const visibleSubjects = useMemo(() => {
+  const visibleRoles = useMemo(() => {
     const keyword = subjectKeyword.trim().toLowerCase();
-    if (subjectType === "user") {
-      return users.filter((user) => `${user.name} ${user.account}`.toLowerCase().includes(keyword));
-    }
     return roles.filter((role) => `${role.name} ${role.description}`.toLowerCase().includes(keyword));
-  }, [roles, subjectKeyword, subjectType, users]);
+  }, [roles, subjectKeyword]);
 
   const isAdminGrantor = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -1049,15 +1043,12 @@ export function ObjectTypeAuthorizationScene() {
             <label htmlFor="object-type-grant-user">
               {t("systemAdmin.objectGrants.grantUserLabel")}
             </label>
-            <Select
-              allowClear
-              aria-label={t("systemAdmin.objectGrants.grantUserLabel")}
+            <DirectoryUserPicker
+              ariaLabel={t("systemAdmin.objectGrants.grantUserLabel")}
               id="object-type-grant-user"
+              initialUsers={users}
               onChange={selectCandidateUser}
-              optionFilterProp="label"
-              options={users.map((user) => ({ label: userLabel(user), value: user.id }))}
               placeholder={t("systemAdmin.objectGrants.addGranteePlaceholder")}
-              showSearch
               value={candidateUserId}
             />
           </div>
@@ -1224,6 +1215,7 @@ export function ObjectTypeAuthorizationScene() {
             confirmDiscard(() => {
               setSubjectType(value as PropertyGrantSubjectType);
               setSubjectId(undefined);
+              setSubjectKeyword("");
               setDraft(new Map());
             })
           }
@@ -1233,41 +1225,60 @@ export function ObjectTypeAuthorizationScene() {
           ]}
           value={subjectType}
         />
-        <Input
-          allowClear
-          onChange={(event) => setSubjectKeyword(event.target.value)}
-          placeholder={t("knowledgeNetwork.propertyAuthorizationSearchSubject")}
-          prefix={<SearchOutlined />}
-          value={subjectKeyword}
-        />
-        <div className={styles.subjectList}>
-          {visibleSubjects.map((record) => {
-            const id = record.id;
-            const selected = id === subjectId;
-            const isRole = subjectType === "role";
-            return (
-              <button
-                className={selected ? styles.subjectItemSelected : styles.subjectItem}
-                key={id}
-                onClick={() => confirmDiscard(() => setSubjectId(id))}
-                type="button"
-              >
-                <Avatar icon={isRole ? <TeamOutlined /> : <UserOutlined />} size={34} />
-                <span>
-                  <strong>{record.name || id}</strong>
-                  <small>
-                    {isRole
-                      ? t("knowledgeNetwork.propertyAuthorizationMemberCount", {
-                          count: (record as AdminRole).accessorIds.length,
-                        })
-                      : (record as AdminUser).account}
-                  </small>
-                </span>
-                <span className={styles.subjectChevron}>›</span>
-              </button>
-            );
-          })}
-        </div>
+        {subjectType === "user" ? (
+          <DirectoryUserPicker
+            ariaLabel={t("knowledgeNetwork.propertyAuthorizationSelectUser")}
+            className={styles.subjectUserPicker}
+            onChange={(nextUserId) => confirmDiscard(() => setSubjectId(nextUserId))}
+            onUsersChange={(selectedUsers) => {
+              if (selectedUsers.length) {
+                setUsers((current) => mergeUsers(current, selectedUsers));
+              }
+            }}
+            presentation="inline"
+            value={subjectId}
+          />
+        ) : (
+          <>
+            <Input
+              allowClear
+              onChange={(event) => setSubjectKeyword(event.target.value)}
+              placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+              prefix={<SearchOutlined />}
+              value={subjectKeyword}
+            />
+            <div className={styles.subjectList}>
+              {visibleRoles.length ? visibleRoles.map((role) => {
+                const selected = role.id === subjectId;
+                return (
+                  <button
+                    className={selected ? styles.subjectItemSelected : styles.subjectItem}
+                    key={role.id}
+                    onClick={() => confirmDiscard(() => setSubjectId(role.id))}
+                    type="button"
+                  >
+                    <Avatar icon={<TeamOutlined />} size={34} />
+                    <span>
+                      <strong>{role.name || role.id}</strong>
+                      <small>
+                        {t("knowledgeNetwork.propertyAuthorizationMemberCount", {
+                          count: role.accessorIds.length,
+                        })}
+                      </small>
+                    </span>
+                    <span className={styles.subjectChevron}>›</span>
+                  </button>
+                );
+              }) : (
+                <Empty
+                  className={styles.subjectListEmpty}
+                  description={t("knowledgeNetwork.propertyAuthorizationRoleEmpty")}
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              )}
+            </div>
+          </>
+        )}
       </aside>
 
       <section className={styles.matrixArea}>

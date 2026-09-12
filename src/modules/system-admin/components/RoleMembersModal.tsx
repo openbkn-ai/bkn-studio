@@ -6,12 +6,11 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Input, Modal, Select, Tag } from "antd";
+import { Input, Modal, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -19,17 +18,16 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   getUser,
-  listUsersPage,
   setRoleMember,
 } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment, AdminRole, RoleMember } from "@/modules/system-admin/types/admin";
 import { deptPath } from "@/modules/system-admin/utils/admin-helpers";
 
+import { DirectoryUserPicker } from "./DirectoryUserPicker";
 import modalStyles from "@/modules/system-admin/components/RoleMembersModal.module.css";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 const DEFAULT_PAGE_SIZE = 5;
-const CANDIDATE_SEARCH_LIMIT = 50;
 
 type RoleMembersModalProps = {
   departments: AdminDepartment[];
@@ -51,17 +49,10 @@ export function RoleMembersModal({
   const [accessorIds, setAccessorIds] = useState<string[]>(role.accessorIds);
   const [userLabels, setUserLabels] = useState<Record<string, string>>({});
   const [candidates, setCandidates] = useState<string[]>([]);
-  const [candidateSearch, setCandidateSearch] = useState("");
-  const [userCandidateOptions, setUserCandidateOptions] = useState<{ label: string; value: string }[]>(
-    [],
-  );
-  const [candidateLoading, setCandidateLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const debouncedCandidateSearch = useDebouncedValue(candidateSearch.trim());
-  const candidateRequestSeq = useRef(0);
   const userLabelRequestSeq = useRef(0);
   const loadedUserLabelIds = useRef(new Set<string>());
 
@@ -72,8 +63,6 @@ export function RoleMembersModal({
       setAccessorIds([]);
       setUserLabels({});
       setCandidates([]);
-      setCandidateSearch("");
-      setUserCandidateOptions([]);
       setMemberSearch("");
       setPage(1);
       loadedUserLabelIds.current = new Set();
@@ -113,43 +102,6 @@ export function RoleMembersModal({
     });
   }, [accessorIds, deptIdSet, open]);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const requestSeq = ++candidateRequestSeq.current;
-    setCandidateLoading(true);
-    void listUsersPage(
-      {
-        limit: CANDIDATE_SEARCH_LIMIT,
-        offset: 0,
-        search: debouncedCandidateSearch || undefined,
-      },
-      { skipErrorToast: true },
-    )
-      .then((result) => {
-        if (requestSeq !== candidateRequestSeq.current) {
-          return;
-        }
-        const accessorIdSet = new Set(accessorIds);
-        setUserCandidateOptions(
-          result.users
-            .filter((user) => !accessorIdSet.has(user.id))
-            .map((user) => ({ label: `${user.name}（${user.account}）`, value: user.id })),
-        );
-      })
-      .catch(() => {
-        if (requestSeq === candidateRequestSeq.current) {
-          setUserCandidateOptions([]);
-        }
-      })
-      .finally(() => {
-        if (requestSeq === candidateRequestSeq.current) {
-          setCandidateLoading(false);
-        }
-      });
-  }, [accessorIds, debouncedCandidateSearch, open]);
-
   const resolveMember = useCallback(
     (id: string): RoleMember => {
       if (deptIdSet.has(id)) {
@@ -163,8 +115,6 @@ export function RoleMembersModal({
   // Users only. bkn-safe accepts a department binding (204) but casbin holds no user→department
   // membership, so the policy never matches at enforce time — the binding looks applied and grants
   // nothing. Departments already bound stay listed, marked as ineffective, so they can be removed.
-  const candidateOptions = useMemo(() => userCandidateOptions, [userCandidateOptions]);
-
   const notifyChanged = useCallback(() => {
     onChanged();
   }, [onChanged]);
@@ -328,16 +278,13 @@ export function RoleMembersModal({
 
         <div className={modalStyles.toolbarCard}>
           <div className={modalStyles.addRow}>
-            <Select
+            <DirectoryUserPicker
               className={modalStyles.memberSelect}
-              filterOption={false}
-              loading={candidateLoading}
+              departments={departments}
+              disabledUserIds={accessorIds}
               mode="multiple"
-              onChange={(values) => setCandidates(values)}
-              onSearch={setCandidateSearch}
-              options={candidateOptions}
+              onChange={setCandidates}
               placeholder={t("systemAdmin.roles.membersModal.addPlaceholder")}
-              showSearch
               value={candidates}
             />
             <AppButton

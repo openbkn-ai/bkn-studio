@@ -230,7 +230,7 @@ export async function listUsers(options?: { skipErrorToast?: boolean }): Promise
   return result.users;
 }
 
-export async function listDepartments(): Promise<AdminDepartment[]> {
+export async function listDepartments(options?: { skipErrorToast?: boolean }): Promise<AdminDepartment[]> {
   if (useMock) {
     const subtreeCounts = computeSubtreeMemberCounts(departments, users);
     return wait(
@@ -243,6 +243,7 @@ export async function listDepartments(): Promise<AdminDepartment[]> {
   }
   const response = await http.get<{ departments?: BackendDept[] }>(`${ADMIN}/departments`, {
     params: { offset: 0, limit: 1000 },
+    skipErrorToast: options?.skipErrorToast,
   });
   return (response.data.departments ?? []).map(mapDept);
 }

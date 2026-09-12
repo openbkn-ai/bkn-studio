@@ -6,29 +6,27 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Input, Modal, Select, Tag } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Input, Modal, Tag } from "antd";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   listDepartmentMembers,
-  listUsersPage,
   setDepartmentMembers,
 } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
 import { deptPath } from "@/modules/system-admin/utils/admin-helpers";
 import { extractSystemAdminErrorMessage } from "@/modules/system-admin/utils/system-admin-error-message";
 
+import { DirectoryUserPicker } from "./DirectoryUserPicker";
 import modalStyles from "@/modules/system-admin/components/DeptMembersModal.module.css";
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 const DEFAULT_MEMBER_PAGE_SIZE = 10;
-const CANDIDATE_SEARCH_LIMIT = 50;
 
 type DeptMembersModalProps = {
   department: AdminDepartment;
@@ -76,11 +74,6 @@ export function DeptMembersModal({
   const [memberSearch, setMemberSearch] = useState("");
   const [memberPage, setMemberPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(DEFAULT_MEMBER_PAGE_SIZE);
-  const [candidateSearch, setCandidateSearch] = useState("");
-  const [candidateOptions, setCandidateOptions] = useState<{ label: string; value: string }[]>([]);
-  const [candidateLoading, setCandidateLoading] = useState(false);
-  const debouncedCandidateSearch = useDebouncedValue(candidateSearch.trim());
-  const candidateRequestSeq = useRef(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,9 +89,7 @@ export function DeptMembersModal({
   useEffect(() => {
     if (open) {
       setMemberSearch("");
-      setCandidateSearch("");
       setCandidates([]);
-      setCandidateOptions([]);
       setMemberPage(1);
       setMemberPageSize(DEFAULT_MEMBER_PAGE_SIZE);
       void load();
@@ -106,42 +97,6 @@ export function DeptMembersModal({
   }, [load, open]);
 
   const memberIdSet = useMemo(() => new Set(members.map((user) => user.id)), [members]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const requestSeq = ++candidateRequestSeq.current;
-    setCandidateLoading(true);
-    void listUsersPage(
-      {
-        limit: CANDIDATE_SEARCH_LIMIT,
-        offset: 0,
-        search: debouncedCandidateSearch || undefined,
-      },
-      { skipErrorToast: true },
-    )
-      .then((result) => {
-        if (requestSeq !== candidateRequestSeq.current) {
-          return;
-        }
-        setCandidateOptions(
-          result.users
-            .filter((user) => !memberIdSet.has(user.id))
-            .map((user) => ({ label: `${user.name}（${user.account}）`, value: user.id })),
-        );
-      })
-      .catch(() => {
-        if (requestSeq === candidateRequestSeq.current) {
-          setCandidateOptions([]);
-        }
-      })
-      .finally(() => {
-        if (requestSeq === candidateRequestSeq.current) {
-          setCandidateLoading(false);
-        }
-      });
-  }, [debouncedCandidateSearch, memberIdSet, open]);
 
   const filteredMembers = useMemo(() => {
     const keyword = memberSearch.trim().toLowerCase();
@@ -313,17 +268,14 @@ export function DeptMembersModal({
         {t("systemAdmin.users.deptMembers.memberCount", { count: members.length })}
       </p>
       <div className={modalStyles.toolbar}>
-        <Select
+        <DirectoryUserPicker
           className={modalStyles.memberSelect}
+          departments={departments}
           disabled={saving}
-          filterOption={false}
-          loading={candidateLoading}
+          disabledUserIds={[...memberIdSet]}
           mode="multiple"
-          onChange={(values) => setCandidates(values)}
-          onSearch={setCandidateSearch}
-          options={candidateOptions}
+          onChange={setCandidates}
           placeholder={t("systemAdmin.users.deptMembers.addPlaceholder")}
-          showSearch
           value={candidates}
         />
         <AppButton
