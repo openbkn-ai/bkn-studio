@@ -127,3 +127,35 @@ describe("action-type.service - listKnowledgeNetworkActionTypeExecutionResults",
     ).rejects.toBe(serverError);
   });
 });
+
+describe("action-type.service - getKnowledgeNetworkActionTypeExecutionLogDetail", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps how many results the execution has beyond the embedded first page", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        id: "exec-1",
+        results: [{ _display: "Order 1", status: "success" }],
+        results_total: 8808,
+        status: "completed",
+      },
+    });
+    const { getKnowledgeNetworkActionTypeExecutionLogDetail } = await import(
+      "@/modules/knowledge-network/services/action-type.service"
+    );
+
+    const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail("kn-1", "exec-1");
+
+    expect(detail?.results).toHaveLength(1);
+    expect(detail?.resultsTotal).toBe(8808);
+  });
+});
+

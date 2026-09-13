@@ -296,7 +296,17 @@ export function ActionTypeTaskManagementPanel({
 
   const shownResultRows = embeddedResults ? embeddedResults.rows : resultRows;
   const shownResultTotal = embeddedResults ? embeddedResults.total : Math.min(resultTotal, RESULT_WINDOW);
-  const resultWindowExceeded = !embeddedResults && resultTotal > RESULT_WINDOW;
+
+  // Say so when only part of the results can be browsed: past the endpoint's window, or, without
+  // the endpoint, beyond the first page the detail response embeds.
+  const embeddedResultCount = currentLog?.results?.length ?? 0;
+  const browsableResults = embeddedResults
+    ? (currentLog?.resultsTotal ?? 0) > embeddedResultCount
+      ? { count: embeddedResultCount, total: currentLog?.resultsTotal ?? 0 }
+      : null
+    : resultTotal > RESULT_WINDOW
+      ? { count: RESULT_WINDOW, total: resultTotal }
+      : null;
 
   const confirmCancel = (record: ActionTypeExecutionLog) => {
     void modal.confirm({
@@ -517,12 +527,9 @@ export function ActionTypeTaskManagementPanel({
                 value={resultStatus}
               />
             </div>
-            {resultWindowExceeded ? (
+            {browsableResults ? (
               <div className={styles.resultHint}>
-                {t("knowledgeNetwork.actionTypeExecutionResultWindowHint", {
-                  count: RESULT_WINDOW,
-                  total: resultTotal,
-                })}
+                {t("knowledgeNetwork.actionTypeExecutionResultWindowHint", browsableResults)}
               </div>
             ) : null}
             <Table<ActionTypeExecutionLogResultItem>

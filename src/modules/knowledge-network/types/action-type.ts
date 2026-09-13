@@ -161,6 +161,8 @@ export type ActionTypeExecutionLogDetail = ActionTypeExecutionLog & {
   endTime?: string;
   executorName?: string;
   results?: ActionTypeExecutionLogResultItem[];
+  /** How many results the execution has; `results` holds only the detail response's first page. */
+  resultsTotal?: number;
 };
 
 export type ActionTypeExecutionLogListResult = {

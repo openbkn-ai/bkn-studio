@@ -34,6 +34,7 @@ export type BackendActionExecutionLog = {
   failed_count?: number;
   id: string;
   results?: BackendActionExecutionResult[];
+  results_total?: number;
   start_time?: number;
   status?: ActionTypeExecutionStatus;
   success_count?: number;
@@ -94,6 +95,7 @@ export function mapActionTypeExecutionLogDetail(
     endTime: item.end_time ? formatTimestamp(item.end_time) : undefined,
     executorName: item.executor?.name ?? item.executor?.id,
     results: mapExecutionLogResults(item.results),
+    resultsTotal: item.results_total,
   };
 }
 

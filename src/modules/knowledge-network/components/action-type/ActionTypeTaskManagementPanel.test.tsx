@@ -165,6 +165,20 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     await within(resultTable()).findByText("embedded-1");
     expect(within(resultTable()).getByText("embedded-2")).toBeTruthy();
     expect(mocks.results).toHaveBeenCalledTimes(1);
+    // Every result the execution has is embedded, so nothing is out of reach.
+    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionResultWindowHint")).toBeNull();
+  }, 15_000);
+
+  it("says only the embedded first page can be browsed when the endpoint is missing", async () => {
+    mocks.results.mockResolvedValue(null);
+    mocks.detail.mockResolvedValue({ ...detail, resultsTotal: 250 });
+
+    await openDetail();
+
+    await within(resultTable()).findByText("embedded-1");
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionResultWindowHint")).toBeTruthy();
+    // Paging still covers only what can be fetched: the two embedded rows fit on one page.
+    expect(within(resultTable()).queryByTitle("2")).toBeNull();
   }, 15_000);
 
   it("labels cancelled and pending results instead of reporting them as failed", async () => {
