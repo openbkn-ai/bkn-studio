@@ -384,6 +384,8 @@ describe("CapabilityMountModal availability", () => {
         "knowledgeNetwork.capabilityPickerReasonLoadFailed",
       ),
     ).toBeNull();
+    // The error the failed read raised is retracted with it; nothing on screen still says it failed.
+    expect(screen.queryByText("gateway timeout")).toBeNull();
 
     fireEvent.click(checkbox("dataset_function"));
     await waitFor(() => expect(confirmButton()).toHaveProperty("disabled", false));

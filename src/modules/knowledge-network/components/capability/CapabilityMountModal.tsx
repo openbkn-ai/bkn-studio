@@ -128,7 +128,10 @@ export function CapabilityMountModal({
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<RequestErrorDetails | null>(null);
+  // `boxId` marks an error raised by that container's failed read, which a later read retracts.
+  const [error, setError] = useState<{ boxId?: string; details: RequestErrorDetails } | null>(
+    null,
+  );
   const [skills, setSkills] = useState<SkillRecord[]>([]);
   const [boxes, setBoxes] = useState<PickerContainer[]>([]);
   const [toolsByBox, setToolsByBox] = useState<Record<string, PickerTool[]>>({});
@@ -189,7 +192,7 @@ export function CapabilityMountModal({
           );
         }
       } catch (requestError) {
-        setError(extractRequestErrorDetails(requestError));
+        setError({ details: extractRequestErrorDetails(requestError) });
       } finally {
         setLoading(false);
       }
@@ -282,10 +285,12 @@ export function CapabilityMountModal({
       ),
     );
     setFailedBoxIds((current) => current.filter((id) => id !== containerId));
-    // A read that now succeeded retracts the "failed to load" it left in the notice.
+    // A read that now succeeded retracts what its earlier failure left on screen: the "failed to
+    // load" in the notice and the request error itself. Errors from anything else stay.
     setDeselected((current) =>
       current.filter((item) => !(item.key === containerId && item.reason === "loadFailed")),
     );
+    setError((current) => (current?.boxId === containerId ? null : current));
   }, []);
 
   /**
@@ -326,7 +331,7 @@ export function CapabilityMountModal({
         } catch (requestError) {
           setFailedBoxIds((current) => [...new Set([...current, boxId])]);
           setExpandedKeys((current) => current.filter((key) => key !== `${BOX_KEY_PREFIX}${boxId}`));
-          setError(extractRequestErrorDetails(requestError));
+          setError({ boxId, details: extractRequestErrorDetails(requestError) });
         } finally {
           loadingBoxes.current.delete(boxId);
         }
@@ -743,7 +748,7 @@ export function CapabilityMountModal({
       await onSubmit(inputs);
     } catch (requestError) {
       const details = extractRequestErrorDetails(requestError);
-      setError(details);
+      setError({ details });
       // Something picked changed after the picker read it. Re-read what was picked: the
       // reconciliation then unticks whatever is no longer mountable and names it with the reason.
       if (!isSkill && details.code && TARGET_STATE_ERROR_CODES.has(details.code)) {
@@ -825,7 +830,7 @@ export function CapabilityMountModal({
         {error ? (
           <RequestErrorAlert
             autoDismissMs={0}
-            error={error}
+            error={error.details}
             onDismiss={() => setError(null)}
           />
         ) : null}
