@@ -134,11 +134,27 @@ export type ActionTypeExecutionLogQuery = {
   triggerType?: string;
 };
 
+export type ActionTypeExecutionLogResultStatus = "cancelled" | "failed" | "pending" | "success";
+
 export type ActionTypeExecutionLogResultItem = {
   displayName?: string;
   durationMs?: number;
   errorMessage?: string;
-  status: "failed" | "success";
+  status: ActionTypeExecutionLogResultStatus;
+};
+
+/** Results the results endpoint can filter by; an empty value means every status. */
+export type ActionTypeExecutionResultStatusFilter = "" | "cancelled" | "failed" | "success";
+
+export type ActionTypeExecutionResultQuery = {
+  limit: number;
+  offset: number;
+  status?: ActionTypeExecutionResultStatusFilter;
+};
+
+export type ActionTypeExecutionResultPage = {
+  entries: ActionTypeExecutionLogResultItem[];
+  totalCount: number;
 };
 
 export type ActionTypeExecutionLogDetail = ActionTypeExecutionLog & {

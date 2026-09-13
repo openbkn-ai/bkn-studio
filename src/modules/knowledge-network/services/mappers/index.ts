@@ -541,6 +541,8 @@ export {
 } from "./action-type.mapper";
 export {
   buildActionExecutionLogQueryParams,
+  buildActionExecutionResultQueryParams,
   mapActionTypeExecutionLogDetail,
   mapActionTypeExecutionLogList,
+  mapActionTypeExecutionResultPage,
 } from "./action-execution.mapper";

@@ -8,9 +8,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const postMock = vi.hoisted(() => vi.fn());
+const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: vi.fn(), post: postMock },
+  http: { get: getMock, post: postMock },
 }));
 
 describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
@@ -57,5 +58,72 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
       "/ontology-query/v1/knowledge-networks/kn-1/action-types/action-1/execute",
       {},
     );
+  });
+});
+
+describe("action-type.service - listKnowledgeNetworkActionTypeExecutionResults", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("requests one page of results filtered by status and maps it", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ _display: "Order 21", duration_ms: 12, error_message: "timeout", status: "failed" }],
+        total_count: 3,
+      },
+    });
+    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
+      "@/modules/knowledge-network/services/action-type.service"
+    );
+
+    const page = await listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", {
+      limit: 20,
+      offset: 20,
+      status: "failed",
+    });
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/ontology-query/v1/knowledge-networks/kn-1/action-logs/exec-1/results",
+      { params: { limit: 20, offset: 20, status: "failed" } },
+    );
+    expect(page).toEqual({
+      entries: [{ displayName: "Order 21", durationMs: 12, errorMessage: "timeout", status: "failed" }],
+      totalCount: 3,
+    });
+  });
+
+  it("does not send an empty status filter", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
+      "@/modules/knowledge-network/services/action-type.service"
+    );
+
+    await listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", { limit: 20, offset: 0, status: "" });
+
+    expect(getMock).toHaveBeenCalledWith(expect.any(String), { params: { limit: 20, offset: 0 } });
+  });
+
+  it("resolves to null when the backend has no results endpoint, and rethrows other errors", async () => {
+    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
+      "@/modules/knowledge-network/services/action-type.service"
+    );
+
+    getMock.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
+    await expect(
+      listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", { limit: 20, offset: 0 }),
+    ).resolves.toBeNull();
+
+    const serverError = { isAxiosError: true, response: { status: 500 } };
+    getMock.mockRejectedValueOnce(serverError);
+    await expect(
+      listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", { limit: 20, offset: 0 }),
+    ).rejects.toBe(serverError);
   });
 });
