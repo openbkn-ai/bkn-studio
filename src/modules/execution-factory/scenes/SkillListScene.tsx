@@ -28,6 +28,7 @@ import {
 } from "@/modules/execution-factory/services/skill.service";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { resolveStatusChangeOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 
 import styles from "./execution-factory-list.module.css";
 
@@ -91,7 +92,7 @@ export function SkillListScene() {
         name: record.name,
         status: t(`executionFactory.skillStatuses.${status}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveStatusChangeOkTextKey(status)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         await updateSkillStatus(record.skillId, status);
