@@ -119,7 +119,9 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
     try {
       await loadRecord();
       try {
-        const nextTools = await listMcpTools(mcpId);
+        // Outside the catalog this page shows the config and debugs its draft, so it lists the
+        // draft too; while the server is editing, the default listing is the release.
+        const nextTools = await listMcpTools(mcpId, { draft: !catalogContext });
         setTools(nextTools);
         setSelectedTool(nextTools[0] ?? null);
       } catch (error) {
@@ -134,7 +136,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
     } finally {
       setLoading(false);
     }
-  }, [loadRecord, mcpId]);
+  }, [catalogContext, loadRecord, mcpId]);
 
   useEffect(() => {
     void loadTools();
