@@ -6,9 +6,9 @@
  */
 
 // Object types available for object-level grants, aligned with bkn-safe's type vocabulary in
-// section 3 of frontend-object-grants-integration.md. Grants apply to a complete object instance,
-// such as a whole Catalog, not individual data resources. Type labels and operation vocabulary
-// reuse resource-catalog.
+// section 3 of frontend-object-grants-integration.md. Model access is a platform
+// baseline and is intentionally absent: it cannot be configured as an object grant.
+// Type labels and operation vocabulary reuse resource-catalog.
 import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 export const AUTHZ_OBJECT_TYPES = [
@@ -21,8 +21,6 @@ export const AUTHZ_OBJECT_TYPES = [
   "action_type",
   "metric",
   "risk_type",
-  "small_model",
-  "large_model",
   "operator",
   "tool_box",
   "mcp",
@@ -50,10 +48,8 @@ export const COMMUNITY_OBJECT_GRANT_TYPES = [
   "skill",
 ] as const;
 
-/** Filterable grant types for the fine-grained editions; retired model grants stay readable only. */
-export const FINE_GRAINED_OBJECT_FILTER_TYPES = AUTHZ_OBJECT_TYPES.filter(
-  (type) => type !== "small_model" && type !== "large_model",
-);
+/** Filterable grant types for the fine-grained editions. */
+export const FINE_GRAINED_OBJECT_FILTER_TYPES = AUTHZ_OBJECT_TYPES;
 
 /** Type-level operations hidden by the object-grant UI because they are meaningless on concrete instances. */
 export const HIDDEN_INSTANCE_OPS = new Set(["create"]);
