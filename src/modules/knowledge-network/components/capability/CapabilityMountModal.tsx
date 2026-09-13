@@ -137,7 +137,8 @@ export function CapabilityMountModal({
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
-  const loadingBoxIds = useRef(new Set<string>());
+  /** Reads in flight, so a second caller waits on the same read instead of starting another. */
+  const loadingBoxes = useRef(new Map<string, Promise<void>>());
 
   useEffect(() => {
     if (!open) {
@@ -216,13 +217,12 @@ export function CapabilityMountModal({
     [isToolMounted],
   );
 
-  /** Why a container cannot be ticked as a whole, or null when it can. */
+  /**
+   * Why a container cannot be ticked as a whole, or null when it can. A failed read is not one of
+   * these: it says nothing about the container, so the row stays tickable and ticking it reads again.
+   */
   const containerReason = useCallback(
-    (container: PickerContainer): PickerReason | null => {
-      if (failedBoxIds.includes(container.id)) {
-        return "loadFailed";
-      }
-
+    (container: PickerContainer): PickerBlockReason | null => {
       const tools = toolsByBox[container.id];
       const blocked = containerBlockReason(container, tools);
       if (blocked) {
@@ -232,7 +232,7 @@ export function CapabilityMountModal({
       // Everything it could add is already here; ticking it would mount nothing.
       return tools && mountableToolKeys(container, tools).length === 0 ? "mounted" : null;
     },
-    [failedBoxIds, mountableToolKeys, toolsByBox],
+    [mountableToolKeys, toolsByBox],
   );
 
   const reasonLabel = useCallback(
@@ -282,34 +282,58 @@ export function CapabilityMountModal({
       ),
     );
     setFailedBoxIds((current) => current.filter((id) => id !== containerId));
+    // A read that now succeeded retracts the "failed to load" it left in the notice.
+    setDeselected((current) =>
+      current.filter((item) => !(item.key === containerId && item.reason === "loadFailed")),
+    );
   }, []);
 
+  /**
+   * Reads a container's tools once; a caller arriving while the read is in flight gets that read.
+   * The tree depends on this: it re-asks for an expanded, unloaded node on every render until the
+   * returned promise settles, so answering "already loading" with an immediate resolve would spin.
+   *
+   * A failed read leaves the container unread rather than empty, so it can be read again: ticking
+   * the row or expanding it retries. The node is collapsed on failure for the same reason as above —
+   * an expanded node the tree does not consider loaded would be retried on every render.
+   */
   const loadBoxTools = useCallback(
-    async (boxId: string) => {
-      if (toolsByBox[boxId] || loadingBoxIds.current.has(boxId)) {
-        return;
+    (boxId: string): Promise<void> => {
+      const inFlight = loadingBoxes.current.get(boxId);
+      if (inFlight) {
+        return inFlight;
       }
 
-      loadingBoxIds.current.add(boxId);
-      try {
-        const loaded = await fetchContainer(boxId);
-        applyContainer(boxId, loaded);
-        // A box checked before its tools arrived still means "all of them": tick them on arrival,
-        // otherwise expanding a checked box shows every child unticked. A box that turns out to
-        // hold nothing mountable is unticked by the reconciliation below, which also says why.
-        const childKeys = mountableToolKeys({ id: boxId, status: loaded.status }, loaded.tools);
-        setCheckedKeys((current) =>
-          current.includes(`${BOX_KEY_PREFIX}${boxId}`)
-            ? [...new Set([...current, ...childKeys])]
-            : current,
-        );
-      } catch (requestError) {
-        setToolsByBox((current) => ({ ...current, [boxId]: [] }));
-        setFailedBoxIds((current) => [...new Set([...current, boxId])]);
-        setError(extractRequestErrorDetails(requestError));
-      } finally {
-        loadingBoxIds.current.delete(boxId);
+      if (toolsByBox[boxId]) {
+        return Promise.resolve();
       }
+
+      setFailedBoxIds((current) => current.filter((id) => id !== boxId));
+      const read = (async () => {
+        try {
+          const loaded = await fetchContainer(boxId);
+          applyContainer(boxId, loaded);
+          // A box checked before its tools arrived still means "all of them": tick them on
+          // arrival, otherwise expanding a checked box shows every child unticked. A box that
+          // turns out to hold nothing mountable is unticked by the reconciliation below, which
+          // also says why.
+          const childKeys = mountableToolKeys({ id: boxId, status: loaded.status }, loaded.tools);
+          setCheckedKeys((current) =>
+            current.includes(`${BOX_KEY_PREFIX}${boxId}`)
+              ? [...new Set([...current, ...childKeys])]
+              : current,
+          );
+        } catch (requestError) {
+          setFailedBoxIds((current) => [...new Set([...current, boxId])]);
+          setExpandedKeys((current) => current.filter((key) => key !== `${BOX_KEY_PREFIX}${boxId}`));
+          setError(extractRequestErrorDetails(requestError));
+        } finally {
+          loadingBoxes.current.delete(boxId);
+        }
+      })();
+      loadingBoxes.current.set(boxId, read);
+
+      return read;
     },
     [applyContainer, fetchContainer, mountableToolKeys, toolsByBox],
   );
@@ -370,6 +394,13 @@ export function CapabilityMountModal({
         return true;
       }
 
+      // A ticked box whose read failed would hold submit forever; drop it and say so. Ticking it
+      // again reads it again.
+      if (isBoxKey && failedBoxIds.includes(boxId)) {
+        dropped.set(boxId, { key: boxId, label: box.name, reason: "loadFailed" });
+        return false;
+      }
+
       // A tool under a box that cannot be used at all is reported once, as that box.
       const boxReason = containerReason(box);
       if (isBoxKey || (boxReason && boxReason !== "mounted")) {
@@ -413,7 +444,7 @@ export function CapabilityMountModal({
       ...current.filter((item) => !dropped.has(item.key)),
       ...dropped.values(),
     ]);
-  }, [boxes, checkedKeys, containerReason, isToolMounted, toolsByBox]);
+  }, [boxes, checkedKeys, containerReason, failedBoxIds, isToolMounted, toolsByBox]);
 
   /**
    * The tree is checked strictly so that a box and its tools stay distinguishable — a checked box
@@ -494,9 +525,11 @@ export function CapabilityMountModal({
       });
 
       if (checked) {
-        void loadManyBoxTools(
-          tickableBoxes.filter((box) => !toolsByBox[box.id]).map((box) => box.id),
-        );
+        const unread = tickableBoxes.filter((box) => !toolsByBox[box.id]).map((box) => box.id);
+        // Reads beyond the first few start later; clear earlier failures now, or the reconciliation
+        // would untick those boxes as failed before their retry even began.
+        setFailedBoxIds((current) => current.filter((id) => !unread.includes(id)));
+        void loadManyBoxTools(unread);
       }
     },
     [loadManyBoxTools, mountableToolKeys, tickableBoxes, toolsByBox, visibleBoxes],
@@ -618,6 +651,8 @@ export function CapabilityMountModal({
                 <Tag color={boxReason === "mounted" ? undefined : "warning"}>
                   {reasonLabel(boxReason)}
                 </Tag>
+              ) : failedBoxIds.includes(box.id) ? (
+                <Tag color="warning">{reasonLabel("loadFailed")}</Tag>
               ) : null}
               {countLabel ? <span className={styles.pickerHint}>{countLabel}</span> : null}
             </span>
@@ -626,7 +661,22 @@ export function CapabilityMountModal({
 
       return nodes;
     }, []);
-  }, [containerReason, isToolMounted, keyword, reasonLabel, t, toolsByBox, visibleBoxes]);
+  }, [
+    containerReason,
+    failedBoxIds,
+    isToolMounted,
+    keyword,
+    reasonLabel,
+    t,
+    toolsByBox,
+    visibleBoxes,
+  ]);
+
+  // Only a successful read counts as loaded, so a node whose read failed is read again on expand.
+  const loadedBoxKeys = useMemo(
+    () => Object.keys(toolsByBox).map((boxId) => `${BOX_KEY_PREFIX}${boxId}`),
+    [toolsByBox],
+  );
 
   const checkedBoxIds = checkedKeys
     .filter((key) => key.startsWith(BOX_KEY_PREFIX))
@@ -872,6 +922,7 @@ export function CapabilityMountModal({
                   loadData={(node) =>
                     loadBoxTools(String(node.key).slice(BOX_KEY_PREFIX.length))
                   }
+                  loadedKeys={loadedBoxKeys}
                   onCheck={(keys) => {
                     const checked = Array.isArray(keys) ? keys : keys.checked;
                     handleCheck(checked.map(String));

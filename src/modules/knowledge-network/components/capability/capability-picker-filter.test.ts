@@ -83,12 +83,14 @@ describe("containerBlockReason", () => {
     );
   });
 
-  it("refuses a toolset the catalogue reported empty, without reading it", () => {
-    expect(containerBlockReason({ ...box, toolCount: 0 }, undefined)).toBe("noTools");
+  it("leaves an unread toolset to its read, even one the catalogue listed as empty", () => {
+    // The listing's count is derived from a field it may omit; it is shown, never trusted to lock.
+    expect(containerBlockReason(box, undefined)).toBeNull();
+    expect(containerBlockReason({ ...box, toolCount: 0 }, undefined)).toBeNull();
   });
 
-  it("gives a toolset that reported tools the benefit of the doubt until they are read", () => {
-    expect(containerBlockReason(box, undefined)).toBeNull();
+  it("refuses a toolset whose read found no tools", () => {
+    expect(containerBlockReason(box, [])).toBe("noTools");
   });
 
   it("refuses a toolset whose only tools are disabled — the whole-box mount the backend 400s", () => {

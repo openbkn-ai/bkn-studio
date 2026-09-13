@@ -13,9 +13,9 @@
 export type PickerTool = { description?: string; id: string; name: string; status?: string };
 
 /**
- * `status` is the toolset's lifecycle state and `toolCount` what the catalogue listing reported;
- * both are absent for an MCP Server, which the picker only lists once published and whose tools it
- * only learns by asking the Server.
+ * `status` is the toolset's lifecycle state and `toolCount` what the catalogue listing reported
+ * (for display only); both are absent for an MCP Server, which the picker only lists once published
+ * and whose tools it only learns by asking the Server.
  */
 export type PickerContainer = { id: string; name: string; status?: string; toolCount?: number };
 
@@ -49,9 +49,9 @@ export function toolBlockReason(
 }
 
 /**
- * Whether the container as a whole can be picked. Before its tools are loaded only the catalogue's
- * word is available, so a toolset that reported tools is given the benefit of the doubt until they
- * are read — the picker reads them the moment the toolset is ticked.
+ * Whether the container as a whole can be picked. Until its tools are read only its own status is
+ * judged: the catalogue's tool count is derived from a listing field and only ever displayed, so it
+ * is not trusted to lock a row. The picker reads the tools the moment the container is ticked.
  */
 export function containerBlockReason(
   container: PickerContainer,
@@ -62,7 +62,7 @@ export function containerBlockReason(
   }
 
   if (!tools) {
-    return container.toolCount === 0 ? "noTools" : null;
+    return null;
   }
 
   if (tools.length === 0) {

@@ -227,6 +227,12 @@ describe("CapabilityMountModal availability", () => {
     await screen.findByText("dataset_function");
     fireEvent.click(checkbox("dataset_function"));
     expect(confirmButton()).toHaveProperty("disabled", true);
+    // Expanding while that read is in flight joins it instead of starting another.
+    expand("dataset_function");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(mocks.getToolbox).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await Promise.resolve();
@@ -297,7 +303,7 @@ describe("CapabilityMountModal availability", () => {
     expect(treeNode("get_birthday").className).toContain("ant-tree-treenode-disabled");
   });
 
-  it("select-all skips toolsets known to be unmountable", async () => {
+  it("select-all skips unpublished toolsets and drops ones whose read finds nothing", async () => {
     mocks.listToolboxes.mockResolvedValue(
       listing([
         toolbox({}),
@@ -305,14 +311,21 @@ describe("CapabilityMountModal availability", () => {
         toolbox({ boxId: "box-3", name: "empty_box", toolCount: 0 }),
       ]),
     );
-    mocks.getToolbox.mockResolvedValue(
-      toolbox({ tools: [{ name: "get_age", status: "enabled", toolId: "get_age" }] }),
+    mocks.getToolbox.mockImplementation((boxId: string) =>
+      Promise.resolve(
+        boxId === "box-3"
+          ? toolbox({ boxId, name: "empty_box", toolCount: 0, tools: [] })
+          : toolbox({ tools: [{ name: "get_age", status: "enabled", toolId: "get_age" }] }),
+      ),
     );
     const onSubmit = renderPicker();
 
     await screen.findByText("dataset_function");
     fireEvent.click(screen.getByText("knowledgeNetwork.capabilityPickerSelectAll"));
 
+    await screen.findByText(
+      "knowledgeNetwork.capabilityPickerDeselectedItem(empty_box|knowledgeNetwork.capabilityPickerReasonNoTools)",
+    );
     await waitFor(() => expect(confirmButton()).toHaveProperty("disabled", false));
     fireEvent.click(confirmButton());
 
@@ -320,7 +333,65 @@ describe("CapabilityMountModal availability", () => {
     expect(onSubmit.mock.calls[0]?.[0]).toEqual([
       { allTools: true, boxId: "box-1", capabilityType: "function" },
     ]);
-    expect(mocks.getToolbox).toHaveBeenCalledTimes(1);
+    // The unpublished toolset is refused on its status alone, without a read.
+    expect(mocks.getToolbox.mock.calls.map(([boxId]) => boxId as string).sort()).toEqual([
+      "box-1",
+      "box-3",
+    ]);
+  });
+
+  it("keeps a toolset whose read failed tickable, and reads it again when ticked or expanded", async () => {
+    mocks.listToolboxes.mockResolvedValue(listing([toolbox({})]));
+    const loaded = toolbox({ tools: [{ name: "get_age", status: "enabled", toolId: "get_age" }] });
+    mocks.getToolbox
+      .mockRejectedValueOnce(new Error("gateway timeout"))
+      .mockRejectedValueOnce(new Error("gateway timeout"))
+      .mockResolvedValueOnce(loaded);
+    const onSubmit = renderPicker();
+
+    await screen.findByText("dataset_function");
+
+    // A failed tick: unticked with the reason, the row tagged, but its checkbox left usable.
+    fireEvent.click(checkbox("dataset_function"));
+    await screen.findByText(
+      "knowledgeNetwork.capabilityPickerDeselectedItem(dataset_function|knowledgeNetwork.capabilityPickerReasonLoadFailed)",
+    );
+    expect(
+      within(treeNode("dataset_function")).getByText(
+        "knowledgeNetwork.capabilityPickerReasonLoadFailed",
+      ),
+    ).toBeTruthy();
+    expect(checkbox("dataset_function").className).not.toContain("ant-tree-checkbox-disabled");
+    expect(screen.getByText("gateway timeout")).toBeTruthy();
+
+    // A failed expand: the node folds back up rather than sitting open and unloaded.
+    expand("dataset_function");
+    await waitFor(() => expect(mocks.getToolbox).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(treeNode("dataset_function").className).not.toContain("ant-tree-treenode-switcher-open"),
+    );
+
+    // Expanding again reads again, and this time it lands. The tree ignores expand clicks while its
+    // fold animation runs (antd caps it at 500ms), as it would for a person clicking that fast.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    });
+    expand("dataset_function");
+    await screen.findByText("get_age");
+    expect(mocks.getToolbox).toHaveBeenCalledTimes(3);
+    expect(
+      within(treeNode("dataset_function")).queryByText(
+        "knowledgeNetwork.capabilityPickerReasonLoadFailed",
+      ),
+    ).toBeNull();
+
+    fireEvent.click(checkbox("dataset_function"));
+    await waitFor(() => expect(confirmButton()).toHaveProperty("disabled", false));
+    fireEvent.click(confirmButton());
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual([
+      { allTools: true, boxId: "box-1", capabilityType: "function" },
+    ]);
   });
 });
 
