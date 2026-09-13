@@ -463,6 +463,7 @@ export const executionFactoryZhCN = {
     },
     statusChangeConfirmTitle: "更新算子状态",
     statusChangeConfirmDescription: '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    statusChangeConfirmOk: "确认",
     deleteConfirmTitle: "删除算子",
     deleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
     toolboxStatusChangeConfirmTitle: "更新工具箱状态",

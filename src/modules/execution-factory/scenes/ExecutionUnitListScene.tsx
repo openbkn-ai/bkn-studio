@@ -67,6 +67,7 @@ import {
   resolveLifecycleActionStatus,
   resolveListStatusQueries,
 } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
+import { resolveStatusChangeOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import {
   collectLocalResourceIds,
   invalidateLocalResourceIdsCache,
@@ -938,7 +939,7 @@ export function ExecutionUnitListScene({
             </>
           ),
           okButtonProps: options?.danger ? { danger: true } : undefined,
-          okText: t(options?.okTextKey ?? "common.save"),
+          okText: t(options?.okTextKey ?? resolveStatusChangeOkTextKey(nextStatus)),
           cancelText: t("common.cancel"),
           onOk: async () => {
             try {
