@@ -7,17 +7,19 @@
 
 import { Alert, Checkbox, Input, Modal, Table, Tag, Tree } from "antd";
 import type { TableProps, TreeDataNode } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  type RequestErrorDetails,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import { listMcps, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
 import { listSkills } from "@/modules/execution-factory/services/skill.service";
-import { listTools } from "@/modules/execution-factory/services/tool.service";
-import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
+import { getToolbox, listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import type { SkillRecord } from "@/modules/execution-factory/types/skill";
-import type { ToolRecord } from "@/modules/execution-factory/types/tool";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import type {
@@ -26,8 +28,12 @@ import type {
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
+  containerBlockReason,
   filterVisibleContainers,
+  type PickerBlockReason,
+  type PickerContainer,
   type PickerTool,
+  toolBlockReason,
 } from "./capability-picker-filter";
 import styles from "./CapabilityMountModal.module.css";
 
@@ -37,8 +43,46 @@ const PICKER_PAGE_SIZE = 100;
 /** Guards against walking a pathological catalogue; the search box narrows anything beyond it. */
 const PICKER_MAX_PAGES = 5;
 
+/** How many containers select-all reads at once when it ticks ones whose tools are not loaded. */
+const PICKER_LOAD_CONCURRENCY = 4;
+
 const BOX_KEY_PREFIX = "box:";
 const TOOL_KEY_PREFIX = "tool:";
+
+/**
+ * Rejections meaning a picked target is no longer in the state the picker showed — gone,
+ * unpublished, disabled, or left with nothing to mount. The picker re-reads what was picked before
+ * answering, so the answer can name what changed rather than repeat a generic refusal.
+ */
+const TARGET_STATE_ERROR_CODES = new Set([
+  "BknBackend.CapabilityBinding.EmptyToolBox",
+  "BknBackend.CapabilityBinding.TargetNotAvailable",
+  "BknBackend.CapabilityBinding.TargetNotFound",
+]);
+
+/** A load that failed leaves nothing to judge by; it is kept apart from "has no tools". */
+type PickerReason = PickerBlockReason | "loadFailed";
+
+const REASON_LABEL_KEYS: Record<PickerReason, string> = {
+  boxUnpublished: "knowledgeNetwork.capabilityPickerReasonBoxUnpublished",
+  loadFailed: "knowledgeNetwork.capabilityPickerReasonLoadFailed",
+  mounted: "knowledgeNetwork.capabilityPickerMounted",
+  noEnabledTools: "knowledgeNetwork.capabilityPickerReasonNoEnabledTools",
+  noTools: "knowledgeNetwork.capabilityPickerReasonNoTools",
+  notFound: "knowledgeNetwork.capabilityPickerReasonNotFound",
+  toolDisabled: "knowledgeNetwork.capabilityPickerReasonToolDisabled",
+};
+
+type LoadedContainer = { status?: string; tools: PickerTool[] };
+
+type DeselectedItem = { key: string; label: string; reason: PickerReason };
+
+/** Box ids carry no "/", tool names may; split on the first one only. */
+function splitToolRef(ref: string): [string, string] {
+  const slash = ref.indexOf("/");
+
+  return slash < 0 ? [ref, ""] : [ref.slice(0, slash), ref.slice(slash + 1)];
+}
 
 /**
  * The picker needs one flat list to filter and check against, so it walks the pages itself rather
@@ -58,13 +102,6 @@ async function collectPages<T>(
 
   return items;
 }
-
-/**
- * Both tool sources are a container holding named tools, so the tree works off one shape: a toolset
- * with its tools, or an MCP Server with the tools it exposes. What differs is only how a tool is
- * addressed — by tool_id inside a box, by name inside a Server — which is what `id` carries.
- */
-type PickerContainer = { id: string; name: string; toolCount?: number };
 
 type CapabilityMountModalProps = {
   capabilityType: CapabilityType;
@@ -91,13 +128,16 @@ export function CapabilityMountModal({
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestErrorDetails | null>(null);
   const [skills, setSkills] = useState<SkillRecord[]>([]);
   const [boxes, setBoxes] = useState<PickerContainer[]>([]);
   const [toolsByBox, setToolsByBox] = useState<Record<string, PickerTool[]>>({});
+  const [failedBoxIds, setFailedBoxIds] = useState<string[]>([]);
+  const [deselected, setDeselected] = useState<DeselectedItem[]>([]);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [checkedKeys, setCheckedKeys] = useState<string[]>([]);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const loadingBoxIds = useRef(new Set<string>());
 
   useEffect(() => {
     if (!open) {
@@ -110,6 +150,8 @@ export function CapabilityMountModal({
     setCheckedKeys([]);
     setExpandedKeys([]);
     setToolsByBox({});
+    setFailedBoxIds([]);
+    setDeselected([]);
 
     void (async () => {
       setLoading(true);
@@ -140,12 +182,13 @@ export function CapabilityMountModal({
               .map((box: ToolboxRecord) => ({
                 id: box.boxId,
                 name: box.name,
+                status: box.status,
                 toolCount: box.toolCount,
               })),
           );
         }
       } catch (requestError) {
-        setError(extractRequestErrorMessage(requestError));
+        setError(extractRequestErrorDetails(requestError));
       } finally {
         setLoading(false);
       }
@@ -157,54 +200,220 @@ export function CapabilityMountModal({
     [mountedRefs],
   );
 
-  /** Tools a whole-box mount would actually add: the ones this network does not hold yet. */
+  /**
+   * Tools a whole-box mount would actually add: enabled ones in a published box that this network
+   * does not hold yet. The backend's own expansion skips the rest, so ticking them would promise
+   * something the write never delivers.
+   */
   const mountableToolKeys = useCallback(
-    (boxId: string, tools: PickerTool[]) =>
+    (container: Pick<PickerContainer, "id" | "status">, tools: PickerTool[]) =>
       tools
-        .filter((tool) => !isToolMounted(boxId, tool.id))
-        .map((tool) => `${TOOL_KEY_PREFIX}${boxId}/${tool.id}`),
+        .filter(
+          (tool) =>
+            !isToolMounted(container.id, tool.id) && toolBlockReason(container, tool) === null,
+        )
+        .map((tool) => `${TOOL_KEY_PREFIX}${container.id}/${tool.id}`),
     [isToolMounted],
   );
 
+  /** Why a container cannot be ticked as a whole, or null when it can. */
+  const containerReason = useCallback(
+    (container: PickerContainer): PickerReason | null => {
+      if (failedBoxIds.includes(container.id)) {
+        return "loadFailed";
+      }
+
+      const tools = toolsByBox[container.id];
+      const blocked = containerBlockReason(container, tools);
+      if (blocked) {
+        return blocked;
+      }
+
+      // Everything it could add is already here; ticking it would mount nothing.
+      return tools && mountableToolKeys(container, tools).length === 0 ? "mounted" : null;
+    },
+    [failedBoxIds, mountableToolKeys, toolsByBox],
+  );
+
+  const reasonLabel = useCallback(
+    (reason: PickerReason) => t(REASON_LABEL_KEYS[reason]),
+    [t],
+  );
+
+  const fetchContainer = useCallback(
+    async (containerId: string): Promise<LoadedContainer> => {
+      if (isMcp) {
+        const tools = await listMcpTools(containerId);
+
+        return {
+          tools: tools.map((tool) => ({
+            description: tool.description,
+            // An MCP tool is addressed by name; that is what the binding stores.
+            id: tool.name,
+            name: tool.name,
+          })),
+        };
+      }
+
+      // The toolset detail is the read the backend validates a mount against, so the state the
+      // picker shows — toolset published, each tool enabled — is the state the write will find.
+      const box = await getToolbox(containerId, { skipErrorToast: true });
+
+      return {
+        status: box.status,
+        tools: (box.tools ?? []).map((tool) => ({
+          description: tool.description,
+          id: tool.toolId,
+          name: tool.name,
+          status: tool.status,
+        })),
+      };
+    },
+    [isMcp],
+  );
+
+  const applyContainer = useCallback((containerId: string, loaded: LoadedContainer) => {
+    setToolsByBox((current) => ({ ...current, [containerId]: loaded.tools }));
+    setBoxes((current) =>
+      current.map((box) =>
+        box.id === containerId
+          ? { ...box, status: loaded.status ?? box.status, toolCount: loaded.tools.length }
+          : box,
+      ),
+    );
+    setFailedBoxIds((current) => current.filter((id) => id !== containerId));
+  }, []);
+
   const loadBoxTools = useCallback(
     async (boxId: string) => {
-      if (toolsByBox[boxId]) {
+      if (toolsByBox[boxId] || loadingBoxIds.current.has(boxId)) {
         return;
       }
 
+      loadingBoxIds.current.add(boxId);
       try {
-        const items = isMcp
-          ? (await listMcpTools(boxId)).map((tool) => ({
-              description: tool.description,
-              // An MCP tool is addressed by name; that is what the binding stores.
-              id: tool.name,
-              name: tool.name,
-            }))
-          : (
-              await collectPages((page: number) =>
-                listTools(boxId, { page, pageSize: PICKER_PAGE_SIZE }),
-              )
-            ).map((tool: ToolRecord) => ({
-              description: tool.description,
-              id: tool.toolId,
-              name: tool.name,
-              status: tool.status,
-            }));
-        setToolsByBox((current) => ({ ...current, [boxId]: items }));
+        const loaded = await fetchContainer(boxId);
+        applyContainer(boxId, loaded);
         // A box checked before its tools arrived still means "all of them": tick them on arrival,
-        // otherwise expanding a checked box shows every child unticked.
+        // otherwise expanding a checked box shows every child unticked. A box that turns out to
+        // hold nothing mountable is unticked by the reconciliation below, which also says why.
+        const childKeys = mountableToolKeys({ id: boxId, status: loaded.status }, loaded.tools);
         setCheckedKeys((current) =>
           current.includes(`${BOX_KEY_PREFIX}${boxId}`)
-            ? [...new Set([...current, ...mountableToolKeys(boxId, items)])]
+            ? [...new Set([...current, ...childKeys])]
             : current,
         );
       } catch (requestError) {
         setToolsByBox((current) => ({ ...current, [boxId]: [] }));
-        setError(extractRequestErrorMessage(requestError));
+        setFailedBoxIds((current) => [...new Set([...current, boxId])]);
+        setError(extractRequestErrorDetails(requestError));
+      } finally {
+        loadingBoxIds.current.delete(boxId);
       }
     },
-    [isMcp, mountableToolKeys, toolsByBox],
+    [applyContainer, fetchContainer, mountableToolKeys, toolsByBox],
   );
+
+  /** Select-all can tick a whole catalogue; read the unloaded ones a few at a time. */
+  const loadManyBoxTools = useCallback(
+    async (boxIds: string[]) => {
+      let next = 0;
+      const worker = async () => {
+        while (next < boxIds.length) {
+          const boxId = boxIds[next];
+          next += 1;
+          if (boxId) {
+            await loadBoxTools(boxId);
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from({ length: Math.min(PICKER_LOAD_CONCURRENCY, boxIds.length) }, worker),
+      );
+    },
+    [loadBoxTools],
+  );
+
+  /** Re-reads containers even when loaded: used after a rejection, to learn what changed. */
+  const refreshContainers = useCallback(
+    async (containerIds: string[]) => {
+      await Promise.all(
+        containerIds.map(async (containerId) => {
+          try {
+            applyContainer(containerId, await fetchContainer(containerId));
+          } catch {
+            // The rejection itself is already on screen; a failed re-read adds nothing to it.
+          }
+        }),
+      );
+    },
+    [applyContainer, fetchContainer],
+  );
+
+  /**
+   * Everything ticked must still be mountable given what the picker now knows. That knowledge
+   * changes after a tick in two ways — a box's tools arrive after the box was ticked, or a rejected
+   * mount made the picker re-read what was picked — and either can leave a tick on something the
+   * write would refuse. Those ticks are dropped here and listed with the reason, so the selection
+   * never shrinks without saying why.
+   */
+  useEffect(() => {
+    const dropped = new Map<string, DeselectedItem>();
+    const kept = checkedKeys.filter((key) => {
+      const isBoxKey = key.startsWith(BOX_KEY_PREFIX);
+      const [boxId, toolId] = isBoxKey
+        ? [key.slice(BOX_KEY_PREFIX.length), ""]
+        : splitToolRef(key.slice(TOOL_KEY_PREFIX.length));
+      const box = boxes.find((item) => item.id === boxId);
+      if (!box) {
+        return true;
+      }
+
+      // A tool under a box that cannot be used at all is reported once, as that box.
+      const boxReason = containerReason(box);
+      if (isBoxKey || (boxReason && boxReason !== "mounted")) {
+        if (!boxReason) {
+          return true;
+        }
+
+        dropped.set(boxId, { key: boxId, label: box.name, reason: boxReason });
+        return false;
+      }
+
+      const tools = toolsByBox[boxId];
+      if (!tools) {
+        return true;
+      }
+
+      const tool = tools.find((item) => item.id === toolId);
+      const reason: PickerReason | null = !tool
+        ? "notFound"
+        : isToolMounted(boxId, toolId)
+          ? "mounted"
+          : toolBlockReason(box, tool);
+      if (!reason) {
+        return true;
+      }
+
+      dropped.set(`${boxId}/${toolId}`, {
+        key: `${boxId}/${toolId}`,
+        label: `${box.name} / ${tool?.name || toolId}`,
+        reason,
+      });
+      return false;
+    });
+
+    if (dropped.size === 0) {
+      return;
+    }
+
+    setCheckedKeys(kept);
+    setDeselected((current) => [
+      ...current.filter((item) => !dropped.has(item.key)),
+      ...dropped.values(),
+    ]);
+  }, [boxes, checkedKeys, containerReason, isToolMounted, toolsByBox]);
 
   /**
    * The tree is checked strictly so that a box and its tools stay distinguishable — a checked box
@@ -221,7 +430,7 @@ export function CapabilityMountModal({
       boxes.forEach((box) => {
         const boxKey = `${BOX_KEY_PREFIX}${box.id}`;
         const tools = toolsByBox[box.id];
-        const childKeys = mountableToolKeys(box.id, tools ?? []);
+        const childKeys = mountableToolKeys(box, tools ?? []);
 
         if (!previous.has(boxKey) && next.has(boxKey)) {
           childKeys.forEach((key) => next.add(key));
@@ -256,16 +465,24 @@ export function CapabilityMountModal({
     [boxes, keyword, toolsByBox],
   );
 
+  /** Visible containers that can be ticked as a whole; select-all reaches only these. */
+  const tickableBoxes = useMemo(
+    () => visibleBoxes.filter((box) => containerReason(box) === null),
+    [containerReason, visibleBoxes],
+  );
+
   /**
    * The tree's own checkboxes only reach one container at a time, so mounting a whole catalogue
    * would be a click each. This ticks every container the search is showing, or clears those —
-   * anything picked outside the current search stays as it was.
+   * anything picked outside the current search stays as it was. Containers whose tools are not
+   * loaded yet are read now, so any that turn out to hold nothing mountable drop out before submit.
    */
   const toggleAllBoxes = useCallback(
     (checked: boolean) => {
-      const affected = visibleBoxes.flatMap((box) => [
+      const targets = checked ? tickableBoxes : visibleBoxes;
+      const affected = targets.flatMap((box) => [
         `${BOX_KEY_PREFIX}${box.id}`,
-        ...mountableToolKeys(box.id, toolsByBox[box.id] ?? []),
+        ...mountableToolKeys(box, toolsByBox[box.id] ?? []),
       ]);
 
       setCheckedKeys((current) => {
@@ -275,13 +492,19 @@ export function CapabilityMountModal({
 
         return [...new Set([...current, ...affected])];
       });
+
+      if (checked) {
+        void loadManyBoxTools(
+          tickableBoxes.filter((box) => !toolsByBox[box.id]).map((box) => box.id),
+        );
+      }
     },
-    [mountableToolKeys, toolsByBox, visibleBoxes],
+    [loadManyBoxTools, mountableToolKeys, tickableBoxes, toolsByBox, visibleBoxes],
   );
 
   const allBoxesChecked =
-    visibleBoxes.length > 0 &&
-    visibleBoxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
+    tickableBoxes.length > 0 &&
+    tickableBoxes.every((box) => checkedKeys.includes(`${BOX_KEY_PREFIX}${box.id}`));
 
   const someVisibleChecked = visibleBoxes.some(
     (box) =>
@@ -316,7 +539,7 @@ export function CapabilityMountModal({
             return false;
           }
 
-          const childKeys = mountableToolKeys(box.id, toolsByBox[box.id] ?? []);
+          const childKeys = mountableToolKeys(box, toolsByBox[box.id] ?? []);
 
           return childKeys.some((key) => checkedKeys.includes(key));
         })
@@ -342,13 +565,29 @@ export function CapabilityMountModal({
           return nodes;
         }
 
+        const boxReason = containerReason(box);
+        // Count what the person can act on, not only what exists: a toolset of three whose tools
+        // are all disabled mounts nothing, and "3 tools" alone would not say so. An MCP Server's
+        // tools carry no status and its listing no count, so it shows a count once one is known.
+        const countLabel = tools
+          ? tools.some((tool) => tool.status !== undefined)
+            ? t("knowledgeNetwork.capabilityPickerBoxToolCountEnabled", {
+                count: tools.length,
+                enabled: tools.filter((tool) => tool.status === "enabled").length,
+              })
+            : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: tools.length })
+          : box.toolCount === undefined
+            ? null
+            : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: box.toolCount });
+
         nodes.push({
           children: tools
             ? matchedTools.map((tool) => {
                 const mounted = isToolMounted(box.id, tool.id);
+                const blocked = toolBlockReason(box, tool);
 
                 return {
-                  disabled: mounted,
+                  disabled: mounted || blocked !== null,
                   isLeaf: true,
                   key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
                   title: (
@@ -356,6 +595,10 @@ export function CapabilityMountModal({
                       <span>{tool.name || tool.id}</span>
                       {mounted ? (
                         <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
+                      ) : blocked === "toolDisabled" ? (
+                        // An unpublished box already says so on its own row; repeating it on every
+                        // tool beneath would bury the one tag that differs.
+                        <Tag color="warning">{reasonLabel(blocked)}</Tag>
                       ) : null}
                       {tool.description ? (
                         <span className={styles.pickerHint}>{tool.description}</span>
@@ -365,22 +608,25 @@ export function CapabilityMountModal({
                 } satisfies TreeDataNode;
               })
             : undefined,
+          // Only the checkbox: the row can still be expanded to show which tools are unavailable.
+          disableCheckbox: boxReason !== null,
           key: `${BOX_KEY_PREFIX}${box.id}`,
           title: (
             <span className={styles.pickerNode}>
               <span>{box.name}</span>
-              <span className={styles.pickerHint}>
-                {t("knowledgeNetwork.capabilityPickerBoxToolCount", {
-                  count: tools?.length ?? box.toolCount ?? 0,
-                })}
-              </span>
+              {boxReason ? (
+                <Tag color={boxReason === "mounted" ? undefined : "warning"}>
+                  {reasonLabel(boxReason)}
+                </Tag>
+              ) : null}
+              {countLabel ? <span className={styles.pickerHint}>{countLabel}</span> : null}
             </span>
           ),
       });
 
       return nodes;
     }, []);
-  }, [isToolMounted, keyword, t, toolsByBox, visibleBoxes]);
+  }, [containerReason, isToolMounted, keyword, reasonLabel, t, toolsByBox, visibleBoxes]);
 
   const checkedBoxIds = checkedKeys
     .filter((key) => key.startsWith(BOX_KEY_PREFIX))
@@ -390,7 +636,11 @@ export function CapabilityMountModal({
     .filter((key) => key.startsWith(TOOL_KEY_PREFIX))
     .map((key) => key.slice(TOOL_KEY_PREFIX.length))
     // A whole-box mount already covers every tool in it; sending both would be redundant.
-    .filter((ref) => !checkedBoxIds.includes(ref.split("/")[0] ?? ""));
+    .filter((ref) => !checkedBoxIds.includes(splitToolRef(ref)[0]));
+
+  // A ticked box is sent as "all of its tools", which the backend refuses outright when none can be
+  // mounted. Until its tools are read that cannot be ruled out, so submit waits for the read.
+  const checkingBoxes = !isSkill && checkedBoxIds.some((boxId) => !toolsByBox[boxId]);
 
   // Count tools, not nodes: a checked box stands for the tools it will mount. Boxes whose tools have
   // not been fetched yet fall back to the count the catalogue reported.
@@ -423,15 +673,37 @@ export function CapabilityMountModal({
         capabilityType,
       })),
       ...checkedToolRefs.map((ref) => {
-        const [boxId, toolId] = ref.split("/");
+        const [boxId, toolId] = splitToolRef(ref);
 
         return {
-          boxId: boxId ?? "",
-          capabilityId: toolId ?? "",
+          boxId,
+          capabilityId: toolId,
           capabilityType,
         };
       }),
     ];
+  };
+
+  const submit = async () => {
+    setSubmitting(true);
+    setError(null);
+    setDeselected([]);
+    const inputs = buildInputs();
+    try {
+      await onSubmit(inputs);
+    } catch (requestError) {
+      const details = extractRequestErrorDetails(requestError);
+      setError(details);
+      // Something picked changed after the picker read it. Re-read what was picked: the
+      // reconciliation then unticks whatever is no longer mountable and names it with the reason.
+      if (!isSkill && details.code && TARGET_STATE_ERROR_CODES.has(details.code)) {
+        await refreshContainers([
+          ...new Set(inputs.map((input) => input.boxId ?? "").filter(Boolean)),
+        ]);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const skillColumns: TableProps<SkillRecord>["columns"] = [
@@ -483,21 +755,11 @@ export function CapabilityMountModal({
           {t("common.cancel")}
         </AppButton>,
         <AppButton
-          disabled={selectedCount === 0}
+          disabled={selectedCount === 0 || checkingBoxes}
           key="confirm"
-          loading={submitting}
+          loading={submitting || checkingBoxes}
           onClick={() => {
-            void (async () => {
-              setSubmitting(true);
-              setError(null);
-              try {
-                await onSubmit(buildInputs());
-              } catch (requestError) {
-                setError(extractRequestErrorMessage(requestError));
-              } finally {
-                setSubmitting(false);
-              }
-            })();
+            void submit();
           }}
           type="primary"
         >
@@ -510,7 +772,35 @@ export function CapabilityMountModal({
       width={880}
     >
       <div className={styles.picker}>
-        {error ? <Alert message={error} showIcon type="error" /> : null}
+        {error ? (
+          <RequestErrorAlert
+            autoDismissMs={0}
+            error={error}
+            onDismiss={() => setError(null)}
+          />
+        ) : null}
+
+        {deselected.length > 0 ? (
+          <Alert
+            closable
+            description={
+              <ul className={styles.pickerDeselectedList}>
+                {deselected.map((item) => (
+                  <li key={item.key}>
+                    {t("knowledgeNetwork.capabilityPickerDeselectedItem", {
+                      name: item.label,
+                      reason: reasonLabel(item.reason),
+                    })}
+                  </li>
+                ))}
+              </ul>
+            }
+            message={t("knowledgeNetwork.capabilityPickerDeselected")}
+            onClose={() => setDeselected([])}
+            showIcon
+            type="warning"
+          />
+        ) : null}
 
         <div className={styles.pickerToolbar}>
           <Input
@@ -524,7 +814,7 @@ export function CapabilityMountModal({
             <Checkbox
               checked={allBoxesChecked}
               className={styles.pickerSelectAll}
-              disabled={visibleBoxes.length === 0}
+              disabled={tickableBoxes.length === 0}
               indeterminate={!allBoxesChecked && someVisibleChecked}
               onChange={(event) => toggleAllBoxes(event.target.checked)}
             >
@@ -559,7 +849,9 @@ export function CapabilityMountModal({
         ) : (
           <>
             <div className={styles.pickerHint}>
-              {t("knowledgeNetwork.capabilityPickerWholeBoxHint")}
+              {isMcp
+                ? t("knowledgeNetwork.capabilityPickerWholeServerHint")
+                : t("knowledgeNetwork.capabilityPickerWholeBoxHint")}
             </div>
             <div className={styles.pickerTree}>
               {treeData.length === 0 && !loading ? (
@@ -586,7 +878,7 @@ export function CapabilityMountModal({
                   }}
                   onExpand={(keys) => setExpandedKeys(keys.map(String))}
                   onSelect={(_keys, info) => {
-                    if (info.node.disabled) {
+                    if (info.node.disabled || info.node.disableCheckbox) {
                       return;
                     }
 
