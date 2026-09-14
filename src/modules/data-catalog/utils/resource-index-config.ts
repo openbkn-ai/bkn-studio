@@ -108,15 +108,17 @@ export function applyIndexFormToSchema(
   const defaultModel = values.embeddingModel.trim();
 
   const nextSchema = schema.map((field) => {
+    const managesTextFeatures = ["string", "text"].includes(field.type.trim().toLowerCase());
     const kept = (field.features ?? []).filter(
       (feature) =>
-        (feature.featureType !== "vector" || Boolean(feature.refProperty)) &&
-        feature.featureType !== "fulltext" &&
-        (!managesKeyword || feature.featureType !== "keyword"),
+        !managesTextFeatures ||
+        ((feature.featureType !== "vector" || Boolean(feature.refProperty)) &&
+          feature.featureType !== "fulltext" &&
+          (!managesKeyword || feature.featureType !== "keyword")),
     );
     const features: ResourceFieldFeature[] = [...kept];
 
-    if (managesKeyword) {
+    if (managesTextFeatures && managesKeyword) {
       for (const [index, item] of normalizeDefaultFeature(
         values.fieldKeywordGroups?.[field.name] ?? [],
         "keyword",
@@ -137,7 +139,7 @@ export function applyIndexFormToSchema(
       }
     }
 
-    if (fulltextSet.has(field.name)) {
+    if (managesTextFeatures && fulltextSet.has(field.name)) {
       const analyzers = values.fieldFulltextAnalyzerGroups?.[field.name] ?? [
         values.fieldFulltextAnalyzers[field.name] ?? "",
       ];
@@ -156,7 +158,7 @@ export function applyIndexFormToSchema(
       }
     }
 
-    if (embeddingSet.has(field.name)) {
+    if (managesTextFeatures && embeddingSet.has(field.name)) {
       const models = values.fieldEmbeddingModelGroups?.[field.name] ?? [
         values.fieldEmbeddingModels[field.name] ?? "",
       ];

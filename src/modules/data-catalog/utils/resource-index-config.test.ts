@@ -267,4 +267,39 @@ describe("resource-index-config", () => {
       ],
     });
   });
+
+  it("preserves the vector feature that owns a referenced vector result", () => {
+    const resource = {
+      schema: [
+        {
+          features: [{ featureType: "vector" as const, refProperty: "content_embedding" }],
+          name: "content",
+          type: "text",
+        },
+        {
+          features: [{
+            config: { dimension: 1024, embedding_model: "embed-default" },
+            featureType: "vector" as const,
+            name: "embedding",
+          }],
+          name: "content_embedding",
+          type: "vector",
+        },
+      ],
+    };
+    const values = indexFormValuesFromResource(resource);
+    values.embeddingFields = values.embeddingFields.filter((name) => name !== "content_embedding");
+    if (values.fieldEmbeddingModelGroups) {
+      delete values.fieldEmbeddingModelGroups.content_embedding;
+    }
+    delete values.fieldEmbeddingModels.content_embedding;
+
+    const result = applyIndexFormToSchema(resource.schema, values);
+
+    expect(result.schema[0].features).toContainEqual({
+      featureType: "vector",
+      refProperty: "content_embedding",
+    });
+    expect(result.schema[1]).toEqual(resource.schema[1]);
+  });
 });
