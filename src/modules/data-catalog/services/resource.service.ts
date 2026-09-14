@@ -210,7 +210,6 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
 type BackendResourceSummary = {
   catalog_id: string;
   category?: string;
-  column_count?: number;
   create_time?: number;
   creator?: { id?: string; name?: string };
   description?: string;
@@ -222,7 +221,6 @@ type BackendResourceSummary = {
   logic_type?: string;
   name: string;
   operations?: string[];
-  row_count?: number;
   schema?: string;
   source_identifier?: string;
   status?: string;
@@ -233,7 +231,9 @@ type BackendResourceSummary = {
 };
 
 type BackendResourceDetailFields = {
+  column_count?: number;
   index_config?: BackendIndexConfig | null;
+  row_count?: number;
   schema_definition?: BackendSchemaField[] | null;
   source_metadata?: {
     foreign_keys?: unknown[];
@@ -347,7 +347,7 @@ function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetai
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
     sourceMetadata: mapSourceMetadata(item.source_metadata),
-    // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
+    // Scale fields and schema_definition are detail-only; list resources map them to null and an empty schema.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     rowCount: item.row_count ?? null,
     schemaName: item.schema,
@@ -391,8 +391,16 @@ export async function listCatalogResourcePage(
 
   if (useMock) {
     const filtered = filterResources([...mockResources], query);
+    const page = limit === -1 ? filtered.slice(offset) : filtered.slice(offset, offset + limit);
     return wait({
-      items: limit === -1 ? filtered.slice(offset) : filtered.slice(offset, offset + limit),
+      items: page.map((resource) => ({
+        ...resource,
+        columnCount: null,
+        indexConfig: undefined,
+        rowCount: null,
+        schema: [],
+        sourceMetadata: undefined,
+      })),
       total: filtered.length,
     });
   }

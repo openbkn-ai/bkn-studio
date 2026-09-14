@@ -71,13 +71,13 @@ const catalog: CatalogRecord = {
   updaterName: "test",
 };
 
-function renderPanel(record: CatalogRecord) {
+function renderPanel(record: CatalogRecord, onOpenResource = vi.fn()) {
   return render(
     <MemoryRouter>
       <CatalogDetailPanel
         catalog={record}
         onCreateResource={vi.fn()}
-        onOpenResource={vi.fn()}
+        onOpenResource={onOpenResource}
       />
     </MemoryRouter>,
   );
@@ -161,11 +161,12 @@ describe("CatalogDetailPanel authorize entry", () => {
           enabled: false,
           expectedUpdateTime: 0,
           id: "resource-1",
-          localIndexStatus: "none",
+          localIndexStatus: "unavailable",
           name: "customers",
           rowCount: 0,
           schema: [],
           sourceIdentifier: "db.customers",
+          tags: ["crm", "pii"],
           updateTime: "",
         },
       ],
@@ -174,6 +175,40 @@ describe("CatalogDetailPanel authorize entry", () => {
     renderPanel(catalog);
 
     expect(await screen.findByText("common.disabled")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.tags" })).toBeTruthy();
+    expect(screen.getByText("crm")).toBeTruthy();
+    expect(screen.getByText("pii")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.indexState" })).toBeTruthy();
+    expect(screen.getByText("dataCatalog.resource.localIndexStatuses.unavailable")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.resource.fieldCount")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.rowCount")).toBeNull();
+  });
+
+  it("opens preview when list summaries omit schema and scale fields", async () => {
+    const onOpenResource = vi.fn();
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        category: "table",
+        columnCount: null,
+        description: "",
+        expectedUpdateTime: 0,
+        id: "resource-1",
+        localIndexStatus: "unavailable",
+        name: "customers",
+        rowCount: null,
+        schema: [],
+        sourceIdentifier: "db.customers",
+        updateTime: "",
+      }],
+      total: 1,
+    });
+    renderPanel(catalog, onOpenResource);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "dataCatalog.actions.preview" }));
+
+    expect(onOpenResource).toHaveBeenCalledWith("resource-1", "preview");
   });
 
   it("opens the shared authorization drawer for an individual data resource", async () => {
@@ -187,7 +222,7 @@ describe("CatalogDetailPanel authorize entry", () => {
           description: "",
           expectedUpdateTime: 0,
           id: "resource-1",
-          localIndexStatus: "none",
+          localIndexStatus: "unavailable",
           name: "customers",
           rowCount: 0,
           schema: [],

@@ -23,7 +23,6 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
-import { formatRowCount } from "@/modules/data-catalog/lib/format";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
@@ -280,6 +279,26 @@ export function CatalogDetailPanel({
       ),
     },
     {
+      dataIndex: "tags",
+      ellipsis: true,
+      title: t("dataCatalog.resource.tags"),
+      width: 168,
+      render: (tags: string[] = []) => {
+        if (tags.length === 0) {
+          return "—";
+        }
+        const visibleTags = tags.slice(0, 2);
+        return (
+          <Tooltip title={tags.join(", ")}>
+            <Space size={4}>
+              {visibleTags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+              {tags.length > visibleTags.length ? <Tag>+{tags.length - visibleTags.length}</Tag> : null}
+            </Space>
+          </Tooltip>
+        );
+      },
+    },
+    {
       dataIndex: "enabled",
       ellipsis: true,
       title: t("dataCatalog.resource.enabledStatus"),
@@ -304,22 +323,23 @@ export function CatalogDetailPanel({
         ),
     },
     {
-      dataIndex: "columnCount",
-      title: t("dataCatalog.resource.fieldCount"),
-      width: 88,
-      render: (value: number | null) =>
-        value !== null && value > 0 ? (
-          <span className={styles.monoText}>{value}</span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      dataIndex: "rowCount",
-      title: t("dataCatalog.resource.rowCount"),
+      dataIndex: "localIndexStatus",
+      ellipsis: true,
+      title: t("dataCatalog.resource.indexState"),
       width: 112,
-      render: (value: number | null) =>
-        value !== null ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
+      render: (value: CatalogResource["localIndexStatus"]) => (
+        <Tag
+          className={
+            value === "available"
+              ? styles.statusTagSuccess
+              : value === "stale"
+                ? styles.statusTagWarning
+                : styles.statusTagNeutral
+          }
+        >
+          {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
+        </Tag>
+      ),
     },
     {
       key: "actions",
@@ -329,7 +349,9 @@ export function CatalogDetailPanel({
       width: 84,
       render: (_, record) => {
         const blockedByDisabledCatalog = physical && !catalog.enabled;
-        const queryBlockReason = resourceQueryBlockReason(record, record.columnCount);
+        // List responses intentionally omit schema and scale fields. Metadata availability is
+        // checked after the resource detail has been loaded; list actions only use known states.
+        const queryBlockReason = resourceQueryBlockReason(record, null);
         const previewDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
         const indexDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
         const previewLabel = t("dataCatalog.actions.preview");

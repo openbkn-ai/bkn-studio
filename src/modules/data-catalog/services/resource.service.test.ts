@@ -180,6 +180,24 @@ describe("resource.service · listCatalogResourcePage", () => {
     vi.unstubAllEnvs();
   });
 
+  it("omits detail-only schema and scale fields in mock list responses", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { listCatalogResourcePage } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const result = await listCatalogResourcePage({ limit: 1 });
+
+    expect(result.items[0]).toMatchObject({
+      columnCount: null,
+      indexConfig: undefined,
+      rowCount: null,
+      schema: [],
+      sourceMetadata: undefined,
+    });
+  });
+
   it("sends schema to the server so totals and pages are filtered consistently", async () => {
     getMock.mockResolvedValue({
       data: {
