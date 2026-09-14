@@ -111,7 +111,8 @@ export function McpDetailDrawer({
 
         if (!marketMode) {
           try {
-            const tools = await listMcpTools(mcpId);
+            // The record above is the config, so count the draft's tools, not the release's.
+            const tools = await listMcpTools(mcpId, { draft: true });
             setToolCount(tools.length);
           } catch {
             setToolCount(mcpRecord.toolConfigs?.length ?? 0);

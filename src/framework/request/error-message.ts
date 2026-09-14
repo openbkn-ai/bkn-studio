@@ -104,3 +104,8 @@ export function isRequestConflict(error: unknown): boolean {
 export function isRequestForbidden(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 403;
 }
+
+/** The target, or the endpoint itself on an older backend, does not exist. */
+export function isRequestNotFound(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
+}

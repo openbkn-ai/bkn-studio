@@ -155,13 +155,14 @@ export async function listCatalogConnectorTypeStats(keyword = ""): Promise<Catal
   }));
 }
 
-export async function getCatalog(id: string) {
+export async function getCatalog(id: string, options?: { skipErrorToast?: boolean }) {
   if (useMock) {
     return wait(findMockCatalog(id));
   }
 
   const response = await http.get<{ entries: BackendCatalog[] }>(
     `/vega-backend/v1/catalogs/${id}`,
+    { skipErrorToast: options?.skipErrorToast },
   );
 
   const catalog = response.data.entries?.[0];

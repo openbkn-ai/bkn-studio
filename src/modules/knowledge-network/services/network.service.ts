@@ -64,11 +64,11 @@ const BKN_EXPORT_TIMEOUT_MS = 60_000;
 
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
-  "data_query",
+  "query_data",
   "modify",
   "delete",
   "authorize",
-  "task_manage",
+  "execute",
 ];
 
 export async function listKnowledgeNetworks(

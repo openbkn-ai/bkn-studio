@@ -66,6 +66,7 @@ import {
 import { buildToolboxBasicInfoItems } from "@/modules/execution-factory/utils/toolbox-info-items";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { useImpexExport } from "@/modules/execution-factory/utils/use-impex-export";
 
@@ -306,7 +307,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         name: tool.name,
         status: t(`executionFactory.toolStatuses.${nextStatus}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveToolStatusOkTextKey(nextStatus)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         await updateToolStatus(boxId, [tool.toolId], nextStatus);
@@ -332,7 +333,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         count: selectedToolIds.length,
         status: t(`executionFactory.toolStatuses.${nextStatus}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveToolStatusOkTextKey(nextStatus)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         await updateToolStatus(boxId, selectedToolIds, nextStatus);

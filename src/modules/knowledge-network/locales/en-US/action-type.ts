@@ -201,4 +201,6 @@ export const actiontypePart = {
     actionTypeMcpSearchPlaceholder: "Search MCP service name",
     actionTypeMcpCatalogEmpty: "No MCP tools are available in the current environment.",
     actionTypeExecutionResultEmpty: "No execution result details yet.",
+    actionTypeExecutionResultStatusFilter: "Filter results by status",
+    actionTypeExecutionResultWindowHint: "Showing the first {{count}} of {{total}} results.",
 };

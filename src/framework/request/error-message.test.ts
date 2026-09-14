@@ -12,6 +12,7 @@ import {
   extractRequestErrorDetails,
   extractRequestErrorMessage,
   isRequestConflict,
+  isRequestNotFound,
 } from "./error-message";
 
 function createAxiosLikeError(data: unknown) {
@@ -92,5 +93,13 @@ describe("isRequestConflict", () => {
     expect(isRequestConflict({ isAxiosError: true, response: { status: 409 } })).toBe(true);
     expect(isRequestConflict({ isAxiosError: true, response: { status: 400 } })).toBe(false);
     expect(isRequestConflict(new Error("conflict"))).toBe(false);
+  });
+});
+
+describe("isRequestNotFound", () => {
+  it("only matches Axios 404 responses", () => {
+    expect(isRequestNotFound({ isAxiosError: true, response: { status: 404 } })).toBe(true);
+    expect(isRequestNotFound({ isAxiosError: true, response: { status: 403 } })).toBe(false);
+    expect(isRequestNotFound(new Error("not found"))).toBe(false);
   });
 });

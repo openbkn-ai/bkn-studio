@@ -15,6 +15,12 @@ export const subscriptionEnUS = {
   subscription: {
     capabilities: {
       business_provenance: {
+        // Named after the three views on the business provenance page.
+        bullets: {
+          b1: "Timeline",
+          b2: "Evidence chain",
+          b3: "Execution chain",
+        },
         description:
           "Evidence chains, data provenance, the business semantic graph and interactive tracing for business questions and results.",
         name: "Business provenance",
@@ -29,6 +35,10 @@ export const subscriptionEnUS = {
           b1: "Connect straight to SQL Server and other commercial databases — no export step in between",
           b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
           b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
+        },
+        // The card lists only which databases connect; the full sentences above stay in the upgrade dialog.
+        cardBullets: {
+          b1: "SQL Server",
         },
         description:
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",

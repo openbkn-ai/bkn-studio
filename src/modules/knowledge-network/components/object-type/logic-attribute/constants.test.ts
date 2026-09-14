@@ -12,6 +12,7 @@ import {
   LOGIC_RESULT_PATH_PLACEHOLDER,
   buildToolLogicParameterSettings,
   isToolLogicBindingComplete,
+  normalizeFunctionParameterSources,
   removeParameterById,
   readLogicAttributeToolBinding,
 } from "./constants";
@@ -31,6 +32,25 @@ describe("LOGIC_RESULT_PATH_PLACEHOLDER", () => {
 });
 
 describe("buildToolLogicParameterSettings", () => {
+  it("forces function inputs to Body even when a legacy mapping used another source", () => {
+    const result = buildToolLogicParameterSettings(
+      [],
+      [
+        {
+          id: "saved-query",
+          name: "product",
+          source: "Query",
+          type: "string",
+          value: "product_code",
+          valueFrom: "property",
+        },
+      ],
+      () => "generated-id",
+    );
+
+    expect(result[0]?.source).toBe("Body");
+  });
+
   it("merges saved tool parameter mappings into the input schema", () => {
     let index = 0;
 
@@ -113,6 +133,36 @@ describe("buildToolLogicParameterSettings", () => {
         type: "string",
         value: "openbkn",
         valueFrom: "const",
+      },
+    ]);
+  });
+});
+
+describe("normalizeFunctionParameterSources", () => {
+  it("normalizes nested parameters before a function binding is saved", () => {
+    expect(
+      normalizeFunctionParameterSources([
+        {
+          children: [
+            {
+              id: "child",
+              name: "payload.product",
+              source: "Header",
+              type: "string",
+              valueFrom: "input",
+            },
+          ],
+          id: "parent",
+          name: "payload",
+          source: "Path",
+          type: "object",
+          valueFrom: "input",
+        },
+      ]),
+    ).toMatchObject([
+      {
+        children: [{ source: "Body" }],
+        source: "Body",
       },
     ]);
   });

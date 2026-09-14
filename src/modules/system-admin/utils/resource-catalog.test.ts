@@ -94,14 +94,22 @@ describe("resource-catalog", () => {
     expect(resourceTypeLabel("skill")).toBe("SKILL 包");
   });
 
-  it("keeps authorize and task_manage off every knowledge-network child", () => {
+  it("keeps task management out of knowledge-network grants", () => {
     for (const type of ["concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
       const operations = operationsForType(type).map((item) => item.key);
       expect(operations).not.toContain("authorize");
       expect(operations).not.toContain("task_manage");
     }
 
-    expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("authorize");
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toEqual([
+      "view_detail",
+      "create",
+      "modify",
+      "delete",
+      "query_data",
+      "authorize",
+      "execute",
+    ]);
     expect(operationsForType("action_type").map((item) => item.key)).toContain("execute");
   });
 

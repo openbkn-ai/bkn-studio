@@ -40,7 +40,6 @@ import {
   getModelTableColumnSortOrder,
   toggleModelSort,
 } from "@/modules/model-resources/utils/model-table-sort";
-import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./ModelListPanels.module.css";
 
@@ -69,7 +68,6 @@ export function SmallModelListPanel() {
   const [formMode, setFormMode] = useState<"create" | "edit" | "view">("create");
   const [formOpen, setFormOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [authorizeRecord, setAuthorizeRecord] = useState<SmallModel | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -177,7 +175,6 @@ export function SmallModelListPanel() {
 
   const canModify = (record: SmallModel) => record.operations?.includes("modify");
   const canDelete = (record: SmallModel) => record.operations?.includes("delete");
-  const canAuthorize = (record: SmallModel) => record.operations?.includes("authorize");
   const canSetDefault = (record: SmallModel) =>
     (record.modelType === "embedding" || record.modelType === "reranker") &&
     !record.default &&
@@ -266,9 +263,6 @@ export function SmallModelListPanel() {
       return;
     }
 
-    if (key === "authorize" && canAuthorize(record)) {
-      setAuthorizeRecord(record);
-    }
   };
 
   const columns: ColumnsType<SmallModel> = [
@@ -314,9 +308,6 @@ export function SmallModelListPanel() {
             : null,
           canUnsetDefault(record)
             ? { key: "unsetDefault", label: t("modelResources.models.menus.unsetDefault") }
-            : null,
-          canAuthorize(record)
-            ? { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") }
             : null,
         ].filter(Boolean) as { key: string; label: string }[];
 
@@ -518,16 +509,6 @@ export function SmallModelListPanel() {
         open={guideOpen}
         record={activeRecord}
       />
-      {authorizeRecord ? (
-        <ObjectAuthorizeDrawer
-          objId={authorizeRecord.modelId}
-          objName={authorizeRecord.modelName}
-          objSub={authorizeRecord.modelType}
-          objType="small_model"
-          onClose={() => setAuthorizeRecord(null)}
-          open={Boolean(authorizeRecord)}
-        />
-      ) : null}
     </div>
   );
 }

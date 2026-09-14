@@ -186,4 +186,6 @@ export const actiontypePart = {
     actionTypeMcpSearchPlaceholder: "搜索 MCP 服务名称",
     actionTypeMcpCatalogEmpty: "当前环境暂无 MCP 工具。",
     actionTypeExecutionResultEmpty: "暂无执行结果明细。",
+    actionTypeExecutionResultStatusFilter: "按结果状态筛选",
+    actionTypeExecutionResultWindowHint: "共 {{total}} 条结果，仅可查看前 {{count}} 条。",
 };

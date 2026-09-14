@@ -10,7 +10,8 @@
  * (`server/internal/store/capabilities.go`)——那是签进客户证书、也是客户在门户上
  * 看到的同一份文案。两边不一致会让客户拿着证书对不上产品页。
  *
- * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用。权限三项的条目
+ * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用;`cardBullets` 有值时
+ * 卡片改用它(见 `capabilityCardBullets`)。权限三项的条目
  * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行列权限 / 脱敏 / 审计),
  * 矩阵改了这里要跟着改。
  */
@@ -18,6 +19,12 @@ export const subscriptionZhCN = {
   subscription: {
     capabilities: {
       business_provenance: {
+        // 与业务溯源页的三个视图同名(时间链视图 / 证据链 / 执行链路)。
+        bullets: {
+          b1: "时间链",
+          b2: "证据链",
+          b3: "执行链",
+        },
         description: "业务问题与结果的证据链、数据溯源、业务语义图与交互式追溯",
         name: "业务溯源",
       },
@@ -30,6 +37,10 @@ export const subscriptionZhCN = {
           b1: "SQL Server 等商业数据库直连,不必再导出中间文件",
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
           b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
+        },
+        // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
+        cardBullets: {
+          b1: "SQL Server",
         },
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",

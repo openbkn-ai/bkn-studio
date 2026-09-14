@@ -405,6 +405,11 @@ export async function deleteMcp(mcpId: string): Promise<void> {
 
 type McpToolsQuery = {
   all?: boolean;
+  /**
+   * List the draft instead of the released tools. They differ only while the server is
+   * editing: callers are served the release, and the authoring page debugs the draft.
+   */
+  draft?: boolean;
   page?: number;
   pageSize?: number;
   status?: "enabled" | "disabled";
@@ -454,6 +459,7 @@ export async function listMcpTools(
   }>(`${API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
     params: {
       all: query.all || undefined,
+      draft: query.draft || undefined,
       page: query.page ?? 1,
       page_size: query.pageSize ?? 100,
       status: query.status,

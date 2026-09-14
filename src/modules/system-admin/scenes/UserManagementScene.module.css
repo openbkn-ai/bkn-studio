@@ -15,7 +15,7 @@
 
 .explorer {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: var(--dept-panel-width, 280px) 8px minmax(0, 1fr);
   gap: 0;
   flex: 1;
   align-items: stretch;
@@ -32,6 +32,32 @@
   background: var(--admin-color-surface-muted);
   min-height: 0;
   min-width: 0;
+}
+
+.deptPanelSplitter {
+  position: relative;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.deptPanelSplitter::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: var(--admin-color-border);
+  content: "";
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.deptPanelSplitter:hover::after,
+.deptPanelSplitter:focus-visible::after {
+  left: -1px;
+  width: 3px;
+  background: var(--admin-color-link, #1d4ed8);
 }
 
 .deptPanelHead {
@@ -197,6 +223,10 @@
 @media (max-width: 1200px) {
   .explorer {
     grid-template-columns: 1fr;
+  }
+
+  .deptPanelSplitter {
+    display: none;
   }
 
   .deptPanel {

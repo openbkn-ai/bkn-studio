@@ -161,7 +161,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "dataCatalog.semanticWorkspace.includeSamples" }));
-    fireEvent.change((await screen.findAllByRole("spinbutton")).at(-1)!, { target: { value: "30" } });
+    fireEvent.input((await screen.findAllByRole("spinbutton")).at(-1)!, { target: { value: "30" } });
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
 
     await screen.findByText("dataCatalog.semanticWorkspace.sampleRowsInvalid");

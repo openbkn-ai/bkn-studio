@@ -40,9 +40,12 @@ describe("knowledge-network mock child operations", () => {
       actionTypes[0],
       metrics.entries[0],
     ]) {
-      expect(record?.operations).toEqual(
-        expect.arrayContaining(["modify", "delete", "authorize"]),
-      );
+      expect(record?.operations).toEqual([
+        "view_detail",
+        "query_data",
+        "modify",
+        "delete",
+      ]);
     }
   });
 });

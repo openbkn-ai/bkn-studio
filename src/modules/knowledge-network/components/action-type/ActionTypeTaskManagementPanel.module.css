@@ -64,3 +64,20 @@
   font-weight: 600;
   margin: 8px 0 0;
 }
+
+.resultHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.drawerBody .resultHeader h4 {
+  margin: 0;
+}
+
+.resultHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}

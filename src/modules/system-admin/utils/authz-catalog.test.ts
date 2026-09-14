@@ -17,10 +17,10 @@ import {
 } from "./authz-catalog";
 
 describe("object authorization types", () => {
-  it("keeps stored grant types filterable while restricting the new-grant picker", () => {
-    expect(AUTHZ_OBJECT_TYPES).toContain("small_model");
-    expect(AUTHZ_OBJECT_TYPES).toContain("large_model");
-    expect(isAuthzObjectType("small_model")).toBe(true);
+  it("excludes models from every object-grant surface", () => {
+    expect(AUTHZ_OBJECT_TYPES).not.toContain("small_model");
+    expect(AUTHZ_OBJECT_TYPES).not.toContain("large_model");
+    expect(isAuthzObjectType("small_model")).toBe(false);
     expect(isAuthzObjectType("concept_group")).toBe(true);
 
     for (const type of ["small_model", "large_model", "concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
@@ -29,7 +29,7 @@ describe("object authorization types", () => {
     }
   });
 
-  it("exposes edition-aware filter catalogues without retired model resources", () => {
+  it("exposes edition-aware filter catalogues without model resources", () => {
     expect(COMMUNITY_OBJECT_GRANT_TYPES).toContain("catalog");
     expect(COMMUNITY_OBJECT_GRANT_TYPES).toContain("knowledge_network");
     expect(COMMUNITY_OBJECT_GRANT_TYPES).not.toContain("resource");

@@ -64,6 +64,11 @@
   white-space: nowrap;
 }
 
+.pickerDeselectedList {
+  margin: 0;
+  padding-inline-start: 18px;
+}
+
 .pickerEmpty {
   padding: 32px 0;
   color: var(--color-text-muted);

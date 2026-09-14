@@ -18,7 +18,7 @@ import {
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import { capabilityBullets } from "@/modules/subscription/capability-bullets";
+import { capabilityCardBullets } from "@/modules/subscription/capability-bullets";
 import {
   CAPABILITY_CATEGORIES,
   capabilitiesByCategory,
@@ -215,14 +215,13 @@ export function SubscriptionScene() {
                   </li>
                 )}
                 {/*
-                  只给权限类能力铺卖点:这页的主题是「权限边界、审计与合规随版本递进」,
-                  登记表的名字(「细粒度对象授权」)说不清这一档比上一档细在哪——操作粒度、
-                  显式例外、行列权限、审计各进一步,卡片得把这几句写出来。其他能力(连接器)
-                  的卖点留给升级弹窗,铺上卡片只会把它拉成一页说明书。文案与弹窗同一份。
+                  登记表的名字说不清这一档比上一档多在哪:「细粒度对象授权」细到操作粒度与
+                  显式例外,「高级数据连接」连的是哪些库,「业务溯源」看得到哪几条链——卡片
+                  得把这几项列出来。默认与升级弹窗同一份卖点;连接器的卖点是整句,卡片上只列
+                  它的摘要(`cardBullets`),整句留给弹窗,否则卡片会被拉成一页说明书。
                 */}
                 {introduced.map((entry) => {
-                  const bullets =
-                    entry.category === "permission" ? capabilityBullets(t, entry.key) : [];
+                  const bullets = capabilityCardBullets(t, entry.key);
 
                   return (
                     <li key={entry.key}>

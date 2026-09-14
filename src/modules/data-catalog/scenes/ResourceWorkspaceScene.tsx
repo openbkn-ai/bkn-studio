@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
@@ -77,6 +77,7 @@ export function ResourceWorkspaceScene({
   });
   const [resource, setResource] = useState<CatalogResource | null>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
+  const [catalogVisibilityRestricted, setCatalogVisibilityRestricted] = useState(false);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -108,7 +109,12 @@ export function ResourceWorkspaceScene({
       }
 
       const [catalogRecord, latestTaskPage] = await Promise.all([
-        getCatalog(detail.catalogId),
+        getCatalog(detail.catalogId, { skipErrorToast: true }).catch((error) => {
+          if (isRequestForbidden(error)) {
+            return null;
+          }
+          throw error;
+        }),
         listBuildTaskPage({
           direction: "desc",
           limit: 1,
@@ -122,6 +128,7 @@ export function ResourceWorkspaceScene({
       }
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
+        setCatalogVisibilityRestricted(catalogRecord === null);
         setTasks(latestTaskPage.items);
       }
     } catch (error) {
@@ -132,6 +139,7 @@ export function ResourceWorkspaceScene({
         setResource(null);
         setLoadError(extractRequestErrorMessage(error));
         setCatalog(null);
+        setCatalogVisibilityRestricted(false);
         setTasks([]);
       }
     } finally {
@@ -178,7 +186,9 @@ export function ResourceWorkspaceScene({
     () => indexStateOf(sortedTasks, resource?.localIndexStatus ?? "unavailable"),
     [resource?.localIndexStatus, sortedTasks],
   );
-  const gate = resourceGateOf(catalog);
+  // A hidden parent Catalog has no displayable lifecycle metadata. Query APIs
+  // remain the source of truth for its state; do not fabricate one in the UI.
+  const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
   const hideSemanticUnderstanding = Boolean(catalog?.internal);
   const discoveryFailed = resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;

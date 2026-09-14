@@ -46,7 +46,6 @@ import {
   getModelTableColumnSortOrder,
   toggleModelSort,
 } from "@/modules/model-resources/utils/model-table-sort";
-import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./ModelListPanels.module.css";
 
@@ -75,7 +74,6 @@ export function LargeModelListPanel() {
   const [formOpen, setFormOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
-  const [authorizeRecord, setAuthorizeRecord] = useState<LlmModel | null>(null);
   const [canCreate, setCanCreate] = useState(false);
   const [canSetDefaultOnCreate, setCanSetDefaultOnCreate] = useState(false);
   const userPermissions = runtimeConfig.currentUser.permissions;
@@ -216,7 +214,6 @@ export function LargeModelListPanel() {
   // Item actions are determined by the effective object operations returned by bkn-safe.
   const canModify = (record: LlmModel) => Boolean(record.operations?.includes("modify"));
   const canDelete = (record: LlmModel) => Boolean(record.operations?.includes("delete"));
-  const canAuthorize = (record: LlmModel) => Boolean(record.operations?.includes("authorize"));
   const canExecute = (record: LlmModel) => Boolean(record.operations?.includes("execute"));
   const canSetDefault = (record: LlmModel) => canModify(record) && !record.default;
   const canUnsetDefault = (record: LlmModel) => canModify(record) && Boolean(record.default);
@@ -302,9 +299,6 @@ export function LargeModelListPanel() {
       return;
     }
 
-    if (key === "authorize" && canAuthorize(record)) {
-      setAuthorizeRecord(record);
-    }
   };
 
   const columns: ColumnsType<LlmModel> = [
@@ -356,9 +350,6 @@ export function LargeModelListPanel() {
                 ? { key: "unsetDefault", label: t("modelResources.models.menus.unsetDefault") }
                 : null,
               { key: "monitor", label: t("modelResources.models.menus.modelMonitoring") },
-              canAuthorize(record)
-                ? { key: "authorize", label: t("modelResources.models.menus.authorizationManagement") }
-                : null,
             ].filter(Boolean),
             onClick: ({ key, domEvent }) => {
               domEvent.stopPropagation();
@@ -675,16 +666,6 @@ export function LargeModelListPanel() {
         open={monitorOpen}
         record={activeRecord}
       />
-      {authorizeRecord ? (
-        <ObjectAuthorizeDrawer
-          objId={authorizeRecord.modelId}
-          objName={authorizeRecord.modelName}
-          objSub={authorizeRecord.modelType}
-          objType="large_model"
-          onClose={() => setAuthorizeRecord(null)}
-          open={Boolean(authorizeRecord)}
-        />
-      ) : null}
     </div>
   );
 }

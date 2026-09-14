@@ -29,12 +29,12 @@ export const VALUE_FROM_OPTIONS: Array<{
 
 export const OPERATOR_TYPE_OPTIONS = [{ label: "==", value: "==" }];
 
-export const PARAMETER_SOURCE_OPTIONS = [
-  { labelKey: "objectTypeLogicParameterSourceHeader", value: "header" },
-  { labelKey: "objectTypeLogicParameterSourceQuery", value: "query" },
-  { labelKey: "objectTypeLogicParameterSourceBody", value: "body" },
-  { labelKey: "objectTypeLogicParameterSourcePath", value: "path" },
-];
+/**
+ * Execution Factory functions expose one JSON request body.  Header, query and
+ * path are OpenAPI transport concepts and must not be configurable for a
+ * function logical property.
+ */
+export const FUNCTION_PARAMETER_SOURCE = "Body";
 
 export const FIELD_TYPE_INPUT = {
   boolean: ["boolean"],
@@ -115,13 +115,26 @@ export function extractLeafParams<T extends { children?: T[] }>(items: T[]): T[]
   return leafParams;
 }
 
+/** Normalize saved and outgoing function parameters to the only supported transport. */
+export function normalizeFunctionParameterSources(
+  parameters: ObjectTypeLogicParameter[],
+): ObjectTypeLogicParameter[] {
+  return parameters.map((parameter) => ({
+    ...parameter,
+    children: parameter.children?.length
+      ? normalizeFunctionParameterSources(parameter.children)
+      : undefined,
+    source: FUNCTION_PARAMETER_SOURCE,
+  }));
+}
+
 export function buildToolLogicParameterSettings(
   schema: ActionTypeToolInputParam[],
   saved: ObjectTypeLogicParameter[] = [],
   createId: () => string,
 ): ObjectTypeLogicParameter[] {
   if (schema.length === 0) {
-    return saved.map((item) => ({
+    return normalizeFunctionParameterSources(saved).map((item) => ({
       ...item,
       id: item.id || createId(),
       valueFrom: item.valueFrom ?? "input",
@@ -138,7 +151,7 @@ export function buildToolLogicParameterSettings(
       description: node.description,
       id: matched?.id || createId(),
       name: node.key,
-      source: node.source,
+      source: FUNCTION_PARAMETER_SOURCE,
       type: node.type,
       value: matched?.value,
       valueFrom: matched?.valueFrom ?? "input",

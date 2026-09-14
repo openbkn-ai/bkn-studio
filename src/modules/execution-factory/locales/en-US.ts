@@ -470,6 +470,7 @@ export const executionFactoryEnUS = {
     },
     statusChangeConfirmTitle: "Update operator status",
     statusChangeConfirmDescription: 'Change "{{name}}" to "{{status}}"?',
+    statusChangeConfirmOk: "Confirm",
     deleteConfirmTitle: "Delete operator",
     deleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     toolboxStatusChangeConfirmTitle: "Update toolbox status",
