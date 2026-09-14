@@ -50,6 +50,51 @@ export type DataCatalogSceneProps = {
   suppressAutoSelect?: boolean;
 };
 
+function mergeCatalogPage(
+  current: CatalogRecord[],
+  pageItems: CatalogRecord[],
+  type: CatalogRecord["type"],
+  connectorType: string,
+  replaceLoadedPageItems: boolean,
+  hydratedCatalogIds: Set<string>,
+) {
+  const belongsToPageScope = (catalog: CatalogRecord) => (
+    catalog.type === type
+    && (type !== "physical" || catalog.connectorType === connectorType)
+  );
+  const pageIds = new Set(pageItems.map((catalog) => catalog.id));
+
+  const outsidePageScope = current.filter(
+    (catalog) => !belongsToPageScope(catalog) && !pageIds.has(catalog.id),
+  );
+  const loadedPageItems = replaceLoadedPageItems
+    ? []
+    : current.filter((catalog) => (
+      belongsToPageScope(catalog)
+      && !hydratedCatalogIds.has(catalog.id)
+      && !pageIds.has(catalog.id)
+    ));
+  const pendingHydratedItems = current.filter((catalog) => (
+    belongsToPageScope(catalog)
+    && hydratedCatalogIds.has(catalog.id)
+    && !pageIds.has(catalog.id)
+  ));
+  const catalogIds = new Set<string>();
+
+  return [
+    ...outsidePageScope,
+    ...loadedPageItems,
+    ...pageItems,
+    ...pendingHydratedItems,
+  ].filter((catalog) => {
+    if (catalogIds.has(catalog.id)) {
+      return false;
+    }
+    catalogIds.add(catalog.id);
+    return true;
+  });
+}
+
 export function DataCatalogScene({
   selection,
   suppressAutoSelect = false,
@@ -84,6 +129,7 @@ export function DataCatalogScene({
   const [resourceTotal, setResourceTotal] = useState(0);
   const initialLoadRef = useRef(false);
   const catalogQueryGeneration = useRef(0);
+  const hydratedCatalogIds = useRef(new Set<string>());
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
@@ -118,10 +164,18 @@ export function DataCatalogScene({
     if (generation !== catalogQueryGeneration.current) {
       return false;
     }
-    setCatalogs((current) => [
-      ...(preservePhysicalCatalogs ? current.filter((catalog) => catalog.type !== "logical") : []),
-      ...logicalCatalogResult.items,
-    ]);
+    if (!preservePhysicalCatalogs) {
+      hydratedCatalogIds.current.clear();
+    }
+    logicalCatalogResult.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
+    setCatalogs((current) => mergeCatalogPage(
+      preservePhysicalCatalogs ? current : [],
+      logicalCatalogResult.items,
+      "logical",
+      "",
+      true,
+      hydratedCatalogIds.current,
+    ));
     if (applyKeyword) {
       setCatalogKeyword(keyword);
     }
@@ -145,22 +199,15 @@ export function DataCatalogScene({
     if (generation !== catalogQueryGeneration.current) {
       return;
     }
-    setCatalogs((current) => {
-      const next = [
-        ...current.filter((catalog) =>
-        pageOffset > 0 || catalog.type !== type || (type === "physical" && catalog.connectorType !== connectorType),
-        ),
-        ...result.items,
-      ];
-      const catalogIDs = new Set<string>();
-      return next.filter((catalog) => {
-        if (catalogIDs.has(catalog.id)) {
-          return false;
-        }
-        catalogIDs.add(catalog.id);
-        return true;
-      });
-    });
+    result.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
+    setCatalogs((current) => mergeCatalogPage(
+      current,
+      result.items,
+      type,
+      connectorType,
+      pageOffset === 0,
+      hydratedCatalogIds.current,
+    ));
   }, [catalogKeyword]);
 
   const loadCatalogSchemas = useCallback(async (catalogId: string) => {
@@ -264,9 +311,13 @@ export function DataCatalogScene({
         ) {
           return;
         }
-        setCatalogs((current) => (
-          current.some((item) => item.id === catalog.id) ? current : [...current, catalog]
-        ));
+        setCatalogs((current) => {
+          if (current.some((item) => item.id === catalog.id)) {
+            return current;
+          }
+          hydratedCatalogIds.current.add(catalog.id);
+          return [...current, catalog];
+        });
       })
       .catch(async (error) => {
         if (isRequestForbidden(error)) {

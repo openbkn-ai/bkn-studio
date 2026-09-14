@@ -254,11 +254,15 @@ describe("DataCatalogScene", () => {
       id: `first-${index}`,
       name: `first-${index}`,
     }));
-    const secondPage = [catalog, ...Array.from({ length: 99 }, (_, index) => ({
-      ...catalog,
-      id: `second-${index}`,
-      name: `second-${index}`,
-    }))];
+    const secondPage = [
+      { ...catalog, id: "second-before", name: "before-selected" },
+      catalog,
+      ...Array.from({ length: 98 }, (_, index) => ({
+        ...catalog,
+        id: `second-${index}`,
+        name: `second-${index}`,
+      })),
+    ];
     listCatalogsMock.mockImplementation((query: CatalogListQuery) => Promise.resolve(
       query.type !== "physical"
         ? { items: [], total: 0 }
@@ -282,12 +286,19 @@ describe("DataCatalogScene", () => {
     await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1"));
     fireEvent.click(screen.getByRole("button", { name: "load physical" }));
     await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent?.split(",")).toHaveLength(101));
+    expect(screen.getByTestId("catalog-ids").textContent?.split(",").at(-1)).toBe("catalog-1");
 
     fireEvent.click(screen.getByRole("button", { name: "load more physical" }));
     await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent?.split(",")).toHaveLength(200));
 
     const catalogIDs = screen.getByTestId("catalog-ids").textContent?.split(",") ?? [];
     expect(catalogIDs.filter((id) => id === "catalog-1")).toHaveLength(1);
+    expect(catalogIDs.slice(99, 103)).toEqual([
+      "first-99",
+      "second-before",
+      "catalog-1",
+      "second-0",
+    ]);
     expect(listCatalogsMock).toHaveBeenCalledWith({
       connectorType: "postgresql",
       direction: "asc",
