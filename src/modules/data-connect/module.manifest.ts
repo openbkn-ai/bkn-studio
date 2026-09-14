@@ -36,7 +36,7 @@ export const dataConnectModuleManifest = {
       id: "data-connect.discover",
       exportName: "DataConnectDiscoverScene",
       description: "Manage discover schedules and discover tasks for data connection catalogs.",
-      inputs: ["catalogId?", "onBackToConnections?", "onCatalogIdChange?"],
+      inputs: ["catalogId", "onBackToConnections?", "onTabChange?"],
     },
   ],
 } as const;

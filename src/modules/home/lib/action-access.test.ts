@@ -26,7 +26,7 @@ describe("canAccessHomeAction", () => {
   it("keeps non-navigation actions permission-gated", () => {
     expect(
       canAccessHomeAction([], {
-        path: "/data-connect/discover",
+        path: "/some-protected-action",
         permissions: "catalog:task_manage",
       }),
     ).toBe(false);

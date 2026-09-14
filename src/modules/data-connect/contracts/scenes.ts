@@ -11,7 +11,7 @@ export type DataConnectListSceneProps = {
   onCreate?: () => void;
   onEdit?: (recordId: string) => void;
   onOpenDetail?: (recordId: string) => void;
-  onOpenDiscovers?: (recordId?: string) => void;
+  onOpenDiscovers?: (recordId: string) => void;
 };
 
 export type DataConnectFormSceneProps = {
@@ -25,8 +25,7 @@ export type DataConnectDiscoverTab = "schedules" | "tasks";
 
 export type DataConnectDiscoverSceneProps = {
   activeTab?: DataConnectDiscoverTab;
-  catalogId?: string;
+  catalogId: string;
   onBackToConnections?: () => void;
-  onCatalogIdChange?: (catalogId?: string) => void;
   onTabChange?: (tab: DataConnectDiscoverTab) => void;
 };

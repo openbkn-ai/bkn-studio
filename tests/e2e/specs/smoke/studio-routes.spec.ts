@@ -10,7 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
 const criticalRoutes = [
   { name: "home", path: "/studio/" },
   { name: "knowledge network", path: "/studio/knowledge-network" },
-  { name: "data directory", path: "/studio/data-directory" },
+  { name: "data catalog", path: "/studio/data-catalog" },
   { name: "execution factory", path: "/studio/execution-factory/units" },
 ];
 

@@ -70,7 +70,7 @@ export const dataConnectRoutes: RouteObject[] = [
     element: withRouteLoading("catalog:modify", <DataConnectFormPage mode="edit" />),
   },
   {
-    path: "data-connect/discover",
+    path: "data-connect/:catalogId/discover",
     handle: {
       console: {
         descriptionKey: "dataConnect.discoverDescription",

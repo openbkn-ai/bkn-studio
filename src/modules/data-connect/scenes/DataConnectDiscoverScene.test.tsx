@@ -18,7 +18,6 @@ const {
   appServicesMock,
   getCatalogMock,
   getScheduleMock,
-  listCatalogsMock,
   listTasksMock,
   listSchedulesMock,
   updateScheduleMock,
@@ -30,7 +29,6 @@ const {
   },
   getCatalogMock: vi.fn(),
   getScheduleMock: vi.fn(),
-  listCatalogsMock: vi.fn(),
   listTasksMock: vi.fn(),
   listSchedulesMock: vi.fn(),
   updateScheduleMock: vi.fn(),
@@ -206,7 +204,6 @@ vi.mock("@/shared/catalog", () => ({
     catalog: { operations?: string[] } | null | undefined,
     operation: string,
   ) => Boolean(catalog?.operations?.includes("*") || catalog?.operations?.includes(operation)),
-  listCatalogs: listCatalogsMock,
 }));
 
 vi.mock("@/modules/data-connect/services/discover.service", () => ({
@@ -279,18 +276,6 @@ describe("DataConnectDiscoverScene", () => {
       operations: ["task_manage", "view_detail"],
     });
     updateScheduleMock.mockReset();
-    listCatalogsMock.mockResolvedValue({
-      items: [{
-        id: "catalog-1",
-        name: "Orders",
-        operations: ["task_manage", "view_detail"],
-      }, {
-        id: "catalog-2",
-        name: "Customers",
-        operations: ["task_manage", "view_detail"],
-      }],
-      total: 2,
-    });
     listSchedulesMock.mockResolvedValue({ items: [schedule(100)], total: 1 });
     listTasksMock.mockResolvedValue({ items: [], total: 0 });
     getScheduleMock
@@ -314,7 +299,6 @@ describe("DataConnectDiscoverScene", () => {
     expect(await screen.findByText("common.noPermission")).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();
-    expect(listCatalogsMock).not.toHaveBeenCalled();
   });
 
   it("authorizes a direct catalog route with an exact catalog lookup", async () => {
@@ -322,7 +306,6 @@ describe("DataConnectDiscoverScene", () => {
 
     await waitFor(() => expect(listTasksMock).toHaveBeenCalled());
     expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
-    expect(listCatalogsMock).not.toHaveBeenCalled();
   });
 
   it("keeps the newest direct catalog authorization when lookups resolve out of order", async () => {
@@ -364,34 +347,6 @@ describe("DataConnectDiscoverScene", () => {
     });
 
     expect(screen.queryByText("common.noPermission")).toBeNull();
-  });
-
-  it("loads all catalog pages before filtering task_manage options", async () => {
-    listCatalogsMock.mockImplementation(({ page }: { page: number }) => Promise.resolve({
-      items: page === 1
-        ? Array.from({ length: 50 }, (_, index) => ({
-          id: `catalog-denied-${index}`,
-          name: `Denied ${index}`,
-          operations: ["view_detail"],
-        }))
-        : [{
-          id: "catalog-authorized",
-          name: "Authorized",
-          operations: ["task_manage", "view_detail"],
-        }],
-      total: 51,
-    }));
-
-    render(<DataConnectDiscoverScene />);
-
-    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
-      keyword: "",
-      page: 2,
-      pageSize: 50,
-      type: "physical",
-    }));
-    expect(await screen.findByText("Authorized")).toBeTruthy();
-    expect(screen.queryByText("Denied 0")).toBeNull();
   });
 
   it("shows no permission only for a forbidden direct catalog lookup", async () => {

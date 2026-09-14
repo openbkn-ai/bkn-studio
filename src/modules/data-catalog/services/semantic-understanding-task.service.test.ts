@@ -257,51 +257,6 @@ describe("semantic-understanding mock tasks", () => {
   });
 });
 
-describe("resource semantic-understanding task history", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("walks every backend page instead of truncating the history at 100 rows", async () => {
-    vi.resetModules();
-    vi.stubEnv("VITE_USE_MOCK", "false");
-    const backendTask = (id: string, createTime: number) => ({
-      agent_id: "semantic-agent",
-      applied: true,
-      apply_mode: "fill_empty",
-      catalog_id: "catalog-1",
-      confidence: 0.9,
-      confidence_threshold: 0.75,
-      create_time: createTime,
-      creator: { id: "user-1", name: "User", type: "user" },
-      id,
-      resource_id: "resource-1",
-      scope: "resource",
-      status: "completed",
-    });
-    getMock
-      .mockResolvedValueOnce({
-        data: { entries: [backendTask("newer", 200)], total_count: 101 },
-      })
-      .mockResolvedValueOnce({
-        data: { entries: [backendTask("older", 100)], total_count: 101 },
-      });
-    const { listResourceSemanticUnderstandingTasks } = await import(
-      "@/modules/data-catalog/services/semantic-understanding-task.service"
-    );
-
-    const tasks = await listResourceSemanticUnderstandingTasks("resource-1");
-
-    expect(tasks.map((task) => task.id)).toEqual(["newer", "older"]);
-    expect(getMock).toHaveBeenCalledTimes(2);
-    const offsets = getMock.mock.calls.map((call) => {
-      const config = call[1] as { params: { offset: number } };
-      return config.params.offset;
-    });
-    expect(offsets).toEqual([0, 100]);
-  });
-});
-
 describe("semantic-understanding task list", () => {
   afterEach(() => {
     vi.unstubAllEnvs();

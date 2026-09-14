@@ -578,7 +578,7 @@ export function CatalogDetailPanel({
               physical && canManageResourceTasks ? (
                 <AppButton
                   onClick={() => {
-                    void navigate(`/data-connect/discover?catalogId=${catalog.id}`);
+                    void navigate(`/data-connect/${catalog.id}/discover`);
                   }}
                   type="primary"
                 >

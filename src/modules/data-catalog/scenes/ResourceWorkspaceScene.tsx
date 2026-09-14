@@ -425,7 +425,7 @@ export function ResourceWorkspaceScene({
             action={canManageCatalogTasks && !resourceDisabled && !resourceStale && (discoveryFailed || resourceMissing) ? (
               <AppButton
                 onClick={() => {
-                  void navigate(`/data-connect/discover?catalogId=${resource.catalogId}`);
+                  void navigate(`/data-connect/${resource.catalogId}/discover`);
                 }}
                 type="link"
               >

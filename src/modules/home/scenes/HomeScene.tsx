@@ -114,7 +114,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         descriptionKey: "home.platform.stages.data.required.discovery.description",
         impactKey: "home.platform.stages.data.required.discovery.impact",
         outcomeKey: "home.platform.stages.data.required.discovery.outcome",
-        path: "/data-connect/discover",
+        path: "/data-connect",
         permissionMode: "any",
         permissions: "catalog:task_manage",
         summaryKey: "home.platform.stages.data.required.discovery.summary",

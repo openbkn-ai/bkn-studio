@@ -6,7 +6,7 @@
  */
 
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import type { DataConnectDiscoverTab } from "@/modules/data-connect/contracts/scenes";
 import { DataConnectDiscoverScene } from "@/modules/data-connect/scenes/DataConnectDiscoverScene";
@@ -16,8 +16,8 @@ function resolveDiscoverTab(value: string | null): DataConnectDiscoverTab {
 }
 
 export function DataConnectDiscoverPage() {
+  const { catalogId = "" } = useParams<{ catalogId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const catalogId = searchParams.get("catalogId") ?? undefined;
   const activeTab = resolveDiscoverTab(searchParams.get("tab"));
 
   useEffect(() => {
@@ -31,17 +31,6 @@ export function DataConnectDiscoverPage() {
     <DataConnectDiscoverScene
       activeTab={activeTab}
       catalogId={catalogId}
-      onCatalogIdChange={(nextCatalogId) => {
-        const nextParams = new URLSearchParams(searchParams);
-
-        if (nextCatalogId) {
-          nextParams.set("catalogId", nextCatalogId);
-        } else {
-          nextParams.delete("catalogId");
-        }
-
-        setSearchParams(nextParams, { replace: true });
-      }}
       onTabChange={(nextTab) => {
         const nextParams = new URLSearchParams(searchParams);
         nextParams.set("tab", nextTab);

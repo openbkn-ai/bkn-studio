@@ -6,7 +6,7 @@
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/data-connect/scenes/DataConnectDiscoverScene", () => ({
@@ -31,32 +31,41 @@ function LocationState() {
   return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
 }
 
+function renderPage(initialEntry: string) {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route
+          element={(
+            <>
+              <DataConnectDiscoverPage />
+              <LocationState />
+            </>
+          )}
+          path="/data-connect/:catalogId/discover"
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe("DataConnectDiscoverPage", () => {
-  it("stores the active tab in the URL while preserving catalogId", () => {
-    render(
-      <MemoryRouter initialEntries={["/data-connect/discover?catalogId=catalog-1&tab=tasks"]}>
-        <DataConnectDiscoverPage />
-        <LocationState />
-      </MemoryRouter>,
-    );
+  it("reads catalogId from the route and stores the active tab in the query", () => {
+    renderPage("/data-connect/catalog-1/discover?tab=tasks");
 
     fireEvent.click(screen.getByRole("button", { name: "schedules" }));
     expect(screen.getByTestId("location").textContent).toBe(
-      "/data-connect/discover?catalogId=catalog-1&tab=schedules",
+      "/data-connect/catalog-1/discover?tab=schedules",
     );
+    expect(screen.getByTestId("catalog-id").textContent).toBe("catalog-1");
     expect(screen.getByTestId("active-tab").textContent).toBe("schedules");
   });
 
   it("normalizes a missing tab parameter to tasks", async () => {
-    render(
-      <MemoryRouter initialEntries={["/data-connect/discover?catalogId=catalog-1"]}>
-        <DataConnectDiscoverPage />
-        <LocationState />
-      </MemoryRouter>,
-    );
+    renderPage("/data-connect/catalog-1/discover");
 
     expect(await screen.findByText(
-      "/data-connect/discover?catalogId=catalog-1&tab=tasks",
+      "/data-connect/catalog-1/discover?tab=tasks",
     )).toBeTruthy();
     expect(screen.getByTestId("active-tab").textContent).toBe("tasks");
   });

@@ -202,7 +202,7 @@ export function DataConnectListScene({
       onOpenDiscovers(record.id);
       return;
     }
-    void navigate(`/data-connect/discover?catalogId=${record.id}`);
+    void navigate(`/data-connect/${record.id}/discover`);
   }, [navigate, onOpenDiscovers]);
 
   const openEdit = useCallback((record: DataConnectRecord) => {

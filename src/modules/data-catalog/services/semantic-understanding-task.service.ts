@@ -345,38 +345,6 @@ export async function listSemanticUnderstandingTasks(
   };
 }
 
-export async function listResourceSemanticUnderstandingTasks(resourceId: string): Promise<SemanticUnderstandingTaskSummary[]> {
-  if (useMock) {
-    return [...mockTasks]
-      .filter((task) => task.resourceId === resourceId)
-      .sort((left, right) => right.createTime - left.createTime);
-  }
-  const pageSize = 100;
-  const tasks: SemanticUnderstandingTaskSummary[] = [];
-  let offset = 0;
-
-  for (; ;) {
-    const response = await http.get<{
-      entries: BackendSemanticUnderstandingTaskSummary[];
-      total_count: number;
-    }>("/vega-backend/v1/semantic-understanding-tasks", {
-      params: {
-        resource_id: resourceId,
-        scope: "resource",
-        limit: pageSize,
-        offset,
-        sort: "create_time",
-        direction: "desc",
-      },
-    });
-    tasks.push(...response.data.entries.map(mapSemanticUnderstandingTaskSummary));
-    offset += pageSize;
-    if (offset >= response.data.total_count) break;
-  }
-
-  return tasks.sort((left, right) => right.createTime - left.createTime);
-}
-
 export async function getSemanticUnderstandingTask(id: string) {
   if (useMock) return mockTasks.find((task) => task.id === id) ?? null;
   const response = await http.get<BackendSemanticUnderstandingTask>(`/vega-backend/v1/semantic-understanding-tasks/${id}`);
