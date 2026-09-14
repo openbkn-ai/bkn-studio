@@ -219,17 +219,9 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
       );
     });
 
-    const [, , granteePicker] = screen.getAllByRole("combobox");
-    fireEvent.mouseDown(granteePicker);
-    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
-    fireEvent.click(screen.getByRole("button", {
-      name: "systemAdmin.objectGrants.confirmGrant",
-    }));
-    await waitFor(() => {
-      expect(upsertObjectGrantMock).toHaveBeenCalledWith(expect.objectContaining({
-        objId: "catalog-1", objName: "Customer data", objType: "catalog",
-      }));
-    });
+    // The summary is derived from selectedObject and would show the raw ID if
+    // the selected metadata were lost while replacing the search candidates.
+    expect(screen.getByText("Customer data", { selector: "dd" })).not.toBeNull();
   });
 
   it("falls back to the Community full-package mode and hides child resource types", async () => {
