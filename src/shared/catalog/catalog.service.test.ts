@@ -76,6 +76,21 @@ describe("catalog.service · listCatalogs", () => {
     expect(lastParams()).toMatchObject({ type: undefined });
   });
 
+  it("passes an explicit sort field and direction to Vega", async () => {
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    await listCatalogs({
+      direction: "asc",
+      keyword: "",
+      page: 1,
+      pageSize: 100,
+      sort: "name",
+      type: "logical",
+    });
+
+    expect(lastParams()).toMatchObject({ direction: "asc", sort: "name" });
+  });
+
   it("passes the keyword to connector type statistics", async () => {
     const { listCatalogConnectorTypeStats } = await import("@/shared/catalog/catalog.service");
 
@@ -87,6 +102,58 @@ describe("catalog.service · listCatalogs", () => {
     );
   });
 
+});
+
+describe("catalog.service · mock listCatalogs", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sorts by name and direction before slicing catalog pages", async () => {
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    const firstPage = await listCatalogs({
+      direction: "asc",
+      keyword: "",
+      page: 1,
+      pageSize: 2,
+      sort: "name",
+      type: "physical",
+    });
+    const secondPage = await listCatalogs({
+      direction: "asc",
+      keyword: "",
+      page: 2,
+      pageSize: 2,
+      sort: "name",
+      type: "physical",
+    });
+    const descendingPage = await listCatalogs({
+      direction: "desc",
+      keyword: "",
+      page: 1,
+      pageSize: 2,
+      sort: "name",
+      type: "physical",
+    });
+
+    expect(firstPage.items.map((catalog) => catalog.name)).toEqual([
+      "customer_master",
+      "finance_dw",
+    ]);
+    expect(secondPage.items.map((catalog) => catalog.name)).toEqual([
+      "knowledge_index",
+    ]);
+    expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
+      "knowledge_index",
+      "finance_dw",
+    ]);
+  });
 });
 
 describe("catalog.service · deletion preflight", () => {

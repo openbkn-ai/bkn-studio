@@ -103,11 +103,13 @@ export type CatalogRecord = {
 
 export type CatalogListQuery = {
   connectorType?: string;
+  direction?: "asc" | "desc";
   enabled?: boolean;
   healthStatus?: CatalogHealthStatus;
   keyword: string;
   page: number;
   pageSize: number;
+  sort?: "create_time" | "name" | "update_time";
   /** Defaults to physical; data catalogs pass all when logical catalogs must also be shown. */
   type?: "all" | "logical" | "physical";
 };

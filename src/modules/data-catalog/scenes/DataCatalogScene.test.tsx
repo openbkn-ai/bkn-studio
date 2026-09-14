@@ -131,9 +131,11 @@ describe("DataCatalogScene", () => {
 
     await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledTimes(1));
     expect(listCatalogsMock).toHaveBeenCalledWith({
+      direction: "asc",
       keyword: "",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "logical",
     });
     fireEvent.click(screen.getByRole("button", { name: "select catalog" }));
@@ -204,9 +206,11 @@ describe("DataCatalogScene", () => {
 
     await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
       connectorType: "postgresql",
+      direction: "asc",
       keyword: "",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "physical",
     }));
     expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1");
@@ -286,9 +290,11 @@ describe("DataCatalogScene", () => {
     expect(catalogIDs.filter((id) => id === "catalog-1")).toHaveLength(1);
     expect(listCatalogsMock).toHaveBeenCalledWith({
       connectorType: "postgresql",
+      direction: "asc",
       keyword: "",
       page: 2,
       pageSize: 100,
+      sort: "name",
       type: "physical",
     });
   });
@@ -306,9 +312,11 @@ describe("DataCatalogScene", () => {
 
     await waitFor(() => expect(listCatalogConnectorTypeStatsMock).toHaveBeenCalledWith("orders"));
     expect(listCatalogsMock).toHaveBeenCalledWith({
+      direction: "asc",
       keyword: "orders",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "logical",
     });
   });
@@ -325,9 +333,11 @@ describe("DataCatalogScene", () => {
 
     await waitFor(() => expect(listCatalogConnectorTypeStatsMock).toHaveBeenLastCalledWith(""));
     expect(listCatalogsMock).toHaveBeenLastCalledWith({
+      direction: "asc",
       keyword: "",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "logical",
     });
   });
@@ -459,9 +469,11 @@ describe("DataCatalogScene", () => {
     fireEvent.click(screen.getByRole("button", { name: "load physical" }));
     await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
       connectorType: "postgresql",
+      direction: "asc",
       keyword: "",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "physical",
     }));
     fireEvent.click(screen.getByRole("button", { name: "enter search keyword" }));
@@ -558,9 +570,11 @@ describe("DataCatalogScene", () => {
     );
 
     await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
+      direction: "asc",
       keyword: "",
       page: 1,
       pageSize: 100,
+      sort: "name",
       type: "logical",
     }));
     fireEvent.click(screen.getByRole("button", { name: "enter search keyword" }));

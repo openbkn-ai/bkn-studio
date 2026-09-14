@@ -105,7 +105,14 @@ export function DataCatalogScene({
     applyKeyword = false,
   ) => {
     const [logicalCatalogResult, statsResult] = await Promise.all([
-      listCatalogs({ keyword, page: 1, pageSize: CATALOG_PAGE_SIZE, type: "logical" }),
+      listCatalogs({
+        direction: "asc",
+        keyword,
+        page: 1,
+        pageSize: CATALOG_PAGE_SIZE,
+        sort: "name",
+        type: "logical",
+      }),
       listCatalogConnectorTypeStats(keyword),
     ]);
     if (generation !== catalogQueryGeneration.current) {
@@ -128,9 +135,11 @@ export function DataCatalogScene({
     const pageOffset = Math.floor(offset / CATALOG_PAGE_SIZE) * CATALOG_PAGE_SIZE;
     const result = await listCatalogs({
       connectorType,
+      direction: "asc",
       keyword: catalogKeyword,
       page: pageOffset / CATALOG_PAGE_SIZE + 1,
       pageSize: CATALOG_PAGE_SIZE,
+      sort: "name",
       type,
     });
     if (generation !== catalogQueryGeneration.current) {

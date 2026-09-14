@@ -90,13 +90,45 @@ const wait = async <T,>(value: T, delay = 180) =>
     window.setTimeout(() => resolve(value), delay);
   });
 
+function catalogSortValue(
+  catalog: CatalogRecord,
+  sort: NonNullable<CatalogListQuery["sort"]>,
+): number | string {
+  if (sort === "name") {
+    return catalog.name;
+  }
+  if (sort === "update_time") {
+    return catalog.expectedUpdateTime;
+  }
+  const value = catalog.createTime;
+  if (typeof value === "number") {
+    return value;
+  }
+  const timestamp = value ? Date.parse(value) : Number.NaN;
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortMockCatalogs(catalogs: CatalogRecord[], query: CatalogListQuery) {
+  const sort = query.sort ?? "update_time";
+  const direction = query.direction ?? "desc";
+  return [...catalogs].sort((left, right) => {
+    const leftValue = catalogSortValue(left, sort);
+    const rightValue = catalogSortValue(right, sort);
+    const comparison = typeof leftValue === "string" && typeof rightValue === "string"
+      ? leftValue.localeCompare(rightValue)
+      : Number(leftValue) - Number(rightValue);
+    return direction === "asc" ? comparison : -comparison;
+  });
+}
+
 export async function listCatalogs(query: CatalogListQuery): Promise<CatalogListResult> {
   if (useMock) {
     const filtered = filterCatalogs(getMockCatalogs(), query);
+    const sorted = sortMockCatalogs(filtered, query);
     const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize),
+      items: sorted.slice(startIndex, startIndex + query.pageSize),
       total: filtered.length,
     });
   }
@@ -104,13 +136,13 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
   const response = await http.get<ListResponse<BackendCatalogSummary>>("/vega-backend/v1/catalogs", {
     params: {
       connector_type: query.connectorType || undefined,
-      direction: "desc",
+      direction: query.direction ?? "desc",
       enabled: query.enabled,
       health_check_status: query.healthStatus || undefined,
       limit: query.pageSize,
       name: query.keyword.trim() || undefined,
       offset: (query.page - 1) * query.pageSize,
-      sort: "update_time",
+      sort: query.sort ?? "update_time",
       type: query.type === "all" ? undefined : query.type,
     },
   });
