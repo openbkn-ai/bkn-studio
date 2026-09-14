@@ -311,11 +311,12 @@ export function DataCatalogScene({
         ) {
           return;
         }
+        hydratedCatalogIds.current.add(catalog.id);
         setCatalogs((current) => {
           if (current.some((item) => item.id === catalog.id)) {
+            hydratedCatalogIds.current.delete(catalog.id);
             return current;
           }
-          hydratedCatalogIds.current.add(catalog.id);
           return [...current, catalog];
         });
       })
