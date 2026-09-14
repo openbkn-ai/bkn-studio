@@ -15,10 +15,9 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./shared.module.css";
 
-const { indexConfigFormPanelMock, listBuildTaskPageMock, permissionsMock } = vi.hoisted(() => ({
+const { indexConfigFormPanelMock, listBuildTaskPageMock } = vi.hoisted(() => ({
   indexConfigFormPanelMock: vi.fn(),
   listBuildTaskPageMock: vi.fn(),
-  permissionsMock: ["catalog:task_manage"],
 }));
 
 vi.mock("@/modules/data-catalog/services/build-task.service", async (importOriginal) => ({
@@ -53,9 +52,7 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({
-    runtimeConfig: { currentUser: { permissions: permissionsMock } },
-  }),
+  useAppServices: () => ({}),
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
@@ -160,11 +157,10 @@ function buildTask(overrides: Partial<BuildTask>): BuildTask {
 describe("ResourceIndexPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    permissionsMock.splice(0, permissionsMock.length, "catalog:task_manage");
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
   });
 
-  it("renders index configuration read-only without catalog resource management permission", () => {
+  it("renders index configuration read-only without the resource modify operation", () => {
     render(
       <MemoryRouter>
         <ResourceIndexPanel
@@ -187,8 +183,7 @@ describe("ResourceIndexPanel", () => {
     }));
   });
 
-  it("keeps index configuration editable with catalog resource management permission", () => {
-    permissionsMock.push("catalog:resource_manage");
+  it("keeps index configuration editable with the resource modify operation", () => {
     render(
       <MemoryRouter>
         <ResourceIndexPanel
@@ -198,7 +193,7 @@ describe("ResourceIndexPanel", () => {
           indexViewExplicit
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
-          resource={resource}
+          resource={{ ...resource, operations: ["modify"] }}
           tasks={[]}
         />
       </MemoryRouter>,

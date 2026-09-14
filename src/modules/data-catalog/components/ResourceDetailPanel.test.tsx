@@ -121,6 +121,7 @@ describe("ResourceDetailPanel", () => {
       <MemoryRouter>
         <ResourceDetailPanel
           active
+          canEdit={false}
           catalog={null}
           resource={{ ...resource, rowCount: 0 }}
         />
@@ -141,7 +142,7 @@ describe("ResourceDetailPanel", () => {
   it("shows the original source metadata for each field", () => {
     render(
       <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} resource={resource} />
+        <ResourceDetailPanel active canEdit={false} catalog={null} resource={resource} />
       </MemoryRouter>,
     );
 
@@ -154,7 +155,12 @@ describe("ResourceDetailPanel", () => {
     const describedResource = { ...resource, description: "A long resource description" };
     render(
       <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} resource={describedResource} />
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={describedResource}
+        />
       </MemoryRouter>,
     );
 
@@ -177,6 +183,7 @@ describe("ResourceDetailPanel", () => {
       <MemoryRouter>
         <ResourceDetailPanel
           active
+          canEdit={false}
           catalog={null}
           resource={{ ...resource, category: "dataset" }}
         />
