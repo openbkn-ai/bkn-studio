@@ -39,6 +39,6 @@ export function CurrentExplanationPanel({ interactionId, panel, onPanelChange }:
     {failed && <Alert type="error" showIcon message={t(failed && !value ? "bknTrace.evidenceChain.current.readFailed" : "bknTrace.evidenceChain.current.failed")} />}
     {!busy && !failed && value?.status === "not_generated" && <p>{t("bknTrace.evidenceChain.current.empty")}</p>}
     {value?.generatedAt && <p>{t("bknTrace.evidenceChain.current.generatedAt", { time: formatDateTime(value.generatedAt) })}</p>}
-    {value?.view && <EvidenceChainPanels key={`${interactionId}:${value.generatedAt ?? ""}:${panel ?? "evidence"}`} view={value.view} initialPanel={panel} panel={panel} onPanelChange={onPanelChange} />}
+    {value?.view && <EvidenceChainPanels key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} initialPanel={panel} panel={panel} onPanelChange={onPanelChange} />}
   </section>;
 }

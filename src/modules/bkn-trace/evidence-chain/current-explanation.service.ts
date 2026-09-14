@@ -16,9 +16,16 @@ function parse(value: unknown, id: string): CurrentExplanation {
   const view = row.view;
   if (!view || view.interactionId !== id || !Array.isArray(view.claims) || !view.execution || !view.evidence) throw new Error("invalid explanation scope");
   const text = (v: unknown) => v === undefined || typeof v === "string";
-  if (typeof row.generated_at !== "string" || !text(view.question) || !text(view.answer) || !text(view.revisionLabel) || !["running", "completed", "interrupted", "failed", "unknown"].includes(view.status) || (view.notices !== undefined && (!Array.isArray(view.notices) || !view.notices.every(v => typeof v === "string")))) throw new Error("invalid explanation text");
+  const optionalEnum = (v: unknown, values: string[]) => v === undefined || (typeof v === "string" && values.includes(v));
+  if (typeof row.generated_at !== "string" || !text(view.question) || !text(view.answer) || !text(view.revisionLabel) || !["running", "completed", "interrupted", "failed", "unknown"].includes(view.status) || !optionalEnum(view.evidenceStatus, ["complete", "partial", "assembling", "failed", "not_applicable", "content_unavailable"]) || (view.notices !== undefined && (!Array.isArray(view.notices) || !view.notices.every(v => typeof v === "string")))) throw new Error("invalid explanation text");
   for (const claim of view.claims) {
-    if (!claim || typeof claim.id !== "string" || typeof claim.label !== "string" || !["checked", "located", "candidate", "unbound", "missing"].includes(claim.status) || !Array.isArray(claim.nodeIds) || !claim.nodeIds.every(id => typeof id === "string") || !text(claim.value) || !text(claim.detail) || !text(claim.objectLabel)) throw new Error("invalid conclusion");
+    if (!claim || typeof claim.id !== "string" || typeof claim.label !== "string" || !["checked", "located", "candidate", "unbound", "missing"].includes(claim.status) || !optionalEnum(claim.supportStatus, ["supported", "partial", "unsupported", "contradicted"]) || !optionalEnum(claim.attributionStatus, ["explicit", "reconstructed", "none"]) || !Array.isArray(claim.nodeIds) || !claim.nodeIds.every(id => typeof id === "string") || (claim.requirementIds !== undefined && (!Array.isArray(claim.requirementIds) || !claim.requirementIds.every(id => typeof id === "string"))) || !text(claim.value) || !text(claim.detail) || !text(claim.objectLabel)) throw new Error("invalid conclusion");
+  }
+  if (view.requirements !== undefined) {
+    if (!Array.isArray(view.requirements) || view.requirements.length > 64) throw new Error("invalid question requirement");
+    for (const requirement of view.requirements) {
+      if (!requirement || typeof requirement.id !== "string" || typeof requirement.label !== "string" || !["supported", "partial", "unsupported", "contradicted", "missing"].includes(requirement.status) || !Array.isArray(requirement.claimIds) || !requirement.claimIds.every(id => typeof id === "string")) throw new Error("invalid question requirement");
+    }
   }
   for (const graph of [view.execution, view.evidence]) {
     if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges) || graph.nodes.length > 500 || graph.edges.length > 1000) throw new Error("explanation graph budget");

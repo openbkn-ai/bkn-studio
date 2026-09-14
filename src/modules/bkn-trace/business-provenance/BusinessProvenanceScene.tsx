@@ -69,7 +69,8 @@ function formatDuration(value?: number) {
 function statusLabel(value?: string) {
   if (value === "completed") return bpText("status.completed");
   if (value === "failed") return bpText("status.failed");
-  if (value === "running" || value === "active") return bpText("status.running");
+  if (value === "active") return bpText("status.active");
+  if (value === "running") return bpText("status.running");
   return value || bpText("notRecorded");
 }
 

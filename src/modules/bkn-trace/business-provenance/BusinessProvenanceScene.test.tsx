@@ -163,8 +163,8 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     fireEvent.change(screen.getByPlaceholderText("搜索问题、结果或会话 ID"), { target: { value: "采购" } });
     fireEvent.change(screen.getByPlaceholderText("Agent / 应用"), { target: { value: "Cursor" } });
     fireEvent.change(screen.getByPlaceholderText("知识网络"), { target: { value: "supply" } });
-    fireEvent.mouseDown(screen.getByRole("combobox", { name: "运行状态" }));
-    fireEvent.click(await screen.findByText("进行中"));
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "会话状态" }));
+    fireEvent.click(await screen.findByText("可继续对话"));
     expect(getConversations).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: /查\s*询/ }));
@@ -324,10 +324,10 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 
     render(<BusinessProvenanceScene />);
     expect(screen.getByRole("main").className).toContain("pageSurface");
-    await screen.findByRole("columnheader", { name: "证据完整性" });
+    await screen.findByRole("columnheader", { name: "记录完整性" });
     expect(screen.getByRole("columnheader", { name: "用户问题" })).not.toBeNull();
     expect(screen.getByRole("columnheader", { name: "业务结果" })).not.toBeNull();
-    expect(await screen.findByText("完整可溯源")).not.toBeNull();
+    expect(await screen.findByText("记录完整")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查询采购订单" }));
     await waitFor(() => expect(getInteractions).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-1" })));
     expect(await screen.findByText("2 轮交互")).not.toBeNull();

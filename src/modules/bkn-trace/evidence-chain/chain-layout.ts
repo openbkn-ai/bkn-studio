@@ -28,8 +28,8 @@ export function layoutChain(graph: ChainGraph, mode: "evidence" | "execution") {
   let height = 260;
   slots.forEach((slot, index) => {
     const nodes = groups.get(slot)!.sort((a, b) => a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
-    nodes.forEach((node, row) => positions.set(node.id, { x: 28 + index * 310, y: 62 + row * 162, width: 230, height: 122 }));
-    height = Math.max(height, 100 + nodes.length * 162);
+    nodes.forEach((node, row) => positions.set(node.id, { x: 28 + index * 310, y: 62 + row * 194, width: 230, height: 154 }));
+    height = Math.max(height, 100 + nodes.length * 194);
   });
   return { positions, width: Math.max(340, slots.length * 310 + 10), height, columns: slots.map(s => names[s]) };
 }
