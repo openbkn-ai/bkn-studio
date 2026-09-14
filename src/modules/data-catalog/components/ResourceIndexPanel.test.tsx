@@ -160,17 +160,17 @@ describe("ResourceIndexPanel", () => {
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
   });
 
-  it("renders index configuration read-only without the resource modify operation", () => {
+  it("renders index configuration read-only without catalog resource management", () => {
     render(
       <MemoryRouter>
         <ResourceIndexPanel
           active
-          catalog={null}
+          catalog={manageableCatalog}
           indexView="config"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
-          resource={resource}
+          resource={{ ...resource, operations: ["modify"] }}
           tasks={[]}
         />
       </MemoryRouter>,
@@ -183,17 +183,17 @@ describe("ResourceIndexPanel", () => {
     }));
   });
 
-  it("keeps index configuration editable with the resource modify operation", () => {
+  it("keeps index configuration editable with catalog resource management", () => {
     render(
       <MemoryRouter>
         <ResourceIndexPanel
           active
-          catalog={null}
+          catalog={{ ...manageableCatalog, operations: ["resource_manage"] }}
           indexView="config"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
-          resource={{ ...resource, operations: ["modify"] }}
+          resource={resource}
           tasks={[]}
         />
       </MemoryRouter>,

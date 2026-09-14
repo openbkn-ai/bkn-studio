@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
-import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -52,8 +51,7 @@ import type {
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
-import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
-import type { CatalogRecord } from "@/shared/catalog";
+import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
 
@@ -180,7 +178,7 @@ export function ResourceIndexPanel({
   tasks,
 }: ResourceIndexPanelProps) {
   const { i18n, t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const { message, modal } = useAppServices();
   const navigate = useNavigate();
   const [taskPage, setTaskPage] = useState(1);
   const [taskPageSize, setTaskPageSize] = useState(10);
@@ -251,7 +249,7 @@ export function ResourceIndexPanel({
   const gate = resourceGateOf(catalog);
   const resourceBlockReason = resourceQueryBlockReason(resource);
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
-  const canModifyResource = hasCatalogResourceOperation(resource, "modify");
+  const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const readOnly = isResourceIndexReadOnly(catalog, canModifyResource);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
   const canManageTaskActions = canManageBuildTasks;
