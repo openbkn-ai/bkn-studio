@@ -28,7 +28,8 @@ export type CanvasMarks = {
 export type GraphCanvasHandle = {
   /** Adds elements; new nodes without a stored position are scattered around `anchorId` when given. */
   addElements(nodes: GNode[], edges: GEdge[], anchorId?: string): Promise<void>;
-  removeNode(id: string): Promise<void>;
+  /** Removes nodes (and their edges) with one redraw, however many are passed. */
+  removeNodes(ids: string[]): Promise<void>;
   clear(): Promise<void>;
   relayout(): Promise<void>;
   fitView(): Promise<void>;
@@ -595,12 +596,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           emitPositions();
         }
       },
-      async removeNode(id) {
+      async removeNodes(ids) {
         await readyRef.current;
         const graph = graphRef.current;
-        if (!graph) return;
-        graph.removeNodeData([id]);
-        delete pinnedPositionsRef.current[id];
+        if (!graph || ids.length === 0) return;
+        graph.removeNodeData(ids);
+        for (const id of ids) delete pinnedPositionsRef.current[id];
         await graph.draw();
         emitPositions();
       },

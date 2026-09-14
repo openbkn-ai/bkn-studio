@@ -260,6 +260,12 @@ export function SearchPanel({
   const [browseResults, setBrowseResults] = useState<GNode[]>([]);
   const [browsed, setBrowsed] = useState(false);
   const [browseExhausted, setBrowseExhausted] = useState(false);
+  /**
+   * Bumped by every browse / locate request and by switching the object type. A response only
+   * lands while its number is still current, so a late page of the previous type cannot fill the
+   * list of the new one (and skew the offset "load more" continues from).
+   */
+  const browseSeqRef = useRef(0);
 
   const [locateKey, setLocateKey] = useState("");
   const [idsText, setIdsText] = useState("");
@@ -281,28 +287,33 @@ export function SearchPanel({
   const runLocate = async () => {
     const raw = locateKey.trim();
     if (!browseOt || !raw || disabled) return;
+    const seq = ++browseSeqRef.current;
     setBrowsing(true);
     setBrowseError(null);
     try {
       const hits = await onLocate(browseOt, raw);
+      if (seq !== browseSeqRef.current) return;
       setBrowseResults(hits);
       setBrowseExhausted(true);
       setBrowsed(true);
       if (hits.length === 0) setBrowseError(t("knowledgeNetwork.graphExplorer.browse.locateEmpty"));
     } catch (error) {
+      if (seq !== browseSeqRef.current) return;
       setBrowseError(error instanceof Error ? error.message : String(error));
     } finally {
-      setBrowsing(false);
+      if (seq === browseSeqRef.current) setBrowsing(false);
     }
   };
 
   const runBrowse = async (append: boolean) => {
     if (!browseOt || disabled) return;
+    const seq = ++browseSeqRef.current;
     setBrowsing(true);
     setBrowseError(null);
     try {
       const offset = append ? browseResults.length : 0;
       const page = await onBrowse(browseOt, offset);
+      if (seq !== browseSeqRef.current) return;
       setBrowseResults((previous) => {
         const base = append ? previous : [];
         const seen = new Set(base.map((node) => node.id));
@@ -311,9 +322,10 @@ export function SearchPanel({
       setBrowseExhausted(page.length < BROWSE_PAGE_SIZE);
       setBrowsed(true);
     } catch (error) {
+      if (seq !== browseSeqRef.current) return;
       setBrowseError(error instanceof Error ? error.message : String(error));
     } finally {
-      setBrowsing(false);
+      if (seq === browseSeqRef.current) setBrowsing(false);
     }
   };
 
@@ -671,7 +683,10 @@ export function SearchPanel({
         placeholder={t("knowledgeNetwork.graphExplorer.condition.objectTypePlaceholder")}
         options={objectTypes.map((item) => ({ value: item.id, label: item.name }))}
         onChange={(value: string) => {
+          browseSeqRef.current += 1;
           setBrowseOt(value);
+          setBrowsing(false);
+          setBrowseError(null);
           setBrowseResults([]);
           setBrowsed(false);
           setBrowseExhausted(false);

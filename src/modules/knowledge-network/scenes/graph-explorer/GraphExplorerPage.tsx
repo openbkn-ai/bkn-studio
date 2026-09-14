@@ -563,7 +563,7 @@ export function GraphExplorerScene() {
         if (removed.has(edge.source) || removed.has(edge.target)) edgesRef.current.delete(edgeId);
       }
       for (const id of present) delete positionsRef.current[id];
-      for (const id of present) await canvasRef.current?.removeNode(id);
+      await canvasRef.current?.removeNodes(present);
       setPinned((previous) => {
         const next = new Set([...previous].filter((id) => !removed.has(id)));
         return next.size === previous.size ? previous : next;

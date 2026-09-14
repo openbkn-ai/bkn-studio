@@ -118,7 +118,7 @@ export function GraphView() {
     for (const [edgeId, edge] of edgesRef.current) {
       if (edge.source === id || edge.target === id) edgesRef.current.delete(edgeId);
     }
-    await canvasRef.current?.removeNode(id);
+    await canvasRef.current?.removeNodes([id]);
     setSelected((current) => (current?.id === id ? null : current));
     setCounts({ nodes: nodesRef.current.size, edges: edgesRef.current.size });
   }, []);

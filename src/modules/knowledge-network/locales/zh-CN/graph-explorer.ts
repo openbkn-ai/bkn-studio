@@ -42,6 +42,7 @@ export const graphExplorerPart = {
           "先用 search_instances 或 query_instances 找候选，再用 show_instances 把确定要看的实例画上去；这两个查找工具只返回候选，不会画。",
           "expand_neighbours 按方向展开一跳：out 沿关系类定义的 source -> target，in 相反，both 两者都要。",
           "run_cypher 只接受一条 MATCH … [WHERE …]：一条连续路径，标签用对象类 id，关系必须带方向且只写一个关系类 id，不支持变长关系，不要写 RETURN。",
+          "WHERE 支持 = <> < > <= >=、IN [...]、IS NULL / IS NOT NULL，可用 AND / OR / NOT 与括号组合。不支持变长关系（*1..3）、OPTIONAL MATCH、WITH、UNION、STARTS WITH / CONTAINS / ENDS WITH、函数和算术。一条模式最多 8 段关系。",
           "库里的名称往往是完整长名；用户只给简称时用 search_instances，不要对名称字段做 = 过滤。",
           "工具调用次数有限，每一步都要有明确目的；找不到就说明原因，不要编造实例。",
           "最后用用户提问的语言，用一两句话总结画布上新增了什么。",

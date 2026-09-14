@@ -41,6 +41,7 @@ export const graphExplorerPart = {
           "Instance ids look like `<object type id>-<primary key>`; ids returned by a tool can be passed to other tools as they are.",
           "Find candidates with search_instances or query_instances first, then draw the ones that matter with show_instances; the two finders only return candidates and draw nothing.",
           "expand_neighbours goes one hop: out follows the relation type's declared source -> target, in goes against it, both takes both.",
+          "run_cypher takes a single MATCH … [WHERE …]: one connected path, labels are object type ids, every relationship has a direction and exactly one relation type id, no variable-length relationships, never write RETURN.",
           "WHERE takes = <> < > <= >=, IN [...], IS NULL / IS NOT NULL, combined with AND / OR / NOT and parentheses. No variable-length relationships (*1..3), OPTIONAL MATCH, WITH, UNION, STARTS WITH / CONTAINS / ENDS WITH, functions or arithmetic. At most 8 relationships in one pattern.",
           "Stored names are usually long full names; when the user gives a short name use search_instances instead of an = filter on the name.",
           "Tool calls are limited; every step needs a clear purpose. When nothing is found, say why rather than inventing instances.",
