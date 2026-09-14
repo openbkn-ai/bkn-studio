@@ -12,7 +12,7 @@ import {
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { Alert, Segmented, Select, Spin, Tag, Tooltip } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -28,7 +28,7 @@ import { authzPoints } from "@/modules/system-admin/permissions";
 import { listUsers } from "@/modules/system-admin/services/admin.service";
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import {
-  listAuthorizableObjects,
+  listAuthorizableObjectsPage,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
@@ -118,6 +118,10 @@ export function ObjectAuthorizationCreateScene() {
   const [effect, setEffect] = useState<GrantEffect>("allow");
   const [objectLoading, setObjectLoading] = useState(false);
   const [objectLoadRevision, setObjectLoadRevision] = useState(0);
+  const [objectKeyword, setObjectKeyword] = useState("");
+  const [objectPage, setObjectPage] = useState(0);
+  const [objectTotal, setObjectTotal] = useState(0);
+  const objectRequestRef = useRef(0);
 
   const selectedObject = useMemo(() => {
     const parsed = parseObjValue(objectValue);
@@ -170,53 +174,68 @@ export function ObjectAuthorizationCreateScene() {
     void loadUsers();
   }, [loadUsers]);
 
-  useEffect(() => {
+  const loadObjectPage = useCallback(async (page: number, append: boolean) => {
     if (!objectType) {
-      setObjects([]);
       return;
     }
-    let cancelled = false;
+    const request = ++objectRequestRef.current;
     setObjectLoading(true);
     setLoadError(null);
-    void listAuthorizableObjects(objectType)
-      .then(async (listed) => {
-        const linked = parseObjValue(deepLinkedObject);
-        const alreadyListed =
-          !linked || listed.some((item) => item.type === linked.objType && item.id === linked.objId);
-        if (linked && linked.objType === objectType && !alreadyListed) {
-          const [resolved] = await resolveGrantNames([
-            {
-              accessorId: "",
-              objId: linked.objId,
-              objName: linked.objId,
-              objType: linked.objType,
-              operations: [],
-            },
-          ]);
-          listed = [...listed, { id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType }];
-        }
-        if (!cancelled) {
-          setObjects(listed);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLoadError(extractRequestErrorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setObjectLoading(false);
-        }
+    try {
+      let result = await listAuthorizableObjectsPage(objectType, { keyword: objectKeyword, page });
+      const linked = parseObjValue(deepLinkedObject);
+      const alreadyListed = !linked || result.items.some(
+        (item) => item.type === linked.objType && item.id === linked.objId,
+      );
+      if (!append && linked && linked.objType === objectType && !alreadyListed) {
+        const [resolved] = await resolveGrantNames([{
+          accessorId: "", objId: linked.objId, objName: linked.objId, objType: linked.objType, operations: [],
+        }]);
+        result = {
+          ...result,
+          items: [...result.items, { id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType }],
+        };
+      }
+      if (request !== objectRequestRef.current) {
+        return;
+      }
+      setObjects((previous) => {
+        const candidates = append ? [...previous, ...result.items] : result.items;
+        return [...new Map(candidates.map((item) => [`${item.type}::${item.id}`, item])).values()];
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [deepLinkedObject, objectLoadRevision, objectType]);
+      setObjectPage(page);
+      setObjectTotal(result.total);
+    } catch (error) {
+      if (request === objectRequestRef.current) {
+        setLoadError(extractRequestErrorMessage(error));
+      }
+    } finally {
+      if (request === objectRequestRef.current) {
+        setObjectLoading(false);
+      }
+    }
+  }, [deepLinkedObject, objectKeyword, objectType]);
+
+  useEffect(() => {
+    if (!objectType) {
+      objectRequestRef.current += 1;
+      setObjects([]);
+      setObjectPage(0);
+      setObjectTotal(0);
+      return;
+    }
+    void loadObjectPage(0, false);
+  }, [loadObjectPage, objectLoadRevision, objectType]);
 
   const retryLoad = () => {
     void loadUsers();
     setObjectLoadRevision((revision) => revision + 1);
+  };
+
+  const loadNextObjectPage = () => {
+    if (!objectLoading && (objectPage + 1) * 100 < objectTotal) {
+      void loadObjectPage(objectPage + 1, true);
+    }
   };
 
   useEffect(() => {
@@ -436,6 +455,7 @@ export function ObjectAuthorizationCreateScene() {
                     onChange={(value) => {
                       setObjectType(value);
                       setObjectValue(undefined);
+                      setObjectKeyword("");
                       setOpKeys([]);
                       setBundleSelected(false);
                     }}
@@ -449,12 +469,31 @@ export function ObjectAuthorizationCreateScene() {
                     className={styles.createObjectSelect}
                     disabled={!objectType}
                     loading={objectLoading}
+                    filterOption={false}
+                    notFoundContent={objectLoading ? <Spin size="small" /> : t("systemAdmin.objectGrants.pickerNoResults")}
                     onChange={(value) => {
                       setObjectValue(value);
                       setBundleSelected(false);
                     }}
-                    optionFilterProp="label"
                     options={objectOptions}
+                    onPopupScroll={(event) => {
+                      const target = event.currentTarget;
+                      if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
+                        loadNextObjectPage();
+                      }
+                    }}
+                    onSearch={setObjectKeyword}
+                    popupRender={(menu) => (
+                      <>
+                        {menu}
+                        <div className={styles.objectPickerStatus}>
+                          {objectLoading
+                            ? t("systemAdmin.objectGrants.pickerLoading")
+                            : t("systemAdmin.objectGrants.pickerCount", { loaded: objects.length, total: objectTotal })}
+                        </div>
+                      </>
+                    )}
+                    searchValue={objectKeyword}
                     placeholder={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
                     showSearch
                     value={objectValue}

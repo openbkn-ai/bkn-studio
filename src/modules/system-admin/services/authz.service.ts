@@ -8,6 +8,7 @@
 import { http } from "@/framework/request/http";
 import {
   listDomainObjects,
+  listDomainObjectsPage,
   resolveGrantNames,
 } from "@/modules/system-admin/services/authz-objects.service";
 import type { AdminUser } from "@/modules/system-admin/types/admin";
@@ -308,6 +309,21 @@ export async function listAuthorizableObjects(objType?: string): Promise<Authori
     return wait(authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })));
   }
   return listDomainObjects(objType);
+}
+
+export async function listAuthorizableObjectsPage(
+  objType: string,
+  { keyword = "", page = 0 }: { keyword?: string; page?: number } = {},
+) {
+  if (useMock) {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    const matching = authzObjects.filter((item) =>
+      item.type === objType && (!normalizedKeyword || item.name.toLowerCase().includes(normalizedKeyword)),
+    );
+    const start = page * 100;
+    return wait({ items: matching.slice(start, start + 100).map((item) => ({ ...item })), total: matching.length });
+  }
+  return listDomainObjectsPage(objType, { keyword, page });
 }
 
 export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {

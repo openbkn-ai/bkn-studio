@@ -2536,6 +2536,13 @@
   min-width: 0;
 }
 
+.objectPickerStatus {
+  padding: 8px 12px;
+  color: var(--admin-color-text-secondary);
+  font-size: 12px;
+  border-top: 1px solid var(--admin-color-border-soft);
+}
+
 .createSummaryBox {
   display: grid;
   gap: 10px;

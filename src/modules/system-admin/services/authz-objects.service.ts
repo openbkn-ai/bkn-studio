@@ -20,6 +20,13 @@ import {
 
 const PAGE_SIZE = 100;
 
+export const AUTHZ_OBJECT_PAGE_SIZE = PAGE_SIZE;
+
+export type AuthorizableObjectPage = {
+  items: AuthorizableObject[];
+  total: number;
+};
+
 // Maximum IDs per batch URL. Legacy Vega/MCP APIs put comma-separated IDs in the path, so batching
 // avoids gateway URL limits and confines a missing ID's 404 to its own batch (50 UUIDs are ~1.8 KB).
 const NAME_ID_BATCH = 50;
@@ -63,10 +70,10 @@ const LIST_CONFIG: Record<string, ListConfig> = {
   skill: { path: "/agent-operator-integration/v1/skills", envelope: "data", idField: "skill_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
 };
 
-function pagingParams(paging: Paging): Record<string, number> {
-  if (paging === "offset") return { offset: 0, limit: PAGE_SIZE };
-  if (paging === "page-size") return { page: 1, size: PAGE_SIZE };
-  return { page: 1, page_size: PAGE_SIZE };
+function pagingParams(paging: Paging, page: number): Record<string, number> {
+  if (paging === "offset") return { offset: page * PAGE_SIZE, limit: PAGE_SIZE };
+  if (paging === "page-size") return { page: page + 1, size: PAGE_SIZE };
+  return { page: page + 1, page_size: PAGE_SIZE };
 }
 
 function arrayFrom(body: unknown, key: "entries" | "data"): Record<string, unknown>[] {
@@ -74,18 +81,25 @@ function arrayFrom(body: unknown, key: "entries" | "data"): Record<string, unkno
   return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
 }
 
-async function listOne(type: string, keyword: string): Promise<AuthorizableObject[]> {
+function totalFrom(body: unknown, fallback: number): number {
+  const payload = body as Record<string, unknown>;
+  const total = payload?.total_count ?? payload?.total;
+  return typeof total === "number" && Number.isFinite(total) ? total : fallback;
+}
+
+async function listOne(type: string, keyword: string, page: number): Promise<AuthorizableObjectPage> {
   const cfg = LIST_CONFIG[type];
   if (!cfg) {
-    return [];
+    return { items: [], total: 0 };
   }
   const response = await http.get<Record<string, unknown>>(cfg.path, {
-    params: { ...pagingParams(cfg.paging), [cfg.nameParam]: keyword || undefined },
+    params: { ...pagingParams(cfg.paging, page), [cfg.nameParam]: keyword || undefined },
     skipErrorToast: true,
   });
-  return arrayFrom(response.data, cfg.envelope)
+  const items = arrayFrom(response.data, cfg.envelope)
     .map((item) => ({ type, id: str(item[cfg.idField]), name: str(item[cfg.nameField]) || str(item[cfg.idField]) }))
     .filter((object) => object.id);
+  return { items, total: totalFrom(response.data, items.length) };
 }
 
 // List types that have a concrete-instance endpoint. Object-grant history can include additional
@@ -94,8 +108,19 @@ export async function listDomainObjects(type?: string, keyword = ""): Promise<Au
   const types = type
     ? (isAuthzObjectPickerType(type) ? [type] : [])
     : AUTHZ_OBJECT_PICKER_TYPES;
-  const settled = await Promise.allSettled(types.map((item) => listOne(item, keyword)));
-  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+  const settled = await Promise.allSettled(types.map((item) => listOne(item, keyword, 0)));
+  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value.items : []));
+}
+
+/** Lists one picker type through its domain API. Errors deliberately propagate so the picker can retry. */
+export async function listDomainObjectsPage(
+  type: string,
+  { keyword = "", page = 0 }: { keyword?: string; page?: number } = {},
+): Promise<AuthorizableObjectPage> {
+  if (!isAuthzObjectPickerType(type)) {
+    return { items: [], total: 0 };
+  }
+  return listOne(type, keyword, page);
 }
 
 // 7.2 Resolve names by ID in batches.
