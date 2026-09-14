@@ -230,6 +230,7 @@
   }
 
   .deptPanel {
+    border-right: 0;
     border-bottom: 1px solid var(--admin-color-border, #d9e0ea);
     height: auto;
     max-height: none;
