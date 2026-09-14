@@ -299,6 +299,33 @@ export function CatalogDetailPanel({
       },
     },
     {
+      dataIndex: "status",
+      ellipsis: true,
+      title: t("dataCatalog.resource.resourceStatus"),
+      width: 104,
+      render: (value: CatalogResource["status"], record) => {
+        if (!value) {
+          return "—";
+        }
+        const tag = (
+          <Tag
+            className={
+              value === "active"
+                ? styles.statusTagSuccess
+                : value === "stale"
+                  ? styles.statusTagWarning
+                  : styles.statusTagNeutral
+            }
+          >
+            {t(`dataCatalog.resourceStatuses.${value}`)}
+          </Tag>
+        );
+        return record.statusMessage ? (
+          <Tooltip title={record.statusMessage}>{tag}</Tooltip>
+        ) : tag;
+      },
+    },
+    {
       dataIndex: "enabled",
       ellipsis: true,
       title: t("dataCatalog.resource.enabledStatus"),

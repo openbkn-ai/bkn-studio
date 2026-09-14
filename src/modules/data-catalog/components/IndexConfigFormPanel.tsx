@@ -460,6 +460,37 @@ export function IndexConfigFormPanel({
     }
     return duplicates;
   }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
+  const duplicateFeatureNames = useMemo(() => {
+    const namesByField = new Map<string, string[]>();
+    const collectNames = (
+      kind: FeatureKind,
+      groupsByField: Record<string, ResourceFeatureDraft[]>,
+    ) => {
+      for (const [field, groups] of Object.entries(groupsByField)) {
+        const names = namesByField.get(field) ?? [];
+        groups.forEach((feature, index) => {
+          names.push(feature.name?.trim() || defaultFeatureNameOf(kind, index));
+        });
+        namesByField.set(field, names);
+      }
+    };
+
+    collectNames("keyword", eligibleKeywordGroups);
+    collectNames("fulltext", eligibleFulltextAnalyzerGroups);
+    collectNames("embedding", eligibleEmbeddingModelGroups);
+
+    return Array.from(namesByField.entries()).flatMap(([field, names]) => {
+      const seen = new Set<string>();
+      const duplicates = new Set<string>();
+      for (const name of names) {
+        if (seen.has(name)) {
+          duplicates.add(name);
+        }
+        seen.add(name);
+      }
+      return Array.from(duplicates, (name) => `${field}: ${name}`);
+    });
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
   const invalidSavedPrimaryKeyFields = useMemo(
     () => invalidKeyFields(schema, primaryKeyFields, isPrimaryKeyField),
     [primaryKeyFields, schema],
@@ -476,6 +507,9 @@ export function IndexConfigFormPanel({
     }
     if (duplicateUnsupportedFeatureTypes.length > 0) {
       return t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") });
+    }
+    if (duplicateFeatureNames.length > 0) {
+      return t("dataCatalog.build.duplicateFeatureNames", { features: duplicateFeatureNames.join(", ") });
     }
     const keywordDefault = Number(defaultKeywordIgnoreAbove);
     if (
@@ -987,6 +1021,12 @@ export function IndexConfigFormPanel({
       ) : duplicateUnsupportedFeatureTypes.length > 0 ? (
         <Alert
           message={t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : duplicateFeatureNames.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.duplicateFeatureNames", { features: duplicateFeatureNames.join(", ") })}
           showIcon
           type="error"
         />

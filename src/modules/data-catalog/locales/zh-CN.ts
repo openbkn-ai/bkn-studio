@@ -584,6 +584,7 @@ export const dataCatalogZhCN = {
       featureConfiguredCount: "已配置",
       removeFeatureType: "移除本类",
       duplicateFeatureTypeUnsupported: "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
+      duplicateFeatureNames: "同一字段内的特征名称不能重复。请修改重复名称：{{features}}。",
       featureSummaryEmpty: "未配置特征",
       featureUnsupported: "暂不支持",
       defaultEmbeddingModelHint: "实际可选项以当前环境已接入的 Embedding 模型为准。",

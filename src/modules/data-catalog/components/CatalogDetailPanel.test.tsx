@@ -166,6 +166,8 @@ describe("CatalogDetailPanel authorize entry", () => {
           rowCount: 0,
           schema: [],
           sourceIdentifier: "db.customers",
+          status: "stale",
+          statusMessage: "source table no longer exists",
           tags: ["crm", "pii"],
           updateTime: "",
         },
@@ -178,6 +180,11 @@ describe("CatalogDetailPanel authorize entry", () => {
     expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.tags" })).toBeTruthy();
     expect(screen.getByText("crm")).toBeTruthy();
     expect(screen.getByText("pii")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.resourceStatus" })).toBeTruthy();
+    const resourceStatus = screen.getByText("dataCatalog.resourceStatuses.stale");
+    expect(resourceStatus).toBeTruthy();
+    fireEvent.mouseEnter(resourceStatus);
+    expect(await screen.findByText("source table no longer exists")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.indexState" })).toBeTruthy();
     expect(screen.getByText("dataCatalog.resource.localIndexStatuses.unavailable")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.resource.fieldCount")).toBeNull();

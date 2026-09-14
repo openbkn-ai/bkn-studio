@@ -232,4 +232,39 @@ describe("resource-index-config", () => {
     });
     expect(values.fulltextFields).toEqual(["content"]);
   });
+
+  it("preserves a referenced vector without turning it into a native vector", () => {
+    const resource = {
+      schema: [{
+        features: [{
+          featureType: "vector" as const,
+          refProperty: "content_embedding",
+        }],
+        name: "content",
+        type: "string",
+      }],
+    };
+    const values = indexFormValuesFromResource(resource);
+
+    expect(values.embeddingFields).toEqual([]);
+    expect(values.fieldEmbeddingModelGroups).toEqual({});
+
+    const result = applyIndexFormToSchema(resource.schema, values);
+    expect(result.schema[0]).toEqual({
+      ...resource.schema[0],
+      features: [
+        {
+          featureType: "vector",
+          refProperty: "content_embedding",
+        },
+        {
+          config: { ignore_above: 256 },
+          displayName: "keyword",
+          featureType: "keyword",
+          isDefault: true,
+          name: "keyword",
+        },
+      ],
+    });
+  });
 });

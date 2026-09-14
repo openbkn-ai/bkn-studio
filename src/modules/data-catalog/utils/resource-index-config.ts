@@ -110,7 +110,7 @@ export function applyIndexFormToSchema(
   const nextSchema = schema.map((field) => {
     const kept = (field.features ?? []).filter(
       (feature) =>
-        feature.featureType !== "vector" &&
+        (feature.featureType !== "vector" || Boolean(feature.refProperty)) &&
         feature.featureType !== "fulltext" &&
         (!managesKeyword || feature.featureType !== "keyword"),
     );
@@ -228,7 +228,7 @@ export function indexFormValuesFromResource(resource: {
           },
         ];
       }
-      if (feature.featureType === "vector") {
+      if (feature.featureType === "vector" && !feature.refProperty) {
         if (!embeddingFields.includes(field.name)) {
           embeddingFields.push(field.name);
         }

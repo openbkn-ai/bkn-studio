@@ -285,6 +285,32 @@ describe("IndexConfigFormPanel", () => {
     expect(keyword?.config).toEqual({ ignore_above: 512 });
   });
 
+  it("rejects duplicate physical feature names across feature types", async () => {
+    const duplicateNameResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [
+          { featureType: "keyword", name: "search", config: { ignore_above: 256 } },
+          { featureType: "fulltext", name: "search", config: { analyzer: "standard" } },
+        ],
+        name: "title",
+        type: "text",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(duplicateNameResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={duplicateNameResource} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+
+    expect(screen.getAllByText("dataCatalog.build.duplicateFeatureNames").length).toBeGreaterThan(0);
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
   it("preserves freshly generated semantic metadata when saving index config", async () => {
     const configuredResource: CatalogResource = {
       ...resource,
