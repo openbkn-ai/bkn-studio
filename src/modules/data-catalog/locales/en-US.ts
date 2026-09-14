@@ -201,6 +201,7 @@ export const dataCatalogEnUS = {
       confidenceThreshold: "Confidence threshold",
       includeSamples: "Include sample data",
       includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking.",
+      includeSamplesPermissionHint: "Query data permission is required to include sample data.",
       sampleRows: "Sample rows (1–20)",
       sampleRowsRequired: "Enter the number of sample rows.",
       sampleRowsInvalid: "Enter an integer between 1 and 20."

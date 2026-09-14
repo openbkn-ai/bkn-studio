@@ -59,6 +59,7 @@ const resource: CatalogResource = {
   description: "",
   id: "resource-1",
   name: "orders",
+  operations: ["query_data", "view_detail"],
   rowCount: 1,
   schema: [{ name: "id", type: "string" }],
   sourceIdentifier: "orders",
@@ -178,6 +179,35 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       sampleMaxRows: 20,
     }));
   }, 20_000);
+
+  it("disables sample rows without query_data while keeping task creation available", async () => {
+    createResourceSemanticUnderstandingTaskMock.mockResolvedValue({ id: "task-1" });
+
+    render(
+      <ResourceSemanticUnderstandingPanel
+        active
+        catalog={manageableCatalog}
+        resource={{ ...resource, operations: ["view_detail"] }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.create/ }));
+
+    const includeSamples = screen.getByRole("checkbox", {
+      name: "dataCatalog.semanticWorkspace.includeSamples",
+    });
+    expect((includeSamples as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText("dataCatalog.semanticWorkspace.includeSamplesPermissionHint")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.semanticWorkspace\.start/ }));
+
+    await waitFor(() => expect(createResourceSemanticUnderstandingTaskMock).toHaveBeenCalledWith({
+      applyMode: "fill_empty",
+      confidenceThreshold: 0.75,
+      includeSampleRows: false,
+      resourceId: "resource-1",
+    }));
+  });
 
   it("rejects manually entered out-of-range sample rows", async () => {
     render(<ResourceSemanticUnderstandingPanel active catalog={manageableCatalog} resource={resource} />);

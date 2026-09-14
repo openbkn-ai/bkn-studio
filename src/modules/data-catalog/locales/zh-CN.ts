@@ -201,6 +201,7 @@ export const dataCatalogZhCN = {
       confidenceThreshold: "置信度阈值",
       includeSamples: "包含样本数据",
       includeSamplesHint: "样本数据将以未脱敏形式发送给语义理解服务。",
+      includeSamplesPermissionHint: "包含样本数据需要查询该资源数据的权限。",
       sampleRows: "样本行数（1–20）",
       sampleRowsRequired: "请输入样本行数。",
       sampleRowsInvalid: "请输入 1～20 的整数。"

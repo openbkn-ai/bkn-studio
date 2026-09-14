@@ -28,6 +28,7 @@ import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/co
 import { SemanticTaskAppliedTag, SemanticTaskStatusTag } from "@/modules/data-catalog/components/SemanticTaskPresentation";
 import { createResourceSemanticUnderstandingTask, deleteSemanticUnderstandingTask, listSemanticUnderstandingTasks, type CreateSemanticUnderstandingTaskPayload, type SemanticUnderstandingTaskSummary } from "@/modules/data-catalog/services/semantic-understanding-task.service";
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceSemanticUnderstandingPanel.module.css";
@@ -82,6 +83,7 @@ export function ResourceSemanticUnderstandingPanel({
   const summaryRequestIdRef = useRef(0);
   const resourceChanged = filtersResourceId !== resource.id;
   const canManageTasks = hasCatalogOperation(catalog, "task_manage");
+  const canQueryData = hasCatalogResourceOperation(resource, "query_data");
 
   const loadPage = useCallback(async (targetPage: number, targetPageSize: number) => {
     const requestId = ++pageRequestIdRef.current;
@@ -198,6 +200,10 @@ export function ResourceSemanticUnderstandingPanel({
                 : { className: styles.summaryValueMuted, label: t("dataCatalog.semanticWorkspace.cancelled") };
 
   useSemanticUnderstandingTaskFormDefaults(form, open);
+
+  useEffect(() => {
+    if (!canQueryData) form.setFieldValue("includeSampleRows", false);
+  }, [canQueryData, form]);
 
   const start = async () => {
     let values: CreateSemanticUnderstandingTaskPayload;
@@ -360,8 +366,14 @@ export function ResourceSemanticUnderstandingPanel({
         <Form.Item label={t("dataCatalog.semanticWorkspace.confidenceThreshold")} name="confidenceThreshold" rules={[{ required: true }]}>
           <InputNumber max={1} min={0} precision={2} style={{ width: "100%" }} step={0.05} />
         </Form.Item>
-        <Form.Item extra={t("dataCatalog.semanticWorkspace.includeSamplesHint")} name="includeSampleRows" valuePropName="checked">
-          <Checkbox>{t("dataCatalog.semanticWorkspace.includeSamples")}</Checkbox>
+        <Form.Item
+          extra={t(canQueryData
+            ? "dataCatalog.semanticWorkspace.includeSamplesHint"
+            : "dataCatalog.semanticWorkspace.includeSamplesPermissionHint")}
+          name="includeSampleRows"
+          valuePropName="checked"
+        >
+          <Checkbox disabled={!canQueryData}>{t("dataCatalog.semanticWorkspace.includeSamples")}</Checkbox>
         </Form.Item>
         {includeSampleRows ? <Form.Item
           label={t("dataCatalog.semanticWorkspace.sampleRows")}
