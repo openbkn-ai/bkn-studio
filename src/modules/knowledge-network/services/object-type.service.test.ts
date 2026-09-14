@@ -26,38 +26,109 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     vi.unstubAllEnvs();
   });
 
-  it("queries object type sample data through the BKN API", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        columns: [{ data_index: "order_id", title: "订单 ID" }],
-        entries: [{ order_id: 1 }],
-        name: "采购订单",
-        total_count: 1,
-      },
+  it("queries object type sample data through the managed-proxy ontology-query API", async () => {
+    const rawResponse = JSON.stringify({
+      columns: [{ data_index: "order_id", title: "订单 ID" }],
+      entries: [{ order_id: 1 }],
+      name: "采购订单",
+      total_count: 1,
     });
+    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
     const { getObjectTypeSampleData } = await import(
       "@/modules/knowledge-network/services/object-type.service"
+    );
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
     );
 
     const result = await getObjectTypeSampleData("kn-1", "purchase_order");
 
     expect(getMock).toHaveBeenCalledWith(
-      "/bkn-backend/v1/knowledge-networks/kn-1/object-types/purchase_order/sample-data",
+      "/ontology-query/v1/knowledge-networks/kn-1/object-types/purchase_order/sample-data",
       {
         params: {
           limit: 20,
           need_total: true,
           offset: 0,
         },
+        skipErrorToast: true,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(postMock).not.toHaveBeenCalled();
+    expect(getMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("/vega-backend/"),
+      expect.anything(),
+    );
     expect(result).toEqual({
       columns: [{ dataIndex: "order_id", title: "订单 ID" }],
       name: "采购订单",
       rowTotalCount: 1,
       rows: [{ order_id: 1 }],
     });
+  });
+
+  it("preserves unsafe integers from the raw sample-data response", async () => {
+    const rawResponse =
+      '{"columns":[{"data_index":"order_id"}],"entries":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}],"total_count":1}';
+    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    );
+    const { getObjectTypeSampleData } = await import(
+      "@/modules/knowledge-network/services/object-type.service"
+    );
+
+    await expect(getObjectTypeSampleData("kn-1", "purchase_order")).resolves.toMatchObject({
+      rows: [
+        {
+          order_id: "110101199001152345",
+          signed: "-9223372036854775808",
+          unsigned: "18446744073709551615",
+        },
+      ],
+    });
+  });
+
+  it("loads every object type page for permission enrichment", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `object-${index}`,
+      name: `Object ${index}`,
+      operations: ["view_detail"],
+    }));
+    getMock
+      .mockResolvedValueOnce({ data: { entries: firstPage, total_count: 101 } })
+      .mockResolvedValueOnce({
+        data: {
+          entries: [{ id: "object-100", name: "Object 100", operations: ["query_data"] }],
+          total_count: 101,
+        },
+      });
+    const { listKnowledgeNetworkObjectTypes } = await import(
+      "@/modules/knowledge-network/services/object-type.service"
+    );
+
+    const result = await listKnowledgeNetworkObjectTypes("kn-1", {
+      allPages: true,
+      skipErrorToast: true,
+    });
+
+    expect(result).toHaveLength(101);
+    expect(result.at(-1)).toMatchObject({ id: "object-100", operations: ["query_data"] });
+    expect(getMock).toHaveBeenNthCalledWith(
+      2,
+      "/bkn-backend/v1/knowledge-networks/kn-1/object-types",
+      {
+        params: {
+          direction: "desc",
+          limit: 100,
+          offset: 100,
+          sort: "update_time",
+        },
+        skipErrorToast: true,
+      },
+    );
   });
 });
 

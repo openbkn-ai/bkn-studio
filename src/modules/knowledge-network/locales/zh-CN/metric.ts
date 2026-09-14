@@ -80,6 +80,8 @@ export const metricPart = {
     metricQueryFormTitle: "查询条件",
     metricQueryLimit: "结果上限",
     metricQueryModeLabel: "查询模式",
+    metricQueryNoPermission: "没有查询该指标的权限",
+    metricQueryNoPermissionDescription: "当前账号缺少该指标的数据查询权限，请联系知识网络管理员授权。",
     metricQueryResultTitle: "查询结果",
     metricQueryRun: "执行查询",
     metricQuerySamePeriodConfig: "同环比配置",

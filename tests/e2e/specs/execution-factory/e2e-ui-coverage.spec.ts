@@ -151,7 +151,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await expect(
         page
           .getByText(
-            /与能力管理相同的列表视图|与执行能力管理相同的列表视图|Same list view as Capability Management|Same list view as Execution Capabilities|浏览其他业务域已发布|Browse capability packs published/i,
+            /与能力管理相同的列表视图|与执行能力管理相同的列表视图|Same list view as Capability Management|Same list view as Execution Capabilities|浏览市场中已发布|Browse published capability packs/i,
           )
           .first(),
       ).toBeVisible();
@@ -247,7 +247,6 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
       const listResponse = await request.get(
         "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=20",
-        { headers: { "x-business-domain": "bd_public" } },
       );
       if (listResponse.ok()) {
         const body = (await listResponse.json()) as {
@@ -481,7 +480,6 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
       const listResponse = await request.get(
         "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=20",
-        { headers: { "x-business-domain": "bd_public" } },
       );
       if (listResponse.ok()) {
         const body = (await listResponse.json()) as {

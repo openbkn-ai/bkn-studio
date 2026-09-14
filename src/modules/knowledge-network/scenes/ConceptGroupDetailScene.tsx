@@ -7,11 +7,9 @@
 
 import {
   AppstoreOutlined,
-  DownloadOutlined,
-  EditOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Alert, Empty, Input, Select, Spin, Table, Tabs, Tag } from "antd";
+import { Alert, Empty, Input, Select, Table, Tabs, Tag } from "antd";
 import type { TableProps } from "antd";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,8 +21,10 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConceptGroupAddObjectTypesModal } from "@/modules/knowledge-network/components/concept-group/ConceptGroupAddObjectTypesModal";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import {
   deleteKnowledgeNetworkConceptGroup,
   getKnowledgeNetworkConceptGroup,
@@ -36,6 +36,7 @@ import type {
   ConceptGroupRelatedItem,
   KnowledgeNetworkActionTypeKind,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { downloadConceptGroupExport } from "@/modules/knowledge-network/utils/concept-group-export";
 
 import styles from "./ConceptGroupDetailScene.module.css";
 
@@ -51,18 +52,6 @@ const DEFAULT_TAB_SEARCH: Record<RelatedTabKey, TabSearchState> = {
   object: { keyword: "", tag: "all" },
   relation: { keyword: "", tag: "all" },
 };
-
-function downloadConceptGroupExport(detail: ConceptGroupDetail) {
-  const blob = new Blob([JSON.stringify(detail, null, 2)], {
-    type: "application/json;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${detail.name}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function renderMemberNameCell(
   record: ConceptGroupRelatedItem,
@@ -139,16 +128,36 @@ export function ConceptGroupDetailScene() {
     useState<Record<RelatedTabKey, TabSearchState>>(DEFAULT_TAB_SEARCH);
   const [selectedObjectTypeIds, setSelectedObjectTypeIds] = useState<string[]>([]);
   const [addObjectTypesOpen, setAddObjectTypesOpen] = useState(false);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
+  const { access: operationAccess, error: permissionError } =
+    useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
   const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/concept-groups`;
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.conceptGroupDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkConceptGroup(networkId, conceptGroupId);
+        void message.success(t("common.success"));
+        void navigate(listPath);
+      },
+      title: t("knowledgeNetwork.conceptGroupDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const loadData = useCallback(async () => {
     if (!networkId || !conceptGroupId) {
@@ -242,28 +251,6 @@ export function ConceptGroupDetailScene() {
     const start = (page - 1) * pageSize;
     return filteredItems.slice(start, start + pageSize);
   }, [filteredItems, page, pageSize]);
-
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      content: t("knowledgeNetwork.conceptGroupDeleteDescription", { name: detail.name }),
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkConceptGroup(networkId, detail.id);
-        void message.success(t("common.success"));
-        void navigate(listPath);
-      },
-      title: t("knowledgeNetwork.conceptGroupDeleteTitle"),
-      width: 520,
-    });
-  };
 
   const openResourceDetail = (item: ConceptGroupRelatedItem) => {
     if (activeTab === "object") {
@@ -427,9 +414,14 @@ export function ConceptGroupDetailScene() {
 
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        loading
+        onBack={() => {
+          void navigate(listPath);
+        }}
+        subtitle={t("knowledgeNetwork.conceptGroupDetailDescription")}
+        title={t("knowledgeNetwork.conceptGroupDetailTitle")}
+      />
     );
   }
 
@@ -440,36 +432,46 @@ export function ConceptGroupDetailScene() {
   return (
     <>
       <KnowledgeNetworkResourceConfigShell
-        actions={!isPermissionLoading ? (
-          <>
-            {canModify ? (
-              <AppButton
-                icon={<EditOutlined />}
-                onClick={() => {
+        actions={
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
+              {
+                key: "export",
+                label: t("knowledgeNetwork.conceptGroupExport"),
+                onClick: () => {
+                  downloadConceptGroupExport(detail);
+                  void message.success(t("knowledgeNetwork.conceptGroupExportSuccess"));
+                },
+                operation: "query_data",
+              },
+              {
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
                   void navigate(
                     `/knowledge-network/workspace/${networkId}/concept-groups/${conceptGroupId}/edit`,
                   );
-                }}
-              >
-                {t("common.edit")}
-              </AppButton>
-            ) : null}
-            <AppButton
-              icon={<DownloadOutlined />}
-              onClick={() => {
-                downloadConceptGroupExport(detail);
-                void message.success(t("knowledgeNetwork.conceptGroupExportSuccess"));
-              }}
-            >
-              {t("knowledgeNetwork.conceptGroupExport")}
-            </AppButton>
-            {canDelete ? (
-              <AppButton danger onClick={confirmDelete}>
-                {t("common.delete")}
-              </AppButton>
-            ) : null}
-          </>
-        ) : null}
+                },
+                operation: "modify",
+                type: "primary",
+              },
+              {
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
+              },
+              {
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
+              },
+            ]}
+            record={detail}
+          />
+        }
         onBack={() => {
           void navigate(listPath);
         }}
@@ -477,6 +479,7 @@ export function ConceptGroupDetailScene() {
         title={detail.name}
       >
         <div className={styles.page}>
+          {permissionError ? <Alert message={permissionError} showIcon type="error" /> : null}
           <section className={styles.summaryCard}>
             <div className={styles.summaryHead}>
               <span
@@ -617,6 +620,13 @@ export function ConceptGroupDetailScene() {
         onCancel={() => setAddObjectTypesOpen(false)}
         onSuccess={() => void loadData()}
         open={addObjectTypesOpen}
+      />
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="concept_group"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
       />
     </>
   );

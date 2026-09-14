@@ -11,14 +11,14 @@ import {
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Select, Space, Tooltip, type MenuProps } from "antd";
+import { Alert, Dropdown, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -40,20 +40,15 @@ import {
   listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
-import {
-  getCatalogResource,
-  listCatalogResourcePage,
-} from "@/modules/data-catalog/services/resource.service";
 import type {
   BuildMode,
   BuildTask,
+  BuildTaskExecuteType,
   BuildTaskPageQuery,
   BuildTaskSort,
   BuildTaskStatus,
 } from "@/modules/data-catalog/types/data-catalog";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
-import { getCatalog, listCatalogs } from "@/shared/catalog";
-import type { CatalogRecord } from "@/shared/catalog";
 
 import sceneStyles from "./IndexBuildListScene.module.css";
 import taskPanelStyles from "./TaskManagementTaskPanels.module.css";
@@ -61,13 +56,13 @@ import taskPanelStyles from "./TaskManagementTaskPanels.module.css";
 const STATUS_OPTIONS: BuildTaskStatus[] = [
   "pending",
   "running",
-  "listening",
   "stopping",
-  "paused",
-  "succeeded",
+  "stopped",
+  "completed",
   "failed",
   "cancelled",
 ];
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 function EllipsisText({ text, title }: { text: string; title?: string }) {
   return (
@@ -82,38 +77,12 @@ export function IndexBuildListScene() {
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [taskColumnWidth, setTaskColumnWidth] = useState(() => {
-    try {
-      const value = window.localStorage.getItem("index-builds.colWidth.task");
-      const parsed = value ? Number(value) : NaN;
-      return Number.isFinite(parsed) && parsed >= 120 ? parsed : 152;
-    } catch {
-      return 152;
-    }
-  });
-  const [resourceColumnWidth, setResourceColumnWidth] = useState(() => {
-    try {
-      const value = window.localStorage.getItem("index-builds.colWidth.resource");
-      const parsed = value ? Number(value) : NaN;
-      return Number.isFinite(parsed) && parsed >= 160 ? parsed : 240;
-    } catch {
-      return 240;
-    }
-  });
-  const resizingRef = useRef<{ key: "task" | "resource"; startX: number; startWidth: number } | null>(
-    null,
-  );
-
   const listFilters = useMemo(
     () => readIndexBuildListFilters(searchParams),
     [searchParams],
   );
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
-  const [catalogOptions, setCatalogOptions] = useState<CatalogRecord[]>([]);
-  const [resourceOptions, setResourceOptions] = useState<{ label: string; value: string }[]>([]);
-  const [catalogSearch, setCatalogSearch] = useState("");
-  const [resourceSearch, setResourceSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -125,7 +94,7 @@ export function IndexBuildListScene() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "resource:task_manage",
+    requiredPermissions: "catalog:task_manage",
   });
 
   // Query parameters for server pagination, sorting, and status filtering.
@@ -135,16 +104,14 @@ export function IndexBuildListScene() {
       pageSize,
       sort,
       direction,
-      catalogId: listFilters.catalogId,
+      executeType: listFilters.executeType,
       mode: listFilters.mode,
-      resourceId: listFilters.resourceId,
       statuses: listFilters.statuses.length === 0 ? undefined : listFilters.statuses,
     }),
     [
       direction,
-      listFilters.catalogId,
+      listFilters.executeType,
       listFilters.mode,
-      listFilters.resourceId,
       listFilters.statuses,
       page,
       pageSize,
@@ -155,12 +122,12 @@ export function IndexBuildListScene() {
   const updateListFilters = useCallback(
     (patch: Partial<typeof listFilters>) => {
       const next = applyIndexBuildListFilters(searchParams, {
-        catalogId: "catalogId" in patch ? patch.catalogId : listFilters.catalogId,
+        executeType: "executeType" in patch ? patch.executeType : listFilters.executeType,
         mode: "mode" in patch ? patch.mode : listFilters.mode,
-        resourceId: "resourceId" in patch ? patch.resourceId : listFilters.resourceId,
         statuses: "statuses" in patch ? patch.statuses! : listFilters.statuses,
       });
       setSearchParams(next, { replace: true });
+      setSelectedKeys([]);
       setPage(1);
     },
     [listFilters, searchParams, setSearchParams],
@@ -170,9 +137,9 @@ export function IndexBuildListScene() {
     setLoading(true);
     setLoadError(null);
     try {
-      const taskResult = await listBuildTaskPage(taskQuery);
-      setTasks(taskResult.items);
-      setTotal(taskResult.total);
+      const result = await listBuildTaskPage(taskQuery);
+      setTasks(result.items);
+      setTotal(result.total);
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -200,7 +167,7 @@ export function IndexBuildListScene() {
   const hasActive = useMemo(() => tasks.some(isActiveBuildTask), [tasks]);
 
   useEffect(() => {
-    if (!hasActive) {
+    if (useMock || !hasActive) {
       return;
     }
     const timer = window.setInterval(() => {
@@ -212,81 +179,31 @@ export function IndexBuildListScene() {
     return () => window.clearInterval(timer);
   }, [hasActive, refreshTasksSilently]);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void listCatalogs({ keyword: catalogSearch, page: 1, pageSize: 50, type: "all" })
-        .then((result) => setCatalogOptions(result.items))
-        .catch(() => setCatalogOptions([]));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [catalogSearch]);
-
-  useEffect(() => {
-    if (!listFilters.catalogId) {
-      setResourceOptions([]);
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void listCatalogResourcePage({
-        catalogId: listFilters.catalogId,
-        keyword: resourceSearch,
-        limit: 50,
-        offset: 0,
-      })
-        .then((result) =>
-          setResourceOptions(result.items.map((resource) => ({ label: resource.name, value: resource.id }))),
-        )
-        .catch(() => setResourceOptions([]));
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [listFilters.catalogId, resourceSearch]);
-
-  useEffect(() => {
-    if (!listFilters.catalogId || catalogOptions.some((item) => item.id === listFilters.catalogId)) {
-      return;
-    }
-    void getCatalog(listFilters.catalogId).then((catalog) => {
-      if (catalog) setCatalogOptions((items) => [catalog, ...items]);
-    }).catch(() => undefined);
-  }, [catalogOptions, listFilters.catalogId]);
-
-  useEffect(() => {
-    if (!listFilters.resourceId || resourceOptions.some((item) => item.value === listFilters.resourceId)) {
-      return;
-    }
-    void getCatalogResource(listFilters.resourceId).then((resource) => {
-      if (resource) {
-        setResourceOptions((items) => [{ label: resource.name, value: resource.id }, ...items]);
-      }
-    }).catch(() => undefined);
-  }, [listFilters.resourceId, resourceOptions]);
-
   const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
     useBuildTaskActions(loadTasks);
 
+  const batchDeleteTargets = tasks.filter(
+    (task) => selectedKeys.includes(task.id) && !isActiveBuildTask(task),
+  );
+
   const handleBatchDelete = () => {
-    const targets = tasks.filter((task) => selectedKeys.includes(task.id));
-    if (!targets.length) {
+    if (!batchDeleteTargets.length) {
       return;
     }
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: targets.length }),
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTargets.length }),
       content: t("dataCatalog.task.batchDeleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
       okButtonProps: { danger: true },
       onOk: async () => {
         const results = await Promise.allSettled(
-          targets.map((task) =>
-            deleteBuildTask(task.id, {
-              stopFirst: task.status === "running" || task.status === "listening",
-            }),
-          ),
+          batchDeleteTargets.map((task) => deleteBuildTask(task.id)),
         );
         const failed = results.filter((result) => result.status === "rejected").length;
         if (failed) {
           void message.error(
-            t("dataCatalog.task.batchDeletePartial", { failed, total: targets.length }),
+            t("dataCatalog.task.batchDeletePartial", { failed, total: batchDeleteTargets.length }),
           );
         } else {
           message.success(t("common.success"));
@@ -299,42 +216,6 @@ export function IndexBuildListScene() {
 
   const sortOrderOf = (key: BuildTaskSort): "ascend" | "descend" | null =>
     sort === key ? (direction === "asc" ? "ascend" : "descend") : null;
-
-  useEffect(() => {
-    const handleMove = (event: MouseEvent) => {
-      if (!resizingRef.current) {
-        return;
-      }
-      const delta = event.clientX - resizingRef.current.startX;
-      const next = Math.max(120, resizingRef.current.startWidth + delta);
-      if (resizingRef.current.key === "task") {
-        setTaskColumnWidth(next);
-      } else {
-        setResourceColumnWidth(Math.max(160, next));
-      }
-    };
-
-    const handleUp = () => {
-      if (!resizingRef.current) {
-        return;
-      }
-      const current = resizingRef.current;
-      resizingRef.current = null;
-      try {
-        const width = current.key === "task" ? taskColumnWidth : resourceColumnWidth;
-        window.localStorage.setItem(`index-builds.colWidth.${current.key}`, String(width));
-      } catch {
-        // ignore
-      }
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-  }, [resourceColumnWidth, taskColumnWidth]);
 
   // Header sorting follows the shared task-list sort/direction contract.
   const handleTableChange: TableProps<BuildTask>["onChange"] = (
@@ -354,34 +235,21 @@ export function IndexBuildListScene() {
       setSort(single.columnKey as BuildTaskSort);
       setDirection(single.order === "ascend" ? "asc" : "desc");
     }
+    setSelectedKeys([]);
     setPage(1);
   };
 
   const columns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
-      width: taskColumnWidth,
-      onHeaderCell: () => ({ style: { position: "relative" } }),
-      title: (
-        <div className={sceneStyles.resizableHeader}>
-          <span>{t("dataCatalog.taskManagement.columns.task")}</span>
-          <span
-            className={sceneStyles.resizeHandle}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              resizingRef.current = { key: "task", startX: event.clientX, startWidth: taskColumnWidth };
-            }}
-            role="separator"
-          />
-        </div>
-      ),
-      render: (value: string) => <EllipsisText text={value} />,
+      width: 160,
+      title: t("dataCatalog.taskManagement.columns.task"),
+      render: (value: string) => <button className={sceneStyles.textLink} onClick={() => setDetailTaskId(value)} type="button"><span className={sceneStyles.cellEllipsis}>{value}</span></button>,
     },
     {
       dataIndex: "catalogId",
-      title: t("dataCatalog.resource.catalog"),
-      width: 180,
+      title: t("dataCatalog.taskManagement.columns.catalog"),
+      width: 160,
       render: (value: string | undefined, record) => {
         const catalogId = value ?? record.catalogId;
         if (!catalogId) {
@@ -392,7 +260,7 @@ export function IndexBuildListScene() {
           <Tooltip title={label}>
             <button
               className={sceneStyles.textLink}
-              onClick={() => void navigate(`/data-directory/catalog/${catalogId}`)}
+              onClick={() => void navigate(`/data-catalog/catalog/${catalogId}`)}
               type="button"
             >
               <span className={sceneStyles.cellEllipsis}>{label}</span>
@@ -403,26 +271,8 @@ export function IndexBuildListScene() {
     },
     {
       dataIndex: "resourceId",
-      width: resourceColumnWidth,
-      onHeaderCell: () => ({ style: { position: "relative" } }),
-      title: (
-        <div className={sceneStyles.resizableHeader}>
-          <span>{t("dataCatalog.build.resource")}</span>
-          <span
-            className={sceneStyles.resizeHandle}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              resizingRef.current = {
-                key: "resource",
-                startX: event.clientX,
-                startWidth: resourceColumnWidth,
-              };
-            }}
-            role="separator"
-          />
-        </div>
-      ),
+      width: 160,
+      title: t("dataCatalog.taskManagement.columns.resource"),
       render: (value: string, record) => {
         const label = record.resourceName ?? value;
         return value ? (
@@ -430,7 +280,7 @@ export function IndexBuildListScene() {
             <button
               className={sceneStyles.textLink}
               onClick={() => {
-                void navigate(`/data-directory/resource/${value}?tab=index`);
+                void navigate(`/data-catalog/resource/${value}?tab=index`);
               }}
               type="button"
             >
@@ -445,35 +295,78 @@ export function IndexBuildListScene() {
     {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
-      width: 108,
+      width: 100,
+      filters: ["batch", "streaming"].map((value) => ({ text: t(`dataCatalog.modes.${value}`), value })),
+      filterMultiple: false,
+      filteredValue: listFilters.mode ? [listFilters.mode] : null,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
       render: (value: BuildTask["mode"]) => (
         <EllipsisText text={t(`dataCatalog.modes.${value}`)} />
       ),
     },
     {
+      dataIndex: "executeType",
+      title: t("dataCatalog.build.executeType"),
+      width: 100,
+      filters: ["full", "incremental"].map((value) => ({ text: t(value === "incremental" ? "dataCatalog.build.executeIncremental" : "dataCatalog.build.executeFull"), value })),
+      filterMultiple: false,
+      filteredValue: listFilters.executeType ? [listFilters.executeType] : null,
+      onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
+      render: (_value: BuildTask["executeType"], record) => (
+        <EllipsisText
+          text={
+            record.mode === "batch"
+              ? record.executeType === "incremental"
+                ? t("dataCatalog.build.executeIncremental")
+                : record.executeType === "full"
+                  ? t("dataCatalog.build.executeFull")
+                  : "-"
+              : "-"
+          }
+        />
+      ),
+    },
+    {
       dataIndex: "status",
-      title: t("common.status"),
-      width: 116,
-      render: (_value: BuildTaskStatus, record) => <BuildStatusTag plain task={record} />,
+      title: t("dataCatalog.task.detailSections.status"),
+      width: 120,
+      filters: STATUS_OPTIONS.map((value) => ({ text: t(`dataCatalog.task.statuses.${value}`), value })),
+      filteredValue: listFilters.statuses.length ? listFilters.statuses : null,
+      render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
     {
       key: "progress",
       title: t("dataCatalog.task.progress"),
-      width: 196,
+      width: 200,
       onCell: () => ({ className: sceneStyles.progressCell }),
       render: (_, record) => <BuildProgress compact task={record} />,
     },
     {
+      dataIndex: "lastProgressTime",
+      key: "last_progress_time",
+      title: t("dataCatalog.task.fields.lastProgressTime"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("last_progress_time"),
+      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+    },
+    {
+      dataIndex: "finishTime",
+      key: "finish_time",
+      title: t("dataCatalog.task.finishedAt"),
+      width: 180,
+      sorter: true,
+      sortOrder: sortOrderOf("finish_time"),
+      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+    },
+    {
       dataIndex: "createTime",
       key: "create_time",
-      title: t("dataCatalog.task.createTime"),
+      title: t("dataConnect.createTime"),
       width: 180,
       sorter: true,
       sortOrder: sortOrderOf("create_time"),
-      render: (value: number) => (
-        <EllipsisText text={formatDateTime(value || undefined)} />
-      ),
+      render: (value: number) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
     },
     {
       align: "center",
@@ -483,32 +376,31 @@ export function IndexBuildListScene() {
       fixed: "right",
       render: (_, record) => {
         const pauseResumeLabel =
-          record.status === "paused"
+          record.status === "stopped"
             ? t(
-                record.mode === "streaming"
-                  ? "dataCatalog.task.resumeListening"
-                  : "dataCatalog.task.resumeBuild",
-              )
+              record.mode === "streaming"
+                ? "dataCatalog.task.resumeListening"
+                : "dataCatalog.task.resumeBuild",
+            )
             : t(
-                record.mode === "streaming"
-                  ? "dataCatalog.task.pauseListening"
-                  : "dataCatalog.task.stopBuild",
-              );
+              record.mode === "streaming"
+                ? "dataCatalog.task.pauseListening"
+                : "dataCatalog.task.stopBuild",
+            );
 
         const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
         if (
           canManageResourceTasks &&
           (record.status === "running" ||
-            record.status === "listening" ||
             record.status === "pending" ||
-            record.status === "paused")
+            record.status === "stopped")
         ) {
           menuItems.push({ key: "pauseResume", label: pauseResumeLabel });
         }
         if (canManageResourceTasks && record.status === "failed") {
           menuItems.push({ key: "retry", label: t("dataCatalog.task.rerun") });
         }
-        if (canManageResourceTasks && record.status !== "stopping") {
+        if (canManageResourceTasks && !isActiveBuildTask(record)) {
           menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
         }
 
@@ -547,86 +439,22 @@ export function IndexBuildListScene() {
   return (
     <section className={sceneStyles.contentSurface}>
       <div className={taskPanelStyles.operationBar}>
-        <Space>
-            <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
-              {t("common.refresh")}
+        <Space className={taskPanelStyles.toolbarActions}>
+          <AppButton icon={<ReloadOutlined />} onClick={() => void loadTasks()}>
+            {t("common.refresh")}
+          </AppButton>
+          <PermissionGate permissions="catalog:task_manage">
+            <AppButton
+              danger
+              disabled={batchDeleteTargets.length === 0}
+              icon={<DeleteOutlined />}
+              onClick={handleBatchDelete}
+            >
+              {batchDeleteTargets.length > 0
+                ? `${t("dataCatalog.task.batchDelete")} (${batchDeleteTargets.length})`
+                : t("dataCatalog.task.batchDelete")}
             </AppButton>
-            <PermissionGate permissions="resource:task_manage">
-              <AppButton
-                danger
-                disabled={selectedKeys.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={handleBatchDelete}
-              >
-                {selectedKeys.length > 0
-                  ? `${t("dataCatalog.task.batchDelete")} (${selectedKeys.length})`
-                  : t("dataCatalog.task.batchDelete")}
-              </AppButton>
-            </PermissionGate>
-        </Space>
-        <Space className={sceneStyles.taskFilters}>
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              filterOption={false}
-              onChange={(value) => {
-                setResourceSearch("");
-                updateListFilters({
-                  catalogId: value ?? undefined,
-                  resourceId: undefined,
-                });
-              }}
-              onSearch={setCatalogSearch}
-              options={catalogOptions.map((catalog) => ({ label: catalog.name, value: catalog.id }))}
-              placeholder={t("dataCatalog.resource.catalog")}
-              showSearch
-              value={listFilters.catalogId ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              disabled={!listFilters.catalogId && !listFilters.resourceId}
-              filterOption={false}
-              onChange={(value) => {
-                updateListFilters({ resourceId: value ?? undefined });
-              }}
-              onSearch={setResourceSearch}
-              options={resourceOptions}
-              placeholder={t("dataCatalog.build.resource")}
-              showSearch
-              value={listFilters.resourceId ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              onChange={(value: BuildMode | undefined) => {
-                updateListFilters({ mode: value });
-              }}
-              options={["batch", "streaming"].map((value) => ({
-                label: t(`dataCatalog.modes.${value}`),
-                value,
-              }))}
-              placeholder={t("dataCatalog.build.mode")}
-              value={listFilters.mode ?? null}
-            />
-            <Select
-              allowClear
-              className={taskPanelStyles.select}
-              maxTagCount="responsive"
-              mode="multiple"
-              onChange={(value: BuildTaskStatus[]) => {
-                updateListFilters({ statuses: value });
-              }}
-              options={STATUS_OPTIONS.map((status) => ({
-                label:
-                  status === "paused"
-                    ? `${t("dataCatalog.task.statuses.paused")} / ${t("dataCatalog.task.statuses.stopped")}`
-                    : t(`dataCatalog.task.statuses.${status}`),
-                value: status,
-              }))}
-              placeholder={t("common.status")}
-              value={listFilters.statuses}
-            />
+          </PermissionGate>
         </Space>
       </div>
 
@@ -642,38 +470,55 @@ export function IndexBuildListScene() {
             showIcon
             type="error"
           />
-        ) : !loading && tasks.length === 0 ? (
-          <EmptyStatePanel
-            description={t("dataCatalog.task.emptyDescription")}
-            icon={<UnorderedListOutlined />}
-            title={t("dataCatalog.task.empty")}
-          />
         ) : (
           <AppTable<BuildTask>
             columns={columns}
             dataSource={tasks}
+            locale={{
+              emptyText: (
+                <EmptyStatePanel
+                  description={
+                    t("dataCatalog.task.emptyDescription")
+                  }
+                  icon={<UnorderedListOutlined />}
+                  title={t("dataCatalog.task.empty")}
+                />
+              ),
+            }}
             loading={loading}
-            onChange={handleTableChange}
+            onChange={(pagination, filters, sorter, extra) => {
+              if (extra.action === "filter") {
+                updateListFilters({ executeType: filters.executeType?.[0] as BuildTaskExecuteType | undefined, mode: filters.mode?.[0] as BuildMode | undefined, statuses: (filters.status ?? []).map(String) as BuildTaskStatus[] });
+                return;
+              }
+              handleTableChange(pagination, filters, sorter, extra);
+            }}
             pagination={false}
             rowKey="id"
-            rowSelection={{
+            rowSelection={canManageResourceTasks ? {
               selectedRowKeys: selectedKeys,
               onChange: (keys) => setSelectedKeys(keys.map(String)),
-            }}
+              getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
+            } : undefined}
             tableLayout="fixed"
           />
         )}
       </TableSurface>
-      {total > 0 ? (
+      {total > 0 || page > 1 ? (
         <TablePaginationBar
           current={page}
           onChange={(nextPage, nextPageSize) => {
+            setSelectedKeys([]);
+            if (nextPageSize !== pageSize) {
+              setPage(1);
+              setPageSize(nextPageSize);
+              return;
+            }
             setPage(nextPage);
-            setPageSize(nextPageSize);
           }}
           pageSize={pageSize}
           showSizeChanger
-          showTotal={(count) => t("common.total", { total: count })}
+          showTotal={() => t("dataCatalog.task.totalCount", { count: total })}
           total={total}
         />
       ) : null}

@@ -6,17 +6,9 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? "bd_public";
-
-  return { "x-business-domain": businessDomainId };
-}
 
 export async function getPythonCodeTemplate(): Promise<string> {
   if (useMock) {
@@ -26,7 +18,6 @@ export async function getPythonCodeTemplate(): Promise<string> {
   const response = await http.get<{
     code_template?: string;
   }>(`${API_PREFIX}/template/python`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   return response.data.code_template ?? "";

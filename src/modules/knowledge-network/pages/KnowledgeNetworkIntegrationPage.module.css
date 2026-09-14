@@ -13,14 +13,14 @@
   height: 100%;
   min-height: 0;
   padding: 14px 12px 20px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .headerCopy {
@@ -30,7 +30,7 @@
 
 .title {
   margin: 0 0 5px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 600;
   line-height: 28px;
@@ -38,7 +38,7 @@
 
 .description {
   margin: 0;
-  color: #526179;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.65;
   white-space: nowrap;
@@ -50,11 +50,11 @@
   align-items: center;
   gap: 24px;
   min-height: 58px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .modeLabel {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -77,20 +77,20 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-secondary);
   text-align: left;
   cursor: pointer;
 }
 
 .tab:hover {
-  color: #1d4ed8;
-  background: #f8fbff;
+  color: var(--color-text-link);
+  background: var(--color-hover);
 }
 
 .tabActive {
   border-bottom-color: #2e68ff;
-  background: #fff;
-  color: #1d4ed8;
+  background: var(--color-bg-surface);
+  color: var(--color-text-link);
 }
 
 .tabIcon {
@@ -114,7 +114,7 @@
   flex-direction: column;
   min-height: 0;
   margin-top: 14px;
-  background: #fff;
+  background: var(--color-bg-surface);
   overflow: hidden;
 }
 
@@ -140,13 +140,13 @@
 
 .sdkGuide {
   padding: 28px 26px;
-  border-right: 1px solid #d9e0ea;
+  border-right: 1px solid var(--color-border);
 }
 
 .sdkTitle,
 .sdkContentTitle {
   margin: 0;
-  color: #132036;
+  color: var(--color-text-primary);
   font-size: 22px;
   font-weight: 700;
   line-height: 1.35;
@@ -154,7 +154,7 @@
 
 .sdkDescription {
   margin: 8px 0 0;
-  color: #526179;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -171,7 +171,7 @@
 .sdkSteps li {
   position: relative;
   padding-left: 30px;
-  color: #334155;
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.6;
   counter-increment: sdk-step;
@@ -186,9 +186,9 @@
   width: 20px;
   height: 20px;
   place-items: center;
-  border: 1px solid #bfd0ea;
-  background: #eef4ff;
-  color: #1d4ed8;
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
   font-size: 11px;
   font-weight: 700;
 }
@@ -200,25 +200,25 @@
   gap: 6px;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #e5ebf5;
-  color: #64748b;
+  border-top: 1px solid var(--color-divider);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 
 .sdkKeyNote > :first-child {
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkKeyNote a,
 .sdkPackageLink {
-  color: #1d4ed8;
+  color: var(--color-text-link);
   text-decoration: none;
 }
 
 .sdkKeyNote a:hover,
 .sdkPackageLink:hover {
-  color: #1742b4;
+  color: var(--color-text-link);
 }
 
 .sdkContent {
@@ -235,7 +235,7 @@
   gap: 16px;
   min-width: 0;
   padding-bottom: 14px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sdkContentHeader > div {
@@ -245,7 +245,7 @@
 .sdkEyebrow {
   display: block;
   margin-bottom: 4px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
@@ -265,7 +265,7 @@
 
 .sdkInstallBlock {
   margin-top: 16px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -276,9 +276,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 12px;
-  border-bottom: 1px solid #d9e0ea;
-  background: #f8faff;
-  color: #526179;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -287,8 +287,8 @@
   margin: 0;
   padding: 12px;
   overflow: auto;
-  background: #f5f7fb;
-  color: #17305b;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12.5px;
   line-height: 20px;
@@ -302,7 +302,7 @@
   margin-top: 20px;
   overflow-x: auto;
   padding-bottom: 10px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .sdkExampleTab {
@@ -312,27 +312,27 @@
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .sdkExampleTab:hover {
-  background: #f2f6ff;
-  color: #1d4ed8;
+  background: var(--color-hover);
+  color: var(--color-text-link);
 }
 
 .sdkExampleTabActive {
   border-color: #bcd0f7;
-  background: #eef4ff;
-  color: #1d4ed8;
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
 }
 
 .sdkCodeBlock {
   max-width: 100%;
   margin-top: 16px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -344,9 +344,9 @@
   gap: 12px;
   min-width: 0;
   padding: 10px 12px;
-  border-bottom: 1px solid #d9e0ea;
-  background: #f8faff;
-  color: #526179;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -365,17 +365,17 @@
   gap: 5px;
   height: 28px;
   padding: 0 9px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #fff;
-  color: #526179;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
 }
 
 .sdkCopyButton:hover {
   border-color: #9bb9ff;
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .sdkCode {
@@ -383,8 +383,8 @@
   margin: 0;
   padding: 18px;
   overflow: auto;
-  background: #f5f7fb;
-  color: #17305b;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12.5px;
   line-height: 1.7;
@@ -406,7 +406,7 @@
 
   .sdkGuide {
     border-right: 0;
-    border-bottom: 1px solid #d9e0ea;
+    border-bottom: 1px solid var(--color-border);
   }
 }
 

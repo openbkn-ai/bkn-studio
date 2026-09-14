@@ -45,4 +45,22 @@ describe("admin.service · updateUser", () => {
     expect(deleteMock).not.toHaveBeenCalled();
     expect(putMock).not.toHaveBeenCalled();
   });
+
+  it("keeps mock network-builder grants within the knowledge-network catalog", async () => {
+    const roles = await listRoles({ withMembers: true });
+    const networkBuilder = roles.find((role) => role.name === "network_builder");
+    const knowledgeNetwork = networkBuilder?.permissions.find(
+      (permission) => permission.resource.type === "knowledge_network",
+    );
+
+    expect(knowledgeNetwork?.operations).toEqual([
+      "view_detail",
+      "create",
+      "modify",
+      "delete",
+      "query_data",
+      "authorize",
+      "execute",
+    ]);
+  });
 });

@@ -11,82 +11,100 @@ import {
   NumberOutlined,
 } from "@ant-design/icons";
 
+import { DATA_PROPERTY_TYPES } from "./constants";
 import styles from "./FieldTypeIcon.module.css";
 
 type FieldTypeIconProps = {
   type?: string;
 };
 
-function getFieldTypeLabel(type?: string) {
-  const normalized = (type ?? "string").toLowerCase();
+type DataPropertyType = (typeof DATA_PROPERTY_TYPES)[number];
+type TypeIcon = "boolean" | "date" | "number";
+type TypePresentation = {
+  icon?: TypeIcon;
+  label: string;
+};
 
-  if (
-    normalized === "integer" ||
-    normalized === "unsigned integer" ||
-    normalized === "bigint" ||
-    normalized === "smallint"
-  ) {
-    return "int";
-  }
+const TYPE_PRESENTATIONS = {
+  string: { label: "Str" },
+  text: { label: "Text" },
+  integer: { icon: "number", label: "int" },
+  "unsigned integer": { icon: "number", label: "uint" },
+  float: { icon: "number", label: "float" },
+  decimal: { icon: "number", label: "dec" },
+  date: { icon: "date", label: "date" },
+  time: { icon: "date", label: "time" },
+  datetime: { icon: "date", label: "datetime" },
+  timestamp: { icon: "date", label: "timestamp" },
+  ip: { label: "IP" },
+  boolean: { icon: "boolean", label: "bool" },
+  binary: { label: "Bin" },
+  json: { label: "JSON" },
+  point: { label: "Point" },
+  shape: { label: "Shape" },
+  vector: { label: "Vec" },
+  other: { label: "Other" },
+} satisfies Record<DataPropertyType, TypePresentation>;
 
-  if (
-    normalized === "float" ||
-    normalized === "double" ||
-    normalized === "decimal" ||
-    normalized === "number" ||
-    normalized === "numeric" ||
-    normalized === "real"
-  ) {
-    return "float";
-  }
+const TYPE_ALIASES: Record<string, DataPropertyType> = {
+  bigint: "integer",
+  smallint: "integer",
+  double: "float",
+  number: "float",
+  numeric: "decimal",
+  real: "float",
+};
 
-  if (normalized === "boolean") {
-    return "bool";
-  }
+const DATA_PROPERTY_TYPE_SET = new Set<string>(DATA_PROPERTY_TYPES);
 
-  if (normalized === "vector") {
-    return "vec";
-  }
-
-  if (normalized === "text") {
-    return "text";
-  }
-
-  return "Str";
+function isDataPropertyType(type: string): type is DataPropertyType {
+  return DATA_PROPERTY_TYPE_SET.has(type);
 }
 
-function isDateLikeType(type?: string) {
-  const normalized = (type ?? "").toLowerCase();
-  return ["date", "datetime", "time", "timestamp"].includes(normalized);
+function resolveTypePresentation(type?: string): TypePresentation {
+  const normalized = type?.trim().toLowerCase() ?? "";
+  const canonicalType = TYPE_ALIASES[normalized] ?? normalized;
+
+  if (isDataPropertyType(canonicalType)) {
+    return TYPE_PRESENTATIONS[canonicalType];
+  }
+
+  return { label: "Unknown" };
 }
 
 export function FieldTypeIcon({ type }: FieldTypeIconProps) {
-  if (isDateLikeType(type)) {
-    return <ClockCircleOutlined className={styles.dateIcon} />;
-  }
+  const { icon, label } = resolveTypePresentation(type);
+  const title = type?.trim() || "unknown";
 
-  const label = getFieldTypeLabel(type);
-
-  if (label === "int" || label === "float") {
+  if (icon === "number") {
     return (
-      <span className={styles.typeBadge} title={type}>
+      <span className={styles.typeBadge} title={title}>
         <NumberOutlined className={styles.typeBadgeIcon} />
         <span>{label}</span>
       </span>
     );
   }
 
-  if (label === "bool") {
+  if (icon === "boolean") {
     return (
-      <span className={styles.typeBadge} title={type}>
+      <span className={styles.typeBadge} title={title}>
         <FieldBinaryOutlined className={styles.typeBadgeIcon} />
-        <span>bool</span>
+        <span>{label}</span>
+      </span>
+    );
+  }
+
+  if (icon === "date") {
+    return (
+      <span className={styles.typeBadge} title={title}>
+        <ClockCircleOutlined className={styles.dateIcon} />
+        <span>{label}</span>
       </span>
     );
   }
 
   return (
-    <span className={styles.typeBadge} title={type}>
+    <span className={styles.typeBadge} title={title}>
       [{label}]
     </span>
   );

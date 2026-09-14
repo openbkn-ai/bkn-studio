@@ -7,6 +7,10 @@
 import CryptoJS from "crypto-js";
 import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
+import {
+  normalizeSupportedLocale,
+  resolveSupportedLocale,
+} from "@/framework/i18n/locale";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   clearStoredTokens,
@@ -293,7 +297,28 @@ export function getStoredReturnTo() {
   return window.sessionStorage.getItem(RETURN_TO_KEY) ?? undefined;
 }
 
-export async function beginLogin(returnTo?: string) {
+export function buildAuthorizationRequestURL(
+  codeChallenge: string,
+  state: string,
+  requestedLocale?: string | null,
+) {
+  const locale = normalizeSupportedLocale(requestedLocale) ?? resolveSupportedLocale();
+  const params = new URLSearchParams({
+    audience: OAUTH_AUDIENCE,
+    client_id: OAUTH_CLIENT_ID,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
+    redirect_uri: redirectUri(),
+    response_type: "code",
+    scope: OAUTH_SCOPE,
+    state,
+    ui_locales: locale,
+  });
+
+  return `${gatewayOrigin()}${AUTHORIZE_PATH}?${params.toString()}`;
+}
+
+export async function beginLogin(returnTo?: string, requestedLocale?: string | null) {
   const verifier = randomUrlSafeString();
   const state = randomUrlSafeString();
 
@@ -305,21 +330,16 @@ export async function beginLogin(returnTo?: string) {
     window.sessionStorage.removeItem(RETURN_TO_KEY);
   }
 
-  const params = new URLSearchParams({
-    audience: OAUTH_AUDIENCE,
-    client_id: OAUTH_CLIENT_ID,
-    code_challenge: await computeCodeChallenge(verifier),
-    code_challenge_method: "S256",
-    redirect_uri: redirectUri(),
-    response_type: "code",
-    scope: OAUTH_SCOPE,
+  const authorizationURL = buildAuthorizationRequestURL(
+    await computeCodeChallenge(verifier),
     state,
-  });
+    requestedLocale,
+  );
 
   // Claim the browser's login CSRF cookie before navigating; other tabs stop
   // auto-redirecting until this flow finishes or the lock ages out.
   writeFlowLock();
-  window.location.assign(`${gatewayOrigin()}${AUTHORIZE_PATH}?${params.toString()}`);
+  window.location.assign(authorizationURL);
 }
 
 async function requestToken(body: URLSearchParams): Promise<TokenResponse> {

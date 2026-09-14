@@ -24,11 +24,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { formatNumber } from "@/framework/i18n/format";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { OverviewOntologyBlock } from "@/modules/knowledge-network/components/preview/OverviewOntologyBlock";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
@@ -69,6 +70,11 @@ export function WorkspaceOverviewSection({
   const navigate = useNavigate();
   const { message } = useAppServices();
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  // Judged on the record's own operations, not on a platform permission point. bkn-backend writes
+  // `authorize` to whoever created the network, so this is what "I made it, I may share it" looks
+  // like; admin-authz:grant is a platform-administrator capability that a builder never holds, and
+  // gating on it hid the button from exactly the person the grant was written for.
+  const canAuthorize = hasKnowledgeNetworkRecordOperation(detail, "authorize");
   const [graphExpanded, setGraphExpanded] = useState(false);
   const [recentExpanded, setRecentExpanded] = useState(false);
   const [recentPage, setRecentPage] = useState(1);
@@ -80,8 +86,7 @@ export function WorkspaceOverviewSection({
       return;
     }
 
-    void navigator.clipboard
-      ?.writeText(networkIdentifier)
+    void writeTextToClipboard(networkIdentifier)
       .then(() => message.success(t("knowledgeNetwork.networkIdentifierCopied")))
       .catch(() => message.error(t("knowledgeNetwork.copyNetworkIdentifierFailed")));
   };
@@ -173,15 +178,11 @@ export function WorkspaceOverviewSection({
             <div className={styles.overviewHeaderName}>{detail?.name}</div>
           </div>
           <div className={styles.overviewHeaderTitleRight}>
-            <PermissionGate permissions="admin-authz:grant">
-              <AppButton
-                disabled={!detail}
-                icon={<KeyOutlined />}
-                onClick={() => setAuthorizeOpen(true)}
-              >
-                {t("systemAdmin.objectGrants.authorize")}
+            {detail && canAuthorize ? (
+              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                {t("knowledgeNetwork.authorizeAction")}
               </AppButton>
-            </PermissionGate>
+            ) : null}
             {canModify ? (
               <AppButton icon={<EditOutlined />} onClick={onEdit}>
                 {t("common.edit")}
@@ -377,11 +378,12 @@ export function WorkspaceOverviewSection({
 
       {detail ? (
         <ObjectAuthorizeDrawer
+          objectAuthorized={canAuthorize}
           objId={networkId}
           objName={detail.name}
           objType="knowledge_network"
           onClose={() => setAuthorizeOpen(false)}
-          open={authorizeOpen}
+          open={authorizeOpen && canAuthorize}
         />
       ) : null}
     </div>

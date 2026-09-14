@@ -48,6 +48,7 @@ type SampleRowEntry = {
 };
 
 type ObjectTypeDetailLogicPropertyTrialPanelProps = {
+  canQueryData: boolean;
   dataProperties: ObjectTypeDataProperty[];
   displayKey: string;
   highlightedLogicPropertyName?: string | null;
@@ -66,6 +67,7 @@ type TrialTableRow = SampleRowEntry;
 const DEFAULT_PAGE_SIZE = 10;
 
 export function ObjectTypeDetailLogicPropertyTrialPanel({
+  canQueryData,
   dataProperties,
   displayKey,
   highlightedLogicPropertyName = null,
@@ -161,6 +163,10 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
 
   const runTrialForRows = useCallback(
     async (rowKeys: string[]) => {
+      if (!canQueryData) {
+        return;
+      }
+
       const entries = sampleRows.filter((item) => rowKeys.includes(item.key) && item.identity);
 
       if (entries.length === 0) {
@@ -208,7 +214,7 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
         });
       }
     },
-    [message, networkId, objectTypeId, propertyNames, sampleRows, t, trialLogicProperties],
+    [canQueryData, message, networkId, objectTypeId, propertyNames, sampleRows, t, trialLogicProperties],
   );
 
   const columns: TableProps<TrialTableRow>["columns"] = useMemo(() => {
@@ -286,6 +292,17 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
       <div className={styles.loadingState}>
         <Spin />
       </div>
+    );
+  }
+
+  if (!canQueryData) {
+    return (
+      <Alert
+        description={t("knowledgeNetwork.objectTypeProxyReadForbiddenDescription")}
+        message={t("knowledgeNetwork.objectTypeProxyReadForbidden")}
+        showIcon
+        type="warning"
+      />
     );
   }
 

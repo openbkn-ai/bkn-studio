@@ -11,6 +11,7 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ConceptGroupDetail,
   ConceptGroupMutationPayload,
@@ -27,6 +28,7 @@ import {
 import {
   enrichConceptGroupDetail,
   mockConceptGroups,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   syncKnowledgeNetworkStatistics,
   syncMockConceptGroups,
@@ -54,7 +56,12 @@ function resolveConceptGroupMutationResultId(value: unknown): string | null {
 
 export async function listKnowledgeNetworkConceptGroups(networkId: string) {
   if (useMock) {
-    return wait((mockConceptGroups[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockConceptGroups[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendConceptGroup>>(
@@ -75,7 +82,11 @@ export async function listKnowledgeNetworkConceptGroups(networkId: string) {
 export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId: string) {
   if (useMock) {
     const group = mockConceptGroups[networkId]?.find((item) => item.id === groupId) ?? null;
-    return wait(group ? enrichConceptGroupDetail(networkId, group) : null);
+    return wait(
+      group
+        ? { ...enrichConceptGroupDetail(networkId, group), operations: mockKnowledgeNetworkChildOperations }
+        : null,
+    );
   }
 
   const response = await http.get<SingleEntryResponse<BackendConceptGroup>>(
@@ -83,7 +94,13 @@ export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapConceptGroupDetail(record) : null;
+  return record
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "concept-groups",
+        mapConceptGroupDetail(record),
+      )
+    : null;
 }
 
 export async function createKnowledgeNetworkConceptGroup(

@@ -16,6 +16,9 @@ import {
 } from "@/modules/bkn-trace/trace-analysis/trace-analysis.service";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() } }),
+}));
 vi.mock("@/modules/bkn-trace/trace-analysis/trace-analysis.service", () => ({
   getReferencedPayload: vi.fn(),
   getTechnicalTrace: vi.fn(),
@@ -154,6 +157,12 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     });
   });
 
+  it("uses the standard level-three page title", async () => {
+    render(<TraceAnalysisScene />);
+
+    expect(await screen.findByRole("heading", { level: 3, name: "bknTrace.traceAnalysis.title" })).not.toBeNull();
+  });
+
   it("opens a real technical Trace into summary, execution chain and raw detail", async () => {
     const { container } = render(<TraceAnalysisScene />);
     expect(container.firstElementChild?.className).toContain("pageSurface");
@@ -192,6 +201,15 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("bknTrace.traceWorkspace.detailTitle")).not.toBeNull();
   });
 
+  it("uses Ant Design date pickers for trace time filters", async () => {
+    const { container } = render(<TraceAnalysisScene />);
+
+    await screen.findByRole("button", { name: "c2c97a9e8afd1259218a9d975ad63e91" });
+    expect(screen.getByLabelText("bknTrace.traceWorkspace.filters.from")).not.toBeNull();
+    expect(screen.getByLabelText("bknTrace.traceWorkspace.filters.to")).not.toBeNull();
+    expect(container.querySelectorAll('input[type="datetime-local"]')).toHaveLength(0);
+  });
+
   it("keeps the latest list response when an earlier page request finishes late", async () => {
     let resolvePageTwo!: (value: Awaited<ReturnType<typeof listTechnicalTraces>>) => void;
     const pageTwo = new Promise<Awaited<ReturnType<typeof listTechnicalTraces>>>((resolve) => { resolvePageTwo = resolve; });
@@ -204,7 +222,7 @@ describe("TraceAnalysisScene", { timeout: 30_000 }, () => {
     await screen.findByRole("button", { name: "initial" });
     fireEvent.click(screen.getByTitle("2"));
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(2));
-    fireEvent.change(screen.getByPlaceholderText("Trace ID"), { target: { value: "filtered" } });
+    fireEvent.change(screen.getByPlaceholderText("bknTrace.traceWorkspace.filters.traceId"), { target: { value: "filtered" } });
     fireEvent.click(screen.getByRole("button", { name: /bknTrace.actions.query/ }));
     await waitFor(() => expect(listTechnicalTraces).toHaveBeenCalledTimes(3));
     expect(await screen.findByRole("button", { name: "filtered" })).not.toBeNull();

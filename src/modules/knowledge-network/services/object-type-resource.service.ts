@@ -6,7 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import { transformVegaDynamicDataResponse } from "@/framework/request/vega-bigint";
+import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import { catalogListAllQuery, listCatalogs } from "@/shared/catalog";
 import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
 import type {
@@ -26,6 +26,7 @@ type BackendResourceListEntry = {
   catalog_id?: string;
   id: string;
   name?: string;
+  operations?: string[];
 };
 
 type BackendResourceListResponse = {
@@ -44,6 +45,7 @@ type BackendResourceField = {
 type BackendResourceDetail = {
   id: string;
   name?: string;
+  operations?: string[];
   schema_definition?: BackendResourceField[] | null;
 };
 
@@ -59,6 +61,7 @@ type BackendResourcePreviewResponse = {
 async function getResourceDetail(resourceId: string): Promise<BackendResourceDetail | null> {
   const response = await http.get<BackendResourceDetailResponse>(
     `/vega-backend/v1/resources/${resourceId}`,
+    { skipErrorToast: true },
   );
   return response.data.entries?.[0] ?? null;
 }
@@ -230,6 +233,8 @@ export async function queryObjectTypeResources(
 ): Promise<ObjectTypeResourceListResult> {
   const page = query.page ?? 1;
   const pageSize = query.pageSize ?? 10;
+  const trimmedName = query.name?.trim();
+  const normalizedName = trimmedName?.toLowerCase();
 
   if (useMock) {
     let items = (mockObjectTypeResources[networkId] ?? []).map((item) => ({ ...item }));
@@ -238,9 +243,8 @@ export async function queryObjectTypeResources(
       items = items.filter((item) => item.dataSourceId === query.dataSourceId);
     }
 
-    if (query.name?.trim()) {
-      const keyword = query.name.trim().toLowerCase();
-      items = items.filter((item) => item.name.toLowerCase().includes(keyword));
+    if (normalizedName) {
+      items = items.filter((item) => item.name.toLowerCase().includes(normalizedName));
     }
 
     const start = (page - 1) * pageSize;
@@ -254,7 +258,7 @@ export async function queryObjectTypeResources(
     params: {
       catalog_id: query.dataSourceId || undefined,
       limit: pageSize,
-      name: query.name?.trim() || undefined,
+      name: trimmedName || undefined,
       offset: (page - 1) * pageSize,
       sort: "update_time",
     },
@@ -265,6 +269,7 @@ export async function queryObjectTypeResources(
       dataSourceId: item.catalog_id,
       id: item.id,
       name: item.name ?? item.id,
+      operations: item.operations,
     })),
     total: response.data.total_count ?? 0,
   };
@@ -298,9 +303,30 @@ export async function getObjectTypeResourcePreview(
     });
   }
 
-  const [detail, previewResponse] = await Promise.all([
-    getResourceDetail(resourceId),
-    http.post<BackendResourcePreviewResponse>(
+  const detail = await getResourceDetail(resourceId);
+
+  if (!detail) {
+    return null;
+  }
+
+  const fields = (detail.schema_definition ?? []).map(mapResourceField);
+  const canQueryData = detail.operations === undefined
+    || detail.operations.includes("*")
+    || detail.operations.includes("query_data");
+
+  if (!canQueryData) {
+    return {
+      columns: fields.map((item) => ({
+        dataIndex: item.name,
+        title: item.displayName,
+      })),
+      name: detail.name ?? resourceId,
+      queryDenied: true,
+      rows: [],
+    };
+  }
+
+  const previewResponse = await http.post<BackendResourcePreviewResponse>(
       `/vega-backend/v1/resources/${resourceId}/data`,
       {
         need_total: true,
@@ -314,16 +340,11 @@ export async function getObjectTypeResourcePreview(
         headers: {
           "X-HTTP-Method-Override": "GET",
         },
-        transformResponse: transformVegaDynamicDataResponse,
+        skipErrorToast: true,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
-    ),
-  ]);
+    );
 
-  if (!detail) {
-    return null;
-  }
-
-  const fields = (detail.schema_definition ?? []).map(mapResourceField);
   const rows = normalizeResourcePreviewRows(previewResponse.data.entries);
   const columns =
     fields.length > 0

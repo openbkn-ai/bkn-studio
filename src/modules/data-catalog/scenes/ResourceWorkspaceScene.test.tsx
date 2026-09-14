@@ -1,0 +1,353 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AxiosError, AxiosHeaders } from "axios";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+
+const getCatalogResourceMock = vi.hoisted(() => vi.fn());
+const getCatalogMock = vi.hoisted(() => vi.fn());
+const listBuildTaskPageMock = vi.hoisted(() => vi.fn());
+const subscribeMockDbMock = vi.hoisted(() => vi.fn());
+const discoverCatalogResourceMock = vi.hoisted(() => vi.fn());
+const setCatalogResourceEnabledMock = vi.hoisted(() => vi.fn());
+const modalConfirmMock = vi.hoisted(() => vi.fn());
+const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
+const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
+
+vi.mock("antd", () => ({
+  Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
+  Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
+  Tabs: ({ activeKey, items }: { activeKey: string; items: Array<{ children: React.ReactNode; key: string }> }) => (
+    <>{items.find((item) => item.key === activeKey)?.children}</>
+  ),
+}));
+
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock("react-router-dom", () => ({
+  useLocation: () => ({ pathname: "/data-catalog/resource/resource-1", search: "" }),
+  useNavigate: () => vi.fn(),
+}));
+
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({
+    message: { error: vi.fn(), success: vi.fn() },
+    modal: { confirm: modalConfirmMock },
+    runtimeConfig: { currentUser: { permissions: currentPermissions.value } },
+  }),
+}));
+
+vi.mock("@/framework/permission/PermissionGate", () => ({
+  PermissionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("@/framework/ui/common/AppButton", () => ({
+  AppButton: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick} type="button">{children}</button>
+  ),
+}));
+
+vi.mock("@/framework/ui/common/EmptyStatePanel", () => ({
+  EmptyStatePanel: () => <div />,
+}));
+
+vi.mock("@/framework/ui/common/SceneBackButton", () => ({
+  SceneBackButton: () => <button type="button" />,
+}));
+
+vi.mock("@/framework/entitlement/EditionBadge", () => ({ EditionBadge: () => null }));
+vi.mock("@/framework/entitlement/RequireEdition", () => ({
+  RequireEdition: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("@/modules/data-catalog/components/ResourceDetailPanel", () => ({
+  ResourceDetailPanel: ({ resource }: { resource: CatalogResource }) => (
+    <div data-testid="detail-schema-name">{resource.schema[0]?.displayName ?? "-"}</div>
+  ),
+}));
+vi.mock("@/modules/data-catalog/components/ResourceIndexPanel", () => ({ ResourceIndexPanel: () => <div /> }));
+vi.mock("@/modules/data-catalog/components/ResourcePreviewPanel", () => ({ ResourcePreviewPanel: () => <div /> }));
+vi.mock("@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel", () => ({
+  ResourceSemanticUnderstandingPanel: () => <div data-testid="semantic-panel" />,
+}));
+vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
+  ObjectAuthorizeDrawer: (props: Record<string, unknown>) => {
+    drawerProps.value = props;
+    return props.open ? <div data-testid="authorize-drawer" /> : null;
+  },
+}));
+
+vi.mock("@/modules/data-catalog/services/resource.service", () => ({
+  discoverCatalogResource: discoverCatalogResourceMock,
+  getCatalogResource: getCatalogResourceMock,
+  setCatalogResourceEnabled: setCatalogResourceEnabledMock,
+}));
+vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
+  listBuildTaskPage: listBuildTaskPageMock,
+}));
+vi.mock("@/modules/data-catalog/services/mock-db", () => ({
+  subscribeMockDb: subscribeMockDbMock,
+}));
+vi.mock("@/shared/catalog", () => ({
+  getCatalog: getCatalogMock,
+  hasCatalogOperation: (catalog: { operations?: string[] } | null, operation: string) =>
+    Boolean(catalog?.operations?.includes("*") || catalog?.operations?.includes(operation)),
+}));
+
+import { ResourceWorkspaceScene } from "./ResourceWorkspaceScene";
+
+const staleResource: CatalogResource = {
+  catalogId: "catalog-1",
+  localIndexStatus: "unavailable",
+  category: "table",
+  columnCount: 1,
+  description: "",
+  id: "resource-1",
+  name: "orders",
+  rowCount: 1,
+  schema: [{ name: "order_id", type: "string" }],
+  sourceIdentifier: "orders",
+  updateTime: "2026-08-20T00:00:00Z",
+  expectedUpdateTime: 1,
+};
+
+describe("ResourceWorkspaceScene", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentPermissions.value = [];
+    drawerProps.value = null;
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      name: "Catalog",
+      operations: ["authorize", "resource_manage", "task_manage"],
+    });
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
+    subscribeMockDbMock.mockImplementation(() => () => {});
+    discoverCatalogResourceMock.mockReset();
+    setCatalogResourceEnabledMock.mockReset();
+    modalConfirmMock.mockReset();
+  });
+
+  it("loads only the latest build task for the resource status", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: staleResource.id,
+      sort: "create_time",
+    }));
+  });
+
+  it("keeps a directly granted resource available when the parent catalog is forbidden", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    getCatalogMock.mockRejectedValue(new AxiosError(
+      "Forbidden",
+      undefined,
+      undefined,
+      undefined,
+      {
+        status: 403,
+        statusText: "Forbidden",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      },
+    ));
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(getCatalogMock).toHaveBeenCalledWith(staleResource.catalogId, { skipErrorToast: true });
+  });
+
+  it("does not use global catalog grants for management actions on the current catalog", async () => {
+    currentPermissions.value = ["catalog:resource_manage", "catalog:task_manage"];
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      name: "Catalog",
+      operations: ["view_detail"],
+    });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+    expect(screen.queryByText("common.disable")).toBeNull();
+  });
+
+  it("opens the shared authorization drawer from the resource workspace", async () => {
+    currentPermissions.value = ["admin-authz:grant"];
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    fireEvent.click(await screen.findByText("dataCatalog.catalog.authorize"));
+
+    expect(screen.getByTestId("authorize-drawer")).toBeTruthy();
+    expect(drawerProps.value?.objType).toBe("resource");
+    expect(drawerProps.value?.objId).toBe("resource-1");
+    expect(drawerProps.value?.objName).toBe("orders");
+  });
+
+  it("confirms metadata refresh and resource availability changes before creating requests", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await screen.findByText("dataCatalog.resourceWorkspace.refreshMetadata");
+    fireEvent.click(screen.getByText("dataCatalog.resourceWorkspace.refreshMetadata"));
+    fireEvent.click(screen.getByText("common.disable"));
+
+    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+    expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      title: "dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle",
+    }));
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      okButtonProps: { danger: true },
+      title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
+    }));
+  });
+
+  it("confirms enabling a disabled resource before issuing the request", async () => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, enabled: false });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await screen.findByText("common.enable");
+    fireEvent.click(screen.getByText("common.enable"));
+
+    expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
+    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "dataCatalog.resourceWorkspace.enableConfirmTitle",
+    }));
+  });
+
+  it("finishes an in-flight workspace load after a tab refresh", async () => {
+    let onMockDbChange: (() => void) | undefined;
+    let resolveLoad: (resource: CatalogResource) => void;
+    const semanticResource: CatalogResource = {
+      ...staleResource,
+      expectedUpdateTime: 2,
+      schema: [{ ...staleResource.schema[0], displayName: "订单编号" }],
+    };
+    subscribeMockDbMock.mockImplementation((listener: () => void) => {
+      onMockDbChange = listener;
+      return () => {};
+    });
+    getCatalogResourceMock
+      .mockResolvedValueOnce(staleResource)
+      .mockImplementationOnce(() => new Promise<CatalogResource>((resolve) => {
+        resolveLoad = resolve;
+      }))
+      .mockResolvedValueOnce(semanticResource);
+
+    const props = {
+      indexView: "config" as const,
+      onIndexViewChange: vi.fn(),
+      onTabChange: vi.fn(),
+      resourceId: staleResource.id,
+      tab: "semantic-understanding" as const,
+    };
+    const { rerender } = render(<ResourceWorkspaceScene {...props} />);
+
+    await screen.findByTestId("semantic-panel");
+    onMockDbChange?.();
+    await screen.findByTestId("workspace-spin");
+    rerender(<ResourceWorkspaceScene {...props} tab="detail" />);
+    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(3));
+    resolveLoad!(staleResource);
+
+    expect((await screen.findByTestId("detail-schema-name")).textContent).toBe("订单编号");
+    expect(screen.queryByTestId("workspace-spin")).toBeNull();
+  });
+
+  it("refreshes the resource once when entering detail after semantic understanding", async () => {
+    const semanticResource: CatalogResource = {
+      ...staleResource,
+      expectedUpdateTime: 2,
+      schema: [{ ...staleResource.schema[0], description: "Order identifier", displayName: "订单编号" }],
+    };
+    getCatalogResourceMock
+      .mockResolvedValueOnce(staleResource)
+      .mockResolvedValueOnce(semanticResource);
+
+    const props = {
+      indexView: "config" as const,
+      onIndexViewChange: vi.fn(),
+      onTabChange: vi.fn(),
+      resourceId: staleResource.id,
+      tab: "semantic-understanding" as const,
+    };
+    const { rerender } = render(<ResourceWorkspaceScene {...props} />);
+
+    await screen.findByTestId("semantic-panel");
+    rerender(<ResourceWorkspaceScene {...props} tab="detail" />);
+
+    await waitFor(() => expect(getCatalogResourceMock).toHaveBeenCalledTimes(2));
+    expect((await screen.findByTestId("detail-schema-name")).textContent).toBe("订单编号");
+  });
+});

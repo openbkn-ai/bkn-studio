@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, InputNumber, Modal, Select, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Form, Input, InputNumber, Modal, Select, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +15,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createSmallModel,
+  setDefaultSmallModel,
   testSmallModel,
   updateSmallModel,
 } from "@/modules/model-resources/services/small-model.service";
@@ -24,19 +26,27 @@ import {
   smallModelToFormValues,
   type SmallModelFormValues,
 } from "@/modules/model-resources/utils/model-form";
+import { getModelConfigConflict } from "@/modules/model-resources/utils/model-config-conflict";
 
 import { AdaptationCodeEditor } from "./AdaptationCodeEditor";
 
 type SmallModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
   record: SmallModel | null;
 };
 
-export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelFormModalProps) {
+export function SmallModelFormModal({
+  canSetDefault = false,
+  mode,
+  onClose,
+  open,
+  record,
+}: SmallModelFormModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [form] = Form.useForm<SmallModelFormValues>();
   const [modalMode, setModalMode] = useState(mode);
   const [submitting, setSubmitting] = useState(false);
@@ -82,6 +92,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
       auth: "empty",
       adapter: false,
       batchSize: 32,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -162,6 +173,47 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
       message.success(t("modelResources.models.saveSuccess"));
       onClose(true);
     } catch (error) {
+      const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
+      const existingModel = conflict?.existingModel;
+      if (conflict && payload.default && conflict.canSetDefault && existingModel) {
+        modal.confirm({
+          title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
+          content: t("modelResources.models.duplicateConfigSetDefaultContent", {
+            name: existingModel.name,
+          }),
+          okText: t("modelResources.models.duplicateConfigSetDefaultOk"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            const result = await setDefaultSmallModel(existingModel.id);
+            if (result.status !== "ok") {
+              throw new Error(t("modelResources.models.setDefaultFailed"));
+            }
+            message.success(t("modelResources.models.setDefaultSuccess"));
+            onClose(true);
+          },
+        });
+        return;
+      }
+      if (conflict) {
+        if (!existingModel) {
+          if (conflict.defaultSwitchReason === "NO_DISPLAY_PERMISSION") {
+            message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+          } else {
+            message.error(extractRequestErrorMessage(error));
+          }
+          return;
+        }
+        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+          ? t("modelResources.models.duplicateConfigAlreadyDefault")
+          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+            : "";
+        message.error(t("modelResources.models.duplicateConfigExists", {
+          name: existingModel.name,
+          permission: reasonMessage,
+        }));
+        return;
+      }
       message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
@@ -229,14 +281,14 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
         {!adapterEnabled ? (
           <>
             <Form.Item
-              label="API Model"
+              label={t("modelResources.models.modal.apiModel")}
               name="apiModel"
               rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
             >
               <Input placeholder={t("modelResources.models.modal.apiModelPlaceholder")} />
             </Form.Item>
             <Form.Item
-              label="API URL"
+              label={t("modelResources.models.modal.apiUrl")}
               name="apiUrl"
               rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
             >
@@ -247,7 +299,7 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
             </Form.Item>
             {authValue === "auth" ? (
               <Form.Item
-                label="API Key"
+                label={t("modelResources.models.modal.apiKey")}
                 name="apiKey"
                 rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
               >
@@ -308,6 +360,22 @@ export function SmallModelFormModal({ mode, onClose, open, record }: SmallModelF
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
           </>
+        ) : null}
+        {modalMode === "create" && canSetDefault ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.smallDefaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (

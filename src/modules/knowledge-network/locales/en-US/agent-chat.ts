@@ -18,6 +18,8 @@ export const agentChatPart = {
       scale: "Scale: {{objectTypes}} object types and {{relations}} relation types",
       objectTypes: "Object types: {{names}}",
       objectTypesMore: "Object types: {{names}} and {{count}} total",
+      objectTypesMore_one: "Object type: {{names}} ({{count}} total)",
+      objectTypesMore_other: "Object types: {{names}} ({{count}} total)",
     },
     templateSuggestions: {
       firstObject: "What data does {{name}} have? Show a few records first.",
@@ -28,7 +30,7 @@ export const agentChatPart = {
     },
     suggestPrompt:
       "You are writing recommended questions for the empty chat page of an intelligent data-questioning product. The user is a non-technical business user.\n" +
-      "Below is a JSON structure definition for a business domain. name/comment describe business meaning, object_types are business entities, and relation_types are business relationships.\n" +
+      "Below is a JSON structure definition for a business model. name/comment describe business meaning, object_types are business entities, and relation_types are business relationships.\n" +
       "Write 3 questions that a real business user in this domain would ask. Requirements:\n" +
       "1. Only use business terms that appear in the JSON. Do not invent entities or concepts that are not present, because invented questions will not find data.\n" +
       "2. Do not mention technical terms such as object type, relation type, knowledge network, graph, schema, table, or field. Do not mention English JSON field names. Write like a business user.\n" +
@@ -61,6 +63,8 @@ export const agentChatPart = {
       zero: "0 calls",
       errorName: "{{name}}(failed)",
       summary: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
+      summary_one: "{{count}} call ({{ok}} succeeded{{errorPart}}): {{names}}",
+      summary_other: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
       errorPart: " / {{err}} failed",
     },
     errors: {
@@ -148,9 +152,13 @@ export const agentChatPart = {
     chatPane: {
       defaultPrompt:
         "You are the BKN business knowledge network retrieval assistant. Answer user questions based on object types, relation types, and logical attributes in the current knowledge network.\n" +
-        "Call the provided retrieval tools when data is needed, such as search_schema, query_object_instance, query_instance_subgraph, and run_sql. Do not fabricate answers.\n" +
+        "Use the tools when you need data; do not fabricate answers. Establish the structure before fetching: when you are unsure which object types exist or what a field is called, look first with search_schema, " +
+        "then filter on the field names it returns — guessing a field name by meaning tends to yield an empty result, and an empty result raises no error.\n" +
         "kn_id is locked to the current network. You do not need to change it and must not change it.\n" +
-        "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
+        "The retrieval tools are the main path. For what they cannot answer there are three supplements: run_sql for aggregation, sorting, and counting, so the database returns only the result; " +
+        "run_code for a Python script that calls the tools above by name, suited to chaining several tools, branching on an intermediate result, or keeping bulk data in the sandbox when you only need a conclusion; " +
+        "and run_shell for a shell command to inspect files in the sandbox. All three share one workspace scoped to the conversation, and files written there survive between executions, so a later script can pick up where an earlier one left off.\n" +
+        "Query efficiently: use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
       basePrompt:
         "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
         "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +
@@ -188,6 +196,14 @@ export const agentChatPart = {
         request: "Request · tools/call → {{name}}",
         error: "Error",
         response: "Response",
+      },
+      toolGroup: {
+        summary: "Called {{count}} tools",
+        summary_one: "Called {{count}} tool",
+        summary_other: "Called {{count}} tools",
+        failed: "{{count}} failed",
+        failed_one: "{{count}} failed",
+        failed_other: "{{count}} failed",
       },
       error: {
         retry: "Retry Round",

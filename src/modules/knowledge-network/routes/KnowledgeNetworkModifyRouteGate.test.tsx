@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -38,6 +38,10 @@ function createRecord(operations?: string[]): KnowledgeNetworkRecord {
       actionTypesTotal: 0,
       conceptGroupsTotal: 0,
       metricsTotal: 0,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
     },
   };
 }
@@ -123,5 +127,23 @@ describe("KnowledgeNetworkModifyRouteGate", () => {
 
     expect(await screen.findByText("backend unavailable")).toBeTruthy();
     expect(screen.queryByText("overview page")).toBeNull();
+  });
+
+  it("retries a temporary request failure", async () => {
+    mockedGetKnowledgeNetwork
+      .mockRejectedValueOnce(
+        Object.assign(new Error("backend unavailable"), {
+          response: { status: 503 },
+        }),
+      )
+      .mockResolvedValueOnce(createRecord(["modify"]));
+
+    renderGate();
+
+    expect(await screen.findByText("backend unavailable")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(await screen.findByText("modify form")).toBeTruthy();
+    expect(mockedGetKnowledgeNetwork).toHaveBeenCalledTimes(2);
   });
 });

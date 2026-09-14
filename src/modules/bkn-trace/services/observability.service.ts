@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const OBSERVABILITY_API_PREFIX = "/observability/v1";
 
@@ -23,7 +22,6 @@ type BackendLogRecord = {
   actor_name_snapshot: string;
   actor_type?: "service_account" | "user";
   auth_method: "api_key" | "oauth" | "password" | "session" | "unknown";
-  business_domain_id?: string;
   credential_id?: string;
   credential_name?: string;
   event_id: string;
@@ -71,6 +69,15 @@ export type BusinessModule =
   | "model_management"
   | "system_management";
 
+export const BUSINESS_MODULES: BusinessModule[] = [
+  "domain_knowledge_network",
+  "data_resource_knowledge_network",
+  "execution_factory",
+  "model_management",
+  "system_management",
+  "observability",
+];
+
 export type SourceChannel = "api" | "cli" | "mcp" | "sdk" | "studio";
 
 export type LogFacts = {
@@ -91,7 +98,6 @@ export type LogRecord = {
   action: string;
   actor: { id: string; name: string; type: "service_account" | "user" };
   authMethod: BackendLogRecord["auth_method"];
-  businessDomain?: string;
   conversationId?: string;
   credential?: { id: string; name?: string };
   eventId: string;
@@ -156,6 +162,7 @@ export type ArchiveJob = {
 export type LogListQuery = {
   action?: string;
   actorId?: string;
+  actorQuery?: string;
   categories?: LogCategory[];
   conversationId?: string;
   cursor?: string;
@@ -223,7 +230,6 @@ export async function listLogs(query: LogListQuery): Promise<LogListResult> {
 	const params = logQueryParams(query);
 
   const response = await http.get<BackendLogList>(`${OBSERVABILITY_API_PREFIX}/logs`, {
-    headers: observabilityHeaders(),
     params,
     // The Log Query contract uses repeated keys (`outcomes=failure&outcomes=denied`).
     // Axios otherwise emits `outcomes[]=...`, which the Go handler deliberately
@@ -248,7 +254,6 @@ export async function getLogDetail(logId: string): Promise<LogDetailResult> {
     field_projection: { policy_revision: string; redacted_fields: string[] };
     request_trace_context: { related_trace_ids?: string[] };
   }>(`${OBSERVABILITY_API_PREFIX}/logs/${encodeURIComponent(logId)}`, {
-    headers: observabilityHeaders(),
     skipErrorToast: true,
   });
   return {
@@ -261,7 +266,6 @@ export async function getLogDetail(logId: string): Promise<LogDetailResult> {
 
 export async function listLogSources(): Promise<LogSourceStatus[]> {
   const response = await http.get<{ data: BackendSourceStatus[] }>(`${OBSERVABILITY_API_PREFIX}/log-sources`, {
-    headers: observabilityHeaders(),
     skipErrorToast: true,
   });
   return response.data.data.map(mapSourceStatus);
@@ -269,7 +273,6 @@ export async function listLogSources(): Promise<LogSourceStatus[]> {
 
 export async function listLogPolicies(): Promise<LogPolicy[]> {
   const response = await http.get<{ data: BackendLogPolicy[] }>(`${OBSERVABILITY_API_PREFIX}/log-policies`, {
-    headers: observabilityHeaders(),
     skipErrorToast: true,
   });
   return response.data.data.map((policy) => ({
@@ -292,7 +295,7 @@ export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOver
     cutoff_at: string;
     candidate_count: number;
     storage: { status: "ready" | "unavailable" };
-  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { headers: observabilityHeaders(), skipErrorToast: true });
+  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
   return {
     candidateCount: response.data.candidate_count,
     cutoffAt: response.data.cutoff_at,
@@ -310,7 +313,7 @@ export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
     candidate_count: number;
     range: { from?: string; to: string };
     status: ArchiveJob["status"];
-  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
+  }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { skipErrorToast: true });
   return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
 }
 
@@ -322,13 +325,17 @@ export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> 
     candidate_count: number;
     range: { from?: string; to: string };
     status: ArchiveJob["status"];
-  }>>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { headers: observabilityHeaders(), skipErrorToast: true });
+  }>>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
   return response.data.map((job) => ({ candidateCount: job.candidate_count, id: job.archive_job_id, kind: job.archive_kind, range: job.range, status: job.status }));
 }
 
-export async function getArchiveDownloadURL(id: string): Promise<string> {
-  const response = await http.post<{ download_url: string }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download-url`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
-  return response.data.download_url;
+export type ArchiveDownload = { content: Blob; fileName?: string };
+
+export async function downloadArchive(id: string): Promise<ArchiveDownload> {
+  const response = await http.get<Blob>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download`, { responseType: "blob", skipErrorToast: true });
+  const disposition = response.headers?.["content-disposition"] as string | undefined;
+  const fileName = disposition?.match(/filename="?([^";]+)"?/i)?.[1];
+  return { content: response.data, ...(fileName ? { fileName } : {}) };
 }
 
 export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
@@ -338,7 +345,7 @@ export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
     candidate_count: number;
     range: { from?: string; to: string };
     status: ArchiveJob["status"];
-  }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`, {}, { headers: observabilityHeaders(), skipErrorToast: true });
+  }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`, {}, { skipErrorToast: true });
   return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
 }
 
@@ -351,7 +358,6 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
       type: record.actor_type ?? "user",
     },
     authMethod: record.auth_method,
-    ...(record.business_domain_id ? { businessDomain: record.business_domain_id } : {}),
     ...(record.correlation.conversation_id ? { conversationId: record.correlation.conversation_id } : {}),
     ...(record.credential_id ? {
       credential: { id: record.credential_id, ...(record.credential_name ? { name: record.credential_name } : {}) },
@@ -405,6 +411,7 @@ function logQueryParams(query: LogListQuery) {
   const params: Record<string, boolean | number | string | string[]> = {};
   if (query.action) params.action = query.action;
   if (query.actorId) params.actor_id = query.actorId;
+  if (query.actorQuery) params.actor = query.actorQuery;
   if (query.categories?.length) params.categories = query.categories;
   if (query.conversationId) params.conversation_id = query.conversationId;
   if (query.cursor) params.cursor = query.cursor;
@@ -421,10 +428,4 @@ function logQueryParams(query: LogListQuery) {
   if (query.timeTo) params.time_to = query.timeTo;
   if (query.traceId) params.trace_id = query.traceId;
   return params;
-}
-
-function observabilityHeaders() {
-  return {
-    "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public",
-  };
 }

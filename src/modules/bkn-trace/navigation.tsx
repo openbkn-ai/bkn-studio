@@ -16,6 +16,7 @@ import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 
 export const bknTraceNavigation: ConsoleNavContribution = {
+  afterKey: "general-business-knowledge-network",
   items: [
     {
       key: "observability",
@@ -50,6 +51,7 @@ export const bknTraceNavigation: ConsoleNavContribution = {
           labelKey: "shell.items.observabilitySettings",
           icon: <SettingOutlined />,
           path: "/observability/settings",
+          requiresSuperAdmin: true,
         },
       ],
     },

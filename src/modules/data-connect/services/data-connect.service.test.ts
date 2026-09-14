@@ -12,6 +12,7 @@ import i18n from "@/app/locales/i18n";
 
 const testCatalogConnectionMock = vi.hoisted(() => vi.fn());
 const testCatalogConnectionConfigMock = vi.hoisted(() => vi.fn());
+const listCatalogsMock = vi.hoisted(() => vi.fn());
 const getMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
@@ -19,6 +20,7 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 vi.mock("@/shared/catalog", () => ({
+  listCatalogs: listCatalogsMock,
   testCatalogConnection: testCatalogConnectionMock,
   testCatalogConnectionConfig: testCatalogConnectionConfigMock,
 }));
@@ -53,6 +55,162 @@ describe("data-connect.service · test connection", () => {
         offset: 0,
         sort: "name",
       },
+    });
+  });
+
+  it("passes data-connection pagination and filters through to Vega", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 23 });
+    const { listDataConnectRecords } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(listDataConnectRecords({
+      connectorType: "postgresql",
+      keyword: "orders",
+      page: 2,
+      pageSize: 10,
+    })).resolves.toEqual({ items: [], total: 23 });
+
+    expect(listCatalogsMock).toHaveBeenCalledWith({
+      connectorType: "postgresql",
+      keyword: "orders",
+      page: 2,
+      pageSize: 10,
+      type: "physical",
+    });
+  });
+
+  it("passes status and health filters through to the catalog list", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
+    const { listDataConnectRecords } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await listDataConnectRecords({
+      enabled: false,
+      healthStatus: "offline",
+      keyword: "",
+      page: 1,
+      pageSize: 10,
+    });
+
+    expect(listCatalogsMock).toHaveBeenCalledWith({
+      enabled: false,
+      healthStatus: "offline",
+      keyword: "",
+      page: 1,
+      pageSize: 10,
+      type: "physical",
+    });
+  });
+
+  it("keeps only field runtime semantics and ignores backend display text", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            category: "table",
+            description: "后端展示描述",
+            enabled: true,
+            field_config: {
+              host: {
+                description: "后端主机说明",
+                encrypted: false,
+                name: "后端主机名称",
+                required: true,
+                type: "string",
+              },
+            },
+            mode: "local",
+            name: "后端连接器名称",
+            type: "postgresql",
+          },
+        ],
+        total_count: 1,
+      },
+    });
+    const { listDataConnectConnectorTypes } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(listDataConnectConnectorTypes()).resolves.toEqual([
+      {
+        category: "table",
+        description: "后端展示描述",
+        enabled: true,
+        fieldConfig: {
+          host: {
+            encrypted: false,
+            required: true,
+            type: "string",
+          },
+        },
+        mode: "local",
+        name: "后端连接器名称",
+        type: "postgresql",
+      },
+    ]);
+  });
+
+  it("loads field semantics from the selected connector type detail", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        category: "table",
+        description: "后端展示描述",
+        enabled: true,
+        field_config: {
+          host: { encrypted: false, required: true, type: "string" },
+        },
+        mode: "local",
+        name: "后端连接器名称",
+        type: "postgresql",
+      },
+    });
+    const { getDataConnectConnectorType } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(getDataConnectConnectorType("postgresql")).resolves.toMatchObject({
+      fieldConfig: { host: { encrypted: false, required: true, type: "string" } },
+      type: "postgresql",
+    });
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/connector-types/postgresql");
+  });
+
+  it("covers every built-in connector field from the Vega initialization data", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    const { listDataConnectConnectorTypes } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    const connectorTypes = await listDataConnectConnectorTypes();
+    const fieldsByType = new Map(
+      connectorTypes.map((connector) => [connector.type, connector.fieldConfig]),
+    );
+
+    expect(Object.keys(fieldsByType.get("mariadb") ?? {})).toEqual([
+      "host", "port", "username", "password", "databases", "options",
+    ]);
+    expect(Object.keys(fieldsByType.get("mysql") ?? {})).toEqual([
+      "host", "port", "username", "password", "databases", "options",
+    ]);
+    expect(Object.keys(fieldsByType.get("postgresql") ?? {})).toEqual([
+      "host", "port", "username", "password", "database", "schemas", "options",
+    ]);
+    expect(Object.keys(fieldsByType.get("sqlserver") ?? {})).toEqual([
+      "host", "port", "username", "password", "database", "schemas", "options",
+    ]);
+    expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
+      "host", "port", "username", "password", "index_pattern",
+    ]);
+    expect(Object.keys(fieldsByType.get("anyshare") ?? {})).toEqual([
+      "protocol", "host", "port", "auth_type", "token", "app_id", "app_secret", "doc_lib_type", "paths",
+    ]);
+    expect(fieldsByType.get("anyshare")?.app_secret).toMatchObject({
+      encrypted: true,
+      required: false,
+      type: "string",
     });
   });
 
@@ -104,6 +262,23 @@ describe("data-connect.service · test connection", () => {
     await expect(testDataConnectRecord("catalog-1")).rejects.toThrow(
       "Connection refused.",
     );
+  });
+
+  it("rejects a preflight business failure with the backend details", async () => {
+    testCatalogConnectionConfigMock.mockResolvedValue({
+      message: "dial tcp db.example.com:3306: i/o timeout",
+      success: false,
+    });
+    const { testDataConnectConfig } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await expect(
+      testDataConnectConfig({
+        connectorConfig: { host: "db.example.com" },
+        connectorType: "mariadb",
+      }),
+    ).rejects.toThrow("dial tcp db.example.com:3306: i/o timeout");
   });
 
   it("uses the localized fallback when the backend failure message is empty", async () => {

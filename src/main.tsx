@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import "@ant-design/v5-patch-for-react-19";
 import "@/app/locales/i18n";
 import "@/styles/global.css";
 import { startStandaloneApp } from "@/framework/runtime/bootstrap";

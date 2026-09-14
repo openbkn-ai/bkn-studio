@@ -10,7 +10,7 @@ import type { FormInstance } from "antd";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { getKnowledgeNetworkMetricDependencyProperties } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { ActionTypeConditionEditor } from "@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor";
 import {
   getAvailableAggrOptionsForPropertyType,
@@ -32,10 +32,12 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./MetricCalculationEditor.module.css";
 
 const HAVING_OPERATORS: MetricHavingOperator[] = [">", ">=", "<", "<=", "==", "!="];
+const EMPTY_FALLBACK_PROPERTIES: ObjectTypeDataProperty[] = [];
 
 const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
   "last_1h",
@@ -46,6 +48,7 @@ const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
 
 type MetricCalculationEditorProps = {
   embedded?: boolean;
+  fallbackProperties?: ObjectTypeDataProperty[];
   form: FormInstance;
   networkId: string;
   objectTypeId?: string;
@@ -85,6 +88,7 @@ function Subsection({
 
 export function MetricCalculationEditor({
   embedded = false,
+  fallbackProperties = EMPTY_FALLBACK_PROPERTIES,
   form,
   networkId,
   objectTypeId,
@@ -103,22 +107,52 @@ export function MetricCalculationEditor({
   const analysisDimensions = Form.useWatch(["calculationFormula", "analysisDimensions"], form) as
     | string[]
     | undefined;
+  const canLoadDependencyProperties = objectTypes.some(
+    (objectType) =>
+      objectType.id === objectTypeId
+      && hasKnowledgeNetworkRecordOperation(objectType, "view_detail"),
+  );
 
   useEffect(() => {
-    if (!objectTypeId || !networkId) {
-      setProperties([]);
+    if (!objectTypeId || !networkId || !canLoadDependencyProperties) {
+      setProperties(fallbackProperties);
+      setLoadingProperties(false);
       return;
     }
 
+    let active = true;
+    setProperties(fallbackProperties);
     setLoadingProperties(true);
-    void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
-      .then((detail) => {
-        setProperties(detail?.dataProperties ?? []);
+    void getKnowledgeNetworkMetricDependencyProperties(networkId, objectTypeId)
+      .then((candidates) => {
+        if (active) {
+          setProperties(
+            candidates.map((property) => ({
+              comment: property.comment,
+              displayKey: false,
+              displayName: property.displayName || property.name,
+              incrementalKey: false,
+              name: property.name,
+              primaryKey: false,
+              type: property.type || "string",
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setProperties(fallbackProperties);
+        }
       })
       .finally(() => {
-        setLoadingProperties(false);
+        if (active) {
+          setLoadingProperties(false);
+        }
       });
-  }, [networkId, objectTypeId]);
+    return () => {
+      active = false;
+    };
+  }, [canLoadDependencyProperties, fallbackProperties, networkId, objectTypeId]);
 
   const timeProperties = useMemo(
     () => properties.filter((item) => isMetricTimePropertyType(item.type)),

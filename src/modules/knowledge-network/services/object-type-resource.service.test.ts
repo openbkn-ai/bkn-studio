@@ -14,7 +14,7 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
-describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
+describe("object-type-resource.service", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "false");
@@ -29,15 +29,15 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
   it("uses Vega paging for the object-type resource preview", async () => {
     getMock.mockResolvedValue({
       data: {
-        entries: [{ id: "r-1", name: "orders", schema_definition: [{ name: "id" }] }],
+        entries: [{ id: "r-1", name: "orders", operations: ["query_data"], schema_definition: [{ name: "id" }] }],
       },
     });
     postMock.mockResolvedValue({ data: { entries: [{ id: 1 }], total_count: 1 } });
     const { getObjectTypeResourcePreview } = await import(
       "@/modules/knowledge-network/services/object-type-resource.service"
     );
-    const { transformVegaDynamicDataResponse } = await import(
-      "@/framework/request/vega-bigint"
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
     );
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
@@ -50,9 +50,67 @@ describe("object-type-resource.service · getObjectTypeResourcePreview", () => {
       },
       {
         headers: { "X-HTTP-Method-Override": "GET" },
-        transformResponse: transformVegaDynamicDataResponse,
+        skipErrorToast: true,
+        transformResponse: transformPrecisionSafeJSONResponse,
       },
     );
     expect(result?.rowTotalCount).toBe(1);
+  });
+
+  it("does not request preview rows when resource operations omit query_data", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ id: "r-1", name: "orders", operations: ["view_detail"], schema_definition: [{ name: "id" }] }],
+      },
+    });
+    const { getObjectTypeResourcePreview } = await import(
+      "@/modules/knowledge-network/services/object-type-resource.service"
+    );
+
+    const result = await getObjectTypeResourcePreview("kn-1", "r-1");
+
+    expect(result).toMatchObject({ name: "orders", queryDenied: true, rows: [] });
+    expect(postMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps backend authorization as the fallback when resource operations are unavailable", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{ id: "r-1", name: "orders", schema_definition: [{ name: "id" }] }],
+      },
+    });
+    postMock.mockResolvedValue({ data: { entries: [{ id: 1 }], total_count: 1 } });
+    const { getObjectTypeResourcePreview } = await import(
+      "@/modules/knowledge-network/services/object-type-resource.service"
+    );
+
+    const result = await getObjectTypeResourcePreview("kn-1", "r-1");
+
+    expect(result).toMatchObject({ name: "orders", rows: [{ id: 1 }] });
+    expect(postMock).toHaveBeenCalledOnce();
+  });
+
+  it("preserves resource search name casing for backend requests", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { queryObjectTypeResources } = await import(
+      "@/modules/knowledge-network/services/object-type-resource.service"
+    );
+
+    await queryObjectTypeResources("kn-1", {
+      dataSourceId: "catalog-1",
+      name: "  Supply_DEMO  ",
+      page: 2,
+      pageSize: 20,
+    });
+
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
+      params: {
+        catalog_id: "catalog-1",
+        limit: 20,
+        name: "Supply_DEMO",
+        offset: 20,
+        sort: "update_time",
+      },
+    });
   });
 });

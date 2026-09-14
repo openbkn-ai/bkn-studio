@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Card, Collapse, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
+import { Alert, Card, Collapse, DatePicker, Form, InputNumber, Select, Space, Switch, Table } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -74,6 +74,7 @@ function getCalendarStepOptions(mode: MetricDataQueryMode | undefined) {
 type MetricDataQueryPanelProps = {
   analysisDimensionOptions?: string[];
   boundObjectTypeId?: string;
+  canQueryData?: boolean;
   embedded?: boolean;
   metricId: string;
   metricName: string;
@@ -170,6 +171,7 @@ function renderVisualResult(result: MetricDataQueryResult, metricName: string) {
 export function MetricDataQueryPanel({
   analysisDimensionOptions = [],
   boundObjectTypeId,
+  canQueryData = true,
   embedded = false,
   metricId,
   metricName,
@@ -210,7 +212,7 @@ export function MetricDataQueryPanel({
   );
 
   const handleQuery = async () => {
-    if (!networkId || !metricId) {
+    if (!canQueryData || !networkId || !metricId) {
       return;
     }
 
@@ -228,6 +230,17 @@ export function MetricDataQueryPanel({
       setQueryLoading(false);
     }
   };
+
+  if (!canQueryData) {
+    return (
+      <Alert
+        description={t("knowledgeNetwork.metricQueryNoPermissionDescription")}
+        message={t("knowledgeNetwork.metricQueryNoPermission")}
+        showIcon
+        type="warning"
+      />
+    );
+  }
 
   return (
     <div>

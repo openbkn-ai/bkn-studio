@@ -13,9 +13,9 @@ import {
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
-// Every item declares required permissions so unauthorized users do not see sidebar entries that open to empty pages.
-// Execution Unit Management hosts both operators and toolboxes, so either permission allows entry.
-// Sandbox runtime is limited to super administrators, matching backend #339 guards.
+// Navigation entries are product entry points. Execution Unit Management is always available and
+// the API filters the resources it returns. Sandbox runtime remains permission-gated because it is
+// an administrative runtime operation.
 export const executionFactoryNavigation: ConsoleNavContribution = {
   parentKey: "execution-factory",
   items: [
@@ -24,8 +24,6 @@ export const executionFactoryNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.executionUnitManagement",
       icon: <ToolOutlined />,
       path: "/execution-factory/units",
-      permission: ["execution-factory:operator:view", "execution-factory:toolbox:view"],
-      permissionMode: "any",
     },
     {
       key: "all-execution-units",

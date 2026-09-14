@@ -44,11 +44,13 @@ describe("HealthCheckScheduleFormModal", () => {
         onSubmit={onSubmit}
         open
         schedule={{
-          catalogId: "catalog-1",
-          cronExpr: "0 * * * *",
-          lastRun: "-",
-          mode: "enabled",
-          nextRun: "-",
+        catalogId: "catalog-1",
+        cronExpr: "0 * * * *",
+        expectedUpdateTime: 123,
+        lastRun: "-",
+        mode: "enabled",
+        nextRun: "-",
+        updateTime: "2026-08-19 10:00:00",
         }}
       />,
     );
@@ -80,11 +82,13 @@ describe("HealthCheckScheduleFormModal", () => {
         onSubmit={onSubmit}
         open
         schedule={{
-          catalogId: "catalog-1",
-          cronExpr: "0 * * * *",
-          lastRun: "-",
-          mode: "enabled",
-          nextRun: "-",
+        catalogId: "catalog-1",
+        cronExpr: "0 * * * *",
+        expectedUpdateTime: 123,
+        lastRun: "-",
+        mode: "enabled",
+        nextRun: "-",
+        updateTime: "2026-08-19 10:00:00",
         }}
       />,
     );

@@ -5,12 +5,116 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { getMock, postMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  postMock: vi.fn(),
+}));
+
+vi.mock("@/framework/request/http", () => ({
+  http: { get: getMock, post: postMock },
+}));
 
 import {
   buildSemanticUnderstandingTaskListParams,
+  createResourceSemanticUnderstandingTask,
+  deleteSemanticUnderstandingTask,
+  getSemanticUnderstandingTask,
+  listSemanticUnderstandingTasks,
   mapSemanticUnderstandingTaskSummary,
 } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+
+describe("semantic-understanding task mocks", () => {
+  it("creates a completed task with resource and catalog metadata", async () => {
+    const task = await createResourceSemanticUnderstandingTask({
+      applyMode: "fill_empty",
+      resourceId: "res-customers",
+    });
+
+    try {
+      expect(task).toMatchObject({
+        applied: true,
+        catalogId: "cat-001",
+        catalogName: "customer_master",
+        resourceId: "res-customers",
+        resourceName: "customers",
+        status: "completed",
+      });
+    } finally {
+      await deleteSemanticUnderstandingTask(task.id);
+    }
+  });
+});
+
+describe("createResourceSemanticUnderstandingTask", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("sends the selected sample row limit to Vega", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockResolvedValue({ data: { id: "task-1" } });
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows: 20,
+    });
+
+    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/semantic-understanding-tasks", {
+      apply_mode: "dry_run",
+      confidence_threshold: undefined,
+      include_sample_rows: true,
+      resource_id: "resource-1",
+      sample_policy: { masked: false, max_rows: 20 },
+      scope: "resource",
+    });
+  });
+
+  it.each([1, 20])("sends valid sample row boundaries to Vega: %s", async (sampleMaxRows) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockClear();
+    postMock.mockResolvedValue({ data: { id: "task-1" } });
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows,
+    });
+
+    expect(postMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      sample_policy: { masked: false, max_rows: sampleMaxRows },
+    }));
+  });
+
+  it.each([0, 21, 30, -1, 1.5])("rejects invalid sample row limits before sending a request: %s", async (sampleMaxRows) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    postMock.mockClear();
+    const { createResourceSemanticUnderstandingTask: createTask } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await expect(createTask({
+      applyMode: "dry_run",
+      includeSampleRows: true,
+      resourceId: "resource-1",
+      sampleMaxRows,
+    })).rejects.toThrow("sampleMaxRows must be an integer between 1 and 20");
+    expect(postMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("mapSemanticUnderstandingTaskSummary", () => {
   it("maps the list contract without inventing fallback values", () => {
@@ -26,7 +130,8 @@ describe("mapSemanticUnderstandingTaskSummary", () => {
       id: "task-1",
       scope: "catalog",
       status: "running",
-      update_time: 200,
+      start_time: 120,
+      finish_time: 200,
     });
 
     expect(summary).toMatchObject({
@@ -41,7 +146,8 @@ describe("mapSemanticUnderstandingTaskSummary", () => {
       id: "task-1",
       scope: "catalog",
       status: "running",
-      updateTime: 200,
+      startTime: 120,
+      finishTime: 200,
     });
   });
 });
@@ -64,7 +170,7 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       direction: "asc",
       resourceId: "resource-1",
       scope: "resource",
-      status: "succeeded",
+      statuses: ["completed", "failed"],
     })).toEqual({
       applied: true,
       apply_mode: "force",
@@ -75,11 +181,11 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       resource_id: "resource-1",
       scope: "resource",
       sort: "create_time",
-      status: "completed",
+      status: ["completed", "failed"],
     });
   });
 
-  it("maps backend completed and cancelled states", () => {
+  it("preserves backend completed and cancelled states", () => {
     const base = {
       agent_id: "semantic-agent",
       applied: false,
@@ -91,14 +197,126 @@ describe("buildSemanticUnderstandingTaskListParams", () => {
       creator: { id: "user-1", name: "User", type: "user" },
       id: "task-1",
       scope: "catalog" as const,
-      update_time: 200,
+      start_time: 120,
+      finish_time: 200,
     };
 
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "completed" }).status).toBe(
-      "succeeded",
+      "completed",
     );
     expect(mapSemanticUnderstandingTaskSummary({ ...base, status: "cancelled" }).status).toBe(
       "cancelled",
     );
+  });
+});
+
+describe("semantic-understanding mock tasks", () => {
+  it("covers every Vega semantic-understanding task status", async () => {
+    const list = await listSemanticUnderstandingTasks({}, { limit: 20, offset: 0 });
+
+    expect(new Set(list.items.map((task) => task.status))).toEqual(new Set([
+      "pending",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+    ]));
+  });
+
+  it("includes a completed dry-run task whose result has not been applied", async () => {
+    const list = await listSemanticUnderstandingTasks(
+      { applied: false, statuses: ["completed"] },
+      { limit: 20, offset: 0 },
+    );
+
+    expect(list.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        applyMode: "dry_run",
+        applied: false,
+        id: "semantic-task-006",
+        status: "completed",
+      }),
+    ]));
+  });
+
+  it("serves the same mock task to the list and detail query", async () => {
+    const list = await listSemanticUnderstandingTasks({}, { limit: 20, offset: 0 });
+    const task = list.items.find((item) => item.id === "semantic-task-001");
+    const detail = await getSemanticUnderstandingTask("semantic-task-001");
+
+    expect(task).toMatchObject({ resourceId: "res-customers", status: "completed" });
+    expect(detail?.id).toBe("semantic-task-001");
+    expect(typeof detail?.resultJson).toBe("string");
+    expect(typeof detail?.applyDetailJson).toBe("string");
+    expect(JSON.parse(detail?.confidenceDetailJson ?? "{}")).toMatchObject({
+      warning_details: [{
+        code: "sample_omitted_by_policy",
+        params: { field_name: "attachment_blob", field_type: "binary" },
+      }],
+    });
+  });
+});
+
+describe("resource semantic-understanding task history", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("walks every backend page instead of truncating the history at 100 rows", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    const backendTask = (id: string, createTime: number) => ({
+      agent_id: "semantic-agent",
+      applied: true,
+      apply_mode: "fill_empty",
+      catalog_id: "catalog-1",
+      confidence: 0.9,
+      confidence_threshold: 0.75,
+      create_time: createTime,
+      creator: { id: "user-1", name: "User", type: "user" },
+      id,
+      resource_id: "resource-1",
+      scope: "resource",
+      status: "completed",
+    });
+    getMock
+      .mockResolvedValueOnce({
+        data: { entries: [backendTask("newer", 200)], total_count: 101 },
+      })
+      .mockResolvedValueOnce({
+        data: { entries: [backendTask("older", 100)], total_count: 101 },
+      });
+    const { listResourceSemanticUnderstandingTasks } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    const tasks = await listResourceSemanticUnderstandingTasks("resource-1");
+
+    expect(tasks.map((task) => task.id)).toEqual(["newer", "older"]);
+    expect(getMock).toHaveBeenCalledTimes(2);
+    const offsets = getMock.mock.calls.map((call) => {
+      const config = call[1] as { params: { offset: number } };
+      return config.params.offset;
+    });
+    expect(offsets).toEqual([0, 100]);
+  });
+});
+
+describe("semantic-understanding task list", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("preserves Vega's filtered total count for pagination", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 36 } });
+    const { listSemanticUnderstandingTasks: listWithAPI } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    const result = await listWithAPI({ statuses: ["completed"] }, { limit: 20, offset: 0 });
+
+    expect(result).toEqual({ items: [], total: 36 });
   });
 });

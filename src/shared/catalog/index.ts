@@ -8,6 +8,7 @@
 export type {
   CatalogConnectionTestInput,
   CatalogConnectionTestResult,
+  CatalogConnectorTypeStat,
   CatalogDeletionBlocker,
   CatalogDeletionImpact,
   CatalogDeletionTaskImpact,
@@ -24,6 +25,8 @@ export type {
 
 export { catalogListAllQuery, catalogListPhysicalQuery } from "@/shared/catalog/catalog-queries";
 
+export { hasCatalogOperation } from "@/shared/catalog/catalog-operations";
+
 export {
   appendMockPhysicalCatalog,
   createLogicalCatalog,
@@ -32,6 +35,7 @@ export {
   getCatalogHealthCheckSchedule,
   getCatalog,
   listCatalogs,
+  listCatalogConnectorTypeStats,
   previewCatalogDeletion,
   setCatalogEnabled,
   testCatalogConnection,
@@ -40,11 +44,6 @@ export {
   updateCatalogHealthCheckSchedule,
   updateMockCatalogRecord,
 } from "@/shared/catalog/catalog.service";
-
-export {
-  resourceBlastRadius,
-  type CatalogBlastRadius,
-} from "@/shared/catalog/blast-radius";
 
 export { inferConnectorCategory } from "@/shared/catalog/catalog-mapper";
 

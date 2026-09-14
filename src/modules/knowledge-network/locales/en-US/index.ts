@@ -12,6 +12,8 @@ import { relationtypePart } from "./relation-type";
 import { actiontypePart } from "./action-type";
 import { integrationPart } from "./integration";
 import { metricPart } from "./metric";
+import { capabilityPart } from "./capability";
+import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
 
@@ -24,6 +26,8 @@ export const knowledgeNetworkEnUS = {
     ...actiontypePart,
     ...integrationPart,
     ...metricPart,
+    ...capabilityPart,
+    ...propertyAuthorizationPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
   },

@@ -25,7 +25,13 @@ vi.mock("@/framework/auth/oauth", () => oauth);
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
-  return { ...original, useTranslation: () => ({ t: (key: string) => key }) };
+  return {
+    ...original,
+    useTranslation: () => ({
+      i18n: { language: "zh-CN", resolvedLanguage: "zh-CN" },
+      t: (key: string) => key,
+    }),
+  };
 });
 
 vi.mock("@/app/router/app-paths", () => ({
@@ -59,7 +65,7 @@ describe("OAuthCallback CSRF recovery wiring", () => {
 
     render(<OAuthCallback />);
 
-    expect(oauth.beginLogin).toHaveBeenCalledWith("/studio/knowledge-network");
+    expect(oauth.beginLogin).toHaveBeenCalledWith("/studio/knowledge-network", "zh-CN");
     expect(oauth.completeLogin).not.toHaveBeenCalled();
     expect(oauth.stashCallbackError).toHaveBeenCalledTimes(1);
   });

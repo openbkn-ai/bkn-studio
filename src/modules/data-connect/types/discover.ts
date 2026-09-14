@@ -18,7 +18,11 @@ export type DataConnectDiscoverTaskStatus =
   | "running";
 
 export type DataConnectDiscoverTaskTriggerType = "manual" | "scheduled";
-export type DataConnectDiscoverTaskSort = "create_time";
+export type DataConnectDiscoverTaskSort =
+  | "create_time"
+  | "start_time"
+  | "finish_time"
+  | "last_progress_time";
 
 export type DataConnectDiscoverSchedule = {
   catalogId: string;
@@ -39,6 +43,7 @@ export type DataConnectDiscoverSchedule = {
   startTimeValue?: number;
   strategy: DataConnectDiscoverStrategy;
   updateTime: string;
+  expectedUpdateTime: number;
   updaterName: string;
 };
 
@@ -49,10 +54,18 @@ export type DataConnectDiscoverTask = {
   creatorName: string;
   finishTime?: number;
   id: string;
+  lastProgressTime?: number;
   message: string;
   progress: number;
+  /** Server-computed queue priority; greater values run earlier. */
+  queuePriority: number;
+  /** Present only for a resource-level metadata refresh task. */
+  resourceId?: string;
+  /** Current display name of the refreshed resource, populated by the server. */
+  resourceName?: string;
   result?: DataConnectDiscoverResult;
-  scheduleId: string;
+  /** Present only for a task triggered by a discover schedule. */
+  scheduleId?: string;
   startTime?: number;
   status: DataConnectDiscoverTaskStatus;
   strategy: DataConnectDiscoverStrategy;
@@ -92,12 +105,16 @@ export type DataConnectDiscoverScheduleListQuery = {
 
 export type DataConnectDiscoverTaskListQuery = {
   catalogId?: string;
-  page: number;
-  pageSize: number;
+  /** Server pagination window; Vega applies task visibility and filters before limit and offset. */
+  limit?: number;
+  offset?: number;
+  page?: number;
+  pageSize?: number;
+  resourceId?: string;
   scheduleId?: string;
   direction?: "asc" | "desc";
   sort?: DataConnectDiscoverTaskSort;
-  status?: DataConnectDiscoverTaskStatus;
+  statuses?: DataConnectDiscoverTaskStatus[];
   strategy?: DataConnectDiscoverStrategy;
   triggerType?: DataConnectDiscoverTaskTriggerType;
 };
@@ -121,3 +138,8 @@ export type DataConnectDiscoverSchedulePayload = {
   startTime?: number;
   strategy: DataConnectDiscoverStrategy;
 };
+
+export type DataConnectDiscoverScheduleUpdatePayload =
+  DataConnectDiscoverSchedulePayload & {
+    expectedUpdateTime: number;
+  };

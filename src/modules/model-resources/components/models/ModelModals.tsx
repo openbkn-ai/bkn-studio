@@ -5,7 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Drawer, Form, Input, InputNumber, Modal, Select, Spin, Switch, Tooltip } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +15,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createLlmModel,
+  setDefaultLlmModel,
   testLlmModel,
   updateLlmModel,
 } from "@/modules/model-resources/services/llm.service";
@@ -25,10 +27,12 @@ import {
 } from "@/modules/model-resources/utils/model-form";
 import { getModelSeriesOptions } from "@/modules/model-resources/utils/model-display";
 import { getLlmModelTypeLabel } from "@/modules/model-resources/utils/llm-labels";
+import { getModelConfigConflict } from "@/modules/model-resources/utils/model-config-conflict";
 
 import modalStyles from "./LlmModelFormModal.module.css";
 
 type LlmModelFormModalProps = {
+  canSetDefault?: boolean;
   mode: "create" | "edit" | "view";
   onClose: (refresh?: boolean) => void;
   open: boolean;
@@ -37,6 +41,7 @@ type LlmModelFormModalProps = {
 };
 
 export function LlmModelFormModal({
+  canSetDefault = false,
   mode,
   onClose,
   open,
@@ -44,7 +49,7 @@ export function LlmModelFormModal({
   showQuotaField = false,
 }: LlmModelFormModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
   const [form] = Form.useForm<LlmFormValues>();
   const [modalMode, setModalMode] = useState(mode);
   const [submitting, setSubmitting] = useState(false);
@@ -88,6 +93,7 @@ export function LlmModelFormModal({
       modelType: "llm",
       auth: "empty",
       quota: false,
+      default: false,
     });
   }, [form, mode, open, record]);
 
@@ -142,6 +148,47 @@ export function LlmModelFormModal({
       message.success(t("modelResources.models.saveSuccess"));
       onClose(true);
     } catch (error) {
+      const conflict = modalMode === "create" ? getModelConfigConflict(error) : null;
+      const existingModel = conflict?.existingModel;
+      if (conflict && payload.default && conflict.canSetDefault && existingModel) {
+        modal.confirm({
+          title: t("modelResources.models.duplicateConfigSetDefaultTitle"),
+          content: t("modelResources.models.duplicateConfigSetDefaultContent", {
+            name: existingModel.name,
+          }),
+          okText: t("modelResources.models.duplicateConfigSetDefaultOk"),
+          cancelText: t("common.cancel"),
+          onOk: async () => {
+            const result = await setDefaultLlmModel(existingModel.id);
+            if (result.status !== "ok") {
+              throw new Error(t("modelResources.models.setDefaultFailed"));
+            }
+            message.success(t("modelResources.models.setDefaultSuccess"));
+            onClose(true);
+          },
+        });
+        return;
+      }
+      if (conflict) {
+        if (!existingModel) {
+          if (conflict.defaultSwitchReason === "NO_DISPLAY_PERMISSION") {
+            message.error(t("modelResources.models.duplicateConfigNoDisplayPermission"));
+          } else {
+            message.error(extractRequestErrorMessage(error));
+          }
+          return;
+        }
+        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+          ? t("modelResources.models.duplicateConfigAlreadyDefault")
+          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+            : "";
+        message.error(t("modelResources.models.duplicateConfigExists", {
+          name: existingModel.name,
+          permission: reasonMessage,
+        }));
+        return;
+      }
       message.error(extractRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
@@ -215,14 +262,14 @@ export function LlmModelFormModal({
           )}
         </Form.Item>
         <Form.Item
-          label="API Model"
+          label={t("modelResources.models.modal.apiModel")}
           name="apiModel"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
           <Input placeholder={t("modelResources.models.modal.apiModelPlaceholder")} />
         </Form.Item>
         <Form.Item
-          label="API URL"
+          label={t("modelResources.models.modal.apiUrl")}
           name="apiUrl"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
@@ -237,7 +284,7 @@ export function LlmModelFormModal({
         </Form.Item>
         {authValue === "auth" || authValue === "dual_key" ? (
           <Form.Item
-            label="API Key"
+            label={t("modelResources.models.modal.apiKey")}
             name="apiKey"
             rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
           >
@@ -246,7 +293,7 @@ export function LlmModelFormModal({
         ) : null}
         {authValue === "dual_key" ? (
           <Form.Item
-            label="Secret Key"
+            label={t("modelResources.models.modal.secretKey")}
             name="secretKey"
             rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
           >
@@ -305,6 +352,22 @@ export function LlmModelFormModal({
                 : t("modelResources.models.modal.quotaTitleDescribe2Edit")}
             </div>
           </>
+        ) : null}
+        {modalMode === "create" && canSetDefault ? (
+          <Form.Item
+            label={
+              <span>
+                {t("modelResources.models.modal.defaultModel")}
+                <Tooltip title={t("modelResources.models.modal.llmDefaultModelHint")}>
+                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
+                </Tooltip>
+              </span>
+            }
+            name="default"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
         ) : null}
       </Form>
       {isView ? (
@@ -377,7 +440,7 @@ export function LlmMonitorDrawer({
           return (
             <div key={section.key} style={{ marginBottom: 24 }}>
               <h4 style={{ marginBottom: 4 }}>{section.title}</h4>
-              <p style={{ color: "rgba(15, 30, 54, 0.62)", marginBottom: 12 }}>{section.description}</p>
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: 12 }}>{section.description}</p>
               <div style={{ display: "grid", gap: 8 }}>
                 {points.length === 0 ? (
                   <span>--</span>

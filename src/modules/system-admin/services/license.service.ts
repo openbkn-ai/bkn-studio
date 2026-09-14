@@ -91,7 +91,9 @@ export function mapLicenseDetail(item: BackendLicenseDetail): LicenseDetail {
     licId: item.lic_id,
     limits: item.limits ?? {},
     renewError: item.renew_error,
-    state: item.state ?? "invalid",
+    // A missing state is an incomplete response, not proof that a corrupt
+    // license is installed. Fail closed so the UI cannot issue a no-op delete.
+    state: item.state ?? "unlicensed",
   };
 }
 
@@ -192,11 +194,10 @@ export async function deleteLicense() {
     mockLicense = {
       activated: false,
       edition: "community",
-      error: "No license has been imported.",
       features: [],
       instanceFp: mockInstanceFingerprint,
       limits: {},
-      state: "invalid",
+      state: "trial",
     };
     return wait(undefined);
   }

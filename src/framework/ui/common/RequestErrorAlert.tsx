@@ -9,6 +9,8 @@ import { Alert, Space } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import type { RequestErrorDetails } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
@@ -26,6 +28,7 @@ export function RequestErrorAlert({
   onDismiss,
 }: RequestErrorAlertProps) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [expanded, setExpanded] = useState(false);
   const hasDetails = Boolean(error.code || error.details || error.solution || error.errorLink);
   const copyText = useMemo(
@@ -56,7 +59,9 @@ export function RequestErrorAlert({
   }, [autoDismissMs, expanded, onDismiss]);
 
   const copyDetails = () => {
-    void navigator.clipboard?.writeText(copyText);
+    void writeTextToClipboard(copyText)
+      .then(() => message.success(t("common.copySuccess")))
+      .catch(() => message.error(t("common.copyFailed")));
   };
 
   return (

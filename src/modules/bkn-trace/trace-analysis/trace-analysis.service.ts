@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   OperationCallFact,
   OperationReceipt,
@@ -24,7 +23,6 @@ import type {
 
 const TRACE_API_PREFIX = "/agent-observability/v1/traces";
 const ARTIFACT_API_PREFIX = "/agent-observability/v1/evidence/artifacts";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 type BackendPayloadEnvelope = {
   byte_length?: number;
@@ -126,7 +124,6 @@ export async function listTechnicalTraces(
   query: TechnicalTraceQuery = {},
 ): Promise<TechnicalTracePage> {
   const response = await http.get<BackendTracePage>(TRACE_API_PREFIX, {
-    headers: traceHeaders(),
     params: traceQueryParams(query),
   });
   return {
@@ -144,7 +141,7 @@ export async function listTechnicalTraces(
 export async function getTechnicalTrace(traceId: string): Promise<TechnicalTraceDetail> {
   const response = await http.get<BackendTraceDetail>(
     `${TRACE_API_PREFIX}/${encodeURIComponent(traceId)}`,
-    { headers: traceHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
   return {
     graph: response.data.graph ? mapTraceGraph(response.data.graph) : undefined,
@@ -161,18 +158,11 @@ export async function getReferencedPayload(ref: string, interactionId: string): 
   const response = await http.get<{ content?: unknown }>(
     `${ARTIFACT_API_PREFIX}/${encodeURIComponent(artifactId)}`,
     {
-      headers: traceHeaders(),
       params: { interaction_id: interactionId },
       skipErrorToast: true,
     },
   );
   return response.data.content;
-}
-
-function traceHeaders(): Record<string, string> {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-  return { "x-business-domain": businessDomainId };
 }
 
 function traceQueryParams(query: TechnicalTraceQuery): Record<string, number | string> {

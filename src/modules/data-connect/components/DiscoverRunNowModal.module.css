@@ -22,14 +22,14 @@
 
 .summary {
   margin: 0 0 16px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
 
 .fieldLabel {
   margin-bottom: 10px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -44,14 +44,14 @@
   width: 100%;
   margin-inline-end: 0;
   padding: 10px 12px;
-  border: 1px solid #e5eaf2;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #fbfcfe;
+  background: var(--color-interface-panel-bg);
 }
 
 .strategyOption:global(.ant-radio-wrapper-checked) {
   border-color: #2e68ff;
-  background: #f5f8ff;
+  background: var(--color-primary-100);
 }
 
 .strategyOption :global(.ant-radio) {
@@ -60,7 +60,7 @@
 
 .strategyTitle {
   display: block;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -69,7 +69,7 @@
 .strategyHint {
   display: block;
   margin-top: 4px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
   white-space: normal;

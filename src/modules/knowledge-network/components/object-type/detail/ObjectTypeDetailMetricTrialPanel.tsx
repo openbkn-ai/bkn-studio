@@ -17,6 +17,7 @@ import type {
   ObjectTypeDataProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { toMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeDetailTrialPanel.module.css";
 
@@ -52,6 +53,7 @@ export function ObjectTypeDetailMetricTrialPanel({
 
   const resolvedMetricId = selectedMetric?.id ?? trialMetrics[0]?.id ?? null;
   const resolvedMetricName = selectedMetric?.name ?? trialMetrics[0]?.name ?? "";
+  const resolvedMetric = selectedMetric ?? trialMetrics[0] ?? null;
   const [analysisDimensions, setAnalysisDimensions] = useState<string[]>(
     selectedMetric?.calculationFormula.analysisDimensions ??
       trialMetrics[0]?.calculationFormula.analysisDimensions ??
@@ -147,6 +149,7 @@ export function ObjectTypeDetailMetricTrialPanel({
         <MetricDataQueryPanel
           analysisDimensionOptions={analysisDimensions}
           boundObjectTypeId={objectTypeId}
+          canQueryData={hasKnowledgeNetworkRecordOperation(resolvedMetric, "query_data")}
           embedded
           metricId={resolvedMetricId}
           metricName={resolvedMetricName}

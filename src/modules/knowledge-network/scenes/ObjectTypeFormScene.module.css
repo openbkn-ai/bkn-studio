@@ -34,14 +34,14 @@
 }
 
 .basicForm :global(.ant-form-item-label > label) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   white-space: normal;
 }
 
 .objectInfoBar {
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 16px;
   justify-content: space-between;
@@ -59,7 +59,7 @@
 .objectInfoIcon {
   align-items: center;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 14px;
@@ -69,7 +69,7 @@
 }
 
 .objectInfoName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
@@ -78,7 +78,7 @@
 }
 
 .objectInfoStats {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   display: flex;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -105,7 +105,7 @@
 }
 
 .sectionHint {
-  color: #64748b;
+  color: var(--color-text-secondary);
   flex: 1;
   font-size: 13px;
   line-height: 32px;
@@ -113,7 +113,7 @@
 }
 
 .propertyTable :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-hover);
   font-weight: 600;
 }
 

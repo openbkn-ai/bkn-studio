@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   ConvertOperatorToToolInput,
   ConvertOperatorToToolResult,
@@ -78,7 +77,6 @@ type BackendToolListResponse = {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 const HTTP_METHODS = new Set([
   "delete",
   "get",
@@ -128,13 +126,6 @@ const mockToolsByBox: Record<string, ToolDetail[]> = {
     },
   ],
 };
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 function mapTool(item: BackendToolInfo): ToolRecord {
   return {
@@ -380,7 +371,6 @@ export async function listTools(
   const response = await http.get<BackendToolListResponse>(
     `${API_PREFIX}/tool-box/${boxId}/tools/list`,
     {
-      headers: getBusinessDomainHeaders(),
       params: {
         all: query.all || undefined,
         box_id: boxId,
@@ -419,7 +409,7 @@ export async function getTool(boxId: string, toolId: string): Promise<ToolRecord
 
   const response = await http.get<BackendToolInfo>(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return mapTool(response.data);
@@ -452,7 +442,7 @@ export async function getToolDetail(
 
   const response = await http.get<BackendToolInfo>(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
-    { headers: getBusinessDomainHeaders(), skipErrorToast: options?.skipErrorToast },
+    { skipErrorToast: options?.skipErrorToast },
   );
 
   return mapToolDetail(response.data);
@@ -522,7 +512,6 @@ export async function createTool(
     success_count?: number;
     success_ids?: string[];
   }>(`${API_PREFIX}/tool-box/${boxId}/tool`, buildToolMutationBody(input), {
-    headers: getBusinessDomainHeaders(),
   });
 
   return {
@@ -612,7 +601,7 @@ export async function updateTool(
   await http.post(
     `${API_PREFIX}/tool-box/${boxId}/tool/${toolId}`,
     buildToolMutationBody(input),
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -631,7 +620,7 @@ export async function updateToolStatus(
   await http.post(
     `${API_PREFIX}/tool-box/${boxId}/tools/status`,
     toolIds.map((toolId) => ({ status, tool_id: toolId })),
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -646,7 +635,7 @@ export async function deleteTools(boxId: string, toolIds: string[]): Promise<voi
   await http.post(
     `${API_PREFIX}/tool-box/${boxId}/tools/batch-delete`,
     { tool_ids: toolIds },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -676,7 +665,7 @@ export async function debugTool(
       query: input.query,
       path: input.path,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {
@@ -714,7 +703,7 @@ export async function convertOperatorToTool(
       operator_id: input.operatorId,
       operator_version: input.operatorVersion,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {

@@ -37,10 +37,14 @@ export type CatalogHealthCheckScheduleInput = {
 export type CatalogHealthCheckSchedule = {
   catalogId: string;
   cronExpr: string;
-  lastRun: string;
+  expectedUpdateTime: number;
+  lastRun: CatalogTimestamp;
   mode: CatalogHealthCheckScheduleMode;
-  nextRun: string;
+  nextRun: CatalogTimestamp;
+  updateTime: CatalogTimestamp;
 };
+
+export type CatalogTimestamp = number | string | null;
 
 export type CatalogMutationOptions = {
   allowUnhealthy?: boolean;
@@ -75,14 +79,16 @@ export type CatalogRecord = {
   category: string;
   connectorConfig: Record<string, unknown>;
   connectorType: string;
-  createTime: string;
+  createTime: CatalogTimestamp;
   creatorName: string;
   description: string;
   enabled: boolean;
   healthCheckResult: string;
   healthStatus: CatalogHealthStatus;
   id: string;
-  lastCheckTime: string;
+  /** System-managed catalogs are visible but must remain read-only in Studio. */
+  internal: boolean;
+  lastCheckTime: CatalogTimestamp;
   metadata: Record<string, unknown>;
   mode: string;
   name: string;
@@ -90,15 +96,20 @@ export type CatalogRecord = {
   status: CatalogRecordStatus;
   tags: string[];
   type: string;
-  updateTime: string;
+  updateTime: CatalogTimestamp;
+  expectedUpdateTime: number;
   updaterName: string;
 };
 
 export type CatalogListQuery = {
   connectorType?: string;
+  direction?: "asc" | "desc";
+  enabled?: boolean;
+  healthStatus?: CatalogHealthStatus;
   keyword: string;
   page: number;
   pageSize: number;
+  sort?: "create_time" | "name" | "update_time";
   /** Defaults to physical; data catalogs pass all when logical catalogs must also be shown. */
   type?: "all" | "logical" | "physical";
 };
@@ -106,4 +117,10 @@ export type CatalogListQuery = {
 export type CatalogListResult = {
   items: CatalogRecord[];
   total: number;
+};
+
+export type CatalogConnectorTypeStat = {
+  catalogType: "logical" | "physical";
+  connectorType: string;
+  catalogCount: number;
 };

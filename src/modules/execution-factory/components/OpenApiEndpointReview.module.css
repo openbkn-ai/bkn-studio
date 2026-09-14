@@ -9,7 +9,7 @@
   margin-top: 10px;
   border: 1px solid rgba(23, 63, 159, 0.14);
   border-radius: 8px;
-  background: #fbfdff;
+  background: var(--color-interface-panel-bg);
   overflow: hidden;
 }
 
@@ -23,12 +23,12 @@
 }
 
 .title {
-  color: #17253d;
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 
 .count {
-  color: rgba(15, 30, 54, 0.56);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -47,7 +47,7 @@
 
 .table th {
   background: rgba(23, 63, 159, 0.035);
-  color: rgba(15, 30, 54, 0.64);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -61,8 +61,8 @@
   min-width: 54px;
   justify-content: center;
   border-radius: 6px;
-  background: #eef4ff;
-  color: #173f9f;
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
   font-family: Consolas, "SFMono-Regular", monospace;
   font-size: 12px;
   font-weight: 700;
@@ -70,19 +70,19 @@
 }
 
 .path {
-  color: #20324e;
+  color: var(--color-text-primary);
   font-family: Consolas, "SFMono-Regular", monospace;
   font-size: 12px;
 }
 
 .summary {
-  color: rgba(15, 30, 54, 0.78);
+  color: var(--color-text-secondary);
 }
 
 .risk {
   border: 1px solid #dfe6f2;
   border-radius: 999px;
-  color: rgba(15, 30, 54, 0.72);
+  color: var(--color-text-secondary);
   display: inline-flex;
   font-size: 12px;
   padding: 2px 8px;
@@ -91,23 +91,23 @@
 .riskLow {
   background: rgba(23, 125, 78, 0.06);
   border-color: rgba(23, 125, 78, 0.18);
-  color: #177d4e;
+  color: var(--color-success-text);
 }
 
 .riskMedium {
   background: rgba(217, 133, 0, 0.07);
   border-color: rgba(217, 133, 0, 0.2);
-  color: #9b6100;
+  color: var(--color-warning-text);
 }
 
 .riskHigh {
   background: rgba(217, 48, 37, 0.06);
   border-color: rgba(217, 48, 37, 0.2);
-  color: #b42318;
+  color: var(--color-error-text);
 }
 
 .io {
-  color: rgba(15, 30, 54, 0.58);
+  color: var(--color-text-secondary);
   font-size: 12px;
   white-space: nowrap;
 }

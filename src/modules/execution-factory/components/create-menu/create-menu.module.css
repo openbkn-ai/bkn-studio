@@ -24,14 +24,14 @@
 }
 
 .createMenuItemTitle {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.45;
 }
 
 .createMenuItemDesc {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.45;
   white-space: normal;
@@ -76,7 +76,7 @@
   align-items: center;
   gap: 14px;
   min-height: 88px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 20px 24px;
   cursor: pointer;
@@ -105,13 +105,13 @@
 }
 
 .optionDesc {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .modalHint {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -126,14 +126,14 @@
 }
 
 .interfaceSuccessAlert :global(.ant-alert-message) {
-  color: rgba(15, 30, 54, 0.78);
+  color: var(--color-text-primary);
 }
 
 .businessIntro {
   border-left: 3px solid var(--color-primary-600);
-  background: rgba(15, 30, 54, 0.03);
+  background: var(--color-interface-panel-bg);
   border-radius: 8px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.65;
   margin-bottom: 16px;
@@ -141,7 +141,7 @@
 }
 
 .sectionIntro {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
   margin: 0 0 12px;
@@ -169,14 +169,14 @@
 .operatorSyncSection {
   margin-top: 8px;
   padding-top: 16px;
-  border-top: 1px solid rgba(15, 30, 54, 0.08);
+  border-top: 1px solid var(--color-divider);
 }
 
 .operatorSyncPanel {
   margin-top: 8px;
   padding: 12px 16px;
   border-radius: 8px;
-  background: rgba(15, 30, 54, 0.03);
+  background: var(--color-interface-panel-bg);
 }
 
 .wizardTypeGrid {

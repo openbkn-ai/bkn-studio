@@ -24,7 +24,9 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import {
   readPositiveInteger,
@@ -35,6 +37,7 @@ import modalStyles from "@/modules/knowledge-network/components/network/Knowledg
 import type {
   KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
@@ -71,6 +74,7 @@ export function ObjectTypeListPanel({
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { modal } = useAppServices();
+  const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
   const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
@@ -91,7 +95,7 @@ export function ObjectTypeListPanel({
     [items],
   );
   const {
-    buildTasksByResourceId,
+    localIndexStatusByResourceId,
     canLoadResourceIndexStates,
     loading: resourceBuildTasksLoading,
   } =
@@ -224,7 +228,12 @@ export function ObjectTypeListPanel({
   }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
-    () => items.filter((item) => selectedRowKeys.includes(item.id)),
+    () =>
+      items.filter(
+        (item) =>
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete"),
+      ),
     [items, selectedRowKeys],
   );
 
@@ -277,6 +286,13 @@ export function ObjectTypeListPanel({
       return;
     }
 
+    if (key === "authorize") {
+      void navigate(
+        `/knowledge-network/workspace/${networkId}/object-types/${record.id}/authorization`,
+      );
+      return;
+    }
+
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -317,8 +333,22 @@ export function ObjectTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+            ? [{ key: "edit", label: t("common.edit") }]
+            : []),
+          ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{
+                key: "authorize",
+                label: (
+                  <KnowledgeNetworkAuthorizationActionLabel>
+                    {t("knowledgeNetwork.authorizeAction")}
+                  </KnowledgeNetworkAuthorizationActionLabel>
+                ),
+              }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -354,7 +384,7 @@ export function ObjectTypeListPanel({
           <button
             className={styles.tableLink}
             onClick={() => {
-              void navigate(`/data-directory/resource/${resource.id}`);
+              void navigate(`/data-catalog/resource/${resource.id}`);
             }}
             title={resource.name || resource.id}
             type="button"
@@ -378,8 +408,8 @@ export function ObjectTypeListPanel({
 
         const label = canLoadResourceIndexStates
           ? resourceBuildTasksLoading
-            ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-            : formatResourceIndexStateLabel(buildTasksByResourceId.get(resourceId) ?? [], t)
+            ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
+            : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
           : record.hasIndex
             ? t("knowledgeNetwork.previewIndexed")
             : t("knowledgeNetwork.previewNotIndexed");
@@ -388,7 +418,7 @@ export function ObjectTypeListPanel({
           <button
             className={styles.tableLink}
             onClick={() => {
-              void navigate(`/data-directory/resource/${resourceId}?tab=index`);
+              void navigate(`/data-catalog/resource/${resourceId}?tab=index`);
             }}
             type="button"
           >
@@ -472,7 +502,8 @@ export function ObjectTypeListPanel({
   );
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.objectTypesTitle")}</h2>
 
       <div className={styles.toolbar}>
@@ -595,6 +626,9 @@ export function ObjectTypeListPanel({
                   onChange: (nextSelectedRowKeys) => {
                     setSelectedRowKeys(nextSelectedRowKeys.map(String));
                   },
+                  getCheckboxProps: (record) => ({
+                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                  }),
                 }
               : undefined
           }
@@ -618,6 +652,7 @@ export function ObjectTypeListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+    </>
   );
 }

@@ -37,6 +37,10 @@ function createRecord(operations: string[]): KnowledgeNetworkRecord {
       actionTypesTotal: 0,
       conceptGroupsTotal: 0,
       metricsTotal: 0,
+      skillsTotal: 0,
+      mcpToolsTotal: 0,
+      apisTotal: 0,
+      functionsTotal: 0,
       objectTypesTotal: 0,
       relationTypesTotal: 0,
     },
@@ -61,12 +65,22 @@ describe("useKnowledgeNetworkModifyAccess", () => {
 
     const { result } = renderHook(() => useKnowledgeNetworkModifyAccess("kn-1"));
 
-    expect(result.current).toEqual({ canModify: false, isLoading: true });
+    expect(result.current).toEqual({
+      canModify: false,
+      error: null,
+      isForbidden: false,
+      isLoading: true,
+    });
 
     resolveDetail(createRecord(["view_detail", "modify", "delete"]));
 
     await waitFor(() => {
-      expect(result.current).toEqual({ canModify: true, isLoading: false });
+      expect(result.current).toEqual({
+        canModify: true,
+        error: null,
+        isForbidden: false,
+        isLoading: false,
+      });
     });
   });
 
@@ -80,6 +94,46 @@ describe("useKnowledgeNetworkModifyAccess", () => {
     await waitFor(() => {
       expect(result.current).toEqual({
         access: { delete: false, modify: true },
+        error: null,
+        isForbidden: false,
+        isLoading: false,
+      });
+    });
+  });
+
+  it("treats a confirmed 403 as denied without reporting a service failure", async () => {
+    getKnowledgeNetwork.mockRejectedValue(
+      Object.assign(new Error("forbidden"), { response: { status: 403 } }),
+    );
+
+    const { result } = renderHook(() =>
+      useKnowledgeNetworkOperationAccessState("kn-1", ["modify"]),
+    );
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        access: { modify: false },
+        error: null,
+        isForbidden: true,
+        isLoading: false,
+      });
+    });
+  });
+
+  it("reports a non-permission failure instead of silently treating it as denial", async () => {
+    getKnowledgeNetwork.mockRejectedValue(
+      Object.assign(new Error("backend unavailable"), { response: { status: 503 } }),
+    );
+
+    const { result } = renderHook(() =>
+      useKnowledgeNetworkOperationAccessState("kn-1", ["modify"]),
+    );
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        access: { modify: false },
+        error: "backend unavailable",
+        isForbidden: false,
         isLoading: false,
       });
     });

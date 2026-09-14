@@ -15,6 +15,12 @@ export const subscriptionEnUS = {
   subscription: {
     capabilities: {
       business_provenance: {
+        // Named after the three views on the business provenance page.
+        bullets: {
+          b1: "Timeline",
+          b2: "Evidence chain",
+          b3: "Execution chain",
+        },
         description:
           "Evidence chains, data provenance, the business semantic graph and interactive tracing for business questions and results.",
         name: "Business provenance",
@@ -30,24 +36,37 @@ export const subscriptionEnUS = {
           b2: "Connection parameters, drivers and dialects are vendor-maintained and validated each release",
           b3: "Same modelling, indexing and query path as the community connectors — switching changes no model",
         },
+        // The card lists only which databases connect; the full sentences above stay in the upgrade dialog.
+        cardBullets: {
+          b1: "SQL Server",
+        },
         description:
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
+      perm_fine_grained: {
+        bullets: {
+          b1: "View, query, modify, delete and execute granted separately",
+          b2: "Explicit exceptions (direct allow or deny) and full authorization audit",
+        },
+        description: "Per-object allow and deny decisions with source-level revocation",
+        name: "Fine-grained object authorization",
+      },
       perm_object_level: {
-        description: "Object-level authorization and advanced role control",
-        name: "Object-level authorization",
+        bullets: {
+          b1: "Row-level permissions on object types",
+          b2: "Column-level permissions on object types, four property tiers",
+          b3: "Data masking",
+          b4: "Audit of row and column permission changes",
+        },
+        description: "Enterprise object-rule compatibility and property-level controls",
+        name: "Enterprise object rules",
       },
       rbac_basic: {
         description: "Custom departments, roles and permission control",
         name: "Custom roles and permissions",
       },
       semantic_task: {
-        bullets: {
-          b1: "Infers the business meaning of columns and fills in semantic descriptions in bulk",
-          b2: "Results are scored by confidence; apply to empty fields only, or overwrite",
-          b3: "Runs as a task with progress, per-field results and an apply history",
-        },
         description: "Authoring and execution of business-semantic understanding tasks",
         name: "Semantic understanding tasks",
       },
@@ -60,16 +79,18 @@ export const subscriptionEnUS = {
      */
     community: {
       actionSandbox: "Action execution in a secure sandbox",
+      basicAudit: "Basic activity audit",
       cliTrace: "Query run traces, latency, evidence and reasoning via CLI / SDK",
       commonSources: "Common databases, OpenSearch and CSV ingestion",
       indexing: "Data discovery, batch indexing and vectorisation",
-      localAuth: "Local sign-in, user management and basic activity records",
+      localAuth: "Local sign-in with user, department and built-in role management",
       mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
       modelingSurfaces:
         "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
       modelingTypes: "Object, relation, action and metric modelling",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
+      topLevelGrants: "Grants on whole top-level resources (knowledge networks, catalogs)",
     },
     categories: {
       modeling: "Knowledge modelling",
@@ -106,20 +127,20 @@ export const subscriptionEnUS = {
       // steps, each with an expiry — exactly why the number does not belong on this page.
       community: {
         audience:
-          "Developers, technical teams and ecosystem partners. Build and validate a complete business knowledge network for free.",
+          "For developers, technical teams and ecosystem partners. Build and validate business knowledge networks for free, ideal for demo validation and POCs.",
         price: "Free",
         unit: "Self-hosted · perpetual",
       },
       enterprise: {
         audience:
-          "Organisations running OpenBKN as an enterprise AI platform. Adds enterprise administration, knowledge exploration, version governance and fuller production operations.",
+          "For organisations running their enterprise AI agents on OpenBKN. Adds fine-grained enterprise object permissions and business provenance on top of Professional.",
         price: "Contact us",
         unit: "Per contract",
       },
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "Customer teams moving to a production pilot. Adds faster source refresh, enterprise permissions, vendor support and more connectors.",
+          "For fast-growing AI-native teams. Adds custom roles and permissions, fine-grained object authorization and advanced data connectivity on top of Community.",
         price: "¥99,600",
         unit: "/ year · list price",
       },

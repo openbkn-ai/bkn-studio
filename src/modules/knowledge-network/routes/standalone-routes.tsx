@@ -21,6 +21,7 @@ import {
   MetricDetailPage,
   MetricEditPage,
   ObjectTypeCreatePage,
+  ObjectTypeAuthorizationPage,
   ObjectTypeDetailPage,
   ObjectTypeEditPage,
   RelationTypeCreatePage,
@@ -126,6 +127,38 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     workspaceSectionPage("action-types"),
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/functions",
+    {
+      descriptionKey: "knowledgeNetwork.capabilityFunctionsDescription",
+      titleKey: "knowledgeNetwork.workspaceFunctions",
+    },
+    workspaceSectionPage("functions"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/apis",
+    {
+      descriptionKey: "knowledgeNetwork.capabilityApisDescription",
+      titleKey: "knowledgeNetwork.workspaceApis",
+    },
+    workspaceSectionPage("apis"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/mcp",
+    {
+      descriptionKey: "knowledgeNetwork.capabilityMcpToolsDescription",
+      titleKey: "knowledgeNetwork.workspaceMcpTools",
+    },
+    workspaceSectionPage("mcp"),
+  ),
+  createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/skills",
+    {
+      descriptionKey: "knowledgeNetwork.capabilitySkillsDescription",
+      titleKey: "knowledgeNetwork.workspaceSkills",
+    },
+    workspaceSectionPage("skills"),
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics",
     {
       descriptionKey: "knowledgeNetwork.metricsDescription",
@@ -190,6 +223,14 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
     <ObjectTypeDetailPage />,
   ),
   createKnowledgeNetworkRoute(
+    "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization",
+    {
+      descriptionKey: "knowledgeNetwork.propertyAuthorizationDescription",
+      titleKey: "knowledgeNetwork.propertyAuthorizationAction",
+    },
+    <ObjectTypeAuthorizationPage />,
+  ),
+  createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/relation-types/create",
     {
       descriptionKey: "knowledgeNetwork.relationTypeCreateDescription",
@@ -251,6 +292,6 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeExecutionDescription",
       titleKey: "knowledgeNetwork.actionTypeExecutionTitle",
     },
-    modifyRoute(<ActionTypeExecutionPage />),
+    <ActionTypeExecutionPage />,
   ),
 ];

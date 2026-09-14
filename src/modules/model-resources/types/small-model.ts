@@ -57,6 +57,7 @@ export type SmallModelSavePayload = {
   batchSize?: number;
   maxTokens?: number;
   maxDocuments?: number;
+  default?: boolean;
   modelConfig?: SmallModelConfig;
   change?: boolean;
 };

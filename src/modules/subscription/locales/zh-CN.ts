@@ -9,11 +9,22 @@
  * `capabilities.*` 的中文名与描述逐字取自 license-server 的登记表 seed
  * (`server/internal/store/capabilities.go`)——那是签进客户证书、也是客户在门户上
  * 看到的同一份文案。两边不一致会让客户拿着证书对不上产品页。
+ *
+ * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用;`cardBullets` 有值时
+ * 卡片改用它(见 `capabilityCardBullets`)。权限三项的条目
+ * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行列权限 / 脱敏 / 审计),
+ * 矩阵改了这里要跟着改。
  */
 export const subscriptionZhCN = {
   subscription: {
     capabilities: {
       business_provenance: {
+        // 与业务溯源页的三个视图同名(时间链视图 / 证据链 / 执行链路)。
+        bullets: {
+          b1: "时间链",
+          b2: "证据链",
+          b3: "执行链",
+        },
         description: "业务问题与结果的证据链、数据溯源、业务语义图与交互式追溯",
         name: "业务溯源",
       },
@@ -27,17 +38,33 @@ export const subscriptionZhCN = {
           b2: "连接参数、驱动与方言由官方维护并随版本验证",
           b3: "与社区连接器同一套建模、索引与查询链路,切换不改模型",
         },
+        // 卡片只列连得上哪些库;上面的整句卖点留给升级弹窗。
+        cardBullets: {
+          b1: "SQL Server",
+        },
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
-      perm_object_level: { description: "对象级授权和高级角色控制", name: "对象级授权" },
+      perm_fine_grained: {
+        bullets: {
+          b1: "查看、查询、修改、删除、执行分别授权",
+          b2: "显式例外(直接授权或拒绝)与完整授权审计",
+        },
+        description: "按对象和操作配置允许、拒绝与来源级撤销",
+        name: "细粒度对象授权",
+      },
+      perm_object_level: {
+        bullets: {
+          b1: "对象类行权限",
+          b2: "对象类列权限,属性分四档",
+          b3: "数据脱敏",
+          b4: "行列权限变更审计",
+        },
+        description: "企业对象规则兼容层与属性级权限",
+        name: "企业对象规则",
+      },
       rbac_basic: { description: "自定义部门、角色和权限控制", name: "自定义角色与权限" },
       semantic_task: {
-        bullets: {
-          b1: "自动识别字段业务含义,批量补齐对象类与属性的语义描述",
-          b2: "结果按置信度分档,支持只补空值或全量覆盖两种落库方式",
-          b3: "任务化执行,可查看进度、结果明细与应用记录",
-        },
         description: "面向业务语义的理解任务编排与执行",
         name: "语义理解任务",
       },
@@ -48,15 +75,17 @@ export const subscriptionZhCN = {
      */
     community: {
       actionSandbox: "行动运行与安全沙箱环境",
+      basicAudit: "基础操作审计",
       cliTrace: "通过 CLI / SDK 查询运行链路、性能、证据与推理过程",
       commonSources: "常用数据库、OpenSearch 与 CSV 接入",
       indexing: "数据发现、批量索引与向量化",
-      localAuth: "本地登录、用户管理与基础操作记录",
+      localAuth: "本地登录,用户、部门与内置角色管理",
       mcpTooling: "MCP、工具与 Skill 的接入、调试和调用",
       modelingSurfaces: "通过 BKN Studio、CLI、SDK 与 Skill 建模并管理知识网络",
       modelingTypes: "对象、关系、行动与指标建模",
       queryAndSearch: "关系查询、路径查询与语义检索",
       selfHosted: "源码构建、基础部署、状态检查与升级文档",
+      topLevelGrants: "知识网络、Catalog 等顶层资源的整体授权",
     },
     categories: {
       modeling: "知识网络建模",
@@ -91,18 +120,18 @@ export const subscriptionZhCN = {
       // 2026-12-31 前五折 ¥49,800/年(3 年起订),之后还有六折、八折两档,都带截止日期
       // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
-        audience: "开发者、技术团队和生态伙伴。免费构建和验证完整的业务知识网络底座,适合跑通 Demo、样板项目和基础场景。",
+        audience: "面向开发者、技术团队和生态伙伴,免费构建和验证业务知识网络,适合 Demo 验证和 POC。",
         price: "免费",
         unit: "自部署 · 无限期",
       },
       enterprise: {
-        audience: "将 OpenBKN 作为企业级 AI 平台底座的组织。支持企业级管理、知识探索、版本治理和更完整的生产运维能力。",
+        audience: "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加企业对象细粒度权限和业务溯源。",
         price: "洽谈",
         unit: "按合同授权",
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience: "准备做生产试点的客户团队。在社区版基础上获得更高效的数据更新、企业权限、标准支持和更多连接能力。",
+        audience: "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },

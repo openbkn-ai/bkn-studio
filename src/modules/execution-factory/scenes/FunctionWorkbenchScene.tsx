@@ -73,6 +73,7 @@ import {
 } from "@/modules/execution-factory/utils/function-templates";
 import { buildSampleEvent } from "@/modules/execution-factory/utils/function-sample-event";
 import { buildJsonSchemaFromParameters } from "@/modules/execution-factory/utils/function-parameter-schema";
+import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import { collectToolboxPublishIssues } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
 
 import { FunctionDependencyPanel } from "./function-workbench/FunctionDependencyPanel";
@@ -547,7 +548,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         name: target.name || t("executionFactory.workbenchUnnamedFunction"),
         status: t(`executionFactory.toolStatuses.${nextStatus}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveToolStatusOkTextKey(nextStatus)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         await updateToolStatus(boxId, [toolId], nextStatus);
@@ -687,7 +688,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         count: targets.length,
         status: t(`executionFactory.toolStatuses.${nextStatus}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveToolStatusOkTextKey(nextStatus)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         try {

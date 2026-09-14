@@ -29,18 +29,19 @@ export type MyPermissions = {
 };
 
 /**
- * Complete bkn-safe operation vocabulary. It expands full-operation grants (`is_admin`, global
- * wildcards, and type-level `"*"`) so grant-driven button visibility is complete; the backend
+ * Complete bkn-safe operation vocabulary. It expands global and type-level `"*"` grants so
+ * grant-driven button visibility is complete; the backend
  * still enforces authorization per operation.
  *
  * It must include every operation that any consumer may check with `includes(op)`, or a `"*"`
- * grantee would see fewer controls. The list comes from bkn-safe's actual vocabulary; a former
- * nonexistent backend `"display"` operation was removed and view/view_detail/publish were added.
+ * grantee would see fewer controls. `display` is the model-manager read operation issued by the
+ * Studio authorization UI and listed in bkn-safe's resource catalog.
  */
 const ADMIN_OPERATIONS = [
   "create",
   "delete",
   "modify",
+  "display",
   "view",
   "view_detail",
   "execute",
@@ -82,10 +83,6 @@ type MePermissionsResponse = {
  * operation means "all ops" — expanded to ADMIN_OPERATIONS for display.
  */
 function operationsFor(me: MyPermissions, type: string, id: string): string[] {
-  if (me.isAdmin) {
-    return [...ADMIN_OPERATIONS];
-  }
-
   // Global wildcard, equivalent to super admin: permits every operation on every resource and short-circuits.
   if (me.permissions.some((p) => p.type === "*" && p.operations.includes("*"))) {
     return [...ADMIN_OPERATIONS];

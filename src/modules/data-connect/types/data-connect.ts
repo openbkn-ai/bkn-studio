@@ -18,9 +18,7 @@ export type {
 import type { CatalogHealthCheckScheduleInput } from "@/shared/catalog/types";
 
 export type ConnectorFieldConfig = {
-  description: string;
   encrypted: boolean;
-  name: string;
   required: boolean;
   type: string;
 };
@@ -53,4 +51,8 @@ export type DataConnectMutationPayload = {
   healthCheckSchedule?: CatalogHealthCheckScheduleInput;
   name: string;
   tags: string[];
+};
+
+export type DataConnectUpdatePayload = DataConnectMutationPayload & {
+  expectedUpdateTime: number;
 };

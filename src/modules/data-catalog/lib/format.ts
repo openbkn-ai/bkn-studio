@@ -6,9 +6,14 @@
  */
 
 import i18n from "@/app/locales/i18n";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
 export function formatCount(value: number, locale = i18n.language) {
   return value.toLocaleString(locale || "en-US");
+}
+
+export function formatTaskDateTime(timestamp?: number) {
+  return timestamp ? formatDateTimeYmdHms(timestamp) : "-";
 }
 
 function trimUnitValue(value: number) {
@@ -30,8 +35,9 @@ export function formatRowCount(value: number, locale = i18n.language) {
     });
   }
   return i18n.t("dataCatalog.format.rows", {
-    count: formatCount(value, locale),
-    defaultValue: "{{count}} rows",
+    count: value,
+    formattedCount: formatCount(value, locale),
+    defaultValue: "{{formattedCount}} rows",
     lng: locale,
   });
 }

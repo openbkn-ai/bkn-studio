@@ -69,7 +69,11 @@ export type ConversationStore = {
   clear(): void;
 };
 
-export type BknLifecycleOptions = { conversationStore: ConversationStore };
+export type BknLifecycleOptions = {
+  conversationStore: ConversationStore;
+  /** Stable caller label required by the managed lifecycle contract. */
+  agentName?: string;
+};
 
 export function lifecycleEnv(base: string, knId: string): ContextLoaderEnv {
   return { base, token: "", knId };
@@ -229,7 +233,7 @@ export function createBknLifecycle(
 }
 
 export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
-  const { conversationStore } = options;
+  const { conversationStore, agentName = "bkn-studio" } = options;
   let conversationId = conversationStore.read();
   // Whether the previous turn lacked lifecycle support; report only, not a short circuit.
   let notSupported = false;
@@ -259,7 +263,11 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         // Do not short-circuit on notSupported. Lifecycle support is deployment
         // state and may appear after backend upgrades or restarts while the page is open.
         const startInteraction = (currentConversationId: string | null) => {
-          const args: Record<string, unknown> = { question };
+          const args: Record<string, unknown> = {
+            agent_name: agentName,
+            question,
+            conversation_mode: currentConversationId ? "continue" : "new",
+          };
           if (currentConversationId) args.conversation_id = currentConversationId;
           return callLifecycleTool(session, "bkn_start_interaction", args);
         };

@@ -1,0 +1,404 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps, Key, ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import type { CatalogRecord } from "@/shared/catalog";
+
+type MockTreeNode = {
+  children?: MockTreeNode[];
+  key: Key;
+};
+
+vi.mock("react-i18next", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-i18next")>()),
+  useTranslation: () => ({
+    i18n: { language: "zh-CN" },
+    t: (key: string, values?: { catalogCount?: number }) => (
+      key === "dataCatalog.tree.summary" ? `catalogs:${values?.catalogCount}` : key
+    ),
+  }),
+}));
+
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() }, modal: { confirm: vi.fn() } }),
+}));
+
+vi.mock("@/framework/permission/PermissionGate", () => ({
+  PermissionGate: ({ children }: { children: ReactNode }) => children,
+}));
+
+vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
+  BusinessTree: ({
+    expandedKeys = [],
+    onExpand,
+    onSelect,
+    treeData = [],
+  }: {
+    expandedKeys?: Key[];
+    onExpand?: (keys: Key[]) => void;
+    onSelect?: (keys: Key[]) => void;
+    treeData?: MockTreeNode[];
+  }) => (
+    <>
+      <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
+      <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
+      <output data-testid="catalog-tree-keys">
+        {treeData.flatMap((root) => [
+          root.key,
+          ...(root.children ?? []).flatMap((child) => [
+            child.key,
+            ...(child.children ?? []).map((grandchild) => grandchild.key),
+          ]),
+        ]).join(",")}
+      </output>
+      <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
+      <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
+      <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
+      <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">load more logical catalogs</button>
+      <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
+    </>
+  ),
+  BusinessTreePanel: ({ children, footer, headerActions }: { children: ReactNode; footer?: ReactNode; headerActions: ReactNode }) => (
+    <div>
+      {headerActions}
+      {children}
+      <output data-testid="catalog-summary">{footer}</output>
+    </div>
+  ),
+}));
+
+import { CatalogTreePanel } from "./CatalogTreePanel";
+
+function makeCatalog(
+  id: string,
+  name: string,
+  type: CatalogRecord["type"],
+  internal = false,
+): CatalogRecord {
+  return {
+    category: "table",
+    connectorConfig: {},
+    connectorType: type === "physical" ? "postgresql" : "",
+    createTime: null,
+    creatorName: "-",
+    description: "",
+    enabled: true,
+    expectedUpdateTime: 1,
+    healthCheckResult: "",
+    healthStatus: "unchecked",
+    id,
+    internal,
+    lastCheckTime: null,
+    metadata: {},
+    mode: "",
+    name,
+    operations: [],
+    status: "enabled",
+    tags: [],
+    type,
+    updateTime: null,
+    updaterName: "-",
+  };
+}
+
+describe("CatalogTreePanel", () => {
+  it("hides creation and duplicate data-connect entry points", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.queryByLabelText("dataCatalog.tree.addLogical")).toBeNull();
+    expect(screen.queryByLabelText("dataCatalog.catalog.goScan")).toBeNull();
+    expect(screen.queryByLabelText("dataCatalog.catalog.goConnection")).toBeNull();
+  });
+
+  it("keeps both root groups visible when a search has no matches", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        discoveringCatalogIds={[]}
+        keyword="missing"
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("tree-keys").textContent).toBe("group:physical,group:logical");
+  });
+
+  it("keeps matching physical connector groups collapsed until the user loads them", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        connectorTypeStats={[{ catalogCount: 1, catalogType: "physical", connectorType: "postgresql" }]}
+        discoveringCatalogIds={[]}
+        keyword="orders"
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("expanded-keys").textContent).not.toContain("connector:postgresql");
+  });
+
+  it("uses statistics for the catalog total instead of the loaded page size", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[]}
+        connectorTypeStats={[
+          { catalogCount: 250, catalogType: "physical", connectorType: "postgresql" },
+          { catalogCount: 3, catalogType: "logical", connectorType: "" },
+        ]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-summary").textContent).toBe("catalogs:253");
+  });
+
+  it("preserves backend order for mixed-case and Chinese names while pinning built-in logical catalogs", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[
+          makeCatalog("physical-zulu", "Zulu", "physical"),
+          makeCatalog("physical-chinese", "中文", "physical"),
+          makeCatalog("physical-alpha", "alpha", "physical"),
+          makeCatalog("logical-zulu", "Zulu", "logical"),
+          makeCatalog("logical-builtin", "openbkn_system", "logical", true),
+          makeCatalog("logical-chinese", "中文", "logical"),
+          makeCatalog("logical-alpha", "alpha", "logical"),
+        ]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-tree-keys").textContent).toBe([
+      "group:physical",
+      "connector:postgresql",
+      "catalog:physical-zulu",
+      "catalog:physical-chinese",
+      "catalog:physical-alpha",
+      "group:logical",
+      "catalog:logical-builtin",
+      "catalog:logical-zulu",
+      "catalog:logical-chinese",
+      "catalog:logical-alpha",
+    ].join(","));
+  });
+
+  it("loads physical catalog schemas only when its node is expanded", async () => {
+    const onLoadCatalogSchemas = vi.fn().mockResolvedValue(["public"]);
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "postgresql",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "physical",
+      updateTime: null,
+      updaterName: "-",
+    };
+    const props: ComponentProps<typeof CatalogTreePanel> = {
+      catalogs: [catalog],
+      discoveringCatalogIds: [],
+      onLoadCatalogSchemas,
+      onRefresh: vi.fn(),
+      onSelectCatalog: vi.fn(),
+      resourceCount: 0,
+      selection: null,
+    };
+    const { rerender } = render(<CatalogTreePanel {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
+    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledWith("catalog-1"));
+    fireEvent.click(screen.getByRole("button", { name: "collapse catalog" }));
+    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
+    expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(1);
+
+    rerender(<CatalogTreePanel {...props} catalogs={[{ ...catalog }]} />);
+    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(2));
+  });
+
+  it("expands a connector group when its title is selected", () => {
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "postgresql",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "physical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "select connector" }));
+
+    expect(screen.getByTestId("expanded-keys").textContent).toContain("connector:postgresql");
+  });
+
+  it("loads the next page for logical catalogs", () => {
+    const onLoadCatalogsByConnectorType = vi.fn().mockResolvedValue(undefined);
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "logical-orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "logical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        connectorTypeStats={[{ catalogCount: 2, catalogType: "logical", connectorType: "" }]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onLoadCatalogsByConnectorType={onLoadCatalogsByConnectorType}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "load more logical catalogs" }));
+    fireEvent.click(screen.getByRole("button", { name: "load more logical catalogs" }));
+
+    expect(onLoadCatalogsByConnectorType).toHaveBeenCalledWith("", 1);
+    expect(onLoadCatalogsByConnectorType).toHaveBeenCalledTimes(1);
+  });
+
+  it("expands a catalog and loads its schemas when its title is selected", async () => {
+    const onLoadCatalogSchemas = vi.fn().mockResolvedValue(["public"]);
+    const onSelectCatalog = vi.fn();
+    const catalog: CatalogRecord = {
+      category: "table",
+      connectorConfig: {},
+      connectorType: "postgresql",
+      createTime: null,
+      creatorName: "-",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 1,
+      healthCheckResult: "",
+      healthStatus: "unchecked",
+      id: "catalog-1",
+      internal: false,
+      lastCheckTime: null,
+      metadata: {},
+      mode: "",
+      name: "orders",
+      operations: [],
+      status: "enabled",
+      tags: [],
+      type: "physical",
+      updateTime: null,
+      updaterName: "-",
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={onLoadCatalogSchemas}
+        onRefresh={vi.fn()}
+        onSelectCatalog={onSelectCatalog}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "select catalog" }));
+
+    expect(onSelectCatalog).toHaveBeenCalledWith("catalog-1");
+    expect(screen.getByTestId("expanded-keys").textContent).toContain("catalog:catalog-1");
+    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledWith("catalog-1"));
+  });
+});

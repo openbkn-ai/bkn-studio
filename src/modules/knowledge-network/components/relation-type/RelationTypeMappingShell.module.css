@@ -16,7 +16,7 @@
 }
 
 .modeField :global(.ant-form-item-label > label) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   white-space: normal;
 }
 

@@ -13,23 +13,23 @@ import { backendStatusParams } from "@/modules/data-catalog/services/build-task.
 describe("backendStatusParams — 前端状态 → 后端重复查询参数", () => {
   it("区分 stopping 和可恢复的 stopped", () => {
     expect(backendStatusParams(["stopping"])).toEqual(["stopping"]);
-    expect(backendStatusParams(["paused"])).toEqual(["stopped"]);
+    expect(backendStatusParams(["stopped"])).toEqual(["stopped"]);
   });
 
   it("映射前端归一化状态", () => {
     expect(backendStatusParams(["pending"])).toEqual(["pending"]);
     expect(backendStatusParams(["running"])).toEqual(["running"]);
-    expect(backendStatusParams(["succeeded"])).toEqual(["completed"]);
+    expect(backendStatusParams(["completed"])).toEqual(["completed"]);
     expect(backendStatusParams(["failed"])).toEqual(["failed"]);
     expect(backendStatusParams(["cancelled"])).toEqual(["cancelled"]);
   });
 
   it("listening 也映射到后端 running,与 running 去重", () => {
-    expect(backendStatusParams(["running", "listening"])).toEqual(["running"]);
+    expect(backendStatusParams(["running", "running"])).toEqual(["running"]);
   });
 
   it("多状态展开并去重", () => {
-    expect(backendStatusParams(["running", "stopping", "paused", "failed"])).toEqual([
+    expect(backendStatusParams(["running", "stopping", "stopped", "failed"])).toEqual([
       "running",
       "stopping",
       "stopped",

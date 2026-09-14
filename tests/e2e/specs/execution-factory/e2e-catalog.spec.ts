@@ -56,7 +56,6 @@ test.describe("Execution Factory — Catalog E2E flows", () => {
 
     const exported = await exportToolboxViaApi(request, toolbox.boxId);
     const importResponse = await request.post(apiUrl("/impex/import/toolbox"), {
-      headers: { "x-business-domain": "bd_public" },
       multipart: {
           mode: "upsert",
           data: {

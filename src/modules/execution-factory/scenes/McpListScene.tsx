@@ -27,6 +27,7 @@ import {
 } from "@/modules/execution-factory/services/mcp.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
+import { resolveStatusChangeOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 
 import styles from "./execution-factory-list.module.css";
 
@@ -90,7 +91,7 @@ export function McpListScene() {
         name: record.name,
         status: t(`executionFactory.mcpStatuses.${status}`),
       }),
-      okText: t("common.save"),
+      okText: t(resolveStatusChangeOkTextKey(status)),
       cancelText: t("common.cancel"),
       onOk: async () => {
         await updateMcpStatus(record.mcpId, status);

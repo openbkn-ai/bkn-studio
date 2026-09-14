@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { executionFactoryLabPermissions } from "@/modules/execution-factory-lab/permissions";
@@ -265,7 +266,7 @@ export function SandboxRuntimeScene() {
       return;
     }
     try {
-      await navigator.clipboard.writeText(buildDiagnostics(selected));
+      await writeTextToClipboard(buildDiagnostics(selected));
       message.success(t("executionFactoryLab.sandboxRuntimeCopied"));
     } catch {
       message.error(t("executionFactoryLab.sandboxRuntimeCopyFailed"));

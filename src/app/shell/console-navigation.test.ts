@@ -17,11 +17,30 @@ const keys = (items: { key: string }[]) => items.map((item) => item.key);
 const systemGroup = (items: ReturnType<typeof filterNavByPermission>) =>
   items.find((item) => item.key === "system-management");
 
+describe("consoleNavigation — 主线菜单顺序", () => {
+  it("将可观测性置于通用业务知识网络之后、模型管理之前", () => {
+    const navigationKeys = keys(consoleNavigation);
+
+    expect(navigationKeys.indexOf("general-business-knowledge-network")).toBeLessThan(
+      navigationKeys.indexOf("observability"),
+    );
+    expect(navigationKeys.indexOf("observability")).toBeLessThan(
+      navigationKeys.indexOf("model-resources"),
+    );
+  });
+});
+
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
-  it("普通用户的系统管理不再承载 BKN Trace", () => {
+  it("无权限用户显示首页和固定业务入口", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));
     expect(group).toBeUndefined();
-    expect(keys(filterNavByPermission(consoleNavigation, []))).toContain("observability");
+    expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual([
+      "home",
+      "domain-knowledge-network",
+      "execution-factory",
+      "general-business-knowledge-network",
+      "observability",
+    ]);
   });
 
   it("超管(全部权限)→ 系统管理可见,4 个子项齐全", () => {
@@ -65,12 +84,40 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(group!.children ?? [])).toEqual(["user-management", "log-management"]);
   });
 
-  it("非系统类菜单不受权限过滤影响", () => {
-    const filtered = filterNavByPermission(consoleNavigation, []);
-    expect(keys(filtered)).toContain("general-business-knowledge-network");
+  it("审计角色仍可看到固定业务入口", () => {
+    const filtered = filterNavByPermission(consoleNavigation, [
+      "admin-audit:view",
+      "admin-user:view",
+      "admin-dept:view",
+      "admin-role:view",
+      "admin-authz:view",
+    ]);
+
+    expect(keys(filtered)).toEqual([
+      "home",
+      "domain-knowledge-network",
+      "execution-factory",
+      "general-business-knowledge-network",
+      "observability",
+      "system-management",
+    ]);
   });
 
-  it("领域知识网络拆分为管理和调用两个入口", () => {
+  it("数据资源知识网络入口不依赖菜单权限", () => {
+    const filtered = filterNavByPermission(consoleNavigation, []);
+    const businessGroup = filtered.find(
+      (item) => item.key === "general-business-knowledge-network",
+    );
+
+    expect(keys(filtered)).toContain("home");
+    expect(keys(businessGroup?.children ?? [])).toEqual([
+      "data-connection",
+      "data-catalog",
+      "task-management",
+    ]);
+  });
+
+  it("领域知识网络入口不依赖菜单权限", () => {
     const filtered = filterNavByPermission(consoleNavigation, []);
     const group = filtered.find((item) => item.key === "domain-knowledge-network");
     expect(group).toBeDefined();
@@ -78,5 +125,29 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "domain-knowledge-network-management",
       "domain-knowledge-network-integration",
     ]);
+  });
+
+  it("执行单元管理入口不依赖菜单权限，沙箱运行时仍受限", () => {
+    const filtered = filterNavByPermission(consoleNavigation, []);
+    const executionFactory = filtered.find((item) => item.key === "execution-factory");
+
+    expect(keys(executionFactory?.children ?? [])).toContain("execution-unit-management");
+    expect(keys(executionFactory?.children ?? [])).not.toContain(
+      "execution-factory-sandbox-runtime",
+    );
+  });
+
+  it("可观测性设置仅对超级管理员显示", () => {
+    const regular = filterNavByPermission(consoleNavigation, []);
+    const superAdmin = filterNavByPermission(
+      consoleNavigation,
+      [],
+      true,
+    );
+    const observabilityChildren = (items: ReturnType<typeof filterNavByPermission>) =>
+      items.find((item) => item.key === "observability")?.children ?? [];
+
+    expect(keys(observabilityChildren(regular))).not.toContain("observability-settings");
+    expect(keys(observabilityChildren(superAdmin))).toContain("observability-settings");
   });
 });

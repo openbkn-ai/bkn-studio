@@ -6,8 +6,9 @@
  */
 
 .workspace {
-	background: #fff;
-	border: 1px solid #e2e7ef;
+	background: var(--color-bg-surface);
+	border: 1px solid var(--color-border);
+	container-type: inline-size;
 	display: grid;
 	gap: 16px;
 	min-height: 100%;
@@ -28,25 +29,20 @@
 }
 
 .filterPanel {
-  border: 1px solid #e7ebf1;
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 10px;
   padding: 14px;
 }
 
-.filterRowPrimary,
-.filterRowSecondary {
+.filterRow {
   align-items: center;
   display: grid;
   gap: 10px;
 }
 
-.filterRowPrimary {
-  grid-template-columns: minmax(260px, 1.4fr) minmax(180px, 0.8fr) minmax(180px, 0.8fr) minmax(190px, 0.8fr);
-}
-
-.filterRowSecondary {
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(180px, 0.8fr) auto;
+.filterRow {
+  grid-template-columns: minmax(280px, 1.2fr) minmax(180px, 0.7fr) minmax(160px, 0.6fr) minmax(180px, 0.7fr) auto;
 }
 
 .sourceStrip {
@@ -63,7 +59,7 @@
 }
 
 .technicalId {
-  color: #8a97aa;
+  color: var(--color-text-tertiary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
@@ -74,19 +70,55 @@
 
 .auditTable {
   min-width: 0;
+  width: 100%;
+}
+
+.auditTable :global(.ant-table),
+.auditTable :global(.ant-table-container),
+.auditTable :global(.ant-table-content),
+.auditTable :global(table) {
+  max-width: 100%;
+  width: 100%;
 }
 
 .auditTable :global(.ant-table-cell) {
   overflow: hidden;
+  overflow-wrap: anywhere;
   vertical-align: top;
 }
 
 .clampedCell {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  cursor: help;
+  display: -webkit-box;
   min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
-.clampedCell :global(.ant-typography) {
-  margin: 0;
+.clampedCell .technicalId {
+  color: var(--color-text-tertiary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+@container (max-width: 1080px) {
+  .filterRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 640px) {
+  .filterRow {
+    grid-template-columns: 1fr;
+  }
+
+  .resultSummary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .loadMore {
@@ -109,7 +141,7 @@
 }
 
 .detailSection {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--color-divider);
   display: grid;
   gap: 10px;
   padding-top: 14px;
@@ -134,8 +166,8 @@
 }
 
 .attributeBlock {
-  background: #f5f7fa;
-  border: 1px solid #e2e7ef;
+  background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   margin: 0;
   max-height: 280px;
   overflow: auto;
@@ -145,7 +177,7 @@
 }
 
 .section {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--color-divider);
   display: grid;
   gap: 12px;
   padding-top: 18px;
@@ -162,8 +194,8 @@
 }
 
 .metric {
-  background: #f7f9fc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 6px;
   min-height: 68px;
@@ -182,8 +214,8 @@
 }
 
 .storageSummary {
-  background: #f7f9fc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: grid;
   gap: 8px;
   align-content: start;
@@ -192,8 +224,8 @@
 
 .archivePanel {
   align-items: center;
-  background: #fafbfc;
-  border: 1px solid #e5eaf1;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   display: flex;
   gap: 24px;
   justify-content: space-between;
@@ -215,8 +247,7 @@
 		padding: 16px;
 	}
 
-  .filterRowPrimary,
-  .filterRowSecondary {
+  .filterRow {
     grid-template-columns: 1fr;
   }
 

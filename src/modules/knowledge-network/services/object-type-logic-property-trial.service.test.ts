@@ -66,7 +66,10 @@ describe("object-type-logic-property-trial.service", () => {
       _instance_identities: [{ order_id: "1001" }],
       properties: ["discount"],
     });
-    expect(options).toEqual({ headers: { "X-HTTP-Method-Override": "GET" } });
+    expect(options).toEqual({
+      headers: { "X-HTTP-Method-Override": "GET" },
+      skipErrorToast: true,
+    });
     expect(rows).toEqual([
       { instanceIdentity: { order_id: "1001" }, values: { discount: 42 } },
     ]);

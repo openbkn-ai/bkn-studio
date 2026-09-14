@@ -21,6 +21,7 @@ import {
   isAssignableRole,
   isSuperAdminRole,
   isThreeAdminRole,
+  roleDescription,
   threeAdminConflictLabels,
 } from "@/modules/system-admin/utils/role-catalog";
 
@@ -39,7 +40,7 @@ function matchesRoleKeyword(role: AdminRole, keyword: string) {
   if (!keyword) {
     return true;
   }
-  const haystack = `${role.name} ${role.description ?? ""}`.toLowerCase();
+  const haystack = `${role.name} ${roleDescription(role)}`.toLowerCase();
   return haystack.includes(keyword);
 }
 
@@ -148,8 +149,8 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
       />
       <span className={drawerStyles.roleOptionContent}>
         <span className={drawerStyles.roleOptionName}>{role.name}</span>
-        {role.description ? (
-          <span className={drawerStyles.roleOptionDesc}>{role.description}</span>
+        {roleDescription(role) ? (
+          <span className={drawerStyles.roleOptionDesc}>{roleDescription(role)}</span>
         ) : null}
       </span>
     </label>
@@ -254,8 +255,8 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                     {controlledRoles.map((role) => (
                       <span className={drawerStyles.controlledRoleItem} key={role.id}>
                         <span className={drawerStyles.roleOptionName}>{role.name}</span>
-                        {role.description ? (
-                          <span className={drawerStyles.roleOptionDesc}>{role.description}</span>
+                        {roleDescription(role) ? (
+                          <span className={drawerStyles.roleOptionDesc}>{roleDescription(role)}</span>
                         ) : null}
                       </span>
                     ))}

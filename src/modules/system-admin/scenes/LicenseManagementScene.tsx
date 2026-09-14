@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { LicenseStateBanner } from "@/framework/entitlement/LicenseStateBanner";
 import { useRefreshEntitlement } from "@/framework/entitlement/use-entitlement";
@@ -42,6 +43,10 @@ import styles from "./admin.module.css";
 const { TextArea } = Input;
 
 type ActionKind = "delete" | "import" | "online" | null;
+
+function canRemoveLicense(detail: LicenseDetail | null) {
+  return detail !== null && detail.state !== "trial" && detail.state !== "unlicensed";
+}
 
 function formatUnixSeconds(value: number | undefined, locale: string, permanentText: string) {
   if (value === undefined || value === null) {
@@ -68,13 +73,6 @@ function translatedLicenseKey(
   key: string,
 ) {
   return t(`systemAdmin.license.${category}.${key}`, { defaultValue: key });
-}
-
-function copySupported() {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.clipboard?.writeText === "function"
-  );
 }
 
 export function LicenseManagementScene() {
@@ -140,6 +138,9 @@ export function LicenseManagementScene() {
     if (detail.state === "fallback_community") {
       return t("systemAdmin.license.statusDesc.fallback_community");
     }
+    if (detail.state === "trial" || detail.state === "unlicensed") {
+      return t(`systemAdmin.license.statusDesc.${detail.state}`);
+    }
     if (detail.state === "invalid") {
       return t("systemAdmin.license.statusDesc.invalid");
     }
@@ -158,12 +159,12 @@ export function LicenseManagementScene() {
     if (!value) {
       return;
     }
-    if (!copySupported()) {
-      await message.warning(t("systemAdmin.license.copyUnsupported"));
-      return;
+    try {
+      await writeTextToClipboard(value);
+      await message.success(t("systemAdmin.license.copySuccess"));
+    } catch {
+      await message.warning(t("common.copyFailed"));
     }
-    await navigator.clipboard.writeText(value);
-    await message.success(t("systemAdmin.license.copySuccess"));
   };
 
   const refreshAfterAction = async (next?: LicenseDetail) => {
@@ -330,17 +331,18 @@ export function LicenseManagementScene() {
           <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             {t("common.refresh")}
           </AppButton>
-          <PermissionGate permissions={systemAdminPermissions.licenseManage}>
-            <AppButton
-              danger
-              disabled={!detail || detail.state === "invalid"}
-              icon={<DeleteOutlined />}
-              loading={action === "delete"}
-              onClick={handleDelete}
-            >
-              {t("systemAdmin.license.delete")}
-            </AppButton>
-          </PermissionGate>
+          {canRemoveLicense(detail) ? (
+            <PermissionGate permissions={systemAdminPermissions.licenseManage}>
+              <AppButton
+                danger
+                icon={<DeleteOutlined />}
+                loading={action === "delete"}
+                onClick={handleDelete}
+              >
+                {t("systemAdmin.license.delete")}
+              </AppButton>
+            </PermissionGate>
+          ) : null}
         </div>
       </div>
 

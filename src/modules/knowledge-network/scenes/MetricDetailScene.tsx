@@ -5,31 +5,28 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { EditOutlined, LineChartOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Spin, Tabs, Tag } from "antd";
+import { LineChartOutlined } from "@ant-design/icons";
+import { Alert, Descriptions, Tabs, Tag } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import type { MetricDetailSceneProps } from "@/modules/knowledge-network/contracts/scenes";
 import { useResolvedUpdaterName } from "@/modules/knowledge-network/hooks/useAccountDirectory";
 import {
   deleteKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
-  getKnowledgeNetworkObjectTypeDetail,
-  listKnowledgeNetworkObjectTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import type {
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   formatMetricUnitLabel,
@@ -41,8 +38,9 @@ import {
   formatSemanticOrderByLabel,
   formatSemanticPropertyList,
   resolvePropertyDisplayName,
-  toMetricPropertyOptions,
+  toPublishedMetricPropertyOptions,
 } from "@/modules/knowledge-network/utils/metric-property-display";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./MetricDetailScene.module.css";
 
@@ -50,8 +48,6 @@ export function MetricDetailScene({
   metricId: metricIdProp,
   networkId: networkIdProp,
   onBack,
-  onDeleteSuccess,
-  onEdit,
 }: MetricDetailSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -63,56 +59,23 @@ export function MetricDetailScene({
   const metricId = metricIdProp ?? params.metricId ?? "";
   const networkId = networkIdProp ?? params.networkId ?? "";
   const [detail, setDetail] = useState<KnowledgeNetworkMetricRecord | null>(null);
-  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
   const [propertyOptions, setPropertyOptions] = useState<RelationTypePropertyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("info");
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const resolvedUpdaterName = useResolvedUpdaterName(detail?.updaterName);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
-  const loadData = useCallback(async () => {
-    if (!networkId || !metricId) {
+  const leaveDetail = () => {
+    if (onBack) {
+      onBack();
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [metricResult, objectTypeResult] = await Promise.all([
-        getKnowledgeNetworkMetric(networkId, metricId),
-        listKnowledgeNetworkObjectTypes(networkId),
-      ]);
-      setDetail(metricResult);
-      setObjectTypes(objectTypeResult);
-
-      if (metricResult?.scopeType === "object_type" && metricResult.scopeRef) {
-        const objectTypeDetail = await getKnowledgeNetworkObjectTypeDetail(
-          networkId,
-          metricResult.scopeRef,
-        );
-        setPropertyOptions(toMetricPropertyOptions(objectTypeDetail?.dataProperties ?? []));
-      } else {
-        setPropertyOptions([]);
-      }
-    } catch (nextError) {
-      setError(extractRequestErrorMessage(nextError));
-    } finally {
-      setLoading(false);
-    }
-  }, [metricId, networkId]);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    void navigate(listPath);
+  };
 
   const confirmDelete = () => {
     if (!detail) {
@@ -127,38 +90,46 @@ export function MetricDetailScene({
       okButtonProps: { danger: true, type: "primary" },
       okText: t("common.delete"),
       onOk: async () => {
-        await deleteKnowledgeNetworkMetric(networkId, detail.id);
+        await deleteKnowledgeNetworkMetric(networkId, metricId);
         void message.success(t("common.success"));
-        if (onDeleteSuccess) {
-          onDeleteSuccess();
-          return;
-        }
-
-        void navigate(listPath);
+        leaveDetail();
       },
       title: t("knowledgeNetwork.metricDeleteTitle"),
       width: 520,
     });
   };
 
+  const loadData = useCallback(async () => {
+    if (!networkId || !metricId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const metricResult = await getKnowledgeNetworkMetric(networkId, metricId);
+      setDetail(metricResult);
+      setPropertyOptions(metricResult ? toPublishedMetricPropertyOptions(metricResult) : []);
+    } catch (nextError) {
+      setError(extractRequestErrorMessage(nextError));
+    } finally {
+      setLoading(false);
+    }
+  }, [metricId, networkId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
   if (loading) {
     return (
       <KnowledgeNetworkResourceConfigShell
-        onBack={() => {
-          if (onBack) {
-            onBack();
-            return;
-          }
-
-          void navigate(listPath);
-        }}
+        loading
+        onBack={leaveDetail}
         subtitle={t("knowledgeNetwork.metricDetailDescription")}
         title={t("knowledgeNetwork.metricDetailTitle")}
-      >
-        <div className={styles.loadingState}>
-          <Spin />
-        </div>
-      </KnowledgeNetworkResourceConfigShell>
+      />
     );
   }
 
@@ -166,45 +137,45 @@ export function MetricDetailScene({
     return <Alert message={error ?? t("common.notFound")} showIcon type="error" />;
   }
 
-  const boundObjectTypeName = resolveMetricBoundObjectTypeName(detail, objectTypes);
+  const boundObjectTypeName = resolveMetricBoundObjectTypeName(detail, []);
   const formula = detail.calculationFormula;
 
   return (
-    <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete) ? (
-          <>
-            {canModify ? (
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                if (onEdit) {
-                  onEdit();
-                  return;
-                }
-
-                void navigate(`/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`);
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            ) : null}
-            {canDelete ? (
-            <AppButton danger onClick={confirmDelete}>
-              {t("common.delete")}
-            </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
-      onBack={() => {
-        if (onBack) {
-          onBack();
-          return;
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
+              {
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/metrics/${metricId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
+              },
+              {
+                key: "authorize",
+                label: t("knowledgeNetwork.authorizeAction"),
+                onClick: () => setAuthorizeOpen(true),
+                operation: "authorize",
+              },
+              {
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
+              },
+            ]}
+            networkId={networkId}
+            record={detail}
+          />
         }
-
-        void navigate(listPath);
-      }}
+      onBack={leaveDetail}
       subtitle={t("knowledgeNetwork.metricDetailDescription")}
       title={detail.name}
     >
@@ -343,16 +314,25 @@ export function MetricDetailScene({
             <MetricDataQueryPanel
               analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
               boundObjectTypeId={detail.scopeType === "object_type" ? detail.scopeRef : undefined}
+              canQueryData={hasKnowledgeNetworkRecordOperation(detail, "query_data")}
               embedded
               metricId={detail.id}
               metricName={detail.name}
               networkId={networkId}
-              objectTypes={objectTypes}
+              objectTypes={[]}
               propertyOptions={propertyOptions}
             />
           )}
         </section>
       </div>
-    </KnowledgeNetworkResourceConfigShell>
+      </KnowledgeNetworkResourceConfigShell>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="metric"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+        record={detail}
+      />
+    </>
   );
 }

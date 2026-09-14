@@ -301,6 +301,7 @@ export function mapActionTypeDetail(item: BackendActionType): ActionTypeDetail {
     actionKind: mapActionKindFromBackend(item.action_type),
     objectTypeId: item.object_type_id ?? item.object_type?.id ?? "",
     objectTypeName: item.object_type?.name ?? item.object_type_id ?? "-",
+    operations: item.operations,
     tags: item.tags ?? [],
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",

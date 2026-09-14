@@ -13,11 +13,8 @@ const OPERATOR_ID = "e0b56d33-31e8-4646-a32d-8bac094073c5";
 
 test("operator edit form shows saved description", async ({ page, request }) => {
   const apiBase = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:9000/api";
-  const businessDomain = process.env.E2E_BUSINESS_DOMAIN ?? "bd_public";
-
   const detailResponse = await request.get(
     `${apiBase}/agent-operator-integration/v1/operator/info/${OPERATOR_ID}`,
-    { headers: { "x-business-domain": businessDomain } },
   );
   expect(detailResponse.ok()).toBeTruthy();
   const detail = (await detailResponse.json()) as {

@@ -10,7 +10,7 @@ import type {
   CatalogResource,
   CatalogDiscoverRecord,
 } from "@/modules/data-catalog/types/data-catalog";
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
 /**
  * Shared mock storage for data resources, build tasks, and discovery records. It models SDK behavior:
@@ -48,14 +48,7 @@ export function mockSlug(length = 20) {
 }
 
 export function formatMockTimestamp(value: number) {
-  return formatDateTime(value, {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    second: "2-digit",
-    year: "numeric",
-  }).replace(/\//g, "-");
+  return formatDateTimeYmdHms(value);
 }
 
 const now = Date.now();
@@ -63,12 +56,29 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "columnCount" | "updateTime"> & { updatedAt: number },
+  input: Omit<CatalogResource, "columnCount" | "enabled" | "localIndexStatus" | "operations" | "updateTime"> &
+    Partial<Pick<CatalogResource, "enabled" | "localIndexStatus" | "operations">>,
 ): CatalogResource {
+  const sourceMetadata =
+    input.category === "dataset"
+      ? undefined
+      : {
+          foreignKeyCount: 0,
+          indexCount: 0,
+          objectType: "table",
+          originalDescription: input.description,
+          originalName: input.sourceIdentifier,
+          ...input.sourceMetadata,
+        };
+
   return {
     ...input,
     columnCount: input.schema.length,
-    updateTime: formatMockTimestamp(input.updatedAt),
+    enabled: input.enabled ?? true,
+    localIndexStatus: input.localIndexStatus ?? "unavailable",
+    operations: input.operations ?? ["view_detail", "query_data"],
+    sourceMetadata,
+    updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
 }
 
@@ -81,19 +91,36 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.customers",
     description: "客户主数据表,含联系方式与生命周期状态。",
+    sourceMetadata: {
+      primaryKeys: ["customer_id"],
+    },
+    tags: ["crm", "core"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(28)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "updated",
+    localIndexName: "idx_customers_v3",
+    localIndexStatus: "available",
+    status: "active",
     schema: [
       {
         name: "customer_id",
         displayName: "客户ID",
         description: "客户唯一标识",
-        type: "bigint",
+        type: "integer",
+        originalName: "customer_id",
+        originalType: "bigint",
+        originalDescription: "客户唯一标识",
         features: [{ featureType: "keyword" }],
       },
       {
         name: "name",
         displayName: "客户名称",
         description: "客户显示名称",
-        type: "varchar(128)",
+        type: "string",
+        originalName: "name",
+        originalType: "varchar(128)",
+        originalDescription: "客户显示名称",
         features: [
           { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
         ],
@@ -101,27 +128,61 @@ export const mockResources: CatalogResource[] = [
       {
         name: "segment",
         displayName: "客户分层",
-        type: "varchar(32)",
+        description: "",
+        type: "string",
+        originalName: "segment",
+        originalType: "varchar(32)",
+        originalDescription: "",
       },
       {
         name: "profile_text",
         displayName: "客户画像",
         description: "结构化画像文本，供检索与向量化",
         type: "text",
+        originalName: "profile_text",
+        originalType: "text",
+        originalDescription: "结构化画像文本，供检索与向量化",
         features: [
           { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
-          { featureType: "vector", config: { embedding_model: "bge-m3" } },
+          { featureType: "vector", config: { embedding_model: "sm-1" } },
         ],
       },
-      { name: "updated_at", displayName: "更新时间", type: "datetime" },
+      {
+        name: "updated_at",
+        displayName: "更新时间",
+        description: "",
+        type: "datetime",
+        originalName: "updated_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+      {
+        name: "attachment_blob",
+        displayName: "附件原始数据",
+        description: "未索引的二进制附件内容",
+        type: "binary",
+        originalName: "attachment_blob",
+        originalType: "bytea",
+        originalDescription: "未索引的二进制附件内容",
+      },
+      {
+        name: "legacy_profile",
+        displayName: "遗留画像",
+        description: "无法转换的遗留数据库类型",
+        type: "other",
+        originalName: "legacy_profile",
+        originalType: "legacy_profile",
+        originalDescription: "无法转换的遗留数据库类型",
+      },
     ],
     indexConfig: {
-      buildKeyFields: ["updated_at"],
+      primaryKeyFields: ["customer_id"],
+      incrementalFields: ["updated_at"],
       defaultFulltextAnalyzer: "ik_max_word",
-      defaultEmbeddingModel: "bge-m3",
+      defaultEmbeddingModel: "sm-1",
     },
     rowCount: 182_340,
-    updatedAt: minutesAgo(42),
+    expectedUpdateTime: minutesAgo(42),
   }),
   makeResource({
     id: "res-orders",
@@ -131,15 +192,499 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.orders",
     description: "订单事实表。",
+    sourceMetadata: {
+      primaryKeys: ["order_id"],
+    },
+    tags: ["crm", "orders"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(26)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "unchanged",
+    status: "active",
     schema: [
-      { name: "order_id", type: "bigint" },
-      { name: "customer_id", type: "bigint" },
-      { name: "item_summary", type: "text" },
-      { name: "amount", type: "decimal(18,2)" },
-      { name: "created_at", type: "datetime" },
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "customer_id",
+        displayName: "customer_id",
+        description: "",
+        type: "integer",
+        originalName: "customer_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "item_summary",
+        displayName: "item_summary",
+        description: "",
+        type: "text",
+        originalName: "item_summary",
+        originalType: "text",
+        originalDescription: "",
+      },
+      {
+        name: "amount",
+        displayName: "amount",
+        description: "",
+        type: "decimal",
+        originalName: "amount",
+        originalType: "decimal(18,2)",
+        originalDescription: "",
+      },
+      {
+        name: "created_at",
+        displayName: "created_at",
+        description: "",
+        type: "datetime",
+        originalName: "created_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
     ],
     rowCount: 96_120,
-    updatedAt: minutesAgo(18),
+    expectedUpdateTime: minutesAgo(18),
+  }),
+  makeResource({
+    id: "res-index-config-demo",
+    catalogId: "cat-001",
+    name: "index_config_demo",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.index_config_demo",
+    description: "用于验证主键、增量键和字段特征配置的示例资源。",
+    sourceMetadata: {
+      foreignKeyCount: 1,
+      indexCount: 3,
+      originalDescription: "覆盖多类型字段、复合主键和增量同步游标的源端测试表。",
+      primaryKeys: ["tenant_id", "record_id"],
+    },
+    tags: ["demo", "index"],
+    creatorName: "Platform Admin",
+    createTime: formatMockTimestamp(daysAgo(1)),
+    updaterName: "Data Steward",
+    lastDiscoverStatus: "updated",
+    status: "active",
+    schema: [
+      {
+        name: "record_id",
+        displayName: "记录 ID",
+        description: "记录的唯一标识",
+        type: "integer",
+        originalName: "record_id",
+        originalType: "bigint",
+        originalDescription: "记录的唯一标识",
+        features: [{ featureType: "keyword" }],
+      },
+      {
+        name: "tenant_id",
+        displayName: "租户 ID",
+        description: "记录所属租户",
+        type: "string",
+        originalName: "tenant_id",
+        originalType: "varchar(64)",
+        originalDescription: "记录所属租户",
+        features: [{ featureType: "keyword" }],
+      },
+      {
+        name: "title",
+        displayName: "标题",
+        description: "记录标题",
+        type: "text",
+        originalName: "title",
+        originalType: "text",
+        originalDescription: "记录标题",
+        features: [{ featureType: "fulltext", config: { analyzer: "ik_max_word" } }],
+      },
+      {
+        name: "content",
+        displayName: "内容",
+        description: "用于全文与向量检索的正文",
+        type: "text",
+        originalName: "content",
+        originalType: "text",
+        originalDescription: "用于全文与向量检索的正文",
+        features: [
+          { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
+          { featureType: "vector", config: { embedding_model: "sm-1" } },
+        ],
+      },
+      {
+        name: "updated_at",
+        displayName: "更新时间",
+        description: "源数据最后更新时间",
+        type: "datetime",
+        originalName: "updated_at",
+        originalType: "datetime",
+        originalDescription: "源数据最后更新时间",
+      },
+      {
+        name: "revision",
+        displayName: "修订号",
+        description: "同一更新时间内的稳定排序字段",
+        type: "integer",
+        originalName: "revision",
+        originalType: "int",
+        originalDescription: "同一更新时间内的稳定排序字段",
+      },
+      {
+        name: "status",
+        displayName: "状态",
+        description: "业务状态",
+        type: "string",
+        originalName: "status",
+        originalType: "varchar(32)",
+        originalDescription: "业务状态",
+      },
+      {
+        name: "sequence_no",
+        displayName: "序列号",
+        description: "无符号递增序列号",
+        type: "unsigned integer",
+        originalName: "sequence_no",
+        originalType: "bigint unsigned",
+        originalDescription: "无符号递增序列号",
+      },
+      {
+        name: "relevance_score",
+        displayName: "相关性分值",
+        description: "业务计算得到的浮点分值",
+        type: "float",
+        originalName: "relevance_score",
+        originalType: "float",
+        originalDescription: "业务计算得到的浮点分值",
+      },
+      {
+        name: "amount",
+        displayName: "金额",
+        description: "业务金额",
+        type: "decimal",
+        originalName: "amount",
+        originalType: "decimal(18,2)",
+        originalDescription: "业务金额",
+      },
+      {
+        name: "business_date",
+        displayName: "业务日期",
+        description: "记录所属的业务日期",
+        type: "date",
+        originalName: "business_date",
+        originalType: "date",
+        originalDescription: "记录所属的业务日期",
+      },
+      {
+        name: "schedule_time",
+        displayName: "计划时间",
+        description: "每日执行的计划时间",
+        type: "time",
+        originalName: "schedule_time",
+        originalType: "time",
+        originalDescription: "每日执行的计划时间",
+      },
+      {
+        name: "event_timestamp",
+        displayName: "事件时间戳",
+        description: "事件发生时的时间戳",
+        type: "timestamp",
+        originalName: "event_timestamp",
+        originalType: "timestamp",
+        originalDescription: "事件发生时的时间戳",
+      },
+      {
+        name: "source_ip",
+        displayName: "来源 IP",
+        description: "产生记录的来源地址",
+        type: "ip",
+        originalName: "source_ip",
+        originalType: "inet",
+        originalDescription: "产生记录的来源地址",
+      },
+      {
+        name: "is_published",
+        displayName: "是否发布",
+        description: "记录是否已发布",
+        type: "boolean",
+        originalName: "is_published",
+        originalType: "boolean",
+        originalDescription: "记录是否已发布",
+      },
+      {
+        name: "raw_payload",
+        displayName: "原始载荷",
+        description: "未解析的二进制载荷",
+        type: "binary",
+        originalName: "raw_payload",
+        originalType: "blob",
+        originalDescription: "未解析的二进制载荷",
+      },
+      {
+        name: "metadata",
+        displayName: "扩展元数据",
+        description: "记录的结构化扩展属性",
+        type: "json",
+        originalName: "metadata",
+        originalType: "jsonb",
+        originalDescription: "记录的结构化扩展属性",
+      },
+      {
+        name: "location",
+        displayName: "位置",
+        description: "记录关联的地理坐标；当前连接器按未支持类型处理",
+        type: "other",
+        originalName: "location",
+        originalType: "point",
+        originalDescription: "记录关联的地理坐标",
+      },
+      {
+        name: "service_area",
+        displayName: "服务区域",
+        description: "记录关联的地理形状范围；当前连接器按未支持类型处理",
+        type: "other",
+        originalName: "service_area",
+        originalType: "geometry",
+        originalDescription: "记录关联的地理形状范围",
+      },
+      {
+        name: "created_at",
+        displayName: "创建时间",
+        description: "源数据创建时间",
+        type: "datetime",
+        originalName: "created_at",
+        originalType: "datetime",
+        originalDescription: "源数据创建时间",
+      },
+    ],
+    indexConfig: {
+      primaryKeyFields: ["tenant_id", "record_id"],
+      incrementalFields: ["updated_at", "revision"],
+      defaultFulltextAnalyzer: "ik_max_word",
+      defaultEmbeddingModel: "sm-1",
+    },
+    rowCount: 12_640,
+    expectedUpdateTime: minutesAgo(12),
+  }),
+  makeResource({
+    id: "res-source-missing",
+    catalogId: "cat-001",
+    name: "archived_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.archived_orders",
+    description: "用于验证源端资源消失后，即使保留旧字段也禁止查询和预览。",
+    lastDiscoverStatus: "missing",
+    statusMessage: "The resource was not found during the latest discovery.",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "archived_at",
+        displayName: "archived_at",
+        description: "",
+        type: "datetime",
+        originalName: "archived_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 12_480,
+    expectedUpdateTime: minutesAgo(30),
+  }),
+  makeResource({
+    id: "res-discovery-error",
+    catalogId: "cat-001",
+    name: "discover_error_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_error_orders",
+    description: "用于验证最近一次探查失败但仍保留旧字段的降级预览。",
+    lastDiscoverStatus: "error",
+    statusMessage: "The latest metadata discovery failed.",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "updated_at",
+        displayName: "updated_at",
+        description: "",
+        type: "datetime",
+        originalName: "updated_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 8_640,
+    expectedUpdateTime: minutesAgo(35),
+  }),
+  makeResource({
+    id: "res-discovery-error-no-schema",
+    catalogId: "cat-001",
+    name: "discover_error_no_schema",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_error_no_schema",
+    description: "用于验证探查失败且没有任何可用字段时禁止查询和预览。",
+    lastDiscoverStatus: "error",
+    statusMessage: "Metadata discovery failed before any fields were available.",
+    schema: [],
+    rowCount: 0,
+    expectedUpdateTime: minutesAgo(36),
+  }),
+  makeResource({
+    id: "res-discovery-new",
+    catalogId: "cat-001",
+    name: "discover_new_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_new_orders",
+    description: "用于验证新发现资源的探查状态。",
+    lastDiscoverStatus: "new",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "created_at",
+        displayName: "created_at",
+        description: "",
+        type: "datetime",
+        originalName: "created_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 320,
+    expectedUpdateTime: minutesAgo(4),
+  }),
+  makeResource({
+    id: "res-discovery-restored",
+    catalogId: "cat-001",
+    name: "discover_restored_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_restored_orders",
+    description: "用于验证源端资源重新出现后的恢复状态。",
+    lastDiscoverStatus: "restored",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "restored_at",
+        displayName: "restored_at",
+        description: "",
+        type: "datetime",
+        originalName: "restored_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 1_280,
+    expectedUpdateTime: minutesAgo(6),
+  }),
+  makeResource({
+    id: "res-discovery-unchanged",
+    catalogId: "cat-001",
+    name: "discover_unchanged_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_unchanged_orders",
+    description: "用于验证源端元数据未变化的探查状态。",
+    lastDiscoverStatus: "unchanged",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "checked_at",
+        displayName: "checked_at",
+        description: "",
+        type: "datetime",
+        originalName: "checked_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 24_000,
+    expectedUpdateTime: minutesAgo(8),
+  }),
+  makeResource({
+    id: "res-discovery-updated",
+    catalogId: "cat-001",
+    name: "discover_updated_orders",
+    category: "table",
+    schemaName: "customer_center",
+    sourceIdentifier: "crm_core.discover_updated_orders",
+    description: "用于验证源端元数据发生变化后的探查状态。",
+    lastDiscoverStatus: "updated",
+    schema: [
+      {
+        name: "order_id",
+        displayName: "order_id",
+        description: "",
+        type: "integer",
+        originalName: "order_id",
+        originalType: "bigint",
+        originalDescription: "",
+      },
+      {
+        name: "amount",
+        displayName: "amount",
+        description: "",
+        type: "decimal",
+        originalName: "amount",
+        originalType: "decimal(18,2)",
+        originalDescription: "",
+      },
+      {
+        name: "updated_at",
+        displayName: "updated_at",
+        description: "",
+        type: "datetime",
+        originalName: "updated_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+    ],
+    rowCount: 16_800,
+    expectedUpdateTime: minutesAgo(10),
   }),
   makeResource({
     id: "res-kn-chunks",
@@ -149,85 +694,277 @@ export const mockResources: CatalogResource[] = [
     sourceIdentifier: "knowledge_index.kn_chunks",
     description: "知识网络切片数据集,供向量检索。",
     schema: [
-      { name: "chunk_id", type: "varchar(64)" },
-      { name: "doc_id", type: "varchar(64)" },
-      { name: "content", type: "text" },
-      { name: "updated_at", type: "datetime" },
+      {
+        name: "chunk_id",
+        displayName: "chunk_id",
+        description: "",
+        type: "string",
+        originalName: "chunk_id",
+        originalType: "varchar(64)",
+        originalDescription: "",
+      },
+      {
+        name: "doc_id",
+        displayName: "doc_id",
+        description: "",
+        type: "string",
+        originalName: "doc_id",
+        originalType: "varchar(64)",
+        originalDescription: "",
+      },
+      {
+        name: "content",
+        displayName: "content",
+        description: "",
+        type: "text",
+        originalName: "content",
+        originalType: "text",
+        originalDescription: "",
+      },
+      {
+        name: "updated_at",
+        displayName: "updated_at",
+        description: "",
+        type: "datetime",
+        originalName: "updated_at",
+        originalType: "datetime",
+        originalDescription: "",
+      },
     ],
     rowCount: 48_206,
-    updatedAt: minutesAgo(160),
+    expectedUpdateTime: minutesAgo(160),
   }),
   makeResource({
-    id: "res-support-tickets",
-    catalogId: "cat-004",
-    name: "support_tickets",
-    category: "logicview",
-    sourceIdentifier:
-      "SELECT id, title, body, updated_at FROM ops.support_tickets",
-    description: "客服工单逻辑视图,持续增量流入。",
+    id: "res-metadata-unavailable",
+    catalogId: "cat-002",
+    name: "metadata_pending_dataset",
+    category: "dataset",
+    sourceIdentifier: "knowledge_index.metadata_pending_dataset",
+    description: "用于验证资源字段元数据尚未就绪时的查询与预览保护。",
+    schema: [],
+    rowCount: 0,
+    expectedUpdateTime: minutesAgo(5),
+  }),
+  makeResource({
+    id: "adp_bkn_concept_dataset",
+    catalogId: "adp_bkn_catalog",
+    name: "adp_bkn_concept_dataset",
+    category: "dataset",
+    sourceIdentifier: "",
+    description: "BKN的概念存储数据集",
     schema: [
-      { name: "id", type: "bigint" },
-      { name: "title", type: "varchar(256)" },
-      { name: "body", type: "text" },
-      { name: "updated_at", type: "datetime" },
+      {
+        name: "module_type",
+        displayName: "module_type",
+        description: "bkn中的概念模块类型",
+        type: "string",
+        originalName: "module_type",
+        originalType: "string",
+        originalDescription: "bkn中的概念模块类型",
+        features: [{ featureType: "keyword", name: "keyword_module_type", isDefault: true }],
+      },
+      {
+        name: "id",
+        displayName: "id",
+        description: "BKN中概念的唯一标识符",
+        type: "string",
+        originalName: "id",
+        originalType: "string",
+        originalDescription: "BKN中概念的唯一标识符",
+        features: [{ featureType: "keyword", name: "keyword_id", isDefault: true }],
+      },
+      {
+        name: "name",
+        displayName: "name",
+        description: "BKN中概念的名称",
+        type: "text",
+        originalName: "name",
+        originalType: "text",
+        originalDescription: "BKN中概念的名称",
+        features: [
+          { featureType: "keyword", name: "keyword_name", isDefault: true },
+          { featureType: "fulltext", name: "fulltext_name", isDefault: true, config: { analyzer: "standard" } },
+        ],
+      },
+      {
+        name: "comment",
+        displayName: "comment",
+        description: "BKN中概念的注释说明",
+        type: "text",
+        originalName: "comment",
+        originalType: "text",
+        originalDescription: "BKN中概念的注释说明",
+        features: [
+          { featureType: "keyword", name: "keyword_comment", isDefault: true },
+          { featureType: "fulltext", name: "fulltext_comment", isDefault: true, config: { analyzer: "standard" } },
+        ],
+      },
+      {
+        name: "detail",
+        displayName: "detail",
+        description: "BKN中概念的详细信息描述",
+        type: "text",
+        originalName: "detail",
+        originalType: "text",
+        originalDescription: "BKN中概念的详细信息描述",
+        features: [
+          { featureType: "keyword", name: "keyword_detail", isDefault: true },
+          { featureType: "fulltext", name: "fulltext_detail", isDefault: true, config: { analyzer: "standard" } },
+        ],
+      },
+      {
+        name: "kn_id",
+        displayName: "kn_id",
+        description: "",
+        type: "string",
+        originalName: "kn_id",
+        originalType: "string",
+        originalDescription: "",
+      },
+      {
+        name: "branch",
+        displayName: "branch",
+        description: "",
+        type: "string",
+        originalName: "branch",
+        originalType: "string",
+        originalDescription: "",
+      },
+      {
+        name: "creator",
+        displayName: "creator",
+        description: "",
+        type: "json",
+        originalName: "creator",
+        originalType: "json",
+        originalDescription: "",
+      },
+      {
+        name: "create_time",
+        displayName: "create_time",
+        description: "",
+        type: "datetime",
+        originalName: "create_time",
+        originalType: "datetime",
+        originalDescription: "",
+      },
+      {
+        name: "updater",
+        displayName: "updater",
+        description: "",
+        type: "json",
+        originalName: "updater",
+        originalType: "json",
+        originalDescription: "",
+      },
+      {
+        name: "update_time",
+        displayName: "update_time",
+        description: "",
+        type: "datetime",
+        originalName: "update_time",
+        originalType: "datetime",
+        originalDescription: "",
+      },
     ],
-    rowCount: 23_412,
-    updatedAt: minutesAgo(3),
+    indexConfig: { defaultFulltextAnalyzer: "standard" },
+    rowCount: 0,
+    expectedUpdateTime: minutesAgo(3),
   }),
 ];
+
+const mockCatalogNames: Record<string, string> = {
+  "cat-001": "customer_master",
+  "cat-002": "knowledge_index",
+  "cat-003": "finance_dw",
+};
+
+export function mockCatalogName(id?: string) {
+  return id ? mockCatalogNames[id] : undefined;
+}
 
 function makeTask(
   input: Omit<
     BuildTask,
-    | "embeddingDegraded"
-    | "failureDetail"
     | "finishTime"
     | "fulltextAnalyzer"
     | "fulltextFields"
-    | "indexUsable"
+    | "lastProgressTime"
+    | "startTime"
   > & {
     finishedAt?: number | null;
-    embeddingDegraded?: boolean;
-    failureDetail?: string;
+    lastProgressAt?: number | null;
+    startedAt?: number | null;
     fulltextAnalyzer?: string;
     fulltextFields?: string[];
-    indexUsable?: boolean;
   },
 ): BuildTask {
-  // Derive the index-health fields so existing mock literals stay terse: an
-  // index is "indexed" once succeeded/listening, degraded if vectorization
-  // didn't catch up to the row count, and unusable while degraded or unbuilt.
-  const indexed = input.status === "succeeded" || input.status === "listening";
-  const embeddingDegraded =
-    input.embeddingDegraded ?? (indexed && input.vectorizedCount < input.totalCount);
+  const resource = mockResources.find((item) => item.id === input.resourceId);
+  const catalogId = input.catalogId ?? resource?.catalogId;
   return {
     ...input,
+    catalogId,
+    catalogName: input.catalogName ?? mockCatalogName(catalogId),
+    resourceName: input.resourceName ?? resource?.name,
+    executeType: input.mode === "batch" ? (input.executeType ?? "full") : undefined,
     fulltextAnalyzer: input.fulltextAnalyzer ?? "ik_max_word",
     fulltextFields: input.fulltextFields ?? input.embeddingFields,
-    embeddingDegraded,
-    failureDetail: input.failureDetail ?? input.error ?? "",
-    indexUsable: input.indexUsable ?? (indexed && !embeddingDegraded),
-    updateTime: input.updateTime ?? input.lastEventAt ?? input.finishedAt ?? input.createTime,
+    startTime: input.startedAt ?? (input.status === "pending" ? null : input.createTime),
     finishTime: input.finishedAt ?? null,
+    lastProgressTime: input.lastProgressAt ?? null,
   };
 }
 
 export const mockBuildTasks: BuildTask[] = [
   makeTask({
+    id: "bt-pending-01",
+    resourceId: "res-customers",
+    mode: "batch",
+    status: "pending",
+    embeddingFields: ["profile_text"],
+    primaryKeyFields: ["customer_id"],
+    incrementalFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 182_340,
+    syncedCount: 0,
+    createTime: minutesAgo(3),
+    finishedAt: null,
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
+    id: "bt-empty-01",
+    resourceId: "res-metadata-unavailable",
+    mode: "batch",
+    status: "completed",
+    embeddingFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
+    embeddingModel: "",
+    modelDimensions: 0,
+    totalCount: 0,
+    syncedCount: 0,
+    createTime: minutesAgo(18),
+    finishedAt: minutesAgo(17),
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
     id: "bt-cust-01",
     resourceId: "res-customers",
     mode: "batch",
-    status: "succeeded",
+    status: "completed",
     embeddingFields: ["profile_text"],
-    buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    primaryKeyFields: ["customer_id"],
+    incrementalFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 182_340,
     syncedCount: 182_340,
-    vectorizedCount: 182_340,
     createTime: daysAgo(2),
     finishedAt: daysAgo(2) + 25 * 60_000,
-    lastEventAt: null,
+    lastProgressAt: null,
     error: null,
   }),
   makeTask({
@@ -236,15 +973,15 @@ export const mockBuildTasks: BuildTask[] = [
     mode: "batch",
     status: "running",
     embeddingFields: ["item_summary"],
-    buildKeyFields: ["created_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    primaryKeyFields: ["order_id"],
+    incrementalFields: ["created_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 96_120,
     syncedCount: 41_280,
-    vectorizedCount: 28_660,
     createTime: minutesAgo(9),
     finishedAt: null,
-    lastEventAt: null,
+    lastProgressAt: null,
     error: null,
   }),
   makeTask({
@@ -253,49 +990,84 @@ export const mockBuildTasks: BuildTask[] = [
     mode: "batch",
     status: "failed",
     embeddingFields: ["content"],
-    buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-large-zh-v1.5",
-    modelDimensions: 1024,
+    primaryKeyFields: ["chunk_id"],
+    incrementalFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 48_206,
     syncedCount: 18_440,
-    vectorizedCount: 12_020,
     createTime: minutesAgo(75),
     finishedAt: minutesAgo(63),
-    lastEventAt: null,
+    lastProgressAt: null,
     error: "embedding service timeout: 504 upstream",
+  }),
+  makeTask({
+    id: "bt-cancelled-01",
+    resourceId: "res-orders",
+    mode: "batch",
+    status: "cancelled",
+    embeddingFields: ["item_summary"],
+    primaryKeyFields: ["order_id"],
+    incrementalFields: ["created_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 96_120,
+    syncedCount: 24_030,
+    createTime: minutesAgo(48),
+    finishedAt: minutesAgo(43),
+    lastProgressAt: null,
+    error: null,
+  }),
+  makeTask({
+    id: "bt-stopping-01",
+    resourceId: "res-orders",
+    mode: "batch",
+    status: "stopping",
+    embeddingFields: ["item_summary"],
+    primaryKeyFields: ["order_id"],
+    incrementalFields: ["created_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 96_120,
+    syncedCount: 56_340,
+    createTime: minutesAgo(16),
+    finishedAt: null,
+    lastProgressAt: minutesAgo(1),
+    error: null,
+  }),
+  makeTask({
+    id: "bt-stopped-01",
+    resourceId: "res-kn-chunks",
+    mode: "batch",
+    status: "stopped",
+    embeddingFields: ["content"],
+    primaryKeyFields: ["chunk_id"],
+    incrementalFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
+    totalCount: 48_206,
+    syncedCount: 21_000,
+    createTime: minutesAgo(35),
+    finishedAt: minutesAgo(29),
+    lastProgressAt: minutesAgo(29),
+    error: null,
   }),
   makeTask({
     id: "bt-chunks-01",
     resourceId: "res-kn-chunks",
     mode: "batch",
-    status: "succeeded",
+    executeType: "incremental",
+    status: "completed",
     embeddingFields: ["content"],
-    buildKeyFields: ["updated_at"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
+    primaryKeyFields: ["chunk_id"],
+    incrementalFields: ["updated_at"],
+    embeddingModel: "sm-1",
+    modelDimensions: 1536,
     totalCount: 46_010,
     syncedCount: 46_010,
-    vectorizedCount: 46_010,
     createTime: daysAgo(6),
     finishedAt: daysAgo(6) + 19 * 60_000,
-    lastEventAt: null,
-    error: null,
-  }),
-  makeTask({
-    id: "bt-tickets-01",
-    resourceId: "res-support-tickets",
-    mode: "streaming",
-    status: "listening",
-    embeddingFields: ["title", "body"],
-    buildKeyFields: ["id"],
-    embeddingModel: "bge-m3",
-    modelDimensions: 1024,
-    totalCount: 23_412,
-    syncedCount: 23_412,
-    vectorizedCount: 23_412,
-    createTime: daysAgo(1),
-    finishedAt: null,
-    lastEventAt: minutesAgo(2),
+    lastProgressAt: null,
     error: null,
   }),
 ];
@@ -345,181 +1117,28 @@ export const mockDiscoverRecords = new Map<string, CatalogDiscoverRecord[]>([
 
 export const mockDiscoveringCatalogs = new Set<string>();
 
-/** Resources discovered after probing finance_dw (cat-003), used to simulate discovery behavior. */
-const discoverableResources: CatalogResource[] = [
-  makeResource({
-    id: "res-contracts",
-    catalogId: "cat-003",
-    name: "contracts",
-    category: "table",
-    schemaName: "public",
-    sourceIdentifier: "finance_dw.contracts",
-    description: "合同台账，由 discover 探查登记。",
-    schema: [
-      { name: "contract_id", type: "bigint" },
-      { name: "counterparty", type: "varchar(128)" },
-      { name: "summary", type: "text" },
-      { name: "signed_at", type: "datetime" },
-    ],
-    rowCount: 12_840,
-    updatedAt: now,
-  }),
-  makeResource({
-    id: "res-invoices",
-    catalogId: "cat-003",
-    name: "invoices",
-    category: "table",
-    schemaName: "public",
-    sourceIdentifier: "finance_dw.invoices",
-    description: "发票明细，由 discover 探查登记。",
-    schema: [
-      { name: "invoice_id", type: "bigint" },
-      { name: "contract_id", type: "bigint" },
-      { name: "memo", type: "text" },
-      { name: "issued_at", type: "datetime" },
-    ],
-    rowCount: 30_204,
-    updatedAt: now,
-  }),
-];
-
 export function mockStartScan(catalogId: string) {
   if (mockDiscoveringCatalogs.has(catalogId)) {
     return;
   }
 
   mockDiscoveringCatalogs.add(catalogId);
+  const startedAt = Date.now();
+  const foundResources = mockResources.filter((item) => item.catalogId === catalogId).length;
   const record: CatalogDiscoverRecord = {
     id: mockSlug(12),
-    status: "running",
+    status: "succeeded",
     trigger: "manual",
-    startedAt: Date.now(),
-    startTime: formatMockTimestamp(Date.now()),
-    durationSec: null,
-    foundResources: null,
-    newResources: null,
+    startedAt,
+    startTime: formatMockTimestamp(startedAt),
+    durationSec: 0,
+    foundResources,
+    newResources: 0,
   };
   const records = mockDiscoverRecords.get(catalogId) ?? [];
   mockDiscoverRecords.set(catalogId, [record, ...records]);
+  mockDiscoveringCatalogs.delete(catalogId);
   emit();
-
-  window.setTimeout(() => {
-    mockDiscoveringCatalogs.delete(catalogId);
-    record.status = "succeeded";
-    record.durationSec = 8 + Math.floor(Math.random() * 14);
-
-    let discovered = 0;
-    discoverableResources.forEach((resource) => {
-      if (
-        resource.catalogId === catalogId &&
-        !mockResources.some((item) => item.id === resource.id)
-      ) {
-        mockResources.push(resource);
-        discovered += 1;
-      }
-    });
-
-    record.foundResources =
-      mockResources.filter((item) => item.catalogId === catalogId).length;
-    record.newResources = discovered;
-    emit();
-  }, 2600);
-}
-
-/* ---------------- Build task progression engine ---------------- */
-
-let tickTimer: number | null = null;
-
-function hasActiveTask() {
-  return mockBuildTasks.some(
-    (task) =>
-      task.status === "pending" ||
-      task.status === "running" ||
-      task.status === "listening",
-  );
-}
-
-function tick() {
-  let changed = false;
-
-  mockBuildTasks.forEach((task) => {
-    if (task.status === "pending") {
-      task.status = task.mode === "streaming" ? "listening" : "running";
-      task.updateTime = Date.now();
-      changed = true;
-      return;
-    }
-
-    if (task.status === "running") {
-      task.updateTime = Date.now();
-      const step = Math.max(
-        60,
-        Math.floor(task.totalCount * (0.025 + Math.random() * 0.02)),
-      );
-      task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-      task.vectorizedCount = Math.min(
-        task.syncedCount,
-        task.vectorizedCount + Math.max(40, Math.floor(step * (0.55 + Math.random() * 0.35))),
-      );
-
-      if (
-        task.syncedCount >= task.totalCount &&
-        task.vectorizedCount >= task.totalCount
-      ) {
-        task.status = "succeeded";
-        const finishedAt = task.updateTime;
-        task.finishTime = finishedAt;
-        const resource = mockResources.find((item) => item.id === task.resourceId);
-        if (resource) {
-          resource.updatedAt = finishedAt;
-          resource.updateTime = formatMockTimestamp(finishedAt);
-        }
-      }
-      changed = true;
-      return;
-    }
-
-    if (task.status === "listening") {
-      if (task.syncedCount < task.totalCount) {
-        const step = Math.max(80, Math.floor(task.totalCount * 0.06));
-        task.syncedCount = Math.min(task.totalCount, task.syncedCount + step);
-        task.vectorizedCount = task.syncedCount;
-        task.updateTime = Date.now();
-        task.lastEventAt = task.updateTime;
-        changed = true;
-        return;
-      }
-
-      if (Math.random() < 0.16) {
-        const delta = 1 + Math.floor(Math.random() * 36);
-        task.totalCount += delta;
-        task.syncedCount += delta;
-        task.vectorizedCount += delta;
-        task.updateTime = Date.now();
-        task.lastEventAt = task.updateTime;
-        const resource = mockResources.find((item) => item.id === task.resourceId);
-        if (resource) {
-          resource.rowCount = task.totalCount;
-        }
-        changed = true;
-      }
-    }
-  });
-
-  if (changed) {
-    emit();
-  }
-
-  if (!hasActiveTask() && tickTimer !== null) {
-    window.clearInterval(tickTimer);
-    tickTimer = null;
-  }
-}
-
-export function ensureMockTicker() {
-  if (tickTimer === null && hasActiveTask()) {
-    tickTimer = window.setInterval(tick, 1100);
-  }
 }
 
 export function emitMockChange() {

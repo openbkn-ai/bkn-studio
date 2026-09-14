@@ -27,6 +27,8 @@ import {
   type McpAuth,
   type RequestDataAssistantKind,
 } from "@/modules/knowledge-network/services/context-loader.service";
+import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { canQueryDataBrowserObjectType } from "@/modules/knowledge-network/utils/data-browser-access";
 
 import styles from "./ExperienceScene.module.css";
 
@@ -79,6 +81,7 @@ function ObjectTypeCard({
   const [filling, setFilling] = useState(false);
   const res = ot.data_source ?? null;
   const props = ot.data_properties ?? [];
+  const canQueryData = canQueryDataBrowserObjectType(ot);
 
   // Sample-row preview, loading query_object_instance on demand.
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -87,6 +90,9 @@ function ObjectTypeCard({
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   const togglePreview = () => {
+    if (!canQueryData) {
+      return;
+    }
     const next = !previewOpen;
     setPreviewOpen(next);
     if (next && previewRows === null && !previewLoading) {
@@ -117,13 +123,15 @@ function ObjectTypeCard({
           {ot.name || ot.id}
         </span>
         {onFillTest && res?.id ? (
-          <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTestTooltip")}>
+          <Tooltip title={canQueryData
+            ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTestTooltip")
+            : t("knowledgeNetwork.objectTypeProxyReadForbidden")}>
             <button
               type="button"
               className={styles.dbTestBtn}
-              disabled={filling}
+              disabled={filling || !canQueryData}
               onClick={() => {
-                if (filling) return;
+                if (filling || !canQueryData) return;
                 setFilling(true);
                 void onFillTest(ot).finally(() => setFilling(false));
               }}
@@ -209,6 +217,7 @@ function ObjectTypeCard({
         <button
           type="button"
           className={`${styles.dbFields} ${previewOpen ? styles.dbFieldsOpen : ""}`}
+          disabled={!canQueryData}
           onClick={togglePreview}
         >
           {previewOpen
@@ -217,6 +226,12 @@ function ObjectTypeCard({
           <span className={styles.dbChev}>▾</span>
         </button>
       </div>
+
+      {!canQueryData ? (
+        <div className={styles.dbPreviewErr}>
+          {t("knowledgeNetwork.objectTypeProxyReadForbiddenDescription")}
+        </div>
+      ) : null}
 
       {previewOpen ? (
         <div className={styles.dbPreview}>
@@ -265,6 +280,7 @@ function ObjectTypeCard({
 export function DataBrowserPanel({
   active,
   env,
+  permissionNetworkId,
   assistantKind,
   onFillField,
   onFillResource,
@@ -276,6 +292,8 @@ export function DataBrowserPanel({
 }: {
   active: boolean;
   env: ContextLoaderEnv;
+  /** Stable bkn-backend ID used to enrich Context Loader object types with record operations. */
+  permissionNetworkId?: string;
   assistantKind: RequestDataAssistantKind | null;
   onFillField: (key: string, value: string) => void;
   onFillResource: (resourceId: string) => void;
@@ -301,7 +319,11 @@ export function DataBrowserPanel({
    * require bkn_context or Context Loader rejects them. This is not a chat, so one session lasts for this mount.
    */
   const lifecycle = useMemo(
-    () => createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, { conversationStore: memoryConversationStore() }),
+    () =>
+      createBknLifecycle(lifecycleEnv(env.base, env.knId), auth, {
+        agentName: "bkn-agent-data-browser",
+        conversationStore: memoryConversationStore(),
+      }),
     [env.base, env.knId, auth],
   );
 
@@ -314,11 +336,33 @@ export function DataBrowserPanel({
     const timeoutId = window.setTimeout(() => controller.abort(), DETAIL_LOAD_TIMEOUT_MS);
     setLoading(true);
     setError(null);
-    withManagedTurn(lifecycle, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadStructureTurn"), (turn) =>
-      fetchKnDetail(env, auth, controller.signal, turn ?? undefined),
-    )
-      .then((data) => {
-        if (!cancelled) setDetail(data);
+    const detailPromise = withManagedTurn(
+      lifecycle,
+      t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadStructureTurn"),
+      (turn) => fetchKnDetail(env, auth, controller.signal, turn ?? undefined),
+    );
+    const permissionPromise = permissionNetworkId
+      ? listKnowledgeNetworkObjectTypes(permissionNetworkId, {
+          allPages: true,
+          skipErrorToast: true,
+        }).catch(() => null)
+      : Promise.resolve(null);
+
+    void Promise.all([detailPromise, permissionPromise])
+      .then(([data, permissionRecords]) => {
+        if (!cancelled) {
+          const operationsById = new Map(
+            (permissionRecords ?? []).map((record) => [record.id, record.operations]),
+          );
+          setDetail({
+            ...data,
+            object_types: data.object_types.map((objectType) =>
+              operationsById.has(objectType.id)
+                ? { ...objectType, operations: operationsById.get(objectType.id) }
+                : objectType,
+            ),
+          });
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -341,7 +385,7 @@ export function DataBrowserPanel({
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [active, auth, env, reloadKey, lifecycle, t]);
+  }, [active, auth, env, permissionNetworkId, reloadKey, lifecycle, t]);
 
   const reload = () => {
     loadedRef.current = false;

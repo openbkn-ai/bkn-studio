@@ -48,7 +48,7 @@
 }
 
 .title {
-  color: #17253d;
+  color: var(--color-text-primary);
   font-weight: 650;
 }
 

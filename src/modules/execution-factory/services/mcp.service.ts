@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type {
   McpDetail,
   McpListQuery,
@@ -33,6 +32,7 @@ type BackendMcpInfo = {
   mcp_id: string | number;
   mode?: string;
   name: string;
+  operations?: string[];
   status?: string;
   tool_configs?: Array<{
     box_id?: string;
@@ -57,10 +57,10 @@ import { normalizeTimestamp } from "@/modules/execution-factory/utils/format-tim
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 let mockMcps: McpRecord[] = [
   {
+    operations: ["*"],
     mcpId: "mcp_sse_demo",
     name: "SSE Demo MCP",
     description: "Sample SSE MCP server for local development.",
@@ -74,6 +74,7 @@ let mockMcps: McpRecord[] = [
     isInternal: true,
   },
   {
+    operations: ["*"],
     mcpId: "mcp_custom_ops",
     name: "Custom Operations MCP",
     description: "User-defined MCP with imported toolbox tools.",
@@ -86,13 +87,6 @@ let mockMcps: McpRecord[] = [
     isInternal: false,
   },
 ];
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 function mapMcpToolConfig(
   tool: NonNullable<BackendMcpInfo["tool_configs"]>[number],
@@ -116,6 +110,7 @@ function mapMcpDetail(baseInfo: BackendMcpInfo): McpDetail {
 
 function mapMcp(item: BackendMcpInfo): McpRecord {
   return {
+    operations: item.operations,
     mcpId: String(item.mcp_id),
     name: item.name,
     description: item.description,
@@ -154,7 +149,6 @@ async function fetchMcpList(
   query: McpListQuery,
 ): Promise<McpListResult> {
   const response = await http.get<BackendMcpListResponse>(path, {
-    headers: getBusinessDomainHeaders(),
     params: {
       all: query.all || undefined,
       page: query.page,
@@ -220,7 +214,6 @@ export async function getMcp(mcpId: string): Promise<McpRecord> {
   const response = await http.get<{
     base_info?: BackendMcpInfo;
   }>(`${API_PREFIX}/mcp/${mcpId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   if (!response.data.base_info) {
@@ -248,7 +241,6 @@ export async function getMcpDetail(mcpId: string): Promise<McpDetail> {
   const response = await http.get<{
     base_info?: BackendMcpInfo;
   }>(`${API_PREFIX}/mcp/${mcpId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   if (!response.data.base_info) {
@@ -266,7 +258,6 @@ export async function getMcpMarket(mcpId: string): Promise<McpRecord> {
   const response = await http.get<{
     base_info?: BackendMcpInfo;
   }>(`${API_PREFIX}/mcp/market/${mcpId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 
   if (!response.data.base_info) {
@@ -295,7 +286,7 @@ export async function parseMcpSse(input: McpParseSseInput): Promise<McpParseSseR
       mode: input.mode ?? "stream",
       url: input.url,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {
@@ -331,7 +322,7 @@ export async function registerMcp(input: McpRegisterInput): Promise<string> {
   const response = await http.post<{ mcp_id?: string | number }>(
     `${API_PREFIX}/mcp`,
     buildMcpMutationBody(input),
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   if (!response.data.mcp_id) {
@@ -381,7 +372,6 @@ export async function updateMcp(mcpId: string, input: McpUpdateInput): Promise<v
   }
 
   await http.put(`${API_PREFIX}/mcp/${mcpId}`, buildMcpMutationBody(input), {
-    headers: getBusinessDomainHeaders(),
   });
 }
 
@@ -399,7 +389,7 @@ export async function updateMcpStatus(
   await http.post(
     `${API_PREFIX}/mcp/${mcpId}/status`,
     { status },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -410,12 +400,16 @@ export async function deleteMcp(mcpId: string): Promise<void> {
   }
 
   await http.delete(`${API_PREFIX}/mcp/${mcpId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 }
 
 type McpToolsQuery = {
   all?: boolean;
+  /**
+   * List the draft instead of the released tools. They differ only while the server is
+   * editing: callers are served the release, and the authoring page debugs the draft.
+   */
+  draft?: boolean;
   page?: number;
   pageSize?: number;
   status?: "enabled" | "disabled";
@@ -463,9 +457,9 @@ export async function listMcpTools(
       output_schema?: unknown;
     }>;
   }>(`${API_PREFIX}/mcp/proxy/${mcpId}/tools`, {
-    headers: getBusinessDomainHeaders(),
     params: {
       all: query.all || undefined,
+      draft: query.draft || undefined,
       page: query.page ?? 1,
       page_size: query.pageSize ?? 100,
       status: query.status,
@@ -496,7 +490,7 @@ export async function debugMcpTool(
   const response = await http.post<McpToolDebugResult>(
     `${API_PREFIX}/mcp/${mcpId}/tool/${encodeURIComponent(toolName)}/debug`,
     input.arguments ?? {},
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {

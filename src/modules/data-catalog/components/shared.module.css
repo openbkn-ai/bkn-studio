@@ -13,9 +13,9 @@
   gap: 5px;
   margin: 0;
   padding: 2px 10px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f7f9fc;
+  background: var(--color-hover);
   font-size: 12px;
   font-weight: 400;
   line-height: 20px;
@@ -25,51 +25,51 @@
 .taskPending {
   border-color: rgba(148, 163, 184, 0.22);
   background: rgba(148, 163, 184, 0.08);
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .taskRunning {
   border-color: rgba(37, 99, 235, 0.2);
   background: rgba(46, 104, 255, 0.08);
-  color: #1f4fd4;
+  color: var(--color-info-text);
 }
 
 .taskSucceeded {
   border-color: rgba(101, 192, 65, 0.22);
   background: rgba(101, 192, 65, 0.08);
-  color: #4f9f22;
+  color: var(--color-success-text);
 }
 
 .taskFailed {
   border-color: rgba(239, 68, 68, 0.22);
   background: rgba(239, 68, 68, 0.08);
-  color: #dc2626;
+  color: var(--color-error-text);
 }
 
 /* 已完成但向量化失败/部分失败：琥珀色降级标 */
 .taskDegraded {
   border-color: rgba(245, 158, 11, 0.28);
   background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
+  color: var(--color-warning-text);
 }
 
 .progressWarn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #d97706;
+  color: var(--color-warning-text);
 }
 
 .modeBatch {
   border-color: rgba(15, 118, 110, 0.2);
   background: rgba(15, 118, 110, 0.06);
-  color: #0f766e;
+  color: var(--color-success-text);
 }
 
 .modeStreaming {
   border-color: rgba(124, 58, 237, 0.18);
   background: rgba(124, 58, 237, 0.07);
-  color: #7c3aed;
+  color: var(--color-info-text);
 }
 
 .chipRow {
@@ -83,10 +83,10 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f7f9fc;
-  color: #4b5563;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
   word-break: break-all;
@@ -95,7 +95,7 @@
 .plainText {
   display: block;
   overflow: hidden;
-  color: #172033;
+  color: var(--color-text-primary);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -105,10 +105,10 @@
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f7f9fc;
-  color: #4b5563;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
   font-size: 12px;
   line-height: 20px;
@@ -156,28 +156,32 @@
   background: #ef4444;
 }
 
+.progressFillMuted {
+  background: var(--color-text-muted);
+}
+
 .progressMeta {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 2px 10px;
-  color: #8b98ac;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
 .progressMetaCompact {
   display: grid;
   gap: 1px;
-  color: #8b98ac;
+  color: var(--color-text-muted);
   font-size: 11px;
   line-height: 1.35;
 }
 
-.progressMeta > span {
+.progressMeta>span {
   white-space: nowrap;
 }
 
-.progressMetaCompact > span {
+.progressMetaCompact>span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -190,7 +194,7 @@
 }
 
 .progressMuted {
-  color: #8b98ac;
+  color: var(--color-text-muted);
   font-size: inherit;
 }
 
@@ -199,10 +203,10 @@
   gap: 10px;
   margin-bottom: 14px;
   padding: 10px 14px;
-  border: 1px solid #fde68a;
+  border: 1px solid var(--color-warning-border);
   border-radius: 0;
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -210,7 +214,7 @@
 .calloutWarn :global(.anticon) {
   margin-top: 3px;
   flex: none;
-  color: #d97706;
+  color: var(--color-warning-text);
 }
 
 .calloutNote {
@@ -218,10 +222,10 @@
   gap: 10px;
   margin-bottom: 14px;
   padding: 10px 14px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #f3f6fa;
-  color: #4b5563;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -229,15 +233,12 @@
 .calloutNote :global(.anticon) {
   margin-top: 3px;
   flex: none;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 /* ===== 字段角色矩阵(BuildTaskFormPanel):一字段一行,三角色列勾选 ===== */
 .fieldRoleCard {
-  border: 1px solid rgba(15, 30, 54, 0.12);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
+  background: transparent;
 }
 
 .frtBar {
@@ -245,8 +246,9 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(15, 30, 54, 0.08);
-  background: #fafbfd;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .frtSearch {
@@ -261,7 +263,7 @@
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca8ba;
+  color: var(--color-text-muted);
   display: inline-flex;
   pointer-events: none;
 }
@@ -270,11 +272,11 @@
   width: 100%;
   height: 32px;
   padding: 0 10px 0 30px;
-  border: 1px solid rgba(15, 30, 54, 0.14);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 13px;
-  color: #152239;
-  background: #fff;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
   outline: none;
   transition: border-color 0.2s;
 }
@@ -296,12 +298,12 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #5a6b85;
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .frtStat b {
-  color: #152239;
+  color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -325,38 +327,31 @@
 }
 
 .frtScroll {
-  max-height: 304px;
-  overflow: auto;
-}
-
-.frtScroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.frtScroll::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 999px;
-  background-clip: padding-box;
-  background-color: rgba(15, 30, 54, 0.18);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .frtTable {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .frtNameCol {
-  width: 32%;
+  width: 22%;
 }
 
 .frtDisplayCol {
-  width: 24%;
+  width: 16%;
 }
 
 .frtTypeCol {
-  width: 18%;
+  width: 12%;
+}
+
+.frtDescriptionCol {
+  width: 28%;
 }
 
 .frtRoleWidthCol {
@@ -364,19 +359,20 @@
 }
 
 .frtActionWidthCol {
-  width: 224px;
+  width: 208px;
 }
 
 .frtTable thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #f4f6fa;
-  color: #3e4d66;
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+  font-size: 14px;
   font-weight: 600;
   text-align: left;
-  padding: 9px 14px;
-  border-bottom: 1px solid rgba(15, 30, 54, 0.1);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
 
@@ -387,7 +383,7 @@
 
 .frtRoleCol,
 .frtConfigCol {
-  background: #f6f8fc !important;
+  background: var(--color-bg-page) !important;
 }
 
 .frtRoleHead {
@@ -403,36 +399,36 @@
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
-  color: #152239;
+  color: var(--color-text-primary);
 }
 
 .frtReq {
-  color: #ef4444;
+  color: var(--color-error-text);
 }
 
 .frtRoleHint {
   font-size: 12px;
-  color: #8b98ac;
+  color: var(--color-text-muted);
   cursor: help;
   line-height: 1;
 }
 
 .frtRoleHint:hover {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtAll {
   font-size: 11px;
-  color: #8b98ac;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
 .frtAllOn {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtTable tbody tr {
-  border-top: 1px solid rgba(15, 30, 54, 0.05);
+  border-top: 1px solid var(--color-divider);
 }
 
 .frtTable tbody tr:first-child {
@@ -440,7 +436,7 @@
 }
 
 .frtTable tbody tr:hover {
-  background: #f7f9fc;
+  background: var(--color-hover);
 }
 
 .frtRowActive {
@@ -449,16 +445,16 @@
 
 .frtField {
   overflow: hidden;
-  padding: 8px 14px;
+  padding: 13px 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .frtFieldMeta {
   overflow: hidden;
-  padding: 8px 14px;
-  color: #3e4d66;
-  font-size: 12.5px;
+  padding: 13px 14px;
+  color: var(--color-text-primary);
+  font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -467,8 +463,8 @@
   display: block;
   overflow: hidden;
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
-  font-size: 12.5px;
-  color: #152239;
+  font-size: 13px;
+  color: var(--color-text-primary);
   text-overflow: ellipsis;
 }
 
@@ -492,12 +488,12 @@
 .frtConfigHead {
   display: grid;
   gap: 2px;
-  color: #152239;
+  color: var(--color-text-primary);
   line-height: 1.25;
 }
 
 .frtConfigHead small {
-  color: #8b98ac;
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 500;
 }
@@ -509,7 +505,7 @@
 }
 
 .frtGroupEnd {
-  border-right: 1px solid rgba(15, 30, 54, 0.12);
+  border-right: 1px solid var(--color-border);
 }
 
 .frtConfigCell :global(.ant-select) {
@@ -519,7 +515,7 @@
 .frtConfigDash {
   display: block;
   padding: 0 8px;
-  color: #cbd5e1;
+  color: var(--color-text-tertiary);
   text-align: center;
 }
 
@@ -544,7 +540,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--color-text-inverse);
   transition: background-color 0.15s, border-color 0.15s;
 }
 
@@ -560,15 +556,15 @@
 }
 
 .frtBoxEmb:not(.frtBoxDisabled):hover .frtMark {
-  color: #2e68ff;
+  color: var(--color-text-link);
 }
 
 .frtBoxKey:not(.frtBoxDisabled):hover .frtMark {
-  color: #e8973a;
+  color: var(--color-warning-text);
 }
 
 .frtBoxFt:not(.frtBoxDisabled):hover .frtMark {
-  color: #16a394;
+  color: var(--color-success-text);
 }
 
 .frtBoxChecked .frtMark svg {
@@ -593,7 +589,7 @@
 .frtEmpty {
   padding: 22px 14px;
   text-align: center;
-  color: #8b98ac;
+  color: var(--color-text-tertiary);
   font-size: 12.5px;
 }
 
@@ -603,7 +599,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 6px;
-  color: #8b98ac;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.7;
 }

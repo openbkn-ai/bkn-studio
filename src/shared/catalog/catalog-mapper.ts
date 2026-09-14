@@ -16,8 +16,7 @@ type BackendAccountInfo = {
   name?: string | null;
 };
 
-type BackendCatalog = {
-  connector_config?: Record<string, unknown>;
+export type BackendCatalogSummary = {
   connector_type: string;
   create_time?: number;
   creator?: BackendAccountInfo;
@@ -26,8 +25,8 @@ type BackendCatalog = {
   health_check_result?: string;
   health_check_status?: string;
   id: string;
+  internal?: boolean;
   last_check_time?: number;
-  metadata?: Record<string, unknown>;
   name: string;
   operations?: string[];
   tags?: string[];
@@ -36,23 +35,10 @@ type BackendCatalog = {
   updater?: BackendAccountInfo;
 };
 
-export function formatCatalogTimestamp(value?: number) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
-    .format(value)
-    .replace(/\//g, "-");
-}
+export type BackendCatalog = BackendCatalogSummary & {
+  connector_config?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+};
 
 function normalizeHealthStatus(value?: string): CatalogHealthStatus {
   switch (value) {
@@ -64,6 +50,10 @@ function normalizeHealthStatus(value?: string): CatalogHealthStatus {
     default:
       return "unchecked";
   }
+}
+
+function normalizeCatalogTimestamp(value?: number) {
+  return value || null;
 }
 
 export function inferConnectorCategory(connectorType: string) {
@@ -78,7 +68,11 @@ export function inferConnectorCategory(connectorType: string) {
   return "table";
 }
 
-export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
+function mapCatalogRecord(
+  item: BackendCatalogSummary,
+  connectorConfig: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): CatalogRecord {
   return {
     id: item.id,
     name: item.name,
@@ -89,18 +83,28 @@ export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
     enabled: item.enabled,
     status: item.enabled ? "enabled" : "disabled",
     healthStatus: normalizeHealthStatus(item.health_check_status),
+    internal: item.internal ?? false,
     healthCheckResult: item.health_check_result ?? "",
-    lastCheckTime: formatCatalogTimestamp(item.last_check_time),
-    updateTime: formatCatalogTimestamp(item.update_time),
-    createTime: formatCatalogTimestamp(item.create_time),
+    lastCheckTime: normalizeCatalogTimestamp(item.last_check_time),
+    expectedUpdateTime: item.update_time ?? 0,
+    updateTime: normalizeCatalogTimestamp(item.update_time),
+    createTime: normalizeCatalogTimestamp(item.create_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     tags: item.tags ?? [],
-    connectorConfig: item.connector_config ?? {},
-    metadata: item.metadata ?? {},
+    connectorConfig,
+    metadata,
     operations: item.operations ?? [],
     type: item.type ?? "physical",
   };
+}
+
+export function mapBackendCatalogSummary(item: BackendCatalogSummary): CatalogRecord {
+  return mapCatalogRecord(item, {}, {});
+}
+
+export function mapBackendCatalog(item: BackendCatalog): CatalogRecord {
+  return mapCatalogRecord(item, item.connector_config ?? {}, item.metadata ?? {});
 }
 
 export function matchesCatalogType(item: CatalogRecord, type: CatalogListQuery["type"]) {
@@ -125,9 +129,9 @@ export function filterCatalogs(items: CatalogRecord[], query: CatalogListQuery) 
       item.description.toLowerCase().includes(keyword);
     const matchesConnectorType =
       !query.connectorType || item.connectorType === query.connectorType;
+    const matchesEnabled = query.enabled === undefined || item.enabled === query.enabled;
+    const matchesHealthStatus = !query.healthStatus || item.healthStatus === query.healthStatus;
 
-    return matchesType && matchesKeyword && matchesConnectorType;
+    return matchesType && matchesKeyword && matchesConnectorType && matchesEnabled && matchesHealthStatus;
   });
 }
-
-export type { BackendCatalog };

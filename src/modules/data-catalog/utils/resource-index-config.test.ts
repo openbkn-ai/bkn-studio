@@ -9,10 +9,34 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyIndexFormToSchema,
+  hasPersistedBuildFeatures,
   indexFormValuesFromResource,
 } from "@/modules/data-catalog/utils/resource-index-config";
 
 describe("resource-index-config", () => {
+  it("distinguishes persisted build features from editor defaults", () => {
+    expect(hasPersistedBuildFeatures({
+      schema: [{ name: "content", type: "text" }],
+    })).toBe(false);
+    expect(hasPersistedBuildFeatures({
+      schema: [{
+        features: [
+          { config: { ignore_above: 256 }, featureType: "keyword" },
+          { featureType: "fulltext" },
+        ],
+        name: "content",
+        type: "text",
+      }],
+    })).toBe(true);
+    expect(hasPersistedBuildFeatures({
+      schema: [{
+        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+        name: "code",
+        type: "string",
+      }],
+    })).toBe(true);
+  });
+
   it("writes defaults and per-field overrides into schema features", () => {
     const result = applyIndexFormToSchema(
       [
@@ -22,7 +46,8 @@ describe("resource-index-config", () => {
         { name: "note", type: "string" },
       ],
       {
-        buildKeyFields: ["id"],
+        primaryKeyFields: ["id"],
+        incrementalFields: ["id"],
         embeddingFields: ["body", "note"],
         embeddingModel: "embed-default",
         fieldEmbeddingModels: { note: "embed-special" },
@@ -33,7 +58,8 @@ describe("resource-index-config", () => {
     );
 
     expect(result.indexConfig).toEqual({
-      buildKeyFields: ["id"],
+      primaryKeyFields: ["id"],
+      incrementalFields: ["id"],
       defaultFulltextAnalyzer: "standard",
       defaultEmbeddingModel: "embed-default",
     });
@@ -81,7 +107,8 @@ describe("resource-index-config", () => {
     const result = applyIndexFormToSchema(
       [{ name: "body", type: "string", displayName: "Body" }],
       {
-        buildKeyFields: [],
+        primaryKeyFields: [],
+        incrementalFields: [],
         embeddingFields: ["body"],
         embeddingModel: "embed-default",
         fieldEmbeddingModels: {},
@@ -117,10 +144,64 @@ describe("resource-index-config", () => {
     ]);
   });
 
+  it("writes and reads keyword feature name and ignore_above", () => {
+    const result = applyIndexFormToSchema(
+      [{
+        features: [{ featureType: "keyword", name: "legacy_keyword", config: { ignore_above: 64 } }],
+        name: "body",
+        type: "text",
+      }],
+      {
+        defaultKeywordIgnoreAbove: 512,
+        primaryKeyFields: [],
+        incrementalFields: [],
+        embeddingFields: [],
+        embeddingModel: "",
+        fieldEmbeddingModels: {},
+        fieldKeywordGroups: {
+          body: [{ isDefault: true, name: "exact", value: "" }],
+        },
+        fulltextFields: [],
+        fieldFulltextAnalyzers: {},
+      },
+    );
+
+    expect(result.schema[0].features).toEqual([{
+      config: { ignore_above: 512 },
+      displayName: "exact",
+      featureType: "keyword",
+      isDefault: true,
+      name: "exact",
+    }]);
+    expect(indexFormValuesFromResource(result).fieldKeywordGroups).toEqual({
+      body: [{
+        description: undefined,
+        isDefault: true,
+        name: "exact",
+        value: "512",
+      }],
+    });
+  });
+
+  it("preserves an explicit keyword limit that equals the resource default", () => {
+    const values = indexFormValuesFromResource({
+      indexConfig: { defaultKeywordIgnoreAbove: 256 },
+      schema: [{
+        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+        name: "code",
+        type: "string",
+      }],
+    });
+
+    const keyword = values.fieldKeywordGroups?.code?.[0];
+    expect(typeof keyword === "string" ? keyword : keyword?.value).toBe("256");
+  });
+
   it("reads defaults and per-field overrides from resource", () => {
     const values = indexFormValuesFromResource({
       indexConfig: {
-        buildKeyFields: ["id"],
+        primaryKeyFields: ["id"],
+        incrementalFields: ["id"],
         defaultEmbeddingModel: "embed-default",
         defaultFulltextAnalyzer: "standard",
       },
@@ -147,7 +228,9 @@ describe("resource-index-config", () => {
     });
 
     expect(values).toEqual({
-      buildKeyFields: ["id"],
+      defaultKeywordIgnoreAbove: 256,
+      primaryKeyFields: ["id"],
+      incrementalFields: ["id"],
       embeddingFields: ["body", "note"],
       embeddingModel: "embed-default",
       fieldEmbeddingModelGroups: {
@@ -155,6 +238,11 @@ describe("resource-index-config", () => {
         note: [{ value: "embed-special", name: undefined, description: undefined, isDefault: undefined }],
       },
       fieldEmbeddingModels: { note: "embed-special" },
+      fieldKeywordGroups: {
+        body: [{ isDefault: true, name: "keyword", value: "" }],
+        note: [{ isDefault: true, name: "keyword", value: "" }],
+        title: [{ isDefault: true, name: "keyword", value: "" }],
+      },
       fieldFulltextAnalyzerGroups: {
         body: [{ value: "", name: undefined, description: undefined, isDefault: undefined }],
         title: [{ value: "ik_max_word", name: undefined, description: undefined, isDefault: undefined }],
@@ -163,5 +251,93 @@ describe("resource-index-config", () => {
       fulltextFields: ["title", "body"],
       fulltextAnalyzer: "standard",
     });
+  });
+
+  it("adds the default keyword and full-text features implied by field types", () => {
+    const values = indexFormValuesFromResource({
+      schema: [
+        { name: "code", type: "string" },
+        { name: "content", type: "text" },
+      ],
+    });
+
+    expect(values.fieldKeywordGroups).toEqual({
+      code: [{ isDefault: true, name: "keyword", value: "" }],
+      content: [{ isDefault: true, name: "keyword", value: "" }],
+    });
+    expect(values.fieldFulltextAnalyzerGroups).toEqual({
+      content: [{ isDefault: true, name: "fulltext", value: "" }],
+    });
+    expect(values.fulltextFields).toEqual(["content"]);
+  });
+
+  it("preserves a referenced vector without turning it into a native vector", () => {
+    const resource = {
+      schema: [{
+        features: [{
+          featureType: "vector" as const,
+          refProperty: "content_embedding",
+        }],
+        name: "content",
+        type: "string",
+      }],
+    };
+    const values = indexFormValuesFromResource(resource);
+
+    expect(values.embeddingFields).toEqual([]);
+    expect(values.fieldEmbeddingModelGroups).toEqual({});
+
+    const result = applyIndexFormToSchema(resource.schema, values);
+    expect(result.schema[0]).toEqual({
+      ...resource.schema[0],
+      features: [
+        {
+          featureType: "vector",
+          refProperty: "content_embedding",
+        },
+        {
+          config: { ignore_above: 256 },
+          displayName: "keyword",
+          featureType: "keyword",
+          isDefault: true,
+          name: "keyword",
+        },
+      ],
+    });
+  });
+
+  it("preserves the vector feature that owns a referenced vector result", () => {
+    const resource = {
+      schema: [
+        {
+          features: [{ featureType: "vector" as const, refProperty: "content_embedding" }],
+          name: "content",
+          type: "text",
+        },
+        {
+          features: [{
+            config: { dimension: 1024, embedding_model: "embed-default" },
+            featureType: "vector" as const,
+            name: "embedding",
+          }],
+          name: "content_embedding",
+          type: "vector",
+        },
+      ],
+    };
+    const values = indexFormValuesFromResource(resource);
+    values.embeddingFields = values.embeddingFields.filter((name) => name !== "content_embedding");
+    if (values.fieldEmbeddingModelGroups) {
+      delete values.fieldEmbeddingModelGroups.content_embedding;
+    }
+    delete values.fieldEmbeddingModels.content_embedding;
+
+    const result = applyIndexFormToSchema(resource.schema, values);
+
+    expect(result.schema[0].features).toContainEqual({
+      featureType: "vector",
+      refProperty: "content_embedding",
+    });
+    expect(result.schema[1]).toEqual(resource.schema[1]);
   });
 });

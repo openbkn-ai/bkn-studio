@@ -5,6 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isValidElement } from "react";
 import { describe, expect, it } from "vitest";
 
 import { consoleNavigation } from "@/app/shell/console-navigation";
@@ -43,5 +44,17 @@ describe("bkn-trace module registration", () => {
   it("registers permissions in runtime module manifests", () => {
     expect(runtimeModuleManifests.map((manifest) => manifest.id)).toContain("bkn-trace");
     expect(bknTraceModuleManifest.permissions).toEqual([]);
+  });
+
+  it("does not mount the business provenance preview while enterprise is locked", () => {
+    const route = bknTraceRouteContribution.routes.find(
+      ({ path }) => path === "observability/business-provenance",
+    );
+
+    if (!isValidElement<{ mountLockedContent?: boolean }>(route?.element)) {
+      throw new Error("business provenance route must render an entitlement gate");
+    }
+
+    expect(route.element.props.mountLockedContent).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   DEFAULT_APP_BASENAME,
+  DEFAULT_APP_ENTRY_PATH,
   buildAppPath,
   resolveAppBasename,
 } from "@/app/router/app-paths";
@@ -20,6 +21,7 @@ describe("app-paths", () => {
 
   it("uses /studio as the default app basename", () => {
     expect(DEFAULT_APP_BASENAME).toBe("/studio");
+    expect(DEFAULT_APP_ENTRY_PATH).toBe("/");
     expect(resolveAppBasename()).toBe("/studio");
   });
 

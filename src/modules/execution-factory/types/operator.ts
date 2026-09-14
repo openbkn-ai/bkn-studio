@@ -49,6 +49,7 @@ export type OperatorCategory =
   | "model_train";
 
 export type OperatorRecord = {
+  operations?: string[];
   operatorId: string;
   name: string;
   version: string;

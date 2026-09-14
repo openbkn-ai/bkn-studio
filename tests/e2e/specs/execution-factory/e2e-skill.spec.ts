@@ -73,9 +73,7 @@ test.describe("Execution Factory — Skill E2E flows", () => {
 
     await publishSkillViaApi(request, skill.skillId);
 
-    const market = await request.get(apiUrl("/skills/market?page=1&page_size=20"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const market = await request.get(apiUrl("/skills/market?page=1&page_size=20"));
     expect(market.ok()).toBeTruthy();
     const body = (await market.json()) as { data?: Array<{ skill_id: string }> };
     expect(body.data?.some((item) => item.skill_id === skill.skillId)).toBeTruthy();

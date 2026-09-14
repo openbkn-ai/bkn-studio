@@ -12,6 +12,7 @@ export type McpMode = "sse" | "stream";
 export type McpCreationType = "custom" | "tool_imported";
 
 export type McpRecord = {
+  operations?: string[];
   mcpId: string;
   name: string;
   description?: string;

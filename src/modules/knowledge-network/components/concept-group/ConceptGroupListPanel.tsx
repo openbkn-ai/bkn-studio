@@ -26,16 +26,20 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { JsonResourceImportButton } from "@/modules/knowledge-network/components/shared/JsonResourceImportButton";
+import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
+import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
   getKnowledgeNetworkConceptGroup,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
-  ConceptGroupDetail,
   ConceptGroupRecord,
   KnowledgeNetworkImportMode,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { downloadConceptGroupExport } from "@/modules/knowledge-network/utils/concept-group-export";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
 
@@ -53,18 +57,6 @@ type ConceptGroupListPanelProps = {
   onRefresh: () => Promise<void>;
 };
 
-function downloadConceptGroupExport(detail: ConceptGroupDetail) {
-  const blob = new Blob([JSON.stringify(detail, null, 2)], {
-    type: "application/json;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${detail.name}.json`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function ConceptGroupListPanel({
   canDelete,
   canModify,
@@ -78,6 +70,7 @@ export function ConceptGroupListPanel({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal } = useAppServices();
+  const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const [keyword, setKeyword] = useState("");
   const [selectedTag, setSelectedTag] = useState("all");
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
@@ -85,6 +78,7 @@ export function ConceptGroupListPanel({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePersistentPageSize("concept-groups");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [authorizingRecord, setAuthorizingRecord] = useState<ConceptGroupRecord | null>(null);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -138,7 +132,12 @@ export function ConceptGroupListPanel({
   }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
-    () => items.filter((item) => selectedRowKeys.includes(item.id)),
+    () =>
+      items.filter(
+        (item) =>
+          selectedRowKeys.includes(item.id) &&
+          hasKnowledgeNetworkRecordOperation(item, "delete"),
+      ),
     [items, selectedRowKeys],
   );
 
@@ -207,6 +206,11 @@ export function ConceptGroupListPanel({
       return;
     }
 
+    if (key === "authorize") {
+      setAuthorizingRecord(record);
+      return;
+    }
+
     if (key === "delete") {
       confirmDelete([record]);
     }
@@ -247,9 +251,25 @@ export function ConceptGroupListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          { key: "export", label: t("knowledgeNetwork.conceptGroupExport") },
-          ...(canModify ? [{ key: "edit", label: t("common.edit") }] : []),
-          ...(canDelete ? [{ key: "delete", danger: true, label: t("common.delete") }] : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "query_data")
+            ? [{ key: "export", label: t("knowledgeNetwork.conceptGroupExport") }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "modify")
+            ? [{ key: "edit", label: t("common.edit") }]
+            : []),
+          ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+            ? [{
+                key: "authorize",
+                label: (
+                  <KnowledgeNetworkAuthorizationActionLabel>
+                    {t("knowledgeNetwork.authorizeAction")}
+                  </KnowledgeNetworkAuthorizationActionLabel>
+                ),
+              }]
+            : []),
+          ...(hasKnowledgeNetworkRecordOperation(record, "delete")
+            ? [{ key: "delete", danger: true, label: t("common.delete") }]
+            : []),
         ];
 
         return (
@@ -343,7 +363,8 @@ export function ConceptGroupListPanel({
   };
 
   return (
-    <section className={`${styles.page} ${styles.objectTypePage} ${styles.conceptGroupPage}`}>
+    <>
+      <section className={`${styles.page} ${styles.objectTypePage} ${styles.conceptGroupPage}`}>
       <h2 className={styles.title}>{t("knowledgeNetwork.conceptGroupsTitle")}</h2>
 
       <div className={styles.toolbar}>
@@ -467,6 +488,9 @@ export function ConceptGroupListPanel({
                   onChange: (nextSelectedRowKeys) => {
                     setSelectedRowKeys(nextSelectedRowKeys.map(String));
                   },
+                  getCheckboxProps: (record) => ({
+                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                  }),
                 }
               : undefined
           }
@@ -490,6 +514,14 @@ export function ConceptGroupListPanel({
           />
         </div>
       ) : null}
-    </section>
+      </section>
+      <KnowledgeNetworkObjectAuthorizeDrawer
+        networkId={networkId}
+        objectType="concept_group"
+        onClose={() => setAuthorizingRecord(null)}
+        open={Boolean(authorizingRecord)}
+        record={authorizingRecord}
+      />
+    </>
   );
 }

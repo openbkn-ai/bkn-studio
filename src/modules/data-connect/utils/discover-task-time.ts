@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { formatDateTime } from "@/framework/i18n/format";
+import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 
 export function formatDiscoverTaskTime(value?: number) {
-  return formatDateTime(value || undefined);
+  return formatDateTimeYmdHms(value || undefined);
 }

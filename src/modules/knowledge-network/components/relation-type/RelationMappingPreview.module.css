@@ -6,8 +6,8 @@
  */
 
 .previewBox {
-  background: #f7f9fc;
-  border: 1px solid #d9e2f0;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   border-radius: 2px;
   margin: 12px 0 18px;
   min-height: 104px;
@@ -33,7 +33,7 @@
 .previewNodeIcon {
   align-items: center;
   border-radius: 2px;
-  color: #fff;
+  color: var(--color-text-inverse);
   display: inline-flex;
   font-size: 18px;
   height: 36px;
@@ -42,7 +42,7 @@
 }
 
 .previewNodeLabel {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 12px;
   max-width: 96px;
   overflow: hidden;
@@ -73,10 +73,10 @@
 
 .previewBridge {
   align-items: center;
-  background: #eaf3ff;
-  border: 1px solid #bfdbff;
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-border);
   border-radius: 2px;
-  color: #1d6fe8;
+  color: var(--color-text-link);
   display: inline-flex;
   font-size: 18px;
   height: 36px;
@@ -93,7 +93,7 @@
 }
 
 .previewBridgeLabel {
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.4;
   max-width: 120px;
@@ -104,7 +104,7 @@
 }
 
 .previewBridgeResource {
-  background: #ecfdf3;
-  border-color: #b7ebc6;
-  color: #16a34a;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
 }

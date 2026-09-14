@@ -18,6 +18,7 @@ import {
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { capabilityCardBullets } from "@/modules/subscription/capability-bullets";
 import {
   CAPABILITY_CATEGORIES,
   capabilitiesByCategory,
@@ -194,8 +195,8 @@ export function SubscriptionScene() {
 
               <ul className={styles.planFeats}>
                 {plan.edition === "community" ? (
-                  // 卡片只放前四条,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
-                  COMMUNITY_CAPABILITIES.slice(0, 4).map((entry) => (
+                  // 卡片只放标了 onCard 的行,完整清单在下面的对比表里——卡片是选购视角,表是核对视角。
+                  COMMUNITY_CAPABILITIES.filter((entry) => entry.onCard).map((entry) => (
                     <li key={entry.id}>
                       <CheckOutlined className={styles.tick} />
                       <span>{t(`subscription.community.${entry.id}`)}</span>
@@ -213,12 +214,31 @@ export function SubscriptionScene() {
                     </span>
                   </li>
                 )}
-                {introduced.map((entry) => (
-                  <li key={entry.key}>
-                    <CheckOutlined className={styles.tick} />
-                    <span>{t(`subscription.capabilities.${entry.key}.name`)}</span>
-                  </li>
-                ))}
+                {/*
+                  登记表的名字说不清这一档比上一档多在哪:「细粒度对象授权」细到操作粒度与
+                  显式例外,「高级数据连接」连的是哪些库,「业务溯源」看得到哪几条链——卡片
+                  得把这几项列出来。默认与升级弹窗同一份卖点;连接器的卖点是整句,卡片上只列
+                  它的摘要(`cardBullets`),整句留给弹窗,否则卡片会被拉成一页说明书。
+                */}
+                {introduced.map((entry) => {
+                  const bullets = capabilityCardBullets(t, entry.key);
+
+                  return (
+                    <li key={entry.key}>
+                      <CheckOutlined className={styles.tick} />
+                      <span>
+                        {t(`subscription.capabilities.${entry.key}.name`)}
+                        {bullets.length > 0 ? (
+                          <ul className={styles.planFeatDetail}>
+                            {bullets.map((text) => (
+                              <li key={text}>{text}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
 
               {/*

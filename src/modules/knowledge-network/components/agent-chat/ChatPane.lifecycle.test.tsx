@@ -132,6 +132,18 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("ChatPane 受管生命周期接线", () => {
+  it("以稳定的智能问答场景名创建受管会话", () => {
+    stubLifecycle();
+
+    renderPane();
+
+    expect(createBknLifecycle).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ agentName: "bkn-agent-smart-qa" }),
+    );
+  });
+
   it("一轮问答开一轮交互，把它交给工具循环，并以答复正文终结", async () => {
     const { beginTurn, finish, session } = stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
@@ -214,6 +226,10 @@ describe("ChatPane 受管生命周期接线", () => {
       await Promise.resolve();
     });
 
+    // Consecutive tool calls collapse into one closed group; expand it before the cards.
+    for (const group of screen.getAllByText(/已调用工具/)) {
+      fireEvent.click(group);
+    }
     // Tool cards are collapsed by default and render the request body only when expanded.
     for (const header of screen.getAllByText(/^(run_sql|bkn_[a-z_]+)$/)) {
       fireEvent.click(header);

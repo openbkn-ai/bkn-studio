@@ -27,15 +27,14 @@ import {
 } from "@/modules/knowledge-network/services/action-type-tool.service";
 import {
   IDENTIFIER_PATTERN,
-  LOGIC_ATTRIBUTE_TYPE_OPTIONS,
-  PARAMETER_SOURCE_OPTIONS,
+  LOGIC_RESULT_PATH_PLACEHOLDER,
   VALUE_FROM_OPTIONS,
   asOptionalString,
   buildToolLogicParameterSettings,
   extractLeafParams,
   isEmptyExceptZero,
   isToolLogicBindingComplete,
-  removeParameterById,
+  normalizeFunctionParameterSources,
   readLogicAttributeToolBinding,
 } from "./constants";
 import type {
@@ -50,8 +49,6 @@ import styles from "./ObjectTypeLogicAttributeEditDrawer.module.css";
 
 type SettingItem = ObjectTypeLogicParameter & {
   error?: Record<string, string>;
-  /** Parameter manually added through Create and therefore removable; parameters inferred from tool schema lack this marker. */
-  manual?: boolean;
 };
 
 type ObjectTypeLogicAttributeEditDrawerProps = {
@@ -99,27 +96,9 @@ export function ObjectTypeLogicAttributeEditDrawer({
   const getStringFieldValue = (name: keyof LogicAttributeFormValues) =>
     asOptionalString(form.getFieldValue(name));
 
-  const logicAttributeTypeOptions = useMemo(
-    () =>
-      LOGIC_ATTRIBUTE_TYPE_OPTIONS.map((item) => ({
-        label: t(`knowledgeNetwork.${item.labelKey}`),
-        value: item.value,
-      })),
-    [t],
-  );
-
   const valueFromOptions = useMemo(
     () =>
       VALUE_FROM_OPTIONS.map((item) => ({
-        label: t(`knowledgeNetwork.${item.labelKey}`),
-        value: item.value,
-      })),
-    [t],
-  );
-
-  const parameterSourceOptions = useMemo(
-    () =>
-      PARAMETER_SOURCE_OPTIONS.map((item) => ({
         label: t(`knowledgeNetwork.${item.labelKey}`),
         value: item.value,
       })),
@@ -208,6 +187,9 @@ export function ObjectTypeLogicAttributeEditDrawer({
         comment: attrInfo.comment,
         displayName: attrInfo.displayName,
         name: attrInfo.name,
+        // Function is the only logical-property kind.  Older incomplete records
+        // still need a type so the user can select a function and save again.
+        type: "tool",
       });
     } else {
       form.resetFields();
@@ -233,24 +215,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return item;
     };
     setSettingList((prev) => prev.map(processNode));
-  };
-
-  const addToolParameter = () => {
-    setSettingList((prev) => [
-      ...prev,
-      {
-        id: createParameterId(),
-        manual: true,
-        name: "",
-        source: "body",
-        type: "string",
-        valueFrom: "input",
-      },
-    ]);
-  };
-
-  const removeToolParameter = (id: string) => {
-    setSettingList((prev) => removeParameterById(prev, id));
   };
 
   const handleToolSelect = async (selection: ActionTypeCatalogSelection) => {
@@ -345,14 +309,14 @@ export function ObjectTypeLogicAttributeEditDrawer({
       return;
     }
 
-    const parameters = extractLeafParams(settingList)
-      .map((item) => {
-        const { error, children, manual, ...parameter } = item;
+    const parameters = normalizeFunctionParameterSources(
+      extractLeafParams(settingList).map((item) => {
+        const { error, children, ...parameter } = item;
         void error;
         void children;
-        void manual;
         return parameter;
-      });
+      }),
+    );
 
     onOk({
       comment: formValues.comment,
@@ -378,15 +342,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       key: "name",
       render: (value: string, record: SettingItem) => (
         <div>
-          {type === "tool" && !record.children?.length ? (
-            <Input
-              onChange={(event) => updateSettingData(record.id, { name: event.target.value })}
-              status={record.error?.name ? "error" : undefined}
-              value={value}
-            />
-          ) : (
-            <div title={value}>{value}</div>
-          )}
+          <div title={value}>{value}</div>
           <div className={styles.description} title={record.description}>
             {record.description}
           </div>
@@ -398,32 +354,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
     {
       dataIndex: "type",
       key: "type",
-      render: (value: string, record: SettingItem) =>
-        type === "tool" && !record.children?.length ? (
-          <Input
-            onChange={(event) => updateSettingData(record.id, { type: event.target.value })}
-            value={value}
-          />
-        ) : (
-          value
-        ),
+      render: (value: string) => value,
       title: t("knowledgeNetwork.objectTypePropertyType"),
-      width: 100,
-    },
-    {
-      dataIndex: "source",
-      key: "source",
-      render: (value: string, record: SettingItem) =>
-        type === "tool" && !record.children?.length ? (
-          <Select
-            onChange={(source: string) => updateSettingData(record.id, { source })}
-            options={parameterSourceOptions}
-            value={value}
-          />
-        ) : (
-          value
-        ),
-      title: t("knowledgeNetwork.objectTypeParameterSource"),
       width: 100,
     },
     {
@@ -488,18 +420,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
       title: t("knowledgeNetwork.objectTypeLogicValue"),
       width: 278,
     },
-    {
-      align: "center",
-      key: "actions",
-      render: (_, record) =>
-        record.manual ? (
-          <AppButton danger onClick={() => removeToolParameter(record.id)} type="link">
-            {t("common.delete")}
-          </AppButton>
-        ) : null,
-      title: t("common.actions"),
-      width: 72,
-    },
   ];
 
   return (
@@ -529,6 +449,9 @@ export function ObjectTypeLogicAttributeEditDrawer({
           <Input />
         </Form.Item>
         <Form.Item hidden name="resourceName">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="type">
           <Input />
         </Form.Item>
         <Row gutter={16}>
@@ -571,24 +494,8 @@ export function ObjectTypeLogicAttributeEditDrawer({
             </Form.Item>
           </Col>
           <Col span={6}>
-            <Form.Item
-              label={t("knowledgeNetwork.objectTypePropertyType")}
-              name="type"
-              rules={[{ required: true }]}
-            >
-              <Select
-                onChange={() => {
-                  setSettingList([]);
-                  form.setFieldsValue({
-                    boxId: undefined,
-                    resourceName: undefined,
-                    resultPath: undefined,
-                    toolId: undefined,
-                  });
-                }}
-                options={logicAttributeTypeOptions}
-                placeholder={t("knowledgeNetwork.pleaseSelect")}
-              />
+            <Form.Item label={t("knowledgeNetwork.objectTypePropertyType")}>
+              <Input disabled value={t("executionFactory.functionToolboxTab")} />
             </Form.Item>
           </Col>
           <Col span={6}>
@@ -615,7 +522,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                 label={t("knowledgeNetwork.objectTypeLogicResultPath")}
                 name="resultPath"
               >
-                <Input placeholder="$.data.result" />
+                <Input placeholder={LOGIC_RESULT_PATH_PLACEHOLDER} />
               </Form.Item>
             </Col>
           </Row>
@@ -638,11 +545,6 @@ export function ObjectTypeLogicAttributeEditDrawer({
         <>
           <div className={styles.settingTitle}>
             {t("knowledgeNetwork.objectTypeLogicAttributeSetting")}
-            {type === "tool" ? (
-              <AppButton onClick={addToolParameter} style={{ marginLeft: 8 }} type="link">
-                {t("common.create")}
-              </AppButton>
-            ) : null}
           </div>
         </>
       ) : null}

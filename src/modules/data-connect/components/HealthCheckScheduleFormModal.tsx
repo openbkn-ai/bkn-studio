@@ -13,7 +13,7 @@ import type {
   DataConnectHealthCheckSchedule,
   DataConnectHealthCheckScheduleMode,
 } from "@/modules/data-connect/types/data-connect";
-import { isHourlyHealthCheckCron } from "@/modules/data-connect/utils/health-check-cron";
+import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 import type { CatalogHealthCheckScheduleInput } from "@/shared/catalog";
 
 type HealthCheckScheduleFormValues = {
@@ -100,7 +100,7 @@ export function HealthCheckScheduleFormModal({
               { message: t("common.required"), required: true },
               {
                 validator: (_, value: unknown) => {
-                  if (isHourlyHealthCheckCron(value)) {
+                  if (isHourlyCron(value)) {
                     return Promise.resolve();
                   }
 

@@ -9,7 +9,10 @@ import { webcrypto } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LOCALE_COOKIE_NAME } from "@/framework/i18n/locale";
+
 import {
+  buildAuthorizationRequestURL,
   canAutoStartLogin,
   completeLogin,
   computeCodeChallenge,
@@ -50,6 +53,30 @@ describe("oauth", () => {
     await expect(
       computeCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
     ).resolves.toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+  });
+
+  it("sends the normalized Studio locale through OIDC ui_locales", () => {
+    const authorizationURL = new URL(
+      buildAuthorizationRequestURL("challenge-1", "state-1", "en-GB"),
+      window.location.origin,
+    );
+
+    expect(authorizationURL.pathname).toBe("/oauth2/auth");
+    expect(authorizationURL.searchParams.get("client_id")).toBe("openbkn-studio");
+    expect(authorizationURL.searchParams.get("code_challenge")).toBe("challenge-1");
+    expect(authorizationURL.searchParams.get("state")).toBe("state-1");
+    expect(authorizationURL.searchParams.get("ui_locales")).toBe("en-US");
+  });
+
+  it("uses the shared login preference when no locale is passed explicitly", () => {
+    document.cookie = `${LOCALE_COOKIE_NAME}=en-US; Path=/`;
+
+    const authorizationURL = new URL(
+      buildAuthorizationRequestURL("challenge-1", "state-1"),
+      window.location.origin,
+    );
+
+    expect(authorizationURL.searchParams.get("ui_locales")).toBe("en-US");
   });
 
   it("rejects the callback when the state does not match", async () => {

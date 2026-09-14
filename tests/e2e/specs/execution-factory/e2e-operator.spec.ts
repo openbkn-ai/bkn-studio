@@ -76,9 +76,7 @@ test.describe("Execution Factory — Operator E2E flows", () => {
 
     await publishOperatorViaApi(request, operator);
 
-    const market = await request.get(apiUrl("/operator/market?page=1&page_size=20"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const market = await request.get(apiUrl("/operator/market?page=1&page_size=20"));
     expect(market.ok()).toBeTruthy();
     const body = (await market.json()) as { data?: Array<{ operator_id: string }> };
     expect(body.data?.some((item) => item.operator_id === operator.operatorId)).toBeTruthy();

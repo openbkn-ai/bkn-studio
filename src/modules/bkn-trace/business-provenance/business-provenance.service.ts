@@ -28,7 +28,6 @@ export type BusinessProvenanceQuery = {
   keyword?: string;
   status?: string;
   agentOrApp?: string;
-  businessDomain?: string;
   knowledgeNetwork?: string;
   evidenceCompleteness?: string;
   conversationId?: string;
@@ -49,6 +48,8 @@ export type BusinessProvenanceConversation = {
 export type BusinessProvenanceInteractionListItem = {
   interactionId: string;
   conversationId?: string;
+  /** Chronological position within the conversation; the API list is newest first. */
+  roundNumber?: number;
   questionPreview?: string;
   resultPreview?: string;
   startedAt?: string;
@@ -118,7 +119,7 @@ export async function getBusinessProvenanceConversations(
 ): Promise<BusinessProvenancePage<BusinessProvenanceConversation>> {
   const response = await http.get<{ entries?: BackendConversation[]; total?: number; page?: number; page_size?: number }>(
     `${EE_PROVENANCE_PREFIX}/conversations`,
-    { headers: provenanceHeaders(), params: provenanceParams(query) },
+    { params: provenanceParams(query), skipErrorToast: true },
   );
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
@@ -135,15 +136,15 @@ export async function getBusinessProvenanceInteractions(
   query: BusinessProvenanceQuery,
 ): Promise<BusinessProvenancePage<BusinessProvenanceInteractionListItem>> {
   const response = await http.get<{ entries?: Array<{
-    interaction_id?: string; conversation_id?: string; question_preview?: string; result_preview?: string;
+    interaction_id?: string; conversation_id?: string; round_number?: number; question_preview?: string; result_preview?: string;
     started_at?: string; status?: string; duration_ms?: number;
   }>; total?: number; page?: number; page_size?: number }>(
     `${EE_PROVENANCE_PREFIX}/interactions`,
-    { headers: provenanceHeaders(), params: provenanceParams(query) },
+    { params: provenanceParams(query) },
   );
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
-      interactionId: entry.interaction_id ?? "", conversationId: entry.conversation_id,
+      interactionId: entry.interaction_id ?? "", conversationId: entry.conversation_id, roundNumber: entry.round_number,
       questionPreview: entry.question_preview, resultPreview: entry.result_preview,
       startedAt: entry.started_at, status: entry.status, durationMs: entry.duration_ms,
     })),
@@ -163,7 +164,7 @@ export async function getBusinessProvenanceInteraction(interactionId: string): P
       operation_id?: string; attempt?: number; tool_name?: string; knowledge_network_id?: string;
       status?: OperationResolution["status"]; call_status?: string; protocol?: string; started_at?: string; finished_at?: string; duration_ms?: number; input?: unknown; output?: unknown; error?: unknown; query?: { sql?: string; resource_ids?: string[]; resources?: Array<{ id?: string; name?: string; object_id?: string; object_name?: string }>; conditions?: unknown; result_count?: number }; objects?: Array<{ id?: string; name?: string }>; elements?: Array<{ kind?: string; id?: string; name?: string; parent_id?: string; field?: string }>; missing_facts?: string[];
     }>;
-  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, { headers: provenanceHeaders() });
+  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, { skipErrorToast: true });
   return {
     interactionId: response.data.interaction_id ?? interactionId,
     interactionQuestion: response.data.interaction_question,
@@ -184,7 +185,7 @@ export async function getBusinessProvenanceInteraction(interactionId: string): P
 export async function getBusinessProvenanceMarkdown(interactionId: string): Promise<string> {
   const response = await http.get<string>(
     `${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/markdown`,
-    { headers: provenanceHeaders(), responseType: "text" },
+    { responseType: "text" },
   );
   return response.data;
 }
@@ -205,7 +206,6 @@ export async function streamBusinessProvenanceAnalysis(
         Accept: "text/event-stream",
         "Content-Type": "application/json",
         "Accept-Language": runtime.locale,
-        "x-business-domain": runtime.currentUser.businessDomainId ?? "bd_public",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({ markdown }),
@@ -254,7 +254,7 @@ export async function getBusinessProvenanceAnalysisHistory(interactionId: string
   const response = await http.get<{ entries?: Array<{
     analysis_id?: string; interaction_id?: string; agent_id?: string; status?: string;
     result?: Record<string, unknown>; failure_code?: string; failure_message?: string; started_at?: string; finished_at?: string;
-  }> }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`, { headers: provenanceHeaders() });
+  }> }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`);
   return (response.data.entries ?? []).map((entry) => ({
     analysisId: entry.analysis_id ?? "", interactionId: entry.interaction_id ?? interactionId,
     agentId: entry.agent_id ?? "", status: entry.status === "completed" || entry.status === "failed" ? entry.status : "running",
@@ -292,10 +292,6 @@ async function analysisFetchError(response: Response): Promise<BusinessProvenanc
   }
 }
 
-function provenanceHeaders() {
-  return { "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public" };
-}
-
 function provenanceParams(query: BusinessProvenanceQuery) {
   const params: Record<string, string | number> = {};
   if (query.page !== undefined) params.page = query.page;
@@ -303,7 +299,6 @@ function provenanceParams(query: BusinessProvenanceQuery) {
   if (query.keyword) params.keyword = query.keyword;
   if (query.status) params.status = query.status;
   if (query.agentOrApp) params.agent_or_app = query.agentOrApp;
-  if (query.businessDomain) params.business_domain = query.businessDomain;
   if (query.knowledgeNetwork) params.knowledge_network = query.knowledgeNetwork;
   if (query.evidenceCompleteness) params.evidence_completeness = query.evidenceCompleteness;
   if (query.conversationId) params.conversation_id = query.conversationId;

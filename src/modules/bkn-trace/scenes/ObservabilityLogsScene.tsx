@@ -6,7 +6,7 @@
  */
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -26,6 +26,7 @@ import {
   type LogRecord,
 } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile, type TraceAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import { readAuditLogDrilldown } from "@/modules/bkn-trace/utils/audit-log-drilldown";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 const BUSINESS_MODULES: BusinessModule[] = [
@@ -35,17 +36,16 @@ const BUSINESS_MODULES: BusinessModule[] = [
 
 const AUDIT_OUTCOMES: AuditOutcome[] = ["success", "failure", "denied", "canceled", "unknown"];
 const SYSTEM_AUDIT_CATEGORIES: LogCategory[] = ["audit.admin"];
+const EXACT_ACTOR_MATCH = "exact";
 
 type ObservabilityLogsSceneProps = {
   mode?: "audit" | "logs";
 };
 
 type Filters = {
-  action: string;
   actorId: string;
   businessModule?: BusinessModule;
   outcome?: AuditOutcome;
-  query: string;
   timeRange: [Dayjs, Dayjs];
 };
 
@@ -77,11 +77,10 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
         timeFrom: nextFilters.timeRange[0].toISOString(),
         timeTo: nextFilters.timeRange[1].toISOString(),
         ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-        ...(nextFilters.query.trim() ? { query: nextFilters.query.trim() } : {}),
         ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
-        ...(nextFilters.actorId.trim() ? { actorId: nextFilters.actorId.trim() } : {}),
-        ...(nextFilters.action.trim() ? { action: nextFilters.action.trim() } : {}),
+        ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
         ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
+        ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
         ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
         ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
         ...(associatedScope.targetId ? { targetId: associatedScope.targetId } : {}),
@@ -116,35 +115,35 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   }, [associatedScope, load, t]);
 
   const columns = useMemo<ColumnsType<LogRecord>>(() => [
-    { dataIndex: "eventTime", key: "time", title: t("bknTrace.logs.columns.time"), width: 150, render: formatTime },
+    { dataIndex: "eventTime", key: "time", title: t("bknTrace.logs.columns.time"), width: "12%", render: formatTime },
     {
-      dataIndex: "businessModule", key: "businessModule", title: t("bknTrace.logs.columns.module"), width: 145,
+      dataIndex: "businessModule", key: "businessModule", title: t("bknTrace.logs.columns.module"), width: "12%",
       render: (value: string) => <Tag>{moduleLabel(value, t)}</Tag>,
     },
     {
-      dataIndex: "action", key: "action", title: t("bknTrace.logs.columns.action"), width: 190,
+      dataIndex: "action", key: "action", title: t("bknTrace.logs.columns.action"), width: "14%",
       render: (_value: string, record) => <ClampedText value={presentLogAction(record, t)} />,
     },
     {
-      dataIndex: "target", key: "target", title: t("bknTrace.logs.columns.target"), width: 230,
+      dataIndex: "target", key: "target", title: t("bknTrace.logs.columns.target"), width: "20%",
       render: (_target: LogRecord["target"], record) => {
         const value = presentLogTarget(record, t);
         return <ClampedText secondary={value.secondary} value={value.primary} />;
       },
     },
     {
-      dataIndex: "actor", key: "actor", title: t("bknTrace.logs.columns.actor"), width: 180,
+      dataIndex: "actor", key: "actor", title: t("bknTrace.logs.columns.actor"), width: "18%",
       render: (_actor: LogRecord["actor"], record) => {
         const value = presentLogActor(record, t, userDirectory);
         return <ClampedText secondary={value.secondary} value={value.primary} />;
       },
     },
     {
-      dataIndex: "outcome", key: "outcome", title: t("bknTrace.logs.columns.outcome"), width: 105,
+      dataIndex: "outcome", key: "outcome", title: t("bknTrace.logs.columns.outcome"), width: "9%",
       render: (value: AuditOutcome) => <Tag color={outcomeColor(value)}>{t(`bknTrace.logs.outcomes.${value}`)}</Tag>,
     },
     {
-      dataIndex: "sourceId", key: "source", title: t("bknTrace.logs.columns.source"), width: 145,
+      dataIndex: "sourceId", key: "source", title: t("bknTrace.logs.columns.source"), width: "15%",
       render: (value: string, record) => <ClampedText secondary={record.sourceChannel} value={value} />,
     },
   ], [t, userDirectory]);
@@ -176,7 +175,7 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   }
 
-  const associated = associatedScope.conversationId || associatedScope.traceId || associatedScope.requestId || associatedScope.targetId;
+  const associated = associatedScope.actorId || associatedScope.conversationId || associatedScope.traceId || associatedScope.requestId || associatedScope.targetId;
   return (
     <div className={styles.workspace}>
       <header className={styles.header}>
@@ -191,49 +190,53 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
       {result?.partial ? <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" /> : null}
-      {associated ? <div className={styles.sourceStrip}><Tag color="blue">{associated}</Tag></div> : null}
+      {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
+      {associated ? <div className={styles.sourceStrip}><AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} /></div> : null}
 
       {profile?.globalLogSearch ? (
         <div className={styles.filterPanel}>
-          <div className={styles.filterRowPrimary}>
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, query: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.searchPlaceholder")} prefix={<SearchOutlined />} value={filters.query} />
-            <DatePicker allowClear={false} onChange={(value) => { if (value) setFilters((current) => ({ ...current, timeRange: [value, current.timeRange[1]] })); }} placeholder={t("bknTrace.logs.startTime")} showTime value={filters.timeRange[0]} />
-            <DatePicker allowClear={false} onChange={(value) => { if (value) setFilters((current) => ({ ...current, timeRange: [current.timeRange[0], value] })); }} placeholder={t("bknTrace.logs.endTime")} showTime value={filters.timeRange[1]} />
+          <div className={styles.filterRow}>
+            <DatePicker.RangePicker allowClear={false} onChange={(value) => { const [start, end] = value ?? []; if (start && end) setFilters((current) => ({ ...current, timeRange: [start, end] })); }} placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]} showTime value={filters.timeRange} />
             <Select allowClear onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))} options={BUSINESS_MODULES.map((module) => ({ label: moduleLabel(module, t), value: module }))} placeholder={t("bknTrace.logs.modulePlaceholder")} value={filters.businessModule} />
-          </div>
-          <div className={styles.filterRowSecondary}>
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, action: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actionPlaceholder")} value={filters.action} />
             <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
+            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
             <Space><Button icon={<SearchOutlined />} onClick={submit} type="primary">{t("bknTrace.actions.query")}</Button><Button onClick={reset}>{t("bknTrace.actions.reset")}</Button></Space>
           </div>
         </div>
       ) : null}
 
-      <div className={styles.resultSummary}>
-        <Typography.Text>{t("bknTrace.logs.resultCount", { count: result?.count.value ?? 0 })}</Typography.Text>
-        {result?.sourceStatus.length ? <Typography.Text type="secondary">{result.sourceStatus.map((source) => source.sourceId).join(" / ")}</Typography.Text> : null}
-      </div>
+      {loading && !result && !error ? <Spin /> : null}
+      {!error && result ? <>
+        <div className={styles.resultSummary}>
+          <Typography.Text>{result.count.value === null
+            ? t("bknTrace.logs.resultCountUnknown")
+            : t("bknTrace.logs.resultCount", { count: result.count.value })}</Typography.Text>
+          {result.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
+        </div>
 
-      <Spin spinning={loading}>
-        <Table className={styles.auditTable} columns={columns} dataSource={result?.data ?? []} locale={{ emptyText: t(associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="eventId" tableLayout="fixed" />
-      </Spin>
-      {result?.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
+        <Spin spinning={loading}>
+          <Table className={styles.auditTable} columns={columns} dataSource={result.data} locale={{ emptyText: t(associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="eventId" tableLayout="fixed" />
+        </Spin>
+        {result.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
+      </> : null}
       <LogDetailDrawer logId={selectedEventId} onClose={() => setSelectedEventId(undefined)} />
     </div>
   );
 }
 
 function ClampedText({ secondary, value }: { secondary?: string; value: string }) {
-  return <div className={styles.clampedCell}>
-    <Typography.Paragraph ellipsis={{ rows: 2, tooltip: value }}>{value}</Typography.Paragraph>
-    {secondary && secondary !== value ? <Typography.Text className={styles.technicalId}>{secondary}</Typography.Text> : null}
-  </div>;
+  const fullText = secondary && secondary !== value ? `${value}\n${secondary}` : value;
+  return <Tooltip title={fullText}>
+    <span aria-label={fullText} className={styles.clampedCell}>
+      <span>{value}</span>
+      {secondary && secondary !== value ? <span className={styles.technicalId}> · {secondary}</span> : null}
+    </span>
+  </Tooltip>;
 }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
   const end = dayjs();
-  return { action: "", actorId: "", query: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
+  return { actorId: "", timeRange: [end.subtract(mode === "audit" ? 30 : 7, "day"), end] };
 }
 
 function readInitialFilters(mode: "audit" | "logs"): Filters {
@@ -244,26 +247,28 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const timeFrom = dayjs(parameters.get("time_from"));
   const timeTo = dayjs(parameters.get("time_to"));
   const hasValidTimeRange = timeFrom.isValid() && timeTo.isValid() && !timeTo.isBefore(timeFrom);
+  const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
     ...defaults,
-    action: parameters.get("action") ?? "",
-    actorId: parameters.get("actor_id") ?? "",
+    actorId: parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
     ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
     ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
-    query: parameters.get("q") ?? "",
     ...(hasValidTimeRange ? { timeRange: [timeFrom, timeTo] } : {}),
   };
 }
 
-type AssociatedLogScope = { conversationId: string; requestId: string; targetId: string; targetType: string; traceId: string };
+type AssociatedLogScope = { actorId: string; conversationId: string; requestId: string; targetId: string; targetType: string; traceId: string };
 
 function readAssociatedLogScope(): AssociatedLogScope {
   const parameters = new URLSearchParams(window.location.search);
+  const target = readAuditLogDrilldown(parameters);
+  const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
+    actorId: exactActorMatch ? parameters.get("actor_id")?.trim() ?? "" : "",
     conversationId: parameters.get("conversation_id") ?? "",
     requestId: parameters.get("request_id") ?? "",
-    targetId: parameters.get("target_id") ?? "",
-    targetType: parameters.get("target_type") ?? "",
+    targetId: target.targetId,
+    targetType: target.apiResourceType,
     traceId: parameters.get("trace_id") ?? "",
   };
 }
@@ -275,15 +280,58 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
   if (scope.targetId) parameters.set("target_id", scope.targetId);
   if (scope.targetType) parameters.set("target_type", scope.targetType);
   if (scope.traceId) parameters.set("trace_id", scope.traceId);
-  if (filters.query.trim()) parameters.set("q", filters.query.trim());
+  if (scope.actorId) {
+    parameters.set("actor_id", scope.actorId);
+    parameters.set("actor_match", EXACT_ACTOR_MATCH);
+  }
   if (filters.businessModule) parameters.set("business_module", filters.businessModule);
-  if (filters.actorId.trim()) parameters.set("actor_id", filters.actorId.trim());
-  if (filters.action.trim()) parameters.set("action", filters.action.trim());
+  if (filters.actorId.trim()) parameters.set("actor", filters.actorId.trim());
   if (filters.outcome) parameters.set("outcome", filters.outcome);
   parameters.set("time_from", filters.timeRange[0].toISOString());
   parameters.set("time_to", filters.timeRange[1].toISOString());
   const query = parameters.toString();
   window.history.replaceState({}, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+}
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function AssociatedScopeTag({ scope, t, userDirectory }: { scope: AssociatedLogScope; t: Translate; userDirectory: Map<string, string> }) {
+  if (scope.targetId) {
+    const displayType = scope.targetType === "user" ? "user" : "resource";
+    return <Tag color="blue"><span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span> <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span></Tag>;
+  }
+  if (scope.actorId) {
+    return <Tag color="blue"><span>{t("bknTrace.logs.associatedTarget.user")}</span> <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span></Tag>;
+  }
+  return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
+}
+
+function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
+  const failed = sources.filter((source) => source.reason && !isHealthySource(source.status) && source.status !== "not_integrated");
+  if (!failed.length) return null;
+  return <div className={styles.sourceStrip}>{failed.map((source) => <Tag color="orange" key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)} · {sourceFailureLabel(source.reason!, t)}</Tag>)}</div>;
+}
+
+function isHealthySource(status: string) {
+  return status === "available" || status === "healthy";
+}
+
+function sourceStatusColor(status: string) {
+  if (isHealthySource(status)) return "green";
+  if (status === "unavailable") return "orange";
+  return undefined;
+}
+
+function sourceStatusLabel(status: string, t: Translate) {
+  if (isHealthySource(status)) return t("bknTrace.logs.sourceStatus.healthy");
+  if (status === "unavailable") return t("bknTrace.logs.sourceStatus.unavailable");
+  if (status === "not_integrated") return t("bknTrace.logs.sourceStatus.notIntegrated");
+  return status;
+}
+
+function sourceFailureLabel(reason: string, t: Translate) {
+  const key = reason === "source_query_failed" || reason === "source_timeout" ? reason : undefined;
+  return key ? t(`bknTrace.logs.sourceFailures.${key}`) : reason;
 }
 
 function canSearchLogs(profile: TraceAccessProfile, scope: AssociatedLogScope) {

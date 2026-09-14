@@ -23,8 +23,8 @@
 .sideNavItem,
 .sideNavItemActive {
   align-items: center;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -41,9 +41,9 @@
 }
 
 .sideNavItemActive {
-  background: #f0f7ff;
+  background: var(--color-primary-100);
   border-color: #1677ff;
-  color: #1677ff;
+  color: var(--color-text-link);
   font-weight: 500;
 }
 

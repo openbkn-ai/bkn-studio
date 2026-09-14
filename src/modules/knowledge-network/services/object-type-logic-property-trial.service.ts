@@ -73,7 +73,10 @@ async function invokeLogicPropertyTrial(
       instanceIdentities: request.instanceIdentities,
       logicProperties: request.logicProperties,
     }),
-    { headers: { "X-HTTP-Method-Override": "GET" } },
+    {
+      headers: { "X-HTTP-Method-Override": "GET" },
+      skipErrorToast: true,
+    },
   );
 
   return response.data;

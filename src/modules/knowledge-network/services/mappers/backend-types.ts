@@ -39,9 +39,13 @@ export type BackendKnowledgeNetwork = {
   statistics?: {
     action_types_total?: number;
     concept_groups_total?: number;
+    apis_total?: number;
+    functions_total?: number;
+    mcp_tools_total?: number;
     metrics_total?: number;
     object_types_total?: number;
     relation_types_total?: number;
+    skills_total?: number;
   };
   tags?: string[];
   update_time?: number;
@@ -60,6 +64,17 @@ export type BackendDataProperty = {
     type?: string;
   };
   name: string;
+  mask_rule?:
+    | { kind: "fixed"; replacement: string }
+    | { kind: "partial"; keep_start: number; keep_end: number; replacement: string }
+    | {
+        kind: "email";
+        local_keep_start: number;
+        preserve_domain: boolean;
+        replacement: string;
+      }
+    | { kind: "round"; step: number }
+    | { kind: "date_granularity"; granularity: "year" | "month" | "day" | "hour" };
   original_name?: string;
   type?: string;
 };
@@ -67,7 +82,7 @@ export type BackendDataProperty = {
 export type BackendDataSource = {
   id: string;
   name?: string;
-  type: "data_view" | "resource";
+  type: "resource";
 };
 
 export type BackendLogicParameter = {
@@ -134,6 +149,7 @@ export type BackendObjectType = {
   incremental_key?: string;
   logic_properties?: BackendLogicProperty[];
   name: string;
+  operations?: string[];
   primary_keys?: string[];
   status?: {
     index_available?: boolean;
@@ -167,6 +183,7 @@ export type BackendConceptGroup = {
   comment?: string;
   id: string;
   name: string;
+  operations?: string[];
   object_types?: BackendObjectType[];
   relation_types?: BackendObjectType[];
   statistics?: {
@@ -184,9 +201,10 @@ export type BackendRelationType = {
   color?: string;
   comment?: string;
   id: string;
-  mapping_mode?: "direct" | "data_view";
+  mapping_mode?: "direct" | "indirect";
   mapping_rules?: import("./relation-type.mapper").BackendRelationTypeMappingRules;
   name: string;
+  operations?: string[];
   source_object_type?: {
     id?: string;
     name?: string;
@@ -198,7 +216,7 @@ export type BackendRelationType = {
     name?: string;
   };
   target_object_type_id?: string;
-  type?: "direct" | "data_view";
+  type?: "direct" | "indirect";
   update_time?: number;
   updater?: BackendAccountInfo;
 };
@@ -228,6 +246,7 @@ export type BackendActionType = {
   };
   id: string;
   name: string;
+  operations?: string[];
   object_type?: {
     id?: string;
     name?: string;
@@ -257,6 +276,14 @@ export type BackendMetricCondition = {
   value_from?: "const";
 };
 
+export type BackendMetricDependencyProperty = {
+  comment?: string;
+  condition_operations?: string[];
+  display_name?: string;
+  name: string;
+  type?: string;
+};
+
 export type BackendMetric = {
   calculation_formula?: {
     aggregation?: {
@@ -277,12 +304,15 @@ export type BackendMetric = {
     }>;
   };
   analysis_dimensions?: Array<{ display_name?: string; name?: string; property?: string } | string>;
+  dependency_properties?: BackendMetricDependencyProperty[];
   comment?: string;
   creator?: BackendAccountInfo | string;
   id: string;
   metric_type?: KnowledgeNetworkMetricRecord["metricType"];
   name: string;
+  operations?: string[];
   scope_ref?: string;
+  scope_name?: string;
   scope_type?: KnowledgeNetworkMetricRecord["scopeType"];
   tags?: string[];
   time_dimension?: {

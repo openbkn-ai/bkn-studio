@@ -44,8 +44,6 @@ import {
 
   createKnowledgeNetworkMetric,
 
-  getKnowledgeNetworkObjectType,
-
   getKnowledgeNetworkMetric,
 
   listKnowledgeNetworkObjectTypes,
@@ -59,11 +57,16 @@ import type { MetricFormSceneProps } from "@/modules/knowledge-network/contracts
 import type {
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkObjectTypeRecord,
+  ObjectTypeDataProperty,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { createDefaultMetricCalculationFormula } from "@/modules/knowledge-network/types/knowledge-network";
 
-import { mergeBoundObjectTypeOption } from "@/modules/knowledge-network/utils/metric-object-type-options";
+import {
+  createFallbackObjectTypeOption,
+  filterMetricObjectTypeOptions,
+  mergeBoundObjectTypeOption,
+} from "@/modules/knowledge-network/utils/metric-object-type-options";
 
 
 
@@ -139,6 +142,10 @@ export function MetricFormScene({
 
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
 
+  const [fallbackObjectTypeId, setFallbackObjectTypeId] = useState("");
+
+  const [fallbackProperties, setFallbackProperties] = useState<ObjectTypeDataProperty[]>([]);
+
   const [pageTitle, setPageTitle] = useState(t("knowledgeNetwork.metricCreateTitle"));
 
   const objectTypeId = Form.useWatch("scopeRef", form);
@@ -155,6 +162,11 @@ export function MetricFormScene({
 
     [objectTypes],
 
+  );
+
+  const activeFallbackProperties = useMemo(
+    () => (objectTypeId === fallbackObjectTypeId ? fallbackProperties : []),
+    [fallbackObjectTypeId, fallbackProperties, objectTypeId],
   );
 
 
@@ -177,7 +189,9 @@ export function MetricFormScene({
 
       try {
 
-        const objectTypeResult = await listKnowledgeNetworkObjectTypes(networkId);
+        const objectTypeResult = filterMetricObjectTypeOptions(
+          await listKnowledgeNetworkObjectTypes(networkId),
+        );
 
         if (mode === "edit" && metricId) {
 
@@ -197,27 +211,23 @@ export function MetricFormScene({
 
             detail.scopeType === "object_type" ? detail.scopeRef.trim() : "";
 
-          let boundObjectType: KnowledgeNetworkObjectTypeRecord | null = null;
+          const boundObjectType = createFallbackObjectTypeOption(boundObjectTypeId);
 
-          if (
+          boundObjectType.name = detail.scopeName || boundObjectTypeId;
 
-            boundObjectTypeId &&
+          setFallbackObjectTypeId(boundObjectTypeId);
 
-            !objectTypeResult.some((item) => item.id === boundObjectTypeId)
-
-          ) {
-
-            try {
-
-              boundObjectType = await getKnowledgeNetworkObjectType(networkId, boundObjectTypeId);
-
-            } catch {
-
-              boundObjectType = null;
-
-            }
-
-          }
+          setFallbackProperties(
+            (detail.dependencyProperties ?? []).map((property) => ({
+              comment: property.comment,
+              displayKey: false,
+              displayName: property.displayName || property.name,
+              incrementalKey: false,
+              name: property.name,
+              primaryKey: false,
+              type: property.type || "string",
+            })),
+          );
 
           setObjectTypes(
 
@@ -609,6 +619,8 @@ export function MetricFormScene({
 
                 embedded
 
+                fallbackProperties={activeFallbackProperties}
+
                 form={form}
 
                 networkId={networkId}
@@ -632,5 +644,3 @@ export function MetricFormScene({
   );
 
 }
-
-

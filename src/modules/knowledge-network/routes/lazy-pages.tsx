@@ -65,6 +65,11 @@ export const ObjectTypeDetailPage = lazyNamedExport(
   "ObjectTypeDetailPage",
 );
 
+export const ObjectTypeAuthorizationPage = lazyNamedExport(
+  () => import("@/modules/knowledge-network/pages/ObjectTypeAuthorizationPage"),
+  "ObjectTypeAuthorizationPage",
+);
+
 export const RelationTypeMappingPage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/RelationTypeMappingPage"),
   "RelationTypeMappingPage",

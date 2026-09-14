@@ -1,7 +1,7 @@
 {
   "name": "bkn-studio",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "packageManager": "pnpm@11.5.1",
@@ -14,6 +14,8 @@
     "test": "vitest",
     "i18n:scan-hardcoded-zh": "node scripts/scan-hardcoded-zh.mjs",
     "i18n:check": "node scripts/scan-hardcoded-zh.mjs --fail-on-found && pnpm exec vitest --run src/app/locales/locale-parity.test.ts src/framework/i18n/locale.test.ts src/framework/i18n/format.test.ts src/framework/runtime/config.test.ts",
+    "theme:check": "node scripts/check-semantic-text-colors.mjs --fail-on-found",
+    "theme:scan-surfaces": "node scripts/scan-theme-surface-coverage.mjs",
     "test:execution-factory": "vitest run src/modules/execution-factory",
     "test:execution-factory:e2e": "npm run test:full --prefix tests/e2e",
     "test:execution-factory:e2e:operator": "npm run test:operator --prefix tests/e2e",
@@ -25,6 +27,7 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
     "@ant-design/icons": "^6.1.0",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@monaco-editor/react": "^4.7.0",
     "ai": "^7.0.4",
     "antd": "^5.28.0",

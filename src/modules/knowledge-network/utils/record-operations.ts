@@ -5,10 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
+type OperationRecord = {
+  operations?: string[];
+};
 
 export function hasKnowledgeNetworkRecordOperation(
-  record: KnowledgeNetworkRecord | null | undefined,
+  record: OperationRecord | null | undefined,
   operation: string,
 ) {
   if (!record) {

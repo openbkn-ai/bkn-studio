@@ -11,6 +11,7 @@ import i18n from "@/app/locales/i18n";
 import {
   operationLabel,
   operationsForType,
+  ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
 } from "@/modules/system-admin/utils/resource-catalog";
 
@@ -19,8 +20,130 @@ describe("resource-catalog", () => {
     await i18n.changeLanguage("en-US");
 
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
-    expect(operationLabel("knowledge_network", "data_query")).toBe("Data query");
+    expect(operationLabel("knowledge_network", "query_data")).toBe("Query data");
     expect(operationsForType("catalog").map((item) => item.label)).toContain("View details");
+  });
+
+  /**
+   * The vocabulary drives what an administrator can hand out. A verb missing here cannot be granted
+   * at all, which is how `catalog:resource_manage` stayed ungrantable after the backend moved table
+   * management onto the owning catalog (openbkn-ai/bkn-foundry#986). These lists match the
+   * operations bkn-safe stores on each type.
+   */
+  it("offers every catalog operation the backend accepts, table management included", () => {
+    const operations = operationsForType("catalog").map((item) => item.key);
+
+    expect(operations).toEqual(
+      expect.arrayContaining([
+        "view_detail",
+        "create",
+        "modify",
+        "delete",
+        "authorize",
+        "task_manage",
+        "resource_manage",
+        "query_data",
+      ]),
+    );
+  });
+
+  it("offers a table only the two verbs it still declares", () => {
+    expect(operationsForType("resource").map((item) => item.key)).toEqual([
+      "view_detail",
+      "query_data",
+    ]);
+  });
+
+  it("limits role grants to supported type-wide resource types", () => {
+    const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
+
+    for (const type of [
+      "agent",
+      "agent_tpl",
+      "connector_type",
+      "data_flow",
+      "risk_type",
+      "stream_data_pipeline",
+    ]) {
+      expect(roleGrantTypes).not.toContain(type);
+    }
+    expect(roleGrantTypes).toEqual(
+      expect.arrayContaining([
+        "concept_group",
+        "object_type",
+        "relation_type",
+        "action_type",
+        "metric",
+      ]),
+    );
+  });
+
+  it("uses the corrected names for catalog and resource", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("catalog")).toBe("数据目录");
+    expect(resourceTypeLabel("resource")).toBe("数据资源");
+  });
+
+  it("uses the execution-factory names for executable resource types", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("operator")).toBe("函数集");
+    expect(resourceTypeLabel("tool_box")).toBe("API 工具集");
+    expect(resourceTypeLabel("mcp")).toBe("MCP 服务");
+    expect(resourceTypeLabel("skill")).toBe("SKILL 包");
+  });
+
+  it("keeps task management out of knowledge-network grants", () => {
+    for (const type of ["concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
+      const operations = operationsForType(type).map((item) => item.key);
+      expect(operations).not.toContain("authorize");
+      expect(operations).not.toContain("task_manage");
+    }
+
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toEqual([
+      "view_detail",
+      "create",
+      "modify",
+      "delete",
+      "query_data",
+      "authorize",
+      "execute",
+    ]);
+    expect(operationsForType("action_type").map((item) => item.key)).toContain("execute");
+  });
+
+  it("offers data querying for every knowledge-network child type", () => {
+    for (const type of [
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+      "risk_type",
+    ]) {
+      expect(operationsForType(type).map((item) => item.key)).toContain("query_data");
+    }
+  });
+
+  it("offers action execution on a knowledge network", () => {
+    expect(operationsForType("knowledge_network").map((item) => item.key)).toContain("execute");
+  });
+
+  it("marks view as the authoring prerequisite of mutating operations", () => {
+    expect(operationsForType("action_type").find((item) => item.key === "execute")?.requires)
+      .toEqual(["view_detail"]);
+  });
+
+  it("localizes every knowledge-network child resource type in Chinese", async () => {
+    await i18n.changeLanguage("zh-CN");
+
+    expect(resourceTypeLabel("concept_group")).toBe("概念分组");
+    expect(resourceTypeLabel("object_type")).toBe("对象类");
+    expect(resourceTypeLabel("relation_type")).toBe("关系类");
+    expect(resourceTypeLabel("action_type")).toBe("行动类");
+    expect(resourceTypeLabel("metric")).toBe("指标");
+    expect(resourceTypeLabel("risk_type")).toBe("风险类");
   });
 
   it("falls back to raw keys for unknown resource and operation keys", () => {

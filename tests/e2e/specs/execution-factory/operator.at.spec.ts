@@ -100,7 +100,6 @@ test.describe("Execution Factory — Operator AT", () => {
 
     const listResponse = await page.request.get(
       "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=20",
-      { headers: { "x-business-domain": "bd_public" } },
     );
     expect(listResponse.ok()).toBeTruthy();
 

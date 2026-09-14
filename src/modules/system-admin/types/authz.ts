@@ -9,12 +9,50 @@
 // It supplements RBAC (roles -> permissions) by directly granting selected operations on a
 // concrete object, such as a catalog, model, or operator, to one user.
 //
-// Backend contract highlights (frontend-object-grants-integration.md):
-//   - Grantees support users only; departments were removed because Casbin has no user-to-department rule.
-//   - A grant is {accessor_id, resource:{type,id}, operations[]}, without its own ID or grantor timestamp.
-//   - The unique key is accessor_id + resource.type + resource.id; POST replaces the complete set.
-//   - resource.id must be a concrete instance; `*` is unsupported, and type-wide grants use the role page.
-//   - bkn-safe does not store resource names; the frontend resolves them through domain services into objName.
+// The list endpoint returns two deliberately different layers:
+//   - grants: independently revocable source records, each identified by a stable grant_id;
+//   - effective_decisions: the backend-computed result after deny, inheritance, bundles and requires.
+// Studio must never merge source records or recompute the effective result locally.
+
+export type GrantEffect = "allow" | "deny";
+
+export type GrantPolicySource =
+  | "community_bundle"
+  | "professional_rule"
+  | "legacy"
+  | "system_derived"
+  | "role_permission";
+
+export type GrantAuthoritySource = "admin_authz" | "owner_delegate" | "system" | "migration";
+
+export type EffectiveDecisionBasis =
+  | "direct"
+  | "inherited"
+  | "bundle"
+  | "wildcard"
+  | "default"
+  | "requires";
+
+export type GrantRecord = {
+  active: boolean;
+  accessorId: string;
+  authoritySource: GrantAuthoritySource;
+  effect: GrantEffect;
+  grantId: string;
+  inherited: boolean;
+  operation: string;
+  policySource: GrantPolicySource;
+};
+
+export type EffectiveDecision = {
+  basis: EffectiveDecisionBasis;
+  decision: GrantEffect;
+  deniedRequirement?: string;
+  inheritedFrom?: { operation: string; resource: { id: string; type: string } };
+  operation: string;
+  requirementBasis?: EffectiveDecisionBasis;
+  requires: string[];
+};
 
 /** One object-level grant that gives a user selected operations on an object. */
 export type ObjectGrant = {
@@ -25,8 +63,13 @@ export type ObjectGrant = {
   objName: string;
   objSub?: string;
   objType: string;
-  /** Derived from operationsForType(objType); object-grant UI hides type-level create. */
+  /** Compatibility summary returned by the API; do not treat it as the final decision. */
   operations: string[];
+  bundle?: "full_business_access";
+  /** Absent only while reading legacy fixtures or old deployments. */
+  deniedOperations?: string[];
+  effectiveDecisions?: EffectiveDecision[];
+  grants?: GrantRecord[];
 };
 
 /** An authorizable object used by the overview page's new-grant picker. Real mode loads it from domain services. */
@@ -37,15 +80,27 @@ export type AuthorizableObject = {
   type: string;
 };
 
-/** Creates or updates a grant, unique by user and object and replaced as a complete set. Empty operations revoke it. */
-export type ObjectGrantInput = {
+type ObjectGrantTargetInput = {
   accessorId: string;
   objId: string;
   objName: string;
   objSub?: string;
   objType: string;
+};
+
+/** Community has one intentionally coarse bundle and no operation/effect controls. */
+export type CommunityBundleGrantInput = ObjectGrantTargetInput & {
+  bundle: "full_business_access";
+};
+
+/** Professional+ creates one independent allow/deny source record per requested operation. */
+export type FineGrainedGrantInput = ObjectGrantTargetInput & {
+  /** Omitted only for legacy callers; new UI always sends an explicit effect. */
+  effect?: GrantEffect;
   operations: string[];
 };
+
+export type ObjectGrantInput = CommunityBundleGrantInput | FineGrainedGrantInput;
 
 export type AuthzSummary = {
   /** Deduplicated number of grantee users. */
@@ -69,4 +124,29 @@ export type ObjectGrantListResult = {
   grants: ObjectGrant[];
   total: number;
   summary?: AuthzSummary;
+};
+
+export type EnterpriseGrantActivationState =
+  | "activated"
+  | "expired"
+  | "downgraded_inactive"
+  | "deleted"
+  | "dormant"
+  | "experimental"
+  | "invalid";
+
+export type EnterpriseObjectGrant = {
+  activationState: EnterpriseGrantActivationState;
+  accessorId: string;
+  classification: string;
+  effect: GrantEffect;
+  expiresAt?: string;
+  grantId: string;
+  inactiveReason?: string;
+  operation: string;
+  resourceId: string;
+  resourceType: string;
+  ruleId: string;
+  runtimeEligible: boolean;
+  subjectType: "user" | "role" | "department" | "unknown";
 };

@@ -192,7 +192,12 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             </span>
           }
         >
-          <ResourceGrantEditor disabled={permissionsReadOnly} onChange={setGrants} value={grants} />
+          <ResourceGrantEditor
+            disabled={permissionsReadOnly}
+            onChange={setGrants}
+            typeWideOnly
+            value={grants}
+          />
         </Form.Item>
       </Form>
     </Drawer>

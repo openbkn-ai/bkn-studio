@@ -16,6 +16,7 @@ import {
   consoleNavigation,
   findConsoleNavItemByPath,
 } from "@/app/shell/console-navigation";
+import { shouldAlwaysShowEditionBadge } from "@/app/shell/navigation/edition-badge";
 import { useConsoleNavigation } from "@/app/shell/navigation/use-console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { accountSideNavigation } from "@/modules/account/navigation";
@@ -133,7 +134,10 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         {item.lockedEdition ?? item.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
-                              alwaysShow={Boolean(item.paidEdition)}
+                              // A paid capability can report its live entitlement state. Do not keep
+                              // its tier badge after it is available, otherwise an authorized role
+                              // manager is incorrectly told that role management still needs an upgrade.
+                              alwaysShow={shouldAlwaysShowEditionBadge(item)}
                               capability={item.paidCapability}
                               edition={(item.lockedEdition ?? item.paidEdition)!}
                             />
@@ -180,7 +184,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         {item.lockedEdition ?? item.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
-                              alwaysShow={Boolean(item.paidEdition)}
+                              alwaysShow={shouldAlwaysShowEditionBadge(item)}
                               capability={item.paidCapability}
                               edition={(item.lockedEdition ?? item.paidEdition)!}
                             />
@@ -234,7 +238,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                               {child.lockedEdition ?? child.paidEdition ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
-                              alwaysShow={Boolean(child.paidEdition)}
+                              alwaysShow={shouldAlwaysShowEditionBadge(child)}
                               capability={child.paidCapability}
                               edition={(child.lockedEdition ?? child.paidEdition)!}
                             />

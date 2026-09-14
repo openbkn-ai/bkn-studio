@@ -5,8 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Form, Input, Modal, Select, Switch } from "antd";
+import { DatePicker, Form, Input, Modal, Select, Switch } from "antd";
 import type { Rule } from "antd/es/form";
+import dayjs, { type Dayjs } from "dayjs";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,8 @@ import type {
   DataConnectDiscoverSchedule,
   DataConnectDiscoverStrategy,
 } from "@/modules/data-connect/types/discover";
+import { isValidDiscoverScheduleTimeRange } from "@/modules/data-connect/utils/discover-schedule-time";
+import { isHourlyCron } from "@/modules/data-connect/utils/health-check-cron";
 
 import styles from "./DiscoverScheduleFormModal.module.css";
 
@@ -37,9 +40,9 @@ type DiscoverScheduleFormValues = {
   catalogId: string;
   cronExpr: string;
   enabled: boolean;
-  endTime?: string;
+  endTime?: Dayjs;
   name: string;
-  startTime?: string;
+  startTime?: Dayjs;
   strategy: DataConnectDiscoverStrategy;
 };
 
@@ -75,6 +78,13 @@ export function DiscoverScheduleFormModal({
   const [form] = Form.useForm<DiscoverScheduleFormValues>();
   const catalogLocked = mode === "edit" || Boolean(defaultCatalogId);
   const cronExpr = Form.useWatch("cronExpr", form);
+  const validateTimeRange = () => {
+    const startTime = parseDateTimeLocal(form.getFieldValue("startTime"));
+    const endTime = parseDateTimeLocal(form.getFieldValue("endTime"));
+    return isValidDiscoverScheduleTimeRange(startTime, endTime)
+      ? Promise.resolve()
+      : Promise.reject(new Error(t("dataConnect.discoverTimeRangeInvalid")));
+  };
 
   useEffect(() => {
     if (!open) {
@@ -86,9 +96,9 @@ export function DiscoverScheduleFormModal({
       catalogId: initialValue?.catalogId ?? defaultCatalogId,
       cronExpr: initialValue?.cronExpr ?? "0 2 * * *",
       enabled: initialValue?.enabled ?? true,
-      endTime: formatDateTimeLocal(initialValue?.endTimeValue),
+      endTime: toDateTimeValue(initialValue?.endTimeValue),
       name: initialValue?.name ?? "",
-      startTime: formatDateTimeLocal(initialValue?.startTimeValue),
+      startTime: toDateTimeValue(initialValue?.startTimeValue),
       strategy: initialValue?.strategy ?? "full_sync",
     });
   }, [defaultCatalogId, form, initialValue, open]);
@@ -102,21 +112,24 @@ export function DiscoverScheduleFormModal({
       okText={t("common.save")}
       onCancel={onCancel}
       onOk={() => {
-        void form.validateFields().then(async (values) => {
-          const enabled =
-            mode === "edit"
-              ? (initialValue?.enabled ?? true)
-              : (values.enabled ?? true);
-          await onSubmit({
-            catalogId: values.catalogId,
-            cronExpr: values.cronExpr.trim(),
-            enabled,
-            endTime: parseDateTimeLocal(values.endTime),
-            name: values.name.trim(),
-            startTime: parseDateTimeLocal(values.startTime),
-            strategy: values.strategy,
-          });
-        });
+        void form
+          .validateFields()
+          .then(async (values) => {
+            const enabled =
+              mode === "edit"
+                ? (initialValue?.enabled ?? true)
+                : (values.enabled ?? true);
+            await onSubmit({
+              catalogId: values.catalogId,
+              cronExpr: values.cronExpr.trim(),
+              enabled,
+              endTime: parseDateTimeLocal(values.endTime),
+              name: values.name.trim(),
+              startTime: parseDateTimeLocal(values.startTime),
+              strategy: values.strategy,
+            });
+          })
+          .catch(() => undefined);
       }}
       open={open}
       rootClassName={styles.modalRoot}
@@ -220,7 +233,17 @@ export function DiscoverScheduleFormModal({
               label={t("dataConnect.discoverCronExpr")}
               name="cronExpr"
               required
-              rules={[{ required: true, message: t("common.required") }]}
+              rules={[
+                { required: true, message: t("common.required") },
+                {
+                  validator: (_, value: unknown) =>
+                    isHourlyCron(value)
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(t("dataConnect.discoverCronInvalid")),
+                        ),
+                },
+              ]}
               span="full"
             >
               <Input placeholder={t("dataConnect.discoverCronExprPlaceholder")} />
@@ -251,16 +274,26 @@ export function DiscoverScheduleFormModal({
             <InlineField
               label={t("dataConnect.discoverStartTime")}
               name="startTime"
+              rules={[{ validator: validateTimeRange }]}
               span="half"
             >
-              <Input type="datetime-local" />
+              <DatePicker
+                format="YYYY-MM-DD HH:mm"
+                showTime={{ format: "HH:mm", showSecond: false }}
+                style={{ width: "100%" }}
+              />
             </InlineField>
             <InlineField
               label={t("dataConnect.discoverEndTime")}
               name="endTime"
+              rules={[{ validator: validateTimeRange }]}
               span="half"
             >
-              <Input type="datetime-local" />
+              <DatePicker
+                format="YYYY-MM-DD HH:mm"
+                showTime={{ format: "HH:mm", showSecond: false }}
+                style={{ width: "100%" }}
+              />
             </InlineField>
           </div>
         </div>
@@ -288,13 +321,14 @@ function InlineField({
   span = "half",
   valuePropName,
 }: InlineFieldProps) {
+  const controlId = Array.isArray(name) ? name.join("_") : String(name);
   return (
     <div
       className={[styles.field, span === "full" ? styles.spanFull : styles.spanHalf]
         .filter(Boolean)
         .join(" ")}
     >
-      <label className={styles.fieldLabel}>
+      <label className={styles.fieldLabel} htmlFor={controlId}>
         {required ? <span className={styles.requiredMark}>*</span> : null}
         <span>{label}</span>
       </label>
@@ -312,26 +346,18 @@ function InlineField({
   );
 }
 
-function formatDateTimeLocal(value?: number) {
+function toDateTimeValue(value?: number) {
   if (!value) {
     return undefined;
   }
 
-  const date = new Date(value);
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  const hours = `${date.getHours()}`.padStart(2, "0");
-  const minutes = `${date.getMinutes()}`.padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return dayjs(value).startOf("minute");
 }
 
-function parseDateTimeLocal(value?: string) {
-  if (!value) {
+function parseDateTimeLocal(value: unknown) {
+  if (!dayjs.isDayjs(value) || !value.isValid()) {
     return undefined;
   }
 
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? undefined : timestamp;
+  return value.startOf("minute").valueOf();
 }

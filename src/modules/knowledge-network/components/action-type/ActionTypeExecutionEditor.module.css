@@ -19,13 +19,13 @@
 }
 
 .operatorFormItem :global(.ant-form-item-label > label) {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-size: 14px;
   height: 22px;
 }
 
 .operatorLabel {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 22px;
   margin-bottom: 8px;

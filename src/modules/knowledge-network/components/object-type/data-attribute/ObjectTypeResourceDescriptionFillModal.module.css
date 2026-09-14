@@ -1,0 +1,81 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.modal :global(.ant-modal-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hint {
+  border-radius: 6px;
+}
+
+.summary {
+  align-items: center;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: 13px;
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+.identityCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.identityCell strong {
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityCell span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.descriptionCell {
+  color: var(--color-text-primary);
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 20px;
+  max-height: 40px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.emptyDescription {
+  color: var(--color-text-muted);
+}
+
+.modal :global(.ant-table-wrapper) {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.modal :global(.ant-table-thead > tr > th) {
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}

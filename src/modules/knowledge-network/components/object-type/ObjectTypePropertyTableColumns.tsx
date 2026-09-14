@@ -12,6 +12,7 @@ import type { DetailTableColumnDefinition } from "@/modules/knowledge-network/co
 export const ObjectTypePropertyTableColumns: DetailTableColumnDefinition[] = [
   { key: "name", labelKey: "knowledgeNetwork.objectTypePropertyName", required: true },
   { key: "displayName", labelKey: "knowledgeNetwork.objectTypePropertyDisplayName" },
+  { key: "comment", labelKey: "knowledgeNetwork.objectTypePropertyDescription" },
   { key: "type", labelKey: "knowledgeNetwork.objectTypePropertyType" },
   { key: "mappedField", labelKey: "knowledgeNetwork.objectTypePropertyMappedField" },
   { key: "primaryKey", labelKey: "knowledgeNetwork.objectTypePropertyPrimaryKey" },

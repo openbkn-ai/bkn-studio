@@ -11,13 +11,10 @@ import { useEffect, useState } from "react";
 import { SideNav } from "@/app/shell/SideNav";
 import { TopBar } from "@/app/shell/TopBar";
 import { WorkspaceLayout } from "@/app/shell/WorkspaceLayout";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { AntdProviders } from "@/framework/ui/AntdProviders";
 
 const SIDENAV_COLLAPSED_STORAGE_KEY = "bkn-studio:sidenav-collapsed";
 
 export function AppShell() {
-  const runtimeConfig = useRuntimeConfig();
   const [sidenavCollapsed, setSidenavCollapsed] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -44,11 +41,9 @@ export function AppShell() {
           }}
         />
         <main className="console-main">
-          <AntdProviders runtimeConfig={runtimeConfig}>
-            <WorkspaceLayout>
-              <Outlet />
-            </WorkspaceLayout>
-          </AntdProviders>
+          <WorkspaceLayout>
+            <Outlet />
+          </WorkspaceLayout>
         </main>
       </div>
     </div>

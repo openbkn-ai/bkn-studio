@@ -122,13 +122,13 @@ export function InstallFromCatalogModal({
             <Radio.Group>
               <Radio value="create">
                 <div>{t("executionFactory.importModeCreate")}</div>
-                <div style={{ color: "rgba(0,0,0,0.45)", fontSize: 12 }}>
+                <div style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
                   {t("executionFactory.importModeCreateHint")}
                 </div>
               </Radio>
               <Radio value="upsert">
                 <div>{t("executionFactory.importModeUpsert")}</div>
-                <div style={{ color: "rgba(0,0,0,0.45)", fontSize: 12 }}>
+                <div style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>
                   {t("executionFactory.importModeUpsertHint")}
                 </div>
               </Radio>

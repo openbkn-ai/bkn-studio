@@ -5,10 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RequestErrorAlert } from "./RequestErrorAlert";
+
+const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const writeTextToClipboardMock = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
@@ -21,7 +24,19 @@ vi.mock("react-i18next", async (importOriginal) => {
   };
 });
 
+vi.mock("@/framework/compat/clipboard", () => ({
+  writeTextToClipboard: writeTextToClipboardMock,
+}));
+
+vi.mock("@/framework/context/use-app-services", () => ({
+  useAppServices: () => ({ message: messageMock }),
+}));
+
 describe("RequestErrorAlert", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -53,5 +68,26 @@ describe("RequestErrorAlert", () => {
     expect(screen.getByText("common.error.details: No key")).toBeTruthy();
     void act(() => vi.advanceTimersByTime(10000));
     expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it("reports feedback after copying expanded error details", async () => {
+    writeTextToClipboardMock.mockResolvedValue(undefined);
+    render(
+      <RequestErrorAlert
+        autoDismissMs={0}
+        error={{ code: "BuildTask.CreateFailed", description: "Build failed" }}
+        onDismiss={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    fireEvent.click(screen.getByText("common.copy"));
+
+    await waitFor(() => {
+      expect(writeTextToClipboardMock).toHaveBeenCalledWith(
+        "Build failed\ncommon.error.code: BuildTask.CreateFailed",
+      );
+      expect(messageMock.success).toHaveBeenCalledWith("common.copySuccess");
+    });
   });
 });

@@ -9,6 +9,7 @@ import {
   deriveStudioPermissions,
   flattenSafeGrants,
 } from "@/framework/auth/permission-map";
+import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { http } from "@/framework/request/http";
 import { defaultDevPermissions } from "@/framework/runtime/module-manifests";
 import type { RuntimeUser } from "@/framework/runtime/types";
@@ -44,9 +45,9 @@ type MePermissionsResponse = {
  * failures would expose all system-admin entries to regular users (#176).
  */
 export const anonymousRuntimeUser: RuntimeUser = {
-  businessDomainId: null,
   id: null,
   isAdmin: false,
+  isSuperAdmin: false,
   name: null,
   permissions: [],
   roles: [],
@@ -64,8 +65,8 @@ export const anonymousRuntimeUser: RuntimeUser = {
  * it granted every permission, point-level guards would fail for all three roles. Only super
  * administrators receive a resource wildcard, compacted in /me/permissions to `{type:"*",id:"*",ops:["*"]}`.
  *
- * is_admin remains useful as the criterion for ADMIN_ONLY_SUFFIXES, which cover cross-tenant
- * operations pages and align with the execution-factory backend's CheckAdminPermission.
+ * is_admin is retained for identity/UI decisions, but must not expand the permission set: all
+ * three administrator roles receive it, while only a resource wildcard denotes super-admin.
  *
  * The two requests degrade independently through allSettled: failing to load identity does not
  * affect permissions, and failing to load permissions yields no permissions. Never grant on a
@@ -93,13 +94,16 @@ export async function fetchCurrentUser(): Promise<RuntimeUser> {
   const isAdmin = Boolean(perm.is_admin);
   // A resource wildcard means super administrator and covers every operation on every resource type, so per-point derivation is unnecessary.
   const hasResourceWildcard = safeGrants.has("*:*");
+  const roles = me.roles ?? [];
 
   return {
-    businessDomainId: null,
     id: me.id ?? null,
     isAdmin,
+    // `/me` and `/me/permissions` fail independently. Preserve wildcard-derived
+    // super-admin access even when the identity request is temporarily unavailable.
+    isSuperAdmin: hasResourceWildcard || isSuperAdmin(roles),
     name: me.name || me.account || me.id || null,
-    roles: me.roles ?? [],
+    roles,
     permissions: hasResourceWildcard
       ? [...defaultDevPermissions]
       : deriveStudioPermissions(defaultDevPermissions, safeGrants, isAdmin),

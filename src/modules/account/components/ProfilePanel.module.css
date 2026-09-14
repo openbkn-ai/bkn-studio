@@ -23,12 +23,12 @@
   margin: 0 0 4px;
   font-size: 16px;
   font-weight: 600;
-  color: #10233f;
+  color: var(--color-text-primary);
 }
 
 .hint {
   margin: 0 0 18px;
-  color: #5b6678;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -46,10 +46,10 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  border: 1px solid rgba(15, 30, 54, 0.08);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   overflow: hidden;
-  background: rgba(15, 30, 54, 0.08);
+  background: var(--color-divider);
 }
 
 .infoRow {
@@ -57,18 +57,18 @@
   grid-template-columns: 96px 1fr;
   gap: 12px;
   padding: 9px 14px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .infoLabel {
   margin: 0;
-  color: #8a94a6;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .infoValue {
   margin: 0;
-  color: #1e293b;
+  color: var(--color-text-primary);
   font-size: 13px;
   word-break: break-word;
 }

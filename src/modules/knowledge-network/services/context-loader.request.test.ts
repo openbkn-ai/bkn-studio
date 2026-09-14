@@ -12,14 +12,22 @@ import {
   CONTEXT_LOADER_OPS,
   buildCurl,
   createMcpSession,
+  fetchObjectInstances,
   fetchMcpObjectTypes,
   fetchKnDetail,
-  fetchKnDetailRestLegacy,
   listMcpTools,
   sendRequest,
+  type ContextLoaderOp,
 } from "@/modules/knowledge-network/services/context-loader.service";
 
 const searchSchema = CONTEXT_LOADER_OPS.find((operation) => operation.id === "search_schema")!;
+const startInteraction: ContextLoaderOp = {
+  id: "bkn_start_interaction",
+  summary: "Start an interaction",
+  path: "/api/agent-retrieval/v1/kn/bkn_start_interaction",
+  query: [],
+  body: {},
+};
 
 const bknContext = {
   conversation_id: "conv_1",
@@ -139,10 +147,70 @@ describe("sendRequest", () => {
     });
   });
 
+  /**
+   * A body carrying an empty `bkn_context` used to suppress injection: the guard
+   * asked whether the key was present, not whether it held anything, so the
+   * request went out with `{}` and Context Loader answered conversation_required.
+   * Synthesized ops produced exactly that body from the backend schema, which is
+   * why some operations failed in the console while hand-written ops worked.
+   */
+  it("overwrites a placeholder bkn_context in the request body", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单","bkn_context":{}}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
+  it("keeps a caller-supplied bkn_context that carries both ids", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const explicit = { conversation_id: "conv_explicit", interaction_id: "int_explicit" };
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      JSON.stringify({ query: "订单", bkn_context: explicit }),
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: explicit });
+  });
+
+  it("replaces a half-filled bkn_context, since both ids are required", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      searchSchema,
+      "rest",
+      {},
+      '{"query":"订单","bkn_context":{"conversation_id":"conv_1"}}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
+  });
+
 });
 
 describe("fetchKnDetail", () => {
   it("uses the MCP get_kn_detail tool with managed context", async () => {
+    const controller = new AbortController();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
@@ -164,7 +232,7 @@ describe("fetchKnDetail", () => {
         ),
       );
 
-    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, undefined, {
+    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, controller.signal, {
       nextContext: () => bknContext,
     });
 
@@ -180,18 +248,33 @@ describe("fetchKnDetail", () => {
         },
       },
     });
+    fetchSpy.mock.calls.forEach(([, init]) => {
+      expect(init?.signal).toBe(controller.signal);
+    });
   });
 });
 
-describe("legacy context-loader REST requests", () => {
-  it("uses the current UI locale", async () => {
+describe("context-loader REST requests", () => {
+  it("preserves unsafe integers in object-instance preview rows", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ id: "kn-demo", object_types: [], concept_groups: [], relation_types: [] }), { status: 200 }),
+      new Response(
+        '{"datas":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}]}',
+        { status: 200 },
+      ),
     );
 
-    await fetchKnDetailRestLegacy({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
-
-    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
+    await expect(
+      fetchObjectInstances({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, "orders"),
+    ).resolves.toEqual([
+      {
+        order_id: "110101199001152345",
+        signed: "-9223372036854775808",
+        unsigned: "18446744073709551615",
+      },
+    ]);
+    expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({
+      "Accept-Language": "en-US",
+    });
   });
 });
 
@@ -233,6 +316,21 @@ describe("fetchMcpObjectTypes", () => {
 });
 
 describe("buildCurl", () => {
+  it("does not inject managed context or expose the bearer token for lifecycle tools", () => {
+    const curl = buildCurl(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      startInteraction,
+      "mcp",
+      {},
+      '{"agent_name":"bkn-studio","conversation_mode":"new","question":"订单查询"}',
+      bknContext,
+    );
+
+    expect(curl).not.toContain("bkn_context");
+    expect(curl).not.toContain("token-1");
+    expect(curl).toContain("Authorization: Bearer <redacted>");
+  });
+
   it("includes the managed context so the copied command is the one that was sent", () => {
     const curl = buildCurl(
       { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },

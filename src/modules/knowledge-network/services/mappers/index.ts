@@ -23,6 +23,7 @@ import type {
   ObjectTypeLogicParameter,
   ObjectTypeLogicParameterValueFrom,
   ObjectTypeLogicProperty,
+  ObjectTypeMaskRule,
   ObjectTypeSmallModel,
   RelationTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -63,6 +64,10 @@ export function mapKnowledgeNetwork(item: BackendKnowledgeNetwork): KnowledgeNet
       actionTypesTotal: item.statistics?.action_types_total ?? 0,
       conceptGroupsTotal: item.statistics?.concept_groups_total ?? 0,
       metricsTotal: item.statistics?.metrics_total ?? 0,
+      skillsTotal: item.statistics?.skills_total ?? 0,
+      functionsTotal: item.statistics?.functions_total ?? 0,
+      mcpToolsTotal: item.statistics?.mcp_tools_total ?? 0,
+      apisTotal: item.statistics?.apis_total ?? 0,
     },
   };
 }
@@ -71,6 +76,7 @@ export function mapRecentObject(item: BackendObjectType): KnowledgeNetworkRecent
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     comment: item.comment ?? "",
     color: item.color ?? "#1677ff",
     icon: item.icon,
@@ -84,6 +90,7 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#1677ff",
     icon: item.icon,
@@ -120,6 +127,9 @@ export function mapDataProperty(
     displayKey: name === meta.displayKey,
     displayName,
     incrementalKey: false,
+    maskRule: item.mask_rule
+      ? mapMaskRuleFromBackend(item.mask_rule)
+      : undefined,
     mappedField: item.mapped_field
       ? {
           displayName: item.mapped_field.display_name ?? item.mapped_field.name ?? "",
@@ -131,6 +141,55 @@ export function mapDataProperty(
     primaryKey: meta.primaryKeys.includes(name),
     type: item.type ?? "string",
   };
+}
+
+function mapMaskRuleFromBackend(
+  rule: NonNullable<BackendDataProperty["mask_rule"]>,
+): ObjectTypeMaskRule {
+  switch (rule.kind) {
+    case "partial":
+      return {
+        keepEnd: rule.keep_end,
+        keepStart: rule.keep_start,
+        kind: rule.kind,
+        replacement: rule.replacement,
+      };
+    case "email":
+      return {
+        kind: rule.kind,
+        localKeepStart: rule.local_keep_start,
+        preserveDomain: rule.preserve_domain,
+        replacement: rule.replacement,
+      };
+    default:
+      return rule;
+  }
+}
+
+function mapMaskRuleToBackend(
+  rule: ObjectTypeMaskRule | undefined,
+): BackendDataProperty["mask_rule"] {
+  if (!rule) {
+    return undefined;
+  }
+  switch (rule.kind) {
+    case "partial":
+      return {
+        keep_end: rule.keepEnd,
+        keep_start: rule.keepStart,
+        kind: rule.kind,
+        replacement: rule.replacement,
+      };
+    case "email":
+      return {
+        kind: rule.kind,
+        local_keep_start: rule.localKeepStart,
+        preserve_domain: rule.preserveDomain,
+        replacement: rule.replacement,
+      };
+    default:
+      return rule;
+  }
 }
 
 export function mapLogicProperty(item: BackendLogicProperty): ObjectTypeLogicProperty {
@@ -192,6 +251,7 @@ export function toBackendDataProperty(property: ObjectTypeDataProperty): Backend
   return {
     comment: property.comment,
     display_name: property.displayName,
+    mask_rule: mapMaskRuleToBackend(property.maskRule),
     mapped_field: property.mappedField
       ? {
           display_name: property.mappedField.displayName,
@@ -257,7 +317,7 @@ export function buildBackendObjectTypePayload(
     data_properties: dataProperties.map(toBackendDataProperty),
     data_source: input.dataSource
       ? {
-          type: input.dataSource.type ?? "resource",
+          type: "resource",
           id: input.dataSource.id,
           name: input.dataSource.name,
         }
@@ -286,6 +346,7 @@ export function mapConceptGroup(item: BackendConceptGroup): ConceptGroupRecord {
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color,
     tags: item.tags ?? [],
@@ -380,11 +441,14 @@ export function mapConceptGroupDetail(item: BackendConceptGroup): ConceptGroupDe
 
 export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRelationTypeRecord {
   const mappingMode =
-    item.mapping_mode === "data_view" || item.type === "data_view" ? "resource" : "direct";
+    item.mapping_mode === "indirect" || item.type === "indirect"
+      ? "resource"
+      : "direct";
 
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#7c3aed",
     mappingMode,
@@ -443,6 +507,7 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
   return {
     id: item.id,
     name: item.name,
+    operations: item.operations,
     description: item.comment ?? "",
     color: item.color?.trim() || "#16a34a",
     actionKind: mapActionKind(item.action_type),
@@ -455,6 +520,12 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
 }
 
 
+export {
+  mapCapabilityBinding,
+  mapCapabilityBindingsList,
+  mapCapabilityBoxSummary,
+  toBackendAttachEntry,
+} from "./capability.mapper";
 export { mapMetric, toBackendMetricCondition, toBackendMetricEntry } from "./metric.mapper";
 
 export {
@@ -470,6 +541,8 @@ export {
 } from "./action-type.mapper";
 export {
   buildActionExecutionLogQueryParams,
+  buildActionExecutionResultQueryParams,
   mapActionTypeExecutionLogDetail,
   mapActionTypeExecutionLogList,
+  mapActionTypeExecutionResultPage,
 } from "./action-execution.mapper";

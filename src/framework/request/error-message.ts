@@ -95,3 +95,17 @@ export function extractRequestErrorDetails(error: unknown): RequestErrorDetails 
 export function extractRequestErrorMessage(error: unknown) {
   return extractRequestErrorDetails(error).description;
 }
+
+export function isRequestConflict(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 409;
+}
+
+/** The caller is authenticated but not allowed to do this. */
+export function isRequestForbidden(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 403;
+}
+
+/** The target, or the endpoint itself on an older backend, does not exist. */
+export function isRequestNotFound(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
+}

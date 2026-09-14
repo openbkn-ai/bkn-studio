@@ -23,7 +23,7 @@ import {
   type OpenApiSpecSource,
   validateOpenApiDocumentText,
 } from "@/modules/execution-factory/utils/metadata-content";
-import { triggerBrowserDownload } from "@/modules/execution-factory/utils/download-file";
+import { triggerBrowserDownload } from "@/framework/download/file-download";
 
 import { JsonEditor } from "./JsonEditor";
 import styles from "./OpenApiSpecInput.module.css";

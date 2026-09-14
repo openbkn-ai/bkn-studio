@@ -5,12 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ArrowRightOutlined,
-  DeleteOutlined,
-  EditOutlined,
-} from "@ant-design/icons";
-import { Alert, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
+import { ArrowRightOutlined } from "@ant-design/icons";
+import { Alert, Button, Empty, Input, Segmented, Spin, Table, Tabs, Tag, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,19 +15,25 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { hasPermissions } from "@/framework/permission/has-permissions";
+import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
-import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
-import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
-import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
+import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
+import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import {
+  classifyObjectTypeProxyReadFailure,
+  getObjectTypeProxyReadFailureTranslationKeys,
+  type ObjectTypeProxyReadFailure,
+} from "@/modules/knowledge-network/utils/object-type-proxy-read-error";
+import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
+import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import {
   ObjectTypePropertyTable,
   ObjectTypePropertyTableColumnSettings,
+  ObjectTypePropertyDescriptionCell,
 } from "@/modules/knowledge-network/components/object-type/ObjectTypePropertyTable";
 import { useObjectTypePropertyTableState } from "@/modules/knowledge-network/components/object-type/useObjectTypePropertyTableState";
 import { ObjectTypeDetailLogicPropertyTrialPanel } from "@/modules/knowledge-network/components/object-type/detail/ObjectTypeDetailLogicPropertyTrialPanel";
@@ -47,7 +49,6 @@ import {
   listKnowledgeNetworkMetrics,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
-import { useKnowledgeNetworkOperationAccessState } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type {
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -56,6 +57,7 @@ import type {
   ObjectTypeLogicProperty,
   ObjectTypeResourcePreview,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "./ObjectTypeDetailScene.module.css";
 
@@ -166,8 +168,8 @@ export function ObjectTypeDetailScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const runtimeConfig = useRuntimeConfig();
   const { message, modal } = useAppServices();
+  const runtimeConfig = useRuntimeConfig();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
     objectTypeId: string;
@@ -196,7 +198,8 @@ export function ObjectTypeDetailScene() {
   const [keyword, setKeyword] = useState("");
   const [preview, setPreview] = useState<ObjectTypeResourcePreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<ObjectTypeProxyReadFailure | null>(null);
+  const [previewReloadToken, setPreviewReloadToken] = useState(0);
   const [previewKeyword, setPreviewKeyword] = useState("");
   const [previewLoadedObjectTypeId, setPreviewLoadedObjectTypeId] = useState<string | null>(null);
   const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
@@ -221,7 +224,8 @@ export function ObjectTypeDetailScene() {
     useState<string | null>(null);
   const [relatedActionsPage, setRelatedActionsPage] = useState(1);
   const [relatedActionsPageSize, setRelatedActionsPageSize] = useState(10);
-  const [resourceBuildTasks, setResourceBuildTasks] = useState<BuildTask[]>([]);
+  const [resourceLocalIndexStatus, setResourceLocalIndexStatus] =
+    useState<ResourceLocalIndexStatus | undefined>();
   const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
   const [dataPage, setDataPage] = useState(1);
   const [dataPageSize, setDataPageSize] = useState(10);
@@ -232,16 +236,10 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
-  const { access: operationAccess, isLoading: isPermissionLoading } = useKnowledgeNetworkOperationAccessState(
-    networkId,
-    ["modify", "delete"],
-  );
-  const canModify = operationAccess.modify;
-  const canDelete = operationAccess.delete;
   const canLoadResourceIndexStates = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: ["resource:view_detail", "resource:task_manage"],
+    requiredPermissions: [...dataCatalogResourceStatusPermissions],
   });
 
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
@@ -253,6 +251,28 @@ export function ObjectTypeDetailScene() {
     )
       ? locationState.knowledgeNetworkReturnTo
       : listPath;
+
+  const confirmDelete = () => {
+    if (!detail) {
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      centered: true,
+      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
+      content: t("knowledgeNetwork.objectTypeDeleteDescription", { name: detail.name }),
+      okButtonProps: { danger: true, type: "primary" },
+      okText: t("common.delete"),
+      onOk: async () => {
+        await deleteKnowledgeNetworkObjectType(networkId, objectTypeId);
+        void message.success(t("common.success"));
+        void navigate(listPath);
+      },
+      title: t("knowledgeNetwork.objectTypeDeleteTitle"),
+      width: 520,
+    });
+  };
 
   const openMetricTrial = useCallback((metricId: string) => {
     setSearchParams((current) => {
@@ -359,9 +379,11 @@ export function ObjectTypeDetailScene() {
     void loadData();
   }, [loadData]);
 
+  const canQueryData = hasKnowledgeNetworkRecordOperation(detail, "query_data");
   const shouldLoadPreview =
     activeTab === "data" &&
     (dataSection === "instance" || dataSection === "logic") &&
+    canQueryData &&
     Boolean(detail?.dataSource?.id);
   const shouldLoadRelatedRelations = Boolean(networkId && objectTypeId && detail);
   const shouldLoadRelatedMetrics = Boolean(networkId && objectTypeId && detail);
@@ -405,7 +427,7 @@ export function ObjectTypeDetailScene() {
       } catch (nextError) {
         if (!cancelled) {
           setPreview(null);
-          setPreviewError(extractRequestErrorMessage(nextError));
+          setPreviewError(classifyObjectTypeProxyReadFailure(nextError));
           setPreviewLoadedObjectTypeId(null);
         }
       } finally {
@@ -426,6 +448,7 @@ export function ObjectTypeDetailScene() {
     objectTypeId,
     preview,
     previewLoadedObjectTypeId,
+    previewReloadToken,
     shouldLoadPreview,
   ]);
 
@@ -644,7 +667,7 @@ export function ObjectTypeDetailScene() {
     const resourceId = detail?.dataSource?.id;
 
     if (!canLoadResourceIndexStates || !resourceId) {
-      setResourceBuildTasks([]);
+      setResourceLocalIndexStatus(undefined);
       setResourceBuildTasksLoading(false);
       return;
     }
@@ -652,15 +675,15 @@ export function ObjectTypeDetailScene() {
     let cancelled = false;
     setResourceBuildTasksLoading(true);
 
-    void listBuildTasks({ resourceId, silent: true })
-      .then((tasks) => {
+    void getCatalogResources([resourceId])
+      .then(([resource]) => {
         if (!cancelled) {
-          setResourceBuildTasks(tasks);
+          setResourceLocalIndexStatus(resource?.localIndexStatus);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setResourceBuildTasks([]);
+          setResourceLocalIndexStatus(undefined);
         }
       })
       .finally(() => {
@@ -748,11 +771,6 @@ export function ObjectTypeDetailScene() {
     return relatedActions.filter((item) => normalizedSearchText(item.name).includes(normalized));
   }, [relatedActions, relatedKeyword]);
 
-  const resourceIndexState = useMemo(
-    () => indexStateOf(resourceBuildTasks),
-    [resourceBuildTasks],
-  );
-
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
     return filteredDataProperties.slice(start, start + dataPageSize);
@@ -832,28 +850,6 @@ export function ObjectTypeDetailScene() {
     [previewColumns],
   );
 
-  const confirmDelete = () => {
-    if (!detail) {
-      return;
-    }
-
-    void modal.confirm({
-      title: t("knowledgeNetwork.objectTypeDeleteTitle"),
-      content: t("knowledgeNetwork.objectTypeDeleteDescription", { name: detail.name }),
-      cancelText: t("common.cancel"),
-      centered: true,
-      className: `${modalStyles.businessModal} ${modalStyles.resourceDeleteConfirmModal}`,
-      okButtonProps: { danger: true, type: "primary" },
-      okText: t("common.delete"),
-      onOk: async () => {
-        await deleteKnowledgeNetworkObjectType(networkId, detail.id);
-        void message.success(t("common.success"));
-        void navigate(listPath);
-      },
-      width: 520,
-    });
-  };
-
   const logicColumns: TableProps<ObjectTypeLogicProperty>["columns"] = useMemo(
     () => [
       {
@@ -892,7 +888,7 @@ export function ObjectTypeDetailScene() {
             </div>
           );
         },
-        title: t("knowledgeNetwork.objectTypeBindResource"),
+        title: t("knowledgeNetwork.objectTypeBoundResource"),
         width: 320,
       },
       {
@@ -905,9 +901,9 @@ export function ObjectTypeDetailScene() {
       {
         dataIndex: "comment",
         key: "comment",
-        ellipsis: true,
-        title: t("common.description"),
-        render: (value?: string) => value || "--",
+        title: t("knowledgeNetwork.objectTypePropertyDescription"),
+        render: (value?: string) => <ObjectTypePropertyDescriptionCell value={value} />,
+        width: 240,
       },
       {
         key: "actions",
@@ -1015,9 +1011,14 @@ export function ObjectTypeDetailScene() {
 
   if (loading) {
     return (
-      <div className={styles.loadingState}>
-        <Spin />
-      </div>
+      <KnowledgeNetworkResourceConfigShell
+        loading
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={t("knowledgeNetwork.objectTypeDetailDescription")}
+        title={t("knowledgeNetwork.objectTypeDetailTitle")}
+      />
     );
   }
 
@@ -1151,13 +1152,13 @@ export function ObjectTypeDetailScene() {
         <section className={styles.summaryDataSource}>
           <div className={styles.overviewCardHeader}>
             <h3 className={styles.overviewSectionTitle}>
-              {t("knowledgeNetwork.objectTypeBoundDataView")}
+              {t("knowledgeNetwork.objectTypeDataSource")}
             </h3>
             {boundDataView ? (
               <button
                 className={styles.cardHeaderLink}
                 onClick={() => {
-                  void navigate(`/data-directory/resource/${boundDataView.id}`);
+                  void navigate(`/data-catalog/resource/${boundDataView.id}`);
                 }}
                 type="button"
               >
@@ -1170,25 +1171,25 @@ export function ObjectTypeDetailScene() {
             <div className={styles.dataViewFields}>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewName")}
+                  {t("knowledgeNetwork.objectTypeResourceName")}
                 </span>
                 <span className={styles.dataViewValue}>{boundDataView.name || "--"}</span>
               </div>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewResourceId")}
+                  {t("knowledgeNetwork.objectTypeResourceId")}
                 </span>
                 <span className={styles.dataViewCode}>{boundDataView.id || "--"}</span>
               </div>
               <div className={styles.dataViewField}>
                 <span className={styles.dataViewLabel}>
-                  {t("knowledgeNetwork.objectTypeDataViewIndexState")}
+                  {t("knowledgeNetwork.objectTypeResourceIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
                   {canLoadResourceIndexStates
                     ? resourceBuildTasksLoading
-                      ? t("knowledgeNetwork.objectTypeDataViewIndexLoading")
-                      : formatIndexStateLabel(resourceIndexState, t)
+                      ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
+                      : formatResourceIndexStateLabel(resourceLocalIndexStatus, t)
                     : detail.hasIndex
                       ? t("knowledgeNetwork.previewIndexed")
                       : t("knowledgeNetwork.previewNotIndexed")}
@@ -1197,7 +1198,7 @@ export function ObjectTypeDetailScene() {
             </div>
           ) : (
             <span className={styles.placeholder}>
-              {t("knowledgeNetwork.objectTypeBoundDataViewEmpty")}
+              {t("knowledgeNetwork.objectTypeDataSourceEmpty")}
             </span>
           )}
         </section>
@@ -1669,9 +1670,35 @@ export function ObjectTypeDetailScene() {
         {dataSection === "instance" ? (
           <>
             {!boundDataView ? (
-              <Empty description={t("knowledgeNetwork.objectTypeBoundDataViewEmpty")} />
+              <Empty description={t("knowledgeNetwork.objectTypeDataSourceEmpty")} />
+            ) : !canQueryData ? (
+              <Alert
+                description={t("knowledgeNetwork.objectTypeProxyReadForbiddenDescription")}
+                message={t("knowledgeNetwork.objectTypeProxyReadForbidden")}
+                showIcon
+                type="warning"
+              />
             ) : previewError ? (
-              <Alert message={previewError} showIcon type="error" />
+              <Alert
+                action={(
+                  <Button
+                    onClick={() => setPreviewReloadToken((current) => current + 1)}
+                    size="small"
+                  >
+                    {t("common.retry")}
+                  </Button>
+                )}
+                description={previewError.kind === "unknown" && previewError.description
+                  ? previewError.description
+                  : t(getObjectTypeProxyReadFailureTranslationKeys(previewError).description)}
+                message={t(
+                  getObjectTypeProxyReadFailureTranslationKeys(previewError).message,
+                )}
+                showIcon
+                type={previewError.kind === "caller-forbidden" ||
+                  previewError.kind === "proxy-permission-denied" ||
+                  previewError.kind === "binding-invalid" ? "warning" : "error"}
+              />
             ) : previewLoading ? (
               <div className={styles.loadingState}>
                 <Spin />
@@ -1741,6 +1768,7 @@ export function ObjectTypeDetailScene() {
 
         {dataSection === "logic" ? (
           <ObjectTypeDetailLogicPropertyTrialPanel
+            canQueryData={canQueryData}
             dataProperties={detail.dataProperties}
             displayKey={objectTypeDisplayKey}
             highlightedLogicPropertyName={selectedLogicPropertyName}
@@ -1992,70 +2020,80 @@ export function ObjectTypeDetailScene() {
   );
 
   return (
-    <KnowledgeNetworkResourceConfigShell
-      actions={
-        !isPermissionLoading && (canModify || canDelete) ? (
-          <>
-            {canModify ? (
-            <AppButton
-              icon={<EditOutlined />}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
-                );
-              }}
-            >
-              {t("common.edit")}
-            </AppButton>
-            ) : null}
-            {canDelete ? (
-            <AppButton
-              danger
-              icon={<DeleteOutlined />}
-              onClick={confirmDelete}
-            >
-              {t("common.delete")}
-            </AppButton>
-            ) : null}
-          </>
-        ) : null
-      }
-      onBack={() => {
-        void navigate(returnPath);
-      }}
-      subtitle={detail.id}
-      title={detail.name}
-    >
-      <div className={styles.page}>
-        <section className={styles.tabCard}>
-          <Tabs
-            activeKey={activeTab}
-            items={[
+    <>
+      <KnowledgeNetworkResourceConfigShell
+        actions={
+          <KnowledgeNetworkResourceDetailActions
+            actions={[
               {
-                children: overviewPanel,
-                key: "overview",
-                label: t("knowledgeNetwork.objectTypeDetailTabOverview"),
+                key: "edit",
+                label: t("common.edit"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                  );
+                },
+                operation: "modify",
+                type: "primary",
               },
               {
-                children: propertiesPanel,
-                key: "properties",
-                label: t("knowledgeNetwork.objectTypeDetailTabProperties"),
+                key: "authorize",
+                label: t("knowledgeNetwork.propertyAuthorizationAction"),
+                onClick: () => {
+                  void navigate(
+                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization`,
+                  );
+                },
+                operation: "authorize",
               },
               {
-                children: dataPanel,
-                key: "data",
-                label: t("knowledgeNetwork.objectTypeDetailTabData"),
-              },
-              {
-                children: relatedPanel,
-                key: "related",
-                label: t("knowledgeNetwork.objectTypeDetailTabRelated"),
+                danger: true,
+                key: "delete",
+                label: t("common.delete"),
+                onClick: confirmDelete,
+                operation: "delete",
               },
             ]}
-            onChange={handleTabChange}
+            record={detail}
           />
-        </section>
-      </div>
-    </KnowledgeNetworkResourceConfigShell>
+        }
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={detail.id}
+        title={detail.name}
+      >
+        <div className={styles.page}>
+          <section className={styles.tabCard}>
+            <Tabs
+              activeKey={activeTab}
+              items={[
+                {
+                  children: overviewPanel,
+                  key: "overview",
+                  label: t("knowledgeNetwork.objectTypeDetailTabOverview"),
+                },
+                {
+                  children: propertiesPanel,
+                  key: "properties",
+                  label: t("knowledgeNetwork.objectTypeDetailTabProperties"),
+                },
+                {
+                  children: dataPanel,
+                  key: "data",
+                  label: t("knowledgeNetwork.objectTypeDetailTabData"),
+                },
+                {
+                  children: relatedPanel,
+                  key: "related",
+                  label: t("knowledgeNetwork.objectTypeDetailTabRelated"),
+                },
+              ]}
+              onChange={handleTabChange}
+            />
+          </section>
+        </div>
+      </KnowledgeNetworkResourceConfigShell>
+    </>
   );
 }

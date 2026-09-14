@@ -6,7 +6,7 @@
  */
 
 .formLayout {
-  background: #fff;
+  background: var(--color-bg-surface);
   margin: 0;
   min-height: 100%;
   padding: 0;
@@ -24,7 +24,7 @@
 }
 
 .formPanel :global(.ant-form-item-label > label) {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   height: auto;
 }
@@ -37,8 +37,8 @@
 }
 
 .sectionCard {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 20px;
   padding: 0 0 20px;
 }
@@ -50,7 +50,7 @@
 }
 
 .sectionTitle {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   line-height: 24px;

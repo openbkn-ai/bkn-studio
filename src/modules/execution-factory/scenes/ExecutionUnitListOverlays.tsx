@@ -47,7 +47,7 @@ export type ExecutionUnitListOverlaysProps = {
   onConfigurePublishedPerm: () => void;
   onReloadInstalledResourceIds: (options?: { manual?: boolean }) => void;
   onReloadList: () => void;
-  publishedPermTarget: { id: string; name: string; type: string } | null;
+  publishedPermTarget: { id: string; name: string; type: string; objectAuthorized: boolean } | null;
   skillInstallTarget: {
     id: string;
     name: string;

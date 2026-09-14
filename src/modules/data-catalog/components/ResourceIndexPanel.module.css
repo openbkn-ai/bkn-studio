@@ -17,13 +17,13 @@
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #d9e0ea;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .viewTabs {
   display: inline-flex;
-  border: 1px solid #d9e0ea;
-  background: #f3f6fa;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .viewTab {
@@ -31,39 +31,50 @@
   padding: 6px 16px;
   border: 0;
   background: transparent;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.5;
   cursor: pointer;
 }
 
-.viewTab + .viewTab {
+.viewTab+.viewTab {
+  border-left: 1px solid #d9e0ea;
+}
+
+.viewTabTooltipWrapper {
+  display: inline-flex;
   border-left: 1px solid #d9e0ea;
 }
 
 .viewTabActive {
   composes: viewTab;
-  background: #fff;
-  color: #111827;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
   font-weight: 600;
   box-shadow: inset 0 -2px 0 #2e68ff;
 }
 
+.viewTabDisabled {
+  composes: viewTab;
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+}
+
 .viewBarHint {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .sectionCard {
   padding: 14px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
 }
 
 .opsCard {
   border: 1px solid #d9e0ea;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .statusStrip {
@@ -73,7 +84,7 @@
   gap: 16px;
   padding: 10px 16px;
   border-bottom: 1px solid #e8edf4;
-  background: #f8fafc;
+  background: var(--color-interface-panel-bg);
 }
 
 .statusStripMain {
@@ -86,13 +97,13 @@
 
 .statusStripLabel {
   flex-shrink: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
 
 .statusStripValue {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
@@ -119,7 +130,7 @@
 
 .sectionTitle {
   margin: 0 0 2px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -127,7 +138,7 @@
 
 .sectionSummary {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -173,13 +184,13 @@
 }
 
 .metaLabel {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .metaValue {
-  color: #334155;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.5;
   word-break: break-word;
@@ -201,23 +212,23 @@
   display: grid;
   gap: 4px;
   max-width: 100%;
-  color: #334155;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
 
 .failureAlertContent strong {
-  color: #111827;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .failureSuggestion {
-  color: #92400e;
+  color: var(--color-warning-text);
 }
 
 .failureRaw {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .failureRaw summary {
@@ -233,8 +244,8 @@
   padding: 8px 10px;
   overflow: auto;
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #334155;
+  background: var(--color-interface-code-bg);
+  color: var(--color-interface-code-text);
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
@@ -248,15 +259,15 @@
   align-items: center;
   gap: 14px;
   padding: 32px 16px;
-  border: 1px solid #d9e0ea;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
   text-align: center;
 }
 
 .emptyText {
   margin: 0;
   max-width: 420px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -269,15 +280,33 @@
   margin-bottom: 12px;
 }
 
+.historyControls {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.taskFilters {
+  flex-wrap: nowrap;
+}
+
+.taskFilterSelect {
+  width: 160px;
+}
+
 .historyTitle {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 600;
 }
 
 .historyCount {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   font-weight: 400;
 }
@@ -296,16 +325,6 @@
   border: 0;
 }
 
-.historyActionGroup {
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-.historyActionGroup :global(.ant-btn-link) {
-  padding-inline: 0;
-  white-space: nowrap;
-}
-
 .tableSurface :global(.ant-table-thead > tr > th) {
   white-space: nowrap;
 }
@@ -315,9 +334,9 @@
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #92400e;
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -326,7 +345,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #1d4ed8;
+  color: var(--color-text-link);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -345,6 +364,17 @@
   .statusStrip {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .historyHead,
+  .historyControls,
+  .taskFilters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .taskFilterSelect {
+    width: 100%;
   }
 
   .metaGrid {

@@ -24,17 +24,26 @@ import {
   cancelKnowledgeNetworkActionTypeExecution,
   getKnowledgeNetworkActionTypeExecutionLogDetail,
   listKnowledgeNetworkActionTypeExecutionLogs,
+  listKnowledgeNetworkActionTypeExecutionResults,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ActionTypeExecutionLog,
   ActionTypeExecutionLogDetail,
+  ActionTypeExecutionLogResultItem,
+  ActionTypeExecutionLogResultStatus,
+  ActionTypeExecutionResultStatusFilter,
   ActionTypeExecutionStatus,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import styles from "./ActionTypeTaskManagementPanel.module.css";
 
+const RESULT_PAGE_SIZE_OPTIONS = [20, 50, 100];
+// The results endpoint serves pages only within the first 10,000 results (offset + limit).
+const RESULT_WINDOW = 10000;
+
 type ActionTypeTaskManagementPanelProps = {
   actionTypeId: string;
+  canManage?: boolean;
   networkId: string;
   refreshToken?: number;
 };
@@ -68,6 +77,7 @@ function RunResultSummary({ failedCount, successCount }: { failedCount: number; 
 
 export function ActionTypeTaskManagementPanel({
   actionTypeId,
+  canManage = true,
   networkId,
   refreshToken = 0,
 }: ActionTypeTaskManagementPanelProps) {
@@ -84,6 +94,14 @@ export function ActionTypeTaskManagementPanel({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [currentLog, setCurrentLog] = useState<ActionTypeExecutionLogDetail | null>(null);
+  const [resultPage, setResultPage] = useState(1);
+  const [resultPageSize, setResultPageSize] = useState(RESULT_PAGE_SIZE_OPTIONS[0]);
+  const [resultStatus, setResultStatus] = useState<ActionTypeExecutionResultStatusFilter>("");
+  const [resultRows, setResultRows] = useState<ActionTypeExecutionLogResultItem[]>([]);
+  const [resultTotal, setResultTotal] = useState(0);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  // An older backend has no results endpoint; the detail response then carries the first page.
+  const [embeddedResultsOnly, setEmbeddedResultsOnly] = useState(false);
 
   const statusOptions = useMemo(
     () => [
@@ -127,6 +145,31 @@ export function ActionTypeTaskManagementPanel({
     [t],
   );
 
+  const resultStatusOptions = useMemo(
+    () => [
+      { label: t("common.all"), value: "" },
+      { label: t("knowledgeNetwork.actionTypeExecutionResultSuccess"), value: "success" },
+      { label: t("knowledgeNetwork.actionTypeExecutionResultFailed"), value: "failed" },
+      { label: t("knowledgeNetwork.actionTypeExecutionStatusCancelled"), value: "cancelled" },
+    ],
+    [t],
+  );
+
+  const getResultStatusLabel = (status: ActionTypeExecutionLogResultStatus) => {
+    switch (status) {
+      case "success":
+        return t("knowledgeNetwork.actionTypeExecutionResultSuccess");
+      case "failed":
+        return t("knowledgeNetwork.actionTypeExecutionResultFailed");
+      case "cancelled":
+        return t("knowledgeNetwork.actionTypeExecutionStatusCancelled");
+      case "pending":
+        return t("knowledgeNetwork.actionTypeExecutionStatusPending");
+      default:
+        return status;
+    }
+  };
+
   const getStatusBadge = (status: ActionTypeExecutionStatus) => {
     switch (status) {
       case "completed":
@@ -169,6 +212,11 @@ export function ActionTypeTaskManagementPanel({
     setDrawerOpen(true);
     setDrawerLoading(true);
     setCurrentLog(null);
+    setResultPage(1);
+    setResultStatus("");
+    setResultRows([]);
+    setResultTotal(0);
+    setEmbeddedResultsOnly(false);
 
     try {
       const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail(networkId, record.id);
@@ -180,6 +228,85 @@ export function ActionTypeTaskManagementPanel({
       setDrawerLoading(false);
     }
   };
+
+  const currentLogId = currentLog?.id;
+
+  useEffect(() => {
+    if (!drawerOpen || !currentLogId || embeddedResultsOnly) {
+      return;
+    }
+
+    let stale = false;
+    setResultsLoading(true);
+    listKnowledgeNetworkActionTypeExecutionResults(networkId, currentLogId, {
+      limit: resultPageSize,
+      offset: (resultPage - 1) * resultPageSize,
+      status: resultStatus,
+    })
+      .then((page) => {
+        if (stale) {
+          return;
+        }
+        if (page === null) {
+          setEmbeddedResultsOnly(true);
+          return;
+        }
+        setResultRows(page.entries);
+        setResultTotal(page.totalCount);
+      })
+      .catch((error: unknown) => {
+        if (stale) {
+          return;
+        }
+        setResultRows([]);
+        setResultTotal(0);
+        void message.error(extractRequestErrorMessage(error));
+      })
+      .finally(() => {
+        if (!stale) {
+          setResultsLoading(false);
+        }
+      });
+
+    return () => {
+      stale = true;
+    };
+  }, [
+    currentLogId,
+    drawerOpen,
+    embeddedResultsOnly,
+    message,
+    networkId,
+    resultPage,
+    resultPageSize,
+    resultStatus,
+  ]);
+
+  // Without the results endpoint, page and filter the results embedded in the detail response.
+  const embeddedResults = useMemo(() => {
+    if (!embeddedResultsOnly) {
+      return null;
+    }
+    const matched = (currentLog?.results ?? []).filter(
+      (item) => !resultStatus || item.status === resultStatus,
+    );
+    const offset = (resultPage - 1) * resultPageSize;
+    return { rows: matched.slice(offset, offset + resultPageSize), total: matched.length };
+  }, [currentLog?.results, embeddedResultsOnly, resultPage, resultPageSize, resultStatus]);
+
+  const shownResultRows = embeddedResults ? embeddedResults.rows : resultRows;
+  const shownResultTotal = embeddedResults ? embeddedResults.total : Math.min(resultTotal, RESULT_WINDOW);
+
+  // Say so when only part of the results can be browsed: past the endpoint's window, or, without
+  // the endpoint, beyond the first page the detail response embeds.
+  const embeddedResultCount = currentLog?.results?.length ?? 0;
+  const browsableResults = embeddedResults
+    ? (currentLog?.resultsTotal ?? 0) > embeddedResultCount
+      ? { count: embeddedResultCount, total: currentLog?.resultsTotal ?? 0 }
+      : null
+    : resultTotal > RESULT_WINDOW
+      ? { count: RESULT_WINDOW, total: resultTotal }
+      : null;
 
   const confirmCancel = (record: ActionTypeExecutionLog) => {
     void modal.confirm({
@@ -202,7 +329,7 @@ export function ActionTypeTaskManagementPanel({
       },
     ];
 
-    if (record.status === "pending" || record.status === "running") {
+    if (canManage && (record.status === "pending" || record.status === "running")) {
       items.push({
         key: "cancel",
         label: t("knowledgeNetwork.actionTypeExecutionCancelAction"),
@@ -387,8 +514,25 @@ export function ActionTypeTaskManagementPanel({
               </Descriptions.Item>
             </Descriptions>
 
-            <h4>{t("knowledgeNetwork.actionTypeExecutionResultTitle")}</h4>
-            <Table
+            <div className={styles.resultHeader}>
+              <h4>{t("knowledgeNetwork.actionTypeExecutionResultTitle")}</h4>
+              <Select
+                aria-label={t("knowledgeNetwork.actionTypeExecutionResultStatusFilter")}
+                className={styles.filterSelect}
+                onChange={(value: ActionTypeExecutionResultStatusFilter) => {
+                  setResultStatus(value);
+                  setResultPage(1);
+                }}
+                options={resultStatusOptions}
+                value={resultStatus}
+              />
+            </div>
+            {browsableResults ? (
+              <div className={styles.resultHint}>
+                {t("knowledgeNetwork.actionTypeExecutionResultWindowHint", browsableResults)}
+              </div>
+            ) : null}
+            <Table<ActionTypeExecutionLogResultItem>
               bordered
               columns={[
                 {
@@ -399,10 +543,7 @@ export function ActionTypeTaskManagementPanel({
                 {
                   dataIndex: "status",
                   key: "status",
-                  render: (value: "failed" | "success") =>
-                    value === "success"
-                      ? t("knowledgeNetwork.actionTypeExecutionResultSuccess")
-                      : t("knowledgeNetwork.actionTypeExecutionResultFailed"),
+                  render: (value: ActionTypeExecutionLogResultStatus) => getResultStatusLabel(value),
                   title: t("knowledgeNetwork.actionTypeExecutionRunStatus"),
                 },
                 {
@@ -418,10 +559,22 @@ export function ActionTypeTaskManagementPanel({
                   title: t("knowledgeNetwork.actionTypeExecutionResultError"),
                 },
               ]}
-              dataSource={currentLog.results ?? []}
+              dataSource={shownResultRows}
+              loading={resultsLoading}
               locale={{ emptyText: t("knowledgeNetwork.actionTypeExecutionResultEmpty") }}
-              pagination={false}
-              rowKey={(record, index) => `${record.displayName ?? "row"}-${index}`}
+              onChange={(pagination) => {
+                const nextPageSize = pagination.pageSize ?? resultPageSize;
+                setResultPage(nextPageSize === resultPageSize ? (pagination.current ?? 1) : 1);
+                setResultPageSize(nextPageSize);
+              }}
+              pagination={{
+                current: resultPage,
+                pageSize: resultPageSize,
+                pageSizeOptions: RESULT_PAGE_SIZE_OPTIONS,
+                showSizeChanger: true,
+                total: shownResultTotal,
+              }}
+              rowKey={(record) => `${record.displayName ?? "row"}-${shownResultRows.indexOf(record)}`}
               size="small"
             />
           </div>

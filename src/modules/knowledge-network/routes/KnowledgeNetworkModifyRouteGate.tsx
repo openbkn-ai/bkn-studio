@@ -5,8 +5,9 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Spin } from "antd";
+import { Alert, Button, Spin } from "antd";
 import { type ReactNode, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useParams } from "react-router-dom";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
@@ -21,9 +22,11 @@ type KnowledgeNetworkModifyRouteGateProps = {
 export function KnowledgeNetworkModifyRouteGate({
   children,
 }: KnowledgeNetworkModifyRouteGateProps) {
+  const { t } = useTranslation();
   const { networkId = "" } = useParams<{ networkId: string }>();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,10 +53,21 @@ export function KnowledgeNetworkModifyRouteGate({
     return () => {
       cancelled = true;
     };
-  }, [networkId]);
+  }, [networkId, reloadToken]);
 
   if (error) {
-    return <Alert message={error} showIcon type="error" />;
+    return (
+      <Alert
+        action={
+          <Button onClick={() => setReloadToken((value) => value + 1)} size="small">
+            {t("common.retry")}
+          </Button>
+        }
+        message={error}
+        showIcon
+        type="error"
+      />
+    );
   }
 
   if (allowed === null) {

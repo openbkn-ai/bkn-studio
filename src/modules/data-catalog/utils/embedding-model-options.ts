@@ -32,9 +32,8 @@ export async function loadEmbeddingModelOptions(): Promise<EmbeddingModelsLoadRe
       .filter((item) => item.modelType === "embedding")
       .map((item) => ({
         dimensions: item.embeddingDim ?? 1024,
-        // Vega validates against mf-model-manager model_name (not a client-side alias).
-        id: item.modelName.trim(),
-        name: item.modelName.trim(),
+        id: item.modelId.trim(),
+        name: item.modelName.trim() || item.modelId.trim(),
       }))
       .filter((item) => item.id.length > 0);
 

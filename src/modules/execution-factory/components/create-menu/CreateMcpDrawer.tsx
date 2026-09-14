@@ -379,10 +379,10 @@ export function CreateMcpDrawer({
                     {fields.map((field) => (
                       <div className={styles.headerRow} key={field.key}>
                         <Form.Item {...field} name={[field.name, "key"]} style={{ flex: 1 }}>
-                          <Input placeholder="Header" />
+                          <Input placeholder={t("executionFactory.mcpHeaderNamePlaceholder")} />
                         </Form.Item>
                         <Form.Item {...field} name={[field.name, "value"]} style={{ flex: 1 }}>
-                          <Input placeholder="Value" />
+                          <Input placeholder={t("executionFactory.mcpHeaderValuePlaceholder")} />
                         </Form.Item>
                         <Button icon={<MinusCircleOutlined />} onClick={() => remove(field.name)} />
                       </div>

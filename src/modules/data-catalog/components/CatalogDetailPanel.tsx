@@ -5,47 +5,44 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, EllipsisOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Spin, Tooltip, type MenuProps } from "antd";
+import { DatabaseOutlined, EllipsisOutlined, KeyOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import { formatRowCount } from "@/modules/data-catalog/lib/format";
-import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
-import {
-  indexStateOf,
-  isCatalogPhysical,
-} from "@/modules/data-catalog/lib/index-state";
+import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
+import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { authzPoints } from "@/modules/system-admin/permissions";
+import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import type {
-  BuildTask,
-  CatalogResource,
-} from "@/modules/data-catalog/types/data-catalog";
-import type { CatalogRecord } from "@/shared/catalog";
+import type { CatalogResource, ResourceDiscoverStatus } from "@/modules/data-catalog/types/data-catalog";
+import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
 
-const INDEX_FILTERS = ["built", "none", "building", "listening", "failed"] as const;
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
-function indexFilterBucket(key: string) {
-  if (key === "built") return "built";
-  if (key === "none") return "none";
-  if (key === "building" || key === "rebuilding") return "building";
-  if (key === "listening" || key === "paused") return "listening";
-  return "failed";
-}
+const DISCOVER_STATUS_CLASSES: Record<ResourceDiscoverStatus, string> = {
+  error: styles.statusTagError,
+  missing: styles.statusTagError,
+  new: styles.statusTagProcessing,
+  restored: styles.statusTagSuccess,
+  unchanged: styles.statusTagSuccess,
+  updated: styles.statusTagProcessing,
+};
 
 function deriveDisplayName(resource: CatalogResource, connectorType: string) {
   const rawName = (resource.name ?? "").trim();
@@ -98,17 +95,15 @@ type CatalogDetailPanelProps = {
   onCreateResource: (catalogId: string) => void;
   onOpenResource: (
     resourceId: string,
-    tab?: "detail" | "index" | "preview",
+    tab?: "detail" | "index" | "preview" | "semantic-understanding",
     indexView?: "config",
   ) => void;
-  tasks: BuildTask[];
 };
 
 export function CatalogDetailPanel({
   catalog,
   onCreateResource,
   onOpenResource,
-  tasks,
 }: CatalogDetailPanelProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
@@ -117,7 +112,6 @@ export function CatalogDetailPanel({
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
-  const [indexFilter, setIndexFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [resources, setResources] = useState<CatalogResource[]>([]);
@@ -125,6 +119,8 @@ export function CatalogDetailPanel({
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [authorizeOpen, setAuthorizeOpen] = useState(false);
+  const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const [nameColumnWidth, setNameColumnWidth] = useState(() => {
     try {
       const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
@@ -137,36 +133,31 @@ export function CatalogDetailPanel({
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const physical = isCatalogPhysical(catalog);
-  const canManageResourceTasks = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "resource:task_manage",
-  });
+  const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
+  const canManageResources = hasCatalogOperation(catalog, "resource_manage");
   const hasResourceQuery =
-    resourceKeyword.trim().length > 0 || categoryFilter.length > 0 || indexFilter.length > 0;
+    resourceKeyword.trim().length > 0 ||
+    categoryFilter.length > 0;
+  const canAuthorizeGrants = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: authzPoints.grant,
+  });
+  // Two ways to earn the button, and they are different questions. `authorize` on THIS catalog is
+  // what its creator holds (vega writes it at create time); admin-authz:grant is the platform-wide
+  // point. Asking only the second one hid the button from every person who built a data connection.
+  const ownsCatalogAuthorize = hasCatalogOperation(catalog, "authorize");
+  const canAuthorizeCatalog = !catalog.internal && (ownsCatalogAuthorize || canAuthorizeGrants);
+  const showOperationBar =
+    resourceTotal > 0 ||
+    hasResourceQuery ||
+    canAuthorizeCatalog ||
+    (dataCatalogCreationAvailable && !physical && !catalog.internal);
 
-  const tasksByResource = useMemo(() => {
-    const map = new Map<string, BuildTask[]>();
-    tasks.forEach((task) => {
-      map.set(task.resourceId, [...(map.get(task.resourceId) ?? []), task]);
-    });
-    return map;
-  }, [tasks]);
-
-  const displayResources = useMemo(() => {
-    return resources.filter((resource) => {
-      if (indexFilter) {
-        const key = indexStateOf(tasksByResource.get(resource.id) ?? []).key;
-        if (indexFilterBucket(key) !== indexFilter) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [indexFilter, resources, tasksByResource]);
+  const displayResources = resources;
 
   useEffect(() => {
     setPage(1);
-  }, [resourceKeyword, categoryFilter, indexFilter, catalog.id, activeSchema]);
+  }, [resourceKeyword, categoryFilter, catalog.id, activeSchema]);
 
   useEffect(() => {
     let cancelled = false;
@@ -264,7 +255,7 @@ export function CatalogDetailPanel({
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
           <Tooltip
-            overlayClassName={styles.resourceNameTooltip}
+            classNames={{ root: styles.resourceNameTooltip }}
             title={tooltip}
           >
             <AppButton
@@ -288,57 +279,179 @@ export function CatalogDetailPanel({
       ),
     },
     {
-      dataIndex: "columnCount",
-      title: t("dataCatalog.resource.fieldCount"),
-      width: 88,
-      sorter: (left, right) => (left.columnCount ?? 0) - (right.columnCount ?? 0),
-      render: (value: number) =>
-        value > 0 ? <span className={styles.monoText}>{value}</span> : "—",
+      dataIndex: "tags",
+      ellipsis: true,
+      title: t("dataCatalog.resource.tags"),
+      width: 168,
+      render: (tags: string[] = []) => {
+        if (tags.length === 0) {
+          return "—";
+        }
+        const visibleTags = tags.slice(0, 2);
+        return (
+          <Tooltip title={tags.join(", ")}>
+            <Space size={4}>
+              {visibleTags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+              {tags.length > visibleTags.length ? <Tag>+{tags.length - visibleTags.length}</Tag> : null}
+            </Space>
+          </Tooltip>
+        );
+      },
     },
     {
-      dataIndex: "rowCount",
-      title: t("dataCatalog.resource.rowCount"),
+      dataIndex: "status",
+      ellipsis: true,
+      title: t("dataCatalog.resource.resourceStatus"),
+      width: 104,
+      render: (value: CatalogResource["status"], record) => {
+        if (!value) {
+          return "—";
+        }
+        const tag = (
+          <Tag
+            className={
+              value === "active"
+                ? styles.statusTagSuccess
+                : value === "stale"
+                  ? styles.statusTagWarning
+                  : styles.statusTagNeutral
+            }
+          >
+            {t(`dataCatalog.resourceStatuses.${value}`)}
+          </Tag>
+        );
+        return record.statusMessage ? (
+          <Tooltip title={record.statusMessage}>{tag}</Tooltip>
+        ) : tag;
+      },
+    },
+    {
+      dataIndex: "enabled",
+      ellipsis: true,
+      title: t("dataCatalog.resource.enabledStatus"),
+      width: 96,
+      render: (value: boolean | undefined) => {
+        const enabled = value !== false;
+        return <Tag className={enabled ? styles.statusTagSuccess : styles.statusTagNeutral}>{t(enabled ? "common.enabled" : "common.disabled")}</Tag>;
+      },
+    },
+    {
+      dataIndex: "lastDiscoverStatus",
+      ellipsis: true,
+      title: t("dataCatalog.resource.discoverStatus"),
       width: 112,
-      sorter: (left, right) => (left.rowCount ?? 0) - (right.rowCount ?? 0),
-      render: (value: number) =>
-        value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
+      render: (value: ResourceDiscoverStatus | undefined) =>
+        value ? (
+          <Tag className={DISCOVER_STATUS_CLASSES[value]}>
+            {t(`dataCatalog.discoverStatuses.${value}`)}
+          </Tag>
+        ) : (
+          "—"
+        ),
     },
     {
-      key: "indexState",
+      dataIndex: "localIndexStatus",
       ellipsis: true,
       title: t("dataCatalog.resource.indexState"),
-      width: 140,
-      render: (_, record) => {
-        const label = formatIndexStateLabel(
-          indexStateOf(tasksByResource.get(record.id) ?? []),
-          t,
-        );
-        return <EllipsisText text={label} />;
-      },
+      width: 112,
+      render: (value: CatalogResource["localIndexStatus"]) => (
+        <Tag
+          className={
+            value === "available"
+              ? styles.statusTagSuccess
+              : value === "stale"
+                ? styles.statusTagWarning
+                : styles.statusTagNeutral
+          }
+        >
+          {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
+        </Tag>
+      ),
     },
     {
       key: "actions",
       title: t("common.actions"),
       align: "center",
+      fixed: "right",
       width: 84,
       render: (_, record) => {
         const blockedByDisabledCatalog = physical && !catalog.enabled;
+        // List responses intentionally omit schema and scale fields. Metadata availability is
+        // checked after the resource detail has been loaded; list actions only use known states.
+        const queryBlockReason = resourceQueryBlockReason(record, null);
+        const previewDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
+        const indexDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
+        const previewLabel = t("dataCatalog.actions.preview");
+        const indexLabel = t("dataCatalog.actions.dataIndex");
         const moreItems: NonNullable<MenuProps["items"]> = [
           {
             key: "detail",
             label: t("common.detail"),
           },
           {
-            disabled: blockedByDisabledCatalog,
+            disabled: previewDisabled,
             key: "preview",
-            label: t("dataCatalog.actions.preview"),
+            label: queryBlockReason ? (
+              <Tooltip
+                title={t(
+                  queryBlockReason === "missing"
+                    ? "dataCatalog.actions.previewMissingHint"
+                    : queryBlockReason === "disabled"
+                      ? "dataCatalog.actions.previewDisabledHint"
+                      : queryBlockReason === "stale"
+                        ? "dataCatalog.actions.previewStaleHint"
+                        : "dataCatalog.actions.previewMetadataUnavailableHint",
+                )}
+              >
+                <span>{previewLabel}</span>
+              </Tooltip>
+            ) : (
+              previewLabel
+            ),
           },
         ];
         if (canManageResourceTasks) {
           moreItems.push({
-            disabled: blockedByDisabledCatalog,
+            disabled: indexDisabled,
             key: "index",
-            label: t("dataCatalog.actions.buildIndex"),
+            label: queryBlockReason ? (
+              <Tooltip
+                title={t(
+                  queryBlockReason === "missing"
+                    ? "dataCatalog.actions.indexMissingHint"
+                    : queryBlockReason === "disabled"
+                      ? "dataCatalog.actions.indexDisabledHint"
+                      : queryBlockReason === "stale"
+                        ? "dataCatalog.actions.indexStaleHint"
+                        : "dataCatalog.actions.indexMetadataUnavailableHint",
+                )}
+              >
+                <span>{indexLabel}</span>
+              </Tooltip>
+            ) : (
+              indexLabel
+            ),
+          });
+        }
+        if (canAuthorizeGrants && !catalog.internal) {
+          // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
+          moreItems.push({
+            key: "authorize",
+            label: (
+              <span className="console-tab-with-tier">
+                {t("dataCatalog.catalog.authorize")}
+                <EditionBadge
+                  capability={CAPABILITIES.PERM_FINE_GRAINED}
+                  edition="professional"
+                />
+              </span>
+            ),
+          });
+        }
+        if (!catalog.internal) {
+          moreItems.push({
+            key: "semantic-understanding",
+            label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
           });
         }
 
@@ -359,6 +472,14 @@ export function CatalogDetailPanel({
                   }
                   if (key === "index") {
                     onOpenResource(record.id, "index");
+                    return;
+                  }
+                  if (key === "authorize") {
+                    setAuthorizeResource(record);
+                    return;
+                  }
+                  if (key === "semantic-understanding") {
+                    onOpenResource(record.id, "semantic-understanding");
                   }
                 },
               }}
@@ -381,18 +502,28 @@ export function CatalogDetailPanel({
 
   return (
     <section className={styles.contentSurface}>
-      <div className={styles.operationBar}>
-        {!physical ? (
-          <div className={styles.operationPrimary}>
-            <div className={styles.toolbarActions}>
-              <PermissionGate permissions="resource:create">
+      {showOperationBar ? <div className={styles.operationBar}>
+        <div className={styles.operationPrimary}>
+          <div className={styles.toolbarActions}>
+            {dataCatalogCreationAvailable && !physical && !catalog.internal && canManageResources ? (
                 <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                   {t("dataCatalog.resource.create")}
                 </AppButton>
-              </PermissionGate>
-            </div>
+            ) : null}
+            {/*
+              授权在抽屉里当场做完,走 /me/object-grants 自助面。原先这里跳系统管理的对象授权页,
+              那张页面打的是 /admin/object-grants,整组挂在 RequireAdmin 后面——建这个连接的人
+              够不到,而按钮本身又门控在 admin-authz:grant 上,于是"自己建的目录自己授不了"。
+              判定改成问这个目录自己的 operations:建目录时创建者就拿到了 authorize,
+              管理员则继续走平台点位。
+            */}
+            {canAuthorizeCatalog ? (
+              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                {t("dataCatalog.catalog.authorize")}
+              </AppButton>
+            ) : null}
           </div>
-        ) : null}
+        </div>
         {resourceTotal > 0 || hasResourceQuery ? (
           <>
             <Input
@@ -419,27 +550,10 @@ export function CatalogDetailPanel({
                 value={categoryFilter}
               />
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>
-                {t("dataCatalog.resource.indexState")}
-              </span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => setIndexFilter(value)}
-                options={[
-                  { label: t("common.all"), value: "" },
-                  ...INDEX_FILTERS.map((key) => ({
-                    label: t(`dataCatalog.indexState.${key}`),
-                    value: key,
-                  })),
-                ]}
-                value={indexFilter}
-              />
-            </div>
             </div>
           </>
         ) : null}
-      </div>
+      </div> : null}
 
       <TableSurface className={styles.tableSurface}>
         {resourcesLoading ? (
@@ -469,12 +583,12 @@ export function CatalogDetailPanel({
                 >
                   {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
-              ) : !physical ? (
-                <PermissionGate permissions="resource:create">
-                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                    {t("dataCatalog.resource.create")}
-                  </AppButton>
-                </PermissionGate>
+              ) : !physical && !catalog.internal ? (
+                dataCatalogCreationAvailable && canManageResources ? (
+                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                      {t("dataCatalog.resource.create")}
+                    </AppButton>
+                ) : null
               ) : null
             }
             description={
@@ -498,6 +612,7 @@ export function CatalogDetailPanel({
             locale={{ emptyText: t("dataCatalog.resource.noMatch") }}
             pagination={false}
             rowKey="id"
+            scroll={{ x: 1040 }}
             tableLayout="fixed"
           />
         )}
@@ -513,7 +628,26 @@ export function CatalogDetailPanel({
           pageSize={pageSize}
           showSizeChanger
           showTotal={(count) => t("common.total", { total: count })}
-          total={indexFilter ? displayResources.length : resourceTotal}
+          total={resourceTotal}
+        />
+      ) : null}
+
+      <ObjectAuthorizeDrawer
+        objectAuthorized={ownsCatalogAuthorize}
+        objId={catalog.id}
+        objName={catalog.name}
+        objType="catalog"
+        onClose={() => setAuthorizeOpen(false)}
+        open={authorizeOpen}
+      />
+      {authorizeResource ? (
+        <ObjectAuthorizeDrawer
+          objId={authorizeResource.id}
+          objName={deriveDisplayName(authorizeResource, catalog.connectorType)}
+          objSub={catalog.name}
+          objType="resource"
+          onClose={() => setAuthorizeResource(null)}
+          open
         />
       ) : null}
     </section>

@@ -19,11 +19,20 @@ import {
   type ContextLoaderOp,
   type ContextLoaderResponse,
   type McpToolDef,
+  isLongToolSummary,
+  toolSummaryPreview,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import { createClaudeCodeMcpCommand, createMcpRemoteJsonConfig, withMcpTrailingSlash } from "@/modules/knowledge-network/services/mcp-client-config";
+import {
+  createClaudeCodeMcpCommand,
+  createMcpRemoteJsonConfig,
+  getMcpConnectionProtocol,
+  withMcpTrailingSlash,
+} from "@/modules/knowledge-network/services/mcp-client-config";
 import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
+import { businessRequestExample, schemaDocumentation, splitInputSchemaFields, type McpSchemaField } from "@/modules/knowledge-network/services/mcp-schema-doc";
 
 import styles from "./ExperienceScene.module.css";
+import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
 export type ResponseView = { kind: "json" | "toon"; text: string };
 
@@ -156,6 +165,61 @@ function CodeBlock({
   );
 }
 
+function formatSchemaValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
+function SchemaFieldTable({ fields }: { fields: McpSchemaField[] }) {
+  const { t } = useTranslation();
+  if (fields.length === 0) return <div className={styles.schemaNoFields}>{t("knowledgeNetwork.contextLoaderPanel.schema.noFields")}</div>;
+
+  return (
+    <div className={styles.schemaFieldTable} role="table">
+      <div className={styles.schemaFieldHeader} role="row">
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.field")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.type")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.requirement")}</span>
+        <span role="columnheader">{t("knowledgeNetwork.contextLoaderPanel.schema.description")}</span>
+      </div>
+      {fields.map((field) => (
+        <div key={field.path} className={styles.schemaFieldRow} role="row">
+          <code role="cell" className={styles.schemaFieldName} style={{ paddingInlineStart: `${field.depth * 16}px` }} title={field.path}>
+            {field.name}
+          </code>
+          <span role="cell" className={styles.schemaType}>{field.type}</span>
+          <span role="cell" className={field.required ? styles.schemaRequired : styles.schemaOptional}>
+            {field.required ? t("knowledgeNetwork.contextLoaderPanel.schema.required") : t("knowledgeNetwork.contextLoaderPanel.schema.optional")}
+          </span>
+          <span role="cell" className={styles.schemaDescription}>
+            {field.description ?? t("knowledgeNetwork.contextLoaderPanel.schema.noDescription")}
+            {field.defaultValue !== undefined ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.defaultValue", { value: formatSchemaValue(field.defaultValue) })}</em> : null}
+            {field.enumValues ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.enumValues", { values: field.enumValues.map(formatSchemaValue).join(", ") })}</em> : null}
+            {field.allowsAdditionalProperties ? <em>{t("knowledgeNetwork.contextLoaderPanel.schema.dynamicFields")}</em> : null}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SchemaExample({ code, onCopy }: { code: string | null; onCopy: () => void }) {
+  const { t } = useTranslation();
+  if (code === null) return <div className={styles.schemaExampleInvalid}>{t("knowledgeNetwork.contextLoaderPanel.schema.invalidExample")}</div>;
+
+  return (
+    <div className={styles.schemaExample}>
+      <div className={styles.schemaExampleHead}>
+        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.businessExample")}</span>
+        <button type="button" className={styles.mini} onClick={onCopy}>
+          <CopyOutlined /> {t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+        </button>
+      </div>
+      <pre className={styles.schemaExampleCode}><JsonHighlight text={code} /></pre>
+    </div>
+  );
+}
+
 function QueryParamRow({
   param,
   value,
@@ -236,7 +300,10 @@ export function ContextLoaderIntegrationPanel({
   const { t } = useTranslation();
   const location = useLocation();
   const verb = mode === "mcp" ? "MCP" : "POST";
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [schemaOpen, setSchemaOpen] = useState(false);
+  const [schemaTab, setSchemaTab] = useState<"docs" | "raw">("docs");
+  const [schemaOverviewExpanded, setSchemaOverviewExpanded] = useState(false);
   const [queryParamsOpen, setQueryParamsOpen] = useState(true);
   const [callParamsOpen, setCallParamsOpen] = useState(true);
   const [resultOpen, setResultOpen] = useState(true);
@@ -246,13 +313,16 @@ export function ContextLoaderIntegrationPanel({
   const [mcpConfigKeyDraft, setMcpConfigKeyDraft] = useState("");
   const [mcpConfigKeyError, setMcpConfigKeyError] = useState("");
   const [mcpConfigKeyModalOpen, setMcpConfigKeyModalOpen] = useState(false);
+  const [allowInsecureTls, setAllowInsecureTls] = useState(false);
   const filterText = filter.trim().toLowerCase();
   const appKeyPlaceholder = t("knowledgeNetwork.contextLoaderPanel.appKey.placeholder");
   const configAppKey = mcpConfigKey || appKeyPlaceholder;
   const mcpUrlWithSlash = withMcpTrailingSlash(mcpUrl);
+  const mcpProtocol = getMcpConnectionProtocol(mcpUrlWithSlash);
   const apiKeyPagePath = buildApiKeyPagePath(`${location.pathname}${location.search}`);
-  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey);
-  const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey);
+  const mcpClientOptions = { allowInsecureTls };
+  const mcpRemoteJsonConfig = createMcpRemoteJsonConfig(mcpUrlWithSlash, configAppKey, mcpClientOptions);
+  const claudeCliConfig = createClaudeCodeMcpCommand(mcpUrlWithSlash, configAppKey, mcpClientOptions);
   // Display names and groups come from tools/list metadata first, with local fallback for old servers.
   const toolMetaByName = useMemo(() => new Map((toolDefs ?? []).map((tool) => [tool.name, tool])), [toolDefs]);
   const displayOf = useCallback(
@@ -312,6 +382,7 @@ export function ContextLoaderIntegrationPanel({
   useEffect(() => {
     setQueryParamsOpen(true);
     setCallParamsOpen(true);
+    setSchemaOverviewExpanded(false);
   }, [op?.id]);
 
   useEffect(() => {
@@ -321,6 +392,10 @@ export function ContextLoaderIntegrationPanel({
   useEffect(() => {
     if (appKeyValue) setMcpConfigKey(appKeyValue);
   }, [appKeyValue]);
+
+  useEffect(() => {
+    if (mcpProtocol === "http") setAllowInsecureTls(false);
+  }, [mcpProtocol]);
 
   useEffect(() => {
     if (sending || response !== null || reqError !== null) {
@@ -346,49 +421,12 @@ export function ContextLoaderIntegrationPanel({
     setMcpConfigKeyModalOpen(false);
   };
 
-  if (!op) {
-    return (
-      <div className={mainClassName}>
-        <aside className={styles.list}>
-          <div className={styles.listHead}>
-            <div>
-              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
-              <div className={styles.listMeta}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: 0 })}</div>
-            </div>
-            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
-              {toolsLoading ? <Spin size="small" /> : null}
-              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
-            </button>
-          </div>
-          <div className={styles.listSearch}>
-            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")} disabled />
-          </div>
-          <div className={styles.resEmpty}>
-            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
-            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
-          </div>
-        </aside>
-        <div className={styles.mcpWork}>
-          <section className={styles.req}>
-            <div className={styles.resEmpty}>
-              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
-              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
-              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
-                {toolsLoading ? <Spin size="small" /> : null}
-                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
-              </button>
-            </div>
-          </section>
-        </div>
-      </div>
-    );
-  }
-
-  const opDisplay = displayOf(op);
-
-  return (
-    <div className={mainClassName}>
-      {mode === "mcp" && showMcpConnect ? (
+  // The connect view is what someone opens when they cannot connect yet: the MCP address, the
+  // client config, the API-key entry. None of it depends on a selected op, so it is built before
+  // the no-op empty state and returned from both paths — otherwise tools/list failing would blank
+  // the one page that explains how to fix it.
+  const mcpConnectView =
+    mode === "mcp" && showMcpConnect ? (
         <section className={styles.mcpConnectPage}>
           <div className={styles.mcpConnectPanel}>
             <div className={styles.mcpConnectTitleBlock}>
@@ -429,6 +467,11 @@ export function ContextLoaderIntegrationPanel({
                   </button>
                 </div>
               </div>
+              <McpConnectionSecurity
+                protocol={mcpProtocol}
+                allowInsecureTls={allowInsecureTls}
+                onAllowInsecureTlsChange={setAllowInsecureTls}
+              />
               <div className={styles.mcpConfigBody}>
                 {mcpConfigTab === "claude" ? (
                   <>
@@ -473,7 +516,58 @@ export function ContextLoaderIntegrationPanel({
               <p className={styles.mcpConfigKeyModalHint}>{t("knowledgeNetwork.contextLoaderPanel.appKey.hint")}</p>
             </Modal>
           </section>
-      ) : (
+    ) : null;
+
+  if (!op) {
+    if (mcpConnectView) {
+      return <div className={mainClassName}>{mcpConnectView}</div>;
+    }
+    return (
+      <div className={mainClassName}>
+        <aside className={styles.list}>
+          <div className={styles.listHead}>
+            <div>
+              <div className={styles.listTitle}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpServices")}</div>
+              <div className={styles.listMeta}>{t("knowledgeNetwork.contextLoaderPanel.common.mcpLoaded", { count: 0 })}</div>
+            </div>
+            <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+              {toolsLoading ? <Spin size="small" /> : null}
+              {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
+            </button>
+          </div>
+          <div className={styles.listSearch}>
+            <Input value={filter} onChange={(event) => onFilterChange(event.target.value)} placeholder={t("knowledgeNetwork.contextLoaderPanel.common.filterMcpServices")} disabled />
+          </div>
+          <div className={styles.resEmpty}>
+            <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServices")}</h3>
+            <p>{toolsError || t("knowledgeNetwork.contextLoaderPanel.empty.noMcpServicesDescription")}</p>
+          </div>
+        </aside>
+        <div className={styles.mcpWork}>
+          <section className={styles.req}>
+            <div className={styles.resEmpty}>
+              <h3>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServices")}</h3>
+              <p>{t("knowledgeNetwork.contextLoaderPanel.empty.noDebuggableMcpServicesDescription")}</p>
+              <button type="button" className={styles.reloadCapabilitiesBtn} onClick={onReloadTools} disabled={toolsLoading}>
+                {toolsLoading ? <Spin size="small" /> : null}
+                {t("knowledgeNetwork.contextLoaderPanel.common.refreshServices")}
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  const opDisplay = displayOf(op);
+  const inputSchemaFields = currentTool ? splitInputSchemaFields(currentTool.inputSchema) : { businessFields: [], traceFields: [], truncated: false };
+  const outputSchema = currentTool ? schemaDocumentation(currentTool.outputSchema) : { fields: [], truncated: false };
+  const schemaOverview = currentTool?.description || op.summary;
+  const schemaExample = businessRequestExample(bodyText);
+
+  return (
+    <div className={mainClassName}>
+      {mcpConnectView ?? (
         <>
       <aside className={styles.list}>
         <div className={styles.listHead}>
@@ -531,7 +625,7 @@ export function ContextLoaderIntegrationPanel({
             {isVerifyView ? (
               <div className={styles.reqActions}>
                 {mode === "mcp" ? (
-                  <button type="button" className={styles.docBtn} onClick={() => setSchemaOpen(true)}>
+                  <button type="button" className={styles.docBtn} onClick={() => { setSchemaOverviewExpanded(false); setSchemaTab("docs"); setSchemaOpen(true); }}>
                     <FileTextOutlined /> {t("knowledgeNetwork.contextLoaderPanel.request.doc")}
                   </button>
                 ) : null}
@@ -546,7 +640,20 @@ export function ContextLoaderIntegrationPanel({
             <h2 className={styles.reqTitle}>{mode === "mcp" ? opDisplay.name : op.id}</h2>
             {mode === "mcp" ? <span className={styles.reqId}>{op.id}</span> : null}
           </div>
-          <p className={styles.reqSum}>{op.summary}</p>
+          {isLongToolSummary(op.summary) ? (
+            <div className={styles.reqSumBlock}>
+              <p className={`${styles.reqSum} ${summaryOpen ? styles.reqSumFull : ""}`}>
+                {summaryOpen ? op.summary : toolSummaryPreview(op.summary)}
+              </p>
+              <button type="button" className={styles.reqSumToggle} onClick={() => setSummaryOpen((open) => !open)}>
+                {summaryOpen
+                  ? t("knowledgeNetwork.contextLoaderPanel.request.summaryCollapse")
+                  : t("knowledgeNetwork.contextLoaderPanel.request.summaryExpand")}
+              </button>
+            </div>
+          ) : (
+            <p className={styles.reqSum}>{op.summary}</p>
+          )}
         </div>
         <div className={styles.reqBody}>
           {visibleQuery.length > 0 ? (
@@ -732,24 +839,88 @@ export function ContextLoaderIntegrationPanel({
           ) : toolsError ? (
             <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.loadFailed", { error: toolsError })}</div>
           ) : currentTool ? (
-            <div className={styles.schemaGrid}>
-              <CodeBlock
-                title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
-                code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
-                json
-                onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))}
-              />
-              {currentTool.outputSchema !== undefined ? (
-                <CodeBlock
-                  title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
-                  code={JSON.stringify(currentTool.outputSchema, null, 2)}
-                  json
-                  onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))}
-                />
+            <>
+              <div className={styles.schemaTabs} role="tablist" aria-label={t("knowledgeNetwork.contextLoaderPanel.schema.view") }>
+                <button type="button" role="tab" aria-selected={schemaTab === "docs"} className={schemaTab === "docs" ? styles.schemaTabOn : styles.schemaTab} onClick={() => setSchemaTab("docs")}>
+                  {t("knowledgeNetwork.contextLoaderPanel.schema.docsTab")}
+                </button>
+                <button type="button" role="tab" aria-selected={schemaTab === "raw"} className={schemaTab === "raw" ? styles.schemaTabOn : styles.schemaTab} onClick={() => setSchemaTab("raw")}>
+                  {t("knowledgeNetwork.contextLoaderPanel.schema.rawTab")}
+                </button>
+              </div>
+              {schemaTab === "docs" ? (
+                <div className={styles.schemaDocs}>
+                  <section className={styles.schemaOverview}>
+                    <span>{t("knowledgeNetwork.contextLoaderPanel.schema.overview")}</span>
+                    <p>{schemaOverviewExpanded ? schemaOverview : toolSummaryPreview(schemaOverview)}</p>
+                    {isLongToolSummary(schemaOverview) ? (
+                      <button type="button" className={styles.schemaOverviewToggle} onClick={() => setSchemaOverviewExpanded((open) => !open)}>
+                        {schemaOverviewExpanded
+                          ? t("knowledgeNetwork.contextLoaderPanel.schema.overviewCollapse")
+                          : t("knowledgeNetwork.contextLoaderPanel.schema.overviewExpand")}
+                      </button>
+                    ) : null}
+                  </section>
+                  <SchemaExample
+                    code={schemaExample}
+                    onCopy={() => { if (schemaExample !== null) onCopy(schemaExample, t("knowledgeNetwork.contextLoaderPanel.schema.copiedExample")); }}
+                  />
+                  <section className={styles.schemaDocSection}>
+                    <div className={styles.schemaDocSectionHead}>
+                      <div>
+                        <h3>{t("knowledgeNetwork.contextLoaderPanel.schema.businessParams")}</h3>
+                        <p>{t("knowledgeNetwork.contextLoaderPanel.schema.businessParamsHint")}</p>
+                      </div>
+                    </div>
+                    <SchemaFieldTable fields={inputSchemaFields.businessFields} />
+                    {inputSchemaFields.truncated ? <div className={styles.schemaTruncated}>{t("knowledgeNetwork.contextLoaderPanel.schema.truncatedFields")}</div> : null}
+                  </section>
+                  {inputSchemaFields.traceFields.length > 0 ? (
+                    <details className={styles.schemaTrace}>
+                      <summary>
+                        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceTitle")}</span>
+                        <span>{t("knowledgeNetwork.contextLoaderPanel.schema.traceBadge")}</span>
+                      </summary>
+                      <p>{t("knowledgeNetwork.contextLoaderPanel.schema.traceHint")}</p>
+                      <SchemaFieldTable fields={inputSchemaFields.traceFields} />
+                    </details>
+                  ) : null}
+                  <section className={styles.schemaDocSection}>
+                    <div className={styles.schemaDocSectionHead}>
+                      <div>
+                        <h3>{t("knowledgeNetwork.contextLoaderPanel.schema.responseShape")}</h3>
+                        <p>{t("knowledgeNetwork.contextLoaderPanel.schema.responseShapeHint")}</p>
+                      </div>
+                    </div>
+                    {currentTool.outputSchema !== undefined ? (
+                      <>
+                        <SchemaFieldTable fields={outputSchema.fields} />
+                        {outputSchema.truncated ? <div className={styles.schemaTruncated}>{t("knowledgeNetwork.contextLoaderPanel.schema.truncatedFields")}</div> : null}
+                      </>
+                    ) : <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>}
+                  </section>
+                </div>
               ) : (
-                <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
+                <div className={styles.schemaGrid}>
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.schema.inputTitle")}
+                    code={JSON.stringify(currentTool.inputSchema ?? {}, null, 2)}
+                    json
+                    onCopy={() => onCopy(JSON.stringify(currentTool.inputSchema ?? {}, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedInput"))}
+                  />
+                  {currentTool.outputSchema !== undefined ? (
+                    <CodeBlock
+                      title={t("knowledgeNetwork.contextLoaderPanel.schema.outputTitle")}
+                      code={JSON.stringify(currentTool.outputSchema, null, 2)}
+                      json
+                      onCopy={() => onCopy(JSON.stringify(currentTool.outputSchema, null, 2), t("knowledgeNetwork.contextLoaderPanel.schema.copiedOutput"))}
+                    />
+                  ) : (
+                    <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.noOutput")}</div>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           ) : toolDefs ? (
             <div className={styles.schemaHint}>{t("knowledgeNetwork.contextLoaderPanel.schema.missingTool", { id: op.id })}</div>
           ) : (

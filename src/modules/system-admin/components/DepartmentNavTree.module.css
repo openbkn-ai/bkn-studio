@@ -8,7 +8,7 @@
 .treePanel {
   height: 100%;
   padding: 12px 10px;
-  background: var(--admin-color-surface, #fff);
+  background: var(--admin-color-surface);
 }
 
 .treeHeader {
@@ -61,7 +61,8 @@
 .treeScroll {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .scopeItem {
@@ -81,17 +82,18 @@
 }
 
 .scopeItem:hover {
-  background: var(--admin-color-surface-hover, #f7faff);
+  background: var(--admin-color-surface-hover);
 }
 
 .scopeItemActive {
-  background: var(--admin-color-link-bg, #eff6ff);
+  background: var(--admin-color-link-bg);
 }
 
 .scopeLeading {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -116,12 +118,15 @@
 
 .navTree :global(.ant-tree-list-holder-inner) {
   gap: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .navTree :global(.ant-tree-treenode) {
   align-items: center !important;
   box-sizing: border-box;
   display: flex;
+  min-width: 0;
   width: 100%;
   min-height: 32px;
   margin: 0 !important;
@@ -131,11 +136,11 @@
 }
 
 .navTree :global(.ant-tree-treenode:hover) {
-  background: var(--admin-color-surface-hover, #f7faff);
+  background: var(--admin-color-surface-hover);
 }
 
 .navTree :global(.ant-tree-treenode-selected) {
-  background: var(--admin-color-link-bg, #eff6ff) !important;
+  background: var(--admin-color-link-bg) !important;
 }
 
 .navTree :global(.ant-tree-node-selected) {
@@ -147,6 +152,7 @@
   align-items: center;
   justify-content: center;
   width: 18px;
+  flex: 0 0 auto;
   margin-inline-end: 0;
   color: var(--admin-color-muted, #6b7280);
 }
@@ -156,13 +162,15 @@
 }
 
 .navTree :global(.ant-tree-indent-unit) {
+  flex: 0 0 auto;
   width: 14px;
 }
 
 .navTree :global(.ant-tree-node-content-wrapper) {
   display: flex;
   align-items: center;
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   padding: 4px 6px 4px 2px !important;
   border-radius: 0;
@@ -195,7 +203,7 @@
   align-items: center;
   gap: 7px;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0;
 }
 
 .nodeIcon {
@@ -209,6 +217,8 @@
 }
 
 .nodeName {
+  flex: 1 1 0;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -224,11 +234,11 @@
   color: var(--admin-color-link, #1d4ed8);
   font-size: 11px;
   line-height: 18px;
-  background: var(--admin-color-link-bg, #eff6ff);
+  background: var(--admin-color-link-bg);
 }
 
 .countBadge {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   min-width: 22px;
   padding: 0 6px;
   border-radius: 0;
@@ -237,7 +247,8 @@
   font-weight: 600;
   line-height: 20px;
   text-align: center;
-  background: var(--admin-color-surface-muted, #f3f6fa);
+  white-space: nowrap;
+  background: var(--admin-color-surface-muted);
 }
 
 .scopeItemActive .countBadge,
@@ -249,7 +260,7 @@
 .searchHit {
   padding: 0;
   color: inherit;
-  background: #fef08a;
+  background: var(--color-warning-bg);
 }
 
 .emptySearch {

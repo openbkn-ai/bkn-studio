@@ -19,14 +19,14 @@
   align-items: center;
   gap: 8px;
   padding: 12px;
-  border: 1px dashed #d9dee8;
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
-  color: #8a94a6;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .legendTitle {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
@@ -50,13 +50,13 @@
 }
 
 .legendItem:hover {
-  border-color: #e5e9f0;
-  background: #f7f9fc;
+  border-color: var(--color-border);
+  background: var(--color-hover);
 }
 
 .legendName {
   flex: 1;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 
@@ -95,12 +95,12 @@
 }
 
 .headTitle strong {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 15px;
 }
 
 .headTitle span {
-  color: #99a2b2;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 
@@ -113,13 +113,13 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #8a94a6;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .close:hover {
-  background: #f0f2f6;
-  color: #1f2329;
+  background: var(--color-hover);
+  color: var(--color-text-primary);
 }
 
 .groups {
@@ -135,7 +135,7 @@
 }
 
 .sectionTitle {
-  color: #4a5160;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -144,7 +144,7 @@
 
 .sectionTitle span {
   margin-left: 4px;
-  color: #b0b7c3;
+  color: var(--color-text-tertiary);
 }
 
 .loadingRow {
@@ -159,34 +159,34 @@
   justify-content: space-between;
   gap: 12px;
   padding: 5px 2px;
-  border-bottom: 1px dashed #eef1f6;
+  border-bottom: 1px dashed var(--color-divider);
 }
 
 .propRow code {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 12.5px;
 }
 
 .pk {
   padding: 0 5px;
   border-radius: 4px;
-  background: #fff4e0;
-  color: #d97706;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
   font-size: 10px;
   font-weight: 700;
 }
 
 .propType {
-  color: #99a2b2;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   font-family: var(--code-font, monospace);
 }
 
 .muted {
-  color: #b0b7c3;
+  color: var(--color-text-tertiary);
   font-size: 12.5px;
 }
 
@@ -196,22 +196,22 @@
   justify-content: space-between;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #e5e9f0;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #fbfcfe;
+  background: var(--color-interface-panel-bg);
 }
 
 .bindName {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
 }
 
 .bindNone {
   padding: 12px;
-  border: 1px dashed #d9dee8;
+  border: 1px dashed var(--color-border);
   border-radius: 10px;
-  color: #99a2b2;
+  color: var(--color-text-tertiary);
   font-size: 12.5px;
 }
 
@@ -223,19 +223,19 @@
 }
 
 .relVerb {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
 }
 
 .relArrow {
-  color: #b0b7c3;
+  color: var(--color-text-tertiary);
 }
 
 .relTarget {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #4a5160;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }

@@ -6,6 +6,10 @@
  */
 
 import { http } from "@/framework/request/http";
+import {
+  throwMockRequestError,
+  validateMockExpectedUpdateTime,
+} from "@/framework/request/mock-error";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
 import type {
@@ -13,6 +17,7 @@ import type {
   DataConnectDiscoverScheduleListQuery,
   DataConnectDiscoverScheduleListResult,
   DataConnectDiscoverSchedulePayload,
+  DataConnectDiscoverScheduleUpdatePayload,
   DataConnectDiscoverStrategy,
   DataConnectDiscoverTask,
   DataConnectDiscoverTaskListQuery,
@@ -21,6 +26,11 @@ import type {
   DataConnectDiscoverTaskSummary,
   DataConnectDiscoverTaskTriggerType,
 } from "@/modules/data-connect/types/discover";
+import { isValidDiscoverScheduleTimeRange } from "@/modules/data-connect/utils/discover-schedule-time";
+import {
+  calculateNextHourlyCronRun,
+  isHourlyCron,
+} from "@/modules/data-connect/utils/health-check-cron";
 
 type BackendAccountInfo = {
   id?: string | null;
@@ -52,8 +62,12 @@ type BackendDiscoverTask = {
   creator?: BackendAccountInfo;
   finish_time?: number;
   id: string;
+  last_progress_time?: number;
   message?: string;
   progress?: number;
+  queue_priority?: number;
+  resource_id?: string;
+  resource_name?: string;
   result?: {
     catalog_id?: string;
     failed_count?: number;
@@ -101,22 +115,24 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     creatorName: "Platform Admin",
     updaterName: "Platform Admin",
     createTime: "2026-06-01 10:00:00",
+    expectedUpdateTime: Date.parse("2026-06-03T02:00:11Z"),
     updateTime: "2026-06-03 02:00:11",
   },
   {
     id: "discover-schedule-002",
     name: discoverMockText("knowledgeIndexSchedule"),
     catalogId: "cat-002",
-    cronExpr: "*/30 * * * *",
+    cronExpr: "30 * * * *",
     startTime: "2026-06-02 09:00:00",
     endTime: "-",
     enabled: true,
     strategy: "create_only",
     lastRun: "2026-06-03 11:30:08",
-    nextRun: "2026-06-03 12:00:00",
+    nextRun: "2026-06-03 12:30:00",
     creatorName: "Search Team",
     updaterName: "Search Team",
     createTime: "2026-06-02 09:00:00",
+    expectedUpdateTime: Date.parse("2026-06-03T11:30:08Z"),
     updateTime: "2026-06-03 11:30:08",
   },
   {
@@ -133,11 +149,24 @@ let mockSchedules: DataConnectDiscoverSchedule[] = [
     creatorName: "Data Ops",
     updaterName: "Data Ops",
     createTime: "2026-05-26 03:00:00",
+    expectedUpdateTime: Date.parse("2026-06-02T03:00:00Z"),
     updateTime: "2026-06-02 03:00:00",
   },
 ];
 
 let mockTasks: DataConnectDiscoverTask[] = [
+  {
+    id: "discover-task-1005",
+    catalogId: "cat-001",
+    strategy: "full_sync",
+    triggerType: "manual",
+    status: "pending",
+    progress: 0,
+    queuePriority: 10,
+    message: discoverMockText("manualTaskCreated"),
+    creatorName: "Platform Admin",
+    createTime: Date.parse("2026-06-03T12:00:00"),
+  },
   {
     id: "discover-task-1001",
     catalogId: "cat-001",
@@ -146,38 +175,68 @@ let mockTasks: DataConnectDiscoverTask[] = [
     triggerType: "scheduled",
     status: "completed",
     progress: 100,
+    queuePriority: 10,
     message: discoverMockText("syncCompleted", { count: 48 }),
+    result: {
+      catalogId: "cat-001",
+      newCount: 12,
+      updatedCount: 6,
+      staleCount: 2,
+      restoredCount: 1,
+      unchangedCount: 27,
+      failedCount: 0,
+      message: discoverMockText("syncCompleted", { count: 48 }),
+    },
     startTime: Date.parse("2026-06-03T02:00:11"),
     finishTime: Date.parse("2026-06-03T02:12:04"),
+    lastProgressTime: Date.parse("2026-06-03T02:11:50"),
     creatorName: "Platform Admin",
     createTime: Date.parse("2026-06-03T02:00:11"),
   },
   {
     id: "discover-task-1002",
     catalogId: "cat-002",
-    scheduleId: "discover-schedule-002",
+    resourceId: "res-002",
     strategy: "create_only",
-    triggerType: "scheduled",
+    triggerType: "manual",
     status: "running",
     progress: 56,
+    queuePriority: 30,
     message: discoverMockText("pullingIndexChanges"),
     startTime: Date.parse("2026-06-03T11:30:08"),
+    lastProgressTime: Date.parse("2026-06-03T11:42:20"),
     creatorName: "Search Team",
     createTime: Date.parse("2026-06-03T11:30:08"),
   },
   {
     id: "discover-task-1003",
     catalogId: "cat-003",
-    scheduleId: "discover-schedule-003",
     strategy: "cleanup_only",
     triggerType: "manual",
     status: "failed",
     progress: 100,
+    queuePriority: 20,
     message: discoverMockText("cleanupTimeout"),
     startTime: Date.parse("2026-06-02T03:00:00"),
     finishTime: Date.parse("2026-06-02T03:03:15"),
+    lastProgressTime: Date.parse("2026-06-02T03:02:55"),
     creatorName: "Data Ops",
     createTime: Date.parse("2026-06-02T03:00:00"),
+  },
+  {
+    id: "discover-task-1004",
+    catalogId: "cat-001",
+    strategy: "full_sync",
+    triggerType: "manual",
+    status: "cancelled",
+    progress: 44,
+    queuePriority: 20,
+    message: discoverMockText("syncCancelled"),
+    startTime: Date.parse("2026-06-01T08:00:00"),
+    finishTime: Date.parse("2026-06-01T08:05:12"),
+    lastProgressTime: Date.parse("2026-06-01T08:04:58"),
+    creatorName: "Platform Admin",
+    createTime: Date.parse("2026-06-01T08:00:00"),
   },
 ];
 
@@ -250,6 +309,7 @@ function mapSchedule(item: BackendDiscoverSchedule): DataConnectDiscoverSchedule
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
     createTime: formatTimestamp(item.create_time),
+    expectedUpdateTime: item.update_time ?? 0,
     updateTime: formatTimestamp(item.update_time),
   };
 }
@@ -259,26 +319,30 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     id: item.id,
     catalogId: item.catalog_id,
     catalogName: item.catalog_name,
-    scheduleId: item.schedule_id ?? "",
+    scheduleId: item.schedule_id || undefined,
     strategy: normalizeStrategy(item.strategy),
     triggerType: normalizeTriggerType(item.trigger_type),
     status: normalizeTaskStatus(item.status),
     progress: item.progress ?? 0,
+    queuePriority: item.queue_priority ?? 20,
+    resourceId: item.resource_id,
+    resourceName: item.resource_name,
     result: item.result
       ? {
-          catalogId: item.result.catalog_id ?? item.catalog_id,
-          failedCount: item.result.failed_count ?? 0,
-          message: item.result.message ?? "",
-          newCount: item.result.new_count ?? 0,
-          restoredCount: item.result.restored_count ?? 0,
-          staleCount: item.result.stale_count ?? 0,
-          unchangedCount: item.result.unchanged_count ?? 0,
-          updatedCount: item.result.updated_count ?? 0,
-        }
+        catalogId: item.result.catalog_id ?? item.catalog_id,
+        failedCount: item.result.failed_count ?? 0,
+        message: item.result.message ?? "",
+        newCount: item.result.new_count ?? 0,
+        restoredCount: item.result.restored_count ?? 0,
+        staleCount: item.result.stale_count ?? 0,
+        unchangedCount: item.result.unchanged_count ?? 0,
+        updatedCount: item.result.updated_count ?? 0,
+      }
       : undefined,
     message: item.message ?? "",
     startTime: item.start_time,
     finishTime: item.finish_time,
+    lastProgressTime: item.last_progress_time,
     creatorName: item.creator?.name ?? item.creator?.id ?? "-",
     createTime: item.create_time ?? 0,
   };
@@ -288,14 +352,14 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
   const fullResult = task.result;
   const result = fullResult
     ? {
-        catalogId: fullResult.catalogId,
-        failedCount: fullResult.failedCount,
-        newCount: fullResult.newCount,
-        restoredCount: fullResult.restoredCount,
-        staleCount: fullResult.staleCount,
-        unchangedCount: fullResult.unchangedCount,
-        updatedCount: fullResult.updatedCount,
-      }
+      catalogId: fullResult.catalogId,
+      failedCount: fullResult.failedCount,
+      newCount: fullResult.newCount,
+      restoredCount: fullResult.restoredCount,
+      staleCount: fullResult.staleCount,
+      unchangedCount: fullResult.unchangedCount,
+      updatedCount: fullResult.updatedCount,
+    }
     : undefined;
 
   return {
@@ -305,7 +369,11 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
     creatorName: task.creatorName,
     finishTime: task.finishTime,
     id: task.id,
+    lastProgressTime: task.lastProgressTime,
     progress: task.progress,
+    queuePriority: task.queuePriority,
+    resourceId: task.resourceId,
+    resourceName: task.resourceName,
     result,
     scheduleId: task.scheduleId,
     startTime: task.startTime,
@@ -341,7 +409,8 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesSchedule =
       !query.scheduleId || item.scheduleId === query.scheduleId;
-    const matchesStatus = !query.status || item.status === query.status;
+    const matchesResource = !query.resourceId || item.resourceId === query.resourceId;
+    const matchesStatus = !query.statuses?.length || query.statuses.includes(item.status);
     const matchesStrategy = !query.strategy || item.strategy === query.strategy;
     const matchesTriggerType =
       !query.triggerType || item.triggerType === query.triggerType;
@@ -349,13 +418,26 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
     return (
       matchesCatalog &&
       matchesSchedule &&
+      matchesResource &&
       matchesStatus &&
       matchesStrategy &&
       matchesTriggerType
     );
   });
   const direction = query.direction === "asc" ? 1 : -1;
-  return filtered.sort((left, right) => (left.createTime - right.createTime) * direction);
+  const timestampOf = (task: DataConnectDiscoverTask) => {
+    switch (query.sort) {
+      case "start_time":
+        return task.startTime ?? 0;
+      case "finish_time":
+        return task.finishTime ?? 0;
+      case "last_progress_time":
+        return task.lastProgressTime ?? 0;
+      default:
+        return task.createTime;
+    }
+  };
+  return filtered.sort((left, right) => (timestampOf(left) - timestampOf(right)) * direction);
 }
 
 export async function listDataConnectDiscoverSchedules(
@@ -408,7 +490,14 @@ export async function createDataConnectDiscoverSchedule(
   input: DataConnectDiscoverSchedulePayload,
 ) {
   if (useMock) {
+    validateMockDiscoverCron(input.cronExpr);
+    validateMockDiscoverTimeRange(input.startTime, input.endTime);
     const now = Date.now();
+    const nextRunValue = calculateNextHourlyCronRun(
+      input.cronExpr,
+      now,
+      input.startTime,
+    );
     mockSchedules = [
       {
         id: crypto.randomUUID(),
@@ -422,10 +511,12 @@ export async function createDataConnectDiscoverSchedule(
         enabled: input.enabled,
         strategy: input.strategy,
         lastRun: "-",
-        nextRun: "-",
+        nextRun: formatTimestamp(nextRunValue),
+        nextRunValue,
         creatorName: "Local Admin",
         updaterName: "Local Admin",
         createTime: formatTimestamp(now),
+        expectedUpdateTime: now,
         updateTime: formatTimestamp(now),
       },
       ...mockSchedules,
@@ -447,22 +538,63 @@ export async function createDataConnectDiscoverSchedule(
 
 export async function updateDataConnectDiscoverSchedule(
   id: string,
-  input: DataConnectDiscoverSchedulePayload,
+  input: DataConnectDiscoverScheduleUpdatePayload,
 ) {
   if (useMock) {
+    const current = mockSchedules.find((item) => item.id === id);
+    if (!current) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.DiscoverSchedule.NotFound",
+        "Discover schedule not found.",
+      );
+    }
+    validateMockDiscoverCron(input.cronExpr);
+    validateMockDiscoverTimeRange(input.startTime, input.endTime);
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    if (current.catalogId !== input.catalogId) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.CatalogMismatch",
+        "Discover schedule catalog cannot be changed.",
+      );
+    }
+    if (current.enabled !== input.enabled) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.EnabledFieldNotAllowed",
+        "Use the enable or disable action to change discover schedule state.",
+      );
+    }
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(
+        409,
+        "VegaBackend.DiscoverSchedule.UpdateConflict",
+        "Discover schedule has been updated. Reload it and try again.",
+      );
+    }
+    const now = Date.now();
+    const nextRunValue = calculateNextHourlyCronRun(
+      input.cronExpr,
+      now,
+      input.startTime,
+    );
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-            ...item,
-            name: input.name,
-            cronExpr: input.cronExpr,
-            startTime: formatTimestamp(input.startTime),
-            startTimeValue: input.startTime,
-            endTime: formatTimestamp(input.endTime),
-            endTimeValue: input.endTime,
-            strategy: input.strategy,
-            updateTime: formatTimestamp(Date.now()),
-          }
+          ...item,
+          name: input.name,
+          cronExpr: input.cronExpr,
+          startTime: formatTimestamp(input.startTime),
+          startTimeValue: input.startTime,
+          endTime: formatTimestamp(input.endTime),
+          endTimeValue: input.endTime,
+          strategy: input.strategy,
+          nextRun: formatTimestamp(nextRunValue),
+          nextRunValue,
+          expectedUpdateTime: now,
+          updateTime: formatTimestamp(now),
+        }
         : item,
     );
     await wait(undefined);
@@ -473,6 +605,7 @@ export async function updateDataConnectDiscoverSchedule(
     catalog_id: input.catalogId,
     cron_expr: input.cronExpr,
     enabled: input.enabled,
+    expected_update_time: input.expectedUpdateTime,
     end_time: input.endTime ?? 0,
     name: input.name,
     start_time: input.startTime ?? 0,
@@ -480,18 +613,60 @@ export async function updateDataConnectDiscoverSchedule(
   });
 }
 
+function validateMockDiscoverCron(cronExpr: string): void {
+  if (!isHourlyCron(cronExpr)) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.DiscoverSchedule.InvalidCronExpr",
+      "cron_expr must be a valid five-field cron with an interval of at least one hour.",
+    );
+  }
+}
+
+function validateMockDiscoverTimeRange(
+  startTime?: number,
+  endTime?: number,
+): void {
+  if (!isValidDiscoverScheduleTimeRange(startTime, endTime)) {
+    throwMockRequestError(
+      400,
+      "VegaBackend.DiscoverSchedule.InvalidTimeRange",
+      "start_time must be less than or equal to end_time.",
+    );
+  }
+}
+
 export async function setDataConnectDiscoverScheduleEnabled(
   id: string,
   enabled: boolean,
 ) {
   if (useMock) {
+    const current = mockSchedules.find((item) => item.id === id);
+    if (!current) {
+      throwMockRequestError(
+        404,
+        "VegaBackend.DiscoverSchedule.NotFound",
+        "Discover schedule not found.",
+      );
+    }
+    const now = Date.now();
+    const nextRunValue = enabled
+      ? calculateNextHourlyCronRun(
+        current.cronExpr,
+        now,
+        current.startTimeValue,
+      )
+      : current.nextRunValue;
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-            ...item,
-            enabled,
-            updateTime: formatTimestamp(Date.now()),
-          }
+          ...item,
+          enabled,
+          nextRun: formatTimestamp(nextRunValue),
+          nextRunValue,
+          expectedUpdateTime: now,
+          updateTime: formatTimestamp(now),
+        }
         : item,
     );
     await wait(undefined);
@@ -517,12 +692,15 @@ export async function deleteDataConnectDiscoverSchedule(id: string) {
 export async function listDataConnectDiscoverTasks(
   query: DataConnectDiscoverTaskListQuery,
 ): Promise<DataConnectDiscoverTaskListResult> {
+  const pageSize = query.pageSize ?? 10;
+  const limit = query.limit ?? pageSize;
+  const offset = query.offset ?? ((query.page ?? 1) - 1) * pageSize;
+
   if (useMock) {
     const filtered = filterTasks(mockTasks, query);
-    const startIndex = (query.page - 1) * query.pageSize;
 
     return wait({
-      items: filtered.slice(startIndex, startIndex + query.pageSize).map(toTaskSummary),
+      items: filtered.slice(offset, offset + limit).map(toTaskSummary),
       total: filtered.length,
     });
   }
@@ -533,14 +711,16 @@ export async function listDataConnectDiscoverTasks(
       params: {
         catalog_id: query.catalogId,
         direction: query.direction ?? "desc",
-        limit: query.pageSize,
-        offset: (query.page - 1) * query.pageSize,
+        limit,
+        offset,
+        resource_id: query.resourceId,
         schedule_id: query.scheduleId,
         sort: query.sort ?? "create_time",
-        status: query.status,
+        status: query.statuses?.length ? query.statuses : undefined,
         strategy: query.strategy,
         trigger_type: query.triggerType,
       },
+      paramsSerializer: { indexes: null },
     },
   );
 
@@ -581,13 +761,25 @@ export async function triggerDataConnectDiscover(
     const task: DataConnectDiscoverTask = {
       id: crypto.randomUUID(),
       catalogId,
-      scheduleId: "",
       strategy: strategy ?? "full_sync",
       triggerType: "manual",
-      status: "pending",
-      progress: 0,
-      message: discoverMockText("manualTaskCreated"),
+      status: "completed",
+      progress: 100,
+      queuePriority: 20,
+      message: discoverMockText("syncCompleted", { count: 0 }),
+      result: {
+        catalogId,
+        newCount: 0,
+        updatedCount: 0,
+        staleCount: 0,
+        restoredCount: 0,
+        unchangedCount: 0,
+        failedCount: 0,
+        message: discoverMockText("syncCompleted", { count: 0 }),
+      },
       startTime: now,
+      finishTime: now,
+      lastProgressTime: now,
       creatorName: "Local Admin",
       createTime: now,
     };

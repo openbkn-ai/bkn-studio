@@ -95,11 +95,20 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("catalog:task_manage", grants, false)).toBe(true);
   });
 
-  it("能力的增删改查按 operator 判定，且 edit 落到 modify、debug 落到 execute", () => {
+  it("能力的写操作按 operator 判定，且 edit 落到 modify、debug 落到 execute", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:capability:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:edit", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:debug", grants, false)).toBe(true);
+  });
+
+  it("能力列表接受任一执行单元的查看权限", () => {
+    for (const type of ["operator", "tool_box", "mcp", "skill"]) {
+      const viewOnly = flattenSafeGrants([
+        { operations: ["view"], resource: { id: "*", type } },
+      ]);
+      expect(isStudioPermissionGranted("execution-factory-lab:capability:view", viewOnly, false)).toBe(true);
+    }
   });
 
   it("函数归算子，与后端 #345 的门禁同口径", () => {
@@ -132,13 +141,13 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, true)).toBe(false);
   });
 
-  it("沙箱运行时只认超管，与后端 CheckAdminPermission 同口径", () => {
+  it("沙箱运行时不由 is_admin 推导，避免三员角色取得业务入口", () => {
     expect(
       isStudioPermissionGranted(executionFactoryLabPermissions.sandboxRuntimeView, grants, false),
     ).toBe(false);
     expect(
       isStudioPermissionGranted(executionFactoryLabPermissions.sandboxRuntimeView, grants, true),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("零权限账号一条都拿不到", () => {
@@ -193,7 +202,8 @@ describe("执行工厂权限点覆盖", () => {
       (permission) => !isStudioPermissionGranted(permission, fullGrants, false),
     );
 
-    // catalog:install remains blocked because the backend has no endpoint; sandbox-runtime:view is based on is_admin.
+    // catalog:install remains blocked because the backend has no endpoint. Sandbox runtime is
+    // intentionally absent: its menu is reserved for resource-wildcard super administrators.
     expect(unresolved.sort()).toEqual([
       "execution-factory-lab:catalog:install",
       "execution-factory-lab:sandbox-runtime:view",
@@ -232,8 +242,32 @@ describe("折叠通配契约", () => {
 
     // The backend has no installation endpoint, so it remains permanently blocked even by a wildcard.
     expect(isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false)).toBe(false);
-    // Sandbox runtime is based on is_admin, so a wildcard without super-admin status does not grant it.
+    // Sandbox runtime does not use the grant mapper; fetchCurrentUser gives resource-wildcard
+    // super administrators the complete registered permission set directly.
     expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
+  });
+
+  it("大模型查看权限开放模型统计，小模型查看不开放", () => {
+    const grants = flattenSafeGrants([
+      {
+        operations: ["display", "create", "modify"],
+        resource: { id: "*", type: "large_model" },
+      },
+    ]);
+
+    expect(isStudioPermissionGranted("model-resources:model:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:large-model:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:small-model:view", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("model-resources:model:create", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:model:edit", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:model:delete", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("model-resources:statistics:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("model-resources:quota:edit", grants, false)).toBe(true);
+
+    const smallModelDisplay = flattenSafeGrants([
+      { operations: ["display"], resource: { id: "*", type: "small_model" } },
+    ]);
+    expect(isStudioPermissionGranted("model-resources:statistics:view", smallModelDisplay, false)).toBe(false);
   });
 });
 

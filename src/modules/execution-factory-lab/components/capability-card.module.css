@@ -94,7 +94,7 @@
   flex: 1;
   min-height: 40px;
   margin-bottom: 12px !important;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
 }

@@ -19,11 +19,14 @@ import {
   listKnowledgeNetworkRecentObjects,
   listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
   integrateWorkspaceMetrics,
   logServiceFallback,
 } from "@/modules/knowledge-network/services/shared/runtime";
 import type {
+  CapabilityBindingListResult,
+  CapabilityType,
   ConceptGroupRecord,
   KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
@@ -39,6 +42,93 @@ import {
   createMetricsTotalPending,
   mergePendingMetricsTotalIntoDetail,
 } from "./workspaceMetricsTotal";
+
+/**
+ * The backend appends model-referenced capabilities only to a page that reaches the end of the
+ * stored rows, so a short page would drop them. Ask for the largest page it accepts, which covers
+ * any real network in one read; the loop below stays for the pathological case.
+ */
+const CAPABILITY_SECTION_LIMIT = 1000;
+
+/** Enough pages for any real network; a truncated read would understate the nav counts. */
+const CAPABILITY_MAX_PAGES = 10;
+
+/**
+ * Tool bindings drive both list pages and both nav counts, and the split between API and function
+ * can only be made on entries this client holds. Reading one page would silently undercount a
+ * network with more bindings than the page size, so walk the pages until the reported total is in.
+ */
+async function listAllCapabilities(
+  networkId: string,
+  type: CapabilityType,
+): Promise<CapabilityBindingListResult> {
+  const first = await listKnowledgeNetworkCapabilities(networkId, {
+    limit: CAPABILITY_SECTION_LIMIT,
+    type,
+    withDetail: true,
+  });
+  const entries = [...first.entries];
+  const boxes = [...first.boxes];
+
+  const pages = Math.min(
+    Math.ceil(first.totalCount / CAPABILITY_SECTION_LIMIT),
+    CAPABILITY_MAX_PAGES,
+  );
+  for (let page = 1; page < pages; page += 1) {
+    const next = await listKnowledgeNetworkCapabilities(networkId, {
+      limit: CAPABILITY_SECTION_LIMIT,
+      offset: page * CAPABILITY_SECTION_LIMIT,
+      type,
+      withDetail: true,
+    });
+    entries.push(...next.entries);
+    next.boxes.forEach((box) => {
+      if (!boxes.some((known) => known.boxId === box.boxId)) {
+        boxes.push(box);
+      }
+    });
+  }
+
+  return { ...first, boxes, entries };
+}
+
+/**
+ * Tool bindings come back as one list whatever the tool is; the backend tags each row with the kind
+ * of toolset it belongs to, the same line the workspace draws between its two lists. A row without
+ * the tag lands under functions, which is how functions_total counts it.
+ */
+function splitToolBindings(
+  result: CapabilityBindingListResult,
+): Record<"api" | "function", CapabilityBindingListResult> {
+  const entriesByKind: Record<"api" | "function", CapabilityBindingListResult["entries"]> = {
+    api: [],
+    function: [],
+  };
+  result.entries.forEach((entry) => {
+    entriesByKind[entry.metadataType === "openapi" ? "api" : "function"].push(entry);
+  });
+
+  const byKind = {} as Record<"api" | "function", CapabilityBindingListResult>;
+  (["api", "function"] as const).forEach((kind) => {
+    const entries = entriesByKind[kind];
+    const boxIds = new Set(entries.map((entry) => entry.boxId));
+    byKind[kind] = {
+      boxes: result.boxes.filter((box) => boxIds.has(box.boxId)),
+      entries,
+      metadataAvailable: result.metadataAvailable,
+      totalCount: entries.length,
+    };
+  });
+
+  return byKind;
+}
+
+const EMPTY_CAPABILITY_RESULT: CapabilityBindingListResult = {
+  boxes: [],
+  entries: [],
+  metadataAvailable: true,
+  totalCount: 0,
+};
 
 function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   return `${networkId}:${section}`;
@@ -57,6 +147,14 @@ export function useWorkspaceData(
   );
   const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
+  const [functions, setFunctions] = useState<CapabilityBindingListResult>(
+    EMPTY_CAPABILITY_RESULT,
+  );
+  const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
+  const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(
+    EMPTY_CAPABILITY_RESULT,
+  );
+  const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -140,6 +238,12 @@ export function useWorkspaceData(
     }
   }, [networkId]);
 
+  const loadToolBindings = useCallback(async (targetNetworkId: string) => {
+    const split = splitToolBindings(await listAllCapabilities(targetNetworkId, "function"));
+    setFunctions(split.function);
+    setApis(split.api);
+  }, []);
+
   const loadSectionData = useCallback(
     async (targetSection: KnowledgeNetworkWorkspaceSection, options?: { force?: boolean }) => {
       if (!networkId) {
@@ -185,6 +289,16 @@ export function useWorkspaceData(
             setActionTypes(actionTypeResult);
             break;
           }
+          case "functions":
+          case "apis":
+            await loadToolBindings(networkId);
+            break;
+          case "mcp":
+            setMcpTools(await listAllCapabilities(networkId, "mcp_tool"));
+            break;
+          case "skills":
+            setSkills(await listAllCapabilities(networkId, "skill"));
+            break;
           case "metrics":
             if (integrateWorkspaceMetrics) {
               const metricResult = await listKnowledgeNetworkMetrics(networkId);
@@ -204,7 +318,7 @@ export function useWorkspaceData(
         setSectionLoading(false);
       }
     },
-    [networkId, applyMetricsTotalToDetail],
+    [networkId, applyMetricsTotalToDetail, loadToolBindings],
   );
 
   useEffect(() => {
@@ -267,6 +381,39 @@ export function useWorkspaceData(
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "action-types"));
   }, [networkId]);
 
+  const reloadCapabilities = useCallback(
+    async (capabilityType: CapabilityType) => {
+      if (!networkId) {
+        return;
+      }
+
+      const sections: KnowledgeNetworkWorkspaceSection[] =
+        capabilityType === "function"
+          ? ["functions", "apis"]
+          : capabilityType === "mcp_tool"
+            ? ["mcp"]
+            : ["skills"];
+      sections.forEach((section) => {
+        loadedSectionsRef.current.delete(sectionCacheKey(networkId, section));
+      });
+
+      if (capabilityType === "function") {
+        await loadToolBindings(networkId);
+      } else if (capabilityType === "mcp_tool") {
+        setMcpTools(await listAllCapabilities(networkId, "mcp_tool"));
+      } else {
+        setSkills(await listAllCapabilities(networkId, "skill"));
+      }
+
+      sections.forEach((section) => {
+        loadedSectionsRef.current.add(sectionCacheKey(networkId, section));
+      });
+      // The nav count comes from the detail statistics, so a mount has to refresh it too.
+      await loadDetail();
+    },
+    [loadDetail, loadToolBindings, networkId],
+  );
+
   const reloadMetrics = useCallback(async () => {
     if (!networkId || !integrateWorkspaceMetrics) {
       return;
@@ -291,6 +438,9 @@ export function useWorkspaceData(
     loading: sectionLoading,
     loadWorkspaceData,
     loadRecentObjects,
+    apis,
+    functions,
+    mcpTools,
     metricApiUnavailable,
     metrics,
     objectTypes,
@@ -298,11 +448,13 @@ export function useWorkspaceData(
     recentLoading,
     relationTypes,
     reloadActionTypes,
+    reloadCapabilities,
     reloadConceptGroups,
     reloadMetrics,
     reloadObjectTypes,
     reloadRelationTypes,
     sectionError,
     sectionLoading,
+    skills,
   };
 }

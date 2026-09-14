@@ -14,12 +14,12 @@
   margin: 0 0 4px;
   font-size: 16px;
   font-weight: 600;
-  color: #10233f;
+  color: var(--color-text-primary);
 }
 
 .hint {
   margin: 0 0 18px;
-  color: #5b6678;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }

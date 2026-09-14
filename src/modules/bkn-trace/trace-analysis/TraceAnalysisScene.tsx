@@ -15,6 +15,7 @@ import {
 import {
   Alert,
   Button,
+  DatePicker,
   Descriptions,
   Empty,
   Form,
@@ -30,10 +31,13 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildAppPath } from "@/app/router/app-paths";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import type { PayloadEnvelope } from "@/modules/bkn-trace/shared/operation-fact.types";
 import styles from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene.module.css";
 import {
@@ -53,7 +57,7 @@ const defaultPageSize = 20;
 
 export function TraceAnalysisScene() {
   const { t } = useTranslation();
-  const [form] = Form.useForm<TechnicalTraceQuery>();
+  const [form] = Form.useForm<TechnicalTraceFilterValues>();
   const [listState, setListState] = useState<{ query: TechnicalTraceQuery; page: number }>({
     query: { limit: defaultPageSize },
     page: 1,
@@ -205,13 +209,13 @@ export function TraceAnalysisScene() {
     <section className={`${styles.workspace} ${styles.pageSurface}`}>
       <header className={styles.pageHeader}>
         <div>
-          <Typography.Title level={2}>{t("bknTrace.traceAnalysis.title")}</Typography.Title>
+          <Typography.Title level={3}>{t("bknTrace.traceAnalysis.title")}</Typography.Title>
           <Typography.Paragraph type="secondary">{t("bknTrace.traceWorkspace.description")}</Typography.Paragraph>
         </div>
         <Button icon={<ReloadOutlined />} onClick={() => void loadList(query, page)}>{t("bknTrace.actions.refresh")}</Button>
       </header>
 
-      <Form<TechnicalTraceQuery>
+      <Form<TechnicalTraceFilterValues>
         className={styles.filters}
         form={form}
         initialValues={{}}
@@ -228,15 +232,15 @@ export function TraceAnalysisScene() {
           });
         }}
       >
-        <Form.Item name="traceId"><Input allowClear placeholder="Trace ID" /></Form.Item>
+        <Form.Item name="traceId"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.traceId")} /></Form.Item>
         <Form.Item name="service"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.service")} /></Form.Item>
         <Form.Item name="tool"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.tool")} /></Form.Item>
         <Form.Item name="status">
           <Select allowClear options={["completed", "failed", "running", "unknown"].map((value) => ({ label: value, value }))} placeholder={t("bknTrace.traceWorkspace.filters.status")} />
         </Form.Item>
         <Form.Item name="errorKeyword"><Input allowClear placeholder={t("bknTrace.traceWorkspace.filters.error")} /></Form.Item>
-        <Form.Item name="from"><Input aria-label={t("bknTrace.traceWorkspace.filters.from")} type="datetime-local" /></Form.Item>
-        <Form.Item name="to"><Input aria-label={t("bknTrace.traceWorkspace.filters.to")} type="datetime-local" /></Form.Item>
+        <Form.Item name="from"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.from")} format="YYYY-MM-DD HH:mm" placeholder={t("bknTrace.traceWorkspace.filters.from")} showTime={{ format: "HH:mm", showSecond: false }} /></Form.Item>
+        <Form.Item name="to"><DatePicker aria-label={t("bknTrace.traceWorkspace.filters.to")} format="YYYY-MM-DD HH:mm" placeholder={t("bknTrace.traceWorkspace.filters.to")} showTime={{ format: "HH:mm", showSecond: false }} /></Form.Item>
         <Button htmlType="submit" icon={<SearchOutlined />} type="primary">{t("bknTrace.actions.query")}</Button>
       </Form>
 
@@ -297,7 +301,7 @@ function TraceDetail({
 
       <article className={styles.summaryCard}>
         <Descriptions column={4} size="small">
-          <Descriptions.Item label="Request ID">{summary.requestId || "-"}</Descriptions.Item>
+          <Descriptions.Item label={t("bknTrace.traceWorkspace.requestId")}>{summary.requestId || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("bknTrace.traceWorkspace.columns.agent")}>{summary.agentName || summary.agentOrApp || "-"}</Descriptions.Item>
           <Descriptions.Item label={t("bknTrace.traceWorkspace.columns.duration")}>{summary.durationMs === undefined ? "-" : `${summary.durationMs} ms`}</Descriptions.Item>
           <Descriptions.Item label="Span">{summary.spanCountStatus === "unavailable" ? t("bknTrace.traceWorkspace.spanUnavailable") : summary.spanCount}</Descriptions.Item>
@@ -343,7 +347,7 @@ function TraceDetail({
               >
                 <span>
                   <strong>{event.value.fact.toolName || t("bknTrace.traceWorkspace.unknownOperation")}</strong>
-                  <small>{event.value.fact.sourceModule} · {event.value.fact.protocol.toUpperCase()} · Attempt {event.value.fact.attempt}</small>
+                  <small>{event.value.fact.sourceModule} · {event.value.fact.protocol.toUpperCase()} · {t("bknTrace.traceWorkspace.attempt", { attempt: event.value.fact.attempt })}</small>
                 </span>
                 <span className={styles.operationState}><StatusTag status={event.value.state} /><small>{operationDuration(event.value)}</small></span>
               </button>
@@ -375,10 +379,10 @@ function OperationPanel({ onClose, operation, traceId }: { onClose: () => void; 
         <Button aria-label={t("bknTrace.traceWorkspace.closeDetail")} icon={<CloseOutlined />} onClick={onClose} type="text" />
       </header>
       <Descriptions column={1} size="small">
-        <Descriptions.Item label="Operation ID">{operation.fact.operationId}</Descriptions.Item>
-        <Descriptions.Item label="Request ID">{operation.fact.requestId || "-"}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.operationId")}>{operation.fact.operationId}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.requestId")}>{operation.fact.requestId || "-"}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.source")}>{operation.fact.sourceModule} · {operation.fact.protocol.toUpperCase()}</Descriptions.Item>
-        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{operation.state} · Attempt {operation.fact.attempt}</Descriptions.Item>
+        <Descriptions.Item label={t("bknTrace.traceWorkspace.state")}>{t("bknTrace.traceWorkspace.stateWithAttempt", { attempt: operation.fact.attempt, state: operation.state })}</Descriptions.Item>
         <Descriptions.Item label={t("bknTrace.traceWorkspace.startedAt")}>{operation.fact.startedAt || "-"}</Descriptions.Item>
       </Descriptions>
       <Tabs items={items} />
@@ -434,10 +438,16 @@ function PayloadView({ interactionId, payload }: { interactionId: string; payloa
 
 function InlinePayload({ value }: { value: unknown }) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const content = JSON.stringify(value, null, 2) ?? "null";
+  const copyContent = () => {
+    void writeTextToClipboard(content)
+      .then(() => message.success(t("bknTrace.traceWorkspace.copySuccess")))
+      .catch(() => message.error(t("bknTrace.traceWorkspace.copyFailed")));
+  };
   return (
     <div className={styles.payloadBlock}>
-      <Button icon={<CopyOutlined />} onClick={() => void navigator.clipboard?.writeText(content)} size="small">
+      <Button icon={<CopyOutlined />} onClick={copyContent} size="small">
         {t("bknTrace.traceWorkspace.copy")}
       </Button>
       <pre className={styles.payload}>{content}</pre>
@@ -447,6 +457,7 @@ function InlinePayload({ value }: { value: unknown }) {
 
 function SummaryText({ label, text }: { label: string; text?: string }) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const [open, setOpen] = useState(false);
   const [overflow, setOverflow] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
@@ -461,6 +472,11 @@ function SummaryText({ label, text }: { label: string; text?: string }) {
     return () => observer.disconnect();
   }, [text]);
   const content = text || "-";
+  const copyContent = () => {
+    void writeTextToClipboard(content)
+      .then(() => message.success(t("bknTrace.traceWorkspace.copySuccess")))
+      .catch(() => message.error(t("bknTrace.traceWorkspace.copyFailed")));
+  };
   const button = <button className={styles.clampedText} onClick={() => setOpen(true)} ref={ref} type="button">{content}</button>;
   return (
     <div className={styles.summaryText}>
@@ -468,7 +484,7 @@ function SummaryText({ label, text }: { label: string; text?: string }) {
       {overflow ? <Tooltip mouseEnterDelay={0.3} placement="bottomLeft" title={content}>{button}</Tooltip> : button}
       <Modal
         footer={(
-          <Button icon={<CopyOutlined />} onClick={() => void navigator.clipboard?.writeText(content)}>
+          <Button icon={<CopyOutlined />} onClick={copyContent}>
             {t("bknTrace.traceWorkspace.copyFullText")}
           </Button>
         )}
@@ -519,10 +535,13 @@ function buildDiagnostics(detail: TechnicalTraceDetail) {
   return [...diagnostics];
 }
 
-function toIsoDateTime(value?: string) {
-  if (!value) return undefined;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : value;
+type TechnicalTraceFilterValues = Omit<TechnicalTraceQuery, "from" | "to"> & {
+  from?: Dayjs;
+  to?: Dayjs;
+};
+
+function toIsoDateTime(value?: Dayjs) {
+  return value?.isValid() ? value.toISOString() : undefined;
 }
 
 type ExecutionEvent =

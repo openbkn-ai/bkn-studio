@@ -204,6 +204,8 @@ export const executionFactoryLabZhCN = {
     republishSuccess: "版本已重新发布",
     importOpenApiBatchTitle: "OpenAPI 导入完成",
     importOpenApiBatchHint: "已导入 {{count}} 个能力。已打开第一个，其余在列表中高亮。",
+    importOpenApiBatchHint_one: "已导入 {{count}} 个能力，并已在编辑器中打开。",
+    importOpenApiBatchHint_other: "已导入 {{count}} 个能力。已打开第一个，其余在列表中高亮。",
     importOpenApiEmpty: "该 OpenAPI 文档没有导入出任何能力。",
     stepDraft: "草稿",
     stepDebug: "调试",

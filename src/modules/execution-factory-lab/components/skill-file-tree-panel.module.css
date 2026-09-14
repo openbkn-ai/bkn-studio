@@ -13,17 +13,17 @@
 
 .tree {
   padding: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-bg-surface);
 }
 
 .preview {
   min-height: 240px;
   margin: 0;
   padding: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--color-interface-code-bg);
   white-space: pre-wrap;
 }

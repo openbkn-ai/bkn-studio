@@ -35,7 +35,7 @@ function ParameterList({ namePath, title }: { namePath: (string | number)[]; tit
             <a onClick={() => add({ type: "string" })}>{t("executionFactory.addParameter")}</a>
           </div>
           {fields.length === 0 ? (
-            <p style={{ color: "rgba(0,0,0,0.45)", margin: 0 }}>
+            <p style={{ color: "var(--color-text-tertiary)", margin: 0 }}>
               {t("executionFactory.noParameters")}
             </p>
           ) : null}

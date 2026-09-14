@@ -8,16 +8,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
-const runtimeConfigMock = vi.hoisted(() => ({
-  currentUser: { businessDomainId: "bd_demo" },
-}));
 
 vi.mock("@/framework/request/http", () => ({
   http: { get: getMock },
-}));
-
-vi.mock("@/framework/runtime/config", () => ({
-  getRuntimeConfig: () => runtimeConfigMock,
 }));
 
 describe("BKN Trace access profile service", () => {
@@ -47,10 +40,7 @@ describe("BKN Trace access profile service", () => {
 
     const profile = await getAccessProfile();
 
-    expect(getMock).toHaveBeenCalledWith(
-      "/agent-observability/v1/access-profile",
-      { headers: { "x-business-domain": "bd_demo" } },
-    );
+    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/access-profile");
     expect(profile).toEqual({
       accessScopeFingerprint: "sha256:scope-a",
       allowedLogCategories: [],

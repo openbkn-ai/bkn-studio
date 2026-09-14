@@ -6,10 +6,12 @@
  */
 
 import { http } from "@/framework/request/http";
+import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkImportMode,
   KnowledgeNetworkObjectTypeMutationPayload,
@@ -29,6 +31,7 @@ import {
   buildMockObjectTypeDetail,
   cloneDataProperties,
   mockConceptGroups,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   mockRecentObjects,
   persistMockObjectTypeProperties,
@@ -128,24 +131,52 @@ async function resolveObjectTypeConceptGroups(
     .map((group) => ({ id: group.id, name: group.name }));
 }
 
-export async function listKnowledgeNetworkObjectTypes(networkId: string) {
+export async function listKnowledgeNetworkObjectTypes(
+  networkId: string,
+  options: { allPages?: boolean; skipErrorToast?: boolean } = {},
+) {
   if (useMock) {
-    return wait((mockObjectTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockObjectTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
-  const response = await http.get<BackendListResponse<BackendObjectType>>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types`,
-    {
-      params: {
-        direction: "desc",
-        limit: 100,
-        offset: 0,
-        sort: "update_time",
-      },
-    },
-  );
+  const pageSize = 100;
+  const entries: BackendObjectType[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  return response.data.entries.map(mapObjectType);
+  while (hasMore) {
+    const response = await http.get<BackendListResponse<BackendObjectType>>(
+      `/bkn-backend/v1/knowledge-networks/${networkId}/object-types`,
+      {
+        params: {
+          direction: "desc",
+          limit: pageSize,
+          offset,
+          sort: "update_time",
+        },
+        skipErrorToast: options.skipErrorToast,
+      },
+    );
+    const pageEntries = response.data.entries;
+    entries.push(...pageEntries);
+
+    hasMore = Boolean(
+      options.allPages
+      && pageEntries.length === pageSize
+      && entries.length < response.data.total_count
+    );
+    if (!hasMore) {
+      break;
+    }
+    offset += pageEntries.length;
+  }
+
+  return entries.map(mapObjectType);
 }
 
 export async function getKnowledgeNetworkObjectType(
@@ -153,9 +184,8 @@ export async function getKnowledgeNetworkObjectType(
   objectTypeId: string,
 ) {
   if (useMock) {
-    return wait(
-      (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId) ?? null,
-    );
+    const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
+    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
@@ -171,7 +201,8 @@ export async function getKnowledgeNetworkObjectTypeDetail(
   objectTypeId: string,
 ) {
   if (useMock) {
-    return wait(buildMockObjectTypeDetail(networkId, objectTypeId));
+    const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
+    return wait(detail ? { ...detail, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   const response = await http.get<SingleEntryResponse<BackendObjectType>>(
@@ -179,7 +210,13 @@ export async function getKnowledgeNetworkObjectTypeDetail(
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapObjectTypeDetail(record) : null;
+  return record
+    ? ensureKnowledgeNetworkChildOperations(
+        networkId,
+        "object-types",
+        mapObjectTypeDetail(record),
+      )
+    : null;
 }
 
 export async function getObjectTypeSampleData(
@@ -208,13 +245,15 @@ export async function getObjectTypeSampleData(
   }
 
   const response = await http.get<BackendObjectTypeSampleDataResponse>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
+    `/ontology-query/v1/knowledge-networks/${networkId}/object-types/${objectTypeId}/sample-data`,
     {
       params: {
         limit: 20,
         need_total: true,
         offset: 0,
       },
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
     },
   );
 

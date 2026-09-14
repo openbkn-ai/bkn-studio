@@ -11,6 +11,8 @@ import {
   GlobalOutlined,
   CrownOutlined,
   LogoutOutlined,
+  MoonOutlined,
+  SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { Dropdown } from "antd";
@@ -20,7 +22,8 @@ import { useTranslation } from "react-i18next";
 import { useMatches, useNavigate, useParams } from "react-router-dom";
 
 import { getConsoleNavTrail } from "@/app/shell/console-navigation";
-import openBknLogo from "@/assets/brand/openbkn-logo.png";
+import { useResolvedTheme, useToggleTheme } from "@/app/theme/theme-context";
+import openBknLogo from "@/assets/brand/openbkn-logo-compact.webp";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
@@ -28,7 +31,6 @@ import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/u
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
-import { BuildActivityChip } from "@/modules/data-catalog/components/BuildActivityChip";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 
 export function TopBar() {
@@ -38,6 +40,8 @@ export function TopBar() {
   const { networkId } = useParams<{ networkId?: string }>();
   const runtimeConfig = useRuntimeConfig();
   const updateLocale = useUpdateLocale();
+  const resolvedTheme = useResolvedTheme();
+  const toggleTheme = useToggleTheme();
   const entitlement = useEntitlement();
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
@@ -265,7 +269,20 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
-        <BuildActivityChip />
+        <button
+          aria-label={t(
+            resolvedTheme === "dark" ? "shell.theme.switchToLight" : "shell.theme.switchToDark",
+          )}
+          aria-pressed={resolvedTheme === "dark"}
+          className="console-theme-toggle"
+          onClick={toggleTheme}
+          title={t(
+            resolvedTheme === "dark" ? "shell.theme.switchToLight" : "shell.theme.switchToDark",
+          )}
+          type="button"
+        >
+          {resolvedTheme === "dark" ? <SunOutlined /> : <MoonOutlined />}
+        </button>
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"

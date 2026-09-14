@@ -20,8 +20,7 @@ import { RequestErrorAlert } from "@/framework/ui/common/RequestErrorAlert";
 import {
   BuildTaskConflictError,
   createBuildTask,
-  listBuildTasks,
-  resumeBuildTask,
+  listBuildTaskPage,
 } from "@/modules/data-catalog/services/build-task.service";
 import type {
   BuildMode,
@@ -29,8 +28,16 @@ import type {
   BuildTaskExecuteType,
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
-import { streamingNeedsBuildKey } from "@/modules/data-catalog/lib/build-task-launch-guards";
-import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
+import {
+  invalidKeyFields,
+  isIncrementalField,
+  isPrimaryKeyField,
+  excludedBuildSchemaFields,
+} from "@/modules/data-catalog/lib/build-guards";
+import {
+  hasPersistedBuildFeatures,
+  indexFormValuesFromResource,
+} from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 import type { SmallModel } from "@/modules/model-resources/types/small-model";
@@ -39,6 +46,7 @@ import formStyles from "./BuildTaskFormPanel.module.css";
 
 // Streaming-build backend support remains available; set this flag to true to restore the entry point when reopening it.
 export const STREAMING_BUILD_ENTRY_ENABLED = false;
+const EMPTY_KEY_FIELDS: string[] = [];
 
 export type BuildTaskLaunchPanelProps = {
   active: boolean;
@@ -78,7 +86,7 @@ export function BuildTaskLaunchPanel({
   resource,
 }: BuildTaskLaunchPanelProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, modal } = useAppServices();
 
   const [mode, setMode] = useState<BuildMode>("batch");
   const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
@@ -88,10 +96,19 @@ export function BuildTaskLaunchPanel({
   const [saving, setSaving] = useState(false);
 
   const config = useMemo(() => indexFormValuesFromResource(resource), [resource]);
-  const hasResourceConfig =
-    config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
-  const batchNeedsBuildKey = mode === "batch" && config.buildKeyFields.length === 0;
-  const streamingBuildKeyRequired = streamingNeedsBuildKey(mode, config.buildKeyFields);
+  const primaryKeyFields = config.primaryKeyFields ?? EMPTY_KEY_FIELDS;
+  const incrementalFields = config.incrementalFields ?? EMPTY_KEY_FIELDS;
+  const hasResourceConfig = hasPersistedBuildFeatures(resource);
+  const batchNeedsKeyFields =
+    mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
+  const excludedFields = useMemo(() => excludedBuildSchemaFields(resource.schema), [resource.schema]);
+  const invalidConfiguredKeyFields = useMemo(
+    () => [
+      ...invalidKeyFields(resource.schema, primaryKeyFields, isPrimaryKeyField),
+      ...invalidKeyFields(resource.schema, incrementalFields, isIncrementalField),
+    ],
+    [incrementalFields, primaryKeyFields, resource.schema],
+  );
   const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
     ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
         defaultValue: config.fulltextAnalyzer,
@@ -103,7 +120,8 @@ export function BuildTaskLaunchPanel({
       : "-";
   const configSummary = t("dataCatalog.indexWorkspace.launchConfigSummary", {
     analyzer: analyzerLabel,
-    buildKey: config.buildKeyFields.length,
+    primaryKey: primaryKeyFields.length,
+    incremental: incrementalFields.length,
     embedding: config.embeddingFields.length,
     fulltext: config.fulltextFields.length,
     model: modelLabel,
@@ -138,9 +156,15 @@ export function BuildTaskLaunchPanel({
     setMode("batch");
     setExecuteType("full");
     setError(null);
-    void listBuildTasks({ resourceId: resource.id })
-      .then((tasks) => {
-        setExistingActive(tasks.find((task) => isActiveBuildTask(task)) ?? null);
+    void listBuildTaskPage({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    })
+      .then((result) => {
+        setExistingActive(result.items[0] ?? null);
       })
       .catch(() => {
         setExistingActive(null);
@@ -152,30 +176,10 @@ export function BuildTaskLaunchPanel({
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || actionsLocked;
   const startDisabled =
-    controlsDisabled || !hasResourceConfig || batchNeedsBuildKey || streamingBuildKeyRequired;
+    controlsDisabled || !hasResourceConfig || batchNeedsKeyFields ||
+    invalidConfiguredKeyFields.length > 0;
 
-  const startBuild = async () => {
-    if (!hasResourceConfig) {
-      setError({ description: t("dataCatalog.build.needConfigFirst") });
-      return;
-    }
-    if (mode === "batch" && config.buildKeyFields.length === 0) {
-      setError({ description: t("dataCatalog.build.buildKeyRequired") });
-      return;
-    }
-    if (streamingBuildKeyRequired) {
-      setError({ description: t("dataCatalog.build.streamingBuildKeyRequired") });
-      return;
-    }
-    if (actionsLocked) {
-      setError({
-        description: streamingActive
-          ? t("dataCatalog.build.streamingActiveLocked")
-          : t("dataCatalog.build.activeTaskLocked"),
-      });
-      return;
-    }
-
+  const createTask = async () => {
     setSaving(true);
     setError(null);
     try {
@@ -184,11 +188,6 @@ export function BuildTaskLaunchPanel({
         resourceId: resource.id,
         executeType: mode === "batch" ? executeType : undefined,
       });
-      try {
-        await resumeBuildTask(task.id);
-      } catch {
-        // Creation may already have transitioned the task to running.
-      }
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onStarted(task);
     } catch (persistError) {
@@ -200,6 +199,41 @@ export function BuildTaskLaunchPanel({
     } finally {
       setSaving(false);
     }
+  };
+
+  const startBuild = () => {
+    if (invalidConfiguredKeyFields.length > 0) {
+      setError({ description: t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") }) });
+      return;
+    }
+    if (!hasResourceConfig) {
+      setError({ description: t("dataCatalog.build.needConfigFirst") });
+      return;
+    }
+    if (mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0)) {
+      setError({ description: t("dataCatalog.build.keyFieldsRequired") });
+      return;
+    }
+    if (actionsLocked) {
+      setError({
+        description: streamingActive
+          ? t("dataCatalog.build.streamingActiveLocked")
+          : t("dataCatalog.build.activeTaskLocked"),
+      });
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: excludedFields.length > 0
+        ? t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
+          fields: excludedFields.map((field) => field.originalType ? `${field.name} (${field.originalType})` : field.name).join(", "),
+        })
+        : t("dataCatalog.build.startBuildConfirmContent"),
+      okText: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmOk") : t("dataCatalog.build.startBuild"),
+      onOk: createTask,
+      title: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmTitle") : t("dataCatalog.build.startBuildConfirmTitle"),
+    });
   };
 
   if (!active) {
@@ -240,26 +274,43 @@ export function BuildTaskLaunchPanel({
         />
       ) : null}
 
-      {streamingActive ? (
-        <Alert message={t("dataCatalog.build.streamingActiveLocked")} showIcon type="warning" />
+      {excludedFields.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.excludedSchemaFieldsHint", { fields: excludedFields.map((field) => field.name).join(", ") })}
+          showIcon
+          type="warning"
+        />
       ) : null}
-      {!streamingActive && actionsLocked ? (
-        <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
-      ) : null}
-      {hasResourceConfig && batchNeedsBuildKey ? (
+      {invalidConfiguredKeyFields.length > 0 ? (
         <Alert
           action={
             <AppButton onClick={onGoConfigure} size="small" type="link">
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </AppButton>
           }
-          message={t("dataCatalog.build.buildKeyRequired")}
+          message={t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") })}
           showIcon
           type="warning"
         />
       ) : null}
-      {hasResourceConfig && streamingBuildKeyRequired ? (
-        <Alert message={t("dataCatalog.build.streamingBuildKeyRequired")} showIcon type="warning" />
+
+      {streamingActive ? (
+        <Alert message={t("dataCatalog.build.streamingActiveLocked")} showIcon type="warning" />
+      ) : null}
+      {!streamingActive && actionsLocked ? (
+        <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
+      ) : null}
+      {hasResourceConfig && batchNeedsKeyFields ? (
+        <Alert
+          action={
+            <AppButton onClick={onGoConfigure} size="small" type="link">
+              {t("dataCatalog.indexWorkspace.viewConfig")}
+            </AppButton>
+          }
+          message={t("dataCatalog.build.keyFieldsRequired")}
+          showIcon
+          type="warning"
+        />
       ) : null}
 
       {hasResourceConfig ? (

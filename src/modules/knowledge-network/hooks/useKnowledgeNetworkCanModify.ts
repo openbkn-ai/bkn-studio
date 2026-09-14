@@ -7,13 +7,17 @@
 
 import { useEffect, useState } from "react";
 
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { getRequestErrorStatus } from "@/modules/knowledge-network/services/shared/runtime";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 type OperationAccess = Record<string, boolean>;
 
 type OperationAccessState = {
   access: OperationAccess;
+  error: string | null;
+  isForbidden: boolean;
   isLoading: boolean;
 };
 
@@ -31,6 +35,8 @@ export function useKnowledgeNetworkOperationAccessState(
   const operationsKey = operations.join("\u0000");
   const requestKey = `${networkId}\u0000${operationsKey}`;
   const [resolvedRequestKey, setResolvedRequestKey] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isForbidden, setIsForbidden] = useState(false);
   const isLoading = Boolean(networkId) && resolvedRequestKey !== requestKey;
 
   useEffect(() => {
@@ -39,6 +45,8 @@ export function useKnowledgeNetworkOperationAccessState(
       operationsKey.length > 0 ? operationsKey.split("\u0000") : [];
 
     setAccess(createOperationAccess(requestedOperations, false));
+    setError(null);
+    setIsForbidden(false);
 
     if (!networkId) {
       setResolvedRequestKey(requestKey);
@@ -58,12 +66,17 @@ export function useKnowledgeNetworkOperationAccessState(
               ]),
             ),
           );
+          setError(null);
+          setIsForbidden(false);
           setResolvedRequestKey(requestKey);
         }
       })
-      .catch(() => {
+      .catch((nextError: unknown) => {
         if (!cancelled) {
           setAccess(createOperationAccess(requestedOperations, false));
+          const forbidden = getRequestErrorStatus(nextError) === 403;
+          setError(forbidden ? null : extractRequestErrorMessage(nextError));
+          setIsForbidden(forbidden);
           setResolvedRequestKey(requestKey);
         }
       });
@@ -73,7 +86,7 @@ export function useKnowledgeNetworkOperationAccessState(
     };
   }, [networkId, operationsKey, requestKey]);
 
-  return { access, isLoading };
+  return { access, error, isForbidden, isLoading };
 }
 
 export function useKnowledgeNetworkOperationAccess(
@@ -92,6 +105,12 @@ export function useKnowledgeNetworkCanModify(networkId: string) {
 }
 
 export function useKnowledgeNetworkModifyAccess(networkId: string) {
-  const { access, isLoading } = useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
-  return { canModify: access.modify ?? false, isLoading };
+  const { access, error, isForbidden, isLoading } =
+    useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
+  return {
+    canModify: access.modify ?? false,
+    error,
+    isForbidden,
+    isLoading,
+  };
 }

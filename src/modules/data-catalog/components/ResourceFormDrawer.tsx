@@ -102,7 +102,7 @@ export function ResourceFormDrawer({
       destroyOnHidden
       footer={
         <Space style={{ display: "flex", justifyContent: "flex-end" }}>
-          <span style={{ marginRight: "auto", color: "#8b98ac", fontSize: 12 }}>
+          <span style={{ marginRight: "auto", color: "var(--color-text-tertiary)", fontSize: 12 }}>
             POST /vega-backend/v1/resources
           </span>
           <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>

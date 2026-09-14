@@ -36,6 +36,22 @@ type ObjectTypePropertyTableColumnSettingsProps = {
   visibleColumnKeys: string[];
 };
 
+type ObjectTypePropertyDescriptionCellProps = {
+  value?: string;
+};
+
+export function ObjectTypePropertyDescriptionCell({
+  value,
+}: ObjectTypePropertyDescriptionCellProps) {
+  const text = value?.trim() || "—";
+
+  return (
+    <Tooltip title={text}>
+      <span className={styles.cellEllipsis}>{text}</span>
+    </Tooltip>
+  );
+}
+
 export function ObjectTypePropertyTableColumnSettings({
   tableState,
   visibleColumnKeys,
@@ -95,6 +111,14 @@ export function ObjectTypePropertyTable({
                 </Tooltip>
               );
             },
+          };
+        case "comment":
+          return {
+            key: "comment",
+            dataIndex: "comment",
+            title: t("knowledgeNetwork.objectTypePropertyDescription"),
+            width: 240,
+            render: (value?: string) => <ObjectTypePropertyDescriptionCell value={value} />,
           };
         case "type":
           return {

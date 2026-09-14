@@ -14,7 +14,7 @@
 
 .summary {
   margin: 0 0 16px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -25,7 +25,7 @@
   gap: 8px;
   min-height: 40px;
   margin-bottom: 12px;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .typeLabel {
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 400;
 }

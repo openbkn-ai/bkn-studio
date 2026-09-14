@@ -10,13 +10,11 @@ import {
   DatabaseOutlined,
   DeleteOutlined,
   LeftOutlined,
-  LinkOutlined,
   PlusOutlined,
-  SearchOutlined,
 } from "@ant-design/icons";
 import { Form, Input, Modal, Tooltip } from "antd";
 import type { DataNode } from "antd/es/tree";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -24,14 +22,15 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { BusinessTree, BusinessTreePanel } from "@/framework/ui/common/BusinessTreePanel";
+import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { isBuiltinLogicalCatalog } from "@/modules/data-catalog/lib/logical-catalog";
 import {
   createLogicalCatalog,
   deleteCatalog,
+  hasCatalogOperation,
   previewCatalogDeletion,
 } from "@/shared/catalog";
-import type { CatalogRecord } from "@/shared/catalog";
-import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
+import type { CatalogConnectorTypeStat, CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogTreePanel.module.css";
 
@@ -41,11 +40,16 @@ export type CatalogTreeSelection =
 type CatalogTreePanelProps = {
   activeSchema?: string;
   catalogs: CatalogRecord[];
+  connectorTypeStats?: CatalogConnectorTypeStat[];
   collapsed?: boolean;
-  connectorTypes: DataConnectConnectorType[];
+  keyword?: string;
+  searchLoading?: boolean;
+  searchValue?: string;
   onRefresh: () => Promise<void> | void;
-  onOpenConnections?: () => void;
-  onOpenDiscoverTasks?: (catalogId?: string) => void;
+  onLoadCatalogSchemas: (catalogId: string) => Promise<string[]>;
+  onLoadCatalogsByConnectorType?: (connectorType: string, offset?: number) => Promise<void>;
+  onSearch?: () => void;
+  onSearchChange?: (keyword: string) => void;
   onSelectCatalog: (catalogId: string) => void;
   onSelectScope?: (scope: { schema: string } | null) => void;
   onToggleCollapsed?: () => void;
@@ -60,7 +64,8 @@ type LogicalFormValues = {
 };
 
 type TreeNodeMeta =
-  | { catalogId?: never; key: string; type: "group" | "connector" }
+  | { catalogId?: never; key: string; type: "group" }
+  | { catalogId?: never; connectorType: string; key: string; loadedCatalogCount: number; type: "connector" | "load-more" }
   | { catalogId: string; key: string; type: "catalog" }
   | {
       catalogId: string;
@@ -84,12 +89,16 @@ function schemaKey(catalogId: string, schema: string) {
   return `schema:${catalogId}:${schema}`;
 }
 
-function catalogSchemas(catalog: CatalogRecord, locale?: string) {
-  const schemas = catalog.metadata.schemas;
-  if (!Array.isArray(schemas)) {
-    return [];
-  }
-  return [...new Set(schemas.filter((schema): schema is string => typeof schema === "string" && schema.trim().length > 0))]
+function loadMoreKey(connectorType: string) {
+  return `catalog-load-more:${connectorType || "logical"}`;
+}
+
+function connectorLoadingKey(connectorType: string) {
+  return `catalog-loading:${connectorType || "logical"}`;
+}
+
+function catalogSchemas(schemas: string[], locale?: string) {
+  return [...new Set(schemas.filter((schema) => schema.trim().length > 0))]
     .map((schema) => schema.trim())
     .sort((left, right) => left.localeCompare(right, locale));
 }
@@ -97,11 +106,16 @@ function catalogSchemas(catalog: CatalogRecord, locale?: string) {
 export function CatalogTreePanel({
   activeSchema = "",
   catalogs,
+  connectorTypeStats = [],
   collapsed = false,
-  connectorTypes,
+  keyword = "",
+  searchLoading = false,
+  searchValue = keyword,
   onRefresh,
-  onOpenConnections,
-  onOpenDiscoverTasks,
+  onLoadCatalogSchemas,
+  onLoadCatalogsByConnectorType = async () => {},
+  onSearch,
+  onSearchChange = () => {},
   onSelectCatalog,
   onSelectScope,
   onToggleCollapsed,
@@ -111,17 +125,101 @@ export function CatalogTreePanel({
 }: CatalogTreePanelProps) {
   const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
-  const [keyword, setKeyword] = useState("");
+  const messageRef = useRef(message);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY]);
+  const [loadingConnectorTypeKeys, setLoadingConnectorTypeKeys] = useState<Set<string>>(() => new Set());
+  const [schemaNamesByCatalogId, setSchemaNamesByCatalogId] = useState<Record<string, string[]>>({});
+  const expandedKeysRef = useRef(expandedKeys);
+  const loadingConnectorTypeKeysRef = useRef(loadingConnectorTypeKeys);
+  const schemaNamesByCatalogIdRef = useRef<Record<string, string[]>>({});
+  const schemaLoadGeneration = useRef(0);
+  const loadingSchemaCatalogIds = useRef(new Map<string, number>());
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<LogicalFormValues>();
 
-  const connectorTypeNameMap = useMemo(
-    () => new Map(connectorTypes.map((item) => [item.type, item.name])),
-    [connectorTypes],
-  );
   const sortLocale = i18n.language || undefined;
+
+  const loadCatalogSchemas = useCallback((catalogId: string, force = false) => {
+    const generation = schemaLoadGeneration.current;
+    if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
+      return;
+    }
+    if (!force && Object.hasOwn(schemaNamesByCatalogIdRef.current, catalogId)) {
+      return;
+    }
+    loadingSchemaCatalogIds.current.set(catalogId, generation);
+    void onLoadCatalogSchemas(catalogId)
+      .then((schemas) => {
+        if (schemaLoadGeneration.current !== generation) {
+          return;
+        }
+        setSchemaNamesByCatalogId((current) => {
+          const next = { ...current, [catalogId]: schemas };
+          schemaNamesByCatalogIdRef.current = next;
+          return next;
+        });
+      })
+      .catch((error) => {
+        if (schemaLoadGeneration.current === generation) {
+          void messageRef.current.error(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
+          loadingSchemaCatalogIds.current.delete(catalogId);
+        }
+      });
+  }, [onLoadCatalogSchemas]);
+
+  useEffect(() => {
+    messageRef.current = message;
+  }, [message]);
+
+  useEffect(() => {
+    expandedKeysRef.current = expandedKeys;
+  }, [expandedKeys]);
+
+  useEffect(() => {
+    const rootKeys = [PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY];
+    setExpandedKeys(rootKeys);
+    expandedKeysRef.current = rootKeys;
+  }, [keyword]);
+
+  useEffect(() => {
+    loadingConnectorTypeKeysRef.current = loadingConnectorTypeKeys;
+  }, [loadingConnectorTypeKeys]);
+
+  const loadCatalogsByConnectorType = useCallback((connectorType: string, offset: number) => {
+    const loadingKey = connectorLoadingKey(connectorType);
+    if (loadingConnectorTypeKeysRef.current.has(loadingKey)) {
+      return;
+    }
+    loadingConnectorTypeKeysRef.current = new Set(loadingConnectorTypeKeysRef.current).add(loadingKey);
+    setLoadingConnectorTypeKeys(loadingConnectorTypeKeysRef.current);
+    void onLoadCatalogsByConnectorType(connectorType, offset)
+      .catch((error) => {
+        void messageRef.current.error(extractRequestErrorMessage(error));
+      })
+      .finally(() => {
+        const nextKeys = new Set(loadingConnectorTypeKeysRef.current);
+        nextKeys.delete(loadingKey);
+        loadingConnectorTypeKeysRef.current = nextKeys;
+        setLoadingConnectorTypeKeys(nextKeys);
+      });
+  }, [onLoadCatalogsByConnectorType]);
+
+  useEffect(() => {
+    schemaLoadGeneration.current += 1;
+    loadingSchemaCatalogIds.current.clear();
+    schemaNamesByCatalogIdRef.current = {};
+    setSchemaNamesByCatalogId({});
+
+    const expandedCatalogKeys = new Set(expandedKeysRef.current);
+    catalogs
+      .filter((catalog) => catalog.type !== "logical" && expandedCatalogKeys.has(catalogKey(catalog.id)))
+      .forEach((catalog) => loadCatalogSchemas(catalog.id, true));
+  }, [catalogs, loadCatalogSchemas]);
 
   const selectedCatalogId = selection?.id;
 
@@ -136,6 +234,9 @@ export function CatalogTreePanel({
   }, [activeSchema, selectedCatalogId]);
 
   const query = keyword.trim().toLowerCase();
+  const catalogCount = connectorTypeStats.length > 0
+    ? connectorTypeStats.reduce((total, stat) => total + stat.catalogCount, 0)
+    : catalogs.length;
 
   const physicalCatalogs = useMemo(
     () =>
@@ -149,13 +250,10 @@ export function CatalogTreePanel({
         return (
           catalog.name.toLowerCase().includes(query) ||
           catalog.id.toLowerCase().includes(query) ||
-          catalog.connectorType.toLowerCase().includes(query) ||
-          (connectorTypeNameMap.get(catalog.connectorType) ?? "")
-            .toLowerCase()
-            .includes(query)
+          catalog.connectorType.toLowerCase().includes(query)
         );
       }),
-    [catalogs, connectorTypeNameMap, query],
+    [catalogs, query],
   );
 
   const logicalCatalogs = useMemo(() => {
@@ -172,22 +270,18 @@ export function CatalogTreePanel({
       );
     });
 
-    return items.sort((left, right) => {
-      const leftBuiltin = isBuiltinLogicalCatalog(left) ? 0 : 1;
-      const rightBuiltin = isBuiltinLogicalCatalog(right) ? 0 : 1;
-      if (leftBuiltin !== rightBuiltin) {
-        return leftBuiltin - rightBuiltin;
-      }
-      return left.name.localeCompare(right.name, sortLocale);
-    });
-  }, [catalogs, query, sortLocale]);
+    return [
+      ...items.filter(isBuiltinLogicalCatalog),
+      ...items.filter((catalog) => !isBuiltinLogicalCatalog(catalog)),
+    ];
+  }, [catalogs, query]);
 
   const treeModel = useMemo(() => {
     const metaMap = new Map<string, TreeNodeMeta>();
     const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
     const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
-      const schemas = catalogSchemas(catalog, sortLocale);
+      const schemas = catalogSchemas(schemaNamesByCatalogId[catalog.id] ?? [], sortLocale);
       if (schemas.length === 0) {
         return undefined;
       }
@@ -214,34 +308,58 @@ export function CatalogTreePanel({
       });
     };
 
-    const physicalGroups = [...new Set(physicalCatalogs.map((catalog) => catalog.connectorType || "unknown"))]
-      .map((type) => ({
+    const effectiveConnectorTypeStats = connectorTypeStats.length > 0
+      ? connectorTypeStats
+      : [...new Set(physicalCatalogs.map((catalog) => catalog.connectorType || "unknown"))]
+        .map((connectorType) => ({
+          catalogType: "physical" as const,
+          catalogCount: physicalCatalogs.filter((catalog) => (catalog.connectorType || "unknown") === connectorType).length,
+          connectorType,
+        }));
+    const physicalGroups = effectiveConnectorTypeStats
+      .filter((stat) => stat.catalogType === "physical" && stat.connectorType)
+      .map((stat) => ({
         catalogs: physicalCatalogs
-          .filter((catalog) => (catalog.connectorType || "unknown") === type)
-          .sort((left, right) => left.name.localeCompare(right.name, sortLocale)),
-        key: connectorKey(type),
-        label: connectorTypeNameMap.get(type) ?? type,
+          .filter((catalog) => (catalog.connectorType || "unknown") === stat.connectorType),
+        count: stat.catalogCount,
+        connectorType: stat.connectorType,
+        key: connectorKey(stat.connectorType),
+        label: t(`dataCatalog.tree.connectorTypes.${stat.connectorType}`, {
+          defaultValue: stat.connectorType,
+        }),
       }))
       .sort((left, right) => left.label.localeCompare(right.label, sortLocale));
+    const physicalCatalogCount = connectorTypeStats.length > 0
+      ? connectorTypeStats.reduce(
+        (total, stat) => total + (stat.catalogType === "physical" ? stat.catalogCount : 0),
+        0,
+      )
+      : physicalCatalogs.length;
+    const logicalCatalogCount = connectorTypeStats.find((stat) => stat.catalogType === "logical")?.catalogCount
+      ?? logicalCatalogs.length;
 
     const physicalChildren = physicalGroups.map((group) => {
-      metaMap.set(group.key, { key: group.key, type: "connector" });
+      const isLoading = loadingConnectorTypeKeys.has(connectorLoadingKey(group.connectorType));
+      metaMap.set(group.key, {
+        connectorType: group.connectorType,
+        key: group.key,
+        loadedCatalogCount: group.catalogs.length,
+        type: "connector",
+      });
       if (selectedCatalogId) {
         const selected = group.catalogs.find((item) => item.id === selectedCatalogId);
         if (selected) {
           requiredExpanded.add(group.key);
         }
       }
-      if (query) {
-        requiredExpanded.add(group.key);
-      }
-
       return {
-        children: group.catalogs.map((catalog) => {
+        children: [
+          ...group.catalogs.map((catalog) => {
           const nodeKey = catalogKey(catalog.id);
           metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
           return {
             children: attachCatalogChildren(catalog),
+            isLeaf: false,
             key: nodeKey,
             title: (
               <span className={styles.catalogNodeTitle}>
@@ -254,26 +372,53 @@ export function CatalogTreePanel({
                     {t("dataCatalog.tree.discovering")}
                   </span>
                 ) : null}
-                {!catalog.enabled ? (
-                  <span className={styles.treeMiniTag}>{t("common.disabled")}</span>
-                ) : null}
+                <span
+                  className={[
+                    styles.treeMiniTag,
+                    catalog.enabled ? styles.treeMiniTagEnabled : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {t(catalog.enabled ? "common.enabled" : "common.disabled")}
+                </span>
               </span>
             ),
           };
-        }),
+          }),
+          ...(group.catalogs.length < group.count
+            ? [(() => {
+              const nodeKey = loadMoreKey(group.connectorType);
+              metaMap.set(nodeKey, {
+                connectorType: group.connectorType,
+                key: nodeKey,
+                loadedCatalogCount: group.catalogs.length,
+                type: "load-more",
+              });
+              return {
+                disabled: isLoading,
+                isLeaf: true,
+                key: nodeKey,
+                title: t(isLoading ? "dataCatalog.tree.loading" : "dataCatalog.tree.loadMore"),
+              };
+            })()]
+            : []),
+        ],
+        disabled: isLoading,
         key: group.key,
-        selectable: false,
+        selectable: true,
         title: (
           <span className={styles.groupNodeTitle}>
             <span className={styles.groupNodeName}>{group.label}</span>
-            <span className={styles.groupCount}>{group.catalogs.length}</span>
+            <span className={styles.groupCount}>{group.count}</span>
           </span>
         ),
       };
     });
 
     metaMap.set(PHYSICAL_GROUP_KEY, { key: PHYSICAL_GROUP_KEY, type: "group" });
-    const logicalChildren = logicalCatalogs.map((catalog) => {
+    const logicalChildren: DataNode[] = [
+      ...logicalCatalogs.map((catalog) => {
       const nodeKey = catalogKey(catalog.id);
       metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
       if (selectedCatalogId === catalog.id) {
@@ -289,8 +434,7 @@ export function CatalogTreePanel({
             <span className={styles.catalogNodeName}>{catalog.name}</span>
             {isBuiltinLogicalCatalog(catalog) ? (
               <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
-            ) : (
-              <PermissionGate permissions="catalog:delete">
+            ) : dataCatalogCreationAvailable && hasCatalogOperation(catalog, "delete") ? (
                 <button
                   aria-label={t("common.delete")}
                   className={styles.treeActionBtnVisible}
@@ -369,12 +513,30 @@ export function CatalogTreePanel({
                 >
                   <DeleteOutlined />
                 </button>
-              </PermissionGate>
-            )}
+            ) : null}
           </span>
         ),
       };
-    });
+      }),
+      ...(logicalCatalogs.length < logicalCatalogCount
+        ? [(() => {
+          const isLoading = loadingConnectorTypeKeys.has(connectorLoadingKey(""));
+          const nodeKey = loadMoreKey("");
+          metaMap.set(nodeKey, {
+            connectorType: "",
+            key: nodeKey,
+            loadedCatalogCount: logicalCatalogs.length,
+            type: "load-more",
+          });
+          return {
+            disabled: isLoading,
+            isLeaf: true,
+            key: nodeKey,
+            title: t(isLoading ? "dataCatalog.tree.loading" : "dataCatalog.tree.loadMore"),
+          };
+        })()]
+        : []),
+    ];
 
     if (logicalChildren.length > 0 || !query) {
       requiredExpanded.add(LOGICAL_GROUP_KEY);
@@ -384,39 +546,35 @@ export function CatalogTreePanel({
 
     const treeData: DataNode[] = [];
 
-    if (physicalChildren.length > 0 || !query) {
-      treeData.push({
-        children: physicalChildren,
-        key: PHYSICAL_GROUP_KEY,
-        selectable: false,
-        title: (
-          <span className={styles.rootNodeTitle}>
-            <span className={styles.rootNodeIcon}>
-              <DatabaseOutlined className={styles.rootIcon} />
-            </span>
-            <span className={styles.rootNodeName}>{t("dataCatalog.tree.physicalGroup")}</span>
-            <span className={styles.rootCount}>{physicalCatalogs.length}</span>
+    treeData.push({
+      children: physicalChildren,
+      key: PHYSICAL_GROUP_KEY,
+      selectable: false,
+      title: (
+        <span className={styles.rootNodeTitle}>
+          <span className={styles.rootNodeIcon}>
+            <DatabaseOutlined className={styles.rootIcon} />
           </span>
-        ),
-      });
-    }
+          <span className={styles.rootNodeName}>{t("dataCatalog.tree.physicalGroup")}</span>
+          <span className={styles.rootCount}>{physicalCatalogCount}</span>
+        </span>
+      ),
+    });
 
-    if (logicalChildren.length > 0 || !query) {
-      treeData.push({
-        children: logicalChildren,
-        key: LOGICAL_GROUP_KEY,
-        selectable: false,
-        title: (
-          <span className={styles.rootNodeTitle}>
-            <span className={styles.rootNodeIcon}>
-              <AppstoreOutlined className={styles.rootIcon} />
-            </span>
-            <span className={styles.rootNodeName}>{t("dataCatalog.tree.logicalGroup")}</span>
-            <span className={styles.rootCount}>{logicalCatalogs.length}</span>
+    treeData.push({
+      children: logicalChildren,
+      key: LOGICAL_GROUP_KEY,
+      selectable: false,
+      title: (
+        <span className={styles.rootNodeTitle}>
+          <span className={styles.rootNodeIcon}>
+            <AppstoreOutlined className={styles.rootIcon} />
           </span>
-        ),
-      });
-    }
+          <span className={styles.rootNodeName}>{t("dataCatalog.tree.logicalGroup")}</span>
+          <span className={styles.rootCount}>{logicalCatalogCount}</span>
+        </span>
+      ),
+    });
 
     return {
       metaMap,
@@ -424,14 +582,16 @@ export function CatalogTreePanel({
       treeData,
     };
   }, [
-    connectorTypeNameMap,
+    connectorTypeStats,
     logicalCatalogs,
     message,
     modal,
     onRefresh,
     physicalCatalogs,
     query,
+    loadingConnectorTypeKeys,
     discoveringCatalogIds,
+    schemaNamesByCatalogId,
     selectedCatalogId,
     sortLocale,
     t,
@@ -498,42 +658,28 @@ export function CatalogTreePanel({
         footer={
           <span>
             {t("dataCatalog.tree.summary", {
-              catalogCount: catalogs.length as never,
+              catalogCount: catalogCount as never,
               resourceCount: resourceCount as never,
             })}
           </span>
         }
         headerActions={
           <>
-            <Tooltip title={t("dataCatalog.catalog.goScan")}>
-              <AppButton
-                aria-label={t("dataCatalog.catalog.goScan")}
-                className={styles.treeActionBtn}
-                icon={<SearchOutlined />}
-                onClick={() => onOpenDiscoverTasks?.(selectedCatalogId)}
-              />
-            </Tooltip>
-            <Tooltip title={t("dataCatalog.catalog.goConnection")}>
-              <AppButton
-                aria-label={t("dataCatalog.catalog.goConnection")}
-                className={styles.treeActionBtn}
-                icon={<LinkOutlined />}
-                onClick={() => onOpenConnections?.()}
-              />
-            </Tooltip>
-            <PermissionGate permissions="catalog:create">
-              <Tooltip title={t("dataCatalog.tree.addLogical")}>
-                <AppButton
-                  aria-label={t("dataCatalog.tree.addLogical")}
-                  className={styles.treeActionBtn}
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    form.resetFields();
-                    setCreateOpen(true);
-                  }}
-                />
-              </Tooltip>
-            </PermissionGate>
+            {dataCatalogCreationAvailable ? (
+              <PermissionGate permissions="catalog:create">
+                <Tooltip title={t("dataCatalog.tree.addLogical")}>
+                  <AppButton
+                    aria-label={t("dataCatalog.tree.addLogical")}
+                    className={styles.treeActionBtn}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      form.resetFields();
+                      setCreateOpen(true);
+                    }}
+                  />
+                </Tooltip>
+              </PermissionGate>
+            ) : null}
             <Tooltip title={t("dataCatalog.tree.collapse")}>
               <AppButton
                 aria-label={t("dataCatalog.tree.collapse")}
@@ -544,15 +690,35 @@ export function CatalogTreePanel({
             </Tooltip>
           </>
         }
-        onSearchChange={setKeyword}
+        onSearch={onSearch}
+        onSearchChange={onSearchChange}
+        searchLoading={searchLoading}
         searchPlaceholder={t("dataCatalog.tree.searchPlaceholder")}
-        searchValue={keyword}
+        searchValue={searchValue}
         title={t("dataCatalog.title")}
       >
         <BusinessTree
           className={styles.catalogTree}
           expandedKeys={expandedKeys}
-          onExpand={(keys) => setExpandedKeys(keys.map(String))}
+          onExpand={(keys) => {
+            const nextKeys = keys.map(String);
+            setExpandedKeys(nextKeys);
+            expandedKeysRef.current = nextKeys;
+            for (const key of nextKeys) {
+              if (expandedKeys.includes(key)) {
+                continue;
+              }
+              const meta = treeModel.metaMap.get(key);
+              if (meta?.type === "connector" && meta.loadedCatalogCount === 0) {
+                loadCatalogsByConnectorType(meta.connectorType, 0);
+                continue;
+              }
+              if (meta?.type !== "catalog") {
+                continue;
+              }
+              loadCatalogSchemas(meta.catalogId);
+            }
+          }}
           onSelect={(keys) => {
             const key = String(keys[0] ?? "");
             if (!key) {
@@ -562,7 +728,29 @@ export function CatalogTreePanel({
             if (!meta) {
               return;
             }
+            if (meta.type === "connector") {
+              const currentKeys = expandedKeysRef.current;
+              const nextKeys = currentKeys.includes(key)
+                ? currentKeys.filter((expandedKey) => expandedKey !== key)
+                : [...currentKeys, key];
+              setExpandedKeys(nextKeys);
+              expandedKeysRef.current = nextKeys;
+              if (!currentKeys.includes(key) && meta.loadedCatalogCount === 0) {
+                loadCatalogsByConnectorType(meta.connectorType, 0);
+              }
+              return;
+            }
+            if (meta.type === "load-more") {
+              loadCatalogsByConnectorType(meta.connectorType, meta.loadedCatalogCount);
+              return;
+            }
             if (meta.type === "catalog") {
+              if (!expandedKeysRef.current.includes(key)) {
+                const nextKeys = [...expandedKeysRef.current, key];
+                setExpandedKeys(nextKeys);
+                expandedKeysRef.current = nextKeys;
+                loadCatalogSchemas(meta.catalogId);
+              }
               onSelectScope?.(null);
               onSelectCatalog(meta.catalogId);
               return;

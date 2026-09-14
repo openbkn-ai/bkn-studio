@@ -10,7 +10,7 @@ import {
   parseContentDispositionFilename,
   sanitizeDownloadFilename,
   triggerBrowserDownload,
-} from "@/modules/execution-factory/utils/download-file";
+} from "@/framework/download/file-download";
 import { getExecutionFactoryApiHeaders } from "@/modules/execution-factory/utils/execution-factory-api-headers";
 import type {
   ImpexComponentType,

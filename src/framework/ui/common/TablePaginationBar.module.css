@@ -19,7 +19,7 @@
 
 .bar :global(.ant-pagination-total-text) {
   margin-inline-end: 14px;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
   font-weight: 400;
   line-height: 28px;
@@ -44,7 +44,7 @@
 
 .bar :global(.ant-pagination-item a) {
   line-height: 26px !important;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .bar :global(.ant-pagination-item-active a) {
-  color: #1e3a8a;
+  color: var(--color-text-link);
   font-weight: 500;
 }
 
@@ -61,7 +61,7 @@
 .bar :global(.ant-pagination-next .ant-pagination-item-link) {
   border: 0;
   background: transparent;
-  color: #8b98ac;
+  color: var(--color-text-tertiary);
   font-size: 11px;
   line-height: 26px !important;
 }
@@ -77,12 +77,12 @@
 .bar :global(.ant-pagination-options-size-changer .ant-select-selector) {
   height: 28px !important;
   padding: 0 6px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   box-shadow: none !important;
 }
 
 .bar :global(.ant-pagination-options-size-changer .ant-select-selection-item) {
   line-height: 26px !important;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 12px;
 }

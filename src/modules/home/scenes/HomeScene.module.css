@@ -21,7 +21,7 @@
   padding: 28px 40px 24px;
   border-bottom: 1px solid var(--color-divider);
   background:
-    linear-gradient(90deg, var(--color-bg-surface) 0%, rgba(255, 255, 255, 0.98) 38%, rgba(255, 255, 255, 0.84) 68%, rgba(255, 255, 255, 0.56) 100%),
+    linear-gradient(90deg, var(--color-bg-surface) 0%, color-mix(in srgb, var(--color-bg-surface) 98%, transparent) 38%, color-mix(in srgb, var(--color-bg-surface) 84%, transparent) 68%, color-mix(in srgb, var(--color-bg-surface) 56%, transparent) 100%),
     var(--color-bg-surface);
 }
 
@@ -41,7 +41,7 @@
   position: absolute;
   inset: auto 0 0;
   height: 92px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, var(--color-bg-surface) 92%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-surface) 0%, transparent) 0%, var(--color-bg-surface) 92%);
   content: "";
   pointer-events: none;
 }
@@ -120,7 +120,7 @@
   padding: 28px 40px 44px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.76) 0%, rgba(255, 255, 255, 0.96) 260px),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-surface) 76%, var(--color-primary-50)) 0%, color-mix(in srgb, var(--color-bg-surface) 96%, transparent) 260px),
     var(--color-bg-surface);
 }
 
@@ -149,6 +149,20 @@
     radial-gradient(circle at 76% 78%, rgba(0, 184, 166, 0.035), transparent 34%);
   content: "";
   pointer-events: none;
+}
+
+:global(:root[data-theme="dark"]) .hero::before {
+  background-image: url("../assets/home-hero-bg-dark.webp");
+  background-position: right -34px center;
+  background-size: 520px auto;
+  opacity: 0.52;
+}
+
+:global(:root[data-theme="dark"]) .content::before {
+  background-image: url("../assets/home-hero-bg-dark.webp");
+  background-position: right bottom;
+  background-size: 720px auto;
+  opacity: 0.16;
 }
 
 .contentInner {

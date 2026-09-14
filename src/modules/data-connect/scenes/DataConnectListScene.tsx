@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,6 +43,14 @@ import {
 } from "@/shared/catalog";
 
 import styles from "./DataConnectListScene.module.css";
+
+const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
+  degraded: "orange",
+  healthy: "success",
+  offline: "error",
+  unchecked: "default",
+  unhealthy: "error",
+};
 
 function hasCascadeImpact(impact: CatalogDeletionImpact) {
   return (
@@ -113,6 +121,8 @@ export function DataConnectListScene({
   const debouncedKeyword = useDebouncedValue(pageState.keyword.trim());
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
+  const [selectedEnabled, setSelectedEnabled] = useState<boolean>();
+  const [selectedHealthStatus, setSelectedHealthStatus] = useState<DataConnectRecord["healthStatus"]>();
   const [items, setItems] = useState<DataConnectRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -138,8 +148,10 @@ export function DataConnectListScene({
       pageSize: query.pageSize,
       keyword: debouncedKeyword,
       connectorType: selectedConnectorType,
+      enabled: selectedEnabled,
+      healthStatus: selectedHealthStatus,
     }),
-    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType],
+    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType, selectedEnabled, selectedHealthStatus],
   );
 
   const connectorTypeMap = useMemo(
@@ -379,40 +391,54 @@ export function DataConnectListScene({
     {
       dataIndex: "name",
       title: t("dataConnect.name"),
-      render: (_, record) => <span className={styles.nameTitle}>{record.name}</span>,
+      width: 200,
+      render: (_, record) => (
+        <Tooltip title={record.description || "-"}>
+          <AppButton
+            className={styles.ellipsisLink}
+            onClick={() => openDetail(record)}
+            type="link"
+          >
+            <span className={styles.cellEllipsis}>{record.name}</span>
+          </AppButton>
+        </Tooltip>
+      ),
     },
     {
       dataIndex: "connectorType",
       title: t("dataConnect.connectorType"),
+      width: 150,
       render: (value: string) => <span>{connectorTypeMap.get(value) ?? value}</span>,
     },
     {
       dataIndex: "mode",
       title: t("common.mode"),
+      width: 96,
       render: (value: string) => <span className={styles.modeText}>{t(`dataConnect.modes.${value}`)}</span>,
     },
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (_, record) => <span>{record.enabled ? t("common.enabled") : t("common.disabled")}</span>,
+      width: 96,
+      render: (_, record) => (
+        <Tag color={record.enabled ? "success" : "default"}>
+          {record.enabled ? t("common.enabled") : t("common.disabled")}
+        </Tag>
+      ),
     },
     {
       dataIndex: "healthStatus",
       title: t("common.healthStatus"),
-      render: (value: DataConnectRecord["healthStatus"]) => <span>{t(`dataConnect.healthStatuses.${value}`)}</span>,
-    },
-    {
-      dataIndex: "updaterName",
-      title: t("dataConnect.updater"),
-    },
-    {
-      dataIndex: "updateTime",
-      title: t("dataConnect.updateTime"),
+      width: 112,
+      render: (value: DataConnectRecord["healthStatus"]) => (
+        <Tag color={HEALTH_STATUS_COLORS[value]}>{t(`dataConnect.healthStatuses.${value}`)}</Tag>
+      ),
     },
     {
       key: "actions",
       title: t("common.actions"),
       align: "center",
+      fixed: "right",
       width: 84,
       render: (_, record) => {
         const moreMenu = buildActionMoreMenu(record);
@@ -441,16 +467,16 @@ export function DataConnectListScene({
         <div className={styles.operationBar}>
           <div className={styles.operationPrimary}>
             <div className={styles.toolbarActions}>
-                <PermissionGate permissions="catalog:create">
-                  <AppButton
-                    onClick={() => {
-                      if (onCreate) {
-                        onCreate();
-                        return;
-                      }
-                      void navigate("/data-connect/new");
-                    }}
-                    type="primary"
+              <PermissionGate permissions="catalog:create">
+                <AppButton
+                  onClick={() => {
+                    if (onCreate) {
+                      onCreate();
+                      return;
+                    }
+                    void navigate("/data-connect/new");
+                  }}
+                  type="primary"
                 >
                   {t("common.create")}
                 </AppButton>
@@ -460,6 +486,8 @@ export function DataConnectListScene({
                 onClick={() => {
                   reset();
                   setSelectedConnectorType(undefined);
+                  setSelectedEnabled(undefined);
+                  setSelectedHealthStatus(undefined);
                   void loadConnectorTypes();
                 }}
               >
@@ -493,6 +521,40 @@ export function DataConnectListScene({
                   })),
                 ]}
                 value={selectedConnectorType ?? ""}
+              />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>{t("common.status")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedEnabled(value === "" ? undefined : value === "true");
+                  setPagination(1, pageState.pageSize);
+                }}
+                options={[
+                  { label: t("dataConnect.categoryAll"), value: "" },
+                  { label: t("common.enabled"), value: "true" },
+                  { label: t("common.disabled"), value: "false" },
+                ]}
+                value={selectedEnabled === undefined ? "" : String(selectedEnabled)}
+              />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>{t("common.healthStatus")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedHealthStatus(value ? value as DataConnectRecord["healthStatus"] : undefined);
+                  setPagination(1, pageState.pageSize);
+                }}
+                options={[
+                  { label: t("dataConnect.categoryAll"), value: "" },
+                  ...(["healthy", "degraded", "unhealthy", "offline", "unchecked"] as const).map((value) => ({
+                    label: t(`dataConnect.healthStatuses.${value}`),
+                    value,
+                  })),
+                ]}
+                value={selectedHealthStatus ?? ""}
               />
             </div>
           </div>
@@ -538,6 +600,7 @@ export function DataConnectListScene({
               locale={{ emptyText: t("dataConnect.empty") }}
               pagination={false}
               rowKey="id"
+              scroll={{ x: 1034 }}
             />
           )}
         </TableSurface>

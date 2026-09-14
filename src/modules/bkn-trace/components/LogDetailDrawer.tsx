@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildAppPath } from "@/app/router/app-paths";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { useAppServices } from "@/framework/context/use-app-services";
 import { presentAuthMethod, presentLogAction, presentLogActor, presentLogTarget, presentTargetType } from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import { getLogDetail, type LogDetailResult } from "@/modules/bkn-trace/services/observability.service";
@@ -23,6 +25,7 @@ type Props = {
 
 export function LogDetailDrawer({ logId, onClose }: Props) {
   const { t } = useTranslation();
+  const { message } = useAppServices();
   const userDirectory = useAuditUserDirectory();
   const [detail, setDetail] = useState<LogDetailResult>();
   const [error, setError] = useState<string>();
@@ -43,6 +46,12 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
   const record = detail?.data;
   const target = record ? presentLogTarget(record, t) : undefined;
   const actor = record ? presentLogActor(record, t, userDirectory) : undefined;
+  const copyRawFacts = () => {
+    if (!record) return;
+    void writeTextToClipboard(JSON.stringify(record, null, 2))
+      .then(() => message.success(t("bknTrace.logs.detail.rawFactsCopied")))
+      .catch(() => message.error(t("bknTrace.logs.detail.copyFailed")));
+  };
   return (
     <Drawer
       className={styles.compactDrawer}
@@ -97,10 +106,10 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
 
         {record.conversationId || record.requestId || record.taskId || record.traceId ? <DetailSection title={t("bknTrace.logs.detail.associations")}>
           <Descriptions column={1} size="small">
-            {record.conversationId ? <Descriptions.Item label="Conversation ID"><a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`)}>{record.conversationId}</a></Descriptions.Item> : null}
-            {record.requestId ? <Descriptions.Item label="Request ID"><span className={styles.technicalId}>{record.requestId}</span></Descriptions.Item> : null}
-            {record.taskId ? <Descriptions.Item label="Task ID"><span className={styles.technicalId}>{record.taskId}</span></Descriptions.Item> : null}
-            {record.traceId ? <Descriptions.Item label="Trace ID"><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
+            {record.conversationId ? <Descriptions.Item label={t("bknTrace.logs.detail.conversationId")}><a aria-label={t("bknTrace.logs.detail.openBusinessProvenance")} href={buildAppPath(`/observability/business-provenance?conversation_id=${encodeURIComponent(record.conversationId)}`)}>{record.conversationId}</a></Descriptions.Item> : null}
+            {record.requestId ? <Descriptions.Item label={t("bknTrace.logs.detail.requestId")}><span className={styles.technicalId}>{record.requestId}</span></Descriptions.Item> : null}
+            {record.taskId ? <Descriptions.Item label={t("bknTrace.logs.detail.taskId")}><span className={styles.technicalId}>{record.taskId}</span></Descriptions.Item> : null}
+            {record.traceId ? <Descriptions.Item label={t("bknTrace.logs.detail.traceId")}><a aria-label={t("bknTrace.logs.detail.openTrace")} href={buildAppPath(`/observability/traces?trace_id=${encodeURIComponent(record.traceId)}`)}>{record.traceId}</a></Descriptions.Item> : null}
           </Descriptions>
         </DetailSection> : null}
 
@@ -115,7 +124,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
                 <Descriptions.Item label={t("bknTrace.logs.detail.rawAction")}>{record.action}</Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.targetId")}><span className={styles.technicalId}>{record.target.id}</span></Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.actorId")}><span className={styles.technicalId}>{record.actor.id}</span></Descriptions.Item>
-                <Descriptions.Item label="Event ID"><span className={styles.technicalId}>{record.eventId}</span></Descriptions.Item>
+                <Descriptions.Item label={t("bknTrace.logs.detail.eventId")}><span className={styles.technicalId}>{record.eventId}</span></Descriptions.Item>
                 <Descriptions.Item label={t("bknTrace.logs.detail.recordedAt")}>{formatTime(record.recordedAt)}</Descriptions.Item>
               </Descriptions>,
             },
@@ -123,7 +132,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
               key: "raw",
               label: t("bknTrace.logs.detail.rawFacts"),
               children: <>
-              <Button onClick={() => void navigator.clipboard?.writeText(JSON.stringify(record, null, 2))} size="small">
+              <Button onClick={copyRawFacts} size="small">
                 {t("bknTrace.logs.detail.copyRawFacts")}
               </Button>
               <pre className={styles.attributeBlock}>{JSON.stringify({ facts: record.facts, attributes: record.attributes }, null, 2)}</pre>

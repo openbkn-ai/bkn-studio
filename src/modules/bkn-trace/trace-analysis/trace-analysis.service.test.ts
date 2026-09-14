@@ -8,19 +8,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
-const runtimeConfigMock: { currentUser: { businessDomainId: string | null } } = vi.hoisted(() => ({
-  currentUser: { businessDomainId: "bd_demo" },
-}));
 
 vi.mock("@/framework/request/http", () => ({ http: { get: getMock } }));
-vi.mock("@/framework/runtime/config", () => ({
-  getRuntimeConfig: () => runtimeConfigMock,
-}));
 
 describe("trace-analysis service", () => {
   beforeEach(() => {
     getMock.mockReset();
-    runtimeConfigMock.currentUser.businessDomainId = "bd_demo";
   });
 
   it("lists technical traces through stable typed filters", async () => {
@@ -64,7 +57,6 @@ describe("trace-analysis service", () => {
     });
 
     expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/traces", {
-      headers: { "x-business-domain": "bd_demo" },
       params: {
         error_keyword: "timeout",
         from: "2026-08-08T00:00:00Z",
@@ -126,7 +118,6 @@ describe("trace-analysis service", () => {
 
     expect(getMock).toHaveBeenCalledTimes(1);
     expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/traces/trace-1", {
-      headers: { "x-business-domain": "bd_demo" },
       skipErrorToast: true,
     });
     expect(detail.operations[0]).toMatchObject({
@@ -138,21 +129,6 @@ describe("trace-analysis service", () => {
       },
     });
     expect(getMock.mock.calls.flat().join(" ")).not.toMatch(/business-provenance|business-graph|evidence|snapshot/);
-  });
-
-  it("uses the local default business domain when the signed-in user has no domain", async () => {
-    runtimeConfigMock.currentUser.businessDomainId = null;
-    getMock.mockResolvedValue({ data: { entries: [], total: 0 } });
-    const { listTechnicalTraces } = await import(
-      "@/modules/bkn-trace/trace-analysis/trace-analysis.service"
-    );
-
-    await listTechnicalTraces({ limit: 20 });
-
-    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/traces", {
-      headers: { "x-business-domain": "bd_public" },
-      params: { limit: 20 },
-    });
   });
 
   it("loads a referenced payload only through the authorized artifact read", async () => {
@@ -167,7 +143,6 @@ describe("trace-analysis service", () => {
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/evidence/artifacts/run_sql_input_1",
       {
-        headers: { "x-business-domain": "bd_demo" },
         params: { interaction_id: "int-1" },
         skipErrorToast: true,
       },

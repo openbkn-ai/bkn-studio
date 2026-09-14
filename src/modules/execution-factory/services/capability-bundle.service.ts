@@ -6,18 +6,9 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
 const API_PREFIX = "/agent-operator-integration/v1";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 export type RegisterOpenApiBundleInput = {
   openapiSpec: string;
@@ -75,7 +66,7 @@ export async function registerOpenApiBundle(
       },
       operator_execute_control: input.operatorSync.executeControl,
     },
-    { headers: getBusinessDomainHeaders(), skipErrorToast: true },
+    { skipErrorToast: true },
   );
 
   const body = response.data;

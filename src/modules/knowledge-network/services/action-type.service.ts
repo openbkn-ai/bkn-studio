@@ -5,31 +5,40 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ActionTypeDetail,
   ActionTypeExecutionLogDetail,
   ActionTypeExecutionLogListResult,
   ActionTypeExecutionLogQuery,
+  ActionTypeExecutionResultPage,
+  ActionTypeExecutionResultQuery,
   KnowledgeNetworkActionTypeMutationPayload,
   KnowledgeNetworkImportMode,
   KnowledgeNetworkActionTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import type { BackendActionExecutionLog } from "@/modules/knowledge-network/services/mappers/action-execution.mapper";
+import type {
+  BackendActionExecutionLog,
+  BackendActionExecutionResultList,
+} from "@/modules/knowledge-network/services/mappers/action-execution.mapper";
 import type {
   BackendActionType,
   BackendListResponse,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import {
   buildActionExecutionLogQueryParams,
+  buildActionExecutionResultQueryParams,
   mapActionType,
   mapActionTypeDetail,
   mapActionTypeExecutionLogDetail,
   mapActionTypeExecutionLogList,
+  mapActionTypeExecutionResultPage,
   toBackendActionTypeCreateEntry,
   toBackendActionTypeUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers";
@@ -41,9 +50,11 @@ import {
   createMockActionTypeExecutionLog,
   getMockActionTypeExecutionLogDetail,
   listMockActionTypeExecutionLogs,
+  listMockActionTypeExecutionResults,
   mockActionTypeDetailExtras,
   mockActionTypeExecutionConfigs,
   mockActionTypes,
+  mockKnowledgeNetworkChildOperations,
   mockObjectTypes,
   persistMockActionTypeDetailExtras,
   persistMockActionTypeExecutionConfig,
@@ -95,7 +106,12 @@ function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
 
 export async function listKnowledgeNetworkActionTypes(networkId: string) {
   if (useMock) {
-    return wait((mockActionTypes[networkId] ?? []).map((item) => ({ ...item })));
+    return wait(
+      (mockActionTypes[networkId] ?? []).map((item) => ({
+        ...item,
+        operations: mockKnowledgeNetworkChildOperations,
+      })),
+    );
   }
 
   const response = await http.get<BackendListResponse<BackendActionType>>(
@@ -119,7 +135,10 @@ export async function getKnowledgeNetworkActionType(
 ) {
   if (useMock) {
     return wait(
-      (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId) ?? null,
+      (() => {
+        const record = (mockActionTypes[networkId] ?? []).find((item) => item.id === actionTypeId);
+        return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
+      })(),
     );
   }
 
@@ -164,7 +183,11 @@ export async function getKnowledgeNetworkActionTypeDetail(
     return null;
   }
 
-  return mapActionTypeDetail(record);
+  return ensureKnowledgeNetworkChildOperations(
+    networkId,
+    "action-types",
+    mapActionTypeDetail(record),
+  );
 }
 
 export async function listKnowledgeNetworkActionTypeExecutionLogs(
@@ -200,6 +223,35 @@ export async function getKnowledgeNetworkActionTypeExecutionLogDetail(
   );
 
   return mapActionTypeExecutionLogDetail(response.data);
+}
+
+/**
+ * Pages through one execution's per-instance results, paginated and filtered by the backend.
+ * Resolves to null when the backend predates the results endpoint (404), so callers can fall
+ * back to the first page of results embedded in the execution detail.
+ */
+export async function listKnowledgeNetworkActionTypeExecutionResults(
+  networkId: string,
+  logId: string,
+  query: ActionTypeExecutionResultQuery,
+): Promise<ActionTypeExecutionResultPage | null> {
+  if (useMock) {
+    await wait(undefined);
+    return listMockActionTypeExecutionResults(networkId, logId, query);
+  }
+
+  try {
+    const response = await http.get<BackendActionExecutionResultList>(
+      `/ontology-query/v1/knowledge-networks/${networkId}/action-logs/${logId}/results`,
+      { params: buildActionExecutionResultQueryParams(query) },
+    );
+    return mapActionTypeExecutionResultPage(response.data);
+  } catch (error) {
+    if (isRequestNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function executeKnowledgeNetworkActionTypeNow(

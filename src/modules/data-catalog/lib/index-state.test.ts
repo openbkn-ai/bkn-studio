@@ -15,44 +15,52 @@ function buildTask(
   overrides: Partial<BuildTask> = {},
 ): BuildTask {
   return {
-    buildKeyFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
     createTime: 1,
-    embeddingDegraded: false,
     embeddingFields: [],
     embeddingModel: "",
     error: null,
-    failureDetail: "",
     finishTime: null,
     fulltextAnalyzer: "",
     fulltextFields: [],
     id: "task-1",
-    indexUsable: status === "succeeded",
-    lastEventAt: null,
+    lastProgressTime: null,
     mode: "batch",
     modelDimensions: 0,
     resourceId: "resource-1",
+    startTime: null,
     status,
-    syncedCount: status === "succeeded" ? 10 : 0,
+    syncedCount: status === "completed" ? 10 : 0,
     totalCount: 10,
-    vectorizedCount: status === "succeeded" ? 10 : 0,
     ...overrides,
   };
 }
 
 describe("indexStateOf · stopping and cancelled tasks", () => {
   it("keeps a stopping task in the active build bucket", () => {
-    expect(indexStateOf([buildTask("stopping")]).key).toBe("building");
+    expect(indexStateOf([buildTask("stopping")], "unavailable").key).toBe("building");
 
-    const previous = buildTask("succeeded", { createTime: 1, id: "completed" });
+    const previous = buildTask("completed", { createTime: 1, id: "completed" });
     const stopping = buildTask("stopping", { createTime: 2, id: "stopping" });
-    expect(indexStateOf([previous, stopping]).key).toBe("rebuilding");
+    expect(indexStateOf([previous, stopping], "available").key).toBe("rebuilding");
   });
 
   it("does not treat a cancelled pending task as a failed index", () => {
-    expect(indexStateOf([buildTask("cancelled")]).key).toBe("none");
+    expect(indexStateOf([buildTask("cancelled")], "unavailable").key).toBe("none");
 
-    const previous = buildTask("succeeded", { createTime: 1, id: "completed" });
+    const previous = buildTask("completed", { createTime: 1, id: "completed" });
     const cancelled = buildTask("cancelled", { createTime: 2, id: "cancelled" });
-    expect(indexStateOf([previous, cancelled]).key).toBe("built");
+    expect(indexStateOf([previous, cancelled], "available").key).toBe("built");
+  });
+
+  it("does not infer availability from a successful task", () => {
+    expect(indexStateOf([buildTask("completed")], "unavailable").key).toBe("none");
+    expect(indexStateOf([], "available").key).toBe("built");
+  });
+
+  it("uses Resource availability for every terminal task status", () => {
+    expect(indexStateOf([buildTask("cancelled")], "unavailable").key).toBe("none");
+    expect(indexStateOf([buildTask("completed")], "available").key).toBe("built");
   });
 });

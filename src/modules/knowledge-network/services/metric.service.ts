@@ -10,9 +10,11 @@ import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
+import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkMetricMutationPayload,
   KnowledgeNetworkMetricRecord,
+  MetricDependencyProperty,
   MetricDataQueryParams,
   MetricDataQueryResult,
   MetricListQuery,
@@ -21,6 +23,7 @@ import type {
 import type {
   BackendListResponse,
   BackendMetric,
+  BackendMetricDependencyProperty,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
 import {
   mapMetric,
@@ -29,6 +32,8 @@ import {
 } from "@/modules/knowledge-network/services/mappers";
 import {
   mockMetrics,
+  mockKnowledgeNetworkChildOperations,
+  buildMockObjectTypeDetail,
   syncKnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/services/mock/state";
 import {
@@ -100,7 +105,10 @@ function filterAndSortMockMetrics(
   const offset = query.offset ?? 0;
 
   return {
-    entries: sliceMetricListPage(sorted, offset, query.limit),
+    entries: sliceMetricListPage(sorted, offset, query.limit).map((item) => ({
+      ...item,
+      operations: mockKnowledgeNetworkChildOperations,
+    })),
     totalCount: sorted.length,
   };
 }
@@ -148,7 +156,8 @@ export async function listKnowledgeNetworkMetrics(
 export async function getKnowledgeNetworkMetric(networkId: string, metricId: string) {
   if (useMock) {
     updateMetricApiAvailability("ready");
-    return wait((mockMetrics[networkId] ?? []).find((item) => item.id === metricId) ?? null);
+    const record = (mockMetrics[networkId] ?? []).find((item) => item.id === metricId);
+    return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
   }
 
   try {
@@ -158,7 +167,9 @@ export async function getKnowledgeNetworkMetric(networkId: string, metricId: str
 
     updateMetricApiAvailability("ready");
     const item = unwrapSingleEntryResponse(response.data);
-    return item ? mapMetric(item) : null;
+    return item
+      ? ensureKnowledgeNetworkChildOperations(networkId, "metrics", mapMetric(item))
+      : null;
   } catch (error) {
     if (getErrorStatus(error) === 404) {
       updateMetricApiAvailability("unsupported");
@@ -166,6 +177,39 @@ export async function getKnowledgeNetworkMetric(networkId: string, metricId: str
 
     throw error;
   }
+}
+
+function mapMetricDependencyProperty(
+  property: BackendMetricDependencyProperty,
+): MetricDependencyProperty {
+  return {
+    comment: property.comment,
+    displayName: property.display_name,
+    name: property.name,
+    type: property.type,
+  };
+}
+
+export async function getKnowledgeNetworkMetricDependencyProperties(
+  networkId: string,
+  objectTypeId: string,
+): Promise<MetricDependencyProperty[]> {
+  if (useMock) {
+    const properties = buildMockObjectTypeDetail(networkId, objectTypeId)?.dataProperties ?? [];
+    return wait(
+      properties.map((property) => ({
+        comment: property.comment,
+        displayName: property.displayName,
+        name: property.name,
+        type: property.type,
+      })),
+    );
+  }
+
+  const response = await http.get<{ entries: BackendMetricDependencyProperty[] }>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics/dependency-properties/${objectTypeId}`,
+  );
+  return response.data.entries.map(mapMetricDependencyProperty);
 }
 
 export async function createKnowledgeNetworkMetric(
@@ -730,6 +774,7 @@ export async function queryKnowledgeNetworkMetricData(
         params: {
           fill_null: params.fillNull,
         },
+        skipErrorToast: true,
       },
     );
 

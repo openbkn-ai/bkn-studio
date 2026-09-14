@@ -10,6 +10,9 @@ import type { RuntimeInput } from "@/framework/runtime/types";
 export { DEFAULT_APP_BASENAME } from "./app-basename";
 import { DEFAULT_APP_BASENAME } from "./app-basename";
 
+// The application root forwards to the current default module route.
+export const DEFAULT_APP_ENTRY_PATH = "/";
+
 function normalizeBasename(value?: string) {
   const trimmed = value?.trim();
   if (!trimmed || trimmed === "/") {
@@ -36,7 +39,7 @@ export function getAppBasename() {
   return resolveAppBasename(window.__BKN_STUDIO_RUNTIME__);
 }
 
-export function buildAppPath(pathname = "/") {
+export function buildAppPath(pathname = DEFAULT_APP_ENTRY_PATH) {
   const basename = getAppBasename();
   const normalizedPathname = pathname.startsWith("/") ? pathname : `/${pathname}`;
 
@@ -52,7 +55,7 @@ export function buildAppPath(pathname = "/") {
 }
 
 export function getAppHomePath() {
-  return buildAppPath("/");
+  return buildAppPath(DEFAULT_APP_ENTRY_PATH);
 }
 
 export function getAppCallbackPath() {

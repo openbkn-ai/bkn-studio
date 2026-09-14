@@ -9,6 +9,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 
 const DataConnectListPage = lazy(async () => {
@@ -26,7 +27,15 @@ const DataConnectDiscoverPage = lazy(async () => {
   return { default: module.DataConnectDiscoverPage };
 });
 
-function withRouteLoading(element: ReactNode) {
+function withRouteLoading(permissions: string | string[], element: ReactNode) {
+  return (
+    <RequirePermission mode="any" permissions={permissions}>
+      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+    </RequirePermission>
+  );
+}
+
+function withPublicRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
@@ -40,7 +49,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.title",
       },
     },
-    element: withRouteLoading(<DataConnectListPage />),
+    element: withPublicRouteLoading(<DataConnectListPage />),
   },
   {
     path: "data-connect/new",
@@ -51,7 +60,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.createTitle",
       },
     },
-    element: withRouteLoading(<DataConnectFormPage mode="create" />),
+    element: withRouteLoading("catalog:create", <DataConnectFormPage mode="create" />),
   },
   {
     path: "data-connect/:recordId/edit",
@@ -62,7 +71,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.editTitle",
       },
     },
-    element: withRouteLoading(<DataConnectFormPage mode="edit" />),
+    element: withRouteLoading("catalog:modify", <DataConnectFormPage mode="edit" />),
   },
   {
     path: "data-connect/discover",
@@ -73,7 +82,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.discoverTitle",
       },
     },
-    element: withRouteLoading(<DataConnectDiscoverPage />),
+    element: withRouteLoading("catalog:task_manage", <DataConnectDiscoverPage />),
   },
 ];
 

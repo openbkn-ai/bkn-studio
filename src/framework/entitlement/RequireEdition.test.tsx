@@ -107,6 +107,23 @@ describe("RequireEdition · 核实不了镜像的能力以证书为准", () => {
 
     expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
   });
+
+  it("锁定页可选择不挂载实时内容", () => {
+    contextState.snapshot = entitlement({});
+
+    render(
+      <RequireEdition
+        capability={CAPABILITIES.BUSINESS_PROVENANCE}
+        minEdition="enterprise"
+        mountLockedContent={false}
+      >
+        <p>protected live content</p>
+      </RequireEdition>,
+    );
+
+    expect(screen.getByText("common.entitlement.unlockTitle")).toBeTruthy();
+    expect(screen.queryByText("protected live content")).toBeNull();
+  });
 });
 
 describe("RequireEdition · 能力确实可用", () => {

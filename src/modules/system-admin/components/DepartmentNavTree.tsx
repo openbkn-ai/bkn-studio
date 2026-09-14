@@ -39,6 +39,8 @@ type DepartmentNavTreeProps = {
   onMembers?: (dept: AdminDepartment) => void;
   onReparent: (dragId: string, newParentId: string | null) => void;
   onSelect: (deptId: string | null) => void;
+  /** Use the organization structure as a read-only navigation scope. */
+  readOnly?: boolean;
   selectedDeptId: string | null;
   totalUserCount: number;
 };
@@ -96,6 +98,7 @@ export function DepartmentNavTree({
   onMembers,
   onReparent,
   onSelect,
+  readOnly = false,
   selectedDeptId,
   totalUserCount,
 }: DepartmentNavTreeProps) {
@@ -107,19 +110,19 @@ export function DepartmentNavTree({
   const [initialExpandDone, setInitialExpandDone] = useState(() => readExpandedKeys() !== null);
 
   const permissions = runtimeConfig.currentUser.permissions;
-  const canEditDept = hasPermissions({
+  const canEditDept = !readOnly && hasPermissions({
     currentPermissions: permissions,
     requiredPermissions: "admin-dept:edit",
   });
-  const canCreateDept = hasPermissions({
+  const canCreateDept = !readOnly && hasPermissions({
     currentPermissions: permissions,
     requiredPermissions: "admin-dept:create",
   });
-  const canDeleteDept = hasPermissions({
+  const canDeleteDept = !readOnly && hasPermissions({
     currentPermissions: permissions,
     requiredPermissions: "admin-dept:delete",
   });
-  const canManageMembers = hasPermissions({
+  const canManageMembers = !readOnly && hasPermissions({
     currentPermissions: permissions,
     requiredPermissions: "admin-dept:members",
   });

@@ -26,7 +26,7 @@
 }
 
 .tabCard :global(.ant-tabs-nav::before) {
-  border-bottom-color: #e8eaed;
+  border-bottom-color: var(--color-border);
 }
 
 .tabPanel {
@@ -51,8 +51,8 @@
 }
 
 .overviewCard {
-  background: #fff;
-  border: 1px solid #e5eaf2;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   display: flex;
   flex-direction: column;
@@ -78,7 +78,7 @@
 }
 
 .overviewSectionTitle {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
@@ -92,7 +92,7 @@
 }
 
 .overviewMetaSections > .overviewMetaList + .overviewMetaList {
-  border-top: 1px solid #eef0f3;
+  border-top: 1px solid var(--color-divider);
   padding-top: 14px;
 }
 
@@ -115,13 +115,13 @@
 }
 
 .overviewMetaItem dt {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .overviewMetaItem dd {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.5;
   margin: 0;
@@ -129,14 +129,14 @@
 }
 
 .overviewDescriptionValue {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 1.6;
 }
 
 .overviewMetaItemAudit dt,
 .overviewMetaItemAudit dd {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -145,7 +145,7 @@
 }
 
 .overviewStatsSection {
-  border-top: 1px solid #eef0f3;
+  border-top: 1px solid var(--color-divider);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -159,8 +159,8 @@
 }
 
 .quickStatButton {
-  background: #fafcff;
-  border: 1px solid #e5eaf2;
+  background: var(--color-hover);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -187,8 +187,8 @@
 }
 
 .quickStatButton:disabled {
-  background: #fafafa;
-  border-color: #ececec;
+  background: var(--color-hover);
+  border-color: var(--color-border);
   cursor: default;
 }
 
@@ -206,7 +206,7 @@
 }
 
 .quickStatArrow {
-  color: #126ee3;
+  color: var(--color-text-link);
   flex-shrink: 0;
   font-size: 12px;
   opacity: 0;
@@ -216,19 +216,19 @@
 }
 
 .quickStatError {
-  color: #cf1322;
+  color: var(--color-error-text);
   font-size: 14px;
   font-weight: 500;
 }
 
 .quickStatLabel {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .quickStatValue {
   align-items: center;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: flex;
   font-size: 24px;
   font-weight: 600;
@@ -237,7 +237,7 @@
 }
 
 .quickStatButton:disabled .quickStatValue {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--color-text-muted);
 }
 
 .subSectionHeader {
@@ -264,7 +264,7 @@
 }
 
 .subSectionSubtitle {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
   margin: 0;
@@ -276,7 +276,7 @@
 }
 
 .summaryCard {
-  background: #fff;
+  background: var(--color-bg-surface);
   border: 1px solid #e5e5e5;
   border-radius: 4px;
   padding: 20px;
@@ -305,14 +305,14 @@
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 18px;
   flex-shrink: 0;
 }
 
 .summaryTitle {
   margin: 0 0 8px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 500;
 }
@@ -328,12 +328,12 @@
   flex-wrap: wrap;
   gap: 24px;
   margin-top: 16px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .sectionCard {
-  background: #fff;
+  background: var(--color-bg-surface);
   border: 1px solid #e5e5e5;
   border-radius: 4px;
   padding: 20px;
@@ -349,7 +349,7 @@
 
 .sectionTitle {
   margin: 0;
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 600;
   line-height: 1.4;
@@ -357,7 +357,7 @@
 
 .sectionHint {
   margin: 6px 0 0;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -370,7 +370,7 @@
   align-items: center;
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   display: inline-flex;
   flex-shrink: 0;
@@ -380,7 +380,7 @@
 }
 
 .cardHeaderLink:hover {
-  color: #0958d9;
+  color: var(--color-text-link);
 }
 
 .dataViewFields {
@@ -397,13 +397,13 @@
 }
 
 .dataViewLabel {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .dataViewValue {
-  color: #1f2329;
+  color: var(--color-text-primary);
   font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
@@ -411,10 +411,10 @@
 }
 
 .dataViewCode {
-  background: #f7f8fa;
-  border: 1px solid #eef0f3;
+  background: var(--color-interface-code-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: inline-block;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 13px;
@@ -426,10 +426,10 @@
 
 .dataViewStatus {
   align-self: flex-start;
-  background: #f7f8fa;
-  border: 1px solid #eef0f3;
+  background: var(--color-interface-panel-bg);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  color: #1f2329;
+  color: var(--color-text-primary);
   display: inline-block;
   font-size: 13px;
   line-height: 1.5;
@@ -474,7 +474,7 @@
 .tableLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   max-width: 100%;
@@ -486,20 +486,20 @@
 }
 
 .tableLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .conceptGroupLink {
   background: transparent;
   border: 0;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   font: inherit;
   padding: 0;
 }
 
 .conceptGroupLink:hover {
-  color: #0b5fc7;
+  color: var(--color-text-link);
 }
 
 .rowActions {
@@ -531,9 +531,9 @@
 
 .resourceIconMetric {
   align-items: center;
-  background: #eef4ff;
+  background: var(--color-primary-100);
   border-radius: 4px;
-  color: #126ee3;
+  color: var(--color-text-link);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 12px;
@@ -545,9 +545,9 @@
 
 .resourceIconOperator {
   align-items: center;
-  background: #fff7e6;
+  background: var(--color-warning-bg);
   border-radius: 4px;
-  color: #fa8c16;
+  color: var(--color-warning-text);
   display: inline-flex;
   flex-shrink: 0;
   font-size: 12px;
@@ -558,7 +558,7 @@
 }
 
 .resourceName {
-  color: rgba(0, 0, 0, 0.85);
+  color: var(--color-text-primary);
   font-size: 14px;
   line-height: 1;
   min-width: 0;
@@ -569,11 +569,11 @@
 
 .keyBadge {
   border-radius: 4px;
-  color: #126ee3;
+  color: var(--color-text-link);
   font-size: 12px;
   line-height: 1;
   padding: 2px 6px;
-  background: #f1f6fd;
+  background: var(--color-primary-50);
 }
 
 .loadingState {
@@ -584,7 +584,7 @@
 }
 
 .placeholder {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
 }
 
 @media (max-width: 1080px) {

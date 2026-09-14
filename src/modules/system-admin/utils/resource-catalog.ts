@@ -10,6 +10,8 @@ import i18n from "@/app/locales/i18n";
 export type OperationDef = {
   key: string;
   label: string;
+  /** Authoring prerequisite. Effective availability still comes exclusively from bkn-safe. */
+  requires: string[];
 };
 
 export type ResourceTypeDef = {
@@ -25,7 +27,6 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   authorize: "Authorize",
   create: "Create",
   create_system_agent: "Create system agent",
-  data_query: "Data query",
   delete: "Delete",
   display: "Display",
   edit: "Edit",
@@ -44,7 +45,9 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   publish_to_be_data_flow_agent: "Publish as data flow agent",
   publish_to_be_skill_agent: "Publish as skill agent",
   publish_to_be_web_sdk_agent: "Publish as Web SDK agent",
+  query_data: "Query data",
   "reset-password": "Reset password",
+  resource_manage: "Manage tables",
   revoke: "Revoke",
   run_statistics: "Run statistics",
   run_with_app: "Run with app",
@@ -67,22 +70,42 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   "admin-user": "System user management",
   agent: "Agent",
   agent_tpl: "Agent template",
-  catalog: "Data connection / Catalog",
-  connector_type: "Connector type",
+  catalog: "Data directory",
+  connector_type: "Data connection",
+  concept_group: "Concept group",
   data_flow: "Data flow",
   knowledge_network: "Knowledge network",
   large_model: "Large model",
-  mcp: "MCP",
-  operator: "Operator",
+  mcp: "MCP service",
+  metric: "Metric",
+  object_type: "Object type",
+  operator: "Function set",
   resource: "Data resource",
+  relation_type: "Relation type",
+  risk_type: "Risk type",
   safe_admin: "bkn-safe management API",
-  skill: "Skill",
+  skill: "Skill package",
   small_model: "Small model",
   stream_data_pipeline: "Stream data pipeline",
-  tool_box: "Toolbox",
+  tool_box: "API toolset",
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+// Child resources delegate sharing through the knowledge-network root. They never carry
+// `authorize` or `task_manage`; action execution is expressed by `execute`.
+const KNOWLEDGE_NETWORK_CHILD_AUTHZ = [
+  "view_detail",
+  "create",
+  "modify",
+  "delete",
+  "query_data",
+];
+const ACTION_TYPE_AUTHZ = [...KNOWLEDGE_NETWORK_CHILD_AUTHZ, "execute"];
+// A data connection owns its tables: creating, editing and building one is judged on the catalog,
+// not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
+// lists match the operations bkn-safe actually stores on these types.
+const CATALOG_AUTHZ = [...CRUD_AUTHZ, "resource_manage", "query_data"];
+const RESOURCE_AUTHZ = ["view_detail", "query_data"];
 const PUBLISHABLE = [
   "view",
   "create",
@@ -96,18 +119,24 @@ const PUBLISHABLE = [
 ];
 
 export const RESOURCE_TYPES: ResourceTypeDef[] = [
-  resourceType("catalog", CRUD_AUTHZ),
-  resourceType("resource", CRUD_AUTHZ),
+  resourceType("catalog", CATALOG_AUTHZ),
+  resourceType("resource", RESOURCE_AUTHZ),
   resourceType("connector_type", CRUD_AUTHZ),
   resourceType("knowledge_network", [
     "view_detail",
     "create",
     "modify",
     "delete",
-    "data_query",
+    "query_data",
     "authorize",
-    "task_manage",
+    "execute",
   ]),
+  resourceType("concept_group", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("object_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("relation_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("action_type", ACTION_TYPE_AUTHZ),
+  resourceType("metric", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("risk_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
   resourceType("stream_data_pipeline", ["view_detail", "create", "modify", "delete", "authorize"]),
   resourceType("data_flow", [
     "list",
@@ -148,6 +177,24 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("safe_admin", ["manage"]),
 ];
 
+/**
+ * Roles grant type-wide capabilities. Keep unsupported or object-specific resource types out of
+ * the role editor without removing them from the canonical catalog: existing grants must remain
+ * readable, and object authorization still uses the full resource catalog where applicable.
+ */
+const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
+  "agent",
+  "agent_tpl",
+  "connector_type",
+  "data_flow",
+  "risk_type",
+  "stream_data_pipeline",
+]);
+
+export const ROLE_GRANT_RESOURCE_TYPES = RESOURCE_TYPES.filter(
+  (item) => !ROLE_GRANT_EXCLUDED_RESOURCE_TYPES.has(item.type),
+);
+
 const byType = new Map(RESOURCE_TYPES.map((item) => [item.type, item]));
 
 function resourceType(type: string, operations: string[]): ResourceTypeDef {
@@ -174,7 +221,19 @@ export function operationsForType(type: string): OperationDef[] {
   return (byType.get(type)?.operations ?? []).map((op) => ({
     key: op,
     label: operationLabel(type, op),
+    requires: requiredOperationsFor(type, op),
   }));
+}
+
+export function requiredOperationsFor(type: string, operation: string): string[] {
+  const operations = byType.get(type)?.operations ?? [];
+  const viewOperation = ["view_detail", "view", "display", "list"].find((candidate) =>
+    operations.includes(candidate),
+  );
+  if (!viewOperation || operation === viewOperation || operation === "create") {
+    return [];
+  }
+  return [viewOperation];
 }
 
 function operationFallbackLabel(op: string): string {

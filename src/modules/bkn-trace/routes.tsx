@@ -11,6 +11,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
+import { RequireSuperAdmin } from "@/framework/permission/RequireSuperAdmin";
 import type { AppRouteContribution } from "@/app/router/types";
 
 const BusinessProvenancePage = lazy(async () => {
@@ -48,6 +49,7 @@ export const bknTraceRoutes: RouteObject[] = [
       <RequireEdition
         capability={CAPABILITIES.BUSINESS_PROVENANCE}
         minEdition="enterprise"
+        mountLockedContent={false}
       >
         {withRouteLoading(<BusinessProvenancePage />)}
       </RequireEdition>
@@ -66,7 +68,7 @@ export const bknTraceRoutes: RouteObject[] = [
   {
     path: "observability/settings",
     handle: { console: { descriptionKey: "bknTrace.settings.description", menuKey: "observability-settings", titleKey: "bknTrace.settings.title" } },
-    element: withRouteLoading(<ObservabilitySettingsPage />),
+    element: <RequireSuperAdmin>{withRouteLoading(<ObservabilitySettingsPage />)}</RequireSuperAdmin>,
   },
   {
     path: "system/bkn-trace",

@@ -18,6 +18,8 @@ export const agentChatPart = {
       scale: "规模：{{objectTypes}} 个对象类、{{relations}} 个关系类",
       objectTypes: "对象类：{{names}}",
       objectTypesMore: "对象类：{{names}} 等 {{count}} 个",
+      objectTypesMore_one: "对象类：{{names}} 等 {{count}} 个",
+      objectTypesMore_other: "对象类：{{names}} 等 {{count}} 个",
     },
     templateSuggestions: {
       firstObject: "{{name}}有哪些数据？先看几条",
@@ -61,6 +63,8 @@ export const agentChatPart = {
       zero: "0 次",
       errorName: "{{name}}(失败)",
       summary: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
+      summary_one: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
+      summary_other: "{{count}} 次（{{ok}} 成功{{errorPart}}）：{{names}}",
       errorPart: " / {{err}} 失败",
     },
     errors: {
@@ -148,9 +152,13 @@ export const agentChatPart = {
     chatPane: {
       defaultPrompt:
         "你是 BKN 业务知识网络的检索助手。基于当前知识网络上的对象类、关系类与逻辑属性回答用户问题。\n" +
-        "需要数据时调用提供的检索工具（search_schema / query_object_instance / query_instance_subgraph / run_sql 等），不要编造；" +
+        "需要数据时用工具查，不要编造。先弄清结构再取数：不清楚有哪些对象类、字段叫什么，先用 search_schema 探一眼，" +
+        "再按返回里的真实字段名过滤——按语义猜字段名往往得到空结果，而空结果不报错。\n" +
         "kn_id 已锁定为当前网络，无需也不要修改。\n" +
-        "查询要高效：聚合/排序/计数尽量交给 SQL（run_sql），用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。",
+        "检索工具是主路。它们答不了的那部分，用三个补充手段：run_sql 做聚合/排序/计数，让数据库算完只回结果；" +
+        "run_code 写一段 Python，脚本里可直接调用上面这些工具，适合串联多个工具、按中间结果分支、或中间数据量大而你只需要结论；" +
+        "run_shell 执行 shell 命令，用来看一眼沙箱里的文件。三者共用一个按会话隔离的工作区，落盘的文件在同一对话的多次执行之间保留，下一段脚本可以直接接着用。\n" +
+        "查询要高效：用 LIMIT 和精确过滤、只取需要的字段，避免拉全表或返回超大结果；已获得的信息不要重复查询，少而准地调用工具。",
       basePrompt:
         "你是数据查询助手。你只能使用三个工具直接查询底层数据表回答用户问题：\n" +
         "list_resources（列出可访问的数据表）、describe_resource（查看表的列结构）、run_sql（执行 SQL）。\n" +
@@ -188,6 +196,14 @@ export const agentChatPart = {
         request: "请求 · tools/call → {{name}}",
         error: "错误",
         response: "响应",
+      },
+      toolGroup: {
+        summary: "已调用工具 {{count}} 次",
+        summary_one: "已调用工具 {{count}} 次",
+        summary_other: "已调用工具 {{count}} 次",
+        failed: "{{count}} 个失败",
+        failed_one: "{{count}} 个失败",
+        failed_other: "{{count}} 个失败",
       },
       error: {
         retry: "重试本轮",

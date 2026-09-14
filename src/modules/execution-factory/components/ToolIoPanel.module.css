@@ -20,7 +20,7 @@
 }
 
 .emptyHint {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   margin: 0;
 }
 
@@ -33,13 +33,13 @@
 }
 
 .logItem {
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 12px;
   padding: 8px 10px;
 }
 
 .logMeta {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-secondary);
   margin-bottom: 4px;
 }

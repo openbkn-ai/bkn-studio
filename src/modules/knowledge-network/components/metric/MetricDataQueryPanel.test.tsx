@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/metric/MetricDataQueryPanel";
 
+const queryKnowledgeNetworkMetricDataMock = vi.hoisted(() => vi.fn());
+
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>();
 
@@ -31,7 +33,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
-  queryKnowledgeNetworkMetricData: vi.fn(),
+  queryKnowledgeNetworkMetricData: queryKnowledgeNetworkMetricDataMock,
 }));
 
 vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeConditionEditor", () => ({
@@ -59,6 +61,21 @@ afterEach(() => {
 });
 
 describe("MetricDataQueryPanel", () => {
+  it("does not render query controls when effective metric operations omit query_data", () => {
+    render(
+      <MetricDataQueryPanel
+        canQueryData={false}
+        metricId="metric-1"
+        metricName="Material count"
+        networkId="network-1"
+      />,
+    );
+
+    expect(screen.getByText("knowledgeNetwork.metricQueryNoPermission")).toBeTruthy();
+    expect(screen.queryByText("knowledgeNetwork.metricQueryRun")).toBeNull();
+    expect(queryKnowledgeNetworkMetricDataMock).not.toHaveBeenCalled();
+  });
+
   it("hides quarter step for trend and proportion query modes", () => {
     render(
       <MetricDataQueryPanel

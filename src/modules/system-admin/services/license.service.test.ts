@@ -46,6 +46,10 @@ describe("license.service", () => {
     });
   });
 
+  it("treats a missing backend state as unlicensed", () => {
+    expect(mapLicenseDetail({}).state).toBe("unlicensed");
+  });
+
   it("classifies import and activation errors", () => {
     expect(
       resolveLicenseRequestErrorCode(

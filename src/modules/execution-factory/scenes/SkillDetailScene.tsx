@@ -21,7 +21,7 @@ import {
 import { Alert, Empty, Layout, Spin, Tag } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { SkillDetailSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -51,6 +51,7 @@ import {
   resolveSkillCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
@@ -83,6 +84,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const { t } = useTranslation();
   const auditUserDirectory = useAuditUserDirectory();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
   const [record, setRecord] = useState<SkillRecord | null>(null);
@@ -201,15 +203,14 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
       return;
     }
 
-    if (window.history.length > 1) {
-      void navigate(-1);
-      return;
-    }
-
+    // A knowledge network's capability list links here and names itself in location state; every
+    // other entry returns to the list. Not `navigate(-1)`: it cannot tell a direct hit apart and
+    // leaves the app when this page was the first one opened (#386).
     void navigate(
-      catalogContext
-        ? "/execution-factory/catalog?activeTab=skill"
-        : "/execution-factory/units?activeTab=skill",
+      readReturnTo(location.state) ??
+        (catalogContext
+          ? "/execution-factory/catalog?activeTab=skill"
+          : "/execution-factory/units?activeTab=skill"),
     );
   };
 

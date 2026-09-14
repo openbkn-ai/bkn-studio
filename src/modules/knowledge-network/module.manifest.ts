@@ -9,6 +9,7 @@ export const knowledgeNetworkModuleManifest = {
   id: "knowledge-network",
   name: "Knowledge Network",
   permissions: [
+    "knowledge-network:view",
     "knowledge-network:create",
     "knowledge-network:edit",
     "knowledge-network:delete",

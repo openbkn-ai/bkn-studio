@@ -24,21 +24,28 @@ type RequireEditionProps = {
   /** 能力 key,只用于取文案(`subscription.capabilities.<key>.*`)。 */
   capability: string;
   children: ReactNode;
+  /** 锁定时是否仍挂载内容预览。默认保留现有升级引导体验。 */
+  mountLockedContent?: boolean;
   minEdition: Edition;
 };
 
 /**
  * 整页守卫。放行条件与档位徽标闭嘴的条件同一个:`capabilitySatisfied`。
  *
- * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现、语义理解在数据目录侧,
- * bkn-safe 的那份清单里从来没有它们(ee-design.md §6「A 答不了 B」)。这类能力核实不了
+ * 用于 `capabilities[]` 答不了的付费面:业务溯源由 bkn-trace 实现,bkn-safe 的那份清单里
+ * 从来没有它(ee-design.md §6「A 答不了 B」)。这类能力核实不了
  * 镜像,判据退到证书:档位够就放行。前端核实不了别人的包,不等于那个包没装——把「核实
  * 不了」当「没装」,买了企业版证、也换了企业版包的客户会被自己付过钱的功能挡在门外。
  *
  * 真正的强制力始终在服务端,这层只是体验。等 §6.2 的每服务自述端点落地,这里就能和
  * bkn-safe 自己的能力走同一条判据。
  */
-export function RequireEdition({ capability, children, minEdition }: RequireEditionProps) {
+export function RequireEdition({
+  capability,
+  children,
+  minEdition,
+  mountLockedContent = true,
+}: RequireEditionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { loading, snapshot } = useEntitlementContext();
@@ -80,13 +87,11 @@ export function RequireEdition({ capability, children, minEdition }: RequireEdit
 
   return (
     <div className="console-upgrade-locked">
-      {/*
-        底下照常渲染真实页面,盖一层蒙版:客户看得见这块功能长什么样,才知道自己在买什么。
-        内容层不可点、不可选、焦点也进不去——但蒙版只是体验层,真正的强制力在服务端。
-      */}
-      <div aria-hidden className="console-upgrade-locked-content" inert>
-        {children}
-      </div>
+      {mountLockedContent ? (
+        <div aria-hidden className="console-upgrade-locked-content" inert>
+          {children}
+        </div>
+      ) : null}
       <div className="console-upgrade-mask">
         <div className={`console-upgrade-card ${tierClass ? "console-upgrade-enterprise" : ""}`}>
           <div className={`console-upgrade-hero ${tierClass}`}>

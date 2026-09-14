@@ -82,6 +82,9 @@ export const metricPart = {
     metricQueryFormTitle: "Query conditions",
     metricQueryLimit: "Result limit",
     metricQueryModeLabel: "Query mode",
+    metricQueryNoPermission: "Metric query access denied",
+    metricQueryNoPermissionDescription:
+      "The current account does not have data query permission for this metric. Ask a knowledge network administrator for access.",
     metricQueryResultTitle: "Query results",
     metricQueryRun: "Execute query",
     metricQuerySamePeriodConfig: "Same-period config",

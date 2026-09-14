@@ -38,6 +38,33 @@ function notifyRequestError(error: unknown, config?: RetryableRequestConfig) {
   requestErrorHandler?.(extractRequestErrorMessage(error));
 }
 
+/**
+ * A failed download answers with the error body typed as a Blob, which every
+ * message extractor reads as an empty object. Decoding it back into JSON before
+ * the toast fires is what keeps a rejected export from reporting a generic
+ * failure while the backend explained itself.
+ */
+async function decodeBlobErrorBody(error: unknown) {
+  if (!axios.isAxiosError(error) || !error.response) {
+    return;
+  }
+
+  const data: unknown = error.response.data;
+
+  if (typeof Blob === "undefined" || !(data instanceof Blob)) {
+    return;
+  }
+
+  try {
+    const text = await data.text();
+    const parsed: unknown = text ? JSON.parse(text) : undefined;
+    error.response.data = parsed;
+  } catch {
+    // A non-JSON body (an HTML gateway page, a truncated stream) carries nothing
+    // the extractor could use, so the generic message stands.
+  }
+}
+
 async function refreshAccessToken() {
   const runtimeConfig = getRuntimeConfig();
 
@@ -94,6 +121,8 @@ http.interceptors.response.use(
 
       runtimeConfig.auth.tokenManager.onAuthFailure?.();
     }
+
+    await decodeBlobErrorBody(error);
 
     notifyRequestError(error, config);
 

@@ -6,24 +6,29 @@
  */
 
 import { Alert, Form, Result, Spin, Steps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import type { DataConnectFormSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorMessage,
+  isRequestConflict,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
 import { DataConnectPageHeader } from "@/modules/data-connect/components/DataConnectPageHeader";
 import {
   getConnectorConfigDefaults,
+  isConnectorFieldVisible,
   mergeKnownConnectorTypes,
 } from "@/modules/data-connect/lib/connector-template";
 import {
   createDataConnectRecord,
+  getDataConnectConnectorType,
   getDataConnectRecord,
   isDataConnectConnectionTestFailure,
   listDataConnectConnectorTypes,
@@ -54,29 +59,58 @@ export function DataConnectFormScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [loadingConnectorDefinition, setLoadingConnectorDefinition] = useState(false);
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [currentStep, setCurrentStep] = useState(mode === "edit" ? 1 : 0);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const selectedConnectorTypeRef = useRef<string | undefined>(undefined);
+  const recordIdentityKey = mode === "edit" ? (recordId ?? "") : "";
+  const recordIdentityRef = useRef({ generation: 0, key: recordIdentityKey });
+  if (recordIdentityRef.current.key !== recordIdentityKey) {
+    recordIdentityRef.current = {
+      generation: recordIdentityRef.current.generation + 1,
+      key: recordIdentityKey,
+    };
+  }
+
+  const selectConnectorType = (connectorType: string) => {
+    selectedConnectorTypeRef.current = connectorType;
+    setSelectedConnectorType(connectorType);
+  };
 
   useEffect(() => {
+    let active = true;
+
     void (async () => {
       setLoading(true);
       setLoadError(null);
 
       try {
         const types = await listDataConnectConnectorTypes();
-        setConnectorTypes(mergeKnownConnectorTypes(types));
+        const mergedTypes = mergeKnownConnectorTypes(types);
+        if (!active) {
+          return;
+        }
+        setConnectorTypes(mergedTypes);
 
         if (mode === "edit" && recordId) {
           const currentRecord = await getDataConnectRecord(recordId);
+          if (!active) {
+            return;
+          }
           setRecord(currentRecord);
 
           if (currentRecord) {
-            const connector = types.find(
-              (item) => item.type === currentRecord.connectorType,
-            );
-            setSelectedConnectorType(currentRecord.connectorType);
+            const connector = await getDataConnectConnectorType(currentRecord.connectorType);
+            if (!active) {
+              return;
+            }
+            setConnectorTypes((currentTypes) => currentTypes.map((item) => (
+              item.type === connector.type ? connector : item
+            )));
+            selectConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
               connectorConfig: sanitizeConnectorConfig(
                 currentRecord.connectorConfig,
@@ -101,13 +135,63 @@ export function DataConnectFormScene({
             tags: [],
           });
         }
+        setHasUnsavedChanges(false);
       } catch (error) {
-        setLoadError(extractRequestErrorMessage(error));
+        if (active) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, [form, mode, recordId]);
+
+  const refreshRecordAfterConflict = async (
+    error: unknown,
+    submittedRecordId: string | undefined,
+    submittedRecordIdentity: typeof recordIdentityRef.current,
+  ) => {
+    if (mode !== "edit" || !submittedRecordId || !isRequestConflict(error)) {
+      return;
+    }
+
+    try {
+      const latestRecord = await getDataConnectRecord(submittedRecordId);
+      if (recordIdentityRef.current !== submittedRecordIdentity) {
+        return;
+      }
+
+      setRecord(latestRecord);
+      if (latestRecord) {
+        const connector = connectorTypes.find(
+          (item) => item.type === latestRecord.connectorType,
+        );
+        selectConnectorType(latestRecord.connectorType);
+        form.setFieldsValue({
+          connectorConfig: sanitizeConnectorConfig(
+            latestRecord.connectorConfig,
+            connector?.fieldConfig,
+          ),
+          connectorType: latestRecord.connectorType,
+          description: latestRecord.description,
+          enabled: latestRecord.enabled,
+          name: latestRecord.name,
+          tags: latestRecord.tags,
+        });
+        setHasUnsavedChanges(false);
+      }
+    } catch (refreshError) {
+      if (recordIdentityRef.current === submittedRecordIdentity) {
+        void message.error(extractRequestErrorMessage(refreshError));
+      }
+    }
+  };
 
   const selectedConnector = useMemo(
     () => connectorTypes.find((item) => item.type === selectedConnectorType),
@@ -129,7 +213,7 @@ export function DataConnectFormScene({
     { title: t("dataConnect.configStep") },
   ];
 
-  const handleBack = () => {
+  const leavePage = () => {
     if (onBack) {
       onBack();
       return;
@@ -138,25 +222,57 @@ export function DataConnectFormScene({
     void navigate("/data-connect");
   };
 
-  const handleNext = () => {
+  const handleBack = () => {
+    if (!hasUnsavedChanges) {
+      leavePage();
+      return;
+    }
+
+    void modal.confirm({
+      cancelText: t("common.cancel"),
+      content: t("dataConnect.discardChangesDescription"),
+      okButtonProps: { danger: true },
+      okText: t("dataConnect.discardChangesConfirm"),
+      onOk: leavePage,
+      title: t("dataConnect.discardChangesTitle"),
+    });
+  };
+
+  const handleNext = async () => {
     if (!selectedConnectorType) {
       void message.warning(t("dataConnect.selectConnectorTypeRequired"));
       return;
     }
 
-    const connector = connectorTypes.find((item) => item.type === selectedConnectorType);
-    const defaults = getConnectorConfigDefaults(connector);
-    const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
-    const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
-      ...defaults,
-      ...sanitizeConnectorConfig(currentConfig, connector?.fieldConfig),
-    };
+    try {
+      setLoadingConnectorDefinition(true);
+      const connector = await getDataConnectConnectorType(selectedConnectorType);
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
+      setConnectorTypes((currentTypes) => currentTypes.map((item) => (
+        item.type === connector.type ? connector : item
+      )));
+      const defaults = getConnectorConfigDefaults(connector);
+      const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
+      const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
+        ...defaults,
+        ...sanitizeConnectorConfig(currentConfig, connector.fieldConfig),
+      };
 
-    form.setFieldsValue({
-      connectorConfig: mergedConfig,
-      connectorType: selectedConnectorType,
-    });
-    setCurrentStep(1);
+      form.setFieldsValue({
+        connectorConfig: mergedConfig,
+        connectorType: selectedConnectorType,
+      });
+      setCurrentStep(1);
+    } catch (error) {
+      if (selectedConnectorTypeRef.current !== selectedConnectorType) {
+        return;
+      }
+      void message.error(extractRequestErrorMessage(error));
+    } finally {
+      setLoadingConnectorDefinition(false);
+    }
   };
 
   const buildMutationPayload = async () => {
@@ -166,6 +282,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType: selectedConnectorType ?? values.connectorType,
       description: values.description ?? "",
@@ -197,6 +314,7 @@ export function DataConnectFormScene({
       connectorConfig: normalizeConnectorConfig(
         values.connectorConfig ?? {},
         selectedConnector?.fieldConfig,
+        selectedConnector?.type,
       ),
       connectorType:
         selectedConnectorType ?? currentValues.connectorType,
@@ -205,6 +323,8 @@ export function DataConnectFormScene({
 
   const handleSubmit = async () => {
     let payload: DataConnectMutationPayload | null = null;
+    const submittedRecordId = recordId;
+    const submittedRecordIdentity = recordIdentityRef.current;
 
     try {
       setSubmitting(true);
@@ -213,11 +333,20 @@ export function DataConnectFormScene({
       if (mode === "create") {
         await createDataConnectRecord(payload, { skipErrorToast: true });
       } else if (recordId) {
-        await updateDataConnectRecord(recordId, payload, {
+        if (!record) {
+          throw new Error(t("common.requestFailed"));
+        }
+        await updateDataConnectRecord(recordId, {
+          ...payload,
+          expectedUpdateTime: record.expectedUpdateTime,
+        }, {
           skipErrorToast: true,
         });
       }
 
+      if (recordIdentityRef.current !== submittedRecordIdentity) {
+        return;
+      }
       finishSubmit();
     } catch (error) {
       if (
@@ -225,6 +354,10 @@ export function DataConnectFormScene({
         error !== null &&
         "errorFields" in error
       ) {
+        return;
+      }
+
+      if (recordIdentityRef.current !== submittedRecordIdentity) {
         return;
       }
 
@@ -237,6 +370,10 @@ export function DataConnectFormScene({
           okButtonProps: { danger: true },
           okText: t("dataConnect.allowUnhealthy.confirm"),
           onOk: async () => {
+            if (recordIdentityRef.current !== submittedRecordIdentity) {
+              return;
+            }
+
             try {
               setSubmitting(true);
 
@@ -246,18 +383,36 @@ export function DataConnectFormScene({
                   skipErrorToast: true,
                 });
               } else if (recordId) {
-                await updateDataConnectRecord(recordId, retryPayload, {
+                if (!record) {
+                  throw new Error(t("common.requestFailed"));
+                }
+                await updateDataConnectRecord(recordId, {
+                  ...retryPayload,
+                  expectedUpdateTime: record.expectedUpdateTime,
+                }, {
                   allowUnhealthy: true,
                   skipErrorToast: true,
                 });
               }
 
-              finishSubmit();
+              if (recordIdentityRef.current === submittedRecordIdentity) {
+                finishSubmit();
+              }
             } catch (retryError) {
+              if (recordIdentityRef.current !== submittedRecordIdentity) {
+                return;
+              }
               void message.error(extractRequestErrorMessage(retryError));
+              await refreshRecordAfterConflict(
+                retryError,
+                submittedRecordId,
+                submittedRecordIdentity,
+              );
               throw retryError;
             } finally {
-              setSubmitting(false);
+              if (recordIdentityRef.current === submittedRecordIdentity) {
+                setSubmitting(false);
+              }
             }
           },
           title: t("dataConnect.allowUnhealthy.title"),
@@ -266,8 +421,15 @@ export function DataConnectFormScene({
       }
 
       void message.error(extractRequestErrorMessage(error));
+      await refreshRecordAfterConflict(
+        error,
+        submittedRecordId,
+        submittedRecordIdentity,
+      );
     } finally {
-      setSubmitting(false);
+      if (recordIdentityRef.current === submittedRecordIdentity) {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -353,6 +515,9 @@ export function DataConnectFormScene({
                 }
                 colon={false}
                 form={form}
+                onValuesChange={() => {
+                  setHasUnsavedChanges(true);
+                }}
                 labelAlign="right"
                 labelCol={
                   currentStep === 0 && mode === "create"
@@ -372,7 +537,8 @@ export function DataConnectFormScene({
                   <ConnectorTypePicker
                     onChange={(value) => {
                       const connector = connectorTypes.find((item) => item.type === value);
-                      setSelectedConnectorType(value);
+                      setHasUnsavedChanges(true);
+                      selectConnectorType(value);
                       form.setFieldsValue({
                         connectorConfig: getConnectorConfigDefaults(connector),
                         connectorType: value,
@@ -415,7 +581,7 @@ export function DataConnectFormScene({
               </PermissionGate>
             ) : null}
             <AppButton
-              loading={submitting}
+              loading={submitting || loadingConnectorDefinition}
               onClick={() => {
                 void (currentStep === 0 && mode === "create" ? handleNext() : handleSubmit());
               }}
@@ -465,11 +631,13 @@ function sanitizeConnectorConfig(
 function normalizeConnectorConfig(
   config: Record<string, unknown>,
   fieldConfig: Record<string, ConnectorFieldConfig> = {},
+  connectorType?: string,
 ) {
   return Object.fromEntries(
     Object.entries(config)
       .filter(
         ([key, value]) =>
+          isConnectorFieldVisible(connectorType, key, config) &&
           !shouldOmitConnectorConfigValue(fieldConfig[key], value),
       )
       .map(([key, value]) => {

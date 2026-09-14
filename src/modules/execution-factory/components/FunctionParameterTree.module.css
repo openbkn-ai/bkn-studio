@@ -13,7 +13,7 @@
 
 .node {
   border: 1px solid var(--color-border);
-  background: #ffffff;
+  background: var(--color-bg-surface);
 }
 
 .nodeChild {
@@ -99,15 +99,15 @@
 .addButton.addButton {
   align-self: stretch;
   justify-content: center;
-  border: 1px dashed var(--color-primary-border, #c7d2fe);
-  background: var(--color-primary-bg, #eef2ff);
-  color: var(--color-primary, #2563eb);
+  border: 1px dashed var(--color-primary-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-600);
   height: 30px;
 }
 
 .addButton.addButton:hover {
   border-style: solid;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
 }
 
 .addSubButton.addSubButton {

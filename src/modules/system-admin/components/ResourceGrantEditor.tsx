@@ -6,16 +6,20 @@
  */
 
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Checkbox, Empty, Input, Select, Tag } from "antd";
+import { Checkbox, Empty, Input, Select, Tag, Tooltip } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
 import {
+  addOperationToGrant,
+  removeOperationFromGrant,
+} from "@/modules/system-admin/utils/resource-grant-operations";
+import {
   operationLabel,
   operationsForType,
-  RESOURCE_TYPES,
+  ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
@@ -24,6 +28,8 @@ import styles from "@/modules/system-admin/scenes/admin.module.css";
 
 type ResourceGrantEditorProps = {
   disabled?: boolean;
+  /** Role grants are type-wide; concrete object grants are managed elsewhere. */
+  typeWideOnly?: boolean;
   /** Locked to one resource, such as a data-connection grant; only operations can be selected. */
   lockedResource?: ResourceRef;
   onChange: (next: ResourceGrant[]) => void;
@@ -35,21 +41,28 @@ const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.
 export function ResourceGrantEditor({
   disabled,
   lockedResource,
+  typeWideOnly = false,
   onChange,
   value,
 }: ResourceGrantEditorProps) {
   const { t } = useTranslation();
-  const [draftType, setDraftType] = useState<string>(lockedResource?.type ?? RESOURCE_TYPES[0].type);
-  const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? WILDCARD);
+  const [draftType, setDraftType] = useState<string>(
+    lockedResource?.type ?? ROLE_GRANT_RESOURCE_TYPES[0].type,
+  );
+  const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? "");
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
   const [draftOps, setDraftOps] = useState<string[]>([]);
+  const [addingGrantKey, setAddingGrantKey] = useState<string | null>(null);
 
   const ops = useMemo(() => operationsForType(draftType), [draftType]);
 
   const resolvedId = lockedResource ? lockedResource.id : wholeType ? WILDCARD : draftId.trim();
 
   const addGrant = () => {
-    if (!draftOps.length || (!lockedResource && !wholeType && !draftId.trim())) {
+    if (
+      !draftOps.length ||
+      (!lockedResource && !wholeType && (typeWideOnly || !draftId.trim()))
+    ) {
       return;
     }
     const resource: ResourceRef = { type: draftType, id: resolvedId };
@@ -72,6 +85,15 @@ export function ResourceGrantEditor({
     onChange(value.filter((item) => item !== grant));
   };
 
+  const addOperation = (grant: ResourceGrant, operation: string) => {
+    onChange(addOperationToGrant(value, grant, operation));
+    setAddingGrantKey(null);
+  };
+
+  const removeOperation = (grant: ResourceGrant, operation: string) => {
+    onChange(removeOperationFromGrant(value, grant, operation));
+  };
+
   return (
     <div className={styles.grantEditor}>
       {value.length ? (
@@ -86,7 +108,15 @@ export function ResourceGrantEditor({
               </div>
               <div className={styles.chipRow}>
                 {grant.operations.map((op) => (
-                  <Tag className={styles.permChip} key={op}>
+                  <Tag
+                    closable={!disabled}
+                    className={styles.permChip}
+                    key={op}
+                    onClose={(event) => {
+                      event.preventDefault();
+                      removeOperation(grant, op);
+                    }}
+                  >
                     {grant.resource.id === WILDCARD || op === "*"
                       ? op === "*"
                         ? t("systemAdmin.grant.allOps")
@@ -94,6 +124,32 @@ export function ResourceGrantEditor({
                       : operationLabel(grant.resource.type, op)}
                   </Tag>
                 ))}
+                {!disabled && !grant.operations.includes("*") ? (
+                  addingGrantKey === `${grant.resource.type}:${grant.resource.id}:${index}` ? (
+                    <Select
+                      autoFocus
+                      onBlur={() => setAddingGrantKey(null)}
+                      onSelect={(operation: string) => addOperation(grant, operation)}
+                      options={operationsForType(grant.resource.type)
+                        .filter((operation) => !grant.operations.includes(operation.key))
+                        .map((operation) => ({ label: operation.label, value: operation.key }))}
+                      placeholder={t("systemAdmin.grant.operationsPlaceholder")}
+                      size="small"
+                      style={{ minWidth: 150 }}
+                    />
+                  ) : (
+                    <Tooltip title={t("systemAdmin.grant.addOperation")}>
+                      <AppButton
+                        icon={<PlusOutlined />}
+                        onClick={() => setAddingGrantKey(`${grant.resource.type}:${grant.resource.id}:${index}`)}
+                        size="small"
+                        type="link"
+                      >
+                        {t("systemAdmin.grant.addOperation")}
+                      </AppButton>
+                    </Tooltip>
+                  )
+                ) : null}
               </div>
               {!disabled ? (
                 <AppButton
@@ -124,21 +180,33 @@ export function ResourceGrantEditor({
                   setDraftType(type);
                   setDraftOps([]);
                 }}
-                options={RESOURCE_TYPES.map((item) => ({
+                options={ROLE_GRANT_RESOURCE_TYPES.map((item) => ({
                   label: resourceTypeLabel(item.type),
                   value: item.type,
                 }))}
                 style={{ minWidth: 160 }}
                 value={draftType}
               />
-              <Input
-                disabled={wholeType}
-                onChange={(event) => setDraftId(event.target.value)}
-                placeholder={t("systemAdmin.grant.resourceIdPlaceholder")}
-                style={{ flex: 1, minWidth: 140 }}
-                value={wholeType ? "" : draftId}
-              />
-              <Checkbox checked={wholeType} onChange={(event) => setWholeType(event.target.checked)}>
+              {!typeWideOnly ? (
+                <Input
+                  disabled={wholeType}
+                  onChange={(event) => setDraftId(event.target.value)}
+                  placeholder={t("systemAdmin.grant.resourceIdPlaceholder")}
+                  style={{ flex: 1, minWidth: 140 }}
+                  value={wholeType ? "" : draftId}
+                />
+              ) : null}
+              <Checkbox
+                checked={typeWideOnly || wholeType}
+                disabled={typeWideOnly}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setWholeType(checked);
+                  if (checked || typeWideOnly) {
+                    setDraftId("");
+                  }
+                }}
+              >
                 {t("systemAdmin.grant.wholeType")}
               </Checkbox>
             </>

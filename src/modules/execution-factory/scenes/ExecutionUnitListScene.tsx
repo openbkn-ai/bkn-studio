@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
+import { filterAccessibleExecutionUnitTabs } from "@/modules/execution-factory/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -66,18 +67,19 @@ import {
   resolveLifecycleActionStatus,
   resolveListStatusQueries,
 } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
+import { resolveStatusChangeOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import {
   collectLocalResourceIds,
   invalidateLocalResourceIdsCache,
 } from "@/modules/execution-factory/utils/collect-local-resource-ids";
 import {
-  getDefaultManagementTab,
   getExecutionUnitTabLabelKey,
   isCapabilityUxV2,
   resolveVisibleManagementTabs,
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
 import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
+import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
@@ -103,6 +105,13 @@ const TAB_STORAGE_KEY = "execution-factory.activeTab";
 /** API/function subview under toolboxes, restored from detail-page navigation just like activeTab. */
 const TOOLBOX_VIEW_STORAGE_KEY = "execution-factory.toolboxView";
 const DEFAULT_TABS: ExecutionUnitTab[] = ["operator", "toolbox", "mcp", "skill"];
+
+type ObjectAuthorizationTarget = {
+  id: string;
+  name: string;
+  type: string;
+  objectAuthorized: boolean;
+};
 
 type IdleTaskHandle = {
   cancel: () => void;
@@ -202,6 +211,7 @@ function mapAuditUser(userId: string | undefined, directory: Map<string, string>
 
 function mapOperator(item: OperatorRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.operatorId,
     name: item.name,
     description: item.description,
@@ -220,6 +230,7 @@ function mapOperator(item: OperatorRecord, directory: Map<string, string>): Exec
 
 function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.boxId,
     name: item.name,
     description: item.description,
@@ -238,6 +249,7 @@ function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): Execut
 
 function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.mcpId,
     name: item.name,
     description: item.description,
@@ -254,6 +266,7 @@ function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitC
 
 function mapSkill(item: SkillRecord, directory: Map<string, string>): ExecutionUnitCardItem {
   return {
+    operations: item.operations,
     id: item.skillId,
     name: item.name,
     description: item.description,
@@ -275,7 +288,7 @@ export function ExecutionUnitListScene({
   toolbarHintKey,
 }: ExecutionUnitListSceneProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { pageState, reset, setKeyword } = usePageState();
@@ -283,13 +296,23 @@ export function ExecutionUnitListScene({
   const listLoadGenerationRef = useRef(0);
   const installedSyncIdleRef = useRef<IdleTaskHandle | null>(null);
   const [overlaysReady, setOverlaysReady] = useState(false);
-  const resolvableTabs = useMemo(() => {
-    if (!isCapabilityUxV2() || tabs.includes("operator")) {
+  const accessibleTabs = useMemo(() => {
+    if (marketMode) {
       return tabs;
     }
 
-    return [...tabs, "operator" as const];
-  }, [tabs]);
+    return filterAccessibleExecutionUnitTabs(tabs, runtimeConfig.currentUser.permissions ?? []);
+  }, [marketMode, runtimeConfig.currentUser.permissions, tabs]);
+  const resolvableTabs = useMemo(() => {
+    if (!isCapabilityUxV2() || accessibleTabs.includes("operator")) {
+      return accessibleTabs;
+    }
+
+    const operatorViewPermission = "execution-factory:operator:view";
+    return runtimeConfig.currentUser.permissions?.includes(operatorViewPermission)
+      ? [...accessibleTabs, "operator" as const]
+      : accessibleTabs;
+  }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
   );
@@ -319,9 +342,7 @@ export function ExecutionUnitListScene({
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
   const [detailMcpId, setDetailMcpId] = useState<string | null>(null);
   const [detailSkillId, setDetailSkillId] = useState<string | null>(null);
-  const [authorizeTarget, setAuthorizeTarget] = useState<{ id: string; name: string; type: string } | null>(
-    null,
-  );
+  const [authorizeTarget, setAuthorizeTarget] = useState<ObjectAuthorizationTarget | null>(null);
   const [installTarget, setInstallTarget] = useState<{
     id: string;
     name: string;
@@ -337,11 +358,7 @@ export function ExecutionUnitListScene({
   const [installedResourceIdsReady, setInstalledResourceIdsReady] = useState(!marketMode);
   const installedSyncAbortRef = useRef<AbortController | null>(null);
   const installedSyncManualRef = useRef(false);
-  const [publishedPermTarget, setPublishedPermTarget] = useState<{
-    id: string;
-    name: string;
-    type: string;
-  } | null>(null);
+  const [publishedPermTarget, setPublishedPermTarget] = useState<ObjectAuthorizationTarget | null>(null);
   const [editMcpId, setEditMcpId] = useState<string | null>(null);
   const [updateSkillPackageTarget, setUpdateSkillPackageTarget] = useState<{
     id: string;
@@ -793,14 +810,6 @@ export function ExecutionUnitListScene({
     [activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
   );
 
-  const returnToPrimaryCapabilities = () => {
-    const primaryTab = getDefaultManagementTab();
-    window.localStorage.setItem(TAB_STORAGE_KEY, primaryTab);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("activeTab", primaryTab);
-    setSearchParams(nextParams);
-  };
-
   const statusOptions = useMemo(() => {
     // There is no separate offline option; offline belongs to unpublished and listStatuses queries both.
     const base = [
@@ -930,18 +939,23 @@ export function ExecutionUnitListScene({
             </>
           ),
           okButtonProps: options?.danger ? { danger: true } : undefined,
-          okText: t(options?.okTextKey ?? "common.save"),
+          okText: t(options?.okTextKey ?? resolveStatusChangeOkTextKey(nextStatus)),
           cancelText: t("common.cancel"),
           onOk: async () => {
             try {
               await onConfirm();
               void message.success(t("common.success"));
               reloadList();
-              if (!marketMode && nextStatus === "published") {
+              if (
+                !marketMode &&
+                nextStatus === "published" &&
+                hasExecutionUnitRecordOperation(item, "authorize")
+              ) {
                 setPublishedPermTarget({
                   id: item.id,
                   name: item.name,
                   type: AUTHZ_TYPE_BY_TAB[activeTab],
+                  objectAuthorized: true,
                 });
               }
             } catch (error) {
@@ -973,7 +987,12 @@ export function ExecutionUnitListScene({
       };
 
       if (action === "authorize") {
-        setAuthorizeTarget({ id: item.id, name: item.name, type: AUTHZ_TYPE_BY_TAB[activeTab] });
+        setAuthorizeTarget({
+          id: item.id,
+          name: item.name,
+          type: AUTHZ_TYPE_BY_TAB[activeTab],
+          objectAuthorized: hasExecutionUnitRecordOperation(item, "authorize"),
+        });
         return;
       }
 
@@ -1334,15 +1353,6 @@ export function ExecutionUnitListScene({
   return (
     <>
       <section className={styles.page}>
-        {/* 页面标题由面包屑承担，这里不再重复一遍；算子视图仍需要返回入口。 */}
-        {isCapabilityUxV2() && !marketMode && activeTab === "operator" ? (
-          <div className={styles.pageIntroActions}>
-            <Button onClick={returnToPrimaryCapabilities} type="link">
-              {t("executionFactory.backToCapabilities")}
-            </Button>
-          </div>
-        ) : null}
-
         {!marketMode ? (
           <div className={styles.toolbarActions}>
             <CreateMenu
@@ -1601,6 +1611,7 @@ export function ExecutionUnitListScene({
           objId={authorizeTarget.id}
           objName={authorizeTarget.name}
           objType={authorizeTarget.type}
+          objectAuthorized={authorizeTarget.objectAuthorized}
           onClose={() => setAuthorizeTarget(null)}
           open={Boolean(authorizeTarget)}
         />

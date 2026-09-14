@@ -38,9 +38,9 @@
 .toolbarFilters :global(.ant-input-affix-wrapper) {
   height: 32px;
   padding-inline: 11px;
-  border-color: #d9e0ea;
+  border-color: var(--color-border);
   border-radius: 0 !important;
-  background: #fff;
+  background: var(--color-bg-surface);
   box-shadow: none;
 }
 
@@ -55,7 +55,7 @@
 }
 
 .searchIcon {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
@@ -67,7 +67,7 @@
 
 .filterLabel {
   flex-shrink: 0;
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
   line-height: 32px;
@@ -80,7 +80,7 @@
 
 .filterSelect :global(.ant-select-selector) {
   height: 32px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -119,8 +119,24 @@
   composes: nameCell from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
 
-.nameTitle {
-  composes: nameTitle from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+.ellipsisLink {
+  display: inline-flex !important;
+  align-items: center;
+  max-width: 100%;
+  height: auto !important;
+  padding: 0 !important;
+  font-weight: 400;
+}
+
+.cellEllipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ellipsisLink .cellEllipsis {
+  min-width: 0;
 }
 
 .descriptionText {

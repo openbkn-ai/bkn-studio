@@ -14,6 +14,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { listRoles, setRolePermission } from "@/modules/system-admin/services/admin.service";
 import type { AdminRole } from "@/modules/system-admin/types/admin";
+import { roleDescription } from "@/modules/system-admin/utils/role-catalog";
 import {
   operationLabel,
   operationsForType,
@@ -161,7 +162,7 @@ export function CatalogAuthorizeModal({
           onChange={setRoleId}
           optionFilterProp="label"
           options={candidateRoles.map((role) => ({
-            label: `${role.name}${role.description ? ` · ${role.description}` : ""}`,
+            label: `${role.name}${roleDescription(role) ? ` · ${roleDescription(role)}` : ""}`,
             value: role.id,
           }))}
           placeholder={t("systemAdmin.authorize.rolePlaceholder")}

@@ -6,13 +6,15 @@
  */
 
 import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Empty, Input, Popover, Result, Segmented, Select, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Empty, Input, Popover, Result, Segmented, Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
 import i18n from "@/app/locales/i18n";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import {
   getBusinessProvenanceAnalysisHistory,
   getBusinessProvenanceConversations,
@@ -28,7 +30,7 @@ import {
 } from "@/modules/bkn-trace/business-provenance/business-provenance.service";
 import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css";
 
-type View = "timeline" | "knowledge";
+type View = "timeline" | "knowledge" | "evidence" | "execution";
 type KnowledgeSelection = { network: string; elementId: string; elementName: string };
 type AgentSuggestion = { id?: string; category?: string; location?: string; problem?: string; sourceEvidence?: string; verificationEvidence?: string; change?: string; acceptance?: string };
 type AgentAdvice = { verdicts: Record<string, string | undefined>; conclusion?: string; suggestions: AgentSuggestion[]; notEvaluable?: string };
@@ -68,8 +70,14 @@ function formatDuration(value?: number) {
 function statusLabel(value?: string) {
   if (value === "completed") return bpText("status.completed");
   if (value === "failed") return bpText("status.failed");
-  if (value === "running" || value === "active") return bpText("status.running");
+  if (value === "active") return bpText("status.active");
+  if (value === "running") return bpText("status.running");
   return value || bpText("notRecorded");
+}
+
+function roundLabel(item: BusinessProvenanceInteractionListItem | undefined) {
+  if (item?.roundNumber && item.roundNumber > 0) return bpText("roundLabel", { index: item.roundNumber });
+  return bpText("roundNotRecorded");
 }
 
 function operationTitle(operation: OperationResolution) {
@@ -186,6 +194,10 @@ function conversationTitle(conversation: BusinessProvenanceConversation) {
   return agent ? bpText("conversation.titleWithAgent", { agent }) : bpText("conversation.title");
 }
 
+function ClampedText({ value }: { value: string }) {
+  return <Tooltip title={value}><span aria-label={value} className={styles.tableClamp}>{value}</span></Tooltip>;
+}
+
 function evidenceLabel(conversation: BusinessProvenanceConversation) {
   if (conversation.evidenceCompleteness === "complete") return bpText("evidence.complete");
   if (conversation.evidenceCompleteness === "partial") return bpText("evidence.partial");
@@ -291,7 +303,6 @@ export function BusinessProvenanceScene() {
   const [conversationPage, setConversationPage] = useState(1);
   const [conversationKeyword, setConversationKeyword] = useState("");
   const [conversationAgent, setConversationAgent] = useState("");
-  const [conversationBusinessDomain, setConversationBusinessDomain] = useState("");
   const [conversationKnowledgeNetwork, setConversationKnowledgeNetwork] = useState("");
   const [conversationStatus, setConversationStatus] = useState<string>();
   const [conversationEvidence, setConversationEvidence] = useState<string>();
@@ -299,9 +310,17 @@ export function BusinessProvenanceScene() {
   const [selectedConversation, setSelectedConversation] = useState<BusinessProvenanceConversation>();
   const [interactionKeyword, setInteractionKeyword] = useState("");
   const [interactions, setInteractions] = useState<BusinessProvenanceInteractionListItem[]>([]);
+  const [interactionTotal, setInteractionTotal] = useState(0);
   const [selectedInteraction, setSelectedInteraction] = useState<BusinessProvenanceInteractionListItem>();
   const [projection, setProjection] = useState<BusinessProvenanceInteraction>();
+  const [interactionListLoading, setInteractionListLoading] = useState(false);
+  const [interactionListError, setInteractionListError] = useState(false);
+  const [interactionDetailLoading, setInteractionDetailLoading] = useState(false);
+  const [interactionDetailError, setInteractionDetailError] = useState(false);
+  const [projectionUnavailable, setProjectionUnavailable] = useState(false);
+  const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
+  const needsProjection = view === "timeline" || view === "knowledge";
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
   const [knowledgeSelection, setKnowledgeSelection] = useState<KnowledgeSelection>();
   const [loading, setLoading] = useState(true);
@@ -340,33 +359,61 @@ export function BusinessProvenanceScene() {
   useEffect(() => {
     if (!selectedConversation) return;
     let current = true;
-    setInteractions([]); setSelectedInteraction(undefined);
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
+    setInteractions([]); setInteractionTotal(0); setSelectedInteraction(undefined);
+    setInteractionListLoading(true); setInteractionListError(false);
+    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setProjectionUnavailable(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
-      .then((page) => { if (current) { setInteractions(page.entries); setSelectedInteraction(page.entries[0]); } })
-      .catch(() => { if (current) message.error(bpText("errors.interactionsLoad")); });
+      .then((page) => { if (current) { setInteractions(page.entries); setInteractionTotal(page.total); setSelectedInteraction(page.entries[0]); } })
+      .catch(() => { if (current) { setInteractionListError(true); message.error(bpText("errors.interactionsLoad")); } })
+      .finally(() => { if (current) setInteractionListLoading(false); });
     return () => { current = false; };
   }, [interactionKeyword, selectedConversation]);
   useEffect(() => {
-    if (!selectedInteraction) return;
+    if (!selectedInteraction || !needsProjection) {
+      setProjection(undefined);
+      setDetailOperation(undefined);
+      setKnowledgeSelection(undefined);
+      setInteractionDetailLoading(false);
+      setInteractionDetailError(false);
+      setProjectionUnavailable(false);
+      return;
+    }
     let current = true;
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined);
-    setAnalysisMarkdown(""); setAnalysisMarkdownLoading(true); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
+    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
+    setAnalysisMarkdown(""); setAnalysisMarkdownLoading(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
-      .then((value) => { if (current) setProjection(value); })
-      .catch(() => { if (current) message.error(bpText("errors.factsLoad")); });
-    void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
-      .then((value) => { if (current) setAnalysisMarkdown(value); })
-      .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
-      .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
-    void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId).then((entries) => {
-      if (!current) return;
-      setAnalysisHistory(entries);
-      const latest = entries.find((entry) => entry.status === "completed" && entry.result);
-      setAnalysisResult(latest?.result);
-    }).catch(() => { if (current) setAnalysisHistory([]); });
+      .then((value) => {
+        if (!current) return;
+        setProjection(value);
+        setAnalysisMarkdownLoading(true);
+        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
+          .then((markdown) => { if (current) setAnalysisMarkdown(markdown); })
+          .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
+          .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
+        void getBusinessProvenanceAnalysisHistory(selectedInteraction.interactionId).then((entries) => {
+          if (!current) return;
+          setAnalysisHistory(entries);
+          const latest = entries.find((entry) => entry.status === "completed" && entry.result);
+          setAnalysisResult(latest?.result);
+        }).catch(() => { if (current) setAnalysisHistory([]); });
+      })
+      .catch((error) => {
+        if (!current) return;
+        if (responseStatus(error) !== 404) {
+          setInteractionDetailError(true);
+          message.error(bpText("errors.factsLoad"));
+          return;
+        }
+        setProjectionUnavailable(true);
+        setAnalysisMarkdownLoading(true);
+        void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
+          .then((markdown) => { if (current) setAnalysisMarkdown(markdown); })
+          .catch(() => { if (current) message.error(bpText("errors.markdownLoad")); })
+          .finally(() => { if (current) setAnalysisMarkdownLoading(false); });
+      })
+      .finally(() => { if (current) setInteractionDetailLoading(false); });
     return () => { current = false; };
-  }, [selectedInteraction]);
+  }, [interactionReload, needsProjection, selectedInteraction]);
 
   const groups = useMemo(() => projection ? knowledgeGroups(projection) : [], [projection]);
   const selectedKnowledgeCalls = useMemo(() => {
@@ -386,20 +433,23 @@ export function BusinessProvenanceScene() {
 
   const copyMarkdown = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown) return;
-    await navigator.clipboard?.writeText(analysisMarkdown);
-    message.success(bpText("agent.markdownCopied"));
+    try {
+      await writeTextToClipboard(analysisMarkdown);
+      message.success(bpText("agent.markdownCopied"));
+    } catch {
+      message.error(bpText("agent.copyFailed"));
+    }
   }, [analysisMarkdown, selectedInteraction]);
 
   const copyPayload = useCallback(async (value: unknown) => {
     const content = payloadText(value);
     if (!content) return;
-    await navigator.clipboard?.writeText(content);
+    await writeTextToClipboard(content);
     message.success(bpText("detail.payloadCopied"));
   }, []);
 
   const copySourceText = useCallback((value: string) => {
-    void navigator.clipboard?.writeText(value);
-    message.success(bpText("detail.payloadCopied"));
+    void writeTextToClipboard(value).then(() => message.success(bpText("detail.payloadCopied")));
   }, []);
 
   const downloadMarkdown = useCallback(() => {
@@ -421,22 +471,24 @@ export function BusinessProvenanceScene() {
     setConversationQuery({
       keyword: conversationKeyword,
       agentOrApp: conversationAgent,
-      businessDomain: conversationBusinessDomain,
       knowledgeNetwork: conversationKnowledgeNetwork,
       status: conversationStatus,
       evidenceCompleteness: conversationEvidence,
     });
-  }, [conversationAgent, conversationBusinessDomain, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork, conversationStatus]);
+  }, [conversationAgent, conversationEvidence, conversationKeyword, conversationKnowledgeNetwork, conversationStatus]);
 
   const conversationColumns: ColumnsType<BusinessProvenanceConversation> = [
-    { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: 180, render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
-    { dataIndex: "questionPreview", title: bpText("columns.question"), width: 260, render: (value: string | undefined, item) => <Button type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{value || bpText("questionNotRecorded")}</Button> },
-    { dataIndex: "interactionCount", title: bpText("columns.interactions"), width: 90, align: "center", render: (value?: number) => value ?? 0 },
-    { dataIndex: "resultPreview", title: bpText("columns.result"), width: 260, ellipsis: true, render: (value?: string) => <span className={styles.tableClamp}>{value || "—"}</span> },
-    { dataIndex: "agentName", title: "Agent", width: 140, render: (value?: string) => <span className={styles.tableClamp}>{value || bpText("agentNotRecorded")}</span> },
-    { dataIndex: "status", title: bpText("columns.status"), width: 90, render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
-    { title: bpText("columns.evidence"), width: 120, render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
-    { dataIndex: "durationMs", title: bpText("columns.duration"), width: 90, render: (value?: number) => formatDuration(value) },
+    { dataIndex: "startedAt", title: bpText("columns.startedAt"), width: "15%", render: (value: string | undefined, item) => <div className={styles.timeCell}><b>{formatTime(value)}</b><small>{item.conversationId}</small></div> },
+    { dataIndex: "questionPreview", title: bpText("columns.question"), width: "20%", render: (value: string | undefined, item) => {
+      const text = value || bpText("questionNotRecorded");
+      return <Tooltip title={text}><Button aria-label={text} type="link" className={styles.questionLink} onClick={() => setSelectedConversation(item)}>{text}</Button></Tooltip>;
+    } },
+    { dataIndex: "interactionCount", title: bpText("columns.interactions"), width: "8%", align: "center", render: (value?: number) => value ?? 0 },
+    { dataIndex: "resultPreview", title: bpText("columns.result"), width: "20%", render: (value?: string) => <ClampedText value={value || "—"} /> },
+    { dataIndex: "agentName", title: "Agent", width: "14%", render: (value?: string) => <ClampedText value={value || bpText("agentNotRecorded")} /> },
+    { dataIndex: "status", title: bpText("columns.status"), width: "8%", render: (value?: string) => <span className={styles.statusText}>{statusLabel(value)}</span> },
+    { title: bpText("columns.evidence"), width: "9%", render: (_, item) => <span className={styles.evidence}>{evidenceLabel(item)}</span> },
+    { dataIndex: "durationMs", title: bpText("columns.duration"), width: "6%", render: (value?: number) => formatDuration(value) },
   ];
 
   if (conversationLoadState) {
@@ -457,53 +509,52 @@ export function BusinessProvenanceScene() {
 
   if (!selectedConversation) return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>{bpText("list.title")}</Typography.Title><Typography.Text>{bpText("list.description")}</Typography.Text></div>
+      <div><Typography.Title level={3}>{bpText("list.title")}</Typography.Title><Typography.Text>{bpText("list.description")}</Typography.Text></div>
       <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.listCard}>
       <div className={styles.filters}>
         <Input value={conversationKeyword} onChange={(event) => setConversationKeyword(event.target.value)} onPressEnter={submitConversationQuery} prefix={<SearchOutlined />} placeholder={bpText("filters.keyword")} />
         <Input value={conversationAgent} onChange={(event) => setConversationAgent(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.agent")} />
-        <Input value={conversationBusinessDomain} onChange={(event) => setConversationBusinessDomain(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.businessDomain")} />
         <Input value={conversationKnowledgeNetwork} onChange={(event) => setConversationKnowledgeNetwork(event.target.value)} onPressEnter={submitConversationQuery} placeholder={bpText("filters.network")} />
-        <Select allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "running", label: statusLabel("running") }]} onChange={setConversationStatus} />
+        <Select aria-label={bpText("filters.status")} allowClear placeholder={bpText("filters.status")} value={conversationStatus} options={[{ value: "completed", label: statusLabel("completed") }, { value: "failed", label: statusLabel("failed") }, { value: "active", label: statusLabel("active") }]} onChange={setConversationStatus} />
         <Select allowClear placeholder={bpText("filters.evidence")} value={conversationEvidence} options={[{ value: "complete", label: bpText("evidence.complete") }, { value: "partial", label: bpText("evidence.partial") }]} onChange={setConversationEvidence} />
         <Button type="primary" icon={<SearchOutlined />} onClick={submitConversationQuery}>{bpText("actions.query")}</Button>
-        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationBusinessDomain(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
+        <Button aria-label={bpText("actions.reset")} icon={<ReloadOutlined />} onClick={() => { setConversationKeyword(""); setConversationAgent(""); setConversationKnowledgeNetwork(""); setConversationStatus(undefined); setConversationEvidence(undefined); setConversationPage(1); setConversationQuery({}); }} />
       </div>
-      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" scroll={{ x: 1230 }} locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
+      <Table rowKey="conversationId" columns={conversationColumns} dataSource={conversations} loading={loading} tableLayout="fixed" locale={{ emptyText: <Empty description={bpText("list.empty")} /> }} pagination={{ current: conversationPage, pageSize: 20, total: conversationTotal, showSizeChanger: false, showTotal: (total) => bpText("list.total", { count: total }), onChange: setConversationPage }} />
     </section>
   </main>;
 
   return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
-      <div><Typography.Title level={2}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
+      <div><Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
       <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
     <section className={styles.workspace}>
       <header className={styles.workspaceHeader}>
         <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← {bpText("actions.back")}</Button>
-        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: interactions.length || selectedConversation.interactionCount || 0 })}</span><span>{bpText("callCount", { count: projection?.operations.length ?? 0 })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
+        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span>{projection ? <span>{bpText("callCount", { count: projection.operations.length })}</span> : null}<span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
       <aside className={styles.roundSidebar}>
-        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{bpText("rounds.summary", { total: interactions.length, current: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span></div></div>
+        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: selectedConversation.interactionCount ?? interactionTotal, current: selectedInteraction?.roundNumber && selectedInteraction.roundNumber > 0 ? selectedInteraction.roundNumber : bpText("roundNotRecorded") })}</span></div></div>
         <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("rounds.search")} />
-        <div className={styles.roundList}>{interactions.map((item, index) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{bpText("roundLabel", { index: index + 1 })}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
+        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        {projection ? <>
+        <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); setKnowledgeSelection(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }, { label: bpText("views.evidence"), value: "evidence" }, { label: bpText("views.execution"), value: "execution" }]} />
+        {(view === "evidence" || view === "execution") && selectedInteraction && !interactionListLoading ? <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel={view} onPanelChange={setView} /> : interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
           <section className={styles.interactionSummary}>
-            <header><span>{bpText("roundLabel", { index: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
+            <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
             <div className={styles.sourceTexts}>
               <div><h4>{bpText("rounds.inputOriginal")}</h4><SourceText title={bpText("rounds.inputOriginal")} preview={selectedInteraction?.questionPreview} original={projection.interactionQuestion} viewLabel={bpText("rounds.viewFullInput")} onCopy={copySourceText} /></div>
               <div><h4>{bpText("rounds.outputOriginal")}</h4><SourceText title={bpText("rounds.outputOriginal")} preview={selectedInteraction?.resultPreview} original={projection.interactionResult} viewLabel={bpText("rounds.viewFullOutput")} onCopy={copySourceText} /></div>
             </div>
             <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
           </section>
-          <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }]} />
           {view === "timeline" ? <section className={styles.timeline}>
             <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
-            {projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
+            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
               <div className={styles.timelineRail}><i />{index < projection.operations.length - 1 ? <span /> : null}</div>
               <article className={styles.operationCard} onClick={() => setDetailOperation(operation)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") setDetailOperation(operation); }}>
                 <header><h3>{operationTitle(operation)}</h3>{operation.elements[0] ? <Tag>{operation.elements[0].name || operation.elements[0].id}</Tag> : null}</header>
@@ -513,14 +564,14 @@ export function BusinessProvenanceScene() {
                 <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>{bpText("operation.detail")}</Button>
               </article>
             </div>)}
-          </section> : <section className={styles.knowledgeCanvas}>
+          </section> : view === "knowledge" ? <section className={styles.knowledgeCanvas}>
             <p className={styles.knowledgePath}>{bpText("knowledge.path")}</p>
             {groups.length ? groups.map(([network, elements]) => <div className={styles.knowledgeGrid} key={network}>
               <section className={styles.knowledgeColumn}><h3><span>1</span>{bpText("knowledge.network")}</h3><article className={styles.networkCard}><b>{network}</b><small>{network}</small></article><p className={styles.candidateNote}>{bpText("knowledge.observedOnly")}</p></section>
               <section className={styles.knowledgeColumn}><h3><span>2</span>{bpText("knowledge.observed")}</h3>{elements.map((element) => <button key={`${element.kind}:${element.id}`} className={knowledgeSelection?.elementId === element.id ? styles.knowledgeSelected : ""} onClick={() => setKnowledgeSelection({ network, elementId: element.id, elementName: element.name })}><b>{element.name}</b><small>{elementKindText(element.kind)} · {bpText("knowledge.deterministicCalls", { count: element.operationIds.length })}</small></button>)}</section>
               <section className={styles.knowledgeColumn}><h3><span>3</span>{bpText("knowledge.relations")}</h3>{projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).length ? projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).map((relation) => <article className={styles.contextCard} key={relation.id}><b>{relation.name || relation.id}</b><small>{bpText("knowledge.contextOnly")}</small></article>) : <p className={styles.emptyContext}>{bpText("knowledge.noContext")}</p>}</section>
             </div>) : <Empty description={bpText("knowledge.empty")} />}
-          </section>}
+          </section> : null}
         </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>
@@ -553,7 +604,7 @@ export function BusinessProvenanceScene() {
           </header>
           <p className={styles.agentIntro}>{bpText("agent.intro")}</p>
           <div className={styles.agentSource}>
-            <strong>{bpText("roundLabel", { index: Math.max(1, interactions.findIndex((item) => item.interactionId === selectedInteraction?.interactionId) + 1) })} · {selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</strong>
+            <strong>{roundLabel(selectedInteraction)} · {selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</strong>
             <small>{selectedInteraction?.interactionId}<br />{formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection?.operations.length ?? 0 })}</small>
           </div>
           {analysisHistory.length ? <Select aria-label={bpText("agent.history")} value={analysisHistory.find((item) => item.result === analysisResult)?.analysisId ?? analysisHistory[0]?.analysisId} options={analysisHistory.map((item, index) => ({ value: item.analysisId, label: bpText("agent.historyItem", { index: analysisHistory.length - index, time: formatTime(item.startedAt), status: item.status === "completed" ? statusLabel("completed") : item.status === "failed" ? statusLabel("failed") : bpText("agent.analyzing") }) }))} onChange={(analysisId) => { const selected = analysisHistory.find((item) => item.analysisId === analysisId); setAnalysisResult(selected?.result); setAnalysisError(selected?.status === "failed" ? bpText("agent.failureWithReason", { reason: selected.failureMessage || bpText("agent.failureReasonMissing") }) : undefined); }} /> : null}
@@ -582,7 +633,7 @@ function AnalysisResult({ result, onRestart }: { result: Record<string, unknown>
     <h3>{bpText("agent.recommendations")}</h3>
     {advice.suggestions.length ? advice.suggestions.map((suggestion, index) => <article className={styles.recommendation} key={`${suggestion.id ?? "recommendation"}-${index}`}><header><strong>{suggestion.change || bpText("agent.suggestionTitleMissing")}</strong><span>{suggestion.id || `REC-${index + 1}`}</span></header><dl><dt>{bpText("agent.category")}</dt><dd>{suggestion.category || missing}</dd><dt>{bpText("agent.location")}</dt><dd>{suggestion.location || missing}</dd><dt>{bpText("agent.problem")}</dt><dd>{suggestion.problem || missing}</dd><dt>{bpText("agent.sourceEvidence")}</dt><dd>{suggestion.sourceEvidence || missing}</dd><dt>{bpText("agent.verificationEvidence")}</dt><dd>{suggestion.verificationEvidence || missing}</dd><dt>{bpText("agent.change")}</dt><dd>{suggestion.change || missing}</dd><dt>{bpText("agent.acceptance")}</dt><dd>{suggestion.acceptance || missing}</dd></dl></article>) : <div className={styles.agentSection}>{bpText("agent.noStrictSuggestion")}</div>}
     <h3>{bpText("agent.unableToDetermine")}</h3><div className={styles.agentSection}>{advice.notEvaluable || bpText("none")}</div>
-    <footer><Button onClick={() => { void navigator.clipboard?.writeText(adviceMarkdown(advice)); }}>{bpText("agent.copyAdviceMarkdown")}</Button><Button type="primary" onClick={onRestart}>{bpText("agent.restart")}</Button></footer>
+    <footer><Button onClick={() => { void writeTextToClipboard(adviceMarkdown(advice)).then(() => message.success(bpText("agent.adviceMarkdownCopied"))).catch(() => message.error(bpText("agent.copyFailed"))); }}>{bpText("agent.copyAdviceMarkdown")}</Button><Button type="primary" onClick={onRestart}>{bpText("agent.restart")}</Button></footer>
   </section>;
 }
 

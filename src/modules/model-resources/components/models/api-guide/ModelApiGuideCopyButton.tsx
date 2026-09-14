@@ -8,6 +8,7 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
@@ -22,7 +23,7 @@ export function ModelApiGuideCopyButton({ className, text }: ModelApiGuideCopyBu
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await writeTextToClipboard(text);
       message.success(t("modelResources.models.apiGuide.copySuccess"));
     } catch {
       message.error(t("modelResources.models.apiGuide.copyFailed"));

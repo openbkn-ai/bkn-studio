@@ -28,7 +28,7 @@
 
 .hint {
   margin-bottom: 8px;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -46,7 +46,7 @@
 }
 
 .summary {
-  color: rgba(0, 0, 0, 0.75);
+  color: var(--color-text-primary);
   font-size: 12px;
 }
 

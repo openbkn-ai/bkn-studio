@@ -6,7 +6,6 @@
  */
 
 import { http } from "@/framework/request/http";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const OBSERVABILITY_API_PREFIX = "/agent-observability/v1";
 
@@ -43,7 +42,6 @@ type BackendTraceAccessProfile = {
 export async function getAccessProfile(): Promise<TraceAccessProfile> {
   const response = await http.get<BackendTraceAccessProfile>(
     `${OBSERVABILITY_API_PREFIX}/access-profile`,
-    { headers: traceHeaders() },
   );
   return {
     accessScopeFingerprint: response.data.access_scope_fingerprint ?? "",
@@ -58,11 +56,5 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
     managementAudit: Boolean(response.data.management_audit),
     securityAudit: Boolean(response.data.security_audit),
     technicalTrace: Boolean(response.data.technical_trace),
-  };
-}
-
-function traceHeaders() {
-  return {
-    "x-business-domain": getRuntimeConfig().currentUser.businessDomainId ?? "bd_public",
   };
 }

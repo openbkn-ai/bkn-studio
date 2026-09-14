@@ -5,25 +5,40 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Alert, Select, Spin, Tag } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ArrowLeftOutlined,
+  InfoCircleOutlined,
+  LockOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
+import { Alert, Segmented, Select, Spin, Tag, Tooltip } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { CAPABILITIES } from "@/framework/entitlement/capabilities";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
+import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 import { authzPoints } from "@/modules/system-admin/permissions";
-import { listDepartments, listUsers } from "@/modules/system-admin/services/admin.service";
+import { listUsers } from "@/modules/system-admin/services/admin.service";
+import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
 import {
-  listAuthorizableObjects,
+  listAuthorizableObjectsPage,
   upsertObjectGrant,
 } from "@/modules/system-admin/services/authz.service";
-import type { AdminDepartment, AdminUser } from "@/modules/system-admin/types/admin";
-import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
-import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
+import type { AuthorizableObject, GrantEffect } from "@/modules/system-admin/types/authz";
+import {
+  AUTHZ_OBJECT_PICKER_TYPES,
+  HIDDEN_INSTANCE_OPS,
+  isAuthzObjectPickerType,
+  isCommunityObjectGrantType,
+} from "@/modules/system-admin/utils/authz-catalog";
 import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 
 import styles from "./admin.module.css";
@@ -39,10 +54,43 @@ function parseObjValue(value?: string): { objId: string; objType: string } | nul
   return { objId: id, objType: type };
 }
 
+const GRANT_LIST_PATH = "/system/authorizations";
+const FULL_BUSINESS_ACCESS = "full_business_access" as const;
+
+const OBJECT_TYPE_GROUPS = [
+  { key: "data", types: ["catalog", "resource"] },
+  { key: "knowledge", types: ["knowledge_network"] },
+  { key: "execution", types: ["operator", "tool_box", "mcp", "skill"] },
+] as const;
+
+type ObjectGrantLocationState = {
+  objectGrantReturnTo?: string;
+};
+
+/**
+ * The wizard is reachable from the object's own page as well as from the grant list, so leaving it
+ * has to land where the user came from. Only same-origin absolute paths are honoured — a caller
+ * cannot send someone off-site through this.
+ */
+function resolveReturnPath(state: ObjectGrantLocationState | null): string {
+  const candidate = state?.objectGrantReturnTo;
+  if (typeof candidate !== "string" || !candidate.startsWith("/") || candidate.startsWith("//")) {
+    return GRANT_LIST_PATH;
+  }
+  return candidate;
+}
+
 export function ObjectAuthorizationCreateScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const fineGrainedCapability = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
+  const fineGrained = fineGrainedCapability === "available";
+  // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
+  // from a data catalog does not have to find it again among hundreds of objects.
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const returnPath = resolveReturnPath(location.state as ObjectGrantLocationState | null);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -50,18 +98,42 @@ export function ObjectAuthorizationCreateScene() {
 
   const [objects, setObjects] = useState<AuthorizableObject[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [departments, setDepartments] = useState<AdminDepartment[]>([]);
 
-  const [objectValue, setObjectValue] = useState<string>();
+  const deepLinkedObject = parseObjValue(searchParams.get("object") ?? undefined)
+    ? (searchParams.get("object") ?? undefined)
+    : undefined;
+  const deepLinkedType = parseObjValue(deepLinkedObject)?.objType;
+  const supportedDeepLinkedType = deepLinkedType && isAuthzObjectPickerType(deepLinkedType) &&
+    (fineGrained || isCommunityObjectGrantType(deepLinkedType))
+    ? deepLinkedType
+    : undefined;
+  const supportedDeepLinkedObject = supportedDeepLinkedType
+    ? deepLinkedObject
+    : undefined;
+  const [objectValue, setObjectValue] = useState<string | undefined>(supportedDeepLinkedObject);
+  const [selectedObjectMeta, setSelectedObjectMeta] = useState<AuthorizableObject | null>(null);
+  const [objectType, setObjectType] = useState<string | undefined>(supportedDeepLinkedType);
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
+  const [bundleSelected, setBundleSelected] = useState(false);
+  const [effect, setEffect] = useState<GrantEffect>("allow");
+  const [objectLoading, setObjectLoading] = useState(false);
+  const [objectLoadRevision, setObjectLoadRevision] = useState(0);
+  const [objectKeyword, setObjectKeyword] = useState("");
+  const [objectPage, setObjectPage] = useState(0);
+  const [objectTotal, setObjectTotal] = useState(0);
+  const objectRequestRef = useRef(0);
+  const selectedObjectValueRef = useRef(objectValue);
+  selectedObjectValueRef.current = objectValue;
 
   const selectedObject = useMemo(() => {
     const parsed = parseObjValue(objectValue);
     if (!parsed) {
       return null;
     }
-    const meta = objects.find((item) => item.type === parsed.objType && item.id === parsed.objId);
+    const meta = selectedObjectMeta?.type === parsed.objType && selectedObjectMeta.id === parsed.objId
+      ? selectedObjectMeta
+      : objects.find((item) => item.type === parsed.objType && item.id === parsed.objId);
     return meta
       ? { objType: meta.type, objId: meta.id, objName: meta.name, objSub: meta.sub }
       : {
@@ -70,7 +142,7 @@ export function ObjectAuthorizationCreateScene() {
           objName: parsed.objId,
           objSub: undefined,
         };
-  }, [objectValue, objects]);
+  }, [objectValue, objects, selectedObjectMeta]);
 
   const ops = useMemo(() => {
     if (!selectedObject) {
@@ -79,18 +151,23 @@ export function ObjectAuthorizationCreateScene() {
     return operationsForType(selectedObject.objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key));
   }, [selectedObject]);
 
-  const load = useCallback(async () => {
+  const activeRequirements = useMemo(
+    () =>
+      ops.flatMap((requirement) => {
+        const dependents = ops.filter(
+          (candidate) =>
+            opKeys.includes(candidate.key) && candidate.requires.includes(requirement.key),
+        );
+        return dependents.length > 0 ? [{ dependents, requirement }] : [];
+      }),
+    [opKeys, ops],
+  );
+
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [objList, userList, deptList] = await Promise.all([
-        listAuthorizableObjects(),
-        listUsers(),
-        listDepartments(),
-      ]);
-      setObjects(objList);
-      setUsers(userList);
-      setDepartments(deptList);
+      setUsers(await listUsers());
     } catch (error) {
       setLoadError(extractRequestErrorMessage(error));
     } finally {
@@ -99,11 +176,86 @@ export function ObjectAuthorizationCreateScene() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadUsers();
+  }, [loadUsers]);
+
+  const loadObjectPage = useCallback(async (page: number, append: boolean) => {
+    if (!objectType) {
+      return;
+    }
+    const request = ++objectRequestRef.current;
+    setObjectLoading(true);
+    setLoadError(null);
+    try {
+      let result = await listAuthorizableObjectsPage(objectType, { keyword: objectKeyword, page });
+      const linked = parseObjValue(deepLinkedObject);
+      const alreadyListed = !linked || result.items.some(
+        (item) => item.type === linked.objType && item.id === linked.objId,
+      );
+      // A deep-linked object is needed only while it remains the selected object.
+      // Otherwise, injecting it into every search response makes the server-side
+      // search result contain an unrelated stale option.
+      if (!append && !objectKeyword.trim() && selectedObjectValueRef.current === deepLinkedObject && linked && linked.objType === objectType && !alreadyListed) {
+        const [resolved] = await resolveGrantNames([{
+          accessorId: "", objId: linked.objId, objName: linked.objId, objType: linked.objType, operations: [],
+        }]);
+        result = {
+          ...result,
+          items: [...result.items, { id: linked.objId, name: resolved?.objName || linked.objId, type: linked.objType }],
+        };
+      }
+      if (request !== objectRequestRef.current) {
+        return;
+      }
+      const selected = parseObjValue(selectedObjectValueRef.current);
+      const selectedMeta = selected && result.items.find(
+        (item) => item.type === selected.objType && item.id === selected.objId,
+      );
+      if (selectedMeta) {
+        setSelectedObjectMeta(selectedMeta);
+      }
+      setObjects((previous) => {
+        const candidates = append ? [...previous, ...result.items] : result.items;
+        return [...new Map(candidates.map((item) => [`${item.type}::${item.id}`, item])).values()];
+      });
+      setObjectPage(page);
+      setObjectTotal(result.total);
+    } catch (error) {
+      if (request === objectRequestRef.current) {
+        setLoadError(extractRequestErrorMessage(error));
+      }
+    } finally {
+      if (request === objectRequestRef.current) {
+        setObjectLoading(false);
+      }
+    }
+  }, [deepLinkedObject, objectKeyword, objectType]);
 
   useEffect(() => {
-    if (!selectedObject || !ops.length) {
+    if (!objectType) {
+      objectRequestRef.current += 1;
+      setObjects([]);
+      setSelectedObjectMeta(null);
+      setObjectPage(0);
+      setObjectTotal(0);
+      return;
+    }
+    void loadObjectPage(0, false);
+  }, [loadObjectPage, objectLoadRevision, objectType]);
+
+  const retryLoad = () => {
+    void loadUsers();
+    setObjectLoadRevision((revision) => revision + 1);
+  };
+
+  const loadNextObjectPage = () => {
+    if (!objectLoading && (objectPage + 1) * 100 < objectTotal) {
+      void loadObjectPage(objectPage + 1, true);
+    }
+  };
+
+  useEffect(() => {
+    if (!fineGrained || !selectedObject || !ops.length) {
       setOpKeys([]);
       return;
     }
@@ -114,49 +266,67 @@ export function ObjectAuthorizationCreateScene() {
       const defaultOp = ops.find((op) => /view|display|list/.test(op.key))?.key ?? ops[0]?.key;
       return defaultOp ? [defaultOp] : [];
     });
-  }, [ops, selectedObject]);
+  }, [fineGrained, ops, selectedObject]);
 
-  const objectOptions = useMemo(() => {
-    const byType = new Map<string, AuthorizableObject[]>();
-    for (const obj of objects) {
-      const list = byType.get(obj.type) ?? [];
-      list.push(obj);
-      byType.set(obj.type, list);
-    }
-    return [...byType.entries()].map(([type, list]) => ({
-      label: resourceTypeLabel(type),
-      options: list.map((obj) => ({
+  const objectOptions = useMemo(
+    () => {
+      // Keep the selected label renderable even when the active server-search
+      // result does not contain that object. It is intentionally not merged
+      // into `objects`, so the search result and its loaded count remain exact.
+      const candidates = selectedObjectMeta
+        ? [selectedObjectMeta, ...objects]
+        : objects;
+      return [...new Map(candidates.map((obj) => [`${obj.type}::${obj.id}`, obj])).values()].map((obj) => ({
         label: obj.sub ? `${obj.name} (${obj.sub})` : obj.name,
         value: `${obj.type}::${obj.id}`,
-      })),
-    }));
-  }, [objects]);
+      }));
+    },
+    [objects, selectedObjectMeta],
+  );
 
-  const granteeOptions = useMemo(
-    () => [
-      {
-        label: t("systemAdmin.objectGrants.granteeUser"),
-        options: users.map((user) => ({
-          value: user.id,
-          label: `${user.name} (${user.account})`,
-        })),
-      },
-      {
-        label: t("systemAdmin.objectGrants.granteeDept"),
-        options: departments.map((department) => ({
-          value: department.id,
-          label: department.name,
-        })),
-      },
-    ],
-    [departments, t, users],
+  const objectTypeOptions = useMemo(
+    () =>
+      OBJECT_TYPE_GROUPS.map((group) => ({
+        label: t(`systemAdmin.objectGrants.objectTypeGroups.${group.key}`),
+        options: group.types
+          .filter((type) =>
+            (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type) &&
+            (fineGrained || isCommunityObjectGrantType(type)),
+          )
+          .map((type) => ({ label: resourceTypeLabel(type), value: type })),
+      })),
+    [fineGrained, t],
   );
 
   const toggleOp = (opKey: string) => {
-    setOpKeys((prev) =>
-      prev.includes(opKey) ? prev.filter((key) => key !== opKey) : [...prev, opKey],
-    );
+    setOpKeys((prev) => {
+      if (prev.includes(opKey)) {
+        const requiredBySelected = ops.some(
+          (op) => prev.includes(op.key) && op.requires.includes(opKey),
+        );
+        return requiredBySelected ? prev : prev.filter((key) => key !== opKey);
+      }
+      const requirements = effect === "allow"
+        ? (ops.find((op) => op.key === opKey)?.requires ?? [])
+        : [];
+      return [...new Set([...prev, ...requirements, opKey])];
+    });
   };
+
+  const selectedOperations = ops.filter((op) => opKeys.includes(op.key));
+  const canSubmit = Boolean(
+    selectedObject && granteeIds.length > 0 &&
+      (fineGrained ? opKeys.length > 0 : bundleSelected),
+  );
+  const nextActionKey = !selectedObject
+    ? "systemAdmin.objectGrants.summaryNextPickObject"
+    : granteeIds.length === 0
+      ? "systemAdmin.objectGrants.summaryNextPickGrantee"
+      : !fineGrained && !bundleSelected
+        ? "systemAdmin.objectGrants.grantNeedsBundle"
+        : fineGrained && opKeys.length === 0
+          ? "systemAdmin.objectGrants.summaryNextPickOps"
+          : "systemAdmin.objectGrants.summaryReady";
 
   const handleSubmit = async () => {
     if (!selectedObject) {
@@ -167,8 +337,10 @@ export function ObjectAuthorizationCreateScene() {
       void message.error(t("systemAdmin.objectGrants.pickGranteeFirst"));
       return;
     }
-    if (!opKeys.length) {
-      void message.error(t("systemAdmin.objectGrants.pickOpsFirst"));
+    if (fineGrained ? !opKeys.length : !bundleSelected) {
+      void message.error(t(fineGrained
+        ? "systemAdmin.objectGrants.pickOpsFirst"
+        : "systemAdmin.objectGrants.grantNeedsBundle"));
       return;
     }
 
@@ -178,16 +350,18 @@ export function ObjectAuthorizationCreateScene() {
         granteeIds.map((accessorId) =>
           upsertObjectGrant({
             accessorId,
+            ...(fineGrained
+              ? { effect, operations: opKeys }
+              : { bundle: FULL_BUSINESS_ACCESS }),
             objId: selectedObject.objId,
             objName: selectedObject.objName,
             objSub: selectedObject.objSub,
             objType: selectedObject.objType,
-            operations: opKeys,
           }),
         ),
       );
       message.success(t("systemAdmin.objectGrants.toast.grantCreated"));
-      void navigate("/system/authorizations");
+      void navigate(returnPath);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
@@ -195,34 +369,84 @@ export function ObjectAuthorizationCreateScene() {
     }
   };
 
+  if (fineGrainedCapability === "unknown") {
+    return (
+      <section
+        className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}
+        data-page="object-authz-create"
+      >
+        <RequireEdition
+          capability={CAPABILITIES.PERM_FINE_GRAINED}
+          minEdition="professional"
+          mountLockedContent={false}
+        >
+          <div />
+        </RequireEdition>
+      </section>
+    );
+  }
+
   return (
     <section
       className={[styles.contentSurface, styles.contentSurfacePlain].join(" ")}
       data-page="object-authz-create"
     >
-      <div className={styles.operationBar}>
-        <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
-            <AppButton
-              icon={<ArrowLeftOutlined />}
-              onClick={() => void navigate("/system/authorizations")}
-            >
-              {t("common.back")}
-            </AppButton>
-          </div>
-          <div className={styles.toolbarMeta}>
-            <div className={styles.pageTitle}>{t("systemAdmin.objectGrants.createPageTitle")}</div>
-            <div className={styles.pageSubtitle}>
-              {t("systemAdmin.objectGrants.createPageHint")}
-            </div>
+      <header className={styles.authzCreateHeader}>
+        <AppButton
+          className={styles.authzCreateBack}
+          icon={<ArrowLeftOutlined />}
+          onClick={() => void navigate(returnPath)}
+          type="text"
+        >
+          {t("common.back")}
+        </AppButton>
+        <div className={styles.authzCreateHeading}>
+          <div className={styles.pageTitle}>{t("systemAdmin.objectGrants.createPageTitle")}</div>
+          <div className={styles.pageSubtitle}>
+            {t("systemAdmin.objectGrants.createPageHint")}
           </div>
         </div>
-      </div>
+        <div className={styles.authzCreateMode}>
+          <span className={styles.authzCreateModeIcon}>
+            {fineGrained ? (
+              <SafetyCertificateOutlined aria-hidden="true" />
+            ) : (
+              <LockOutlined aria-hidden="true" />
+            )}
+          </span>
+          <strong>
+            {t(
+              fineGrained
+                ? "systemAdmin.objectGrants.modeFineTitle"
+                : "systemAdmin.objectGrants.modeCommunityTitle",
+            )}
+          </strong>
+          <Tag color={fineGrained ? "blue" : "default"}>
+            {t(
+              fineGrained
+                ? "systemAdmin.objectGrants.editionProfessional"
+                : "systemAdmin.objectGrants.editionCommunity",
+            )}
+          </Tag>
+          <Tooltip
+            title={t(
+              fineGrained
+                ? "systemAdmin.objectGrants.modeFineDescription"
+                : "systemAdmin.objectGrants.modeCommunityDescription",
+            )}
+          >
+            <InfoCircleOutlined
+              aria-label={t("systemAdmin.objectGrants.authorizationModeHelp")}
+              className={styles.authzCreateModeHelp}
+            />
+          </Tooltip>
+        </div>
+      </header>
 
       {loadError ? (
         <Alert
           action={
-            <AppButton onClick={() => void load()} type="link">
+            <AppButton onClick={retryLoad} type="link">
               {t("common.retry")}
             </AppButton>
           }
@@ -235,109 +459,344 @@ export function ObjectAuthorizationCreateScene() {
           <Spin />
         </div>
       ) : (
-        <>
-          <div className={styles.createFormStack}>
-            <section className={styles.createPanel}>
-              <div className={styles.createPanelHead}>
-                <h3 className={styles.createPanelTitle}>
-                  {t("systemAdmin.objectGrants.createPagePickObject")}
-                </h3>
-              </div>
-              <div className={styles.createPanelBody}>
-                <Select
-                  allowClear
-                  onChange={(value) => setObjectValue(value)}
-                  optionFilterProp="label"
-                  options={objectOptions}
-                  placeholder={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
-                  showSearch
-                  value={objectValue}
-                />
-                {selectedObject ? (
-                  <div className={styles.createSummaryBox}>
-                    <div className={styles.nameCell}>
-                      <span className={styles.nameTitle}>{selectedObject.objName}</span>
-                      {selectedObject.objSub ? (
-                        <span className={styles.subText}>{selectedObject.objSub}</span>
-                      ) : null}
-                    </div>
-                    <Tag className={styles.roleTag}>
-                      {resourceTypeLabel(selectedObject.objType)}
-                    </Tag>
+        <div className={styles.authzCreateLayout}>
+          <main className={styles.authzCreateComposer}>
+            <section className={styles.authzCreateStep}>
+              <span className={styles.authzCreateStepIndex}>1</span>
+              <div className={styles.authzCreateStepContent}>
+                <div className={styles.authzCreateStepHead}>
+                  <div>
+                    <h2>{t("systemAdmin.objectGrants.createPagePickObject")}</h2>
+                    <p>{t("systemAdmin.objectGrants.objectStepDescription")}</p>
                   </div>
-                ) : null}
+                </div>
+                <div className={styles.createObjectPickerRow}>
+                  <Select
+                    allowClear
+                    aria-label={t("systemAdmin.objectGrants.pickerObjectTypePlaceholder")}
+                    className={styles.createObjectTypeSelect}
+                    onChange={(value) => {
+                      setObjectType(value);
+                      setObjectValue(undefined);
+                      setSelectedObjectMeta(null);
+                      setObjectKeyword("");
+                      setOpKeys([]);
+                      setBundleSelected(false);
+                    }}
+                    options={objectTypeOptions}
+                    placeholder={t("systemAdmin.objectGrants.pickerObjectTypePlaceholder")}
+                    value={objectType}
+                  />
+                  <Select
+                    allowClear
+                    aria-label={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
+                    className={styles.createObjectSelect}
+                    disabled={!objectType}
+                    loading={objectLoading}
+                    filterOption={false}
+                    notFoundContent={objectLoading ? <Spin size="small" /> : t("systemAdmin.objectGrants.pickerNoResults")}
+                    onChange={(value) => {
+                      setObjectValue(value);
+                      const selected = parseObjValue(value);
+                      setSelectedObjectMeta(selected
+                        ? objects.find((item) => item.type === selected.objType && item.id === selected.objId) ?? null
+                        : null);
+                      setObjectKeyword("");
+                      setBundleSelected(false);
+                    }}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setObjectKeyword("");
+                      }
+                    }}
+                    options={objectOptions}
+                    onPopupScroll={(event) => {
+                      const target = event.currentTarget;
+                      if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24) {
+                        loadNextObjectPage();
+                      }
+                    }}
+                    onSearch={setObjectKeyword}
+                    popupRender={(menu) => (
+                      <>
+                        {menu}
+                        <div className={styles.objectPickerStatus}>
+                          {objectLoading
+                            ? t("systemAdmin.objectGrants.pickerLoading")
+                            : t("systemAdmin.objectGrants.pickerCount", { loaded: objects.length, total: objectTotal })}
+                        </div>
+                      </>
+                    )}
+                    searchValue={objectKeyword}
+                    placeholder={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
+                    showSearch
+                    value={objectValue}
+                  />
+                </div>
               </div>
             </section>
 
-            <section className={styles.createPanel}>
-              <div className={styles.createPanelHead}>
-                <h3 className={styles.createPanelTitle}>
-                  {t("systemAdmin.objectGrants.createPagePickGrantee")}
-                </h3>
-                <p className={styles.createPanelDesc}>
-                  {t("systemAdmin.objectGrants.createPageGranteeHint")}
-                </p>
-              </div>
-              <div className={styles.createPanelBody}>
-                <Select
+            <section className={styles.authzCreateStep}>
+              <span className={styles.authzCreateStepIndex}>2</span>
+              <div className={styles.authzCreateStepContent}>
+                <div className={styles.authzCreateStepHead}>
+                  <div>
+                    <h2>{t("systemAdmin.objectGrants.createPagePickGrantee")}</h2>
+                    <p>{t("systemAdmin.objectGrants.createPageGranteeHint")}</p>
+                  </div>
+                </div>
+                <DirectoryUserPicker
+                  ariaLabel={t("systemAdmin.objectGrants.pickerGranteePlaceholder")}
+                  className={styles.authzCreateSubjectSelect}
+                  initialUsers={users}
                   mode="multiple"
-                  onChange={(value) => setGranteeIds(value)}
-                  optionFilterProp="label"
-                  options={granteeOptions}
+                  onChange={setGranteeIds}
                   placeholder={t("systemAdmin.objectGrants.pickerGranteePlaceholder")}
-                  showSearch
                   value={granteeIds}
                 />
               </div>
             </section>
 
-            <section className={styles.createPanel}>
-              <div className={styles.createPanelHead}>
-                <h3 className={styles.createPanelTitle}>
-                  {t("systemAdmin.objectGrants.createPagePickOps")}
-                </h3>
-                <p className={styles.createPanelDesc}>
-                  {t("systemAdmin.objectGrants.createPageOpsPlaceholder")}
-                </p>
-              </div>
-              <div className={styles.createPanelBody}>
-                {selectedObject ? (
-                  <div className={styles.chipGroup}>
-                    {ops.map((op) => (
-                      <button
-                        className={[
-                          styles.chipOpt,
-                          opKeys.includes(op.key) ? styles.chipOptSelected : "",
-                        ].join(" ")}
-                        key={op.key}
-                        onClick={() => toggleOp(op.key)}
-                        type="button"
-                      >
-                        <span className={styles.chipCode}>{op.label}</span>
-                        <span className={styles.chipType}>{op.key}</span>
-                      </button>
-                    ))}
+            <section className={styles.authzCreateStep}>
+              <span className={styles.authzCreateStepIndex}>3</span>
+              <div className={styles.authzCreateStepContent}>
+                <div className={styles.authzCreateStepHead}>
+                  <div>
+                    <h2>
+                      {t(
+                        fineGrained
+                          ? "systemAdmin.objectGrants.createPagePickOps"
+                          : "systemAdmin.objectGrants.fullBundleTitle",
+                      )}
+                    </h2>
+                    <p>
+                      {t(
+                        fineGrained
+                          ? "systemAdmin.objectGrants.createPageOpsPlaceholder"
+                          : "systemAdmin.objectGrants.fullBundleDescription",
+                      )}
+                    </p>
                   </div>
+                </div>
+                {!selectedObject ? (
+                  <div className={styles.authzCreateEmptyStep}>
+                    <SafetyCertificateOutlined aria-hidden="true" />
+                    <p>{t("systemAdmin.objectGrants.pickObjectFirst")}</p>
+                  </div>
+                ) : fineGrained ? (
+                  <>
+                    <div className={styles.authzOperationToolbar}>
+                      <div className={styles.authzEffectControl}>
+                        <span>{t("systemAdmin.objectGrants.effectLabel")}</span>
+                        <Segmented
+                          aria-label={t("systemAdmin.objectGrants.effectLabel")}
+                          onChange={(value) => {
+                            setEffect(value as GrantEffect);
+                            setOpKeys([]);
+                          }}
+                          options={[
+                            { label: t("systemAdmin.objectGrants.effectAllow"), value: "allow" },
+                            { label: t("systemAdmin.objectGrants.effectDeny"), value: "deny" },
+                          ]}
+                          value={effect}
+                        />
+                      </div>
+                      <div className={styles.authzOperationSelectionActions}>
+                        <span>
+                          {t("systemAdmin.objectGrants.selectedOperationCount", {
+                            selected: opKeys.length,
+                            total: ops.length,
+                          })}
+                        </span>
+                        <AppButton
+                          onClick={() => setOpKeys(ops.map((op) => op.key))}
+                          size="small"
+                          type="link"
+                        >
+                          {t("systemAdmin.objectGrants.selectAllOperations")}
+                        </AppButton>
+                        <AppButton
+                          disabled={opKeys.length === 0}
+                          onClick={() => setOpKeys([])}
+                          size="small"
+                          type="link"
+                        >
+                          {t("systemAdmin.objectGrants.clearOperations")}
+                        </AppButton>
+                      </div>
+                    </div>
+                    <div className={styles.authzCreateOperationGrid}>
+                      {ops.map((op) => {
+                        const prerequisiteLocked = activeRequirements.some(
+                          ({ requirement }) => requirement.key === op.key,
+                        );
+                        return (
+                          <button
+                            aria-pressed={opKeys.includes(op.key)}
+                            className={[
+                              styles.chipOpt,
+                              styles.authzCreateOperation,
+                              opKeys.includes(op.key) ? styles.chipOptSelected : "",
+                              prerequisiteLocked ? styles.chipRequired : "",
+                            ].join(" ")}
+                            key={op.key}
+                            onClick={() => toggleOp(op.key)}
+                            title={`${op.label} (${op.key})`}
+                            type="button"
+                          >
+                            <span className={styles.chipLabelRow}>
+                              <span className={styles.chipCode}>{op.label}</span>
+                              {prerequisiteLocked ? (
+                                <Tooltip title={t("systemAdmin.objectGrants.requiredBySelection")}>
+                                  <LockOutlined
+                                    aria-label={t("systemAdmin.objectGrants.requiredBySelection")}
+                                    className={styles.chipLock}
+                                  />
+                                </Tooltip>
+                              ) : null}
+                            </span>
+                            <span className={styles.chipType}>{op.key}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {activeRequirements.length > 0 ? (
+                      <div className={styles.requirementNotice}>
+                        <InfoCircleOutlined />
+                        <div>
+                          {activeRequirements.map(({ dependents, requirement }) => (
+                            <div key={requirement.key}>
+                              {t("systemAdmin.objectGrants.requiredSelectionNotice", {
+                                dependents: dependents.map((item) => item.label).join("、"),
+                                requirement: requirement.label,
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
-                  <p className={styles.createPanelDesc}>
-                    {t("systemAdmin.objectGrants.pickObjectFirst")}
-                  </p>
+                  <>
+                    <div
+                      aria-label={t("systemAdmin.objectGrants.grantOperationsLabel")}
+                      className={[
+                        styles.authzGrantOperations,
+                        styles.authzGrantOperationsSingle,
+                      ].join(" ")}
+                      role="group"
+                    >
+                      <Tooltip title={FULL_BUSINESS_ACCESS}>
+                        <button
+                          aria-label={`${t("systemAdmin.objectGrants.fullBundleName")} (${FULL_BUSINESS_ACCESS})`}
+                          aria-pressed={bundleSelected}
+                          className={bundleSelected
+                            ? styles.authzGrantOperationSelected
+                            : styles.authzGrantOperation}
+                          onClick={() => setBundleSelected((selected) => !selected)}
+                          type="button"
+                        >
+                          {t("systemAdmin.objectGrants.fullBundleName")}
+                        </button>
+                      </Tooltip>
+                    </div>
+                    <span className={styles.authzBundleHint}>
+                      {t("systemAdmin.objectGrants.fullBundleScope")}
+                    </span>
+                  </>
                 )}
               </div>
             </section>
-          </div>
+          </main>
 
-          <div className={styles.createFooterBar}>
-            <AppButton onClick={() => void navigate("/system/authorizations")}>
-              {t("common.cancel")}
-            </AppButton>
-            <PermissionGate permissions={authzPoints.grant}>
-              <AppButton loading={saving} onClick={() => void handleSubmit()} type="primary">
-                {t("common.confirm")}
-              </AppButton>
-            </PermissionGate>
-          </div>
-        </>
+          <aside className={styles.authzCreateSummary}>
+            <div className={styles.authzCreateSummaryHead}>
+              <div>
+                <h2>{t("systemAdmin.objectGrants.configurationSummary")}</h2>
+                <p>{t(nextActionKey)}</p>
+              </div>
+              <span
+                className={[
+                  styles.authzCreateStatus,
+                  canSubmit ? styles.authzCreateStatusReady : "",
+                ].join(" ")}
+              >
+                {t(
+                  canSubmit
+                    ? "systemAdmin.objectGrants.configurationReady"
+                    : "systemAdmin.objectGrants.configurationIncomplete",
+                )}
+              </span>
+            </div>
+
+            <dl className={styles.authzCreateSummaryList}>
+              <div>
+                <dt>{t("systemAdmin.objectGrants.summaryObject")}</dt>
+                <dd title={selectedObject?.objName}>
+                  {selectedObject?.objName ?? t("systemAdmin.objectGrants.notSelected")}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("systemAdmin.objectGrants.summarySubjects")}</dt>
+                <dd>
+                  {granteeIds.length > 0
+                    ? t("systemAdmin.objectGrants.selectedSubjectCount", {
+                        count: granteeIds.length,
+                      })
+                    : t("systemAdmin.objectGrants.notSelected")}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("systemAdmin.objectGrants.summaryRule")}</dt>
+                <dd>
+                  {fineGrained
+                    ? t(`systemAdmin.objectGrants.effect.${effect}`)
+                    : bundleSelected
+                      ? t("systemAdmin.objectGrants.fullBundleName")
+                      : t("systemAdmin.objectGrants.notSelected")}
+                </dd>
+              </div>
+              <div>
+                <dt>{t("systemAdmin.objectGrants.summaryOperations")}</dt>
+                <dd>
+                  {fineGrained
+                    ? t("systemAdmin.objectGrants.selectedOperationCount", {
+                        selected: opKeys.length,
+                        total: ops.length,
+                      })
+                    : bundleSelected
+                      ? t("systemAdmin.objectGrants.fullBundleName")
+                      : t("systemAdmin.objectGrants.notSelected")}
+                </dd>
+              </div>
+            </dl>
+
+            {fineGrained && selectedOperations.length > 0 ? (
+              <div className={styles.authzCreateSummaryOps}>
+                {selectedOperations.slice(0, 6).map((op) => (
+                  <span key={op.key}>{op.label}</span>
+                ))}
+                {selectedOperations.length > 6 ? (
+                  <span>+{selectedOperations.length - 6}</span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className={styles.authzCreateSummaryActions}>
+              <PermissionGate permissions={authzPoints.grant}>
+                <AppButton
+                  block
+                  disabled={!canSubmit}
+                  loading={saving}
+                  onClick={() => void handleSubmit()}
+                  type="primary"
+                >
+                  {t("systemAdmin.objectGrants.confirmGrant")}
+                </AppButton>
+              </PermissionGate>
+            </div>
+          </aside>
+        </div>
       )}
     </section>
   );

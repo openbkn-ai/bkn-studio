@@ -176,7 +176,6 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     await expect(page.getByRole("heading", { level: 5, name: importName })).toBeVisible();
     const listResponse = await request.get(
       "/api/agent-operator-integration/v1/operator/info/list?page=1&page_size=50",
-      { headers: { "x-business-domain": "bd_public" } },
     );
     if (listResponse.ok()) {
       const body = (await listResponse.json()) as {

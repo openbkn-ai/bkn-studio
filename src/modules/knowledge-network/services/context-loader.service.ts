@@ -13,6 +13,7 @@
  */
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
+import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
 export type ContextLoaderMode = "agent" | "rest" | "mcp";
 
@@ -38,7 +39,11 @@ export type ContextLoaderOp = {
 
 export const REST_PREFIX = "/api/agent-retrieval/v1";
 
-/** MCP endpoint; the gateway route is /api/agent-retrieval/v1/mcp, not root /mcp. */
+/**
+ * Canonical MCP endpoint. Agent Retrieval mounts the outer Gin route at `/mcp/*path`, so the
+ * root Streamable HTTP endpoint is the slash-terminated `/mcp/`; omitting the slash does not
+ * enter that wildcard handler consistently and can redirect or reject a POST handshake.
+ */
 export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
 function languageHeaders(): Record<"Accept-Language", string> {
@@ -196,11 +201,11 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
     body: { kn_id: "your_kn_id", at_id: "your_action_type", _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }] },
   },
   {
-    id: "find_skills",
-    summary: "Recalls candidate skills from business context. kn_id and object_type_id are object-type level; instance_identities make it instance-level.",
-    path: `${REST_PREFIX}/kn/find_skills`,
+    id: "search_capabilities",
+    summary: "Ranks every kind the knowledge network mounted in one space: Skills, Function tools, API tools and MCP tools. Narrow with types, and split Function tools further with metadata_types.",
+    path: `${REST_PREFIX}/kn/search_capabilities`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "your_kn_id", object_type_id: "your_object_type", instance_identities: [{ id: "instance_000001" }], skill_query: "Example skill search", top_k: 10 },
+    body: { kn_id: "your_kn_id", query: "Example capability search", types: ["skill", "function", "mcp_tool"], limit: 20 },
   },
   {
     id: "list_knowledge_networks",
@@ -516,12 +521,157 @@ export type BknCallScope = {
 };
 
 /** Merges managed context into request body or arguments without overwriting bkn_context. */
+/* ============================ Tool Summary Display ============================ */
+/**
+ * Length past which a tool summary is collapsed in the UI.
+ *
+ * Tool descriptions serve the model, not the reader: run_code carries the whole
+ * code-mode rulebook at roughly 4.5k characters. Rendering that inline pushes
+ * the parameters and the run button off the panel, so the operation cannot be
+ * exercised at all. Business tools sit at 90-160 characters, hence a threshold
+ * with room to spare above them — anything under it keeps rendering as before.
+ */
+export const TOOL_SUMMARY_COLLAPSE_CHARS = 240;
+
+/** Whether this summary is long enough to need the collapsed treatment. */
+export function isLongToolSummary(summary: string): boolean {
+  return summary.length > TOOL_SUMMARY_COLLAPSE_CHARS;
+}
+
+/**
+ * First readable chunk of a long summary, for the collapsed state.
+ *
+ * Cuts on the first blank line, then on a sentence end, so the preview reads as
+ * a finished thought rather than a severed clause. Falls back to a hard cut when
+ * the text offers neither within range.
+ */
+export function toolSummaryPreview(summary: string): string {
+  if (!isLongToolSummary(summary)) return summary;
+  const paragraph = summary.indexOf("\n\n");
+  if (paragraph > 0 && paragraph <= TOOL_SUMMARY_COLLAPSE_CHARS) {
+    return summary.slice(0, paragraph).trim();
+  }
+  const window = summary.slice(0, TOOL_SUMMARY_COLLAPSE_CHARS);
+  const sentence = Math.max(window.lastIndexOf("。"), window.lastIndexOf(". "), window.lastIndexOf("\n"));
+  if (sentence > TOOL_SUMMARY_COLLAPSE_CHARS / 3) {
+    return window.slice(0, sentence + 1).trim();
+  }
+  return window.trim() + "…";
+}
+
+/* ============================ Synthesized Ops (schema-driven) ============================ */
+function sampleForSchemaProp(def: unknown): unknown {
+  if (!def || typeof def !== "object") return "";
+  const d = def as Record<string, unknown>;
+  if (d.default !== undefined) return d.default;
+  if (Array.isArray(d.enum) && d.enum.length > 0) return d.enum[0];
+  switch (d.type) {
+    case "number":
+    case "integer":
+      return 0;
+    case "boolean":
+      return false;
+    case "array":
+      return [];
+    case "object":
+      return {};
+    default:
+      return "";
+  }
+}
+
+/**
+ * Builds an example request body from a tool inputSchema for synthesized ops.
+ *
+ * `bkn_context` is skipped even though the backend marks it required. It is
+ * platform identity injected at send time, not a caller parameter — the same
+ * reason stripBknContextSchema removes it from the schema shown to the model.
+ * Emitting it here would produce `"bkn_context": {}`, which reads as "fill this
+ * in yourself" and, worse, counts as a caller-supplied override that suppresses
+ * the real injection, so every synthesized op would answer conversation_required.
+ */
+export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
+  if (!schema || typeof schema !== "object") return {};
+  const s = schema as Record<string, unknown>;
+  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<string, unknown>;
+  const required = Array.isArray(s.required) ? (s.required as string[]) : [];
+  const out: Record<string, unknown> = {};
+  for (const [key, def] of Object.entries(props)) {
+    if (key === "bkn_context") continue;
+    if (required.includes(key) || key === "kn_id" || key === "response_format") {
+      out[key] = sampleForSchemaProp(def);
+    }
+  }
+  return out;
+}
+
+/** Converts live MCP tools/list entries into ContextLoaderOp when no local op exists. */
+/** Builds the MCP op list from what the deployment reports through tools/list.
+ *
+ * The deployment owns the surface. CONTEXT_LOADER_OPS only supplies the curated summary and
+ * example arguments for the tools it reports; anything else is synthesized from the tool's own
+ * inputSchema, and a tool the deployment does not report is not in the list.
+ *
+ * `null` means tools/list has not answered — no list yet, rather than the local one. Substituting
+ * the local list made the panel announce "loaded N services" for a compiled-in constant, so a
+ * stale build and a real surface were indistinguishable: it listed find_skills after that tool was
+ * retired, while hiding every tool added since the constant was last touched.
+ */
+export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
+  if (!toolDefs) return [];
+  return toolDefs.map((tool) => CONTEXT_LOADER_OPS.find((op) => op.id === tool.name) ?? synthesizeOp(tool));
+}
+
+export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
+  const body = exampleBodyFromSchema(tool.inputSchema);
+  return {
+    id: tool.name,
+    summary: tool.description ?? tool.name,
+    path: `${REST_PREFIX}/kn/${tool.name}`,
+    query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
+    body,
+    mcpArgs: body,
+  };
+}
+
 function withBknContext(
   payload: Record<string, unknown>,
   bknContext: BknContext | undefined,
 ): Record<string, unknown> {
-  if (!bknContext || "bkn_context" in payload) return payload;
+  if (!bknContext || hasUsableBknContext(payload)) return payload;
   return { ...payload, bkn_context: bknContext };
+}
+
+function isLifecycleTool(op: ContextLoaderOp): boolean {
+  return op.id === "bkn_start_interaction" || op.id === "bkn_finish_interaction";
+}
+
+function withOperationContext(
+  op: ContextLoaderOp,
+  payload: Record<string, unknown>,
+  bknContext: BknContext | undefined,
+): Record<string, unknown> {
+  return isLifecycleTool(op) ? payload : withBknContext(payload, bknContext);
+}
+
+/**
+ * Whether the payload already carries a context worth keeping.
+ *
+ * Presence of the key is not enough. Context Loader requires both ids on every
+ * business tool, so a `bkn_context` that lacks either one is not an override —
+ * it is a placeholder, and treating it as one silently drops the real context
+ * and gets the call rejected with conversation_required.
+ */
+function hasUsableBknContext(payload: Record<string, unknown>): boolean {
+  const value = payload.bkn_context;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const context = value as Record<string, unknown>;
+  return (
+    typeof context.conversation_id === "string" &&
+    context.conversation_id.trim() !== "" &&
+    typeof context.interaction_id === "string" &&
+    context.interaction_id.trim() !== ""
+  );
 }
 
 /** Parses request-body JSON; non-object or invalid JSON falls back to an empty object. */
@@ -547,6 +697,7 @@ function strictBodyObject(bodyText: string): Record<string, unknown> {
  * response_format selector because MCP has no query string.
  */
 function mcpCallArgs(
+  op: ContextLoaderOp,
   bodyText: string,
   queryValues: Record<string, string>,
   bknContext?: BknContext,
@@ -556,7 +707,12 @@ function mcpCallArgs(
   if (responseFormat && !("response_format" in args)) {
     args.response_format = responseFormat;
   }
-  return withBknContext(args, bknContext);
+  return withOperationContext(op, args, bknContext);
+}
+
+function displayAuthHeaders(env: ContextLoaderEnv): Record<string, string> {
+  const headers = authHeaders(env);
+  return headers.Authorization ? { ...headers, Authorization: "Bearer <redacted>" } : headers;
 }
 
 export function buildCurl(
@@ -569,8 +725,8 @@ export function buildCurl(
 ): string {
   if (mode === "mcp") {
     const url = mcpBase(env);
-    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...authHeaders(env) };
-    const args = mcpCallArgs(bodyText, queryValues, bknContext);
+    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...displayAuthHeaders(env) };
+    const args = mcpCallArgs(op, bodyText, queryValues, bknContext);
     const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: args } };
     let curl = `curl -X POST '${url}'`;
     Object.entries(headers).forEach(([key, value]) => {
@@ -580,7 +736,7 @@ export function buildCurl(
     return curl;
   }
   const url = buildRestUrl(env, op, queryValues);
-  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...authHeaders(env) };
+  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...displayAuthHeaders(env) };
   let curl = `curl -X POST '${url}'`;
   Object.entries(headers).forEach(([key, value]) => {
     curl += ` \\\n  -H '${key}: ${value}'`;
@@ -590,7 +746,7 @@ export function buildCurl(
     // If the body is being edited and is not valid JSON yet, preserve user text.
     let body: string;
     try {
-      body = JSON.stringify(withBknContext(strictBodyObject(bodyText), bknContext));
+      body = JSON.stringify(withOperationContext(op, strictBodyObject(bodyText), bknContext));
     } catch {
       body = (bodyText || "{}").replace(/\n\s*/g, "");
     }
@@ -671,7 +827,7 @@ export async function sendRequest(
           jsonrpc: "2.0",
           id: 2,
           method: "tools/call",
-          params: { name: op.id, arguments: mcpCallArgs(bodyText, queryValues, bknContext) },
+          params: { name: op.id, arguments: mcpCallArgs(op, bodyText, queryValues, bknContext) },
         }),
       });
       const text = await response.text();
@@ -688,7 +844,7 @@ export async function sendRequest(
     const headers = { "Content-Type": "application/json", ...languageHeaders(), ...bearer };
     const init: RequestInit = { method: "POST", headers, signal };
     if (op.body !== null) {
-      init.body = JSON.stringify(withBknContext(strictBodyObject(bodyText), bknContext));
+      init.body = JSON.stringify(withOperationContext(op, strictBodyObject(bodyText), bknContext));
     }
     const response = await fetch(url, init);
     const text = await response.text();
@@ -743,7 +899,7 @@ function parseMcpEnvelope(text: string): unknown {
     .filter(Boolean);
   const candidate = dataLines.length > 0 ? dataLines[dataLines.length - 1] : text;
   try {
-    return JSON.parse(candidate);
+    return parsePrecisionSafeJSON(candidate);
   } catch {
     return null;
   }
@@ -914,7 +1070,11 @@ export type McpToolCallResult = {
 };
 
 export type McpSession = {
-  callTool(name: string, args: Record<string, unknown>): Promise<McpToolCallResult>;
+  callTool(
+    name: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<McpToolCallResult>;
 };
 
 /**
@@ -939,10 +1099,11 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
   let sessionId: string | null = null;
   let rpcId = 1;
 
-  async function initialize(): Promise<void> {
+  async function initialize(signal?: AbortSignal): Promise<void> {
     const initResp = await fetch(url, {
       method: "POST",
       headers: baseHeaders(),
+      signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: rpcId++,
@@ -955,40 +1116,52 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
       throw new Error((await initResp.text()) || `MCP initialize failed (${initResp.status})`);
     }
     if (sessionId) {
-      await fetch(url, {
-        method: "POST",
-        headers: { ...baseHeaders(), "Mcp-Session-Id": sessionId },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-      }).catch(() => undefined);
+      try {
+        await fetch(url, {
+          method: "POST",
+          headers: { ...baseHeaders(), "Mcp-Session-Id": sessionId },
+          signal,
+          body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+        });
+      } catch (error) {
+        if (signal?.aborted) {
+          throw error;
+        }
+      }
     }
   }
 
-  function callOnce(name: string, args: Record<string, unknown>): Promise<Response> {
+  function callOnce(
+    name: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<Response> {
     const headers = sessionId ? { ...baseHeaders(), "Mcp-Session-Id": sessionId } : baseHeaders();
     return fetch(url, {
       method: "POST",
       headers,
+      signal,
       body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method: "tools/call", params: { name, arguments: args } }),
     });
   }
 
   return {
-    async callTool(name, args) {
+    async callTool(name, args, signal) {
       const start = performance.now();
-      if (!sessionId) await initialize();
-      let response = await callOnce(name, args);
+      if (!sessionId) await initialize(signal);
+      let response = await callOnce(name, args, signal);
       if (response.status === 401 && auth?.refresh) {
         // Token expired; refresh, reconnect, and retry.
         await auth.refresh().catch(() => null);
         sessionId = null;
-        await initialize();
-        response = await callOnce(name, args);
+        await initialize(signal);
+        response = await callOnce(name, args, signal);
       }
       if (response.status === 400 || response.status === 404) {
         // Session expired; reconnect once and retry.
         sessionId = null;
-        await initialize();
-        response = await callOnce(name, args);
+        await initialize(signal);
+        response = await callOnce(name, args, signal);
       }
       const text = await response.text();
       const parsed = parseMcpEnvelope(text);
@@ -1026,6 +1199,8 @@ export type KnObjectType = {
   id: string;
   name?: string;
   comment?: string;
+  /** Effective record operations, enriched by Studio when bkn-backend access data is available. */
+  operations?: string[];
   data_source?: KnDataSource | null;
   data_properties?: KnDataProperty[] | null;
   related_metrics?: KnRelatedMetric[];
@@ -1150,6 +1325,7 @@ export async function fetchKnDetail(
       { kn_id: env.knId, response_format: "json" },
       scope?.nextContext(),
     ),
+    signal,
   );
 
   if (signal?.aborted) {
@@ -1166,7 +1342,7 @@ export async function fetchKnDetail(
   }
 
   try {
-    const fromText = knDetailFromMcpPayload(JSON.parse(result.text) as unknown, env.knId);
+    const fromText = knDetailFromMcpPayload(parsePrecisionSafeJSON(result.text), env.knId);
     if (fromText) {
       return fromText;
     }
@@ -1175,36 +1351,6 @@ export async function fetchKnDetail(
   }
 
   throw new Error("get_kn_detail did not return knowledge network detail");
-}
-
-export async function fetchKnDetailRestLegacy(
-  env: ContextLoaderEnv,
-  auth?: McpAuth,
-  signal?: AbortSignal,
-  scope?: BknCallScope,
-): Promise<KnDetail> {
-  const base = env.base.replace(/\/+$/, "");
-  const params = new URLSearchParams({ response_format: "json" });
-  const response = await restPost(
-    env,
-    auth,
-    `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
-    withBknContext({ kn_id: env.knId }, scope?.nextContext()),
-    signal,
-  );
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(text || `Failed to fetch knowledge network detail (${response.status})`);
-  }
-  const data = JSON.parse(text) as Partial<KnDetail> & Record<string, unknown>;
-  return {
-    id: data.id ?? env.knId,
-    name: data.name,
-    comment: typeof data.comment === "string" ? data.comment : undefined,
-    object_types: Array.isArray(data.object_types) ? data.object_types : [],
-    concept_groups: Array.isArray(data.concept_groups) ? data.concept_groups : [],
-    relation_types: parseRelationTypes(data.relation_types ?? data.relations),
-  };
 }
 
 /** Fetches object-type details through MCP so metric tools can choose real metric_id values. */
@@ -1267,6 +1413,6 @@ export async function fetchObjectInstances(
   if (!response.ok) {
     throw new Error(text || `Failed to query object instances (${response.status})`);
   }
-  const data = JSON.parse(text) as { datas?: unknown };
+  const data = parsePrecisionSafeJSON(text) as { datas?: unknown };
   return Array.isArray(data.datas) ? (data.datas as Record<string, unknown>[]) : [];
 }

@@ -11,30 +11,35 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
 } from "@/modules/data-catalog/components/CatalogTreePanel";
+import { AuthorizedResourceListPanel } from "@/modules/data-catalog/components/AuthorizedResourceListPanel";
 import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFormDrawer";
-import { listBuildTasks } from "@/modules/data-catalog/services/build-task.service";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
   isCatalogDiscovering,
+  listCatalogResourcePage,
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
-import type {
-  BuildTask,
-  CatalogDiscoverRecord,
-} from "@/modules/data-catalog/types/data-catalog";
-import { listDataConnectConnectorTypes } from "@/modules/data-connect/services/data-connect.service";
-import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
-import { catalogListAllQuery, listCatalogs, type CatalogRecord } from "@/shared/catalog";
+import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
+import {
+  getCatalog,
+  listCatalogConnectorTypeStats,
+  listCatalogs,
+  type CatalogConnectorTypeStat,
+  type CatalogRecord,
+} from "@/shared/catalog";
 
 import styles from "./DataCatalogScene.module.css";
+
+const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const CATALOG_PAGE_SIZE = 100;
 
 const CatalogDetailPanel = lazy(
   () => import("@/modules/data-catalog/components/CatalogDetailPanel"),
@@ -44,6 +49,73 @@ export type DataCatalogSceneProps = {
   selection: CatalogTreeSelection | null;
   suppressAutoSelect?: boolean;
 };
+
+function catalogPageScope(type: CatalogRecord["type"], connectorType: string) {
+  return type === "physical" ? `${type}:${connectorType}` : type;
+}
+
+function recordPaginatedCatalogs(
+  paginatedCatalogScopes: Map<string, string>,
+  pageItems: CatalogRecord[],
+  type: CatalogRecord["type"],
+  connectorType: string,
+  replaceLoadedPageItems: boolean,
+) {
+  const scope = catalogPageScope(type, connectorType);
+  if (replaceLoadedPageItems) {
+    paginatedCatalogScopes.forEach((catalogScope, catalogId) => {
+      if (catalogScope === scope) {
+        paginatedCatalogScopes.delete(catalogId);
+      }
+    });
+  }
+  pageItems.forEach((catalog) => paginatedCatalogScopes.set(catalog.id, scope));
+}
+
+function mergeCatalogPage(
+  current: CatalogRecord[],
+  pageItems: CatalogRecord[],
+  type: CatalogRecord["type"],
+  connectorType: string,
+  replaceLoadedPageItems: boolean,
+  hydratedCatalogIds: Set<string>,
+) {
+  const belongsToPageScope = (catalog: CatalogRecord) => (
+    catalog.type === type
+    && (type !== "physical" || catalog.connectorType === connectorType)
+  );
+  const pageIds = new Set(pageItems.map((catalog) => catalog.id));
+
+  const outsidePageScope = current.filter(
+    (catalog) => !belongsToPageScope(catalog) && !pageIds.has(catalog.id),
+  );
+  const loadedPageItems = replaceLoadedPageItems
+    ? []
+    : current.filter((catalog) => (
+      belongsToPageScope(catalog)
+      && !hydratedCatalogIds.has(catalog.id)
+      && !pageIds.has(catalog.id)
+    ));
+  const pendingHydratedItems = current.filter((catalog) => (
+    belongsToPageScope(catalog)
+    && hydratedCatalogIds.has(catalog.id)
+    && !pageIds.has(catalog.id)
+  ));
+  const catalogIds = new Set<string>();
+
+  return [
+    ...outsidePageScope,
+    ...loadedPageItems,
+    ...pageItems,
+    ...pendingHydratedItems,
+  ].filter((catalog) => {
+    if (catalogIds.has(catalog.id)) {
+      return false;
+    }
+    catalogIds.add(catalog.id);
+    return true;
+  });
+}
 
 export function DataCatalogScene({
   selection,
@@ -62,8 +134,12 @@ export function DataCatalogScene({
   });
 
   const [catalogs, setCatalogs] = useState<CatalogRecord[]>([]);
-  const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
-  const [tasks, setTasks] = useState<BuildTask[]>([]);
+  const [catalogKeyword, setCatalogKeyword] = useState("");
+  const [catalogSearchInput, setCatalogSearchInput] = useState("");
+  const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
+  const [connectorTypeStats, setConnectorTypeStats] = useState<CatalogConnectorTypeStat[]>([]);
+  const [selectedCatalogLoadingId, setSelectedCatalogLoadingId] = useState<string | null>(null);
+  const [restrictedCatalogId, setRestrictedCatalogId] = useState<string | null>(null);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -73,6 +149,10 @@ export function DataCatalogScene({
     open: boolean;
   }>({ open: false });
   const [resourceTotal, setResourceTotal] = useState(0);
+  const initialLoadRef = useRef(false);
+  const catalogQueryGeneration = useRef(0);
+  const hydratedCatalogIds = useRef(new Set<string>());
+  const paginatedCatalogScopes = useRef(new Map<string, string>());
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
@@ -80,28 +160,100 @@ export function DataCatalogScene({
     }
     return null;
   }, [catalogs, selection]);
+  const selectedCatalogRequestIds = useRef(new Set<string>());
+  const selectedCatalogIdRef = useRef<string | null>(null);
 
-  const selectedCatalogId = selectedCatalog?.id;
+  useEffect(() => {
+    selectedCatalogIdRef.current = selection?.type === "catalog" ? selection.id : null;
+  }, [selection]);
 
-  const loadCatalogs = useCallback(async () => {
-    const [catalogResult, typeResult] = await Promise.all([
-      listCatalogs(catalogListAllQuery()),
-      connectorTypes.length === 0
-        ? listDataConnectConnectorTypes()
-        : Promise.resolve(null),
+  const loadCatalogs = useCallback(async (
+    keyword = "",
+    preservePhysicalCatalogs = true,
+    generation = catalogQueryGeneration.current,
+    applyKeyword = false,
+  ) => {
+    const [logicalCatalogResult, statsResult] = await Promise.all([
+      listCatalogs({
+        direction: "asc",
+        keyword,
+        page: 1,
+        pageSize: CATALOG_PAGE_SIZE,
+        sort: "name",
+        type: "logical",
+      }),
+      listCatalogConnectorTypeStats(keyword),
     ]);
-    setCatalogs(catalogResult.items);
-    if (typeResult) {
-      setConnectorTypes(typeResult);
+    if (generation !== catalogQueryGeneration.current) {
+      return false;
     }
-  }, [connectorTypes.length]);
+    if (!preservePhysicalCatalogs) {
+      hydratedCatalogIds.current.clear();
+      paginatedCatalogScopes.current.clear();
+    }
+    recordPaginatedCatalogs(
+      paginatedCatalogScopes.current,
+      logicalCatalogResult.items,
+      "logical",
+      "",
+      true,
+    );
+    logicalCatalogResult.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
+    setCatalogs((current) => mergeCatalogPage(
+      preservePhysicalCatalogs ? current : [],
+      logicalCatalogResult.items,
+      "logical",
+      "",
+      true,
+      hydratedCatalogIds.current,
+    ));
+    if (applyKeyword) {
+      setCatalogKeyword(keyword);
+    }
+    setConnectorTypeStats(statsResult);
+    return true;
+  }, []);
 
-  const loadCatalogTasks = useCallback(async (catalogId?: string) => {
-    if (!catalogId) {
-      setTasks([]);
+  const loadCatalogsByConnectorType = useCallback(async (connectorType: string, offset = 0) => {
+    const generation = catalogQueryGeneration.current;
+    const type = connectorType ? "physical" : "logical";
+    const pageOffset = Math.floor(offset / CATALOG_PAGE_SIZE) * CATALOG_PAGE_SIZE;
+    const result = await listCatalogs({
+      connectorType,
+      direction: "asc",
+      keyword: catalogKeyword,
+      page: pageOffset / CATALOG_PAGE_SIZE + 1,
+      pageSize: CATALOG_PAGE_SIZE,
+      sort: "name",
+      type,
+    });
+    if (generation !== catalogQueryGeneration.current) {
       return;
     }
-    setTasks(await listBuildTasks({ catalogId }));
+    recordPaginatedCatalogs(
+      paginatedCatalogScopes.current,
+      result.items,
+      type,
+      connectorType,
+      pageOffset === 0,
+    );
+    result.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
+    setCatalogs((current) => mergeCatalogPage(
+      current,
+      result.items,
+      type,
+      connectorType,
+      pageOffset === 0,
+      hydratedCatalogIds.current,
+    ));
+  }, [catalogKeyword]);
+
+  const loadCatalogSchemas = useCallback(async (catalogId: string) => {
+    const catalog = await getCatalog(catalogId);
+    const schemas = catalog?.metadata.schemas;
+    return Array.isArray(schemas)
+      ? schemas.filter((schema): schema is string => typeof schema === "string")
+      : [];
   }, []);
 
   const refreshResourceTotal = useCallback(async () => {
@@ -109,16 +261,49 @@ export function DataCatalogScene({
   }, []);
 
   const loadAll = useCallback(async () => {
+    const generation = catalogQueryGeneration.current;
     setLoadError(null);
     try {
-      await loadCatalogs();
+      await loadCatalogs(catalogKeyword, true, generation);
       await refreshResourceTotal();
     } catch (error) {
-      setLoadError(extractRequestErrorMessage(error));
+      if (generation === catalogQueryGeneration.current) {
+        setLoadError(extractRequestErrorMessage(error));
+      }
     } finally {
-      setLoading(false);
+      if (generation === catalogQueryGeneration.current) {
+        setLoading(false);
+      }
     }
-  }, [loadCatalogs, refreshResourceTotal]);
+  }, [catalogKeyword, loadCatalogs, refreshResourceTotal]);
+
+  const handleCatalogSearch = useCallback((searchKeyword = catalogSearchInput) => {
+    if (catalogSearchLoading) {
+      return;
+    }
+    const keyword = searchKeyword;
+    const generation = catalogQueryGeneration.current + 1;
+    catalogQueryGeneration.current = generation;
+    setLoadError(null);
+    setCatalogSearchLoading(true);
+    void loadCatalogs(keyword, false, generation, true)
+      .then((applied) => {
+        if (applied && selection?.type === "catalog") {
+          void navigate("/data-catalog", { replace: true });
+        }
+      })
+      .catch((error) => {
+        if (generation === catalogQueryGeneration.current) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (generation === catalogQueryGeneration.current) {
+          setCatalogSearchLoading(false);
+          setLoading(false);
+        }
+      });
+  }, [catalogSearchInput, catalogSearchLoading, loadCatalogs, navigate, selection]);
 
   const loadDiscovers = useCallback(async () => {
     if (!selectedCatalog) {
@@ -133,8 +318,87 @@ export function DataCatalogScene({
   }, [selectedCatalog]);
 
   useEffect(() => {
+    if (initialLoadRef.current) {
+      return;
+    }
+    initialLoadRef.current = true;
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (selection?.type !== "catalog") {
+      return;
+    }
+    if (catalogs.some((catalog) => catalog.id === selection.id)) {
+      setSelectedCatalogLoadingId(null);
+      return;
+    }
+    if (selectedCatalogRequestIds.current.has(selection.id)) {
+      return;
+    }
+    selectedCatalogRequestIds.current.add(selection.id);
+    setSelectedCatalogLoadingId(selection.id);
+    const generation = catalogQueryGeneration.current;
+    setRestrictedCatalogId(null);
+    void getCatalog(selection.id, { skipErrorToast: true })
+      .then((catalog) => {
+        if (
+          !catalog ||
+          generation !== catalogQueryGeneration.current ||
+          selectedCatalogIdRef.current !== selection.id
+        ) {
+          return;
+        }
+        if (paginatedCatalogScopes.current.has(catalog.id)) {
+          return;
+        }
+        hydratedCatalogIds.current.add(catalog.id);
+        setCatalogs((current) => {
+          if (current.some((item) => item.id === catalog.id)) {
+            hydratedCatalogIds.current.delete(catalog.id);
+            return current;
+          }
+          return [...current, catalog];
+        });
+      })
+      .catch(async (error) => {
+        if (isRequestForbidden(error)) {
+          // A Resource can be directly granted without catalog:view_detail. In
+          // that case the public Catalog detail call is correctly forbidden, but
+          // the Resource list still applies the child-level PEP. Use that list
+          // solely to establish whether this route has authorized children; do
+          // not turn the 403 into access to the parent Catalog itself.
+          try {
+            const resources = await listCatalogResourcePage({
+              catalogId: selection.id,
+              limit: 1,
+              offset: 0,
+            });
+            if (
+              resources.total > 0
+              && generation === catalogQueryGeneration.current
+              && selectedCatalogIdRef.current === selection.id
+            ) {
+              setRestrictedCatalogId(selection.id);
+              return;
+            }
+          } catch {
+            // Keep the original Catalog error below. A failed child lookup must
+            // never make a parent route appear accessible.
+          }
+        }
+        if (
+          generation === catalogQueryGeneration.current &&
+          selectedCatalogIdRef.current === selection.id
+        ) {
+          setLoadError(extractRequestErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        selectedCatalogRequestIds.current.delete(selection.id);
+        setSelectedCatalogLoadingId((current) => current === selection.id ? null : current);
+      });
+  }, [catalogs, selection]);
 
   useEffect(() => {
     void loadDiscovers();
@@ -143,50 +407,21 @@ export function DataCatalogScene({
   useEffect(() => {
     return subscribeMockDb(() => {
       void loadAll();
-      if (selectedCatalogId) {
-        void loadCatalogTasks(selectedCatalogId);
-      }
       void loadDiscovers();
     });
-  }, [loadAll, loadCatalogTasks, loadDiscovers, selectedCatalogId]);
-
-  useEffect(() => {
-    if (loading) {
-      return;
-    }
-    if (!selectedCatalogId) {
-      setTasks([]);
-      return;
-    }
-
-    void loadCatalogTasks(selectedCatalogId);
-  }, [loadCatalogTasks, loading, selectedCatalogId]);
+  }, [loadAll, loadDiscovers]);
 
   const hasActiveWork = useMemo(
-    () =>
-      tasks.some(
-        (task) =>
-          task.status === "pending" ||
-          task.status === "running" ||
-          task.status === "listening",
-      ) || discover.some((discover) => discover.status === "running"),
-    [discover, tasks],
+    () => discover.some((discover) => discover.status === "running"),
+    [discover],
   );
 
-  const pollActive = useCallback(async () => {
-    if (!selectedCatalogId) {
-      return;
-    }
-    try {
-      setTasks(await listBuildTasks({ catalogId: selectedCatalogId }));
-    } catch {
-      // ignore
-    }
+  const pollActive = useCallback(() => {
     void loadDiscovers();
-  }, [loadDiscovers, selectedCatalogId]);
+  }, [loadDiscovers]);
 
   useEffect(() => {
-    if (!hasActiveWork) {
+    if (useMock || !hasActiveWork) {
       return;
     }
     const timer = window.setInterval(() => {
@@ -211,7 +446,7 @@ export function DataCatalogScene({
       return;
     }
     const target = catalogs.find((item) => item.type !== "logical") ?? catalogs[0];
-    void navigate(`/data-directory/catalog/${target.id}`, { replace: true });
+    void navigate(`/data-catalog/catalog/${target.id}`, { replace: true });
   }, [catalogs, loading, navigate, selection, suppressAutoSelect]);
 
   const discoveringCatalogIds = useMemo(() => {
@@ -227,22 +462,23 @@ export function DataCatalogScene({
     }
     return ids;
   }, [catalogs, discover, selectedCatalog]);
+  const hasPhysicalCatalogs = connectorTypeStats.some(
+    (stat) => stat.catalogType === "physical" && stat.catalogCount > 0,
+  );
 
   const openResourceWorkspace = useCallback(
     (
       resourceId: string,
-      tab: "detail" | "index" | "preview" = "detail",
+      tab: "detail" | "index" | "preview" | "semantic-understanding" = "detail",
       indexView?: "config",
     ) => {
       const params = new URLSearchParams();
-      if (tab !== "detail") {
-        params.set("tab", tab);
-      }
+      params.set("tab", tab);
       if (tab === "index" && indexView === "config") {
         params.set("view", "config");
       }
       const query = params.toString();
-      void navigate(`/data-directory/resource/${resourceId}${query ? `?${query}` : ""}`);
+      void navigate(`/data-catalog/resource/${resourceId}${query ? `?${query}` : ""}`);
     },
     [navigate],
   );
@@ -271,7 +507,56 @@ export function DataCatalogScene({
       );
     }
 
+    if (selection?.type === "catalog" && selectedCatalogLoadingId === selection.id) {
+      return (
+        <div className={styles.placeholder}>
+          <Spin />
+        </div>
+      );
+    }
+
+    if (selection?.type === "catalog" && restrictedCatalogId === selection.id) {
+      return <AuthorizedResourceListPanel catalogId={selection.id} onOpenResource={openResourceWorkspace} />;
+    }
+
+    if (selection?.type === "catalog" && !selectedCatalog) {
+      return (
+        <EmptyStatePanel
+          action={
+            <AppButton
+              onClick={() => {
+                void navigate("/data-catalog");
+              }}
+            >
+              {t("dataCatalog.backToCatalog")}
+            </AppButton>
+          }
+          description=""
+          icon={<DatabaseOutlined />}
+          title={t("dataCatalog.catalog.notFound")}
+        />
+      );
+    }
+
     if (catalogs.length === 0) {
+      if (hasPhysicalCatalogs) {
+        return (
+          <EmptyStatePanel
+            description={t("dataCatalog.catalog.selectPhysicalDescription")}
+            icon={<DatabaseOutlined />}
+            title={t("dataCatalog.title")}
+          />
+        );
+      }
+      if (catalogKeyword.trim()) {
+        return (
+          <EmptyStatePanel
+            description=""
+            icon={<DatabaseOutlined />}
+            title={t("dataCatalog.tree.noCatalogMatch")}
+          />
+        );
+      }
       return (
         <EmptyStatePanel
           action={
@@ -291,25 +576,6 @@ export function DataCatalogScene({
       );
     }
 
-    if (selection?.type === "catalog" && !selectedCatalog) {
-      return (
-        <EmptyStatePanel
-          action={
-            <AppButton
-              onClick={() => {
-                void navigate("/data-directory");
-              }}
-            >
-              {t("dataCatalog.backToCatalog")}
-            </AppButton>
-          }
-          description=""
-          icon={<DatabaseOutlined />}
-          title={t("dataCatalog.catalog.notFound")}
-        />
-      );
-    }
-
     if (selectedCatalog) {
       return (
         <Suspense
@@ -323,7 +589,6 @@ export function DataCatalogScene({
             catalog={selectedCatalog}
             onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
             onOpenResource={openResourceWorkspace}
-            tasks={tasks}
           />
         </Suspense>
       );
@@ -361,23 +626,24 @@ export function DataCatalogScene({
       <div className={[styles.explorer, treeCollapsed ? styles.explorerCollapsed : ""].join(" ")}>
         <CatalogTreePanel
           catalogs={catalogs}
+          keyword={catalogKeyword}
+          searchLoading={catalogSearchLoading}
+          searchValue={catalogSearchInput}
+          connectorTypeStats={connectorTypeStats}
           activeSchema={activeSchema}
-          connectorTypes={connectorTypes}
           collapsed={treeCollapsed}
           onRefresh={async () => {
             await loadAll();
           }}
-          onOpenConnections={() => {
-            void navigate("/data-connect");
-          }}
-          onOpenDiscoverTasks={(catalogId) => {
-            void navigate(`/data-connect/discover${catalogId ? `?catalogId=${catalogId}` : ""}`);
-          }}
+          onLoadCatalogSchemas={loadCatalogSchemas}
+          onLoadCatalogsByConnectorType={loadCatalogsByConnectorType}
+          onSearch={handleCatalogSearch}
+          onSearchChange={setCatalogSearchInput}
           onSelectCatalog={(catalogId) => {
             const next = new URLSearchParams(searchParams);
             next.delete("schema");
             setSearchParams(next, { replace: true });
-            void navigate(`/data-directory/catalog/${catalogId}`);
+            void navigate(`/data-catalog/catalog/${catalogId}`);
           }}
           onSelectScope={(scope) => {
             const next = new URLSearchParams(searchParams);
@@ -410,13 +676,10 @@ export function DataCatalogScene({
         catalogs={catalogs}
         defaultCatalogId={resourceDrawer.catalogId}
         onClose={() => setResourceDrawer({ open: false })}
-        onCreated={(resource) => {
-          void refreshResourceTotal();
-          if (selectedCatalogId) {
-            void loadCatalogTasks(selectedCatalogId);
-          }
-          openResourceWorkspace(resource.id);
-        }}
+          onCreated={(resource) => {
+            void refreshResourceTotal();
+            openResourceWorkspace(resource.id);
+          }}
         open={resourceDrawer.open}
       />
     </>

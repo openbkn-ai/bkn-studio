@@ -9,6 +9,7 @@ import { CopyOutlined, WarningFilled } from "@ant-design/icons";
 import { Alert, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import type { IssuedApiKey } from "@/modules/api-keys/types/api-key";
 
@@ -28,8 +29,7 @@ export function ApiKeySecretModal({
     if (!secret) {
       return;
     }
-    void navigator.clipboard
-      ?.writeText(secret.key)
+    void writeTextToClipboard(secret.key)
       .then(() => message.success(t("apiKeys.secretModal.copied")))
       .catch(() => message.error(t("apiKeys.secretModal.copyFailed")));
   };

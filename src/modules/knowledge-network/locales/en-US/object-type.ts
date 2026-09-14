@@ -8,14 +8,20 @@
 export const objecttypePart = {
     objectTypeAddDataProperty: "Add data property",
     objectTypeAddProperty: "Add property",
-    objectTypeAutoLineSuccess: "Added {{count}} connection(s)",
+    objectTypeAutoLineSuccess: "Added {{count}} connections",
+    objectTypeAutoLineSuccess_one: "Added {{count}} connection",
+    objectTypeAutoLineSuccess_other: "Added {{count}} connections",
     objectTypeBasicInfo: "Basic information",
     objectTypeBatchDeleteDescription:
       "Delete the selected {{count}} object types? This action cannot be undone.",
+    objectTypeBatchDeleteDescription_one:
+      "Delete the selected {{count}} object type? This action cannot be undone.",
+    objectTypeBatchDeleteDescription_other:
+      "Delete the selected {{count}} object types? This action cannot be undone.",
     objectTypeBatchDeleteTitle: "Delete object types",
-    objectTypeBindResource: "Bound resource",
-    objectTypeBoundDataView: "Bound data view",
-    objectTypeBoundDataViewEmpty: "This object type is not bound to a data view yet.",
+    objectTypeBoundResource: "Bound resource",
+    objectTypeDataSource: "Data source",
+    objectTypeDataSourceEmpty: "No resource bound yet.",
     objectTypeClearAllProperties: "Clear all",
     objectTypeClearAllPropertiesDescription: "Clear all data properties?",
     objectTypeClearAllPropertiesTitle: "Clear data properties",
@@ -24,6 +30,28 @@ export const objecttypePart = {
     objectTypeClearResourceTitle: "Clear resource",
     objectTypeClickToConnect: "Click an object type property on the right to complete the mapping.",
     objectTypeClearMapping: "Clear mapping",
+    objectTypeDescriptionFillConfirm: "Fill selected descriptions",
+    objectTypeDescriptionFillCurrent: "Current description",
+    objectTypeDescriptionFillEmpty:
+      "No fields are available to fill. Map object properties to resource fields first.",
+    objectTypeDescriptionFillHint:
+      "Properties without descriptions are selected by default. Selecting an updatable property will overwrite its current description.",
+    objectTypeDescriptionFillProperty: "Object property",
+    objectTypeDescriptionFillSource: "Source description",
+    objectTypeDescriptionFillSourceField: "Resource field",
+    objectTypeDescriptionFillStatus: "Status",
+    objectTypeDescriptionFillStatusFillable: "Ready to fill",
+    objectTypeDescriptionFillStatusMissing: "No source description",
+    objectTypeDescriptionFillStatusSame: "Already matched",
+    objectTypeDescriptionFillStatusTooLong: "Over 1,000 characters",
+    objectTypeDescriptionFillStatusUpdatable: "Updatable",
+    objectTypeDescriptionFillSuccess_one: "Filled description for {{count}} property",
+    objectTypeDescriptionFillSuccess_other:
+      "Filled descriptions for {{count}} properties",
+    objectTypeDescriptionFillSummary:
+      "Ready {{fillable}} · Updatable {{updatable}} · Matched {{same}} · Skipped {{skipped}}",
+    objectTypeDescriptionFillTitle: "Fill property descriptions",
+    objectTypeFillDescriptionsFromResource: "Fill descriptions from resource fields",
     objectTypeMappingCleared: "Mapping cleared",
     objectTypeMappingFilterAll: "All",
     objectTypeMappingFilterMapped: "Mapped",
@@ -36,6 +64,8 @@ export const objecttypePart = {
     objectTypeCreateTitle: "Create object type",
     objectTypeDataProperty: "Data properties",
     objectTypeDataPropertyCount: "{{count}} data properties",
+    objectTypeDataPropertyCount_one: "{{count}} data property",
+    objectTypeDataPropertyCount_other: "{{count}} data properties",
     objectTypeDataPropertyHint: "Configure data properties and set at least one primary key.",
     objectTypeDataPropertyNamePattern:
       "Name must start with a letter or number and may contain letters, numbers, underscores, and hyphens.",
@@ -43,20 +73,52 @@ export const objecttypePart = {
     objectTypeDataQueryDescription:
       "Preview sample rows for this object type and filter them by keyword.",
     objectTypeDataQueryMetaSummary: "{{name}} · {{count}} samples · Filter by keyword",
+    objectTypeDataQueryMetaSummary_one: "{{name}} · {{count}} sample · Filter by keyword",
+    objectTypeDataQueryMetaSummary_other: "{{name}} · {{count}} samples · Filter by keyword",
     objectTypeDataQueryAction: "Query",
     objectTypeDataQueryCollapse: "Collapse",
     objectTypeDataQueryEmpty: "No sample data available.",
     objectTypeDataQueryResourceName: "Object type",
     objectTypeDataQuerySampleCount: "{{count}} sample rows",
+    objectTypeDataQuerySampleCount_one: "{{count}} sample row",
+    objectTypeDataQuerySampleCount_other: "{{count}} sample rows",
     objectTypeDataQuerySearchPlaceholder: "Search sample data",
     objectTypeDataQueryTitle: "Data query",
-    objectTypeDataViewIndexLoading: "Loading",
-    objectTypeDataViewIndexState: "Index build state",
-    objectTypeDataViewName: "Data view",
-    objectTypeDataViewResourceId: "Resource ID",
+    objectTypeProxyReadForbidden: "Sample data access denied",
+    objectTypeProxyReadForbiddenDescription:
+      "Your account cannot query this object type. Ask a knowledge-network administrator to grant access.",
+    objectTypeProxyReadBindingInvalid: "Published binding is invalid",
+    objectTypeProxyReadBindingInvalidDescription:
+      "The object type resource is not a current published and synchronized binding. Check the model publication state.",
+    objectTypeProxyReadMappingMissing: "Proxy mapping is missing",
+    objectTypeProxyReadMappingMissingDescription:
+      "This knowledge network has no managed proxy mapping. Ask a security administrator to synchronize it.",
+    objectTypeProxyReadProxyDisabled: "Proxy account is inactive",
+    objectTypeProxyReadProxyDisabledDescription:
+      "The managed proxy account is disabling or archived. Ask a security administrator to restore it.",
+    objectTypeProxyReadProxyPermissionDenied: "Proxy resource permission denied",
+    objectTypeProxyReadProxyPermissionDeniedDescription:
+      "Caller authorization succeeded, but the managed proxy lacks access to the published resource. Ask a security administrator to inspect grant sources and retry synchronization.",
+    objectTypeProxyReadSyncFailed: "Proxy permission sync failed",
+    objectTypeProxyReadSyncFailedDescription:
+      "The latest proxy permission synchronization failed. Ask a security administrator to inspect the published model and proxy synchronization state.",
+    objectTypeProxyReadSyncPending: "Proxy permissions are synchronizing",
+    objectTypeProxyReadSyncPendingDescription:
+      "Proxy permissions do not yet match the current published model. Wait for synchronization to finish and retry.",
+    objectTypeProxyReadUnavailable: "Sample data is temporarily unavailable",
+    objectTypeProxyReadUnavailableDescription:
+      "The knowledge-network proxy or a required service is not ready. Caller-direct fallback was denied; try again later.",
+    objectTypeProxyReadUnknown: "Could not load sample data",
+    objectTypeProxyReadUnknownDescription:
+      "An unexpected error occurred. Retry the request; if it continues to fail, contact an administrator with the time of the operation.",
+    objectTypeResourceIndexLoading: "Loading",
+    objectTypeResourceName: "Resource",
+    objectTypeResourceId: "Resource ID",
     objectTypeResource: "Resource",
     objectTypeResourceAll: "All resources",
-    objectTypeResourceCheckedCount: "{{count}} resource(s) selected",
+    objectTypeResourceCheckedCount: "{{count}} resources selected",
+    objectTypeResourceCheckedCount_one: "{{count}} resource selected",
+    objectTypeResourceCheckedCount_other: "{{count}} resources selected",
     objectTypeResourceClearAll: "Clear all",
     objectTypeResourcePreviewEmpty: "Select a resource on the left to preview data",
     objectTypeResourcePreviewTip: "(Partial preview)",
@@ -97,7 +159,11 @@ export const objecttypePart = {
     objectTypeDetailLogicTrialMissingPrimaryKey:
       "Primary keys are not configured, so instance identity cannot be built.",
     objectTypeDetailLogicTrialSkippedRows:
-      "Skipped {{count}} sample row(s) without a complete primary key.",
+      "Skipped {{count}} sample rows without a complete primary key.",
+    objectTypeDetailLogicTrialSkippedRows_one:
+      "Skipped {{count}} sample row without a complete primary key.",
+    objectTypeDetailLogicTrialSkippedRows_other:
+      "Skipped {{count}} sample rows without a complete primary key.",
     objectTypeDetailUseSampleForLogicTrial: "Use for logic trial",
     objectTypeDetailTrialSelectMetric: "Trial metric",
     objectTypeDetailTrialAction: "Trial",
@@ -129,6 +195,10 @@ export const objecttypePart = {
     objectTypeLogicAttributeDeleteConfirm: 'Delete logic property "{{name}}"?',
     objectTypeLogicAttributeDeleteConfirmMultiple:
       "Delete the selected {{count}} logic properties?",
+    objectTypeLogicAttributeDeleteConfirmMultiple_one:
+      "Delete the selected {{count}} logic property?",
+    objectTypeLogicAttributeDeleteConfirmMultiple_other:
+      "Delete the selected {{count}} logic properties?",
     objectTypeLogicAttributeFillParameters: "Please complete all parameter settings.",
     objectTypeLogicAttributeMapping: "Logic property mapping",
     objectTypeLogicAttributeNameExists:
@@ -154,6 +224,8 @@ export const objecttypePart = {
     objectTypeLogicNo: "No",
     objectTypeLogicProperty: "Logic properties",
     objectTypeLogicPropertyCount: "{{count}} logic properties",
+    objectTypeLogicPropertyCount_one: "{{count}} logic property",
+    objectTypeLogicPropertyCount_other: "{{count}} logic properties",
     objectTypeLogicPropertyEmpty: "No logic properties yet.",
     objectTypeLogicPropertyHint: "Optionally configure logic properties for this object type.",
     objectTypeLogicPropertyTip:
@@ -182,6 +254,7 @@ export const objecttypePart = {
       "Identifies a unique object instance and can be composed from multiple fields.",
     objectTypePrimaryKeyRequired: "Set at least one primary key.",
     objectTypePropertyDisplayName: "Display name",
+    objectTypePropertyDescription: "Property description",
     objectTypePropertyDuplicateDisplayName: "Display name already exists.",
     objectTypePropertyDuplicateMapping: "This resource field is already mapped to another property.",
     objectTypePropertyDuplicateName: "Property name already exists.",

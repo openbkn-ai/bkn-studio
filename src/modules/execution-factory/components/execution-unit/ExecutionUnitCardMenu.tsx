@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
+import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
 
@@ -227,14 +228,16 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  pushMenuAction(
-    menuItems,
-    "authorize",
-    t("systemAdmin.objectGrants.authorize"),
-    onAction,
-    "authorize",
-    item,
-  );
+  if (hasExecutionUnitRecordOperation(item, "authorize")) {
+    pushMenuAction(
+      menuItems,
+      "authorize",
+      t("systemAdmin.objectGrants.authorize"),
+      onAction,
+      "authorize",
+      item,
+    );
+  }
 
   pushMenuAction(menuItems, "delete", t("common.delete"), onAction, "delete", item, {
     danger: true,

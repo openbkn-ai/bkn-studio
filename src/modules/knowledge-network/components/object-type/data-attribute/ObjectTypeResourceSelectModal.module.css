@@ -25,7 +25,7 @@
 }
 
 .modal :global(.ant-table-thead > tr > th) {
-  background: #fafafa;
+  background: var(--color-interface-panel-bg);
   border-radius: 0 !important;
 }
 
@@ -36,14 +36,14 @@
 }
 
 .titleText {
-  color: #000;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 700;
 }
 
 .splitter {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border);
   height: 492px !important;
 }
 
@@ -69,11 +69,11 @@
 }
 
 .allItem:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--color-hover);
 }
 
 .allItemActive {
-  background: #ecf5ff !important;
+  background: var(--color-primary-100) !important;
 }
 
 .groupTree :global(.ant-tree-treenode) {
@@ -89,11 +89,11 @@
 }
 
 .groupTree :global(.ant-tree-treenode:hover) {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--color-hover);
 }
 
 .groupTree :global(.ant-tree-treenode-selected) {
-  background: #ecf5ff !important;
+  background: var(--color-primary-100) !important;
 }
 
 .groupTree :global(.ant-tree-node-selected) {
@@ -147,13 +147,13 @@
 }
 
 .groupIcon {
-  color: #262626;
+  color: var(--color-text-primary);
   font-size: 16px;
   line-height: 1;
 }
 
 .groupIconLogical {
-  color: #722ed1;
+  color: var(--color-text-accent);
   font-size: 16px;
   line-height: 1;
 }
@@ -173,12 +173,12 @@
 
 .groupBadgeMysql {
   background: linear-gradient(135deg, #6f86ff 0%, #39d0f2 100%);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .groupBadgeDefault {
-  background: #e6f4ff;
-  color: #1677ff;
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
 }
 
 .listBox {
@@ -213,11 +213,11 @@
 }
 
 .listItem:hover {
-  background: #f5f5f5;
+  background: var(--color-hover);
 }
 
 .listItemActive {
-  background: #ecf5ff;
+  background: var(--color-primary-100);
 }
 
 .listItemContent {
@@ -255,7 +255,7 @@
 }
 
 .listItemIconGrid span {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--color-text-inverse);
   border-radius: 1px;
 }
 
@@ -274,7 +274,7 @@
 
 .previewTitle {
   align-items: center;
-  color: #000;
+  color: var(--color-text-primary);
   display: flex;
   font-size: 14px;
   gap: 4px;
@@ -282,13 +282,13 @@
 }
 
 .previewTip {
-  color: rgba(0, 0, 0, 0.8);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .previewEmpty {
   align-items: center;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--color-text-secondary);
   display: flex;
   flex: 1;
   font-size: 14px;
@@ -304,12 +304,12 @@
 }
 
 .footerText {
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-tertiary);
 }
 
 .footerTextActive {
   align-items: center;
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
   display: flex;
   gap: 8px;
@@ -329,7 +329,7 @@
 }
 
 .checkedBoxClear {
-  color: #126ee3;
+  color: var(--color-text-link);
   cursor: pointer;
 }
 

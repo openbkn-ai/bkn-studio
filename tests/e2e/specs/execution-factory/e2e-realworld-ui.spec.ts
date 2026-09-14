@@ -153,9 +153,7 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
 
     await importBackupFileViaUi(page, "toolbox", filePath);
 
-    const list = await request.get(apiUrl("/tool-box/list?page=1&page_size=50"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const list = await request.get(apiUrl("/tool-box/list?page=1&page_size=50"));
     const body = (await list.json()) as {
       data?: Array<{ box_id: string; box_name?: string; name?: string }>;
     };
@@ -168,7 +166,6 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
 
     const tools = await request.get(
       apiUrl(`/tool-box/${imported.box_id}/tools/list?page=1&page_size=20`),
-      { headers: { "x-business-domain": "bd_public" } },
     );
     const toolsBody = (await tools.json()) as {
       data?: Array<{ tool_id: string; tool_name?: string; name?: string }>;
@@ -232,9 +229,7 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
     });
     createdBoxIds.push(boxId);
 
-    const operators = await request.get(apiUrl("/operator/info/list?page=1&page_size=50"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const operators = await request.get(apiUrl("/operator/info/list?page=1&page_size=50"));
     expect(operators.ok()).toBeTruthy();
     const operatorBody = (await operators.json()) as {
       data?: Array<{ operator_id: string; name?: string; version?: string }>;
@@ -291,7 +286,6 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
 
     const tools = await request.get(
       apiUrl(`/tool-box/${boxId}/tools/list?page=1&page_size=20`),
-      { headers: { "x-business-domain": "bd_public" } },
     );
     expect(tools.ok()).toBeTruthy();
     const toolsBody = (await tools.json()) as {
@@ -323,9 +317,7 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
 
     let resolvedMcpId = mcpId;
     if (!resolvedMcpId) {
-      const list = await request.get(apiUrl("/mcp/list?page=1&page_size=20"), {
-        headers: { "x-business-domain": "bd_public" },
-      });
+      const list = await request.get(apiUrl("/mcp/list?page=1&page_size=20"));
       const body = (await list.json()) as {
         data?: Array<{ mcp_id: string | number; name?: string }>;
       };
@@ -357,9 +349,7 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
       sseUrl: LOCAL_MCP_SSE_DOCKER_URL,
     });
 
-    const list = await request.get(apiUrl("/mcp/list?page=1&page_size=20"), {
-      headers: { "x-business-domain": "bd_public" },
-    });
+    const list = await request.get(apiUrl("/mcp/list?page=1&page_size=20"));
     const body = (await list.json()) as {
       data?: Array<{ mcp_id: string | number; name?: string }>;
     };

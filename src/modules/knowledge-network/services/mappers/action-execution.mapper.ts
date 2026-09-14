@@ -11,9 +11,19 @@ import type {
   ActionTypeExecutionLogListResult,
   ActionTypeExecutionLogQuery,
   ActionTypeExecutionLogResultItem,
+  ActionTypeExecutionLogResultStatus,
+  ActionTypeExecutionResultPage,
+  ActionTypeExecutionResultQuery,
   ActionTypeExecutionStatus,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { formatTimestamp } from "@/modules/knowledge-network/services/shared/runtime";
+
+export type BackendActionExecutionResult = {
+  _display?: string;
+  duration_ms?: number;
+  error_message?: string;
+  status?: ActionTypeExecutionLogResultStatus;
+};
 
 export type BackendActionExecutionLog = {
   action_type_id?: string;
@@ -23,12 +33,8 @@ export type BackendActionExecutionLog = {
   executor?: { id?: string; name?: string };
   failed_count?: number;
   id: string;
-  results?: Array<{
-    _display?: string;
-    duration_ms?: number;
-    error_message?: string;
-    status?: "failed" | "success";
-  }>;
+  results?: BackendActionExecutionResult[];
+  results_total?: number;
   start_time?: number;
   status?: ActionTypeExecutionStatus;
   success_count?: number;
@@ -38,6 +44,11 @@ export type BackendActionExecutionLog = {
 
 export type BackendActionExecutionLogList = {
   entries?: BackendActionExecutionLog[];
+  total_count?: number;
+};
+
+export type BackendActionExecutionResultList = {
+  entries?: BackendActionExecutionResult[];
   total_count?: number;
 };
 
@@ -57,7 +68,7 @@ function mapExecutionLog(item: BackendActionExecutionLog): ActionTypeExecutionLo
 }
 
 function mapExecutionLogResults(
-  results?: BackendActionExecutionLog["results"],
+  results?: BackendActionExecutionResult[],
 ): ActionTypeExecutionLogResultItem[] {
   return (results ?? []).map((item) => ({
     displayName: item._display,
@@ -84,6 +95,7 @@ export function mapActionTypeExecutionLogDetail(
     endTime: item.end_time ? formatTimestamp(item.end_time) : undefined,
     executorName: item.executor?.name ?? item.executor?.id,
     results: mapExecutionLogResults(item.results),
+    resultsTotal: item.results_total,
   };
 }
 
@@ -107,5 +119,25 @@ export function buildActionExecutionLogQueryParams(query: ActionTypeExecutionLog
     params.trigger_type = query.triggerType;
   }
 
+  return params;
+}
+
+export function mapActionTypeExecutionResultPage(
+  response: BackendActionExecutionResultList,
+): ActionTypeExecutionResultPage {
+  return {
+    entries: mapExecutionLogResults(response.entries),
+    totalCount: response.total_count ?? response.entries?.length ?? 0,
+  };
+}
+
+export function buildActionExecutionResultQueryParams(query: ActionTypeExecutionResultQuery) {
+  const params: Record<string, string | number> = {
+    limit: query.limit,
+    offset: query.offset,
+  };
+  if (query.status) {
+    params.status = query.status;
+  }
   return params;
 }

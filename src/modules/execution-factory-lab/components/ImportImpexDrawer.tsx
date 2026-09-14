@@ -66,7 +66,7 @@ export function ImportImpexDrawer({ open, onClose, onImported }: ImportImpexDraw
     >
       {error ? <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" /> : null}
 
-      <p style={{ marginBottom: 16, color: "rgba(0,0,0,0.65)" }}>
+      <p style={{ marginBottom: 16, color: "var(--color-text-secondary)" }}>
         {t("executionFactoryLab.importImpexHint")}
       </p>
 

@@ -8,6 +8,7 @@
 import type { Monaco, OnMount } from "@monaco-editor/react";
 import { useCallback, useEffect, useRef } from "react";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
 import { MonacoEditor } from "@/framework/monaco/MonacoEditor";
 
 import styles from "./JsonEditor.module.css";
@@ -41,11 +42,12 @@ const EDITOR_OPTIONS = {
   },
 };
 
-const THEME_NAME = "bkn-code-light";
+const LIGHT_THEME_NAME = "bkn-code-light";
+const DARK_THEME_NAME = "bkn-code-dark";
 
 /** The default VS theme uses pure white with dark line numbers and looks too harsh beside the site's light-gray panels. */
-function defineTheme(monaco: Monaco) {
-  monaco.editor.defineTheme(THEME_NAME, {
+function defineThemes(monaco: Monaco) {
+  monaco.editor.defineTheme(LIGHT_THEME_NAME, {
     base: "vs",
     inherit: true,
     rules: [],
@@ -58,6 +60,22 @@ function defineTheme(monaco: Monaco) {
       "editor.lineHighlightBorder": "#00000000",
       "editorIndentGuide.background1": "#eaeef6",
       "editorIndentGuide.activeBackground1": "#cfd8e8",
+    },
+  });
+
+  monaco.editor.defineTheme(DARK_THEME_NAME, {
+    base: "vs-dark",
+    inherit: true,
+    rules: [],
+    colors: {
+      "editor.background": "#0f172a",
+      "editorGutter.background": "#0f172a",
+      "editorLineNumber.foreground": "#64748b",
+      "editorLineNumber.activeForeground": "#cbd5e1",
+      "editor.lineHighlightBackground": "#17233a",
+      "editor.lineHighlightBorder": "#00000000",
+      "editorIndentGuide.background1": "#273548",
+      "editorIndentGuide.activeBackground1": "#475569",
     },
   });
 }
@@ -113,6 +131,7 @@ export function CodeEditor({
   readOnly = false,
   value = "",
 }: CodeEditorProps) {
+  const resolvedTheme = useResolvedTheme();
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
 
@@ -160,7 +179,7 @@ export function CodeEditor({
       <MonacoEditor
         beforeMount={(monaco) => {
           monacoRef.current = monaco;
-          defineTheme(monaco);
+          defineThemes(monaco);
           applyJsonSchema(monaco);
         }}
         fallback={<div style={{ height: height === "fill" ? "100%" : height }} />}
@@ -180,7 +199,7 @@ export function CodeEditor({
           tabSize: TAB_SIZE_BY_LANGUAGE[language] ?? DEFAULT_TAB_SIZE,
         }}
         path={language === "json" && jsonSchema ? EVENT_MODEL_PATH : undefined}
-        theme={THEME_NAME}
+        theme={resolvedTheme === "dark" ? DARK_THEME_NAME : LIGHT_THEME_NAME}
         value={value}
       />
     </div>

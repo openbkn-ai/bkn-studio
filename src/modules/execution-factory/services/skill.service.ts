@@ -8,9 +8,10 @@
 import { http } from "@/framework/request/http";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
+  parseContentDispositionFilename,
   sanitizeDownloadFilename,
   triggerBrowserDownload,
-} from "@/modules/execution-factory/utils/download-file";
+} from "@/framework/download/file-download";
 import type {
   SkillContentResult,
   SkillFilePreviewResult,
@@ -37,6 +38,7 @@ type BackendSkillSummary = {
   create_user?: string;
   description?: string;
   name: string;
+  operations?: string[];
   skill_id: string;
   status?: string;
   update_time?: number;
@@ -100,7 +102,6 @@ function buildMockFileSummaries(): SkillFileSummary[] {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const DEFAULT_BUSINESS_DOMAIN = "bd_public";
 
 type BackendSkillHistoryInfo = {
   create_time?: number;
@@ -128,6 +129,7 @@ let mockSkillHistory: SkillHistoryRecord[] = [
 
 let mockSkills: SkillRecord[] = [
   {
+    operations: ["*"],
     skillId: "skill_doc_qa",
     name: "Document QA Skill",
     description: "Answer questions over uploaded documents.",
@@ -139,6 +141,7 @@ let mockSkills: SkillRecord[] = [
     updateTime: Date.now() - 345_600_000,
   },
   {
+    operations: ["*"],
     skillId: "skill_summarize",
     name: "Summarize Skill",
     description: "Summarize long-form content into concise notes.",
@@ -150,13 +153,6 @@ let mockSkills: SkillRecord[] = [
     updateTime: Date.now() - 28_800_000,
   },
 ];
-
-function getBusinessDomainHeaders() {
-  const businessDomainId =
-    getRuntimeConfig().currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN;
-
-  return { "x-business-domain": businessDomainId };
-}
 
 function normalizeTimestamp(value?: number): number | undefined {
   if (!value) {
@@ -173,6 +169,7 @@ function normalizeTimestamp(value?: number): number | undefined {
 
 function mapSkill(item: BackendSkillSummary): SkillRecord {
   return {
+    operations: item.operations,
     skillId: item.skill_id,
     name: item.name,
     description: item.description,
@@ -210,7 +207,6 @@ async function fetchSkillList(
   query: SkillListQuery,
 ): Promise<SkillListResult> {
   const response = await http.get<BackendSkillListResponse>(path, {
-    headers: getBusinessDomainHeaders(),
     params: {
       page: query.page,
       page_size: query.pageSize,
@@ -275,7 +271,6 @@ export async function getSkill(skillId: string): Promise<SkillRecord> {
   const response = await http.get<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}`,
     {
-      headers: getBusinessDomainHeaders(),
     },
   );
 
@@ -294,7 +289,6 @@ export async function getSkillMarket(skillId: string): Promise<SkillRecord> {
   const response = await http.get<BackendSkillSummary>(
     `${API_PREFIX}/skills/market/${skillId}`,
     {
-      headers: getBusinessDomainHeaders(),
     },
   );
 
@@ -344,7 +338,6 @@ export async function registerSkill(input: SkillRegisterInput): Promise<SkillRec
     formData,
     {
       headers: {
-        ...getBusinessDomainHeaders(),
         "Content-Type": "multipart/form-data",
       },
     },
@@ -365,7 +358,6 @@ async function fetchSkillMarketPackageBlob(skillId: string): Promise<Blob> {
   const response = await http.get<Blob>(
     `${API_PREFIX}/skills/market/${skillId}/management/download`,
     {
-      headers: getBusinessDomainHeaders(),
       responseType: "blob",
     },
   );
@@ -410,15 +402,13 @@ export async function downloadSkillPackage(
   const response = await http.get<Blob>(
     `${API_PREFIX}/skills/${skillId}/management/download`,
     {
-      headers: getBusinessDomainHeaders(),
       responseType: "blob",
     },
   );
 
   const contentDisposition = response.headers["content-disposition"] as string | undefined;
-  const filenameMatch = contentDisposition?.match(/filename="?([^";]+)"?/i);
   const filename =
-    filenameMatch?.[1] ??
+    parseContentDispositionFilename(contentDisposition) ??
     `${sanitizeDownloadFilename(displayName ?? skillId, skillId)}.zip`;
 
   triggerBrowserDownload(response.data, filename);
@@ -439,7 +429,6 @@ export async function getSkillManagementContent(
   const response = await http.get<BackendSkillManagementContent>(
     `${API_PREFIX}/skills/${skillId}/management/content`,
     {
-      headers: getBusinessDomainHeaders(),
       params: { response_mode: "content" },
     },
   );
@@ -495,7 +484,7 @@ export async function readSkillManagementFile(
   const response = await http.post<BackendReadManagementFileResponse>(
     `${API_PREFIX}/skills/${skillId}/management/files/read?response_mode=${responseMode}`,
     { rel_path: relPath },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   return {
@@ -593,7 +582,7 @@ export async function updateSkillStatus(
   await http.put(
     `${API_PREFIX}/skills/${skillId}/status`,
     { status },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 }
 
@@ -605,7 +594,6 @@ export async function deleteSkill(skillId: string): Promise<void> {
   }
 
   await http.delete(`${API_PREFIX}/skills/${skillId}`, {
-    headers: getBusinessDomainHeaders(),
   });
 }
 
@@ -654,7 +642,7 @@ export async function updateSkillMetadata(
       name: input.name,
       source: input.source,
     },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   if (!response.data.skill_id) {
@@ -701,7 +689,6 @@ export async function updateSkillPackage(
     formData,
     {
       headers: {
-        ...getBusinessDomainHeaders(),
         "Content-Type": "multipart/form-data",
       },
     },
@@ -724,7 +711,6 @@ export async function getSkillReleaseHistory(
   const response = await http.get<BackendSkillHistoryInfo[]>(
     `${API_PREFIX}/skills/${skillId}/history`,
     {
-      headers: getBusinessDomainHeaders(),
     },
   );
 
@@ -771,7 +757,7 @@ export async function republishSkillHistory(
   const response = await http.post<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}/history/republish`,
     { version },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   if (!response.data.skill_id) {
@@ -819,7 +805,7 @@ export async function publishSkillHistory(
   const response = await http.post<BackendSkillSummary>(
     `${API_PREFIX}/skills/${skillId}/history/publish`,
     { version },
-    { headers: getBusinessDomainHeaders() },
+    {},
   );
 
   if (!response.data.skill_id) {

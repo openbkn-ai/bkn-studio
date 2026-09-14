@@ -7,6 +7,22 @@
 
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
+export type ResourceDiscoverStatus =
+  | "error"
+  | "missing"
+  | "new"
+  | "restored"
+  | "unchanged"
+  | "updated";
+
+export type ResourceStatus = "active" | "deprecated" | "stale";
+
+/** Whether the Resource's local OpenSearch index is currently usable for queries. */
+export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
+
+/** Safe integers stay numeric; int64 values outside JavaScript's safe range stay decimal strings. */
+export type ResourceRowCount = number | string;
+
 /** Field-level indexing capabilities: keyword, fulltext, and vector (aligned with Vega feature_type). */
 export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 
@@ -27,7 +43,6 @@ export type ResourceSchemaField = {
   displayName?: string;
   /** Field description (backend description). */
   description?: string;
-  extensions?: Record<string, string>;
   /** Field-level index features, such as full text and vectors. */
   features?: ResourceFieldFeature[];
   name: string;
@@ -40,27 +55,60 @@ export type ResourceSchemaField = {
 
 /** Resource-level defaults and cross-field build strategy, excluding per-field index participation. */
 export type ResourceIndexConfig = {
-  buildKeyFields?: string[];
+  defaultKeywordIgnoreAbove?: number;
+  incrementalFields?: string[];
+  primaryKeyFields?: string[];
   defaultEmbeddingModel?: string;
   defaultFulltextAnalyzer?: string;
+};
+
+export type ResourceSourceMetadata = {
+  foreignKeyCount?: number;
+  indexCount?: number;
+  objectType?: string;
+  originalDescription?: string;
+  originalName?: string;
+  primaryKeys?: string[];
 };
 
 export type CatalogResource = {
   catalogId: string;
   category: ResourceCategory;
-  columnCount: number;
+  /** Field count from a detail schema or list summary; null when the list response omits it. */
+  columnCount: number | null;
+  createTime?: string;
+  creatorName?: string;
   description: string;
+  /** Resource access state, independent from discovery lifecycle status. */
+  enabled?: boolean;
   id: string;
   /** Current index configuration. List endpoints may omit it; use the detail response on configuration pages. */
   indexConfig?: ResourceIndexConfig;
+  /** Latest source-discovery observation reported by Vega. */
+  lastDiscoverStatus?: ResourceDiscoverStatus;
+  /** Name of the Resource's current local index, when one has been published. */
+  localIndexName?: string;
+  /** Authoritative query availability of the Resource's local index. */
+  localIndexStatus: ResourceLocalIndexStatus;
   name: string;
-  rowCount: number;
+  /** Effective operations for the current account on this Resource. */
+  operations?: string[];
+  /** Resource row count returned by Vega; null when the backend did not calculate it. */
+  rowCount: ResourceRowCount | null;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
+  /** Stable, user-facing source metadata normalized from connector-specific data. */
+  sourceMetadata?: ResourceSourceMetadata;
+  /** Resource lifecycle status reported by Vega. */
+  status?: ResourceStatus;
+  /** Resource lifecycle/discovery detail reported by Vega. */
+  statusMessage?: string;
+  tags?: string[];
   updateTime: string;
-  updatedAt: number;
+  updaterName?: string;
+  expectedUpdateTime: number;
 };
 
 export type ResourceListQuery = {
@@ -82,16 +130,25 @@ export type ResourceCreateInput = {
   sourceIdentifier: string;
 };
 
-export type ResourceUpdateInput = ResourceCreateInput;
+export type ResourceUpdateInput = ResourceCreateInput & {
+  /** Preserved by full PUT; changes use the enable/disable action endpoints. */
+  enabled?: boolean;
+  expectedUpdateTime: number;
+};
 
 export type ResourcePreviewQuery = {
+  /** Bypass the local index and query the original data source. */
+  ignoreLocalIndex?: boolean;
+  /** Only valid when querying the original source. */
+  binaryMode?: "metadata" | "content";
   limit: number;
   offset: number;
 };
 
 export type ResourcePreviewResult = {
+  querySource?: "local_index" | "source";
   rows: Record<string, unknown>[];
-  total: number;
+  total: ResourceRowCount;
 };
 
 export type BuildMode = "batch" | "streaming";
@@ -99,22 +156,12 @@ export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
   | "cancelled"
+  | "completed"
   | "failed"
-  | "listening"
-  | "paused"
   | "pending"
   | "running"
   | "stopping"
-  | "succeeded";
-
-/** Per-index health state from backend index_health: ok, partial failure, failure, or building. */
-export type IndexHealthState = "ok" | "partial" | "failed" | "building";
-
-export type IndexHealth = {
-  embedding: IndexHealthState;
-  fulltext: IndexHealthState;
-  usable: boolean;
-};
+  | "stopped";
 
 export type BuildTaskCreator = {
   id: string;
@@ -123,12 +170,16 @@ export type BuildTaskCreator = {
 };
 
 export type EmbeddingFieldConfig = {
+  batchSize?: number;
   dimensions: number;
   modelId: string;
+  modelName?: string;
+  modelType?: string;
+  maxTokens?: number;
 };
 
 export type BuildTask = {
-  buildKeyFields: string[];
+  incrementalFields: string[];
   /** Catalog containing the backend task record. Legacy mock data may omit it and derive it from the resource. */
   catalogId?: string;
   /** Catalog display field returned with task lists to avoid loading all catalogs again. */
@@ -142,54 +193,49 @@ export type BuildTask = {
   /** Model and dimensions actually used for each vector field in the task snapshot. */
   embeddingConfigs?: Record<string, EmbeddingFieldConfig>;
   embeddingModel: string;
-  /** Completed with incomplete vectorization (vectorized < synced), so the index is unavailable or partially usable. */
-  embeddingDegraded: boolean;
   fulltextAnalyzer: string;
   /** Analyzer ultimately used for each full-text field in the task snapshot. */
   fulltextAnalyzers?: Record<string, string>;
   fulltextFields: string[];
   error: string | null;
-  /** Backend failure_detail containing the detailed reason for vectorization failure, shown in a tooltip. */
-  failureDetail: string;
-  /** Completion time derived from update_time for terminal tasks. */
+  /** Time at which the task entered a terminal state. */
   finishTime: number | null;
   id: string;
-  /** Actual backend index health (index_health). Legacy mock data may omit it, so components fall back to embeddingDegraded. */
-  indexHealth?: IndexHealth;
-  /** Whether the index is usable; false when embeddingDegraded. */
-  indexUsable: boolean;
-  lastEventAt: number | null;
+  primaryKeyFields: string[];
+  /** Most recent externally observable progress update. */
+  lastProgressTime: number | null;
   mode: BuildMode;
   modelDimensions: number;
   resourceId: string;
   /** Resource name returned with task lists to avoid loading all resources again. */
   resourceName?: string;
   status: BuildTaskStatus;
+  /** Time at which the worker started this execution. */
+  startTime: number | null;
   syncedCount: number;
   /** Synchronization checkpoint used to resume unfinished tasks. */
   syncedMark?: string;
   totalCount: number;
-  /** Backend last-update time as a millisecond timestamp. */
-  updateTime?: number;
-  vectorizedCount: number;
-};
-
-export type BuildTaskListQuery = {
-  catalogId?: string;
-  resourceId?: string;
-  silent?: boolean;
-  statuses?: BuildTaskStatus[];
 };
 
 /** Server-side sort dimension for the build-task list API. */
-export type BuildTaskSort = "create_time" | "update_time";
+export type BuildTaskSort =
+  | "create_time"
+  | "start_time"
+  | "finish_time"
+  | "last_progress_time";
 
 export type BuildTaskPageQuery = {
   catalogId?: string;
+  executeType?: BuildTaskExecuteType;
   mode?: BuildMode;
   direction?: "asc" | "desc";
-  page: number;
-  pageSize: number;
+  /** Server pagination window; Vega applies task visibility and filters before limit and offset. */
+  limit?: number;
+  offset?: number;
+  /** Page coordinates, kept for callers that read a fixed page. Ignored when offset/limit are given. */
+  page?: number;
+  pageSize?: number;
   resourceId?: string;
   sort?: BuildTaskSort;
   statuses?: BuildTaskStatus[];
@@ -197,6 +243,7 @@ export type BuildTaskPageQuery = {
 
 export type BuildTaskPageResult = {
   items: BuildTask[];
+  /** Count of tasks visible to the current caller after the server-side filters are applied. */
   total: number;
 };
 
@@ -215,12 +262,13 @@ export type FulltextAnalyzer = "hanlp_index" | "ik_max_word" | "standard";
  * This type remains only for transition-period UI construction of resource write payloads.
  */
 export type BuildTaskUpdateInput = {
-  buildKeyFields: string[];
+  incrementalFields: string[];
   embeddingFields: string[];
   embeddingModel: string;
   fulltextAnalyzer?: string;
   fulltextFields: string[];
   modelDimensions: number;
+  primaryKeyFields: string[];
 };
 
 /** Start or rerun: reset=true reruns only full tasks from scratch, ignoring the checkpoint. */

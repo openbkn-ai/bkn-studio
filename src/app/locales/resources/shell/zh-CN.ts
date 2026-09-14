@@ -17,6 +17,10 @@ export const shellZhCN = {
     headerAside: "统一应用壳层",
     collapseSidenav: "收起导航",
     expandSidenav: "展开导航",
+    theme: {
+      switchToDark: "切换到深色模式",
+      switchToLight: "切换到浅色模式",
+    },
     language: {
       label: "语言",
       zhCN: "中文",
@@ -43,8 +47,8 @@ export const shellZhCN = {
       allExecutionUnits: "全部执行单元",
       executionFactorySandboxRuntime: "沙箱运行时管理",
       executionUnitManagementTooltip:
-        "管理本业务域内的算子、工具箱、MCP 与 Skill",
-      allExecutionUnitsTooltip: "浏览市场目录并将资源引入到本业务域",
+        "管理当前平台内的算子、工具箱、MCP 与 Skill",
+      allExecutionUnitsTooltip: "浏览市场目录并将资源引入当前平台",
       modelResources: "模型管理",
       quotaManagement: "配额管理",
       modelStatistics: "模型统计",

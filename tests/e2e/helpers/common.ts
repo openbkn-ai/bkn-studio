@@ -7,7 +7,6 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-export const BUSINESS_DOMAIN = process.env.E2E_BUSINESS_DOMAIN ?? "bd_public";
 export const API_BASE_URL =
   process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:9000/api";
 export const API_PREFIX = `${API_BASE_URL}/agent-operator-integration/v1`;
@@ -18,7 +17,6 @@ export function buildUniqueName(prefix: string) {
 
 export function defaultApiHeaders() {
   return {
-    "x-business-domain": BUSINESS_DOMAIN,
     Accept: "application/json",
   };
 }

@@ -15,6 +15,7 @@ import type { Edition } from "@/framework/entitlement/edition";
 import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { upgradeReason } from "@/framework/entitlement/upgrade-reason";
+import { capabilityBullets } from "@/modules/subscription/capability-bullets";
 import { capabilityReportedByEndpoint } from "@/modules/subscription/capability-catalog";
 
 /** 授权门户。与版本页同一个去处:申请与续期都在那边办。 */
@@ -27,9 +28,6 @@ type CapabilityUpgradeDialogProps = {
   onClose: () => void;
   open: boolean;
 };
-
-/** 卖点最多四条,`subscription.capabilities.<key>.bullets.b1..b4`,缺省即不渲染。 */
-const BULLET_KEYS = ["b1", "b2", "b3", "b4"];
 
 /**
  * 付费能力的升级引导弹窗。
@@ -72,9 +70,7 @@ export function CapabilityUpgradeDialog({
     capabilityReportedByEndpoint(capability),
   );
   const imageIssue = reason !== "buy";
-  const bullets = BULLET_KEYS.map((key) =>
-    t(`subscription.capabilities.${capability}.bullets.${key}`, { defaultValue: "" }),
-  ).filter(Boolean);
+  const bullets = capabilityBullets(t, capability);
 
   return (
     <Modal

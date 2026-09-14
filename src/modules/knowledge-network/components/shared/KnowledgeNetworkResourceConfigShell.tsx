@@ -6,12 +6,15 @@
  */
 
 import { LeftOutlined } from "@ant-design/icons";
+import { Spin } from "antd";
 import type { PropsWithChildren, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import styles from "./KnowledgeNetworkResourceConfigShell.module.css";
 
 type KnowledgeNetworkResourceConfigShellProps = PropsWithChildren<{
   actions?: ReactNode;
+  loading?: boolean;
   onBack: () => void;
   subtitle?: string;
   title: string;
@@ -20,15 +23,18 @@ type KnowledgeNetworkResourceConfigShellProps = PropsWithChildren<{
 export function KnowledgeNetworkResourceConfigShell({
   actions,
   children,
+  loading = false,
   onBack,
   subtitle,
   title,
 }: KnowledgeNetworkResourceConfigShellProps) {
+  const { t } = useTranslation();
+
   return (
     <section className={styles.page}>
       <header className={styles.header}>
         <button
-          aria-label="back"
+          aria-label={t("common.back")}
           className={styles.backButton}
           onClick={onBack}
           type="button"
@@ -41,7 +47,12 @@ export function KnowledgeNetworkResourceConfigShell({
         </div>
         {actions ? <div className={styles.headerActions}>{actions}</div> : null}
       </header>
-      <div className={styles.content}>{children}</div>
+      <div
+        aria-busy={loading || undefined}
+        className={loading ? `${styles.content} ${styles.contentLoading}` : styles.content}
+      >
+        {loading ? <Spin /> : children}
+      </div>
     </section>
   );
 }

@@ -6,9 +6,12 @@
  */
 
 export type * from "./action-type";
+export type * from "./capability";
+export { CAPABILITY_STATUS_MISSING } from "./capability";
 export type * from "./concept-group";
 export type * from "./metric";
 export { createDefaultMetricCalculationFormula } from "./metric";
 export type * from "./network";
 export type * from "./object-type";
+export type * from "./property-authorization";
 export type * from "./relation-type";

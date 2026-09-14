@@ -39,11 +39,13 @@ export function primeUserLookupCache(users: AdminUser[]) {
   }
 }
 
-export async function getCachedDepartments(): Promise<AdminDepartment[]> {
+export async function getCachedDepartments(
+  options?: { skipErrorToast?: boolean },
+): Promise<AdminDepartment[]> {
   if (isFresh(departmentsCache)) {
     return departmentsCache!.data;
   }
-  const data = await listDepartments();
+  const data = await listDepartments(options);
   departmentsCache = { data, loadedAt: Date.now() };
   return data;
 }

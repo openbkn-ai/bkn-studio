@@ -13,6 +13,7 @@ import {
   formatSemanticPropertyList,
   mapMetricAnalysisDimensionFields,
   resolvePropertyDisplayName,
+  toPublishedMetricPropertyOptions,
 } from "./metric-property-display";
 
 const propertyOptions: RelationTypePropertyOption[] = [
@@ -33,6 +34,48 @@ const propertyOptions: RelationTypePropertyOption[] = [
 ];
 
 describe("metric-property-display", () => {
+  it("uses only minimal property metadata embedded in the metric", () => {
+    const options = toPublishedMetricPropertyOptions({
+      calculationFormula: { aggregation: { aggr: "sum", property: "amount" } },
+      dependencyProperties: [
+        { displayName: "Amount", name: "amount", type: "double" },
+        { displayName: "Region", name: "region", type: "string" },
+      ],
+      description: "",
+      id: "metric-1",
+      metricType: "atomic",
+      name: "Sales",
+      scopeRef: "orders",
+      scopeType: "object_type",
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+
+    expect(options.map(({ label, type, value }) => ({ label, type, value }))).toEqual([
+      { label: "Amount", type: "double", value: "amount" },
+      { label: "Region", type: "string", value: "region" },
+    ]);
+  });
+
+  it("does not invent field types when dependency metadata is unavailable", () => {
+    expect(
+      toPublishedMetricPropertyOptions({
+        calculationFormula: { aggregation: { aggr: "sum", property: "amount" } },
+        description: "",
+        id: "metric-1",
+        metricType: "atomic",
+        name: "Sales",
+        scopeRef: "orders",
+        scopeType: "object_type",
+        tags: [],
+        timeDimension: { defaultRangePolicy: "last_24h", property: "created_at" },
+        updateTime: "",
+        updaterName: "",
+      }),
+    ).toEqual([]);
+  });
+
   it("maps metric analysis dimensions to semantic fields", () => {
     expect(
       mapMetricAnalysisDimensionFields(["qty", "status"], [

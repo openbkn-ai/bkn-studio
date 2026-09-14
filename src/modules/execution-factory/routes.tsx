@@ -9,6 +9,7 @@ import { lazy, Suspense, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import type { AppRouteContribution } from "@/app/router/types";
+import { RequirePermission } from "@/framework/permission/RequirePermission";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { ExecutionUnitTabRedirect } from "@/modules/execution-factory/pages/ExecutionUnitTabRedirect";
 
@@ -62,7 +63,15 @@ const SandboxRuntimePage = lazy(async () => {
   return { default: module.SandboxRuntimePage };
 });
 
-function withRouteLoading(element: ReactNode) {
+function withRouteLoading(element: ReactNode, permissions: string | readonly string[]) {
+  return (
+    <RequirePermission mode="any" permissions={[...permissions]}>
+      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+    </RequirePermission>
+  );
+}
+
+function withPublicRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
@@ -76,7 +85,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.unitManagementTitle",
       },
     },
-    element: withRouteLoading(<UnitManagementListPage />),
+    element: withPublicRouteLoading(<UnitManagementListPage />),
   },
   {
     path: "execution-factory/units/new",
@@ -87,7 +96,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.createTitle",
       },
     },
-    element: withRouteLoading(<UnitFormPage mode="create" />),
+    element: withRouteLoading(<UnitFormPage mode="create" />, ["execution-factory:operator:create"]),
   },
   {
     path: "execution-factory/units/:operatorId/edit",
@@ -98,7 +107,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.editTitle",
       },
     },
-    element: withRouteLoading(<UnitFormPage mode="edit" />),
+    element: withRouteLoading(<UnitFormPage mode="edit" />, ["execution-factory:operator:edit"]),
   },
   {
     path: "execution-factory/toolboxes/new",
@@ -111,6 +120,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <ExecutionUnitTabRedirect activeTab="toolbox" migrationFrom="toolboxes-new" openCreate />,
+      ["execution-factory:toolbox:create"],
     ),
   },
   {
@@ -122,7 +132,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxEditTitle",
       },
     },
-    element: withRouteLoading(<ToolboxFormPage mode="edit" />),
+    element: withRouteLoading(<ToolboxFormPage mode="edit" />, ["execution-factory:toolbox:edit"]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools",
@@ -133,7 +143,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxToolsPageTitle",
       },
     },
-    element: withRouteLoading(<ToolboxToolsPage />),
+    element: withRouteLoading(<ToolboxToolsPage />, ["execution-factory:toolbox:view"]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools/:toolId/edit",
@@ -144,7 +154,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolDetailTitle",
       },
     },
-    element: withRouteLoading(<ToolDetailPage />),
+    element: withRouteLoading(<ToolDetailPage />, ["execution-factory:tool:view"]),
   },
   {
     path: "execution-factory/mcp",
@@ -155,7 +165,10 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpListTitle",
       },
     },
-    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp" />),
+    element: withRouteLoading(
+      <ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp" />,
+      ["execution-factory:mcp:view"],
+    ),
   },
   {
     path: "execution-factory/mcp/new",
@@ -168,6 +181,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp-new" openCreate />,
+      ["execution-factory:mcp:create"],
     ),
   },
   {
@@ -179,7 +193,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpDetailPageTitle",
       },
     },
-    element: withRouteLoading(<McpDetailPage />),
+    element: withRouteLoading(<McpDetailPage />, ["execution-factory:mcp:view"]),
   },
   {
     path: "execution-factory/skills",
@@ -192,6 +206,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="skills" />,
+      ["execution-factory:skill:view"],
     ),
   },
   {
@@ -205,6 +220,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="skills-new" openCreate />,
+      ["execution-factory:skill:create"],
     ),
   },
   {
@@ -216,7 +232,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillEditTitle",
       },
     },
-    element: withRouteLoading(<SkillEditPage />),
+    element: withRouteLoading(<SkillEditPage />, ["execution-factory:skill:edit"]),
   },
   {
     path: "execution-factory/skills/:skillId",
@@ -227,7 +243,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillDetailPageTitle",
       },
     },
-    element: withRouteLoading(<SkillDetailPage />),
+    element: withRouteLoading(<SkillDetailPage />, ["execution-factory:skill:view"]),
   },
   {
     path: "execution-factory/catalog",
@@ -238,7 +254,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.catalogTitle",
       },
     },
-    element: withRouteLoading(<CatalogListPage />),
+    element: withRouteLoading(<CatalogListPage />, ["execution-factory:catalog:view"]),
   },
   {
     path: "execution-factory/sandbox-runtime",
@@ -249,7 +265,10 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.sandboxRuntimeTitle",
       },
     },
-    element: withRouteLoading(<SandboxRuntimePage />),
+    element: withRouteLoading(
+      <SandboxRuntimePage />,
+      ["execution-factory-lab:sandbox-runtime:view"],
+    ),
   },
 ];
 

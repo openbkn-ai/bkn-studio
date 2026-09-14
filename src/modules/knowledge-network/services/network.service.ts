@@ -5,14 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import {
+  parseContentDispositionFilename,
+  triggerBrowserDownload,
+} from "@/framework/download/file-download";
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
-import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   unwrapSingleEntryResponse,
   type SingleEntryResponse,
 } from "@/framework/request/normalize";
 import type {
+  KnowledgeNetworkExportFormat,
   KnowledgeNetworkImportMode,
   KnowledgeNetworkListQuery,
   KnowledgeNetworkListResult,
@@ -53,25 +57,19 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-const DEFAULT_BUSINESS_DOMAIN_ID = "bd_public";
+// The backend assembles the whole network — schema plus capability dependencies —
+// while the request is open, which outlasts the client's 30s default on a large
+// network. The other packaging exports in this repo settle on the same minute.
+const BKN_EXPORT_TIMEOUT_MS = 60_000;
+
 const MOCK_KNOWLEDGE_NETWORK_OPERATIONS = [
   "view_detail",
-  "data_query",
+  "query_data",
   "modify",
   "delete",
   "authorize",
-  "task_manage",
+  "execute",
 ];
-
-function getKnowledgeNetworkDomainHeaders() {
-  const runtimeConfig = getRuntimeConfig();
-  const businessDomainId =
-    runtimeConfig.currentUser.businessDomainId ?? DEFAULT_BUSINESS_DOMAIN_ID;
-
-  return {
-    "x-business-domain": businessDomainId,
-  };
-}
 
 export async function listKnowledgeNetworks(
   query: KnowledgeNetworkListQuery,
@@ -89,7 +87,6 @@ export async function listKnowledgeNetworks(
   const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
     "/bkn-backend/v1/knowledge-networks",
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         direction: query.direction === "asc" ? "asc" : "desc",
         limit: query.pageSize,
@@ -115,7 +112,6 @@ export async function listKnowledgeNetworkTags() {
   const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
     "/bkn-backend/v1/knowledge-networks",
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         limit: 200,
         offset: 0,
@@ -142,7 +138,6 @@ export async function getKnowledgeNetwork(networkId: string) {
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
       {
-        headers: getKnowledgeNetworkDomainHeaders(),
         params: { include_statistics: true },
       },
     );
@@ -157,9 +152,7 @@ export async function getKnowledgeNetwork(networkId: string) {
     );
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
-      {
-        headers: getKnowledgeNetworkDomainHeaders(),
-      },
+      {},
     );
 
     const record = unwrapSingleEntryResponse(response.data);
@@ -200,7 +193,6 @@ export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayl
     "/bkn-backend/v1/knowledge-networks",
     toBackendKnowledgeNetworkCreatePayload(input),
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         validate_dependency: false,
       },
@@ -240,7 +232,6 @@ export async function updateKnowledgeNetwork(
     `/bkn-backend/v1/knowledge-networks/${networkId}`,
     toBackendKnowledgeNetworkUpdatePayload(input),
     {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         validate_dependency: false,
       },
@@ -264,9 +255,7 @@ export async function deleteKnowledgeNetwork(networkId: string) {
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}`, {
-    headers: getKnowledgeNetworkDomainHeaders(),
-  });
+  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}`);
 }
 
 export async function listKnowledgeNetworkRecentObjects(networkId: string) {
@@ -289,13 +278,18 @@ export async function listKnowledgeNetworkRecentObjects(networkId: string) {
   return response.data.entries.map(mapRecentObject);
 }
 
-export async function exportKnowledgeNetwork(networkId: string) {
+export async function exportKnowledgeNetwork(
+  networkId: string,
+  format: KnowledgeNetworkExportFormat = "json",
+) {
   if (useMock) {
     const record = mockKnowledgeNetworks.find((item) => item.id === networkId);
     if (!record) {
       throw new Error("Knowledge network not found");
     }
 
+    // The BKN package is assembled by the backend, so mock mode can only ever
+    // hand back the JSON view of the same network.
     downloadJsonFile(record.name, {
       id: record.id,
       code: record.identifier,
@@ -304,6 +298,21 @@ export async function exportKnowledgeNetwork(networkId: string) {
       color: record.color,
       tags: record.tags,
     });
+    return;
+  }
+
+  if (format === "bkn") {
+    const response = await http.get<Blob>(`/bkn-backend/v1/bkns/${networkId}`, {
+      responseType: "blob",
+      timeout: BKN_EXPORT_TIMEOUT_MS,
+    });
+
+    triggerBrowserDownload(
+      response.data,
+      parseContentDispositionFilename(
+        response.headers["content-disposition"] as string | undefined,
+      ) ?? `${networkId}.tar`,
+    );
     return;
   }
 
@@ -378,7 +387,6 @@ export async function importKnowledgeNetwork(
 
   try {
     await http.post("/bkn-backend/v1/knowledge-networks", requestBody, {
-      headers: getKnowledgeNetworkDomainHeaders(),
       params: {
         import_mode: importMode,
         validate_dependency: false,

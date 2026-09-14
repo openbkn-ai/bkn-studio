@@ -29,12 +29,12 @@
   display: grid;
   gap: 10px;
   padding: 12px 12px 2px;
-  border: 1px solid #e8edf3;
-  background: #fbfcfe;
+  border: 1px solid var(--color-border);
+  background: var(--color-interface-panel-bg);
 }
 
 .sectionTitle {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 600;
   line-height: 20px;
@@ -71,7 +71,7 @@
   flex: 0 0 84px;
   width: 84px;
   min-height: 32px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
   line-height: 32px;
@@ -81,7 +81,7 @@
 
 .requiredMark {
   margin-right: 2px;
-  color: #ef4444;
+  color: var(--color-error-text);
   font-family: SimSun, sans-serif;
   line-height: 1;
 }
@@ -135,7 +135,7 @@
 
 .cronPresetsLabel {
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -149,23 +149,23 @@
 .cronPreset {
   height: 28px;
   padding: 0 10px;
-  border: 1px solid #d9e0ea;
+  border: 1px solid var(--color-border);
   border-radius: 0;
-  background: #fff;
-  color: #475569;
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
   font-size: 12px;
   cursor: pointer;
 }
 
 .cronPreset:hover {
   border-color: #2e68ff;
-  color: #1d4ed8;
+  color: var(--color-text-link);
 }
 
 .cronPresetActive {
   border-color: #2e68ff;
-  background: #f5f8ff;
-  color: #1d4ed8;
+  background: var(--color-primary-100);
+  color: var(--color-text-link);
 }
 
 .strategyOption {
@@ -175,13 +175,13 @@
 }
 
 .strategyTitle {
-  color: #111827;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 500;
 }
 
 .strategyHint {
-  color: #94a3b8;
+  color: var(--color-text-tertiary);
   font-size: 12px;
   line-height: 1.4;
   white-space: normal;
@@ -191,7 +191,7 @@
 .form :global(.ant-input-affix-wrapper),
 .form :global(.ant-select-selector) {
   min-height: 32px !important;
-  border-color: #d9e0ea !important;
+  border-color: var(--color-border) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -220,7 +220,7 @@
 
 .form :global(.ant-input:hover),
 .form :global(.ant-select:not(.ant-select-disabled):hover .ant-select-selector) {
-  border-color: #b9c7da !important;
+  border-color: var(--color-primary-border) !important;
 }
 
 .form :global(.ant-input:focus),
@@ -232,7 +232,7 @@
 
 .form :global(.ant-switch) {
   min-width: 44px;
-  background: #cbd5e1;
+  background: var(--color-text-muted);
 }
 
 .form :global(.ant-switch-checked) {

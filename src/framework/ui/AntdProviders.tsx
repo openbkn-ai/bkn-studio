@@ -11,6 +11,7 @@ import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import { App as AntdApp, ConfigProvider } from "antd";
 
+import { useResolvedTheme } from "@/app/theme/theme-context";
 import { createThemeConfig } from "@/app/theme/theme";
 import { AppServicesProviderBridge } from "@/framework/context/app-context";
 import type { RuntimeConfig } from "@/framework/runtime/types";
@@ -28,10 +29,12 @@ export function AntdProviders({
   children,
   runtimeConfig,
 }: AntdProvidersProps) {
+  const resolvedTheme = useResolvedTheme();
+
   return (
     <ConfigProvider
       locale={antdLocaleMap[runtimeConfig.locale]}
-      theme={createThemeConfig(runtimeConfig)}
+      theme={createThemeConfig(runtimeConfig, resolvedTheme)}
     >
       <AntdApp>
         <AppServicesProviderBridge>{children}</AppServicesProviderBridge>
@@ -39,4 +42,3 @@ export function AntdProviders({
     </ConfigProvider>
   );
 }
-

@@ -62,9 +62,11 @@ import {
 import { ObjectTypeDataAttributeFormDrawer } from "./ObjectTypeDataAttributeFormDrawer";
 import styles from "./ObjectTypeDataAttributeEditor.module.css";
 import { ObjectTypeDataAttributePickModal } from "./ObjectTypeDataAttributePickModal";
+import { ObjectTypeResourceDescriptionFillModal } from "./ObjectTypeResourceDescriptionFillModal";
 import { ObjectTypeResourceSelectModal } from "./ObjectTypeResourceSelectModal";
 import { FieldTypeIcon } from "./FieldTypeIcon";
 import {
+  applyResourceFieldDescriptions,
   applyDisplayKeySelection,
   applyPrimaryKeySelection,
   applyMappingFilter,
@@ -73,6 +75,7 @@ import {
   areDataSourcesEqual,
   areStringArraysEqualAsSets,
   buildConnectionId,
+  buildDescriptionFillCandidates,
   buildMappingAlignedLayout,
   countMappedProperties,
   filterPropertyRows,
@@ -323,6 +326,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [alertMessage, setAlertMessage] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<ObjectTypeDataProperty | undefined>();
+  const [descriptionFillModalOpen, setDescriptionFillModalOpen] = useState(false);
   const [pickModalOpen, setPickModalOpen] = useState(false);
   const [resourceModalOpen, setResourceModalOpen] = useState(false);
   const [fieldSearch, setFieldSearch] = useState("");
@@ -337,6 +341,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const validProperties = useMemo(
     () => normalizeProperties(dataProperties),
     [dataProperties],
+  );
+  const descriptionFillCandidates = useMemo(
+    () => buildDescriptionFillCandidates(dataProperties, viewFields),
+    [dataProperties, viewFields],
   );
 
   const logicNameSet = useMemo(() => new Set(logicPropertyNames), [logicPropertyNames]);
@@ -953,6 +961,24 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     });
   }, [modal, t, updateProperties]);
 
+  const handleFillResourceDescriptions = useCallback(
+    (propertyNames: string[]) => {
+      const result = applyResourceFieldDescriptions(dataProperties, viewFields, propertyNames);
+      if (!result.changed) {
+        return;
+      }
+
+      updateProperties(result.nextProperties);
+      setDescriptionFillModalOpen(false);
+      void message.success(
+        t("knowledgeNetwork.objectTypeDescriptionFillSuccess", {
+          count: propertyNames.length,
+        }),
+      );
+    },
+    [dataProperties, message, t, updateProperties, viewFields],
+  );
+
   const handleDeletePropertyFromRow = (name: string, event: React.MouseEvent) => {
     event.stopPropagation();
     handleDeleteProperty(name);
@@ -1065,6 +1091,14 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const dataPanelMoreMenu = useMemo<MenuProps["items"]>(
     () => [
       {
+        key: "fillDescriptions",
+        label: t("knowledgeNetwork.objectTypeFillDescriptionsFromResource"),
+      },
+      {
+        type: "divider",
+      },
+      {
+        danger: true,
         key: "clearAll",
         label: t("knowledgeNetwork.objectTypeClearAllProperties"),
       },
@@ -1074,6 +1108,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const handleDataPanelMoreMenuClick = useCallback(
     ({ key }: { key: string }) => {
+      if (key === "fillDescriptions") {
+        setDescriptionFillModalOpen(true);
+      }
       if (key === "clearAll") {
         handleClearAllProperties();
       }
@@ -1409,7 +1446,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
               <div className={styles.panelTitleBox}>
                 <span
                   className={styles.panelIcon}
-                  style={{ backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR, borderRadius: 4, color: "#fff", fontSize: 14, height: 20, width: 20 }}
+                  style={{ backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR, borderRadius: 4, color: "var(--color-text-inverse)", fontSize: 14, height: 20, width: 20 }}
                 >
                   {renderResourceIcon(basicValue.icon)}
                 </span>
@@ -1588,7 +1625,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
         <div className={styles.canvasControls}>
           <button
-            aria-label="zoom in"
+            aria-label={t("common.zoomIn")}
             className={styles.canvasControlButton}
             onClick={() => setZoom((current) => Math.min(2, current + 0.1))}
             type="button"
@@ -1596,7 +1633,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             <PlusOutlined />
           </button>
           <button
-            aria-label="zoom out"
+            aria-label={t("common.zoomOut")}
             className={styles.canvasControlButton}
             onClick={() => setZoom((current) => Math.max(0.3, current - 0.1))}
             type="button"
@@ -1604,7 +1641,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             <MinusOutlined />
           </button>
           <button
-            aria-label="fit view"
+            aria-label={t("common.fitView")}
             className={styles.canvasControlButton}
             onClick={() => {
               setZoom(1);
@@ -1638,6 +1675,13 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         onCancel={() => setPickModalOpen(false)}
         onOk={handlePickAttributes}
         open={pickModalOpen}
+      />
+
+      <ObjectTypeResourceDescriptionFillModal
+        candidates={descriptionFillCandidates}
+        onCancel={() => setDescriptionFillModalOpen(false)}
+        onConfirm={handleFillResourceDescriptions}
+        open={descriptionFillModalOpen}
       />
 
       <ObjectTypeResourceSelectModal

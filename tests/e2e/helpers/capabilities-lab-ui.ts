@@ -10,7 +10,6 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page } from "@playwright/test";
 
 import { buildLabWeatherOpenApi } from "./capabilities-lab";
-import { BUSINESS_DOMAIN } from "./common";
 
 export const LAB_UI_PERMISSIONS = [
   "execution-factory-lab:capability:view",
@@ -115,20 +114,18 @@ export async function ensureOverviewTab(page: Page) {
 }
 
 export async function ensureLabE2eRuntime(page: Page) {
-  await page.addInitScript(({ apiBaseUrl, businessDomainId, permissions }) => {
+  await page.addInitScript(({ apiBaseUrl, permissions }) => {
     window.__BKN_STUDIO_RUNTIME__ = {
       ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
       apiBaseUrl,
       mode: "hosted",
       currentUser: {
         ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
-        businessDomainId,
         permissions,
       },
     };
   }, {
     apiBaseUrl: STUDIO_API_BASE_URL,
-    businessDomainId: BUSINESS_DOMAIN,
     permissions: LAB_UI_PERMISSIONS,
   });
 }

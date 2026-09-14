@@ -14,7 +14,6 @@ vi.mock("@/framework/runtime/config", () => ({
   getRuntimeConfig: () => ({
     apiBaseUrl: "/api",
     locale: "en-US",
-    currentUser: { businessDomainId: "bd_demo" },
     auth: { tokenManager: { getAccessToken: () => "token", refreshAccessToken: vi.fn() } },
   }),
 }));
@@ -22,7 +21,7 @@ vi.mock("@/framework/runtime/config", () => ({
 describe("EE business provenance service", () => {
   beforeEach(() => { getMock.mockReset(); postMock.mockReset(); });
 
-  it("reads the EE conversation list rather than the removed community endpoint", async () => {
+  it("silences the expected missing-EE-route response while reading the conversation list", async () => {
     getMock.mockResolvedValue({ data: { entries: [{ conversation_id: "conv-1" }], total: 1 } });
     const { getBusinessProvenanceConversations } = await import("./business-provenance.service");
 
@@ -30,7 +29,10 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/conversations",
-      { headers: { "x-business-domain": "bd_demo" }, params: { page: 2, page_size: 20, keyword: "采购" } },
+      {
+        params: { page: 2, page_size: 20, keyword: "采购" },
+        skipErrorToast: true,
+      },
     );
     expect(page.entries[0]?.conversationId).toBe("conv-1");
   });
@@ -52,11 +54,11 @@ describe("EE business provenance service", () => {
 
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1",
-      { headers: { "x-business-domain": "bd_demo" } },
+      { skipErrorToast: true },
     );
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions/int-1/markdown",
-      { headers: { "x-business-domain": "bd_demo" }, responseType: "text" },
+      { responseType: "text" },
     );
     expect(projection.operations[0]?.operationId).toBe("op-1");
     expect(projection).toMatchObject({ interactionQuestion: "完整问题", interactionResult: "## 完整回答" });
@@ -69,13 +71,14 @@ describe("EE business provenance service", () => {
   });
 
   it("loads interaction rounds only for the selected conversation", async () => {
-    getMock.mockResolvedValue({ data: { entries: [{ interaction_id: "int-1", conversation_id: "conv-1" }], total: 1 } });
+    getMock.mockResolvedValue({ data: { entries: [{ interaction_id: "int-1", conversation_id: "conv-1", round_number: 3 }], total: 3 } });
     const { getBusinessProvenanceInteractions } = await import("./business-provenance.service");
-    await getBusinessProvenanceInteractions({ conversationId: "conv-1", page: 1, pageSize: 20 });
+    const page = await getBusinessProvenanceInteractions({ conversationId: "conv-1", page: 1, pageSize: 20 });
     expect(getMock).toHaveBeenCalledWith(
       "/agent-observability/v1/business-provenance/interactions",
-      { headers: { "x-business-domain": "bd_demo" }, params: { conversation_id: "conv-1", page: 1, page_size: 20 } },
+      { params: { conversation_id: "conv-1", page: 1, page_size: 20 } },
     );
+    expect(page.entries[0]).toMatchObject({ interactionId: "int-1", roundNumber: 3 });
   });
 
   it("streams the server-configured provenance Agent and returns its structured result", async () => {

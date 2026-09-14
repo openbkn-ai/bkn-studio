@@ -108,12 +108,12 @@ let roles: AdminRole[] = [
     accessorIds: [], updatedAt: daysAgo(30),
   },
   {
-    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, models, and execution factory assets.",
+    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, and execution factory assets.",
     builtin: true, source: "business",
     permissions: [
       grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
       grant("resource", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
-      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "data_query", "authorize", "task_manage"]),
+      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "query_data", "authorize", "execute"]),
       grant("small_model", "*", ["display", "create", "modify", "execute"]),
       grant("large_model", "*", ["display", "create", "modify", "execute"]),
       grant("operator", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
@@ -129,7 +129,7 @@ let roles: AdminRole[] = [
     permissions: [
       grant("catalog", "*", ["view_detail"]),
       grant("resource", "*", ["view_detail"]),
-      grant("knowledge_network", "*", ["view_detail", "data_query"]),
+      grant("knowledge_network", "*", ["view_detail", "query_data"]),
       grant("small_model", "*", ["display", "execute"]),
       grant("large_model", "*", ["display", "execute"]),
       grant("operator", "*", ["view", "execute"]),
@@ -230,7 +230,7 @@ export async function listUsers(options?: { skipErrorToast?: boolean }): Promise
   return result.users;
 }
 
-export async function listDepartments(): Promise<AdminDepartment[]> {
+export async function listDepartments(options?: { skipErrorToast?: boolean }): Promise<AdminDepartment[]> {
   if (useMock) {
     const subtreeCounts = computeSubtreeMemberCounts(departments, users);
     return wait(
@@ -243,6 +243,7 @@ export async function listDepartments(): Promise<AdminDepartment[]> {
   }
   const response = await http.get<{ departments?: BackendDept[] }>(`${ADMIN}/departments`, {
     params: { offset: 0, limit: 1000 },
+    skipErrorToast: options?.skipErrorToast,
   });
   return (response.data.departments ?? []).map(mapDept);
 }

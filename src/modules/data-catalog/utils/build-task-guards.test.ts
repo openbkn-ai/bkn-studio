@@ -21,20 +21,18 @@ function task(status: BuildTask["status"]): BuildTask {
     mode: "batch",
     status,
     embeddingFields: [],
-    buildKeyFields: [],
+    primaryKeyFields: [],
+    incrementalFields: [],
     embeddingModel: "",
-    embeddingDegraded: false,
     modelDimensions: 0,
     fulltextFields: [],
     fulltextAnalyzer: "",
     totalCount: 0,
     syncedCount: 0,
-    vectorizedCount: 0,
-    indexUsable: true,
-    failureDetail: "",
     createTime: 0,
     finishTime: null,
-    lastEventAt: null,
+    lastProgressTime: null,
+    startTime: null,
     error: null,
   };
 }
@@ -43,11 +41,11 @@ describe("build-task-guards", () => {
   it("treats pending/running/listening/stopping as active", () => {
     expect(isActiveBuildTask(task("pending"))).toBe(true);
     expect(isActiveBuildTask(task("running"))).toBe(true);
-    expect(isActiveBuildTask(task("listening"))).toBe(true);
-    expect(isActiveBuildTask(task("paused"))).toBe(false);
+    expect(isActiveBuildTask(task("running"))).toBe(true);
+    expect(isActiveBuildTask(task("stopped"))).toBe(false);
     expect(isActiveBuildTask(task("stopping"))).toBe(true);
     expect(isActiveBuildTask(task("cancelled"))).toBe(false);
-    expect(isActiveBuildTask(task("succeeded"))).toBe(false);
+    expect(isActiveBuildTask(task("completed"))).toBe(false);
     expect(isActiveBuildTask(null)).toBe(false);
   });
 

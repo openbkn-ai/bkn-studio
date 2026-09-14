@@ -33,7 +33,13 @@ vi.mock("@/framework/auth/oauth", () => oauth);
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
-  return { ...original, useTranslation: () => ({ t: (key: string) => key }) };
+  return {
+    ...original,
+    useTranslation: () => ({
+      i18n: { language: "zh-CN", resolvedLanguage: "zh-CN" },
+      t: (key: string) => key,
+    }),
+  };
 });
 
 /** jsdom reports "visible" by default; override per test. */
@@ -56,6 +62,7 @@ describe("SignInScreen auto-redirect gating", () => {
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
 
     expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
+    expect(oauth.beginLogin).toHaveBeenCalledWith(expect.any(String), "zh-CN");
   });
 
   // A background tab redirecting would rewrite the browser's single login CSRF

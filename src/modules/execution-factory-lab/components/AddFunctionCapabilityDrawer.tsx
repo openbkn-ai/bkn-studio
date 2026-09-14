@@ -343,7 +343,7 @@ export function AddFunctionCapabilityDrawer({
           {runResult ? (
             <pre
               style={{
-                background: "#f5f5f5",
+                background: "var(--color-fill-quaternary)",
                 borderRadius: 8,
                 margin: 0,
                 maxHeight: 300,

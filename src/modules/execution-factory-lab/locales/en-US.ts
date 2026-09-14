@@ -204,6 +204,8 @@ export const executionFactoryLabEnUS = {
     republishSuccess: "Version republished",
     importOpenApiBatchTitle: "OpenAPI import complete",
     importOpenApiBatchHint: "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
+    importOpenApiBatchHint_one: "Imported {{count}} capability. It is opened in the editor.",
+    importOpenApiBatchHint_other: "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
     importOpenApiEmpty: "No capabilities were imported from this OpenAPI document.",
     stepDraft: "Draft",
     stepDebug: "Debug",
