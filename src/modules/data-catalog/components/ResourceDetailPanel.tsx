@@ -411,7 +411,14 @@ export function ResourceDetailPanel({
                   onChange={(event) => setDescriptionDraft(event.target.value)}
                   value={descriptionDraft}
                 />
-              ) : resource.description || "-"}
+              ) : (
+                <span
+                  className={styles.basicInfoDescription}
+                  title={resource.description || undefined}
+                >
+                  {resource.description || "-"}
+                </span>
+              )}
             </span>
           </div>
 
@@ -556,7 +563,12 @@ export function ResourceDetailPanel({
                 {t("dataCatalog.resource.originalDescription")}
               </span>
               <span className={styles.basicInfoValue}>
-                {resource.sourceMetadata?.originalDescription || "-"}
+                <span
+                  className={styles.basicInfoDescription}
+                  title={resource.sourceMetadata?.originalDescription || undefined}
+                >
+                  {resource.sourceMetadata?.originalDescription || "-"}
+                </span>
               </span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>

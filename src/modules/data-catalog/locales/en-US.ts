@@ -606,7 +606,7 @@ export const dataCatalogEnUS = {
       retryLoadAnalyzers: "Retry",
       noAnalyzers: "No full-text analyzers are available; index configuration cannot be saved.",
       savedAnalyzerUnavailable: "Saved analyzer configuration is unavailable: {{analyzers}}. Choose an available analyzer to continue.",
-      fieldsRequired: "Select at least one embedding or full-text field.",
+      fieldsRequired: "Configure at least one keyword, full-text, or vector feature.",
       keyFieldsRequired: "Batch mode requires both primary-key and incremental fields. Select them under Configure Index.",
       model: "Embedding Model",
       modelRequired: "Select an embedding model.",

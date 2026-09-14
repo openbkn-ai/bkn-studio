@@ -606,7 +606,7 @@ export const dataCatalogZhCN = {
       retryLoadAnalyzers: "重试",
       noAnalyzers: "当前没有可用的全文分词器，无法保存索引配置。",
       savedAnalyzerUnavailable: "已保存的分词器配置不可用：{{analyzers}}。请选择可用分词器后继续。",
-      fieldsRequired: "请至少选择一个向量嵌入字段或全文检索字段。",
+      fieldsRequired: "请至少配置一个关键字、全文检索或向量特征。",
       keyFieldsRequired: "批量模式必须同时指定主键字段和增量键字段，请回到「配置索引」勾选。",
       model: "Embedding 模型",
       modelRequired: "请选择 Embedding 模型。",

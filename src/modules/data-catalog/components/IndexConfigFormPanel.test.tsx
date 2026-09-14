@@ -127,6 +127,28 @@ describe("IndexConfigFormPanel", () => {
     }));
   });
 
+  it("allows saving a string resource with only its required keyword feature", async () => {
+    updateCatalogResourceMock.mockResolvedValue(resource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", {
+      name: "dataCatalog.build.saveIndexConfig",
+    }));
+
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
+    const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
+    expect(payload.schema[0]?.features).toContainEqual(expect.objectContaining({
+      config: { ignore_above: 256 },
+      featureType: "keyword",
+      name: "keyword",
+    }));
+  });
+
   it("paginates field feature configuration with ten fields per page", async () => {
     const pagedResource: CatalogResource = {
       ...resource,

@@ -151,14 +151,16 @@ describe("ResourceDetailPanel", () => {
   });
 
   it("shows the original source metadata for the resource", () => {
+    const describedResource = { ...resource, description: "A long resource description" };
     render(
       <MemoryRouter>
-        <ResourceDetailPanel active catalog={null} resource={resource} />
+        <ResourceDetailPanel active catalog={null} resource={describedResource} />
       </MemoryRouter>,
     );
 
+    expect(screen.getByTitle("A long resource description")).toBeTruthy();
     expect(screen.getByText("public.orders")).toBeTruthy();
-    expect(screen.getByText("Orders from the source database")).toBeTruthy();
+    expect(screen.getByTitle("Orders from the source database")).toBeTruthy();
     expect(
       screen.getByText("dataCatalog.resource.schemaName").parentElement?.textContent,
     ).toContain("public");

@@ -534,7 +534,10 @@ export function IndexConfigFormPanel({
         }
       }
     }
-    if (embeddingFields.length === 0 && fulltextFields.length === 0) {
+    const hasKeywordFeature = Object.values(eligibleKeywordGroups).some(
+      (groups) => groups.length > 0,
+    );
+    if (!hasKeywordFeature && embeddingFields.length === 0 && fulltextFields.length === 0) {
       return t("dataCatalog.build.fieldsRequired");
     }
     if (fulltextFields.length > 0) {
