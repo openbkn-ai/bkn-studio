@@ -48,7 +48,7 @@
 .operationPanel > header { border-bottom: 1px solid #edf0f5; margin-bottom: 14px; padding-bottom: 12px; }
 .payloadBlock { display: grid; gap: 8px; justify-items: end; }
 .payloadBlock .payload { justify-self: stretch; }
-.payload { background: #111827; border-radius: 6px; color: var(--color-interface-code-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.65; max-height: 340px; padding: 14px; }
+.payload { background: #111827; border-radius: 6px; color: var(--color-text-inverse); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.65; max-height: 340px; padding: 14px; }
 @media (max-width: 1180px) { .filters { grid-template-columns: 1fr 1fr 1fr; } .detailLayoutOpen { grid-template-columns: 1fr; } .operationPanel { max-height: none; position: static; } }
 @media (max-width: 760px) { .pageSurface { padding: 16px; } .filters, .summaryTextGrid { grid-template-columns: 1fr; } }
 
