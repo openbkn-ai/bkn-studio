@@ -9,7 +9,7 @@ import { EllipsisOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icon
 import { Alert, Dropdown, Input, Select, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -51,6 +51,11 @@ import styles from "./admin.module.css";
 import layoutStyles from "./UserManagementScene.module.css";
 
 type StatusFilter = UserManagementStatusFilter;
+
+const DEPT_PANEL_DEFAULT_WIDTH = 280;
+const DEPT_PANEL_MIN_WIDTH = 220;
+const DEPT_PANEL_MAX_WIDTH = 520;
+const USER_PANEL_MIN_WIDTH = 480;
 
 function formatTime(value: number | undefined, locale: string) {
   if (!value) {
@@ -138,7 +143,10 @@ export function UserManagementScene() {
   const [keywordDraft, setKeywordDraft] = useState(urlFilters.keyword);
   const debouncedKeyword = useDebouncedValue(keywordDraft.trim());
   const tableSectionRef = useRef<HTMLDivElement>(null);
+  const explorerRef = useRef<HTMLDivElement>(null);
   const [tableScrollY, setTableScrollY] = useState(360);
+  const [deptPanelWidth, setDeptPanelWidth] = useState(DEPT_PANEL_DEFAULT_WIDTH);
+  const resizeState = useRef<{ pointerId: number; startWidth: number; startX: number } | null>(null);
   const usersRequestSeq = useRef(0);
 
   const [userDrawer, setUserDrawer] = useState<{ open: boolean; user: AdminUser | null }>({
@@ -586,6 +594,46 @@ export function UserManagementScene() {
     })();
   };
 
+  const clampDeptPanelWidth = useCallback((width: number) => {
+    const explorerWidth = explorerRef.current?.clientWidth ?? Number.POSITIVE_INFINITY;
+    const maxWidth = Math.max(
+      DEPT_PANEL_MIN_WIDTH,
+      Math.min(DEPT_PANEL_MAX_WIDTH, explorerWidth - USER_PANEL_MIN_WIDTH),
+    );
+    return Math.min(Math.max(width, DEPT_PANEL_MIN_WIDTH), maxWidth);
+  }, []);
+
+  const handleSplitterPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    resizeState.current = {
+      pointerId: event.pointerId,
+      startWidth: deptPanelWidth,
+      startX: event.clientX,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleSplitterPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const resize = resizeState.current;
+    if (!resize || resize.pointerId !== event.pointerId) {
+      return;
+    }
+    setDeptPanelWidth(clampDeptPanelWidth(resize.startWidth + event.clientX - resize.startX));
+  };
+
+  const stopSplitterResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (resizeState.current?.pointerId !== event.pointerId) {
+      return;
+    }
+    resizeState.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
   const roleFilterOptions = useMemo(
     () => [
       { label: t("systemAdmin.users.roleAll"), value: "" },
@@ -597,7 +645,11 @@ export function UserManagementScene() {
   return (
     <>
       <section className={[styles.contentSurface, layoutStyles.pageSurface].join(" ")}>
-        <div className={layoutStyles.explorer}>
+        <div
+          className={layoutStyles.explorer}
+          ref={explorerRef}
+          style={{ "--dept-panel-width": `${deptPanelWidth}px` } as CSSProperties}
+        >
           <aside className={layoutStyles.deptPanel}>
             <div className={layoutStyles.deptTreeWrap}>
               <DepartmentNavTree
@@ -671,6 +723,32 @@ export function UserManagementScene() {
               />
             </div>
           </aside>
+
+          <div
+            aria-label={t("systemAdmin.users.deptTreeTitle")}
+            aria-orientation="vertical"
+            aria-valuemax={DEPT_PANEL_MAX_WIDTH}
+            aria-valuemin={DEPT_PANEL_MIN_WIDTH}
+            aria-valuenow={Math.round(deptPanelWidth)}
+            className={layoutStyles.deptPanelSplitter}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setDeptPanelWidth((width) => clampDeptPanelWidth(width - 16));
+              }
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setDeptPanelWidth((width) => clampDeptPanelWidth(width + 16));
+              }
+            }}
+            onLostPointerCapture={stopSplitterResize}
+            onPointerCancel={stopSplitterResize}
+            onPointerDown={handleSplitterPointerDown}
+            onPointerMove={handleSplitterPointerMove}
+            onPointerUp={stopSplitterResize}
+            role="separator"
+            tabIndex={0}
+          />
 
           <div className={layoutStyles.userPanel}>
             <div className={layoutStyles.userPanelHead}>
