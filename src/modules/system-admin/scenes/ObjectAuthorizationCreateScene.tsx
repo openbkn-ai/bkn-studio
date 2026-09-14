@@ -111,6 +111,7 @@ export function ObjectAuthorizationCreateScene() {
     ? deepLinkedObject
     : undefined;
   const [objectValue, setObjectValue] = useState<string | undefined>(supportedDeepLinkedObject);
+  const [selectedObjectMeta, setSelectedObjectMeta] = useState<AuthorizableObject | null>(null);
   const [objectType, setObjectType] = useState<string | undefined>(supportedDeepLinkedType);
   const [granteeIds, setGranteeIds] = useState<string[]>([]);
   const [opKeys, setOpKeys] = useState<string[]>([]);
@@ -122,13 +123,17 @@ export function ObjectAuthorizationCreateScene() {
   const [objectPage, setObjectPage] = useState(0);
   const [objectTotal, setObjectTotal] = useState(0);
   const objectRequestRef = useRef(0);
+  const selectedObjectValueRef = useRef(objectValue);
+  selectedObjectValueRef.current = objectValue;
 
   const selectedObject = useMemo(() => {
     const parsed = parseObjValue(objectValue);
     if (!parsed) {
       return null;
     }
-    const meta = objects.find((item) => item.type === parsed.objType && item.id === parsed.objId);
+    const meta = selectedObjectMeta?.type === parsed.objType && selectedObjectMeta.id === parsed.objId
+      ? selectedObjectMeta
+      : objects.find((item) => item.type === parsed.objType && item.id === parsed.objId);
     return meta
       ? { objType: meta.type, objId: meta.id, objName: meta.name, objSub: meta.sub }
       : {
@@ -137,7 +142,7 @@ export function ObjectAuthorizationCreateScene() {
           objName: parsed.objId,
           objSub: undefined,
         };
-  }, [objectValue, objects]);
+  }, [objectValue, objects, selectedObjectMeta]);
 
   const ops = useMemo(() => {
     if (!selectedObject) {
@@ -187,7 +192,10 @@ export function ObjectAuthorizationCreateScene() {
       const alreadyListed = !linked || result.items.some(
         (item) => item.type === linked.objType && item.id === linked.objId,
       );
-      if (!append && linked && linked.objType === objectType && !alreadyListed) {
+      // A deep-linked object is needed only while it remains the selected object.
+      // Otherwise, injecting it into every search response makes the server-side
+      // search result contain an unrelated stale option.
+      if (!append && !objectKeyword.trim() && selectedObjectValueRef.current === deepLinkedObject && linked && linked.objType === objectType && !alreadyListed) {
         const [resolved] = await resolveGrantNames([{
           accessorId: "", objId: linked.objId, objName: linked.objId, objType: linked.objType, operations: [],
         }]);
@@ -198,6 +206,13 @@ export function ObjectAuthorizationCreateScene() {
       }
       if (request !== objectRequestRef.current) {
         return;
+      }
+      const selected = parseObjValue(selectedObjectValueRef.current);
+      const selectedMeta = selected && result.items.find(
+        (item) => item.type === selected.objType && item.id === selected.objId,
+      );
+      if (selectedMeta) {
+        setSelectedObjectMeta(selectedMeta);
       }
       setObjects((previous) => {
         const candidates = append ? [...previous, ...result.items] : result.items;
@@ -220,6 +235,7 @@ export function ObjectAuthorizationCreateScene() {
     if (!objectType) {
       objectRequestRef.current += 1;
       setObjects([]);
+      setSelectedObjectMeta(null);
       setObjectPage(0);
       setObjectTotal(0);
       return;
@@ -253,12 +269,19 @@ export function ObjectAuthorizationCreateScene() {
   }, [fineGrained, ops, selectedObject]);
 
   const objectOptions = useMemo(
-    () =>
-      objects.map((obj) => ({
+    () => {
+      // Keep the selected label renderable even when the active server-search
+      // result does not contain that object. It is intentionally not merged
+      // into `objects`, so the search result and its loaded count remain exact.
+      const candidates = selectedObjectMeta
+        ? [selectedObjectMeta, ...objects]
+        : objects;
+      return [...new Map(candidates.map((obj) => [`${obj.type}::${obj.id}`, obj])).values()].map((obj) => ({
         label: obj.sub ? `${obj.name} (${obj.sub})` : obj.name,
         value: `${obj.type}::${obj.id}`,
-      })),
-    [objects],
+      }));
+    },
+    [objects, selectedObjectMeta],
   );
 
   const objectTypeOptions = useMemo(
@@ -455,6 +478,7 @@ export function ObjectAuthorizationCreateScene() {
                     onChange={(value) => {
                       setObjectType(value);
                       setObjectValue(undefined);
+                      setSelectedObjectMeta(null);
                       setObjectKeyword("");
                       setOpKeys([]);
                       setBundleSelected(false);
@@ -473,7 +497,17 @@ export function ObjectAuthorizationCreateScene() {
                     notFoundContent={objectLoading ? <Spin size="small" /> : t("systemAdmin.objectGrants.pickerNoResults")}
                     onChange={(value) => {
                       setObjectValue(value);
+                      const selected = parseObjValue(value);
+                      setSelectedObjectMeta(selected
+                        ? objects.find((item) => item.type === selected.objType && item.id === selected.objId) ?? null
+                        : null);
+                      setObjectKeyword("");
                       setBundleSelected(false);
+                    }}
+                    onOpenChange={(open) => {
+                      if (!open) {
+                        setObjectKeyword("");
+                      }
                     }}
                     options={objectOptions}
                     onPopupScroll={(event) => {

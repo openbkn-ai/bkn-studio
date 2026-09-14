@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listAuthorizableObjectsPageMock = vi.hoisted(() => vi.fn());
@@ -183,6 +183,53 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     expect(screen.getByText("systemAdmin.objectGrants.summaryReady")).not.toBeNull();
     expect(confirmButton.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("keeps the selected object's name when a server search excludes it", async () => {
+    listUsersMock.mockResolvedValue([
+      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
+    ]);
+    listUsersPageMock.mockResolvedValue({
+      total: 1,
+      users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
+    });
+    listAuthorizableObjectsPageMock.mockImplementation(
+      (_type: string, { keyword }: { keyword: string }) => Promise.resolve(
+        keyword === "missing"
+          ? { items: [], total: 0 }
+          : { items: [{ id: "catalog-1", name: "Customer data", type: "catalog" }], total: 1 },
+      ),
+    );
+    render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+
+    const [typePicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(typePicker);
+    fireEvent.click(screen.getByText("数据目录"));
+    await act(async () => {});
+
+    const [, objectPicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(objectPicker);
+    fireEvent.click(await screen.findByText("Customer data"));
+
+    fireEvent.change(objectPicker, { target: { value: "missing" } });
+    await waitFor(() => {
+      expect(listAuthorizableObjectsPageMock).toHaveBeenLastCalledWith(
+        "catalog", { keyword: "missing", page: 0 },
+      );
+    });
+
+    const [, , granteePicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(granteePicker);
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
+    fireEvent.click(screen.getByRole("button", {
+      name: "systemAdmin.objectGrants.confirmGrant",
+    }));
+    await waitFor(() => {
+      expect(upsertObjectGrantMock).toHaveBeenCalledWith(expect.objectContaining({
+        objId: "catalog-1", objName: "Customer data", objType: "catalog",
+      }));
+    });
   });
 
   it("falls back to the Community full-package mode and hides child resource types", async () => {
