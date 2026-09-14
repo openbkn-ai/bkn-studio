@@ -32,9 +32,8 @@ describe("canAccessHomeAction", () => {
     ).toBe(false);
   });
 
-  it("enforces permissions for an explicitly gated navigation action", () => {
+  it("keeps guarded Vega navigation entries permission-gated", () => {
     const action = {
-      enforcePermissions: true,
       path: "/data-connect",
       permissions: "catalog:task_manage",
     };

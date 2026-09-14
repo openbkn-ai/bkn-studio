@@ -407,6 +407,9 @@ export function DataConnectDiscoverScene({
     setTaskStrategyFilter(undefined);
     setTaskTriggerTypeFilter("all");
     setTaskPage(1);
+    setScheduleModalState(null);
+    setEditingSchedule(null);
+    setRunNowOpen(false);
   }, [selectedCatalogId]);
 
   useEffect(() => {

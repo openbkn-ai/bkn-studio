@@ -132,12 +132,12 @@ const resource: CatalogResource = {
 
 const manageableCatalog = {
   internal: false,
-  operations: ["task_manage"],
+  operations: ["task_manage", "view_detail"],
 } as CatalogRecord;
 
 const modifiableCatalog = {
   internal: false,
-  operations: ["resource_manage", "task_manage"],
+  operations: ["resource_manage", "task_manage", "view_detail"],
 } as CatalogRecord;
 
 function buildTask(overrides: Partial<BuildTask>): BuildTask {

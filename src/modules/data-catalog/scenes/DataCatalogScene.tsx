@@ -11,20 +11,18 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
 } from "@/modules/data-catalog/components/CatalogTreePanel";
-import { AuthorizedResourceListPanel } from "@/modules/data-catalog/components/AuthorizedResourceListPanel";
 import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFormDrawer";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
   isCatalogDiscovering,
-  listCatalogResourcePage,
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
@@ -139,7 +137,6 @@ export function DataCatalogScene({
   const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
   const [connectorTypeStats, setConnectorTypeStats] = useState<CatalogConnectorTypeStat[]>([]);
   const [selectedCatalogLoadingId, setSelectedCatalogLoadingId] = useState<string | null>(null);
-  const [restrictedCatalogId, setRestrictedCatalogId] = useState<string | null>(null);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -339,7 +336,6 @@ export function DataCatalogScene({
     selectedCatalogRequestIds.current.add(selection.id);
     setSelectedCatalogLoadingId(selection.id);
     const generation = catalogQueryGeneration.current;
-    setRestrictedCatalogId(null);
     void getCatalog(selection.id, { skipErrorToast: true })
       .then((catalog) => {
         if (
@@ -361,32 +357,7 @@ export function DataCatalogScene({
           return [...current, catalog];
         });
       })
-      .catch(async (error) => {
-        if (isRequestForbidden(error)) {
-          // A Resource can be directly granted without catalog:view_detail. In
-          // that case the public Catalog detail call is correctly forbidden, but
-          // the Resource list still applies the child-level PEP. Use that list
-          // solely to establish whether this route has authorized children; do
-          // not turn the 403 into access to the parent Catalog itself.
-          try {
-            const resources = await listCatalogResourcePage({
-              catalogId: selection.id,
-              limit: 1,
-              offset: 0,
-            });
-            if (
-              resources.total > 0
-              && generation === catalogQueryGeneration.current
-              && selectedCatalogIdRef.current === selection.id
-            ) {
-              setRestrictedCatalogId(selection.id);
-              return;
-            }
-          } catch {
-            // Keep the original Catalog error below. A failed child lookup must
-            // never make a parent route appear accessible.
-          }
-        }
+      .catch((error) => {
         if (
           generation === catalogQueryGeneration.current &&
           selectedCatalogIdRef.current === selection.id
@@ -513,10 +484,6 @@ export function DataCatalogScene({
           <Spin />
         </div>
       );
-    }
-
-    if (selection?.type === "catalog" && restrictedCatalogId === selection.id) {
-      return <AuthorizedResourceListPanel catalogId={selection.id} onOpenResource={openResourceWorkspace} />;
     }
 
     if (selection?.type === "catalog" && !selectedCatalog) {

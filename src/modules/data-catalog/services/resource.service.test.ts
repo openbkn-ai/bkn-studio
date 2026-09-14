@@ -280,7 +280,7 @@ describe("resource.service · listCatalogResourcePage", () => {
     expect(result.items[0]?.updateTime).not.toBe("");
   });
 
-  it("preserves unknown operations for backend authorization fallback", async () => {
+  it("preserves missing operations for fail-closed authorization checks", async () => {
     getMock.mockResolvedValue({
       data: {
         entries: [{ catalog_id: "cat-1", id: "res-1", name: "orders", update_time: 123 }],

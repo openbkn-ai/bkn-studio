@@ -43,7 +43,6 @@ type BuildStage = {
   icon: ReactNode;
   required: Array<{
     descriptionKey: string;
-    enforcePermissions?: boolean;
     impactKey: string;
     outcomeKey: string;
     optional?: boolean;
@@ -113,7 +112,6 @@ const PLATFORM_STAGES: BuildStage[] = [
       },
       {
         descriptionKey: "home.platform.stages.data.required.discovery.description",
-        enforcePermissions: true,
         impactKey: "home.platform.stages.data.required.discovery.impact",
         outcomeKey: "home.platform.stages.data.required.discovery.outcome",
         path: "/data-connect",

@@ -32,7 +32,9 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { success: vi.fn() },
     modal: { confirm: modalConfirmMock },
-    runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
+    runtimeConfig: {
+      currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
+    },
   }),
 }));
 
@@ -67,7 +69,7 @@ const resource: CatalogResource = {
 const manageableCatalog = {
   id: "catalog-1",
   internal: false,
-  operations: ["task_manage"],
+  operations: ["task_manage", "view_detail"],
 } as CatalogRecord;
 
 function SemanticUnderstandingTaskFormDefaultsHarness({ form, open }: {

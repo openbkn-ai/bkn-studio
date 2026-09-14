@@ -103,7 +103,10 @@ describe("data-catalog permission points", () => {
       { resource: { type: "resource", id: "resource-1" }, operations: ["view_detail"] },
     ]);
     const manager = permissionsOf([
-      { resource: { type: "catalog", id: "catalog-1" }, operations: ["resource_manage"] },
+      {
+        resource: { type: "catalog", id: "catalog-1" },
+        operations: ["resource_manage", "view_detail"],
+      },
     ]);
 
     expect(viewOnly).not.toContain(dataCatalogResourceManagePermission);

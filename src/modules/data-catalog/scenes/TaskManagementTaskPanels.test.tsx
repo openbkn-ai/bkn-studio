@@ -30,7 +30,9 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
-    runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
+    runtimeConfig: {
+      currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
+    },
   }),
 }));
 

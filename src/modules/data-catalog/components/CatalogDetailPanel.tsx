@@ -390,10 +390,7 @@ export function CatalogDetailPanel({
             label: t("common.detail"),
           },
           {
-            disabled: previewDisabled || (
-              record.operations !== undefined &&
-              !hasCatalogResourceOperation(record, "query_data")
-            ),
+            disabled: previewDisabled || !hasCatalogResourceOperation(record, "query_data"),
             key: "preview",
             label: queryBlockReason ? (
               <Tooltip

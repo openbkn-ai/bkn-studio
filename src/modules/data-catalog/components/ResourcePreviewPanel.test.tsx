@@ -531,9 +531,7 @@ describe("ResourcePreviewPanel", () => {
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
 
-  it("keeps backend authorization as the fallback when resource operations are unavailable", async () => {
-    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
-
+  it("does not request rows when resource operations are unavailable", () => {
     render(
       <ResourcePreviewPanel
         active
@@ -546,12 +544,7 @@ describe("ResourcePreviewPanel", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(previewCatalogResourceMock).toHaveBeenCalledWith("resource-1", {
-        limit: 10,
-        offset: 0,
-      });
-    });
-    expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).toBeNull();
+    expect(screen.getByText("dataCatalog.preview.noQueryPermission")).toBeTruthy();
+    expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
 });

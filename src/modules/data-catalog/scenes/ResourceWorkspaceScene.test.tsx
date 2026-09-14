@@ -131,7 +131,7 @@ describe("ResourceWorkspaceScene", () => {
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
       name: "Catalog",
-      operations: ["authorize", "resource_manage", "task_manage"],
+      operations: ["authorize", "resource_manage", "task_manage", "view_detail"],
     });
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
     subscribeMockDbMock.mockImplementation(() => () => {});
@@ -161,7 +161,7 @@ describe("ResourceWorkspaceScene", () => {
     }));
   });
 
-  it("keeps a directly granted resource available when the parent catalog is forbidden", async () => {
+  it("shows the catalog error when the parent catalog is forbidden", async () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockRejectedValue(new AxiosError(
       "Forbidden",
@@ -187,7 +187,8 @@ describe("ResourceWorkspaceScene", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(await screen.findByText("Forbidden")).toBeTruthy();
+    expect(screen.queryByTestId("detail-schema-name")).toBeNull();
     expect(getCatalogMock).toHaveBeenCalledWith(staleResource.catalogId, { skipErrorToast: true });
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
@@ -216,7 +217,11 @@ describe("ResourceWorkspaceScene", () => {
   });
 
   it("does not use global catalog grants for management actions on the current catalog", async () => {
-    currentPermissions.value = ["catalog:resource_manage", "catalog:task_manage"];
+    currentPermissions.value = [
+      "catalog:resource_manage",
+      "catalog:task_manage",
+      "catalog:view_detail",
+    ];
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",

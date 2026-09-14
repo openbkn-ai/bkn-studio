@@ -72,7 +72,7 @@ const catalog: CatalogRecord = {
 };
 
 function renderPanel(record: CatalogRecord, onOpenResource = vi.fn()) {
-  return render(
+  const view = render(
     <MemoryRouter>
       <CatalogDetailPanel
         catalog={record}
@@ -81,6 +81,7 @@ function renderPanel(record: CatalogRecord, onOpenResource = vi.fn()) {
       />
     </MemoryRouter>,
   );
+  return { ...view, onOpenResource };
 }
 
 describe("CatalogDetailPanel authorize entry", () => {
@@ -134,7 +135,7 @@ describe("CatalogDetailPanel authorize entry", () => {
   });
 
   it("does not use a global resource_manage grant for another logical catalog", async () => {
-    currentPermissions.value = ["catalog:resource_manage"];
+    currentPermissions.value = ["catalog:resource_manage", "catalog:view_detail"];
     renderPanel({ ...catalog, connectorType: "", type: "logical" });
     await act(async () => {});
 
@@ -163,6 +164,7 @@ describe("CatalogDetailPanel authorize entry", () => {
           id: "resource-1",
           localIndexStatus: "unavailable",
           name: "customers",
+          operations: ["view_detail"],
           rowCount: 0,
           schema: [],
           sourceIdentifier: "db.customers",
@@ -218,6 +220,38 @@ describe("CatalogDetailPanel authorize entry", () => {
     expect(onOpenResource).toHaveBeenCalledWith("resource-1", "preview");
   });
 
+  it("disables resource preview when effective operations are unavailable", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "none",
+          name: "customers",
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    const { onOpenResource } = renderPanel(catalog);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    const previewItem = await screen.findByRole("menuitem", {
+      name: "dataCatalog.actions.preview",
+    });
+
+    expect(previewItem.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(previewItem);
+    expect(onOpenResource).not.toHaveBeenCalledWith("resource-1", "preview");
+  });
+
   it("opens the shared authorization drawer for an individual data resource", async () => {
     currentPermissions.value = ["admin-authz:grant"];
     listCatalogResourcePageMock.mockResolvedValue({
@@ -231,6 +265,7 @@ describe("CatalogDetailPanel authorize entry", () => {
           id: "resource-1",
           localIndexStatus: "unavailable",
           name: "customers",
+          operations: ["view_detail"],
           rowCount: 0,
           schema: [],
           sourceIdentifier: "db.customers",

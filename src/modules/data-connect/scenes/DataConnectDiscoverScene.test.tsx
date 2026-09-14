@@ -25,7 +25,9 @@ const {
   appServicesMock: {
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
-    runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
+    runtimeConfig: {
+      currentUser: { permissions: ["catalog:task_manage", "catalog:view_detail"] },
+    },
   },
   getCatalogMock: vi.fn(),
   getScheduleMock: vi.fn(),
@@ -159,7 +161,7 @@ vi.mock("@/modules/data-connect/components/DataConnectDiscoverTaskDrawer", () =>
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverRunNowModal", () => ({
-  DiscoverRunNowModal: () => null,
+  DiscoverRunNowModal: ({ open }: { open: boolean }) => open ? <output>run now modal</output> : null,
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
@@ -505,6 +507,33 @@ describe("DataConnectDiscoverScene", () => {
     await waitFor(() => {
       expect(screen.getByTestId("selected-task-keys").textContent).toBe("");
       expect(screen.queryByText("drawer:discover-task-1")).toBeNull();
+    });
+  });
+
+  it("closes the active schedule editor when the catalog changes", async () => {
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await openScheduleEditor();
+    expect(await screen.findByRole("button", { name: "submit schedule 100" })).toBeTruthy();
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "submit schedule 100" })).toBeNull();
+    });
+  });
+
+  it("closes the run-now modal when the catalog changes", async () => {
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverRunNow" }));
+    expect(screen.getByText("run now modal")).toBeTruthy();
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("run now modal")).toBeNull();
     });
   });
 

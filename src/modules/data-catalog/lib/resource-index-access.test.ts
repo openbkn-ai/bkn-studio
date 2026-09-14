@@ -17,7 +17,7 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 const catalog = (
   internal: boolean,
-  operations = internal ? [] : ["task_manage"],
+  operations = internal ? [] : ["task_manage", "view_detail"],
 ) => ({
   internal,
   operations,
