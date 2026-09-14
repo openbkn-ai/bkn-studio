@@ -140,6 +140,10 @@ export function DataCatalogScene({
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedCatalogError, setSelectedCatalogError] = useState<{
+    catalogId: string;
+    message: string;
+  } | null>(null);
 
   const [resourceDrawer, setResourceDrawer] = useState<{
     catalogId?: string;
@@ -328,6 +332,7 @@ export function DataCatalogScene({
     }
     if (catalogs.some((catalog) => catalog.id === selection.id)) {
       setSelectedCatalogLoadingId(null);
+      setSelectedCatalogError(null);
       return;
     }
     if (selectedCatalogRequestIds.current.has(selection.id)) {
@@ -335,6 +340,7 @@ export function DataCatalogScene({
     }
     selectedCatalogRequestIds.current.add(selection.id);
     setSelectedCatalogLoadingId(selection.id);
+    setSelectedCatalogError(null);
     const generation = catalogQueryGeneration.current;
     void getCatalog(selection.id, { skipErrorToast: true })
       .then((catalog) => {
@@ -345,6 +351,7 @@ export function DataCatalogScene({
         ) {
           return;
         }
+        setSelectedCatalogError(null);
         if (paginatedCatalogScopes.current.has(catalog.id)) {
           return;
         }
@@ -362,7 +369,10 @@ export function DataCatalogScene({
           generation === catalogQueryGeneration.current &&
           selectedCatalogIdRef.current === selection.id
         ) {
-          setLoadError(extractRequestErrorMessage(error));
+          setSelectedCatalogError({
+            catalogId: selection.id,
+            message: extractRequestErrorMessage(error),
+          });
         }
       })
       .finally(() => {
@@ -472,6 +482,30 @@ export function DataCatalogScene({
             </AppButton>
           }
           message={loadError}
+          showIcon
+          type="error"
+        />
+      );
+    }
+
+    if (
+      selection?.type === "catalog" &&
+      selectedCatalogError?.catalogId === selection.id
+    ) {
+      return (
+        <Alert
+          action={
+            <AppButton
+              onClick={() => {
+                setSelectedCatalogError(null);
+                void loadAll();
+              }}
+              type="link"
+            >
+              {t("common.retry")}
+            </AppButton>
+          }
+          message={selectedCatalogError.message}
           showIcon
           type="error"
         />

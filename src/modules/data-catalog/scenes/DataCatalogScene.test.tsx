@@ -235,6 +235,38 @@ describe("DataCatalogScene", () => {
     expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
   });
 
+  it("clears a selected catalog error after switching to an available catalog", async () => {
+    const missingCatalogId = "catalog-missing";
+    getCatalogMock.mockImplementation((catalogId: string) => (
+      catalogId === missingCatalogId
+        ? Promise.reject(new Error("catalog unavailable"))
+        : Promise.resolve(catalog)
+    ));
+
+    const view = render(
+      <MemoryRouter initialEntries={[`/data-catalog/catalog/${missingCatalogId}`]}>
+        <DataCatalogScene
+          selection={{ id: missingCatalogId, type: "catalog" }}
+          suppressAutoSelect
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("catalog unavailable")).toBeTruthy();
+
+    view.rerender(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene
+          selection={{ id: "catalog-1", type: "catalog" }}
+          suppressAutoSelect
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.queryByText("catalog unavailable")).toBeNull());
+    expect(screen.getByTestId("selected-catalog-id").textContent).toBe("catalog-1");
+  });
+
   it("does not duplicate a deep-linked physical catalog when loading its later page", async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) => ({
       ...catalog,
