@@ -131,7 +131,7 @@ export const subscriptionZhCN = {
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience: "面向快速成长的 AI 原生团队,让每一次探索都直通生产落地。在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
+        audience: "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },

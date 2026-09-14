@@ -140,7 +140,7 @@ export const subscriptionEnUS = {
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "For fast-growing AI-native teams, taking every exploration straight to production. Adds custom roles and permissions, fine-grained object authorization and advanced data connectivity on top of Community.",
+          "For fast-growing AI-native teams. Adds custom roles and permissions, fine-grained object authorization and advanced data connectivity on top of Community.",
         price: "¥99,600",
         unit: "/ year · list price",
       },
