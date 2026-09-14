@@ -376,6 +376,63 @@ describe("DataCatalogScene", () => {
     ));
   });
 
+  it("keeps a paginated catalog in place when its hydration resolves before the same page", async () => {
+    let resolveCatalog: (value: CatalogRecord) => void;
+    let resolveFirstPage: (value: { items: CatalogRecord[]; total: number }) => void;
+    const beforeCatalog = { ...catalog, id: "before", name: "before" };
+    const afterCatalog = { ...catalog, id: "after", name: "after" };
+    const lastCatalog = { ...catalog, id: "last", name: "last" };
+
+    getCatalogMock.mockReturnValue(new Promise<CatalogRecord>((resolve) => {
+      resolveCatalog = resolve;
+    }));
+    listCatalogsMock.mockImplementation((query: CatalogListQuery) => {
+      if (query.type !== "physical") {
+        return Promise.resolve({ items: [], total: 0 });
+      }
+      if (query.page === 1) {
+        return new Promise((resolve) => {
+          resolveFirstPage = resolve;
+        });
+      }
+      return Promise.resolve({ items: [lastCatalog], total: 4 });
+    });
+    listCatalogConnectorTypeStatsMock.mockResolvedValue([{
+      catalogCount: 4,
+      catalogType: "physical",
+      connectorType: "postgresql",
+    }]);
+
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(getCatalogMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "load physical" }));
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith(expect.objectContaining({
+      page: 1,
+      type: "physical",
+    })));
+
+    await act(async () => {
+      resolveCatalog!(catalog);
+      await Promise.resolve();
+      resolveFirstPage!({ items: [beforeCatalog, catalog, afterCatalog], total: 4 });
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe(
+      "before,catalog-1,after",
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "load more physical" }));
+
+    await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe(
+      "before,catalog-1,after,last",
+    ));
+  });
+
   it("filters catalog statistics with the current search keyword", async () => {
     render(
       <MemoryRouter initialEntries={["/data-catalog"]}>
