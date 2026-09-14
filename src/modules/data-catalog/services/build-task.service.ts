@@ -8,6 +8,7 @@
 import axios from "axios";
 
 import { http } from "@/framework/request/http";
+import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
 import {
   emitMockChange,
   mockCatalogName,
@@ -442,7 +443,7 @@ export async function createBuildTask(
       modelDimensions: 0,
       fulltextFields: form.fulltextFields,
       fulltextAnalyzer: form.fulltextAnalyzer ?? "",
-      totalCount: Number(resource?.rowCount ?? 0),
+      totalCount: resourceCountForPagination(resource?.rowCount),
       syncedCount: 0,
       createTime,
       finishTime: null,

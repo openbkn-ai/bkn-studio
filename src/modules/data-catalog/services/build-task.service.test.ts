@@ -20,7 +20,7 @@ import {
   pauseBuildTask,
   snapshotFieldsOf,
 } from "@/modules/data-catalog/services/build-task.service";
-import { mockBuildTasks } from "@/modules/data-catalog/services/mock-db";
+import { mockBuildTasks, mockResources } from "@/modules/data-catalog/services/mock-db";
 
 describe("snapshotFieldsOf", () => {
   it("retains the effective analyzer for every fulltext field", () => {
@@ -161,6 +161,30 @@ describe("createBuildTask", () => {
 
     expect(task.executeType).toBe("incremental");
     expect(task.status).toBe("completed");
+  });
+
+  it("clamps an unsafe mock resource row count to a safe task total", async () => {
+    const resourceId = "unsafe-row-count-resource";
+    mockResources.push({
+      ...mockResources[0],
+      id: resourceId,
+      rowCount: "9007199254740993",
+    });
+
+    try {
+      const task = await createBuildTask({ mode: "batch", resourceId });
+
+      expect(task.totalCount).toBe(Number.MAX_SAFE_INTEGER);
+    } finally {
+      const resourceIndex = mockResources.findIndex((item) => item.id === resourceId);
+      if (resourceIndex >= 0) {
+        mockResources.splice(resourceIndex, 1);
+      }
+      const taskIndex = mockBuildTasks.findIndex((item) => item.resourceId === resourceId);
+      if (taskIndex >= 0) {
+        mockBuildTasks.splice(taskIndex, 1);
+      }
+    }
   });
 
   describe("when using the API", () => {
