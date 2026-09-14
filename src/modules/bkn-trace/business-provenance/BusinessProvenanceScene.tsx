@@ -130,8 +130,9 @@ function SourceText({
   onCopy: (value: string) => void;
 }) {
   if (!original) {
+    if (!preview) return <p className={styles.sourceTextUnavailable}>{bpText("notRecorded")}</p>;
     return <div className={styles.sourceTextUnavailable}>
-      <span>{preview || bpText("notRecorded")}</span>
+      <span>{preview}</span>
       <small>{bpText("rounds.originalUnavailable")}</small>
     </div>;
   }
