@@ -11,4 +11,6 @@
 // e.g. disable the in-SPA OAuth gate when bkn-safe is NOT deployed, so studio
 // runs gate-less with the default local-admin user and no login:
 //   window.__BKN_STUDIO_RUNTIME__ = { mode: "hosted" };
+// The graph explorer opens on this layout when a user has not chosen one yet:
+//   window.__BKN_STUDIO_RUNTIME__ = { graphExplorer: { layout: "chain" } };
 window.__BKN_STUDIO_RUNTIME__ = window.__BKN_STUDIO_RUNTIME__ || {};

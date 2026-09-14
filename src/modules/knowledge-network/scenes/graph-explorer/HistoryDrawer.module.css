@@ -1,0 +1,95 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.head {
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+  grid-template-areas:
+    "time kind title"
+    "time kind summary";
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.time {
+  grid-area: time;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+
+.kind {
+  grid-area: kind;
+  margin: 0;
+}
+
+.title {
+  grid-area: title;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.summary {
+  grid-area: summary;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+
+/* The collapse header itself must let its label shrink, or the grid never gets a bound. antd
+   gives the label `flex: auto`, whose implicit min-width is the content's own width — a long
+   Cypher title then pushes past the drawer instead of getting the ellipsis. `flex: 1 1 0` plus
+   min-width: 0 and overflow: hidden is what actually bounds it. */
+.list :global(.ant-collapse-header) {
+  min-width: 0;
+}
+
+.list :global(.ant-collapse-header-text) {
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--color-bg-page, #fafafa);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

@@ -627,7 +627,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
 }
 
 /** Creates a Model Factory OpenAI-compatible model with authenticated fetch. */
-function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
+export function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
   const baseURL = `${env.base.replace(/\/+$/, "")}${MODEL_API_PATH}`;
   const provider = createOpenAICompatible({
     name: "mf-model-api",
