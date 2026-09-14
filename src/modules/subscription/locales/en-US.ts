@@ -127,20 +127,20 @@ export const subscriptionEnUS = {
       // steps, each with an expiry — exactly why the number does not belong on this page.
       community: {
         audience:
-          "Developers, technical teams and ecosystem partners. Build and validate a complete business knowledge network for free.",
+          "For developers, technical teams and ecosystem partners. Build and validate business knowledge networks for free, ideal for demos and sample projects.",
         price: "Free",
         unit: "Self-hosted · perpetual",
       },
       enterprise: {
         audience:
-          "Organisations running OpenBKN as an enterprise AI platform. Adds enterprise administration, knowledge exploration, version governance and fuller production operations.",
+          "For organisations running OpenBKN as the foundation of their enterprise AI platform. Adds enterprise object rules and business provenance on top of Professional.",
         price: "Contact us",
         unit: "Per contract",
       },
       inheritsFrom: "Everything in {{edition}}",
       professional: {
         audience:
-          "Customer teams moving to a production pilot. Adds faster source refresh, enterprise permissions, vendor support and more connectors.",
+          "For teams preparing for a production pilot. Adds custom roles and permissions, fine-grained object authorization and advanced data connectivity on top of Community.",
         price: "¥99,600",
         unit: "/ year · list price",
       },
