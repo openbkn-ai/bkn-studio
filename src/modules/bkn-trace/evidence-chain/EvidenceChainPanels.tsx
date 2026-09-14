@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { layoutChain } from "./chain-layout";
@@ -95,6 +95,17 @@ function Graph({ graph, title, mode, onSelect, onEdge, selectedId }: { graph: Ch
     setActiveNodeId(undefined);
     setActiveEdgeId(undefined);
   }, [graphKey, height, width]);
+  useEffect(() => {
+    const box = viewport.current;
+    if (!box) return undefined;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setScale(value => clampGraphScale(value + (event.deltaY < 0 ? 0.1 : -0.1)));
+    };
+    box.addEventListener("wheel", onWheel, { passive: false });
+    return () => box.removeEventListener("wheel", onWheel);
+  }, []);
   const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || (event.target as HTMLElement).closest("button,[role=button]")) return;
     drag.current = { x: event.clientX, y: event.clientY, left: pan.x, top: pan.y };
@@ -108,11 +119,6 @@ function Graph({ graph, title, mode, onSelect, onEdge, selectedId }: { graph: Ch
     drag.current = null;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };
-  const wheelZoom = (event: ReactWheelEvent<HTMLDivElement>) => {
-    if (!event.ctrlKey && !event.metaKey) return;
-    event.preventDefault();
-    zoom(event.deltaY < 0 ? 0.1 : -0.1);
-  };
   return <section aria-label={title} className={styles.graph}>
     <header className={styles.graphTools} role="group" aria-label={t("bknTrace.evidenceChain.graphTools")}>
       <span aria-live="polite">{Math.round(scale * 100)}%</span>
@@ -121,7 +127,7 @@ function Graph({ graph, title, mode, onSelect, onEdge, selectedId }: { graph: Ch
       <button type="button" onClick={fit}>{t("bknTrace.evidenceChain.fitGraph")}</button>
       <button type="button" onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}>{t("bknTrace.evidenceChain.resetGraph")}</button>
     </header>
-    {!graph.nodes.length ? <p className={styles.empty}>{t("bknTrace.evidenceChain.noGraph")}</p> : <div ref={viewport} className={styles.graphViewport} onWheel={wheelZoom} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={stopPan} onPointerCancel={stopPan}>
+    {!graph.nodes.length ? <p className={styles.empty}>{t("bknTrace.evidenceChain.noGraph")}</p> : <div ref={viewport} className={styles.graphViewport} onPointerDown={startPan} onPointerMove={movePan} onPointerUp={stopPan} onPointerCancel={stopPan}>
     <div className={styles.canvas} style={{ width, height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}>
       {columns.map((column, index) => <span className={styles.columnTitle} key={column} style={{ left: 28 + index * 310 }}>{t(`bknTrace.evidenceChain.column.${column}`)}</span>)}
       <svg width={width} height={height} className={styles.lines} aria-label={t("bknTrace.evidenceChain.relations")}>
@@ -315,7 +321,9 @@ function answerSupportStatus(view: EvidenceChainView): "supported" | "partial" |
     return "unsupported";
   }
   if (!view.claims.length) return "unsupported";
-  const states = view.claims.map(claim => claim.supportStatus ?? "unsupported");
+  // Older projections only recorded the verified calculation state. Preserve
+  // that meaning without treating merely located values as semantic support.
+  const states = view.claims.map(claim => claim.supportStatus ?? (claim.status === "checked" ? "supported" : "unsupported"));
   if (states.includes("contradicted")) return "contradicted";
   if (states.every(state => state === "supported")) return view.evidenceStatus && view.evidenceStatus !== "complete" ? "partial" : "supported";
   if (states.some(state => state === "supported" || state === "partial")) return "partial";
@@ -352,6 +360,7 @@ function Panels({ view, initialPanel = "evidence", panel: controlledPanel, onPan
   const objectLabels = [...new Set(view.claims.map(c => c.objectLabel ?? t("bknTrace.evidenceChain.otherConclusions")))];
   const primaryClaims = view.claims.filter(c => c.role === "primary");
   const supportingClaims = view.claims.filter(c => c.role === "supporting");
+  const otherClaims = view.claims.filter(c => c.role !== "primary" && c.role !== "supporting");
   const primaryRequirementOwner = new Map<string, string>();
   for (const requirement of view.requirements ?? []) {
     for (const id of requirement.claimIds) if (!primaryRequirementOwner.has(id)) primaryRequirementOwner.set(id, requirement.id);
@@ -403,6 +412,7 @@ function Panels({ view, initialPanel = "evidence", panel: controlledPanel, onPan
       })}
       {primaryClaims.filter(claim => !view.requirements?.some(requirement => requirement.claimIds.includes(claim.id))).map(claim => <div className={styles.claims} key={claim.id}><button aria-pressed={claimId === claim.id} onClick={() => selectClaim(claim.id)}><span>{claim.label}</span><ClaimStates claim={claim} /></button></div>)}
       {supportingClaims.length > 0 && <details className={styles.objectGroup}><summary>{t("bknTrace.evidenceChain.supportingConclusions", { count: supportingClaims.length })}</summary><div className={styles.claims}>{supportingClaims.map(claim => <button key={claim.id} aria-pressed={claimId === claim.id} onClick={() => selectClaim(claim.id)}><span>{claim.label}</span><ClaimStates claim={claim} /></button>)}</div></details>}
+      {otherClaims.length > 0 && <section className={styles.objectGroup}><h4>{t("bknTrace.evidenceChain.otherConclusions")}</h4><div className={styles.claims}>{otherClaims.map(claim => <button key={claim.id} aria-pressed={claimId === claim.id} onClick={() => selectClaim(claim.id)}><span>{claim.label}</span><ClaimStates claim={claim} /></button>)}</div></section>}
     </> : objectLabels.map(label => <section className={styles.objectGroup} key={label}><h4>{label}</h4><div className={styles.claims}>{view.claims.filter(c => (c.objectLabel ?? t("bknTrace.evidenceChain.otherConclusions")) === label).map(c => <button key={c.id} aria-pressed={claimId === c.id} onClick={() => selectClaim(c.id)}><span>{c.label}</span><strong>{c.value}</strong><ClaimStates claim={c} /></button>)}</div></section>)}</aside>}
     <div className={styles.graphColumn}>
     {panel === "evidence" && factMode ? <section className={styles.unbound}><h3>{t("bknTrace.evidenceChain.unboundTitle")}</h3><p>{t("bknTrace.evidenceChain.unboundDescription")}</p><button className={styles.sourceLink} onClick={() => setPanel("execution")}>{t("bknTrace.evidenceChain.viewRecordedExecution")}</button></section> : <section className={styles.graphCard}>

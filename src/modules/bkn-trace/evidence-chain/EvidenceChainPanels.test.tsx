@@ -7,7 +7,7 @@
 import "@testing-library/jest-dom/vitest";
 import "@/app/locales/i18n";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EvidenceChainPanels } from "./EvidenceChainPanels";
 import type { EvidenceChainView } from "./evidence-chain.types";
 
@@ -51,6 +51,22 @@ describe("EvidenceChainPanels", () => {
     const catalog = screen.getByText("问题要求与关键结论").closest("aside")!;
     expect(within(catalog).getAllByRole("button", { name: /1978 年，Mario Kempes/ })).toHaveLength(1);
     expect(screen.getByText("由前述共用结论覆盖")).toBeVisible();
+  });
+  it("keeps scope, result, and legacy conclusions reachable in the requirement catalog", () => {
+    render(<EvidenceChainPanels view={{ ...view, requirements: [
+      { id: "inventory", label: "库存", status: "supported", claimIds: ["primary"] },
+    ], claims: [
+      { id: "primary", label: "当前库存为 2 个", role: "primary", status: "checked", nodeIds: ["date"] },
+      { id: "scope", label: "统计范围为全仓", role: "scope", status: "located", nodeIds: ["date"] },
+      { id: "result", label: "生产可用库存为 0", role: "result", status: "located", nodeIds: ["delay"] },
+      { id: "legacy", label: "该物料被 1 个产品使用", status: "located", nodeIds: ["delay"] },
+    ] }} />);
+
+    const catalog = screen.getByText("问题要求与关键结论").closest("aside")!;
+    expect(within(catalog).getByRole("button", { name: /当前库存为 2 个/ })).toBeVisible();
+    expect(within(catalog).getByRole("button", { name: /统计范围为全仓/ })).toBeVisible();
+    expect(within(catalog).getByRole("button", { name: /生产可用库存为 0/ })).toBeVisible();
+    expect(within(catalog).getByRole("button", { name: /该物料被 1 个产品使用/ })).toBeVisible();
   });
   it("keeps one selected conclusion in the explanation workspace", () => {
     render(<EvidenceChainPanels view={view} />);
@@ -147,6 +163,14 @@ describe("EvidenceChainPanels", () => {
     expect(screen.getByText("答案支持度").parentElement).toHaveTextContent("部分结论有依据");
     expect(screen.getByText("证据记录").parentElement).toHaveTextContent("存在缺口");
   });
+  it("treats checked legacy conclusions as supported when no support status was projected", () => {
+    render(<EvidenceChainPanels view={{
+      ...view,
+      evidenceStatus: "complete",
+      claims: [{ ...view.claims[0], status: "checked", supportStatus: undefined }],
+    }} />);
+    expect(screen.getByText("答案支持度").parentElement).toHaveTextContent("已识别结论有依据");
+  });
   it("keeps non-adopted records behind a secondary business entry", () => {
     render(<EvidenceChainPanels view={view} />);
     expect(screen.queryByText(/排障/)).not.toBeInTheDocument();
@@ -191,6 +215,15 @@ describe("EvidenceChainPanels", () => {
     fireEvent.click(relation);
     expect(relation.closest("g")).toHaveAttribute("data-selected", "true");
     expect(screen.getByRole("dialog", { name: "关系详情" })).toBeVisible();
+  });
+  it("registers a non-passive native wheel handler for Ctrl or Command zoom", () => {
+    const listener = vi.spyOn(HTMLElement.prototype, "addEventListener");
+    try {
+      render(<EvidenceChainPanels view={view} />);
+      expect(listener).toHaveBeenCalledWith("wheel", expect.any(Function), { passive: false });
+    } finally {
+      listener.mockRestore();
+    }
   });
   it("keeps the initial graph view readable in a narrow embedded workspace", () => {
     const width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
