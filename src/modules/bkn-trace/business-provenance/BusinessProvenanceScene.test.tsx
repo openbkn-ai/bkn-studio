@@ -489,6 +489,20 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("可用库存 906 件")).not.toBeNull();
   });
 
+  it("does not present a preview as a complete original source", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "截断问题", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-1", questionPreview: "截断问题", resultPreview: "截断回答", roundNumber: 1 }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-1", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [] });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "截断问题" }));
+    fireEvent.click(await screen.findByRole("button", { name: /第 1 轮.*截断问题/ }));
+
+    expect(await screen.findAllByText("完整原文未记录，以下为摘要")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "查看完整本轮输入" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "查看完整本轮输出" })).toBeNull();
+  });
+
   it("shows the EE submission diagnosis instead of claiming that the BKN Agent is unavailable", async () => {
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "查询采购", interactionCount: 1, agentName: "Supply Agent" }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-1", questionPreview: "查询采购" }], total: 1 });

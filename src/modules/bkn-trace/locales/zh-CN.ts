@@ -201,7 +201,7 @@ export const bknTraceZhCN = {
           resourceNotRecorded: "本轮事实未记录资源绑定", resultNotRecorded: "结果未记录。", rows: "返回 {{count}} 条。", rows_one: "返回 {{count}} 条。", rows_other: "返回 {{count}} 条。", runSql: "执行数据查询", sqlConditionBelow: "SQL 条件见下方完整 SQL", zeroRows: "返回 0 条。",
         },
         questionNotRecorded: "未记录问题", resultNotRecorded: "业务结果未记录", roundLabel: "第 {{index}} 轮", roundNotRecorded: "轮次未记录", roundQuestionNotRecorded: "本轮问题未记录",
-        rounds: { input: "本轮输入", inputOriginal: "本轮输入（原文）", loading: "正在加载交互轮次", loadingFacts: "正在加载调用事实", noOperations: "本轮未记录调用事实", outputOriginal: "本轮输出（原文）", search: "搜索问题或业务对象", select: "选择交互轮次查看调用事实", summary: "共 {{total}} 轮 · 当前 {{current}} 轮", title: "交互轮次", viewFull: "查看完整原文", viewFullInput: "查看完整本轮输入", viewFullOutput: "查看完整本轮输出" },
+        rounds: { input: "本轮输入", inputOriginal: "本轮输入（原文）", loading: "正在加载交互轮次", loadingFacts: "正在加载调用事实", noOperations: "本轮未记录调用事实", originalUnavailable: "完整原文未记录，以下为摘要", outputOriginal: "本轮输出（原文）", search: "搜索问题或业务对象", select: "选择交互轮次查看调用事实", summary: "共 {{total}} 轮 · 当前 {{current}} 轮", title: "交互轮次", viewFull: "查看完整原文", viewFullInput: "查看完整本轮输入", viewFullOutput: "查看完整本轮输出" },
         status: { active: "可继续对话", completed: "已结束", failed: "失败", running: "执行中" }, timeNotRecorded: "时间未记录", undetermined: "未确定", views: { evidence: "证据链", execution: "执行链路", knowledge: "知识网络视图", timeline: "时间链视图" },
       },
     },

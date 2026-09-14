@@ -128,11 +128,16 @@ function SourceText({
   viewLabel: string;
   onCopy: (value: string) => void;
 }) {
-  const text = original || preview || bpText("notRecorded");
+  if (!original) {
+    return <div className={styles.sourceTextUnavailable}>
+      <span>{preview || bpText("notRecorded")}</span>
+      <small>{bpText("rounds.originalUnavailable")}</small>
+    </div>;
+  }
   return <Popover
     trigger={["hover", "click"]}
     overlayClassName={styles.sourceTextPopover}
-    content={<section className={styles.sourceTextPopoverContent}><h4>{title}</h4><MarkdownText text={text} variant="document" /><Button size="small" icon={<CopyOutlined />} onClick={() => onCopy(text)}>{bpText("detail.copyPayload")}</Button></section>}
+    content={<section className={styles.sourceTextPopoverContent}><h4>{title}</h4><MarkdownText text={original} variant="document" /><Button size="small" icon={<CopyOutlined />} onClick={() => onCopy(original)}>{bpText("detail.copyPayload")}</Button></section>}
   >
     <button type="button" className={styles.sourceTextPreview} aria-label={viewLabel}><span>{preview || bpText("notRecorded")}</span><small>{bpText("rounds.viewFull")}</small></button>
   </Popover>;
