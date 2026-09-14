@@ -105,6 +105,7 @@ function recordedPayload(value: unknown): unknown {
   if (typeof value !== "object" || Array.isArray(value)) return value;
   const envelope = value as Record<string, unknown>;
   if (envelope.mode === "inline") return envelope.inline;
+  if (envelope.mode === "omitted" || envelope.mode === "referenced") return undefined;
   return value;
 }
 
