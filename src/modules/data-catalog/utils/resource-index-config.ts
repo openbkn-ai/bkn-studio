@@ -42,6 +42,37 @@ export type ResourceFeatureDraft = {
 
 export type ResourceFeatureDraftInput = ResourceFeatureDraft | string;
 
+/** Reports whether persisted features satisfy the backend build contract. */
+export function hasPersistedBuildFeatures(resource: {
+  schema: ResourceSchemaField[];
+}): boolean {
+  let hasIndexFeature = false;
+  for (const field of resource.schema) {
+    const features = field.features ?? [];
+    if (features.some((feature) =>
+      ["keyword", "fulltext", "vector"].includes(feature.featureType))) {
+      hasIndexFeature = true;
+    }
+
+    const fieldType = field.type.trim().toLowerCase();
+    if (fieldType !== "string" && fieldType !== "text") {
+      continue;
+    }
+    const keyword = features.find((feature) => feature.featureType === "keyword");
+    const ignoreAbove = Number(keyword?.config?.ignore_above);
+    if (!keyword || !Number.isSafeInteger(ignoreAbove) || ignoreAbove < 1 || ignoreAbove > 8191) {
+      return false;
+    }
+    if (
+      fieldType === "text" &&
+      !features.some((feature) => feature.featureType === "fulltext")
+    ) {
+      return false;
+    }
+  }
+  return hasIndexFeature;
+}
+
 function readStringConfig(config: Record<string, unknown> | undefined, key: string): string {
   const value = config?.[key];
   return typeof value === "string" ? value : "";
@@ -225,7 +256,7 @@ export function indexFormValuesFromResource(resource: {
             isDefault: feature.isDefault,
             name: feature.name,
             value: typeof ignoreAbove === "number" || typeof ignoreAbove === "string"
-              ? Number(ignoreAbove) === defaultKeywordIgnoreAbove ? "" : String(ignoreAbove)
+              ? String(ignoreAbove)
               : "",
           },
         ];

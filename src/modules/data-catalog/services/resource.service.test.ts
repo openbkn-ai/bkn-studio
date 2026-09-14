@@ -377,6 +377,28 @@ describe("resource.service · getCatalogResources", () => {
       }),
     ]);
   });
+
+  it("keeps missing source index and foreign-key counts unknown", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [{
+          catalog_id: "cat-1",
+          category: "index",
+          id: "res-1",
+          name: "orders",
+          source_metadata: { original_name: "orders-v1" },
+        }],
+      },
+    });
+    const { getCatalogResources } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const [resource] = await getCatalogResources(["res-1"]);
+
+    expect(resource?.sourceMetadata?.foreignKeyCount).toBeUndefined();
+    expect(resource?.sourceMetadata?.indexCount).toBeUndefined();
+  });
 });
 
 describe("resource.service · updateCatalogResource", () => {

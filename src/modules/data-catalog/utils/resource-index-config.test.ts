@@ -9,10 +9,34 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyIndexFormToSchema,
+  hasPersistedBuildFeatures,
   indexFormValuesFromResource,
 } from "@/modules/data-catalog/utils/resource-index-config";
 
 describe("resource-index-config", () => {
+  it("distinguishes persisted build features from editor defaults", () => {
+    expect(hasPersistedBuildFeatures({
+      schema: [{ name: "content", type: "text" }],
+    })).toBe(false);
+    expect(hasPersistedBuildFeatures({
+      schema: [{
+        features: [
+          { config: { ignore_above: 256 }, featureType: "keyword" },
+          { featureType: "fulltext" },
+        ],
+        name: "content",
+        type: "text",
+      }],
+    })).toBe(true);
+    expect(hasPersistedBuildFeatures({
+      schema: [{
+        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+        name: "code",
+        type: "string",
+      }],
+    })).toBe(true);
+  });
+
   it("writes defaults and per-field overrides into schema features", () => {
     const result = applyIndexFormToSchema(
       [
@@ -154,9 +178,23 @@ describe("resource-index-config", () => {
         description: undefined,
         isDefault: true,
         name: "exact",
-        value: "",
+        value: "512",
       }],
     });
+  });
+
+  it("preserves an explicit keyword limit that equals the resource default", () => {
+    const values = indexFormValuesFromResource({
+      indexConfig: { defaultKeywordIgnoreAbove: 256 },
+      schema: [{
+        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+        name: "code",
+        type: "string",
+      }],
+    });
+
+    const keyword = values.fieldKeywordGroups?.code?.[0];
+    expect(typeof keyword === "string" ? keyword : keyword?.value).toBe("256");
   });
 
   it("reads defaults and per-field overrides from resource", () => {

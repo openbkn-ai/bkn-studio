@@ -34,7 +34,10 @@ import {
   isPrimaryKeyField,
   excludedBuildSchemaFields,
 } from "@/modules/data-catalog/lib/build-guards";
-import { indexFormValuesFromResource } from "@/modules/data-catalog/utils/resource-index-config";
+import {
+  hasPersistedBuildFeatures,
+  indexFormValuesFromResource,
+} from "@/modules/data-catalog/utils/resource-index-config";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
 import { listSmallModels } from "@/modules/model-resources/services/small-model.service";
 import type { SmallModel } from "@/modules/model-resources/types/small-model";
@@ -95,8 +98,7 @@ export function BuildTaskLaunchPanel({
   const config = useMemo(() => indexFormValuesFromResource(resource), [resource]);
   const primaryKeyFields = config.primaryKeyFields ?? EMPTY_KEY_FIELDS;
   const incrementalFields = config.incrementalFields ?? EMPTY_KEY_FIELDS;
-  const hasResourceConfig =
-    config.embeddingFields.length > 0 || config.fulltextFields.length > 0;
+  const hasResourceConfig = hasPersistedBuildFeatures(resource);
   const batchNeedsKeyFields =
     mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
   const excludedFields = useMemo(() => excludedBuildSchemaFields(resource.schema), [resource.schema]);

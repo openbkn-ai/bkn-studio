@@ -553,6 +553,7 @@ export const dataCatalogEnUS = {
       defaultAnalyzerRequired: "Full-text fields are selected; set the resource default analyzer.",
       configCanBuild: "Configuration status",
       configCanBuildYes: "Ready",
+      configChecking: "Checking",
       configCannotBuild: "Configuration incomplete",
       primaryKeyRequired: "Primary key is not configured",
       incrementalKeyRequired: "Incremental key is not configured",

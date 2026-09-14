@@ -553,6 +553,7 @@ export const dataCatalogZhCN = {
       defaultAnalyzerRequired: "已选择全文字段，请设置资源默认分词器。",
       configCanBuild: "配置状态",
       configCanBuildYes: "可构建",
+      configChecking: "检查中",
       configCannotBuild: "配置不完整",
       primaryKeyRequired: "未配置主键",
       incrementalKeyRequired: "未配置增量键",

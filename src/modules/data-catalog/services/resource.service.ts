@@ -321,8 +321,8 @@ function mapSourceMetadata(
   }
 
   return {
-    foreignKeyCount: metadata.foreign_keys?.length ?? 0,
-    indexCount: metadata.indices?.length ?? 0,
+    foreignKeyCount: metadata.foreign_keys?.length,
+    indexCount: metadata.indices?.length,
     objectType: metadata.table_type?.trim() || undefined,
     originalDescription: metadata.original_description?.trim() || undefined,
     originalName: metadata.original_name?.trim() || undefined,

@@ -500,7 +500,7 @@ export function IndexConfigFormPanel({
     [incrementalFields, schema],
   );
 
-  const getFormValidationError = (): string | null => {
+  const getFormValidationError = (includeCapabilityState = true): string | null => {
     const invalidKeyFields = [...invalidSavedPrimaryKeyFields, ...invalidSavedIncrementalFields];
     if (invalidKeyFields.length > 0) {
       return t("dataCatalog.build.invalidKeyFields", { fields: invalidKeyFields.join(", ") });
@@ -540,6 +540,21 @@ export function IndexConfigFormPanel({
     if (!hasKeywordFeature && embeddingFields.length === 0 && fulltextFields.length === 0) {
       return t("dataCatalog.build.fieldsRequired");
     }
+    const fulltextNeedsDefault = fulltextFields.some((field) =>
+      (fieldFulltextAnalyzerGroups[field] ?? []).some((feature) => !feature.value?.trim()),
+    );
+    const embeddingNeedsDefault = embeddingFields.some((field) =>
+      (eligibleEmbeddingModelGroups[field] ?? []).some((feature) => !feature.value?.trim()),
+    );
+    if (fulltextNeedsDefault && !defaultFulltextAnalyzer) {
+      return t("dataCatalog.build.defaultAnalyzerRequired");
+    }
+    if (embeddingNeedsDefault && !defaultModelId) {
+      return t("dataCatalog.build.modelRequired");
+    }
+    if (!includeCapabilityState) {
+      return null;
+    }
     if (fulltextFields.length > 0) {
       if (analyzersLoadState === "loading" || analyzersLoadState === "idle") {
         return t("dataCatalog.build.analyzersLoading");
@@ -554,15 +569,6 @@ export function IndexConfigFormPanel({
         return t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") });
       }
     }
-    const fulltextNeedsDefault = fulltextFields.some((field) =>
-      (fieldFulltextAnalyzerGroups[field] ?? []).some((feature) => !feature.value?.trim()),
-    );
-    const embeddingNeedsDefault = embeddingFields.some((field) =>
-      (eligibleEmbeddingModelGroups[field] ?? []).some((feature) => !feature.value?.trim()),
-    );
-    if (fulltextNeedsDefault && !defaultFulltextAnalyzer) {
-      return t("dataCatalog.build.defaultAnalyzerRequired");
-    }
     if (embeddingFields.length > 0) {
       if (modelsLoadState === "loading" || modelsLoadState === "idle") {
         return t("dataCatalog.build.modelsLoading");
@@ -574,9 +580,6 @@ export function IndexConfigFormPanel({
       }
       if (modelsLoadState === "empty" || models.length === 0) {
         return t("dataCatalog.build.noModels");
-      }
-      if (embeddingNeedsDefault && !defaultModelId) {
-        return t("dataCatalog.build.modelRequired");
       }
       if (
         embeddingNeedsDefault &&
@@ -729,12 +732,23 @@ export function IndexConfigFormPanel({
       })
       : t("dataCatalog.build.analyzerSelectionUnavailable");
   const formValidationError = getFormValidationError();
-  const buildReadinessIssues = [
+  const configurationValidationError = getFormValidationError(false);
+  const configurationIssues = [
     ...(primaryKeyFields.length === 0 ? [t("dataCatalog.build.primaryKeyRequired")] : []),
     ...(incrementalFields.length === 0 ? [t("dataCatalog.build.incrementalKeyRequired")] : []),
-    ...(formValidationError ? [formValidationError] : []),
+    ...(configurationValidationError ? [configurationValidationError] : []),
+  ];
+  const buildReadinessIssues = [
+    ...configurationIssues,
+    ...(formValidationError && !configurationIssues.includes(formValidationError)
+      ? [formValidationError]
+      : []),
   ];
   const canBuild = buildReadinessIssues.length === 0;
+  const capabilityCheckPending = configurationIssues.length === 0 && (
+    (fulltextFields.length > 0 && analyzersLoading) ||
+    (embeddingFields.length > 0 && modelsLoading)
+  );
   const summaryFieldLabel = (fieldName: string) => {
     const field = schema.find((item) => item.name === fieldName);
     const displayName = field?.displayName?.trim();
@@ -1066,7 +1080,9 @@ export function IndexConfigFormPanel({
             <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.configCanBuild")}</span>
               <b>
-                {canBuild
+                {capabilityCheckPending
+                  ? t("dataCatalog.build.configChecking")
+                  : canBuild
                   ? t("dataCatalog.build.configCanBuildYes")
                   : t("dataCatalog.build.configCannotBuild")}
               </b>

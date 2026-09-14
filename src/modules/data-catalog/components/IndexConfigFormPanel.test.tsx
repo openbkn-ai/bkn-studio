@@ -111,6 +111,38 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull();
   });
 
+  it("shows capability checking instead of incomplete configuration while analyzers load", () => {
+    loadAnalyzerCapabilitiesMock.mockReturnValue(new Promise(() => undefined));
+    const textResource: CatalogResource = {
+      ...resource,
+      indexConfig: {
+        defaultFulltextAnalyzer: "standard",
+        incrementalFields: ["id"],
+        primaryKeyFields: ["id"],
+      },
+      schema: [
+        { name: "id", type: "integer" },
+        {
+          features: [
+            { config: { ignore_above: 256 }, featureType: "keyword" },
+            { config: { analyzer: "standard" }, featureType: "fulltext" },
+          ],
+          name: "content",
+          type: "text",
+        },
+      ],
+    };
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={textResource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.build.configChecking")).toBeTruthy();
+    expect(screen.queryByText("dataCatalog.build.configCannotBuild")).toBeNull();
+  });
+
   it("loads only the latest active task when configuring an index", async () => {
     render(
       <MemoryRouter>

@@ -53,7 +53,10 @@ const resource: CatalogResource = {
   schema: [
     { name: "id", type: "integer" },
     {
-      features: [{ featureType: "vector" }],
+      features: [
+        { config: { ignore_above: 256 }, featureType: "keyword" },
+        { featureType: "vector" },
+      ],
       name: "content",
       type: "string",
     },
@@ -109,6 +112,58 @@ describe("BuildTaskLaunchPanel", () => {
       sort: "create_time",
       statuses: ["pending", "running", "stopping"],
     }));
+  });
+
+  it("allows a build whose persisted index feature is keyword-only", () => {
+    const keywordOnlyResource: CatalogResource = {
+      ...resource,
+      schema: [
+        { name: "id", type: "integer" },
+        {
+          features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+          name: "code",
+          type: "string",
+        },
+      ],
+    };
+
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={keywordOnlyResource}
+      />,
+    );
+
+    expect(screen.queryByText("dataCatalog.build.needConfigFirst")).toBeNull();
+    expect(screen.getByRole("button", {
+      name: /dataCatalog\.build\.startBuild/,
+    }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("does not treat editor defaults as persisted build features", () => {
+    const legacyTextResource: CatalogResource = {
+      ...resource,
+      schema: [
+        { name: "id", type: "integer" },
+        { name: "content", type: "text" },
+      ],
+    };
+
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={legacyTextResource}
+      />,
+    );
+
+    expect(screen.getByText("dataCatalog.build.needConfigFirst")).toBeTruthy();
+    expect(screen.getByRole("button", {
+      name: /dataCatalog\.build\.startBuild/,
+    }).hasAttribute("disabled")).toBe(true);
   });
 
   it("does not issue a second start request after task creation", async () => {
