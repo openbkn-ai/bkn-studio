@@ -22,7 +22,6 @@ import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-f
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
-import { hasResourceOperation } from "@/modules/data-catalog/lib/resource-operations";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
@@ -42,6 +41,7 @@ import {
   setCatalogResourceEnabled,
 } from "@/modules/data-catalog/services/resource.service";
 import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { getCatalog, hasCatalogOperation } from "@/shared/catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
@@ -193,8 +193,9 @@ export function ResourceWorkspaceScene({
   // remain the source of truth for its state; do not fabricate one in the UI.
   const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
   const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
-  const canModifyResource = hasResourceOperation(resource, "modify");
-  const canQueryResource = hasResourceOperation(resource, "query_data");
+  const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
+  const canQueryResource = resource?.operations === undefined ||
+    hasCatalogResourceOperation(resource, "query_data");
   const canAuthorizeResource = Boolean(!catalog?.internal && canAuthorizeGrants);
   const hideSemanticUnderstanding = Boolean(catalog?.internal) || !canManageCatalogTasks;
   const discoveryFailed = resource?.lastDiscoverStatus === "error";
@@ -203,8 +204,6 @@ export function ResourceWorkspaceScene({
   const resourceMissing = queryBlockReason === "missing";
   const resourceStale = queryBlockReason === "stale";
   const metadataUnavailable = queryBlockReason === "metadata_unavailable";
-  const canManageResources = hasCatalogOperation(catalog, "resource_manage");
-  const canManageTasks = hasCatalogOperation(catalog, "task_manage");
 
   useEffect(() => {
     if (hideSemanticUnderstanding && tab === "semantic-understanding") {
@@ -382,7 +381,7 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
           <Space>
-            {canManageTasks ? (
+            {canManageCatalogTasks ? (
               <AppButton
                 disabled={detailEditing}
                 icon={<ReloadOutlined />}
@@ -392,7 +391,7 @@ export function ResourceWorkspaceScene({
                 {t("dataCatalog.resourceWorkspace.refreshMetadata")}
               </AppButton>
             ) : null}
-            {canManageResources ? (
+            {canModifyResource ? (
               <AppButton
                 color={resource.enabled === false ? "green" : undefined}
                 danger={resource.enabled !== false}
@@ -405,7 +404,7 @@ export function ResourceWorkspaceScene({
                 {t(resource.enabled === false ? "common.enable" : "common.disable")}
               </AppButton>
             ) : null}
-            {canAuthorizeGrants && !catalog?.internal ? (
+            {canAuthorizeResource ? (
               <AppButton
                 icon={<KeyOutlined />}
                 onClick={() => setAuthorizeOpen(true)}
@@ -486,7 +485,7 @@ export function ResourceWorkspaceScene({
                 <div className={styles.tabPanel}>
                   <ResourceDetailPanel
                     active={tab === "detail"}
-                    canEdit={canManageResources}
+                    canEdit={canModifyResource}
                     catalog={catalog}
                     onEditingChange={setDetailEditing}
                     onResourceRefreshed={handleResourceRefreshed}

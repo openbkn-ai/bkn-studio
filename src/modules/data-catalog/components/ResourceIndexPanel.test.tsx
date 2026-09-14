@@ -135,6 +135,11 @@ const manageableCatalog = {
   operations: ["task_manage"],
 } as CatalogRecord;
 
+const modifiableCatalog = {
+  internal: false,
+  operations: ["resource_manage", "task_manage"],
+} as CatalogRecord;
+
 function buildTask(overrides: Partial<BuildTask>): BuildTask {
   return {
     primaryKeyFields: [],
@@ -188,12 +193,12 @@ describe("ResourceIndexPanel", () => {
     }));
   });
 
-  it("keeps index configuration editable with catalog resource management", () => {
+  it("keeps index configuration editable with catalog resource management permission", () => {
     render(
       <MemoryRouter>
         <ResourceIndexPanel
           active
-          catalog={{ ...manageableCatalog, operations: ["resource_manage"] }}
+          catalog={modifiableCatalog}
           indexView="config"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
@@ -414,22 +419,4 @@ describe("ResourceIndexPanel", () => {
     await waitFor(() => expect(listBuildTaskPageMock.mock.calls.length).toBeGreaterThan(callsBeforeRetry));
   });
 
-  it("keeps index configuration read-only without resource modify", () => {
-    render(
-      <MemoryRouter>
-        <ResourceIndexPanel
-          active
-          catalog={catalog}
-          indexView="config"
-          indexViewExplicit
-          onIndexViewChange={vi.fn()}
-          onRefresh={vi.fn()}
-          resource={{ ...resource, operations: ["view_detail"] }}
-          tasks={[]}
-        />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId("index-config-read-only").textContent).toBe("true");
-  });
 });

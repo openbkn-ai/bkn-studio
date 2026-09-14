@@ -26,10 +26,10 @@ import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creatio
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
-import { hasResourceOperation } from "@/modules/data-catalog/lib/resource-operations";
 import { isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource, ResourceDiscoverStatus } from "@/modules/data-catalog/types/data-catalog";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./CatalogDetailPanel.module.css";
@@ -390,7 +390,10 @@ export function CatalogDetailPanel({
             label: t("common.detail"),
           },
           {
-            disabled: previewDisabled || !hasResourceOperation(record, "query_data"),
+            disabled: previewDisabled || (
+              record.operations !== undefined &&
+              !hasCatalogResourceOperation(record, "query_data")
+            ),
             key: "preview",
             label: queryBlockReason ? (
               <Tooltip

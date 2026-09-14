@@ -590,8 +590,6 @@ describe("resource.service · mock update boundaries", () => {
 
     expect(resource?.operations).toEqual([
       "view_detail",
-      "modify",
-      "delete",
       "query_data",
     ]);
   });

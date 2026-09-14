@@ -11,6 +11,7 @@ import {
 } from "@/framework/permission/has-permissions";
 
 export type HomeActionAccess = {
+  enforcePermissions?: boolean;
   path?: string;
   permissionMode?: PermissionCheckMode;
   permissions?: string | string[];
@@ -29,7 +30,11 @@ export function canAccessHomeAction(
   currentPermissions: string[],
   action: HomeActionAccess,
 ) {
-  if (action.path && NAVIGATION_ENTRY_PATHS.has(action.path)) {
+  if (
+    !action.enforcePermissions &&
+    action.path &&
+    NAVIGATION_ENTRY_PATHS.has(action.path)
+  ) {
     return true;
   }
 

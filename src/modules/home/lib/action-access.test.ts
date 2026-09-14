@@ -32,6 +32,17 @@ describe("canAccessHomeAction", () => {
     ).toBe(false);
   });
 
+  it("enforces permissions for an explicitly gated navigation action", () => {
+    const action = {
+      enforcePermissions: true,
+      path: "/data-connect",
+      permissions: "catalog:task_manage",
+    };
+
+    expect(canAccessHomeAction([], action)).toBe(false);
+    expect(canAccessHomeAction(["catalog:task_manage"], action)).toBe(true);
+  });
+
   it("blocks a permission-gated action without a required permission", () => {
     expect(
       canAccessHomeAction(["knowledge-network:view"], {

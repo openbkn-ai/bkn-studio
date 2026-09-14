@@ -479,7 +479,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       description: input.description,
       enabled: true,
       localIndexStatus: "unavailable",
-      operations: ["view_detail", "query_data", "modify"],
+      operations: ["view_detail", "query_data"],
       schema:
         input.schema.length > 0
           ? input.schema

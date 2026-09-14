@@ -37,19 +37,19 @@ Read this first, then load the rules under [`rules/`](rules/). Before working in
 - Branch from the Issue's "Create a branch"; one PR per Issue, kept small.
 - Branch names must use a valid type prefix and at most two path segments after it: `<type>/<description>`, `<type>/<issue-number>-<description>`, or `<type>/<module>/<description>`; segments start with lowercase letters or digits and may contain `-`, `.`, or `_`.
 
-## Mandatory pre-commit CI checks
+## Mandatory local pre-commit checks
 
-Before **every** commit, run the same quality checks enforced by `.github/workflows/ci-quality.yml`. Do not commit if any command fails or emits warnings where CI requires zero warnings:
+Before **every** commit, run the following local quality checks. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
 
 ```bash
 node scripts/check-license-headers.mjs
 pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
-pnpm exec vitest --run
+pnpm exec vitest --run --maxWorkers=50% path/to/affected.test.tsx
 pnpm exec tsc -b --pretty false
 pnpm exec vite build
 pnpm audit --prod
 ```
 
-Every required check, especially `pnpm exec vitest --run`, must finish with an observable successful exit code before committing. Starting a command, seeing partial output, a truncated log, or a terminal session that detaches before reporting completion is not evidence that the check passed. When the terminal cannot retain a long-running command's result, use an observable log and process/exit-status workflow; do not commit until the successful result is confirmed.
+For frontend tests, run only the modules or test files directly affected by the change and use `--maxWorkers=50%` by default. Repository-wide Vitest runs belong to remote CI and must not be run locally unless the requester explicitly asks for them. Every required check must finish with an observable successful exit code before committing. Starting a command, seeing partial output, a truncated log, or a terminal session that detaches before reporting completion is not evidence that the check passed. When the terminal cannot retain a long-running command's result, use an observable log and process/exit-status workflow; do not commit until the successful result is confirmed.
 
 For changes under `src/modules/execution-factory/**`, also run `pnpm test:execution-factory`, matching the path-scoped CI workflow. Report every command run and any CI-only check that was not practical to run locally.

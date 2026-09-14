@@ -25,7 +25,6 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
-import { hasResourceOperation } from "@/modules/data-catalog/lib/resource-operations";
 import { getCatalogResource, updateCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogResource, ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";

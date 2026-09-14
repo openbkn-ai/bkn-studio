@@ -195,11 +195,12 @@ describe("ResourceDetailPanel", () => {
     expect(screen.queryByText("dataCatalog.resource.schemaName")).toBeNull();
   });
 
-  it("keeps a view-only resource read-only", () => {
+  it("keeps a resource read-only when its parent catalog cannot modify resources", () => {
     render(
       <MemoryRouter>
         <ResourceDetailPanel
           active
+          canEdit={false}
           catalog={null}
           resource={{ ...resource, operations: ["view_detail"] }}
         />
