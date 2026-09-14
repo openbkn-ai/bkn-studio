@@ -195,10 +195,7 @@ export function ResourceWorkspaceScene({
   const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
   const canModifyResource = hasResourceOperation(resource, "modify");
   const canQueryResource = hasResourceOperation(resource, "query_data");
-  const canAuthorizeResource = Boolean(
-    !catalog?.internal &&
-    (canAuthorizeGrants || hasResourceOperation(resource, "authorize")),
-  );
+  const canAuthorizeResource = Boolean(!catalog?.internal && canAuthorizeGrants);
   const hideSemanticUnderstanding = Boolean(catalog?.internal) || !canManageCatalogTasks;
   const discoveryFailed = resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;

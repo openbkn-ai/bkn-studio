@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,7 +53,11 @@ vi.mock("antd", () => ({
   Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
     <input onChange={onChange} value={value} />
   ),
-  Select: () => null,
+  Select: ({ options = [] }: { options?: Array<{ label: ReactNode; value: string }> }) => (
+    <div data-testid="catalog-options">
+      {options.map((option) => <span key={option.value}>{option.label}</span>)}
+    </div>
+  ),
   Space: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Switch: () => null,
   Tabs: ({
@@ -149,7 +153,7 @@ vi.mock("@/framework/ui/common/TableSurface", () => ({
 }));
 
 vi.mock("@/modules/data-connect/components/DataConnectPageHeader", () => ({
-  DataConnectPageHeader: () => null,
+  DataConnectPageHeader: ({ extra }: { extra?: ReactNode }) => <>{extra}</>,
 }));
 
 vi.mock("@/modules/data-connect/components/DataConnectDiscoverTaskDrawer", () => ({
@@ -237,6 +241,27 @@ const schedule = (expectedUpdateTime: number) => ({
   updaterName: "-",
 });
 
+const task = (catalogId: string, id: string) => ({
+  catalogId,
+  createTime: 100,
+  id,
+  progress: 100,
+  queuePriority: 10,
+  status: "completed" as const,
+  strategy: "full_sync" as const,
+  triggerType: "manual" as const,
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
 async function openScheduleEditor() {
   await waitFor(() => expect(listSchedulesMock).toHaveBeenCalled());
   fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
@@ -298,6 +323,75 @@ describe("DataConnectDiscoverScene", () => {
     await waitFor(() => expect(listTasksMock).toHaveBeenCalled());
     expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
     expect(listCatalogsMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the newest direct catalog authorization when lookups resolve out of order", async () => {
+    const firstLookup = deferred<{ id: string; name: string; operations: string[] }>();
+    const secondLookup = deferred<{ id: string; name: string; operations: string[] }>();
+    getCatalogMock.mockImplementation((id: string) =>
+      id === "catalog-1" ? firstLookup.promise : secondLookup.promise,
+    );
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith(
+      "catalog-1",
+      { skipErrorToast: true },
+    ));
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+    await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith(
+      "catalog-2",
+      { skipErrorToast: true },
+    ));
+    await act(async () => {
+      secondLookup.resolve({
+        id: "catalog-2",
+        name: "Customers",
+        operations: ["task_manage", "view_detail"],
+      });
+      await secondLookup.promise;
+    });
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-2" }),
+    ));
+
+    await act(async () => {
+      firstLookup.resolve({
+        id: "catalog-1",
+        name: "Orders",
+        operations: ["view_detail"],
+      });
+      await firstLookup.promise;
+    });
+
+    expect(screen.queryByText("common.noPermission")).toBeNull();
+  });
+
+  it("loads all catalog pages before filtering task_manage options", async () => {
+    listCatalogsMock.mockImplementation(({ page }: { page: number }) => Promise.resolve({
+      items: page === 1
+        ? Array.from({ length: 50 }, (_, index) => ({
+          id: `catalog-denied-${index}`,
+          name: `Denied ${index}`,
+          operations: ["view_detail"],
+        }))
+        : [{
+          id: "catalog-authorized",
+          name: "Authorized",
+          operations: ["task_manage", "view_detail"],
+        }],
+      total: 51,
+    }));
+
+    render(<DataConnectDiscoverScene />);
+
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith({
+      keyword: "",
+      page: 2,
+      pageSize: 50,
+      type: "physical",
+    }));
+    expect(await screen.findByText("Authorized")).toBeTruthy();
+    expect(screen.queryByText("Denied 0")).toBeNull();
   });
 
   it("shows no permission only for a forbidden direct catalog lookup", async () => {
@@ -457,5 +551,35 @@ describe("DataConnectDiscoverScene", () => {
       expect(screen.getByTestId("selected-task-keys").textContent).toBe("");
       expect(screen.queryByText("drawer:discover-task-1")).toBeNull();
     });
+  });
+
+  it("does not replace the new catalog task list with a stale response", async () => {
+    const firstTasks = deferred<{ items: ReturnType<typeof task>[]; total: number }>();
+    const secondTasks = deferred<{ items: ReturnType<typeof task>[]; total: number }>();
+    listTasksMock.mockImplementation(({ catalogId }: { catalogId?: string }) =>
+      catalogId === "catalog-1" ? firstTasks.promise : secondTasks.promise,
+    );
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-1" }),
+    ));
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-2" }),
+    ));
+    await act(async () => {
+      secondTasks.resolve({ items: [task("catalog-2", "task-new")], total: 1 });
+      await secondTasks.promise;
+    });
+    expect(await screen.findByText("task-new")).toBeTruthy();
+
+    await act(async () => {
+      firstTasks.resolve({ items: [task("catalog-1", "task-stale")], total: 1 });
+      await firstTasks.promise;
+    });
+
+    expect(screen.queryByText("task-stale")).toBeNull();
+    expect(screen.getByText("task-new")).toBeTruthy();
   });
 });

@@ -71,6 +71,7 @@ import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 import styles from "./DataConnectDiscoverScene.module.css";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
+const CATALOG_OPTION_PAGE_SIZE = 50;
 
 type ScheduleModalState =
   | { mode: "create"; scheduleId?: undefined }
@@ -148,6 +149,9 @@ export function DataConnectDiscoverScene({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const catalogRequestIdRef = useRef(0);
+  const scheduleRequestIdRef = useRef(0);
+  const taskRequestIdRef = useRef(0);
   const [scheduleModalState, setScheduleModalState] =
     useState<ScheduleModalState>(null);
   const [scheduleModalSubmitting, setScheduleModalSubmitting] = useState(false);
@@ -239,30 +243,50 @@ export function DataConnectDiscoverScene({
         .length,
     [tasks],
   );
+  const lockedCatalogId = catalogLocked ? selectedCatalogId : undefined;
   const loadCatalogs = useCallback(async () => {
+    const requestId = ++catalogRequestIdRef.current;
     setLoadingCatalogs(true);
+    setCatalogsLoaded(false);
+    setCatalogAccessDenied(false);
+    setAuthorizedCatalogId(null);
     setCatalogError(null);
 
     try {
-      if (catalogLocked && selectedCatalogId) {
-        const catalog = await getCatalog(selectedCatalogId, { skipErrorToast: true });
+      if (catalogLocked && lockedCatalogId) {
+        const catalog = await getCatalog(lockedCatalogId, { skipErrorToast: true });
+        if (catalogRequestIdRef.current !== requestId) return;
         const allowed = Boolean(catalog && hasCatalogOperation(catalog, "task_manage"));
         setCatalogs(allowed && catalog ? [catalog] : []);
         setCatalogAccessDenied(!allowed);
-        setAuthorizedCatalogId(allowed ? selectedCatalogId : null);
+        setAuthorizedCatalogId(allowed ? lockedCatalogId : null);
         return;
       }
 
-      const result = await listCatalogs({
+      const firstPage = await listCatalogs({
         keyword: debouncedCatalogKeyword,
         page: 1,
-        pageSize: 50,
+        pageSize: CATALOG_OPTION_PAGE_SIZE,
         type: "physical",
       });
-      setCatalogs(result.items.filter((catalog) => hasCatalogOperation(catalog, "task_manage")));
+      const pageCount = Math.ceil(firstPage.total / CATALOG_OPTION_PAGE_SIZE);
+      const remainingPages = await Promise.all(
+        Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+          listCatalogs({
+            keyword: debouncedCatalogKeyword,
+            page: index + 2,
+            pageSize: CATALOG_OPTION_PAGE_SIZE,
+            type: "physical",
+          }),
+        ),
+      );
+      if (catalogRequestIdRef.current !== requestId) return;
+      const catalogOptions = [firstPage, ...remainingPages].flatMap((result) => result.items);
+      setCatalogs(catalogOptions.filter((catalog) => hasCatalogOperation(catalog, "task_manage")));
       setCatalogAccessDenied(false);
       setAuthorizedCatalogId(null);
     } catch (error) {
+      if (catalogRequestIdRef.current !== requestId) return;
       const accessDenied = catalogLocked && isRequestForbidden(error);
       setCatalogs([]);
       setCatalogAccessDenied(accessDenied);
@@ -271,12 +295,15 @@ export function DataConnectDiscoverScene({
         setCatalogError(extractRequestErrorMessage(error));
       }
     } finally {
-      setLoadingCatalogs(false);
-      setCatalogsLoaded(true);
+      if (catalogRequestIdRef.current === requestId) {
+        setLoadingCatalogs(false);
+        setCatalogsLoaded(true);
+      }
     }
-  }, [catalogLocked, debouncedCatalogKeyword, selectedCatalogId]);
+  }, [catalogLocked, debouncedCatalogKeyword, lockedCatalogId]);
 
   const loadSchedules = useCallback(async () => {
+    const requestId = ++scheduleRequestIdRef.current;
     setLoadingSchedules(true);
     setScheduleError(null);
 
@@ -289,18 +316,23 @@ export function DataConnectDiscoverScene({
         page: schedulePage,
         pageSize: schedulePageSize,
       });
+      if (scheduleRequestIdRef.current !== requestId) return;
       setSchedules(result.items);
       setScheduleTotal(result.total);
     } catch (error) {
+      if (scheduleRequestIdRef.current !== requestId) return;
       setSchedules([]);
       setScheduleTotal(0);
       setScheduleError(extractRequestErrorMessage(error));
     } finally {
-      setLoadingSchedules(false);
+      if (scheduleRequestIdRef.current === requestId) {
+        setLoadingSchedules(false);
+      }
     }
   }, [debouncedKeyword, enabledFilter, schedulePage, schedulePageSize, selectedCatalogId]);
 
   const loadTasks = useCallback(async () => {
+    const requestId = ++taskRequestIdRef.current;
     setLoadingTasks(true);
     setTaskError(null);
 
@@ -316,14 +348,18 @@ export function DataConnectDiscoverScene({
         triggerType:
           taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
       });
+      if (taskRequestIdRef.current !== requestId) return;
       setTasks(result.items);
       setTaskTotal(result.total);
     } catch (error) {
+      if (taskRequestIdRef.current !== requestId) return;
       setTasks([]);
       setTaskTotal(0);
       setTaskError(extractRequestErrorMessage(error));
     } finally {
-      setLoadingTasks(false);
+      if (taskRequestIdRef.current === requestId) {
+        setLoadingTasks(false);
+      }
     }
   }, [
     selectedCatalogId,
@@ -392,6 +428,25 @@ export function DataConnectDiscoverScene({
   }, [loadCatalogs]);
 
   useEffect(() => {
+    scheduleRequestIdRef.current += 1;
+    taskRequestIdRef.current += 1;
+    setSchedules([]);
+    setScheduleTotal(0);
+    setScheduleError(null);
+    setLoadingSchedules(false);
+    setTasks([]);
+    setTaskTotal(0);
+    setTaskError(null);
+    setLoadingTasks(false);
+    setSelectedTaskKeys([]);
+    setDetailTaskId(null);
+    setTaskStatusFilter([]);
+    setTaskStrategyFilter(undefined);
+    setTaskTriggerTypeFilter("all");
+    setTaskPage(1);
+  }, [selectedCatalogId]);
+
+  useEffect(() => {
     if (!catalogLocked || lockedCatalogAccessConfirmed) {
       void loadSchedules();
     }
@@ -410,15 +465,6 @@ export function DataConnectDiscoverScene({
   useEffect(() => {
     onCatalogIdChange?.(selectedCatalogId);
   }, [onCatalogIdChange, selectedCatalogId]);
-
-  useEffect(() => {
-    setSelectedTaskKeys([]);
-    setDetailTaskId(null);
-    setTaskStatusFilter([]);
-    setTaskStrategyFilter(undefined);
-    setTaskTriggerTypeFilter("all");
-    setTaskPage(1);
-  }, [selectedCatalogId]);
 
   useEffect(() => {
     if (useMock || !hasActiveTasks) {

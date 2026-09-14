@@ -592,7 +592,6 @@ describe("resource.service · mock update boundaries", () => {
       "view_detail",
       "modify",
       "delete",
-      "authorize",
       "query_data",
     ]);
   });

@@ -115,7 +115,7 @@ const staleResource: CatalogResource = {
   description: "",
   id: "resource-1",
   name: "orders",
-  operations: ["authorize", "modify", "query_data", "view_detail"],
+  operations: ["modify", "query_data", "view_detail"],
   rowCount: 1,
   schema: [{ name: "order_id", type: "string" }],
   sourceIdentifier: "orders",

@@ -434,10 +434,7 @@ export function CatalogDetailPanel({
             ),
           });
         }
-        if (
-          !catalog.internal &&
-          (canAuthorizeGrants || hasResourceOperation(record, "authorize"))
-        ) {
+        if (!catalog.internal && canAuthorizeGrants) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({
             key: "authorize",
