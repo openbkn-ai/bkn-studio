@@ -7,6 +7,16 @@
 
 import type { CatalogRecord } from "@/shared/catalog/types";
 
+export const MOCK_CATALOG_OPERATIONS = [
+  "view_detail",
+  "modify",
+  "delete",
+  "authorize",
+  "task_manage",
+  "query_data",
+  "resource_manage",
+];
+
 let mockCatalogs: CatalogRecord[] = [
   {
     id: "cat-001",
@@ -35,7 +45,7 @@ let mockCatalogs: CatalogRecord[] = [
       options: { charset: "utf8mb4", connect_timeout: 10 },
     },
     metadata: { schemas: ["customer_center"] },
-    operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
+    operations: [...MOCK_CATALOG_OPERATIONS],
     type: "physical",
   },
   {
@@ -64,7 +74,7 @@ let mockCatalogs: CatalogRecord[] = [
       index_pattern: "knowledge-*",
     },
     metadata: {},
-    operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
+    operations: [...MOCK_CATALOG_OPERATIONS],
     type: "physical",
   },
   {
@@ -95,7 +105,7 @@ let mockCatalogs: CatalogRecord[] = [
       options: { sslmode: "require", statement_timeout: 30000 },
     },
     metadata: { schemas: ["public"] },
-    operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
+    operations: [...MOCK_CATALOG_OPERATIONS],
     type: "physical",
   },
   {
@@ -119,7 +129,7 @@ let mockCatalogs: CatalogRecord[] = [
     tags: ["BKN", "概念索引"],
     connectorConfig: {},
     metadata: { builtin: true },
-    operations: ["view"],
+    operations: ["view_detail"],
     type: "logical",
   },
   {
@@ -143,7 +153,7 @@ let mockCatalogs: CatalogRecord[] = [
     tags: ["system"],
     connectorConfig: {},
     metadata: { builtin: true },
-    operations: ["view"],
+    operations: ["view_detail"],
     type: "logical",
   },
 ];

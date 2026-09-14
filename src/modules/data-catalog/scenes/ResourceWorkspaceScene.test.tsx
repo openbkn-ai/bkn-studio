@@ -189,6 +189,30 @@ describe("ResourceWorkspaceScene", () => {
 
     await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
     expect(getCatalogMock).toHaveBeenCalledWith(staleResource.catalogId, { skipErrorToast: true });
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
+  it("does not load build tasks without task_manage on the parent catalog", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      internal: false,
+      name: "Catalog",
+      operations: ["view_detail"],
+    });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
 
   it("does not use global catalog grants for management actions on the current catalog", async () => {

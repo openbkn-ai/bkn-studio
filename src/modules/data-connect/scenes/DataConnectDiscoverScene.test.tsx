@@ -6,6 +6,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AxiosError, AxiosHeaders } from "axios";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +16,7 @@ import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 
 const {
   appServicesMock,
+  getCatalogMock,
   getScheduleMock,
   listCatalogsMock,
   listTasksMock,
@@ -26,6 +28,7 @@ const {
     modal: { confirm: vi.fn() },
     runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
   },
+  getCatalogMock: vi.fn(),
   getScheduleMock: vi.fn(),
   listCatalogsMock: vi.fn(),
   listTasksMock: vi.fn(),
@@ -44,8 +47,8 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Alert: ({ children, message }: { children?: ReactNode; message?: ReactNode }) => (
-    <div>{message}{children}</div>
+  Alert: ({ action, children, message }: { action?: ReactNode; children?: ReactNode; message?: ReactNode }) => (
+    <div>{message}{children}{action}</div>
   ),
   Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
     <input onChange={onChange} value={value} />
@@ -194,6 +197,7 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
 }));
 
 vi.mock("@/shared/catalog", () => ({
+  getCatalog: getCatalogMock,
   hasCatalogOperation: (
     catalog: { operations?: string[] } | null | undefined,
     operation: string,
@@ -244,6 +248,11 @@ describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getScheduleMock.mockReset();
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      name: "Orders",
+      operations: ["task_manage", "view_detail"],
+    });
     updateScheduleMock.mockReset();
     listCatalogsMock.mockResolvedValue({
       items: [{
@@ -269,14 +278,58 @@ describe("DataConnectDiscoverScene", () => {
   });
 
   it("rejects a direct catalog route without task_manage on that catalog", async () => {
-    listCatalogsMock.mockResolvedValue({
-      items: [{ id: "catalog-1", name: "Orders", operations: ["view_detail"] }],
-      total: 1,
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      name: "Orders",
+      operations: ["view_detail"],
     });
 
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
     expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(listTasksMock).not.toHaveBeenCalled();
+    expect(listSchedulesMock).not.toHaveBeenCalled();
+    expect(listCatalogsMock).not.toHaveBeenCalled();
+  });
+
+  it("authorizes a direct catalog route with an exact catalog lookup", async () => {
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalled());
+    expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
+    expect(listCatalogsMock).not.toHaveBeenCalled();
+  });
+
+  it("shows no permission only for a forbidden direct catalog lookup", async () => {
+    getCatalogMock.mockRejectedValue(new AxiosError(
+      "Forbidden",
+      undefined,
+      undefined,
+      undefined,
+      {
+        status: 403,
+        statusText: "Forbidden",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      },
+    ));
+
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(listTasksMock).not.toHaveBeenCalled();
+    expect(listSchedulesMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps lookup failures distinct from permission denials", async () => {
+    getCatalogMock.mockRejectedValue(new Error("Catalog lookup failed"));
+
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    expect(await screen.findByText("Catalog lookup failed")).toBeTruthy();
+    expect(screen.queryByText("common.noPermission")).toBeNull();
+    expect(screen.getByRole("button", { name: "common.retry" })).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();
   });

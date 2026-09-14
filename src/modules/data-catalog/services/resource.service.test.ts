@@ -581,6 +581,22 @@ describe("resource.service · mock update boundaries", () => {
     vi.unstubAllEnvs();
   });
 
+  it("exposes canonical Vega operations on mock resources", async () => {
+    const { getCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const resource = await getCatalogResource("res-orders");
+
+    expect(resource?.operations).toEqual([
+      "view_detail",
+      "modify",
+      "delete",
+      "authorize",
+      "query_data",
+    ]);
+  });
+
   it("returns an HTTP-shaped 404 for a missing resource", async () => {
     const { updateCatalogResource } = await import(
       "@/modules/data-catalog/services/resource.service"

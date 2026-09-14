@@ -17,6 +17,7 @@ import {
 import {
   findMockCatalog,
   getMockCatalogs,
+  MOCK_CATALOG_OPERATIONS,
   prependMockCatalog,
   removeMockCatalog,
   updateMockCatalog,
@@ -307,7 +308,7 @@ export async function createLogicalCatalog(input: { description?: string; name: 
       tags: [],
       connectorConfig: {},
       metadata: {},
-      operations: ["view", "delete"],
+      operations: ["view_detail", "delete"],
       type: "logical",
     });
     await wait(undefined);
@@ -455,7 +456,7 @@ options: CatalogMutationOptions = {},
       tags: input.tags,
       connectorConfig: input.connectorConfig,
       metadata: {},
-      operations: ["view", "edit", "delete", "test_connection", "enable", "disable"],
+      operations: [...MOCK_CATALOG_OPERATIONS],
       type: "physical",
     });
     await wait(undefined);

@@ -405,6 +405,30 @@ describe("catalog.service · mock health check schedule", () => {
     vi.unstubAllEnvs();
   });
 
+  it("exposes canonical Vega operations on mock catalogs", async () => {
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    const result = await listCatalogs({
+      keyword: "",
+      page: 1,
+      pageSize: 50,
+      type: "physical",
+    });
+
+    expect(result.items.length).toBeGreaterThan(0);
+    for (const catalog of result.items) {
+      expect(catalog.operations).toEqual([
+        "view_detail",
+        "modify",
+        "delete",
+        "authorize",
+        "task_manage",
+        "query_data",
+        "resource_manage",
+      ]);
+    }
+  });
+
   it("keeps schedule updates when the catalog is loaded again", async () => {
     const {
       createPhysicalCatalog,

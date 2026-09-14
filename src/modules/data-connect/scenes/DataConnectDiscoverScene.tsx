@@ -28,13 +28,14 @@ import { hasPermissions } from "@/framework/permission/has-permissions";
 import {
   extractRequestErrorMessage,
   isRequestConflict,
+  isRequestForbidden,
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
-import { hasCatalogOperation, listCatalogs } from "@/shared/catalog";
+import { getCatalog, hasCatalogOperation, listCatalogs } from "@/shared/catalog";
 import {
   createDataConnectDiscoverSchedule,
   deleteDataConnectDiscoverTask,
@@ -142,6 +143,8 @@ export function DataConnectDiscoverScene({
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
+  const [catalogAccessDenied, setCatalogAccessDenied] = useState(false);
+  const [authorizedCatalogId, setAuthorizedCatalogId] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -218,12 +221,12 @@ export function DataConnectDiscoverScene({
   const selectedCatalogName = selectedCatalogId
     ? catalogNameMap.get(selectedCatalogId)
     : undefined;
-  const catalogAccessDenied = Boolean(
+  const lockedCatalogAccessConfirmed = Boolean(
     catalogLocked &&
-    selectedCatalogId &&
     catalogsLoaded &&
-    !loadingCatalogs &&
-    !catalogs.some((catalog) => catalog.id === selectedCatalogId),
+    authorizedCatalogId === selectedCatalogId &&
+    !catalogError &&
+    !catalogAccessDenied,
   );
 
   const hasActiveTasks = useMemo(
@@ -241,6 +244,15 @@ export function DataConnectDiscoverScene({
     setCatalogError(null);
 
     try {
+      if (catalogLocked && selectedCatalogId) {
+        const catalog = await getCatalog(selectedCatalogId, { skipErrorToast: true });
+        const allowed = Boolean(catalog && hasCatalogOperation(catalog, "task_manage"));
+        setCatalogs(allowed && catalog ? [catalog] : []);
+        setCatalogAccessDenied(!allowed);
+        setAuthorizedCatalogId(allowed ? selectedCatalogId : null);
+        return;
+      }
+
       const result = await listCatalogs({
         keyword: debouncedCatalogKeyword,
         page: 1,
@@ -248,13 +260,21 @@ export function DataConnectDiscoverScene({
         type: "physical",
       });
       setCatalogs(result.items.filter((catalog) => hasCatalogOperation(catalog, "task_manage")));
+      setCatalogAccessDenied(false);
+      setAuthorizedCatalogId(null);
     } catch (error) {
-      setCatalogError(extractRequestErrorMessage(error));
+      const accessDenied = catalogLocked && isRequestForbidden(error);
+      setCatalogs([]);
+      setCatalogAccessDenied(accessDenied);
+      setAuthorizedCatalogId(null);
+      if (!accessDenied) {
+        setCatalogError(extractRequestErrorMessage(error));
+      }
     } finally {
       setLoadingCatalogs(false);
       setCatalogsLoaded(true);
     }
-  }, [debouncedCatalogKeyword]);
+  }, [catalogLocked, debouncedCatalogKeyword, selectedCatalogId]);
 
   const loadSchedules = useCallback(async () => {
     setLoadingSchedules(true);
@@ -372,16 +392,16 @@ export function DataConnectDiscoverScene({
   }, [loadCatalogs]);
 
   useEffect(() => {
-    if (!catalogLocked || (catalogsLoaded && !catalogAccessDenied)) {
+    if (!catalogLocked || lockedCatalogAccessConfirmed) {
       void loadSchedules();
     }
-  }, [catalogAccessDenied, catalogLocked, catalogsLoaded, loadSchedules]);
+  }, [catalogLocked, loadSchedules, lockedCatalogAccessConfirmed]);
 
   useEffect(() => {
-    if (!catalogLocked || (catalogsLoaded && !catalogAccessDenied)) {
+    if (!catalogLocked || lockedCatalogAccessConfirmed) {
       void loadTasks();
     }
-  }, [catalogAccessDenied, catalogLocked, catalogsLoaded, loadTasks]);
+  }, [catalogLocked, loadTasks, lockedCatalogAccessConfirmed]);
 
   useEffect(() => {
     setSelectedCatalogId(catalogId);
@@ -1056,33 +1076,46 @@ export function DataConnectDiscoverScene({
           title={t("dataConnect.discoverTitle")}
           variant="plain"
         />
-        {catalogError ? <Alert message={catalogError} showIcon type="warning" /> : null}
+        {catalogError ? (
+          <Alert
+            action={catalogLocked ? (
+              <AppButton onClick={() => void loadCatalogs()} type="link">
+                {t("common.retry")}
+              </AppButton>
+            ) : undefined}
+            message={catalogError}
+            showIcon
+            type="warning"
+          />
+        ) : null}
         {catalogAccessDenied ? (
           <Alert message={t("common.noPermission")} showIcon type="error" />
-        ) : <Tabs
-          activeKey={activeTab}
-          className={styles.pageTabs}
-          items={[
-            {
-              key: "tasks",
-              label:
-                activeTaskCount > 0
-                  ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
-                  : t("dataConnect.discoverTabTasks"),
-              children: tasksPanel,
-            },
-            {
-              key: "schedules",
-              label: t("dataConnect.discoverTabSchedules"),
-              children: schedulesPanel,
-            },
-          ]}
-          onChange={(key) => {
-            changeActiveTab(key as DataConnectDiscoverTab);
-          }}
-        />}
+        ) : catalogLocked && catalogError ? null : (
+          <Tabs
+            activeKey={activeTab}
+            className={styles.pageTabs}
+            items={[
+              {
+                key: "tasks",
+                label:
+                  activeTaskCount > 0
+                    ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
+                    : t("dataConnect.discoverTabTasks"),
+                children: tasksPanel,
+              },
+              {
+                key: "schedules",
+                label: t("dataConnect.discoverTabSchedules"),
+                children: schedulesPanel,
+              },
+            ]}
+            onChange={(key) => {
+              changeActiveTab(key as DataConnectDiscoverTab);
+            }}
+          />
+        )}
       </section>
-      {scheduleModalState && !catalogAccessDenied ? (
+      {scheduleModalState && (!catalogLocked || lockedCatalogAccessConfirmed) ? (
         <DiscoverScheduleFormModal
           catalogs={catalogs}
           defaultCatalogId={
@@ -1103,7 +1136,7 @@ export function DataConnectDiscoverScene({
           submitting={scheduleModalSubmitting}
         />
       ) : null}
-      {selectedCatalogId && !catalogAccessDenied ? (
+      {selectedCatalogId && (!catalogLocked || lockedCatalogAccessConfirmed) ? (
         <DiscoverRunNowModal
           connectionName={
             catalogNameMap.get(selectedCatalogId) ?? selectedCatalogId

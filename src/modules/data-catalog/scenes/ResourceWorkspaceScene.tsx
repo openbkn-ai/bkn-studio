@@ -108,20 +108,23 @@ export function ResourceWorkspaceScene({
         return;
       }
 
-      const [catalogRecord, latestTaskPage] = await Promise.all([
-        getCatalog(detail.catalogId, { skipErrorToast: true }).catch((error) => {
-          if (isRequestForbidden(error)) {
-            return null;
-          }
-          throw error;
-        }),
-        listBuildTaskPage({
-          direction: "desc",
-          limit: 1,
-          resourceId,
-          sort: "create_time",
-        }),
-      ]);
+      const catalogRecord = await getCatalog(
+        detail.catalogId,
+        { skipErrorToast: true },
+      ).catch((error) => {
+        if (isRequestForbidden(error)) {
+          return null;
+        }
+        throw error;
+      });
+      const latestTaskPage = hasCatalogOperation(catalogRecord, "task_manage")
+        ? await listBuildTaskPage({
+            direction: "desc",
+            limit: 1,
+            resourceId,
+            sort: "create_time",
+          })
+        : { items: [] };
 
       if (resourceVersionRef.current === resourceVersion) {
         setResource(detail);
