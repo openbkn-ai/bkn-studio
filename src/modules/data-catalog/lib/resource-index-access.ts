@@ -24,6 +24,9 @@ export function canManageResourceBuildTasks(
     && hasCatalogOperation(catalog, "task_manage");
 }
 
-export function canViewResourceIndexTasks(resource: CatalogResource) {
-  return resource.category !== "dataset";
+export function canViewResourceIndexTasks(
+  resource: CatalogResource,
+  catalog?: CatalogRecord | null,
+) {
+  return resource.category !== "dataset" && hasCatalogOperation(catalog, "task_manage");
 }

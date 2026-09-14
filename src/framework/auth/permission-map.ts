@@ -184,16 +184,21 @@ export function isStudioPermissionGranted(
   // Keep the public helper signature stable while permissions are being migrated away from
   // is_admin-based authorization. A resource wildcard is handled by fetchCurrentUser instead.
   void _isAdmin;
-  // 1. Direct name match. data-catalog's `catalog:view_detail`, for example, uses this path.
-  //    Compact wildcards are handled by safeGrantsCover in the mappings below instead of here,
-  //    so intentionally blocked permissions such as catalog:install cannot be bypassed.
-  if (safeGrants.has(studioPermission)) {
-    return true;
-  }
-
   const knowledgeNetworkOperation = KNOWLEDGE_NETWORK_TYPE_PERMISSIONS[studioPermission];
   if (knowledgeNetworkOperation) {
     return safeGrantsCover(safeGrants, "knowledge_network", knowledgeNetworkOperation);
+  }
+
+  // 1. Native bkn-safe permission points use exactly `<resource_type>:<operation>`.
+  //    Honor compact type/global wildcards for those points as well as exact matches. Module
+  //    permissions contain additional segments and continue through their explicit mappings, so
+  //    intentionally blocked entries such as execution-factory:catalog:install stay blocked.
+  const nativeSegments = studioPermission.split(":");
+  if (nativeSegments.length === 2) {
+    return (
+      safeGrants.has(studioPermission) ||
+      safeGrantsCover(safeGrants, nativeSegments[0], nativeSegments[1])
+    );
   }
 
   const modelResourceOperations = MODEL_RESOURCE_PERMISSIONS[studioPermission];

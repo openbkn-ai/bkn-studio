@@ -30,6 +30,7 @@ const getDataConnectConnectorTypeMock = vi.hoisted(() => vi.fn());
 const getDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const listDataConnectConnectorTypesMock = vi.hoisted(() => vi.fn());
 const testDataConnectConfigMock = vi.hoisted(() => vi.fn());
+const testDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const updateDataConnectRecordMock = vi.hoisted(() => vi.fn());
 const messageErrorMock = vi.hoisted(() => vi.fn());
 const messageSuccessMock = vi.hoisted(() => vi.fn());
@@ -44,6 +45,9 @@ vi.mock("@/framework/context/use-app-services", () => ({
     },
     modal: {
       confirm: modalConfirmMock,
+    },
+    runtimeConfig: {
+      currentUser: { permissions: [...permissionState.values] },
     },
   }),
 }));
@@ -94,6 +98,7 @@ vi.mock("@/modules/data-connect/services/data-connect.service", () => ({
   isDataConnectConnectionTestFailure: vi.fn(() => false),
   listDataConnectConnectorTypes: listDataConnectConnectorTypesMock,
   testDataConnectConfig: testDataConnectConfigMock,
+  testDataConnectRecord: testDataConnectRecordMock,
   updateDataConnectRecord: updateDataConnectRecordMock,
 }));
 
@@ -189,6 +194,8 @@ describe("DataConnectFormScene · connection preflight", () => {
     getDataConnectRecordMock.mockReset();
     testDataConnectConfigMock.mockReset();
     testDataConnectConfigMock.mockResolvedValue(undefined);
+    testDataConnectRecordMock.mockReset();
+    testDataConnectRecordMock.mockResolvedValue(undefined);
     updateDataConnectRecordMock.mockReset();
     updateDataConnectRecordMock.mockResolvedValue(undefined);
     listDataConnectConnectorTypesMock.mockResolvedValue([
@@ -226,7 +233,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       metadata: {},
       mode: "local",
       name: "orders",
-      operations: [],
+      operations: ["modify", "view_detail"],
       status: "enabled",
       tags: [],
       type: "physical",
@@ -404,14 +411,27 @@ describe("DataConnectFormScene · connection preflight", () => {
     vi.useRealTimers();
   });
 
-  it("hides the preflight action without catalog create permission", async () => {
+  it("tests the saved record for an editor without catalog create permission", async () => {
     render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
 
     await screen.findByDisplayValue("orders");
+    fireEvent.click(screen.getByRole("button", { name: "common.testConnection" }));
 
-    expect(
-      screen.queryByRole("button", { name: "common.testConnection" }),
-    ).toBeNull();
+    await waitFor(() => expect(testDataConnectRecordMock).toHaveBeenCalledWith("catalog-1"));
+    expect(testDataConnectConfigMock).not.toHaveBeenCalled();
+  });
+
+  it("does not test an unsaved draft through the saved-record endpoint", async () => {
+    render(<DataConnectFormScene mode="edit" recordId="catalog-1" />);
+
+    fireEvent.change(await screen.findByDisplayValue("orders"), {
+      target: { value: "changed orders" },
+    });
+    const button = screen.getByRole("button", { name: "common.testConnection" });
+
+    expect(button.hasAttribute("disabled")).toBe(true);
+    expect(button.getAttribute("title")).toBe("dataConnect.saveBeforeTesting");
+    expect(testDataConnectRecordMock).not.toHaveBeenCalled();
   });
 
   it("tests connector fields even when an unrelated catalog field is invalid", async () => {
@@ -477,7 +497,7 @@ describe("DataConnectFormScene · connection preflight", () => {
         metadata: {},
         mode: "local",
         name: "orders",
-        operations: [],
+        operations: ["modify", "view_detail"],
         status: "enabled",
         tags: [],
         type: "physical",
@@ -500,7 +520,7 @@ describe("DataConnectFormScene · connection preflight", () => {
         metadata: {},
         mode: "local",
         name: "latest orders",
-        operations: [],
+        operations: ["modify", "view_detail"],
         status: "enabled",
         tags: [],
         type: "physical",
@@ -954,7 +974,7 @@ function mockSQLServerEditCatalog(
     metadata: {},
     mode: "local",
     name: "sqlserver-orders",
-    operations: [],
+    operations: ["modify", "view_detail"],
     status: "enabled",
     tags: [],
     type: "physical",

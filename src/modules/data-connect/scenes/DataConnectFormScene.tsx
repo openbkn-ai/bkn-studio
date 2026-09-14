@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { DataConnectFormSceneProps } from "@/modules/data-connect/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import {
   extractRequestErrorMessage,
@@ -33,6 +34,7 @@ import {
   isDataConnectConnectionTestFailure,
   listDataConnectConnectorTypes,
   testDataConnectConfig,
+  testDataConnectRecord,
   updateDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
 import type {
@@ -42,6 +44,7 @@ import type {
   DataConnectMutationPayload,
   DataConnectRecord,
 } from "@/modules/data-connect/types/data-connect";
+import { hasCatalogOperation } from "@/shared/catalog";
 
 import styles from "./DataConnectFormScene.module.css";
 
@@ -52,7 +55,7 @@ export function DataConnectFormScene({
   recordId,
 }: DataConnectFormSceneProps) {
   const { t } = useTranslation();
-  const { message, modal } = useAppServices();
+  const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [form] = Form.useForm<DataConnectMutationInput>();
   const [loading, setLoading] = useState(mode === "edit");
@@ -197,6 +200,10 @@ export function DataConnectFormScene({
     () => connectorTypes.find((item) => item.type === selectedConnectorType),
     [connectorTypes, selectedConnectorType],
   );
+  const canTestUnsavedConfig = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "catalog:create",
+  });
 
   // Align with backend catalog operation vocabulary (catalog.json): create=catalog:create and edit=catalog:modify.
   // Legacy data-connect:create/edit keys were invented by the frontend and absent from /me/permissions, causing permanent 403 responses.
@@ -447,7 +454,11 @@ export function DataConnectFormScene({
   const handleTestConnection = async () => {
     try {
       setTestingConnection(true);
-      await testDataConnectConfig(await buildConnectionTestPayload());
+      if (mode === "edit" && recordId && !canTestUnsavedConfig) {
+        await testDataConnectRecord(recordId);
+      } else {
+        await testDataConnectConfig(await buildConnectionTestPayload());
+      }
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
       if (
@@ -462,6 +473,15 @@ export function DataConnectFormScene({
       setTestingConnection(false);
     }
   };
+
+  if (
+    mode === "edit" &&
+    !loading &&
+    record &&
+    !hasCatalogOperation(record, "modify")
+  ) {
+    return <Result status="403" subTitle={t("common.noPermission")} title="403" />;
+  }
 
   return (
     <PermissionGate
@@ -568,17 +588,21 @@ export function DataConnectFormScene({
                 {t("common.previous")}
               </AppButton>
             ) : null}
-            {((currentStep === 1 && mode === "create") || (mode === "edit" && recordId)) ? (
-              <PermissionGate permissions="catalog:create">
-                <AppButton
-                  loading={testingConnection}
-                  onClick={() => {
-                    void handleTestConnection();
-                  }}
-                >
-                  {t("common.testConnection")}
-                </AppButton>
-              </PermissionGate>
+            {((currentStep === 1 && mode === "create") || (mode === "edit" && record)) ? (
+              <AppButton
+                disabled={mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges}
+                loading={testingConnection}
+                onClick={() => {
+                  void handleTestConnection();
+                }}
+                title={
+                  mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges
+                    ? t("dataConnect.saveBeforeTesting")
+                    : undefined
+                }
+              >
+                {t("common.testConnection")}
+              </AppButton>
             ) : null}
             <AppButton
               loading={submitting || loadingConnectorDefinition}

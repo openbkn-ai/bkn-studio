@@ -17,7 +17,6 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
@@ -39,6 +38,7 @@ import {
 } from "@/framework/safety/DangerDeleteModal";
 import {
   previewCatalogDeletion,
+  hasCatalogOperation,
   type CatalogDeletionImpact,
 } from "@/shared/catalog";
 
@@ -114,7 +114,7 @@ export function DataConnectListScene({
   onOpenDiscovers,
 }: DataConnectListSceneProps) {
   const { t } = useTranslation();
-  const { message, modal, runtimeConfig } = useAppServices();
+  const { message, modal } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
   const { pageState, query, reset, setKeyword, setPagination } = usePageState();
@@ -158,15 +158,6 @@ export function DataConnectListScene({
     () => new Map(connectorTypes.map((item) => [item.type, item.name])),
     [connectorTypes],
   );
-  const canModifyCatalog = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:modify",
-  });
-  const canDeleteCatalog = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "catalog:delete",
-  });
-
   const loadConnectorTypes = async () => {
     const nextTypes = await listDataConnectConnectorTypes();
     setConnectorTypes(nextTypes);
@@ -318,13 +309,15 @@ export function DataConnectListScene({
         key: "detail",
         label: t("common.detail"),
       },
-      {
-        key: "discover",
-        label: t("dataConnect.discoverManage"),
-      },
     ];
 
-    if (canModifyCatalog) {
+    if (hasCatalogOperation(record, "task_manage")) {
+      items.push({
+        key: "discover",
+        label: t("dataConnect.discoverManage"),
+      });
+    }
+    if (hasCatalogOperation(record, "modify")) {
       items.push({
         key: "edit",
         label: t("common.edit"),
@@ -338,7 +331,7 @@ export function DataConnectListScene({
         label: record.enabled ? t("common.disabled") : t("common.enabled"),
       });
     }
-    if (canDeleteCatalog) {
+    if (hasCatalogOperation(record, "delete")) {
       items.push({
         danger: true,
         key: "delete",
@@ -376,8 +369,6 @@ export function DataConnectListScene({
       },
     };
   }, [
-    canDeleteCatalog,
-    canModifyCatalog,
     deleteRecord,
     openDetail,
     openDiscovers,

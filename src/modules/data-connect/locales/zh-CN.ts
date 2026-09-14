@@ -53,6 +53,7 @@ export const dataConnectZhCN = {
     },
     testConnectionSuccess: "连接测试成功。",
     testConnectionFailed: "连接测试失败。",
+    saveBeforeTesting: "请先保存修改再测试；当前权限只能测试已保存的连接。",
     allowUnhealthy: {
       title: "连接测试失败，仍要保存吗？",
       description:

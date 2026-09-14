@@ -16,6 +16,7 @@ import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 const {
   appServicesMock,
   getScheduleMock,
+  listCatalogsMock,
   listTasksMock,
   listSchedulesMock,
   updateScheduleMock,
@@ -26,6 +27,7 @@ const {
     runtimeConfig: { currentUser: { permissions: ["catalog:task_manage"] } },
   },
   getScheduleMock: vi.fn(),
+  listCatalogsMock: vi.fn(),
   listTasksMock: vi.fn(),
   listSchedulesMock: vi.fn(),
   updateScheduleMock: vi.fn(),
@@ -42,7 +44,9 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Alert: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Alert: ({ children, message }: { children?: ReactNode; message?: ReactNode }) => (
+    <div>{message}{children}</div>
+  ),
   Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
     <input onChange={onChange} value={value} />
   ),
@@ -190,7 +194,11 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
 }));
 
 vi.mock("@/shared/catalog", () => ({
-  listCatalogs: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+  hasCatalogOperation: (
+    catalog: { operations?: string[] } | null | undefined,
+    operation: string,
+  ) => Boolean(catalog?.operations?.includes("*") || catalog?.operations?.includes(operation)),
+  listCatalogs: listCatalogsMock,
 }));
 
 vi.mock("@/modules/data-connect/services/discover.service", () => ({
@@ -235,6 +243,20 @@ async function openScheduleEditor() {
 describe("DataConnectDiscoverScene", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getScheduleMock.mockReset();
+    updateScheduleMock.mockReset();
+    listCatalogsMock.mockResolvedValue({
+      items: [{
+        id: "catalog-1",
+        name: "Orders",
+        operations: ["task_manage", "view_detail"],
+      }, {
+        id: "catalog-2",
+        name: "Customers",
+        operations: ["task_manage", "view_detail"],
+      }],
+      total: 2,
+    });
     listSchedulesMock.mockResolvedValue({ items: [schedule(100)], total: 1 });
     listTasksMock.mockResolvedValue({ items: [], total: 0 });
     getScheduleMock
@@ -244,6 +266,19 @@ describe("DataConnectDiscoverScene", () => {
       isAxiosError: true,
       response: { status: 409 },
     });
+  });
+
+  it("rejects a direct catalog route without task_manage on that catalog", async () => {
+    listCatalogsMock.mockResolvedValue({
+      items: [{ id: "catalog-1", name: "Orders", operations: ["view_detail"] }],
+      total: 1,
+    });
+
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(listTasksMock).not.toHaveBeenCalled();
+    expect(listSchedulesMock).not.toHaveBeenCalled();
   });
 
   it("refreshes the discover schedule version after an update conflict", async () => {

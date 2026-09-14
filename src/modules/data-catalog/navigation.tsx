@@ -17,12 +17,15 @@ export const dataCatalogNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.dataResource",
       icon: <DatabaseOutlined />,
       path: "/data-catalog",
+      permission: ["catalog:view_detail", "resource:view_detail"],
+      permissionMode: "any",
     },
     {
       key: "task-management",
       labelKey: "shell.items.indexBuild",
       icon: <ThunderboltOutlined />,
       path: "/task-management",
+      permission: "catalog:task_manage",
     },
   ],
 };

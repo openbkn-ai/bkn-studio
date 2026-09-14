@@ -196,7 +196,7 @@ export function ResourceIndexPanel({
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const autoPickedRef = useRef(false);
   const historyRequestIdRef = useRef(0);
-  const canViewTasks = canViewResourceIndexTasks(resource);
+  const canViewTasks = canViewResourceIndexTasks(resource, catalog);
   const resourceChanged = filtersResourceId !== resource.id;
 
   const loadHistory = useCallback(async (targetPage: number, targetPageSize: number) => {

@@ -83,7 +83,7 @@ const record = {
   metadata: {},
   mode: "standard",
   name: "Orders",
-  operations: [],
+  operations: ["modify", "view_detail"],
   status: "enabled",
   tags: [],
   type: "physical",
@@ -112,6 +112,8 @@ describe("DataConnectDetailDrawer", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    getScheduleMock.mockReset();
+    updateScheduleMock.mockReset();
     getRecordMock.mockResolvedValue(record);
     getScheduleMock
       .mockResolvedValueOnce(schedule(100))
@@ -119,6 +121,22 @@ describe("DataConnectDetailDrawer", () => {
     updateScheduleMock
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } })
       .mockResolvedValue(schedule(300));
+  });
+
+  it("hides schedule editing without modify on this catalog", async () => {
+    getRecordMock.mockResolvedValue({ ...record, operations: ["view_detail"] });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("Orders");
+    expect(screen.queryByRole("button", { name: "common.edit" })).toBeNull();
   });
 
   it("refreshes the schedule version after a conflict before retrying", async () => {

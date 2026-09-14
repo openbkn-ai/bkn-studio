@@ -43,10 +43,6 @@ function withRouteLoading(permissions: string | string[], element: ReactNode) {
   );
 }
 
-function withPublicRouteLoading(element: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
-}
-
 function LegacyDataCatalogRootRedirect() {
   return <Navigate replace to="/data-catalog" />;
 }
@@ -78,7 +74,7 @@ export const dataCatalogRoutes: RouteObject[] = [
     handle: {
       console: dataCatalogConsole,
     },
-    element: withPublicRouteLoading(<DataCatalogPage />),
+    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage />),
     children: [
       {
         element: <></>,
@@ -130,7 +126,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withPublicRouteLoading(<TaskManagementPage />),
+    element: withRouteLoading("catalog:task_manage", <TaskManagementPage />),
   },
   {
     path: "index-builds",

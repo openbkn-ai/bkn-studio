@@ -22,6 +22,7 @@ import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-f
 import { formatIndexStateLabel } from "@/modules/data-catalog/lib/format-index-state";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
+import { hasResourceOperation } from "@/modules/data-catalog/lib/resource-operations";
 import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIndexPanel";
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
@@ -188,7 +189,14 @@ export function ResourceWorkspaceScene({
   // A hidden parent Catalog has no displayable lifecycle metadata. Query APIs
   // remain the source of truth for its state; do not fabricate one in the UI.
   const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
-  const hideSemanticUnderstanding = Boolean(catalog?.internal);
+  const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
+  const canModifyResource = hasResourceOperation(resource, "modify");
+  const canQueryResource = hasResourceOperation(resource, "query_data");
+  const canAuthorizeResource = Boolean(
+    !catalog?.internal &&
+    (canAuthorizeGrants || hasResourceOperation(resource, "authorize")),
+  );
+  const hideSemanticUnderstanding = Boolean(catalog?.internal) || !canManageCatalogTasks;
   const discoveryFailed = resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
@@ -414,7 +422,7 @@ export function ResourceWorkspaceScene({
 
         {discoveryFailed || queryBlockReason ? (
           <Alert
-            action={!resourceDisabled && !resourceStale && (discoveryFailed || resourceMissing) ? (
+            action={canManageCatalogTasks && !resourceDisabled && !resourceStale && (discoveryFailed || resourceMissing) ? (
               <AppButton
                 onClick={() => {
                   void navigate(`/data-connect/discover?catalogId=${resource.catalogId}`);
@@ -495,8 +503,8 @@ export function ResourceWorkspaceScene({
                 <div className={[styles.tabPanel, styles.tabPanelPreview].join(" ")}>
                   <ResourcePreviewPanel
                     active={tab === "preview"}
-                    disabled={!gate.ok}
-                    disabledMessage={previewDisabledMessage}
+                    disabled={!gate.ok || !canQueryResource}
+                    disabledMessage={canQueryResource ? previewDisabledMessage : t("common.noPermission")}
                     resource={resource}
                   />
                 </div>

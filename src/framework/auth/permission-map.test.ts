@@ -213,6 +213,20 @@ describe("执行工厂权限点覆盖", () => {
 });
 
 describe("折叠通配契约", () => {
+  it("Vega 原生权限点接受类型级与全局通配", () => {
+    const typeWildcard = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "catalog" } },
+    ]);
+    const globalWildcard = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "*" } },
+    ]);
+
+    expect(isStudioPermissionGranted("catalog:view_detail", typeWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("catalog:task_manage", typeWildcard, false)).toBe(true);
+    expect(isStudioPermissionGranted("resource:query_data", typeWildcard, false)).toBe(false);
+    expect(isStudioPermissionGranted("resource:query_data", globalWildcard, false)).toBe(true);
+  });
+
   it("类型级 operator:* 放行该类型全部动作,含实例映射", () => {
     const typeWildcard = flattenSafeGrants([
       { operations: ["*"], resource: { id: "*", type: "operator" } },

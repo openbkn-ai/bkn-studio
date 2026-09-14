@@ -99,9 +99,13 @@ vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({
   ),
 }));
 vi.mock("@/modules/data-catalog/components/IndexConfigFormPanel", () => ({
-  IndexConfigFormPanel: (props: unknown) => {
+  IndexConfigFormPanel: (props: { readOnly: boolean }) => {
     indexConfigFormPanelMock(props);
-    return null;
+    return (
+      <output data-testid="index-config-read-only">
+        {String(props.readOnly)}
+      </output>
+    );
   },
 }));
 vi.mock("@/modules/data-catalog/hooks/use-build-task-actions", () => ({
@@ -119,6 +123,7 @@ const resource: CatalogResource = {
   id: "resource-1",
   localIndexStatus: "unavailable",
   name: "orders",
+  operations: ["modify", "query_data", "view_detail"],
   rowCount: 1,
   schema: [{ name: "id", type: "string" }],
   sourceIdentifier: "orders",
@@ -407,5 +412,24 @@ describe("ResourceIndexPanel", () => {
     const callsBeforeRetry = listBuildTaskPageMock.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
     await waitFor(() => expect(listBuildTaskPageMock.mock.calls.length).toBeGreaterThan(callsBeforeRetry));
+  });
+
+  it("keeps index configuration read-only without resource modify", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={catalog}
+          indexView="config"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, operations: ["view_detail"] }}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("index-config-read-only").textContent).toBe("true");
   });
 });

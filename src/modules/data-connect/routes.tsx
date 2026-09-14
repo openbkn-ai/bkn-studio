@@ -35,10 +35,6 @@ function withRouteLoading(permissions: string | string[], element: ReactNode) {
   );
 }
 
-function withPublicRouteLoading(element: ReactNode) {
-  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
-}
-
 export const dataConnectRoutes: RouteObject[] = [
   {
     path: "data-connect",
@@ -49,7 +45,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.title",
       },
     },
-    element: withPublicRouteLoading(<DataConnectListPage />),
+    element: withRouteLoading("catalog:view_detail", <DataConnectListPage />),
   },
   {
     path: "data-connect/new",

@@ -78,7 +78,10 @@ describe("data-catalog permission points", () => {
 
   it("navigation entries ask only for points the manifest declares", () => {
     for (const item of dataCatalogNavigation.items) {
-      for (const permission of item.permission ?? []) {
+      const permissions = typeof item.permission === "string"
+        ? [item.permission]
+        : (item.permission ?? []);
+      for (const permission of permissions) {
         expect(dataCatalogModuleManifest.permissions, `nav ${item.key}`).toContain(permission);
       }
     }
@@ -107,12 +110,11 @@ describe("data-catalog permission points", () => {
     expect(manager).toContain(dataCatalogResourceManagePermission);
   });
 
-  it("the task-management menu entry and list route are public entry points", () => {
+  it("the task-management menu entry and list route require task management", () => {
     const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/task-management");
 
-    expect(navigationItem?.permission).toBeUndefined();
-    expect(navigationItem?.permissionMode).toBeUndefined();
-    expect(guardPermissionsOf("task-management")).toEqual([]);
+    expect(navigationItem?.permission).toBe("catalog:task_manage");
+    expect(guardPermissionsOf("task-management")).toEqual(["catalog:task_manage"]);
   });
 
   it("a catalog task grant opens the task-management page", () => {
@@ -125,20 +127,20 @@ describe("data-catalog permission points", () => {
     expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
   });
 
-  it("a table-only grant can enter the public catalog and build-task pages", () => {
+  it("a resource-only grant can enter the catalog but not catalog task management", () => {
     const permissions = permissionsOf([
       { resource: { type: "resource", id: "*" }, operations: ["view_detail", "query_data"] },
     ]);
 
     expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(false);
   });
 
-  it("an ungranted user can enter public list pages", () => {
+  it("an ungranted user cannot enter Vega list pages", () => {
     const permissions = permissionsOf([]);
 
     expect(permissions).toEqual([]);
-    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(false);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(false);
   });
 });

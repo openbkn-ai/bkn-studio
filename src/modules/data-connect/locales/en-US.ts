@@ -57,6 +57,8 @@ export const dataConnectEnUS = {
     },
     testConnectionSuccess: "Connection test succeeded.",
     testConnectionFailed: "Connection test failed.",
+    saveBeforeTesting:
+      "Save your changes before testing. Your permissions allow testing the saved connection only.",
     allowUnhealthy: {
       title: "Connection Test Failed. Save Anyway?",
       description:

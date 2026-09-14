@@ -17,6 +17,7 @@ export const dataConnectNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.dataConnection",
       icon: <ApiOutlined />,
       path: "/data-connect",
+      permission: "catalog:view_detail",
     },
   ],
 };
