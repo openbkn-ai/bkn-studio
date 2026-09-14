@@ -205,6 +205,7 @@ describe("CatalogDetailPanel authorize entry", () => {
         id: "resource-1",
         localIndexStatus: "unavailable",
         name: "customers",
+        operations: ["query_data", "view_detail"],
         rowCount: null,
         schema: [],
         sourceIdentifier: "db.customers",

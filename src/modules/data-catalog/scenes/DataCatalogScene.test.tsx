@@ -14,6 +14,7 @@ import type { CatalogListQuery, CatalogRecord } from "@/shared/catalog";
 
 const countCatalogResourcesMock = vi.hoisted(() => vi.fn());
 const getCatalogMock = vi.hoisted(() => vi.fn());
+const listCatalogResourcePageMock = vi.hoisted(() => vi.fn());
 const listCatalogsMock = vi.hoisted(() => vi.fn());
 const listCatalogConnectorTypeStatsMock = vi.hoisted(() => vi.fn());
 const subscribeMockDbMock = vi.hoisted(() => vi.fn());
@@ -52,6 +53,11 @@ vi.mock("@/modules/data-catalog/components/CatalogTreePanel", () => ({
 vi.mock("@/modules/data-catalog/components/ResourceFormDrawer", () => ({
   ResourceFormDrawer: () => null,
 }));
+vi.mock("@/modules/data-catalog/components/AuthorizedResourceListPanel", () => ({
+  AuthorizedResourceListPanel: ({ catalogId }: { catalogId: string }) => (
+    <output data-testid="authorized-catalog-id">{catalogId}</output>
+  ),
+}));
 vi.mock("@/modules/data-catalog/components/CatalogDetailPanel", () => ({
   default: ({ catalog }: { catalog: CatalogRecord }) => <output data-testid="selected-catalog-id">{catalog.id}</output>,
 }));
@@ -61,6 +67,7 @@ vi.mock("@/modules/data-catalog/services/mock-db", () => ({
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
   countCatalogResources: countCatalogResourcesMock,
   isCatalogDiscovering: () => false,
+  listCatalogResourcePage: listCatalogResourcePageMock,
   listCatalogDiscovers: vi.fn().mockResolvedValue([]),
 }));
 vi.mock("@/shared/catalog", () => ({
@@ -107,6 +114,7 @@ describe("DataCatalogScene", () => {
     vi.clearAllMocks();
     countCatalogResourcesMock.mockResolvedValue(0);
     getCatalogMock.mockResolvedValue(undefined);
+    listCatalogResourcePageMock.mockResolvedValue({ items: [], total: 0 });
     listCatalogsMock.mockResolvedValue({ items: [catalog], total: 1 });
     listCatalogConnectorTypeStatsMock.mockResolvedValue([{
       catalogType: "physical",
@@ -210,7 +218,7 @@ describe("DataCatalogScene", () => {
     expect(screen.getByTestId("catalog-ids").textContent).toBe("catalog-1");
   });
 
-  it("shows the catalog error instead of probing child resources when catalog access is forbidden", async () => {
+  it("keeps directly granted resources available when catalog access is forbidden", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
     getCatalogMock.mockRejectedValue(new AxiosError(
       "Forbidden",
@@ -225,6 +233,42 @@ describe("DataCatalogScene", () => {
         data: {},
       },
     ));
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{ id: "resource-a" }],
+      total: 1,
+    });
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listCatalogResourcePageMock).toHaveBeenCalledWith({
+      catalogId: "catalog-1",
+      limit: 1,
+      offset: 0,
+    }));
+    expect((await screen.findByTestId("authorized-catalog-id")).textContent).toBe("catalog-1");
+    expect(screen.queryByText("Forbidden")).toBeNull();
+    expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
+  });
+
+  it("keeps the catalog error when no directly granted resource is available", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
+    getCatalogMock.mockRejectedValue(new AxiosError(
+      "Forbidden",
+      undefined,
+      undefined,
+      undefined,
+      {
+        status: 403,
+        statusText: "Forbidden",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      },
+    ));
+
     render(
       <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
         <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
@@ -232,7 +276,7 @@ describe("DataCatalogScene", () => {
     );
 
     expect(await screen.findByText("Forbidden")).toBeTruthy();
-    expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
+    expect(screen.queryByTestId("authorized-catalog-id")).toBeNull();
   });
 
   it("clears a selected catalog error after switching to an available catalog", async () => {

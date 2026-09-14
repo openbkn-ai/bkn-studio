@@ -20,13 +20,15 @@ describe("data-catalog routes", () => {
   });
 
   it("does not register retired compatibility routes", () => {
-    expect(dataCatalogRoutes.map((route) => route.path)).not.toEqual(
-      expect.arrayContaining([
-        "data-directory",
-        "data-directory/catalog/:catalogId",
-        "data-directory/resource/:resourceId",
-        "index-builds",
-      ]),
-    );
+    const paths = dataCatalogRoutes.map((route) => route.path);
+
+    for (const retired of [
+      "data-directory",
+      "data-directory/catalog/:catalogId",
+      "data-directory/resource/:resourceId",
+      "index-builds",
+    ]) {
+      expect(paths).not.toContain(retired);
+    }
   });
 });

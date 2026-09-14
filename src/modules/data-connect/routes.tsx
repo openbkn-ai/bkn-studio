@@ -30,9 +30,13 @@ const DataConnectDiscoverPage = lazy(async () => {
 function withRouteLoading(permissions: string | string[], element: ReactNode) {
   return (
     <RequirePermission mode="any" permissions={permissions}>
-      <Suspense fallback={<RouteLoading />}>{element}</Suspense>
+      {withPageLoading(element)}
     </RequirePermission>
   );
+}
+
+function withPageLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
 
 export const dataConnectRoutes: RouteObject[] = [
@@ -78,7 +82,9 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.discoverTitle",
       },
     },
-    element: withRouteLoading("catalog:task_manage", <DataConnectDiscoverPage />),
+    // Authorization is catalog-scoped and therefore happens after the route parameter is loaded.
+    // The scene renders an explicit forbidden state for a missing effective task_manage operation.
+    element: withPageLoading(<DataConnectDiscoverPage />),
   },
 ];
 

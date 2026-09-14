@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, useRoutes } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/modules/data-connect/scenes/DataConnectDiscoverScene", () => ({
+  DataConnectDiscoverScene: () => <div>common.noPermission</div>,
+}));
 
 import { dataConnectRoutes } from "@/modules/data-connect/routes";
 
@@ -15,5 +21,19 @@ describe("data-connect routes", () => {
 
     expect(paths).toContain("data-connect/:catalogId/discover");
     expect(paths).not.toContain("data-connect/discover");
+  });
+
+  it("lets the catalog-scoped discover scene render an explicit forbidden state", async () => {
+    function TestRoutes() {
+      return useRoutes(dataConnectRoutes);
+    }
+
+    render(
+      <MemoryRouter initialEntries={["/data-connect/catalog-view-only/discover"]}>
+        <TestRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("common.noPermission")).toBeTruthy();
   });
 });

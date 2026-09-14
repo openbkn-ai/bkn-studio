@@ -161,7 +161,7 @@ describe("ResourceWorkspaceScene", () => {
     }));
   });
 
-  it("shows the catalog error when the parent catalog is forbidden", async () => {
+  it("keeps a directly granted resource available when the parent catalog is forbidden", async () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockRejectedValue(new AxiosError(
       "Forbidden",
@@ -187,8 +187,8 @@ describe("ResourceWorkspaceScene", () => {
       />,
     );
 
-    expect(await screen.findByText("Forbidden")).toBeTruthy();
-    expect(screen.queryByTestId("detail-schema-name")).toBeNull();
+    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(screen.queryByText("Forbidden")).toBeNull();
     expect(getCatalogMock).toHaveBeenCalledWith(staleResource.catalogId, { skipErrorToast: true });
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });

@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { SceneBackButton } from "@/framework/ui/common/SceneBackButton";
@@ -77,6 +77,7 @@ export function ResourceWorkspaceScene({
   });
   const [resource, setResource] = useState<CatalogResource | null>(null);
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
+  const [catalogVisibilityRestricted, setCatalogVisibilityRestricted] = useState(false);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -102,12 +103,19 @@ export function ResourceWorkspaceScene({
         ) {
           setResource(null);
           setCatalog(null);
+          setCatalogVisibilityRestricted(false);
           setTasks([]);
         }
         return;
       }
 
-      const catalogRecord = await getCatalog(detail.catalogId, { skipErrorToast: true });
+      const catalogRecord = await getCatalog(detail.catalogId, { skipErrorToast: true })
+        .catch((error) => {
+          if (isRequestForbidden(error)) {
+            return null;
+          }
+          throw error;
+        });
       const latestTaskPage = hasCatalogOperation(catalogRecord, "task_manage")
         ? await listBuildTaskPage({
             direction: "desc",
@@ -122,6 +130,7 @@ export function ResourceWorkspaceScene({
       }
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
+        setCatalogVisibilityRestricted(catalogRecord === null);
         setTasks(latestTaskPage.items);
       }
     } catch (error) {
@@ -132,6 +141,7 @@ export function ResourceWorkspaceScene({
         setResource(null);
         setLoadError(extractRequestErrorMessage(error));
         setCatalog(null);
+        setCatalogVisibilityRestricted(false);
         setTasks([]);
       }
     } finally {
@@ -178,7 +188,9 @@ export function ResourceWorkspaceScene({
     () => indexStateOf(sortedTasks, resource?.localIndexStatus ?? "unavailable"),
     [resource?.localIndexStatus, sortedTasks],
   );
-  const gate = resourceGateOf(catalog);
+  // A directly granted Resource remains readable even when its parent Catalog is hidden.
+  // Do not infer any Catalog metadata or management permission in that restricted view.
+  const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
   const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const canQueryResource = hasCatalogResourceOperation(resource, "query_data");
