@@ -11,6 +11,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogRecord } from "@/shared/catalog";
 
+type MockTreeNode = {
+  children?: MockTreeNode[];
+  key: Key;
+};
+
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
@@ -39,11 +44,20 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
     expandedKeys?: Key[];
     onExpand?: (keys: Key[]) => void;
     onSelect?: (keys: Key[]) => void;
-    treeData?: Array<{ key: Key }>;
+    treeData?: MockTreeNode[];
   }) => (
     <>
       <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
       <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
+      <output data-testid="catalog-tree-keys">
+        {treeData.flatMap((root) => [
+          root.key,
+          ...(root.children ?? []).flatMap((child) => [
+            child.key,
+            ...(child.children ?? []).map((grandchild) => grandchild.key),
+          ]),
+        ]).join(",")}
+      </output>
       <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
       <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
       <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
@@ -61,6 +75,38 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
 }));
 
 import { CatalogTreePanel } from "./CatalogTreePanel";
+
+function makeCatalog(
+  id: string,
+  name: string,
+  type: CatalogRecord["type"],
+  internal = false,
+): CatalogRecord {
+  return {
+    category: "table",
+    connectorConfig: {},
+    connectorType: type === "physical" ? "postgresql" : "",
+    createTime: null,
+    creatorName: "-",
+    description: "",
+    enabled: true,
+    expectedUpdateTime: 1,
+    healthCheckResult: "",
+    healthStatus: "unchecked",
+    id,
+    internal,
+    lastCheckTime: null,
+    metadata: {},
+    mode: "",
+    name,
+    operations: [],
+    status: "enabled",
+    tags: [],
+    type,
+    updateTime: null,
+    updaterName: "-",
+  };
+}
 
 describe("CatalogTreePanel", () => {
   it("hides creation and duplicate data-connect entry points", () => {
@@ -134,6 +180,41 @@ describe("CatalogTreePanel", () => {
     );
 
     expect(screen.getByTestId("catalog-summary").textContent).toBe("catalogs:253");
+  });
+
+  it("preserves backend order for mixed-case and Chinese names while pinning built-in logical catalogs", () => {
+    render(
+      <CatalogTreePanel
+        catalogs={[
+          makeCatalog("physical-zulu", "Zulu", "physical"),
+          makeCatalog("physical-chinese", "中文", "physical"),
+          makeCatalog("physical-alpha", "alpha", "physical"),
+          makeCatalog("logical-zulu", "Zulu", "logical"),
+          makeCatalog("logical-builtin", "openbkn_system", "logical", true),
+          makeCatalog("logical-chinese", "中文", "logical"),
+          makeCatalog("logical-alpha", "alpha", "logical"),
+        ]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+      />,
+    );
+
+    expect(screen.getByTestId("catalog-tree-keys").textContent).toBe([
+      "group:physical",
+      "connector:postgresql",
+      "catalog:physical-zulu",
+      "catalog:physical-chinese",
+      "catalog:physical-alpha",
+      "group:logical",
+      "catalog:logical-builtin",
+      "catalog:logical-zulu",
+      "catalog:logical-chinese",
+      "catalog:logical-alpha",
+    ].join(","));
   });
 
   it("loads physical catalog schemas only when its node is expanded", async () => {

@@ -269,15 +269,11 @@ export function CatalogTreePanel({
       );
     });
 
-    return items.sort((left, right) => {
-      const leftBuiltin = isBuiltinLogicalCatalog(left) ? 0 : 1;
-      const rightBuiltin = isBuiltinLogicalCatalog(right) ? 0 : 1;
-      if (leftBuiltin !== rightBuiltin) {
-        return leftBuiltin - rightBuiltin;
-      }
-      return left.name.localeCompare(right.name, sortLocale);
-    });
-  }, [catalogs, query, sortLocale]);
+    return [
+      ...items.filter(isBuiltinLogicalCatalog),
+      ...items.filter((catalog) => !isBuiltinLogicalCatalog(catalog)),
+    ];
+  }, [catalogs, query]);
 
   const treeModel = useMemo(() => {
     const metaMap = new Map<string, TreeNodeMeta>();
@@ -323,8 +319,7 @@ export function CatalogTreePanel({
       .filter((stat) => stat.catalogType === "physical" && stat.connectorType)
       .map((stat) => ({
         catalogs: physicalCatalogs
-          .filter((catalog) => (catalog.connectorType || "unknown") === stat.connectorType)
-          .sort((left, right) => left.name.localeCompare(right.name, sortLocale)),
+          .filter((catalog) => (catalog.connectorType || "unknown") === stat.connectorType),
         count: stat.catalogCount,
         connectorType: stat.connectorType,
         key: connectorKey(stat.connectorType),
