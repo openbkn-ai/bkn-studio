@@ -5,14 +5,16 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { CopyOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { Input, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
+import { formatDateTime } from "@/framework/i18n/format";
 import {
   extractRequestErrorMessage,
   isRequestConflict,
@@ -116,6 +118,34 @@ export function ResourceDetailPanel({
   const basicInfoDirty = descriptionDraft.trim() !== resource.description.trim();
   const hasDirtyChanges = basicInfoDirty || modifiedFieldCount > 0;
 
+  const copyValue = async (label: string, value: string) => {
+    try {
+      await writeTextToClipboard(value);
+      message.success(t("dataCatalog.resource.copyValueSuccess", { label }));
+    } catch {
+      message.error(t("dataCatalog.resource.copyValueFailed", { label }));
+    }
+  };
+
+  const renderCopyableValue = (label: string, value?: string) => {
+    if (!value) {
+      return "-";
+    }
+    return (
+      <span className={styles.copyableValue}>
+        <code title={value}>{value}</code>
+        <AppButton
+          aria-label={t("dataCatalog.resource.copyValue", { label })}
+          icon={<CopyOutlined />}
+          onClick={() => void copyValue(label, value)}
+          size="small"
+          title={t("dataCatalog.resource.copyValue", { label })}
+          type="link"
+        />
+      </span>
+    );
+  };
+
   const handleFieldChange = (
     fieldIndex: number,
     patch: Pick<ResourceSchemaField, "description" | "displayName">,
@@ -201,10 +231,12 @@ export function ResourceDetailPanel({
     {
       dataIndex: "name",
       title: t("dataCatalog.resource.fieldName"),
+      width: "14%",
     },
     {
       dataIndex: "displayName",
       title: t("dataCatalog.resource.fieldDisplayName"),
+      width: "14%",
       render: (value: string | undefined, _record, index) => {
         if (!editing || index === undefined) {
           return value || "-";
@@ -231,10 +263,12 @@ export function ResourceDetailPanel({
     {
       dataIndex: "type",
       title: t("dataCatalog.resource.fieldType"),
+      width: "10%",
     },
     {
       dataIndex: "description",
       title: t("dataCatalog.resource.fieldDescription"),
+      width: "18%",
       render: (value: string | undefined, _record, index) => {
         if (!editing || index === undefined) {
           return (
@@ -261,6 +295,28 @@ export function ResourceDetailPanel({
           />
         );
       },
+    },
+    {
+      dataIndex: "originalName",
+      render: (value: string | undefined) => value?.trim() || "-",
+      title: t("dataCatalog.resource.fieldOriginalName"),
+      width: "14%",
+    },
+    {
+      dataIndex: "originalType",
+      render: (value: string | undefined) => value || "-",
+      title: t("dataCatalog.resource.fieldOriginalType"),
+      width: "10%",
+    },
+    {
+      dataIndex: "originalDescription",
+      render: (value: string | undefined) => (
+        <span className={styles.fieldDescription} title={value}>
+          {value?.trim() || "-"}
+        </span>
+      ),
+      title: t("dataCatalog.resource.fieldOriginalDescription"),
+      width: "20%",
     },
   ];
 
@@ -319,71 +375,256 @@ export function ResourceDetailPanel({
         </div>
         {editing ? <p className={styles.editHint}>{t("dataCatalog.resource.editHint")}</p> : null}
         <div className={styles.basicInfo}>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>ID:</span> <span>{resource.id}</span>
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.basicName")}:</span>{" "}
-            <span>{resource.name}</span>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+            <span className={styles.basicInfoLabel}>ID</span>
+            <span className={styles.basicInfoValue}>{renderCopyableValue("ID", resource.id)}</span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.tags")}:</span>{" "}
-            {resource.tags?.length ? <Space size={[12, 8]} wrap>{resource.tags.map((tag) => <Tag className={styles.resourceTag} key={tag}>{tag}</Tag>)}</Space> : "-"}
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.basicName")}</span>
+            <span className={styles.basicInfoValue}>
+              {renderCopyableValue(t("dataCatalog.resource.basicName"), resource.name)}
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.description")}:</span>{" "}
-            {editing ? (
-              <Input.TextArea
-                autoSize={{ minRows: 2, maxRows: 4 }}
-                className={`${styles.descriptionInput} ${basicInfoDirty ? styles.descriptionInputDirty : ""}`}
-                maxLength={500}
-                onChange={(event) => setDescriptionDraft(event.target.value)}
-                value={descriptionDraft}
-              />
-            ) : <span>{resource.description || "-"}</span>}
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.tags")}</span>
+            <span className={styles.basicInfoValue}>
+              {resource.tags?.length ? (
+                <Space size={[12, 8]} wrap>
+                  {resource.tags.map((tag) => (
+                    <Tag className={styles.resourceTag} key={tag}>
+                      {tag}
+                    </Tag>
+                  ))}
+                </Space>
+              ) : "-"}
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}:</span> {t(`dataCatalog.categories.${resource.category}`)}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}:</span> <Tag className={resource.enabled === false ? styles.statusTagNeutral : styles.statusTagSuccess}>{t(resource.enabled === false ? "common.disabled" : "common.enabled")}</Tag>
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.discoverStatus")}:</span>{" "}
-            {resource.lastDiscoverStatus ? <Tag className={resource.lastDiscoverStatus === "error" || resource.lastDiscoverStatus === "missing" ? styles.statusTagError : resource.lastDiscoverStatus === "new" || resource.lastDiscoverStatus === "updated" ? styles.statusTagProcessing : styles.statusTagSuccess}>{t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}</Tag> : "-"}
+
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.description")}</span>
+            <span className={styles.basicInfoValue}>
+              {editing ? (
+                <Input.TextArea
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  className={`${styles.descriptionInput} ${basicInfoDirty ? styles.descriptionInputDirty : ""}`}
+                  maxLength={500}
+                  onChange={(event) => setDescriptionDraft(event.target.value)}
+                  value={descriptionDraft}
+                />
+              ) : resource.description || "-"}
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("common.status")}:</span>{" "}
-            {resource.status ? <Tag className={resource.status === "active" ? styles.statusTagSuccess : resource.status === "stale" ? styles.statusTagWarning : styles.statusTagNeutral}>{t(`dataCatalog.resourceStatuses.${resource.status}`)}</Tag> : "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.statusMessage")}:</span> {resource.statusMessage || "-"}
+
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.category")}</span>
+            <span className={styles.basicInfoValue}>
+              {t(`dataCatalog.categories.${resource.category}`)}
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.sourceIdentifier")}:</span> {resource.sourceIdentifier || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.schemaName")}:</span> {resource.schemaName || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}:</span> {resource.columnCount ?? "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}:</span> {resource.rowCount || "-"}
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.enabledStatus")}</span>
+            <span className={styles.basicInfoValue}>
+              <Tag
+                className={
+                  resource.enabled === false ? styles.statusTagNeutral : styles.statusTagSuccess
+                }
+              >
+                {t(resource.enabled === false ? "common.disabled" : "common.enabled")}
+              </Tag>
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexName")}:</span> {resource.localIndexName || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexState")}:</span>{" "}
-            <Tag className={resource.localIndexStatus === "available" ? styles.statusTagSuccess : resource.localIndexStatus === "stale" ? styles.statusTagWarning : styles.statusTagNeutral}>
-              {t(`dataCatalog.resource.localIndexStatuses.${resource.localIndexStatus}`)}
-            </Tag>
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.discoverStatus")}</span>
+            <span className={styles.basicInfoValue}>
+              {resource.lastDiscoverStatus ? (
+                <Tag
+                  className={
+                    resource.lastDiscoverStatus === "error" ||
+                    resource.lastDiscoverStatus === "missing"
+                      ? styles.statusTagError
+                      : resource.lastDiscoverStatus === "new" ||
+                          resource.lastDiscoverStatus === "updated"
+                        ? styles.statusTagProcessing
+                        : styles.statusTagSuccess
+                  }
+                >
+                  {t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}
+                </Tag>
+              ) : "-"}
+            </span>
           </div>
-          <div className={styles.basicInfoRow}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.creator")}:</span> {resource.creatorName || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.createTime")}:</span> {resource.createTime || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.updater")}:</span> {resource.updaterName || "-"}
-            <span className={styles.basicInfoDivider}>|</span>
-            <span className={styles.basicInfoLabel}>{t("common.updateTime")}:</span>{" "}
-            <span>{resource.updateTime}</span>
+
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.resourceStatus")}</span>
+            <span className={styles.basicInfoValue}>
+              {resource.status ? (
+                <Tag
+                  className={
+                    resource.status === "active"
+                      ? styles.statusTagSuccess
+                      : resource.status === "stale"
+                        ? styles.statusTagWarning
+                        : styles.statusTagNeutral
+                  }
+                >
+                  {t(`dataCatalog.resourceStatuses.${resource.status}`)}
+                </Tag>
+              ) : "-"}
+            </span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.statusMessage")}</span>
+            <span className={styles.basicInfoValue}>{resource.statusMessage || "-"}</span>
+          </div>
+
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+            <span className={styles.basicInfoLabel}>
+              {t("dataCatalog.resource.sourceIdentifier")}
+            </span>
+            <span className={styles.basicInfoValue}>
+              {renderCopyableValue(
+                t("dataCatalog.resource.sourceIdentifier"),
+                resource.sourceIdentifier,
+              )}
+            </span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}</span>
+            <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
+            <span className={styles.basicInfoValue}>{resource.rowCount ?? "-"}</span>
+          </div>
+
+          <div className={styles.basicInfoItem}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexState")}</span>
+            <span className={styles.basicInfoValue}>
+              <Tag
+                className={
+                  resource.localIndexStatus === "available"
+                    ? styles.statusTagSuccess
+                    : resource.localIndexStatus === "stale"
+                      ? styles.statusTagWarning
+                      : styles.statusTagNeutral
+                }
+              >
+                {t(`dataCatalog.resource.localIndexStatuses.${resource.localIndexStatus}`)}
+              </Tag>
+            </span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.indexName")}</span>
+            <span className={styles.basicInfoValue}>
+              {renderCopyableValue(t("dataCatalog.resource.indexName"), resource.localIndexName)}
+            </span>
+          </div>
+
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.creator")}</span>
+            <span className={styles.basicInfoValue}>{resource.creatorName || "-"}</span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.createTime")}</span>
+            <span className={styles.basicInfoValue}>{formatDateTime(resource.createTime)}</span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.updater")}</span>
+            <span className={styles.basicInfoValue}>{resource.updaterName || "-"}</span>
+          </div>
+          <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+            <span className={styles.basicInfoLabel}>{t("common.updateTime")}</span>
+            <span className={styles.basicInfoValue}>{formatDateTime(resource.updateTime)}</span>
           </div>
         </div>
       </div>
+
+      {resource.category !== "dataset" ? (
+        <div className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.resource.sourceMetadata")}</h3>
+          <div className={styles.basicInfo}>
+            <div className={styles.basicInfoItem}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.originalName")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.originalName || "-"}
+              </span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.originalDescription")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.originalDescription || "-"}
+              </span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.sourceObjectType")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.objectType
+                  ? t(
+                      `dataCatalog.resource.sourceObjectTypes.${resource.sourceMetadata.objectType}`,
+                      { defaultValue: resource.sourceMetadata.objectType },
+                    )
+                  : "-"}
+              </span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.schemaName")}
+              </span>
+              <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.sourcePrimaryKeys")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.primaryKeys?.length ? (
+                  <Space size={[8, 8]} wrap>
+                    {resource.sourceMetadata.primaryKeys.map((key) => (
+                      <Tag className={styles.resourceTag} key={key}>
+                        {key}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : "-"}
+              </span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.fieldCount")}
+              </span>
+              <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.rowCount")}
+              </span>
+              <span className={styles.basicInfoValue}>{resource.rowCount ?? "-"}</span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.sourceIndexCount")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.indexCount ?? "-"}
+              </span>
+            </div>
+            <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
+              <span className={styles.basicInfoLabel}>
+                {t("dataCatalog.resource.sourceForeignKeyCount")}
+              </span>
+              <span className={styles.basicInfoValue}>
+                {resource.sourceMetadata?.foreignKeyCount ?? "-"}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className={styles.sectionCard}>
         <div className={styles.sectionTitleRow}>
@@ -401,6 +642,7 @@ export function ResourceDetailPanel({
             locale={{ emptyText: t("dataCatalog.resource.schemaEmpty") }}
             pagination={false}
             rowKey="name"
+            tableLayout="fixed"
           />
         </TableSurface>
         {resource.schema.length > 0 ? (

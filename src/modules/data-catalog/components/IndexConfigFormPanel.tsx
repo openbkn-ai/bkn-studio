@@ -61,6 +61,10 @@ export type IndexConfigFormPanelProps = {
 
 const INHERIT_VALUE = "__inherit__";
 const FEATURE_FIELDS_PAGE_SIZE = 10;
+const MIN_KEYWORD_IGNORE_ABOVE = 1;
+const MAX_KEYWORD_IGNORE_ABOVE = 8191;
+const DEFAULT_KEYWORD_IGNORE_ABOVE = "256";
+type FeatureKind = "keyword" | "embedding" | "fulltext";
 
 function isChineseAnalyzer(analyzer: string): boolean {
   return /^(?:ik|hanlp)(?:_|$)/.test(analyzer.trim().toLowerCase());
@@ -69,6 +73,7 @@ function isChineseAnalyzer(analyzer: string): boolean {
 const normalizeFieldType = (type: string) => type.trim().toLowerCase();
 const isFeatureConfigField = (type: string) => ["string", "text"].includes(normalizeFieldType(type));
 const isTextField = isFeatureConfigField;
+const isTextType = (type: string) => normalizeFieldType(type) === "text";
 
 function keyFieldOptionLabel(field: ResourceSchemaField): string {
   const displayName = field.displayName?.trim();
@@ -78,13 +83,13 @@ function keyFieldOptionLabel(field: ResourceSchemaField): string {
   return `${field.name}（${field.type}）`;
 }
 
-const defaultFeatureNameOf = (kind: "embedding" | "fulltext", index: number) => {
-  const base = kind === "embedding" ? "vector" : "fulltext";
+const defaultFeatureNameOf = (kind: FeatureKind, index: number) => {
+  const base = kind === "embedding" ? "vector" : kind;
   return index === 0 ? base : `${base}_${index + 1}`;
 };
 
 function coerceFeatureDrafts(
-  kind: "embedding" | "fulltext",
+  kind: FeatureKind,
   groups: Array<ResourceFeatureDraft | string> = [],
 ): ResourceFeatureDraft[] {
   const normalized = groups.map((item, index) =>
@@ -109,7 +114,7 @@ function coerceFeatureDrafts(
 }
 
 function coerceFeatureDraftRecord(
-  kind: "embedding" | "fulltext",
+  kind: FeatureKind,
   groups?: Record<string, Array<ResourceFeatureDraft | string>>,
 ): Record<string, ResourceFeatureDraft[]> {
   return Object.fromEntries(
@@ -137,8 +142,10 @@ export function IndexConfigFormPanel({
   const [primaryKeyFields, setPrimaryKeyFields] = useState<string[]>([]);
   const [incrementalFields, setIncrementalFields] = useState<string[]>([]);
   const [fieldEmbeddingModelGroups, setFieldEmbeddingModelGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
+  const [fieldKeywordGroups, setFieldKeywordGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [fieldFulltextAnalyzerGroups, setFieldFulltextAnalyzerGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [featureField, setFeatureField] = useState<ResourceSchemaField | null>(null);
+  const [defaultKeywordIgnoreAbove, setDefaultKeywordIgnoreAbove] = useState(DEFAULT_KEYWORD_IGNORE_ABOVE);
   const [defaultFulltextAnalyzer, setDefaultFulltextAnalyzer] = useState<string>("");
   const [models, setModels] = useState<EmbeddingModelOption[]>([]);
   const [modelsLoadState, setModelsLoadState] = useState<EmbeddingModelsLoadState>("idle");
@@ -202,19 +209,31 @@ export function IndexConfigFormPanel({
   };
 
   const inheritAnalyzerOption = useMemo(
-    () => ({
-      label: t("dataCatalog.build.inheritDefaultAnalyzer"),
-      value: INHERIT_VALUE,
-    }),
-    [t],
+    () => {
+      const configured = defaultFulltextAnalyzer.trim();
+      const displayValue = analyzerOptions.find((option) => option.value === configured)?.label ?? configured;
+      return {
+        label: displayValue
+          ? t("dataCatalog.build.inheritDefaultWithValue", { value: displayValue })
+          : t("dataCatalog.build.inheritDefaultMissing"),
+        value: INHERIT_VALUE,
+      };
+    },
+    [analyzerOptions, defaultFulltextAnalyzer, t],
   );
 
   const inheritModelOption = useMemo(
-    () => ({
-      label: t("dataCatalog.build.inheritDefaultModel"),
-      value: INHERIT_VALUE,
-    }),
-    [t],
+    () => {
+      const configured = defaultModelId ?? orphanSavedModel ?? "";
+      const displayValue = modelOptions.find((option) => option.value === configured)?.label ?? configured;
+      return {
+        label: displayValue
+          ? t("dataCatalog.build.inheritDefaultWithValue", { value: displayValue })
+          : t("dataCatalog.build.inheritDefaultMissing"),
+        value: INHERIT_VALUE,
+      };
+    },
+    [defaultModelId, modelOptions, orphanSavedModel, t],
   );
 
   useEffect(() => {
@@ -229,8 +248,10 @@ export function IndexConfigFormPanel({
     setPrimaryKeyFields([]);
     setIncrementalFields([]);
     setFieldEmbeddingModelGroups({});
+    setFieldKeywordGroups({});
     setFieldFulltextAnalyzerGroups({});
     setFeatureField(null);
+    setDefaultKeywordIgnoreAbove(DEFAULT_KEYWORD_IGNORE_ABOVE);
     setDefaultFulltextAnalyzer("");
     setError(null);
     setDirty(false);
@@ -251,7 +272,9 @@ export function IndexConfigFormPanel({
       const form = indexFormValuesFromResource(detail);
       setPrimaryKeyFields(form.primaryKeyFields ?? []);
       setIncrementalFields(form.incrementalFields ?? []);
+      setDefaultKeywordIgnoreAbove(String(form.defaultKeywordIgnoreAbove ?? 256));
       setFieldEmbeddingModelGroups(coerceFeatureDraftRecord("embedding", form.fieldEmbeddingModelGroups));
+      setFieldKeywordGroups(coerceFeatureDraftRecord("keyword", form.fieldKeywordGroups));
       setFieldFulltextAnalyzerGroups(coerceFeatureDraftRecord("fulltext", form.fieldFulltextAnalyzerGroups));
       setDirty(false);
       if (form.fulltextAnalyzer) {
@@ -376,6 +399,15 @@ export function IndexConfigFormPanel({
       ),
     [featureConfigFieldNames, fieldEmbeddingModelGroups],
   );
+  const eligibleKeywordGroups = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(fieldKeywordGroups).filter(([field]) =>
+          featureConfigFieldNames.has(field),
+        ),
+      ),
+    [featureConfigFieldNames, fieldKeywordGroups],
+  );
   const eligibleFulltextAnalyzerGroups = useMemo(
     () =>
       Object.fromEntries(
@@ -411,6 +443,11 @@ export function IndexConfigFormPanel({
   }, [analyzers, defaultFulltextAnalyzer, eligibleFulltextAnalyzerGroups]);
   const duplicateUnsupportedFeatureTypes = useMemo(() => {
     const duplicates: string[] = [];
+    for (const [field, groups] of Object.entries(eligibleKeywordGroups)) {
+      if (groups.length > 1) {
+        duplicates.push(`${field}: keyword`);
+      }
+    }
     for (const [field, groups] of Object.entries(eligibleEmbeddingModelGroups)) {
       if (groups.length > 1) {
         duplicates.push(`${field}: vector`);
@@ -422,7 +459,7 @@ export function IndexConfigFormPanel({
       }
     }
     return duplicates;
-  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups]);
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
   const invalidSavedPrimaryKeyFields = useMemo(
     () => invalidKeyFields(schema, primaryKeyFields, isPrimaryKeyField),
     [primaryKeyFields, schema],
@@ -432,36 +469,52 @@ export function IndexConfigFormPanel({
     [incrementalFields, schema],
   );
 
-  const validateForm = () => {
+  const getFormValidationError = (): string | null => {
     const invalidKeyFields = [...invalidSavedPrimaryKeyFields, ...invalidSavedIncrementalFields];
     if (invalidKeyFields.length > 0) {
-      setError(t("dataCatalog.build.invalidKeyFields", { fields: invalidKeyFields.join(", ") }));
-      return false;
+      return t("dataCatalog.build.invalidKeyFields", { fields: invalidKeyFields.join(", ") });
     }
     if (duplicateUnsupportedFeatureTypes.length > 0) {
-      setError(t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") }));
-      return false;
+      return t("dataCatalog.build.duplicateFeatureTypeUnsupported", { features: duplicateUnsupportedFeatureTypes.join(", ") });
+    }
+    const keywordDefault = Number(defaultKeywordIgnoreAbove);
+    if (
+      !Number.isSafeInteger(keywordDefault) ||
+      keywordDefault < MIN_KEYWORD_IGNORE_ABOVE ||
+      keywordDefault > MAX_KEYWORD_IGNORE_ABOVE
+    ) {
+      return t("dataCatalog.build.defaultKeywordIgnoreAboveInvalid");
+    }
+    for (const groups of Object.values(eligibleKeywordGroups)) {
+      for (const feature of groups) {
+        if (!feature.value?.trim()) {
+          continue;
+        }
+        const ignoreAbove = Number(feature.value);
+        if (
+          !Number.isSafeInteger(ignoreAbove) ||
+          ignoreAbove < MIN_KEYWORD_IGNORE_ABOVE ||
+          ignoreAbove > MAX_KEYWORD_IGNORE_ABOVE
+        ) {
+          return t("dataCatalog.build.keywordIgnoreAboveInvalid");
+        }
+      }
     }
     if (embeddingFields.length === 0 && fulltextFields.length === 0) {
-      setError(t("dataCatalog.build.fieldsRequired"));
-      return false;
+      return t("dataCatalog.build.fieldsRequired");
     }
     if (fulltextFields.length > 0) {
       if (analyzersLoadState === "loading" || analyzersLoadState === "idle") {
-        setError(t("dataCatalog.build.analyzersLoading"));
-        return false;
+        return t("dataCatalog.build.analyzersLoading");
       }
       if (analyzersLoadState === "error") {
-        setError(t("dataCatalog.build.analyzersLoadError", { message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback") }));
-        return false;
+        return t("dataCatalog.build.analyzersLoadError", { message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback") });
       }
       if (analyzersLoadState === "empty") {
-        setError(t("dataCatalog.build.noAnalyzers"));
-        return false;
+        return t("dataCatalog.build.noAnalyzers");
       }
       if (unavailableSavedAnalyzers.length > 0) {
-        setError(t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") }));
-        return false;
+        return t("dataCatalog.build.savedAnalyzerUnavailable", { analyzers: unavailableSavedAnalyzers.join(", ") });
       }
     }
     const fulltextNeedsDefault = fulltextFields.some((field) =>
@@ -471,47 +524,47 @@ export function IndexConfigFormPanel({
       (eligibleEmbeddingModelGroups[field] ?? []).some((feature) => !feature.value?.trim()),
     );
     if (fulltextNeedsDefault && !defaultFulltextAnalyzer) {
-      setError(t("dataCatalog.build.defaultAnalyzerRequired"));
-      return false;
+      return t("dataCatalog.build.defaultAnalyzerRequired");
     }
     if (embeddingFields.length > 0) {
       if (modelsLoadState === "loading" || modelsLoadState === "idle") {
-        setError(t("dataCatalog.build.modelsLoading"));
-        return false;
+        return t("dataCatalog.build.modelsLoading");
       }
       if (modelsLoadState === "error") {
-        setError(
-          t("dataCatalog.build.modelsLoadError", {
-            message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
-          }),
-        );
-        return false;
+        return t("dataCatalog.build.modelsLoadError", {
+          message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
+        });
       }
       if (modelsLoadState === "empty" || models.length === 0) {
-        setError(t("dataCatalog.build.noModels"));
-        return false;
+        return t("dataCatalog.build.noModels");
       }
       if (embeddingNeedsDefault && !defaultModelId) {
-        setError(t("dataCatalog.build.modelRequired"));
-        return false;
+        return t("dataCatalog.build.modelRequired");
       }
       if (
         embeddingNeedsDefault &&
         defaultModelId &&
         !isRegisteredEmbeddingModel(defaultModelId, models)
       ) {
-        setError(t("dataCatalog.build.savedModelUnavailable", { model: defaultModelId }));
-        return false;
+        return t("dataCatalog.build.savedModelUnavailable", { model: defaultModelId });
       }
       for (const field of embeddingFields) {
         for (const feature of eligibleEmbeddingModelGroups[field] ?? []) {
           const override = feature.value?.trim();
           if (override && !isRegisteredEmbeddingModel(override, models)) {
-            setError(t("dataCatalog.build.savedModelUnavailable", { model: override }));
-            return false;
+            return t("dataCatalog.build.savedModelUnavailable", { model: override });
           }
         }
       }
+    }
+    return null;
+  };
+
+  const validateForm = () => {
+    const validationError = getFormValidationError();
+    if (validationError) {
+      setError(validationError);
+      return false;
     }
     return true;
   };
@@ -542,12 +595,14 @@ export function IndexConfigFormPanel({
       const { schema: nextSchema, indexConfig } = applyIndexFormToSchema(
         detail.schema.length ? detail.schema : schema,
         {
+          defaultKeywordIgnoreAbove: Number(defaultKeywordIgnoreAbove),
           primaryKeyFields,
           incrementalFields,
           embeddingFields,
           embeddingModel: defaultModel?.id ?? "",
           fieldEmbeddingModels: {},
           fieldEmbeddingModelGroups: eligibleEmbeddingModelGroups,
+          fieldKeywordGroups: eligibleKeywordGroups,
           fieldFulltextAnalyzers: {},
           fieldFulltextAnalyzerGroups: eligibleFulltextAnalyzerGroups,
           fulltextFields,
@@ -636,30 +691,53 @@ export function IndexConfigFormPanel({
         message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
       })
       : t("dataCatalog.build.analyzerSelectionUnavailable");
-  const hasIndexFeatures = embeddingFields.length > 0 || fulltextFields.length > 0;
-  const canBuild =
-    hasIndexFeatures &&
-    primaryKeyFields.length > 0 &&
-    incrementalFields.length > 0 &&
-    invalidSavedPrimaryKeyFields.length === 0 &&
-    invalidSavedIncrementalFields.length === 0;
+  const formValidationError = getFormValidationError();
+  const buildReadinessIssues = [
+    ...(primaryKeyFields.length === 0 ? [t("dataCatalog.build.primaryKeyRequired")] : []),
+    ...(incrementalFields.length === 0 ? [t("dataCatalog.build.incrementalKeyRequired")] : []),
+    ...(formValidationError ? [formValidationError] : []),
+  ];
+  const canBuild = buildReadinessIssues.length === 0;
+  const summaryFieldLabel = (fieldName: string) => {
+    const field = schema.find((item) => item.name === fieldName);
+    const displayName = field?.displayName?.trim();
+    return displayName && displayName !== fieldName
+      ? `${displayName}（${fieldName}）`
+      : fieldName;
+  };
+  const summarizeFields = (fields: string[]) => {
+    if (fields.length === 0) {
+      return t("dataCatalog.build.notConfigured");
+    }
+    const labels = fields.map(summaryFieldLabel);
+    if (fields.length <= 2) {
+      return labels.join(", ");
+    }
+    return `${labels.slice(0, 2).join(", ")} +${fields.length - 2}`;
+  };
+  const fullFieldSummary = (fields: string[]) => fields.map(summaryFieldLabel).join(", ");
   const selectedEmbeddingGroups = featureField ? (eligibleEmbeddingModelGroups[featureField.name] ?? []) : [];
+  const selectedKeywordGroups = featureField ? (eligibleKeywordGroups[featureField.name] ?? []) : [];
   const selectedFulltextGroups = featureField ? (eligibleFulltextAnalyzerGroups[featureField.name] ?? []) : [];
   const normalizeFeatureDrafts = (
-    kind: "embedding" | "fulltext",
+    kind: FeatureKind,
     groups: ResourceFeatureDraft[],
   ) => {
     return coerceFeatureDrafts(kind, groups);
   };
   const updateFeatureGroups = (
-    kind: "embedding" | "fulltext",
+    kind: FeatureKind,
     fieldName: string,
     nextGroups: ResourceFeatureDraft[],
   ) => {
     if (actionsLocked) {
       return;
     }
-    const setter = kind === "embedding" ? setFieldEmbeddingModelGroups : setFieldFulltextAnalyzerGroups;
+    const setter = kind === "embedding"
+      ? setFieldEmbeddingModelGroups
+      : kind === "keyword"
+        ? setFieldKeywordGroups
+        : setFieldFulltextAnalyzerGroups;
     setter((current) => {
       const next = { ...current };
       const limited = normalizeFeatureDrafts(kind, nextGroups);
@@ -673,33 +751,34 @@ export function IndexConfigFormPanel({
     markDirty();
   };
   const featureCountOf = (fieldName: string) =>
+    (eligibleKeywordGroups[fieldName]?.length ?? 0) +
     (eligibleEmbeddingModelGroups[fieldName]?.length ?? 0) +
     (eligibleFulltextAnalyzerGroups[fieldName]?.length ?? 0);
   const featureSummaryOf = (fieldName: string) => ({
     embedding: eligibleEmbeddingModelGroups[fieldName]?.length ?? 0,
     fulltext: eligibleFulltextAnalyzerGroups[fieldName]?.length ?? 0,
+    keyword: eligibleKeywordGroups[fieldName]?.length ?? 0,
   });
   const renderFeatureRows = (
-    kind: "embedding" | "fulltext",
+    kind: FeatureKind,
     title: string,
     groups: ResourceFeatureDraft[],
     options: Array<{ label: string; value: string }>,
     disabled = false,
+    required = false,
   ) => {
     if (!featureField) {
       return null;
     }
     const isEmbedding = kind === "embedding";
-    const valueLabel = isEmbedding
-      ? t("dataCatalog.build.fieldEmbeddingModel")
-      : t("dataCatalog.build.fieldFulltextAnalyzer");
-    const hasResourceDefault = isEmbedding
-      ? Boolean(defaultModelId)
-      : Boolean(defaultFulltextAnalyzer);
+    const isKeyword = kind === "keyword";
+    const valueLabel = isKeyword
+      ? t("dataCatalog.build.keywordIgnoreAbove")
+      : isEmbedding
+        ? t("dataCatalog.build.fieldEmbeddingModel")
+        : t("dataCatalog.build.fieldFulltextAnalyzer");
     const selectOptions = [
-      ...(hasResourceDefault
-        ? [isEmbedding ? inheritModelOption : inheritAnalyzerOption]
-        : []),
+      isEmbedding ? inheritModelOption : inheritAnalyzerOption,
       ...options,
     ];
     const disabledReason = !disabled ? "" : isEmbedding
@@ -714,12 +793,15 @@ export function IndexConfigFormPanel({
           description: "",
           isDefault: groups.length === 0,
           name: defaultFeatureNameOf(kind, groups.length),
-          value: hasResourceDefault ? "" : options[0]?.value ?? "",
+          value: "",
         },
       ]);
     };
     return (
-      <div className={cx(formStyles.featureSection, groups.length > 0 && formStyles.featureSectionActive)}>
+      <div
+        className={cx(formStyles.featureSection, groups.length > 0 && formStyles.featureSectionActive)}
+        data-feature-type={kind}
+      >
         <div className={formStyles.featureSectionHead}>
           <div>
             <div className={formStyles.featureSectionTitle}>
@@ -779,19 +861,40 @@ export function IndexConfigFormPanel({
                   </label>
                 </div>
                 <div className={formStyles.featureEditGrid}>
-                  <Select
-                    disabled={disabled}
-                    onChange={(nextValue) => {
-                      const copy = [...groups];
-                      copy[index] = {
-                        ...feature,
-                        value: nextValue === INHERIT_VALUE ? "" : nextValue,
-                      };
-                      updateFeatureGroups(kind, featureField.name, copy);
-                    }}
-                    options={selectOptions}
-                    value={feature.value || (hasResourceDefault ? INHERIT_VALUE : options[0]?.value)}
-                  />
+                  {isKeyword ? (
+                    <Input
+                      disabled={disabled}
+                      max={MAX_KEYWORD_IGNORE_ABOVE}
+                      min={MIN_KEYWORD_IGNORE_ABOVE}
+                      onChange={(event) => {
+                        const copy = [...groups];
+                        copy[index] = { ...feature, value: event.target.value };
+                        updateFeatureGroups(kind, featureField.name, copy);
+                      }}
+                      placeholder={defaultKeywordIgnoreAbove.trim()
+                        ? t("dataCatalog.build.inheritDefaultWithValue", {
+                          value: defaultKeywordIgnoreAbove,
+                        })
+                        : t("dataCatalog.build.inheritDefaultMissing")}
+                      step={1}
+                      type="number"
+                      value={feature.value}
+                    />
+                  ) : (
+                    <Select
+                      disabled={disabled}
+                      onChange={(nextValue) => {
+                        const copy = [...groups];
+                        copy[index] = {
+                          ...feature,
+                          value: nextValue === INHERIT_VALUE ? "" : nextValue,
+                        };
+                        updateFeatureGroups(kind, featureField.name, copy);
+                      }}
+                      options={selectOptions}
+                      value={feature.value || INHERIT_VALUE}
+                    />
+                  )}
                   <Input
                     disabled={disabled}
                     onChange={(event) => {
@@ -814,7 +917,7 @@ export function IndexConfigFormPanel({
                   />
                 </div>
                 <AppButton
-                  disabled={disabled}
+                  disabled={disabled || required}
                   onClick={() => {
                     updateFeatureGroups(
                       kind,
@@ -823,6 +926,11 @@ export function IndexConfigFormPanel({
                     );
                   }}
                   size="small"
+                  title={required
+                    ? t(isKeyword
+                      ? "dataCatalog.build.keywordRequiredHint"
+                      : "dataCatalog.build.fulltextRequiredHint")
+                    : undefined}
                   type="link"
                 >
                   {t("common.remove")}
@@ -899,31 +1007,31 @@ export function IndexConfigFormPanel({
       ) : null}
 
       <div>
-        <div className={formStyles.configOverview}>
+        <div className={cx(
+          formStyles.configOverview,
+          hideBuildControls && formStyles.configOverviewTwoColumns,
+        )}>
           <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.primaryKeyFieldCount")}</span>
-            <b>{primaryKeyFields.length}</b>
+            <span>{t("dataCatalog.build.rolePrimaryKey")}</span>
+            <b title={fullFieldSummary(primaryKeyFields) || undefined}>{summarizeFields(primaryKeyFields)}</b>
           </div>
           <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.incrementalFieldCount")}</span>
-            <b>{incrementalFields.length}</b>
-          </div>
-          <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.embeddingFieldCount")}</span>
-            <b>{embeddingFields.length}</b>
-          </div>
-          <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.fulltextFieldCount")}</span>
-            <b>{fulltextFields.length}</b>
+            <span>{t("dataCatalog.build.roleIncrementalKey")}</span>
+            <b title={fullFieldSummary(incrementalFields) || undefined}>{summarizeFields(incrementalFields)}</b>
           </div>
           {!hideBuildControls ? (
-            <div className={formStyles.configMetricWide}>
+            <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.configCanBuild")}</span>
               <b>
                 {canBuild
                   ? t("dataCatalog.build.configCanBuildYes")
                   : t("dataCatalog.build.configCannotBuild")}
               </b>
+              {!canBuild ? (
+                <small className={formStyles.configMetricHint} title={buildReadinessIssues.join(" · ")}>
+                  {buildReadinessIssues.join(" · ")}
+                </small>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -939,7 +1047,32 @@ export function IndexConfigFormPanel({
               </div>
             </div>
           </div>
-          <div className={formStyles.resourceDefaultsGrid}>
+          <div
+            className={cx(
+              formStyles.resourceDefaultsGrid,
+              formStyles.resourceDefaultsGridThreeColumns,
+            )}
+          >
+            <div className={formStyles.resourceDefaultItem}>
+              <div className={formStyles.resourceDefaultItemHead}>
+                <span>{t("dataCatalog.build.defaultKeywordIgnoreAbove")}</span>
+              </div>
+              <Input
+                disabled={actionsLocked}
+                max={MAX_KEYWORD_IGNORE_ABOVE}
+                min={MIN_KEYWORD_IGNORE_ABOVE}
+                onChange={(event) => {
+                  setDefaultKeywordIgnoreAbove(event.target.value);
+                  markDirty();
+                }}
+                step={1}
+                type="number"
+                value={defaultKeywordIgnoreAbove}
+              />
+              <div className={formStyles.fieldHint}>
+                {t("dataCatalog.build.defaultKeywordIgnoreAboveHint")}
+              </div>
+            </div>
             <div className={formStyles.resourceDefaultItem}>
               <div className={formStyles.resourceDefaultItemHead}>
                 <span>
@@ -1163,14 +1296,19 @@ export function IndexConfigFormPanel({
                   </span>
                   <span className={styles.frtSummary}>
                     <span className={styles.frtStat}>
-                      <span className={cx(styles.frtDot, styles.frtDotEmb)} />
-                      {t("dataCatalog.build.roleEmbedding")}
-                      <b>{embeddingFields.length}</b>
+                      <span className={cx(styles.frtDot, styles.frtDotFt)} />
+                      {t("dataCatalog.build.roleKeyword")}
+                      <b>{Object.keys(eligibleKeywordGroups).length}</b>
                     </span>
                     <span className={styles.frtStat}>
                       <span className={cx(styles.frtDot, styles.frtDotFt)} />
                       {t("dataCatalog.build.roleFulltext")}
                       <b>{fulltextFields.length}</b>
+                    </span>
+                    <span className={styles.frtStat}>
+                      <span className={cx(styles.frtDot, styles.frtDotEmb)} />
+                      {t("dataCatalog.build.roleEmbedding")}
+                      <b>{embeddingFields.length}</b>
                     </span>
                   </span>
                 </div>
@@ -1215,14 +1353,19 @@ export function IndexConfigFormPanel({
                                 {canConfigureFeature ? (
                                   <>
                                     <div className={formStyles.featureMiniSummary}>
-                                      {featureSummary.embedding > 0 ? (
-                                        <span className={formStyles.featureMiniTag}>
-                                          {t("dataCatalog.build.roleEmbedding")} {featureSummary.embedding}
+                                      {featureSummary.keyword > 0 ? (
+                                        <span className={formStyles.featureMiniTag} data-feature-type="keyword">
+                                          {t("dataCatalog.build.roleKeyword")} {featureSummary.keyword}
                                         </span>
                                       ) : null}
                                       {featureSummary.fulltext > 0 ? (
-                                        <span className={formStyles.featureMiniTag}>
+                                        <span className={formStyles.featureMiniTag} data-feature-type="fulltext">
                                           {t("dataCatalog.build.roleFulltext")} {featureSummary.fulltext}
+                                        </span>
+                                      ) : null}
+                                      {featureSummary.embedding > 0 ? (
+                                        <span className={formStyles.featureMiniTag} data-feature-type="embedding">
+                                          {t("dataCatalog.build.roleEmbedding")} {featureSummary.embedding}
                                         </span>
                                       ) : null}
                                       {featureCountOf(field.name) === 0 ? (
@@ -1277,16 +1420,49 @@ export function IndexConfigFormPanel({
       >
         {featureField ? (
           <div className={formStyles.featureDrawerBody}>
-            <div className={formStyles.featureFieldMeta}>
-              <span>{featureField.displayName || "-"}</span>
-              <code>{featureField.type}</code>
-            </div>
+            <dl className={formStyles.featureFieldMeta}>
+              <div className={formStyles.featureFieldMetaItem} data-field-meta="name">
+                <dt>{t("dataCatalog.resource.fieldName")}</dt>
+                <dd><code>{featureField.name}</code></dd>
+              </div>
+              <div className={formStyles.featureFieldMetaItem} data-field-meta="display-name">
+                <dt>{t("dataCatalog.resource.fieldDisplayName")}</dt>
+                <dd>{featureField.displayName || "-"}</dd>
+              </div>
+              <div className={formStyles.featureFieldMetaItem} data-field-meta="type">
+                <dt>{t("dataCatalog.resource.fieldType")}</dt>
+                <dd><code>{featureField.type}</code></dd>
+              </div>
+              <div
+                className={cx(formStyles.featureFieldMetaItem, formStyles.featureFieldMetaItemWide)}
+                data-field-meta="description"
+              >
+                <dt>{t("dataCatalog.resource.fieldDescription")}</dt>
+                <dd>{featureField.description || "-"}</dd>
+              </div>
+              <div className={formStyles.featureFieldMetaItem} data-field-meta="original-name">
+                <dt>{t("dataCatalog.resource.fieldOriginalName")}</dt>
+                <dd><code>{featureField.originalName?.trim() || "-"}</code></dd>
+              </div>
+              <div className={formStyles.featureFieldMetaItem} data-field-meta="original-type">
+                <dt>{t("dataCatalog.resource.fieldOriginalType")}</dt>
+                <dd><code>{featureField.originalType || "-"}</code></dd>
+              </div>
+              <div
+                className={cx(formStyles.featureFieldMetaItem, formStyles.featureFieldMetaItemWide)}
+                data-field-meta="original-description"
+              >
+                <dt>{t("dataCatalog.resource.fieldOriginalDescription")}</dt>
+                <dd>{featureField.originalDescription?.trim() || "-"}</dd>
+              </div>
+            </dl>
             {renderFeatureRows(
-              "embedding",
-              t("dataCatalog.build.roleEmbedding"),
-              selectedEmbeddingGroups,
-              modelOptions,
-              actionsLocked || embeddingBlocked,
+              "keyword",
+              t("dataCatalog.build.roleKeyword"),
+              selectedKeywordGroups,
+              [],
+              actionsLocked,
+              isFeatureConfigField(featureField.type),
             )}
             {renderFeatureRows(
               "fulltext",
@@ -1294,6 +1470,14 @@ export function IndexConfigFormPanel({
               selectedFulltextGroups,
               analyzerOptions,
               actionsLocked || !isTextField(featureField.type) || analyzerSelectionDisabled,
+              isTextType(featureField.type),
+            )}
+            {renderFeatureRows(
+              "embedding",
+              t("dataCatalog.build.roleEmbedding"),
+              selectedEmbeddingGroups,
+              modelOptions,
+              actionsLocked || embeddingBlocked,
             )}
             {!isTextField(featureField.type) ? (
               <Alert message={t("dataCatalog.build.fulltextTypeHint")} showIcon type="info" />

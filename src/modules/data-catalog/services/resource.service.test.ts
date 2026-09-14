@@ -232,6 +232,7 @@ describe("resource.service · listCatalogResourcePage", () => {
         localIndexName: "bkn_res-1",
         localIndexStatus: "available",
         operations: ["view_detail", "query_data"],
+        rowCount: null,
         schemaName: "external_data",
         status: "stale",
         statusMessage: "discover metadata failed",
@@ -311,12 +312,23 @@ describe("resource.service · getCatalogResources", () => {
             id: "res-1",
             index_name: "bkn_res-1",
             index_config: {
+              default_keyword_ignore_above: 512,
               incremental_fields: ["updated_at", "revision"],
               primary_key_fields: ["tenant_id", "order_id"],
             },
             local_status: "available",
             name: "orders",
             operations: ["view_detail", "query_data"],
+            row_count: 42,
+            source_metadata: {
+              foreign_keys: [{ name: "fk_orders_customer" }],
+              indices: [{ name: "PRIMARY" }, { name: "idx_orders_updated_at" }],
+              original_description: "Orders from the source database",
+              original_name: "public.orders",
+              properties: { row_count: 999 },
+              primary_keys: ["tenant_id", "order_id"],
+              table_type: "table",
+            },
           },
         ],
       },
@@ -328,12 +340,22 @@ describe("resource.service · getCatalogResources", () => {
     await expect(getCatalogResources(["res-1"])).resolves.toEqual([
       expect.objectContaining({
         indexConfig: {
+          defaultKeywordIgnoreAbove: 512,
           incrementalFields: ["updated_at", "revision"],
           primaryKeyFields: ["tenant_id", "order_id"],
         },
         localIndexName: "bkn_res-1",
         localIndexStatus: "available",
         operations: ["view_detail", "query_data"],
+        rowCount: 42,
+        sourceMetadata: {
+          foreignKeyCount: 1,
+          indexCount: 2,
+          objectType: "table",
+          originalDescription: "Orders from the source database",
+          originalName: "public.orders",
+          primaryKeys: ["tenant_id", "order_id"],
+        },
       }),
     ]);
   });
@@ -372,6 +394,7 @@ describe("resource.service · updateCatalogResource", () => {
       description: "",
       expectedUpdateTime: 123,
       indexConfig: {
+        defaultKeywordIgnoreAbove: 512,
         incrementalFields: ["updated_at", "revision"],
         primaryKeyFields: ["tenant_id", "request_no"],
       },
@@ -417,6 +440,7 @@ describe("resource.service · updateCatalogResource", () => {
         }),
       ],
       index_config: {
+        default_keyword_ignore_above: 512,
         default_embedding_model: undefined,
         default_fulltext_analyzer: undefined,
         incremental_fields: ["updated_at", "revision"],

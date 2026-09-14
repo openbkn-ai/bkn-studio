@@ -120,6 +120,45 @@ describe("resource-index-config", () => {
     ]);
   });
 
+  it("writes and reads keyword feature name and ignore_above", () => {
+    const result = applyIndexFormToSchema(
+      [{
+        features: [{ featureType: "keyword", name: "legacy_keyword", config: { ignore_above: 64 } }],
+        name: "body",
+        type: "text",
+      }],
+      {
+        defaultKeywordIgnoreAbove: 512,
+        primaryKeyFields: [],
+        incrementalFields: [],
+        embeddingFields: [],
+        embeddingModel: "",
+        fieldEmbeddingModels: {},
+        fieldKeywordGroups: {
+          body: [{ isDefault: true, name: "exact", value: "" }],
+        },
+        fulltextFields: [],
+        fieldFulltextAnalyzers: {},
+      },
+    );
+
+    expect(result.schema[0].features).toEqual([{
+      config: { ignore_above: 512 },
+      displayName: "exact",
+      featureType: "keyword",
+      isDefault: true,
+      name: "exact",
+    }]);
+    expect(indexFormValuesFromResource(result).fieldKeywordGroups).toEqual({
+      body: [{
+        description: undefined,
+        isDefault: true,
+        name: "exact",
+        value: "",
+      }],
+    });
+  });
+
   it("reads defaults and per-field overrides from resource", () => {
     const values = indexFormValuesFromResource({
       indexConfig: {
@@ -151,6 +190,7 @@ describe("resource-index-config", () => {
     });
 
     expect(values).toEqual({
+      defaultKeywordIgnoreAbove: 256,
       primaryKeyFields: ["id"],
       incrementalFields: ["id"],
       embeddingFields: ["body", "note"],
@@ -160,6 +200,11 @@ describe("resource-index-config", () => {
         note: [{ value: "embed-special", name: undefined, description: undefined, isDefault: undefined }],
       },
       fieldEmbeddingModels: { note: "embed-special" },
+      fieldKeywordGroups: {
+        body: [{ isDefault: true, name: "keyword", value: "" }],
+        note: [{ isDefault: true, name: "keyword", value: "" }],
+        title: [{ isDefault: true, name: "keyword", value: "" }],
+      },
       fieldFulltextAnalyzerGroups: {
         body: [{ value: "", name: undefined, description: undefined, isDefault: undefined }],
         title: [{ value: "ik_max_word", name: undefined, description: undefined, isDefault: undefined }],
@@ -168,5 +213,23 @@ describe("resource-index-config", () => {
       fulltextFields: ["title", "body"],
       fulltextAnalyzer: "standard",
     });
+  });
+
+  it("adds the default keyword and full-text features implied by field types", () => {
+    const values = indexFormValuesFromResource({
+      schema: [
+        { name: "code", type: "string" },
+        { name: "content", type: "text" },
+      ],
+    });
+
+    expect(values.fieldKeywordGroups).toEqual({
+      code: [{ isDefault: true, name: "keyword", value: "" }],
+      content: [{ isDefault: true, name: "keyword", value: "" }],
+    });
+    expect(values.fieldFulltextAnalyzerGroups).toEqual({
+      content: [{ isDefault: true, name: "fulltext", value: "" }],
+    });
+    expect(values.fulltextFields).toEqual(["content"]);
   });
 });

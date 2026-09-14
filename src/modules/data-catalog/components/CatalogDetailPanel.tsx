@@ -318,8 +318,8 @@ export function CatalogDetailPanel({
       dataIndex: "rowCount",
       title: t("dataCatalog.resource.rowCount"),
       width: 112,
-      render: (value: number) =>
-        value > 0 ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
+      render: (value: number | null) =>
+        value !== null ? <span className={styles.monoText}>{formatRowCount(value)}</span> : "—",
     },
     {
       key: "actions",

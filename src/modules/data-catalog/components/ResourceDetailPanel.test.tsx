@@ -40,8 +40,25 @@ const resource: CatalogResource = {
   id: "resource-1",
   name: "orders",
   rowCount: 1,
-  schema: [{ name: "id", type: "string" }],
+  schemaName: "public",
+  schema: [
+    {
+      name: "id",
+      originalDescription: "Source order identifier",
+      originalName: "source_order_id",
+      originalType: "varchar(64)",
+      type: "string",
+    },
+  ],
   sourceIdentifier: "orders",
+  sourceMetadata: {
+    foreignKeyCount: 1,
+    indexCount: 2,
+    objectType: "table",
+    originalDescription: "Orders from the source database",
+    originalName: "public.orders",
+    primaryKeys: ["id"],
+  },
   updateTime: "2026-08-11T00:00:00Z",
   expectedUpdateTime: 0,
 };
@@ -96,7 +113,76 @@ describe("ResourceDetailPanel", () => {
     );
 
     const tag = await screen.findByText("index");
-    expect(tag.closest(".ant-space")?.parentElement?.tagName).toBe("DIV");
+    expect(tag.closest(".ant-space")?.parentElement?.tagName).not.toBe("P");
+  });
+
+  it("keeps zero row counts visible and exposes copy actions for identifiers", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          catalog={null}
+          resource={{ ...resource, rowCount: 0 }}
+        />
+      </MemoryRouter>,
+    );
+
+    const rowCountLabels = screen.getAllByText("dataCatalog.resource.rowCount");
+    expect(rowCountLabels).toHaveLength(2);
+    rowCountLabels.forEach((label) => {
+      expect(label.parentElement?.textContent).toContain("0");
+    });
+    expect(screen.queryByText(resource.updateTime)).toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" }),
+    ).toHaveLength(3);
+  });
+
+  it("shows the original source metadata for each field", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("source_order_id")).toBeTruthy();
+    expect(screen.getByText("varchar(64)")).toBeTruthy();
+    expect(screen.getByText("Source order identifier")).toBeTruthy();
+  });
+
+  it("shows the original source metadata for the resource", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel active catalog={null} resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("public.orders")).toBeTruthy();
+    expect(screen.getByText("Orders from the source database")).toBeTruthy();
+    expect(
+      screen.getByText("dataCatalog.resource.schemaName").parentElement?.textContent,
+    ).toContain("public");
+    expect(
+      screen.getByText("dataCatalog.resource.sourceIndexCount").parentElement?.textContent,
+    ).toContain("2");
+    expect(
+      screen.getByText("dataCatalog.resource.sourceForeignKeyCount").parentElement?.textContent,
+    ).toContain("1");
+  });
+
+  it("does not show source metadata for a dataset", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          catalog={null}
+          resource={{ ...resource, category: "dataset" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dataCatalog.resource.sourceMetadata")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.schemaName")).toBeNull();
   });
 
   it("refreshes the resource version after an update conflict", async () => {

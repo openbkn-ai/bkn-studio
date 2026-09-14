@@ -12,6 +12,7 @@ import type {
 } from "@/modules/data-catalog/types/data-catalog";
 
 export type ResourceIndexFormValues = {
+  defaultKeywordIgnoreAbove?: number;
   incrementalFields?: string[];
   primaryKeyFields?: string[];
   embeddingFields: string[];
@@ -21,6 +22,8 @@ export type ResourceIndexFormValues = {
   fieldEmbeddingModels: Record<string, string>;
   /** Per-field embedding feature list; empty value = inherit resource default. */
   fieldEmbeddingModelGroups?: Record<string, ResourceFeatureDraftInput[]>;
+  /** Per-field keyword feature list; value is ignore_above. */
+  fieldKeywordGroups?: Record<string, ResourceFeatureDraftInput[]>;
   /** Per-field analyzer override; empty = inherit resource default. */
   fieldFulltextAnalyzers: Record<string, string>;
   /** Per-field fulltext feature list; empty value = inherit resource default. */
@@ -44,13 +47,13 @@ function readStringConfig(config: Record<string, unknown> | undefined, key: stri
   return typeof value === "string" ? value : "";
 }
 
-function featureName(type: "fulltext" | "vector", index: number): string {
+function featureName(type: "keyword" | "fulltext" | "vector", index: number): string {
   return index === 0 ? type : `${type}_${index + 1}`;
 }
 
 function featureDisplayName(
   field: ResourceSchemaField,
-  type: "fulltext" | "vector",
+  type: "keyword" | "fulltext" | "vector",
   index: number,
 ): string {
   const base = field.displayName?.trim() || field.name;
@@ -59,7 +62,7 @@ function featureDisplayName(
 
 function normalizeDraft(
   item: ResourceFeatureDraftInput,
-  type: "fulltext" | "vector",
+  type: "keyword" | "fulltext" | "vector",
   index: number,
 ): ResourceFeatureDraft {
   if (typeof item === "string") {
@@ -79,7 +82,7 @@ function normalizeDraft(
 
 function normalizeDefaultFeature(
   items: ResourceFeatureDraftInput[],
-  type: "fulltext" | "vector",
+  type: "keyword" | "fulltext" | "vector",
 ): ResourceFeatureDraft[] {
   const drafts = items.slice(0, 1).map((item, index) => normalizeDraft(item, type, index));
   const defaultIndex = drafts.findIndex((item) => item.isDefault);
@@ -91,7 +94,7 @@ function normalizeDefaultFeature(
 
 /**
  * Merge UI field-role selections into schema features + resource index_config.
- * Preserves unrelated features (e.g. keyword) on each field.
+ * Preserves feature types that are not managed by the supplied form values.
  */
 export function applyIndexFormToSchema(
   schema: ResourceSchemaField[],
@@ -99,14 +102,40 @@ export function applyIndexFormToSchema(
 ): { indexConfig: ResourceIndexConfig; schema: ResourceSchemaField[] } {
   const embeddingSet = new Set(values.embeddingFields);
   const fulltextSet = new Set(values.fulltextFields);
+  const managesKeyword = values.fieldKeywordGroups !== undefined;
+  const defaultKeywordIgnoreAbove = values.defaultKeywordIgnoreAbove ?? 256;
   const defaultAnalyzer = values.fulltextAnalyzer?.trim() ?? "";
   const defaultModel = values.embeddingModel.trim();
 
   const nextSchema = schema.map((field) => {
     const kept = (field.features ?? []).filter(
-      (feature) => feature.featureType !== "vector" && feature.featureType !== "fulltext",
+      (feature) =>
+        feature.featureType !== "vector" &&
+        feature.featureType !== "fulltext" &&
+        (!managesKeyword || feature.featureType !== "keyword"),
     );
     const features: ResourceFieldFeature[] = [...kept];
+
+    if (managesKeyword) {
+      for (const [index, item] of normalizeDefaultFeature(
+        values.fieldKeywordGroups?.[field.name] ?? [],
+        "keyword",
+      ).entries()) {
+        const configuredIgnoreAbove = item.value?.trim();
+        const ignoreAbove = configuredIgnoreAbove
+          ? Number(configuredIgnoreAbove)
+          : defaultKeywordIgnoreAbove;
+        const name = item.name?.trim() || featureName("keyword", index);
+        features.push({
+          name,
+          displayName: name || featureDisplayName(field, "keyword", index),
+          featureType: "keyword",
+          ...(item.description?.trim() ? { description: item.description.trim() } : {}),
+          isDefault: item.isDefault,
+          config: { ignore_above: ignoreAbove },
+        });
+      }
+    }
 
     if (fulltextSet.has(field.name)) {
       const analyzers = values.fieldFulltextAnalyzerGroups?.[field.name] ?? [
@@ -155,6 +184,9 @@ export function applyIndexFormToSchema(
   return {
     schema: nextSchema,
     indexConfig: {
+      ...(values.defaultKeywordIgnoreAbove !== undefined
+        ? { defaultKeywordIgnoreAbove }
+        : {}),
       incrementalFields: values.incrementalFields ?? [],
       primaryKeyFields: values.primaryKeyFields ?? [],
       defaultFulltextAnalyzer: defaultAnalyzer || undefined,
@@ -173,13 +205,29 @@ export function indexFormValuesFromResource(resource: {
   const fieldEmbeddingModels: Record<string, string> = {};
   const fieldFulltextAnalyzers: Record<string, string> = {};
   const fieldEmbeddingModelGroups: Record<string, ResourceFeatureDraft[]> = {};
+  const fieldKeywordGroups: Record<string, ResourceFeatureDraft[]> = {};
   const fieldFulltextAnalyzerGroups: Record<string, ResourceFeatureDraft[]> = {};
 
   let embeddingModel = resource.indexConfig?.defaultEmbeddingModel ?? "";
   let fulltextAnalyzer = resource.indexConfig?.defaultFulltextAnalyzer ?? "";
+  const defaultKeywordIgnoreAbove = resource.indexConfig?.defaultKeywordIgnoreAbove ?? 256;
 
   for (const field of resource.schema) {
     for (const feature of field.features ?? []) {
+      if (feature.featureType === "keyword") {
+        const ignoreAbove = feature.config?.ignore_above;
+        fieldKeywordGroups[field.name] = [
+          ...(fieldKeywordGroups[field.name] ?? []),
+          {
+            description: feature.description,
+            isDefault: feature.isDefault,
+            name: feature.name,
+            value: typeof ignoreAbove === "number" || typeof ignoreAbove === "string"
+              ? Number(ignoreAbove) === defaultKeywordIgnoreAbove ? "" : String(ignoreAbove)
+              : "",
+          },
+        ];
+      }
       if (feature.featureType === "vector") {
         if (!embeddingFields.includes(field.name)) {
           embeddingFields.push(field.name);
@@ -225,15 +273,37 @@ export function indexFormValuesFromResource(resource: {
         }
       }
     }
+
+    const fieldType = field.type.trim().toLowerCase();
+    if (
+      (fieldType === "string" || fieldType === "text") &&
+      !fieldKeywordGroups[field.name]?.length
+    ) {
+      fieldKeywordGroups[field.name] = [{
+        isDefault: true,
+        name: "keyword",
+        value: "",
+      }];
+    }
+    if (fieldType === "text" && !fieldFulltextAnalyzerGroups[field.name]?.length) {
+      fieldFulltextAnalyzerGroups[field.name] = [{
+        isDefault: true,
+        name: "fulltext",
+        value: "",
+      }];
+      fulltextFields.push(field.name);
+    }
   }
 
   return {
+    defaultKeywordIgnoreAbove,
     incrementalFields: resource.indexConfig?.incrementalFields ?? [],
     primaryKeyFields: resource.indexConfig?.primaryKeyFields ?? [],
     embeddingFields,
     embeddingModel,
     fieldEmbeddingModels,
     fieldEmbeddingModelGroups,
+    fieldKeywordGroups,
     fieldFulltextAnalyzers,
     fieldFulltextAnalyzerGroups,
     fulltextFields,

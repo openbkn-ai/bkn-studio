@@ -52,10 +52,20 @@ export type ResourceSchemaField = {
 
 /** Resource-level defaults and cross-field build strategy, excluding per-field index participation. */
 export type ResourceIndexConfig = {
+  defaultKeywordIgnoreAbove?: number;
   incrementalFields?: string[];
   primaryKeyFields?: string[];
   defaultEmbeddingModel?: string;
   defaultFulltextAnalyzer?: string;
+};
+
+export type ResourceSourceMetadata = {
+  foreignKeyCount?: number;
+  indexCount?: number;
+  objectType?: string;
+  originalDescription?: string;
+  originalName?: string;
+  primaryKeys?: string[];
 };
 
 export type CatalogResource = {
@@ -80,11 +90,14 @@ export type CatalogResource = {
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
-  rowCount: number;
+  /** Resource row count returned by Vega; null when the backend did not calculate it. */
+  rowCount: number | null;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];
   sourceIdentifier: string;
+  /** Stable, user-facing source metadata normalized from connector-specific data. */
+  sourceMetadata?: ResourceSourceMetadata;
   /** Resource lifecycle status reported by Vega. */
   status?: ResourceStatus;
   /** Resource lifecycle/discovery detail reported by Vega. */

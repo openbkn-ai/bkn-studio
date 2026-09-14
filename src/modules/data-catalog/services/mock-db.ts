@@ -59,12 +59,25 @@ function makeResource(
   input: Omit<CatalogResource, "columnCount" | "enabled" | "localIndexStatus" | "operations" | "updateTime"> &
     Partial<Pick<CatalogResource, "enabled" | "localIndexStatus" | "operations">>,
 ): CatalogResource {
+  const sourceMetadata =
+    input.category === "dataset"
+      ? undefined
+      : {
+          foreignKeyCount: 0,
+          indexCount: 0,
+          objectType: "table",
+          originalDescription: input.description,
+          originalName: input.sourceIdentifier,
+          ...input.sourceMetadata,
+        };
+
   return {
     ...input,
     columnCount: input.schema.length,
     enabled: input.enabled ?? true,
     localIndexStatus: input.localIndexStatus ?? "unavailable",
     operations: input.operations ?? ["view_detail", "query_data"],
+    sourceMetadata,
     updateTime: formatMockTimestamp(input.expectedUpdateTime),
   };
 }
@@ -78,6 +91,9 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.customers",
     description: "客户主数据表,含联系方式与生命周期状态。",
+    sourceMetadata: {
+      primaryKeys: ["customer_id"],
+    },
     tags: ["crm", "core"],
     creatorName: "Platform Admin",
     createTime: formatMockTimestamp(daysAgo(28)),
@@ -176,6 +192,9 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.orders",
     description: "订单事实表。",
+    sourceMetadata: {
+      primaryKeys: ["order_id"],
+    },
     tags: ["crm", "orders"],
     creatorName: "Platform Admin",
     createTime: formatMockTimestamp(daysAgo(26)),
@@ -240,6 +259,12 @@ export const mockResources: CatalogResource[] = [
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.index_config_demo",
     description: "用于验证主键、增量键和字段特征配置的示例资源。",
+    sourceMetadata: {
+      foreignKeyCount: 1,
+      indexCount: 3,
+      originalDescription: "覆盖多类型字段、复合主键和增量同步游标的源端测试表。",
+      primaryKeys: ["tenant_id", "record_id"],
+    },
     tags: ["demo", "index"],
     creatorName: "Platform Admin",
     createTime: formatMockTimestamp(daysAgo(1)),

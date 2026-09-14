@@ -59,6 +59,29 @@ describe("data catalog discover-status mocks", () => {
       "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
       "json", "other",
     ]));
+    expect(resource?.sourceMetadata).toEqual({
+      foreignKeyCount: 1,
+      indexCount: 3,
+      objectType: "table",
+      originalDescription: "覆盖多类型字段、复合主键和增量同步游标的源端测试表。",
+      originalName: "crm_core.index_config_demo",
+      primaryKeys: ["tenant_id", "record_id"],
+    });
+  });
+
+  it("provides source metadata for physical resources but not datasets", () => {
+    for (const resource of mockResources) {
+      if (resource.category === "dataset") {
+        expect(resource.sourceMetadata).toBeUndefined();
+        continue;
+      }
+
+      expect(resource.sourceMetadata?.objectType).toBe("table");
+      expect(resource.sourceMetadata?.originalName).toBe(resource.sourceIdentifier);
+      expect(typeof resource.sourceMetadata?.foreignKeyCount).toBe("number");
+      expect(typeof resource.sourceMetadata?.indexCount).toBe("number");
+      expect(typeof resource.sourceMetadata?.originalDescription).toBe("string");
+    }
   });
 
   it("keeps mock task key fields compatible with their resource schema", () => {

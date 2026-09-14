@@ -36,6 +36,7 @@ import type {
   ResourcePreviewQuery,
   ResourcePreviewResult,
   ResourceSchemaField,
+  ResourceSourceMetadata,
   ResourceUpdateInput,
 } from "@/modules/data-catalog/types/data-catalog";
 
@@ -64,6 +65,7 @@ type BackendSchemaField = {
 };
 
 type BackendIndexConfig = {
+  default_keyword_ignore_above?: number;
   incremental_fields?: string[];
   primary_key_fields?: string[];
   default_embedding_model?: string;
@@ -118,6 +120,9 @@ function mapIndexConfigToBackend(
   }
 
   return {
+    ...(config.defaultKeywordIgnoreAbove !== undefined
+      ? { default_keyword_ignore_above: config.defaultKeywordIgnoreAbove }
+      : {}),
     incremental_fields: config.incrementalFields,
     primary_key_fields: config.primaryKeyFields,
     default_fulltext_analyzer: config.defaultFulltextAnalyzer,
@@ -133,6 +138,9 @@ function mapIndexConfigFromBackend(
   }
 
   return {
+    ...(config.default_keyword_ignore_above !== undefined
+      ? { defaultKeywordIgnoreAbove: config.default_keyword_ignore_above }
+      : {}),
     incrementalFields: config.incremental_fields,
     primaryKeyFields: config.primary_key_fields,
     defaultFulltextAnalyzer: config.default_fulltext_analyzer,
@@ -228,9 +236,12 @@ type BackendResourceDetailFields = {
   index_config?: BackendIndexConfig | null;
   schema_definition?: BackendSchemaField[] | null;
   source_metadata?: {
-    properties?: {
-      row_count?: number;
-    };
+    foreign_keys?: unknown[];
+    indices?: unknown[];
+    original_description?: string;
+    original_name?: string;
+    primary_keys?: string[];
+    table_type?: string;
   } | null;
 };
 
@@ -302,6 +313,23 @@ function normalizeLocalIndexStatus(value?: string): CatalogResource["localIndexS
   }
 }
 
+function mapSourceMetadata(
+  metadata?: BackendResourceDetailFields["source_metadata"],
+): ResourceSourceMetadata | undefined {
+  if (!metadata) {
+    return undefined;
+  }
+
+  return {
+    foreignKeyCount: metadata.foreign_keys?.length ?? 0,
+    indexCount: metadata.indices?.length ?? 0,
+    objectType: metadata.table_type?.trim() || undefined,
+    originalDescription: metadata.original_description?.trim() || undefined,
+    originalName: metadata.original_name?.trim() || undefined,
+    primaryKeys: metadata.primary_keys?.map((key) => key.trim()).filter(Boolean),
+  };
+}
+
 function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetailFields>): CatalogResource {
   return {
     id: item.id,
@@ -318,10 +346,10 @@ function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetai
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
+    sourceMetadata: mapSourceMetadata(item.source_metadata),
     // List endpoints omit schema_definition, so use backend column_count; detail endpoints fall back to schema length.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
-    // Backend often omits top-level row_count; actual rows are in source_metadata.properties.
-    rowCount: item.row_count ?? item.source_metadata?.properties?.row_count ?? 0,
+    rowCount: item.row_count ?? null,
     schemaName: item.schema,
     status: normalizeResourceStatus(item.status),
     statusMessage: item.status_message?.trim() || undefined,
@@ -474,7 +502,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
               { name: "updated_at", type: "datetime" },
             ],
       columnCount: input.schema.length > 0 ? input.schema.length : 3,
-      rowCount: 0,
+      rowCount: input.category === "dataset" ? 0 : null,
       expectedUpdateTime: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),
     };
@@ -512,7 +540,7 @@ export async function createCatalogResource(input: ResourceCreateInput) {
       operations: response.data.operations,
       schema: input.schema,
       columnCount: input.schema.length,
-      rowCount: 0,
+      rowCount: input.category === "dataset" ? 0 : null,
       expectedUpdateTime: Date.now(),
       updateTime: formatMockTimestamp(Date.now()),
     }
@@ -736,7 +764,7 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const total = resource.rowCount;
+    const total = resource.rowCount ?? 0;
     const count = Math.max(0, Math.min(query.limit, total - query.offset));
     const usesLocalIndex = !query.ignoreLocalIndex &&
       resource.category === "table" &&

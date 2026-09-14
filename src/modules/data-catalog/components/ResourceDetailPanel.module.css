@@ -152,24 +152,71 @@
 
 .basicInfo {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  border-top: 1px solid var(--color-divider);
+  border-left: 1px solid var(--color-divider);
 }
 
-.basicInfoRow {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.6;
-  word-break: break-word;
+.basicInfoItem {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  grid-column: span 4;
+  min-width: 0;
+  padding: 10px 12px;
+  border-right: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
 }
 
-.basicInfoDivider {
-  margin: 0 12px;
-  color: var(--color-text-muted);
+.basicInfoSpanTwo {
+  grid-column: span 8;
+}
+
+.basicInfoHalf {
+  grid-column: span 6;
+}
+
+.basicInfoQuarter {
+  grid-column: span 3;
+}
+
+.basicInfoFull {
+  grid-column: 1 / -1;
 }
 
 .basicInfoLabel {
   color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.basicInfoValue {
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.copyableValue {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.copyableValue code {
+  overflow: hidden;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyableValue :global(.ant-btn) {
+  flex: 0 0 auto;
+  height: auto;
+  padding: 0 4px;
 }
 
 .resourceTag {
@@ -243,16 +290,16 @@
 }
 
 .fieldDescription {
-  display: inline-block;
-  max-width: 280px;
+  display: block;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  vertical-align: bottom;
 }
 
 .inlineInput {
-  min-width: 180px;
+  width: 100%;
+  min-width: 0;
 }
 
 .inlineInput :global(.ant-input) {
@@ -288,6 +335,17 @@
 }
 
 @media (max-width: 768px) {
+  .basicInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .basicInfoSpanTwo,
+  .basicInfoHalf,
+  .basicInfoQuarter,
+  .basicInfoFull {
+    grid-column: auto;
+  }
+
   .detailGrid {
     grid-template-columns: 1fr;
   }

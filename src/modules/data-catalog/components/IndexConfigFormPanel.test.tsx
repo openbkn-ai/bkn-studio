@@ -9,7 +9,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { BuildTask, CatalogResource } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  BuildTask,
+  CatalogResource,
+  ResourceUpdateInput,
+} from "@/modules/data-catalog/types/data-catalog";
 
 const loadAnalyzerCapabilitiesMock = vi.hoisted(() => vi.fn());
 const loadEmbeddingModelOptionsMock = vi.hoisted(() => vi.fn());
@@ -168,8 +172,8 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("dataCatalog.build.embeddingFieldCount")).toBeTruthy();
-    expect(screen.getByText("dataCatalog.build.fulltextFieldCount")).toBeTruthy();
+    expect(screen.queryAllByText("dataCatalog.build.roleEmbedding").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("dataCatalog.build.roleFulltext").length).toBeGreaterThan(0);
     expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
   });
 
@@ -186,6 +190,99 @@ describe("IndexConfigFormPanel", () => {
     expect(saveButton.getAttribute("disabled")).not.toBeNull();
     fireEvent.click(saveButton);
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
+  it("configures the required keyword feature for a text field", async () => {
+    const textResource: CatalogResource = {
+      ...resource,
+      indexConfig: { incrementalFields: ["id"], primaryKeyFields: ["id"] },
+      schema: [
+        { name: "id", type: "string" },
+        {
+          features: [
+            { config: { analyzer: "standard" }, featureType: "fulltext" },
+            { config: { embedding_model: "model-1" }, featureType: "vector" },
+          ],
+          description: "Searchable title",
+          name: "title",
+          originalDescription: "",
+          originalName: "source_title",
+          originalType: "longtext",
+          type: "text",
+        },
+      ],
+    };
+    getCatalogResourceMock.mockResolvedValue(textResource);
+    updateCatalogResourceMock.mockResolvedValue(textResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={textResource} />
+      </MemoryRouter>,
+    );
+
+    const featureButtons = await screen.findAllByRole("button", { name: "dataCatalog.build.featureConfig" });
+    const titleRow = screen.getAllByRole("row").find((row) =>
+      row.querySelector("code")?.textContent === "title",
+    );
+    expect(Array.from(titleRow?.querySelectorAll("[data-feature-type]") ?? []).map((tag) =>
+      tag.getAttribute("data-feature-type"),
+    )).toEqual(["keyword", "fulltext", "embedding"]);
+
+    fireEvent.click(featureButtons[1]);
+    const featureDrawer = await screen.findByRole("dialog");
+    expect(Array.from(featureDrawer.querySelectorAll("[data-field-meta]")).map((item) =>
+      item.getAttribute("data-field-meta"),
+    )).toEqual([
+      "name",
+      "display-name",
+      "type",
+      "description",
+      "original-name",
+      "original-type",
+      "original-description",
+    ]);
+    expect(featureDrawer.querySelector('[data-field-meta="name"]')?.textContent).toContain("title");
+    expect(featureDrawer.querySelector('[data-field-meta="original-name"]')?.textContent).toContain("source_title");
+    expect(featureDrawer.querySelector('[data-field-meta="original-type"]')?.textContent).toContain("longtext");
+    expect(featureDrawer.querySelector('[data-field-meta="description"]')?.textContent).toContain("Searchable title");
+    expect(featureDrawer.querySelector('[data-field-meta="original-description"]')?.textContent).toContain("-");
+    expect(Array.from(featureDrawer.querySelectorAll("[data-feature-type]")).map((section) =>
+      section.getAttribute("data-feature-type"),
+    )).toEqual(["keyword", "fulltext", "embedding"]);
+    const nameInput = await screen.findByDisplayValue("keyword");
+    const defaultLimitInput = screen.getByDisplayValue("256");
+    const fieldLimitInput = screen.getByPlaceholderText("dataCatalog.build.inheritDefaultWithValue");
+    expect(defaultLimitInput.getAttribute("min")).toBe("1");
+    expect(defaultLimitInput.getAttribute("max")).toBe("8191");
+    expect(fieldLimitInput.getAttribute("min")).toBe("1");
+    expect(fieldLimitInput.getAttribute("max")).toBe("8191");
+
+    fireEvent.change(defaultLimitInput, { target: { value: "8192" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+    expect(screen.getAllByText("dataCatalog.build.defaultKeywordIgnoreAboveInvalid").length).toBeGreaterThan(0);
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+
+    fireEvent.change(defaultLimitInput, { target: { value: "512" } });
+    fireEvent.change(fieldLimitInput, { target: { value: "8192" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+    expect(screen.getAllByText("dataCatalog.build.keywordIgnoreAboveInvalid").length).toBeGreaterThan(0);
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+
+    fireEvent.change(fieldLimitInput, { target: { value: "" } });
+    fireEvent.change(nameInput, { target: { value: "exact" } });
+
+    expect(screen.getByTitle("dataCatalog.build.keywordRequiredHint").getAttribute("disabled")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
+    const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
+    expect(payload.indexConfig?.defaultKeywordIgnoreAbove).toBe(512);
+    const titleField = payload.schema.find((field) => field.name === "title");
+    const { features = [] } = titleField ?? {};
+    const keyword = features.find((feature) => feature.featureType === "keyword");
+    expect(keyword?.name).toBe("exact");
+    expect(keyword?.config).toEqual({ ignore_above: 512 });
   });
 
   it("preserves freshly generated semantic metadata when saving index config", async () => {
@@ -221,7 +318,8 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText("title");
+    await screen.findAllByText("Pass ID（title）");
+    expect(screen.getAllByTitle("Pass ID（title）")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 
     await waitFor(() => {
