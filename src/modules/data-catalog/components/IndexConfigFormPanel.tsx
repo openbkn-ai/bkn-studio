@@ -823,6 +823,9 @@ export function IndexConfigFormPanel({
     }
     const isEmbedding = kind === "embedding";
     const isKeyword = kind === "keyword";
+    const featureNameEditable =
+      (isKeyword && isTextType(featureField.type)) ||
+      (kind === "fulltext" && !isTextType(featureField.type));
     const valueLabel = isKeyword
       ? t("dataCatalog.build.keywordIgnoreAbove")
       : isEmbedding
@@ -947,13 +950,16 @@ export function IndexConfigFormPanel({
                     />
                   )}
                   <Input
-                    disabled={disabled}
+                    disabled={disabled || !featureNameEditable}
                     onChange={(event) => {
                       const copy = [...groups];
                       copy[index] = { ...feature, name: event.target.value };
                       updateFeatureGroups(kind, featureField.name, copy);
                     }}
                     placeholder={t("dataCatalog.build.featureNamePlaceholder")}
+                    title={!featureNameEditable
+                      ? t("dataCatalog.build.fixedFeatureNameHint")
+                      : undefined}
                     value={feature.name}
                   />
                   <Input

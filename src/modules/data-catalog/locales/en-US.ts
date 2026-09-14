@@ -576,6 +576,7 @@ export const dataCatalogEnUS = {
       featureNameLabel: "Feature name",
       featureDescriptionLabel: "Description",
       featureNamePlaceholder: "Feature name",
+      fixedFeatureNameHint: "This feature uses the main field name or a fixed vector field name and cannot be renamed.",
       featureDescriptionPlaceholder: "Feature description",
       defaultFeature: "Default",
       featureGroupHint: "One feature of each type is supported per field.",

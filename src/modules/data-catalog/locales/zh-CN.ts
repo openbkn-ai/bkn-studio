@@ -576,6 +576,7 @@ export const dataCatalogZhCN = {
       featureNameLabel: "特征名称",
       featureDescriptionLabel: "描述",
       featureNamePlaceholder: "特征名称",
+      fixedFeatureNameHint: "该特征使用字段主名称或固定的向量字段名称，特征名称不可修改。",
       featureDescriptionPlaceholder: "特征描述",
       defaultFeature: "默认",
       featureGroupHint: "每个字段的每类特征仅支持配置一组。",

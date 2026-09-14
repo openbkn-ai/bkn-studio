@@ -181,6 +181,37 @@ describe("IndexConfigFormPanel", () => {
     }));
   });
 
+  it("only allows renaming generated keyword and fulltext subfields", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [
+          { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
+          { config: { analyzer: "standard" }, featureType: "fulltext", name: "search" },
+        ],
+        name: "title",
+        type: "string",
+      }],
+    };
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalled());
+    fireEvent.click(await screen.findByRole("button", {
+      name: "dataCatalog.build.featureConfig",
+    }));
+    await screen.findByRole("dialog");
+    const featureNameInputs = screen.getAllByPlaceholderText("dataCatalog.build.featureNamePlaceholder");
+    const keywordName = featureNameInputs.find((input) => input.getAttribute("value") === "keyword");
+    const fulltextName = featureNameInputs.find((input) => input.getAttribute("value") === "search");
+    expect(keywordName?.hasAttribute("disabled")).toBe(true);
+    expect(fulltextName?.hasAttribute("disabled")).toBe(false);
+  });
+
   it("paginates field feature configuration with ten fields per page", async () => {
     const pagedResource: CatalogResource = {
       ...resource,
