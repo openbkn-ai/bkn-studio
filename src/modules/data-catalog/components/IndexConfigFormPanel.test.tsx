@@ -214,6 +214,37 @@ describe("IndexConfigFormPanel", () => {
     expect(await screen.findByText("dataCatalog.build.fixedFeatureNameHint")).toBeTruthy();
   });
 
+  it("rejects feature names qualified with their property name", async () => {
+    const configuredResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [
+          { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
+          { config: { analyzer: "standard" }, featureType: "fulltext", name: "fulltext" },
+        ],
+        name: "title",
+        type: "text",
+      }],
+    };
+    getCatalogResourceMock.mockResolvedValue(configuredResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={configuredResource} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", {
+      name: "dataCatalog.build.featureConfig",
+    }));
+    const keywordName = await screen.findByDisplayValue("keyword");
+    fireEvent.change(keywordName, { target: { value: "title.keyword" } });
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+
+    expect(screen.getAllByText("dataCatalog.build.featureNameMustBeRelative").length).toBeGreaterThan(0);
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
   it("paginates field feature configuration with ten fields per page", async () => {
     const pagedResource: CatalogResource = {
       ...resource,

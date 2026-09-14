@@ -54,6 +54,25 @@ describe("resource.service · previewCatalogResource", () => {
     expect(result).toEqual({ querySource: "local_index", rows: [{ id: "r-1" }], total: 42 });
   });
 
+  it("preserves an unsafe int64 preview total", async () => {
+    postMock.mockImplementation((
+      _url: string,
+      _body: unknown,
+      config: { transformResponse?: (data: unknown) => unknown },
+    ) => Promise.resolve({
+      data: config.transformResponse?.(
+        '{"query_source":"source","entries":[],"total_count":9007199254740993}',
+      ),
+    }));
+    const { previewCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    const result = await previewCatalogResource("r-1", { limit: 10, offset: 0 });
+
+    expect(result.total).toBe("9007199254740993");
+  });
+
   it("requests Binary content only when the caller forces the original source", async () => {
     postMock.mockResolvedValue({ data: { query_source: "source", entries: [], total_count: 0 } });
     const { previewCatalogResource } = await import(

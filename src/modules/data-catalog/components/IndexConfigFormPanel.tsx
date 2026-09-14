@@ -492,6 +492,24 @@ export function IndexConfigFormPanel({
       return Array.from(duplicates, (name) => `${field}: ${name}`);
     });
   }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
+  const qualifiedFeatureNames = useMemo(() => {
+    const qualified: string[] = [];
+    for (const groupsByField of [
+      eligibleKeywordGroups,
+      eligibleFulltextAnalyzerGroups,
+      eligibleEmbeddingModelGroups,
+    ]) {
+      for (const [field, groups] of Object.entries(groupsByField)) {
+        for (const feature of groups) {
+          const name = feature.name?.trim() ?? "";
+          if (name.startsWith(`${field}.`)) {
+            qualified.push(`${field}: ${name}`);
+          }
+        }
+      }
+    }
+    return qualified;
+  }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
   const invalidSavedPrimaryKeyFields = useMemo(
     () => supportsBuild ? invalidKeyFields(schema, primaryKeyFields, isPrimaryKeyField) : [],
     [primaryKeyFields, schema, supportsBuild],
@@ -511,6 +529,9 @@ export function IndexConfigFormPanel({
     }
     if (duplicateFeatureNames.length > 0) {
       return t("dataCatalog.build.duplicateFeatureNames", { features: duplicateFeatureNames.join(", ") });
+    }
+    if (qualifiedFeatureNames.length > 0) {
+      return t("dataCatalog.build.featureNameMustBeRelative", { features: qualifiedFeatureNames.join(", ") });
     }
     const keywordDefault = Number(defaultKeywordIgnoreAbove);
     if (
@@ -1061,6 +1082,12 @@ export function IndexConfigFormPanel({
       ) : duplicateFeatureNames.length > 0 ? (
         <Alert
           message={t("dataCatalog.build.duplicateFeatureNames", { features: duplicateFeatureNames.join(", ") })}
+          showIcon
+          type="error"
+        />
+      ) : qualifiedFeatureNames.length > 0 ? (
+        <Alert
+          message={t("dataCatalog.build.featureNameMustBeRelative", { features: qualifiedFeatureNames.join(", ") })}
           showIcon
           type="error"
         />

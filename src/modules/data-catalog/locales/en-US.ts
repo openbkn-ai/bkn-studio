@@ -587,6 +587,7 @@ export const dataCatalogEnUS = {
       removeFeatureType: "Remove Type",
       duplicateFeatureTypeUnsupported: "Only one feature of each type is supported per field. Remove duplicate features: {{features}}.",
       duplicateFeatureNames: "Feature names must be unique within a field. Rename duplicate features: {{features}}.",
+      featureNameMustBeRelative: "Feature names must be relative and must not repeat the field name. Update: {{features}}.",
       featureSummaryEmpty: "No features",
       featureUnsupported: "Unsupported",
       defaultEmbeddingModelHint: "Available options are the embedding models connected in the current environment.",

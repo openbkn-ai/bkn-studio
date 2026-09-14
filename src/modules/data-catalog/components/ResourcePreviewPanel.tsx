@@ -17,6 +17,10 @@ import {
   isRequestForbidden,
 } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import {
+  resourceCountAsBigInt,
+  resourceCountForPagination,
+} from "@/modules/data-catalog/lib/resource-count";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { previewCatalogResource } from "@/modules/data-catalog/services/resource.service";
 import type {
@@ -295,10 +299,11 @@ export function ResourcePreviewPanel({
   const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
-  const totalUnreliable = rows.length === pageSize && backendTotal <= fetched;
+  const totalUnreliable = rows.length === pageSize &&
+    resourceCountAsBigInt(backendTotal) <= BigInt(fetched);
   const total = totalUnreliable
-    ? Math.max(backendTotal, Number(resource.rowCount ?? 0), fetched)
-    : Math.max(backendTotal, fetched);
+    ? resourceCountForPagination(backendTotal, resource.rowCount, fetched)
+    : resourceCountForPagination(backendTotal, fetched);
   const columns = resource.schema;
 
   const handlePaginationChange = (nextPage: number, nextPageSize: number) => {

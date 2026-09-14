@@ -13,6 +13,7 @@ import {
 import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
 import i18n from "@/app/locales/i18n";
 import { postCatalogDiscover } from "@/shared/catalog";
+import { resourceCountForPagination } from "@/modules/data-catalog/lib/resource-count";
 import {
   emitMockChange,
   formatMockTimestamp,
@@ -779,7 +780,7 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const total = Number(resource.rowCount ?? 0);
+    const total = resourceCountForPagination(resource.rowCount);
     const count = Math.max(0, Math.min(query.limit, total - query.offset));
     const usesLocalIndex = !query.ignoreLocalIndex &&
       resource.category === "table" &&
@@ -803,7 +804,7 @@ export async function previewCatalogResource(
   const response = await http.post<{
     query_source?: "local_index" | "source";
     entries?: Record<string, unknown>[];
-    total_count?: number;
+    total_count?: number | string;
   }>(
     `/vega-backend/v1/resources/${id}/data`,
     {

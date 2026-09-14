@@ -32,7 +32,9 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
-  TablePaginationBar: () => null,
+  TablePaginationBar: ({ total }: { total: number }) => (
+    <span data-testid="pagination-total">{total}</span>
+  ),
 }));
 
 import { ResourcePreviewPanel } from "./ResourcePreviewPanel";
@@ -141,6 +143,29 @@ describe("ResourcePreviewPanel", () => {
         offset: 0,
       });
     });
+  });
+
+  it("clamps unsafe row counts at the numeric pagination boundary", async () => {
+    previewCatalogResourceMock.mockResolvedValue({
+      rows: Array.from({ length: 10 }, (_, index) => ({ id: index })),
+      total: 0,
+    });
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          columnCount: 1,
+          rowCount: "9007199254740993",
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    expect((await screen.findByTestId("pagination-total")).textContent).toBe(
+      String(Number.MAX_SAFE_INTEGER),
+    );
   });
 
   it("does not request Binary data or expose its controls for datasets", async () => {
