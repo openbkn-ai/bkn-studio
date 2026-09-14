@@ -50,6 +50,28 @@ export type DataCatalogSceneProps = {
   suppressAutoSelect?: boolean;
 };
 
+function catalogPageScope(type: CatalogRecord["type"], connectorType: string) {
+  return type === "physical" ? `${type}:${connectorType}` : type;
+}
+
+function recordPaginatedCatalogs(
+  paginatedCatalogScopes: Map<string, string>,
+  pageItems: CatalogRecord[],
+  type: CatalogRecord["type"],
+  connectorType: string,
+  replaceLoadedPageItems: boolean,
+) {
+  const scope = catalogPageScope(type, connectorType);
+  if (replaceLoadedPageItems) {
+    paginatedCatalogScopes.forEach((catalogScope, catalogId) => {
+      if (catalogScope === scope) {
+        paginatedCatalogScopes.delete(catalogId);
+      }
+    });
+  }
+  pageItems.forEach((catalog) => paginatedCatalogScopes.set(catalog.id, scope));
+}
+
 function mergeCatalogPage(
   current: CatalogRecord[],
   pageItems: CatalogRecord[],
@@ -130,6 +152,7 @@ export function DataCatalogScene({
   const initialLoadRef = useRef(false);
   const catalogQueryGeneration = useRef(0);
   const hydratedCatalogIds = useRef(new Set<string>());
+  const paginatedCatalogScopes = useRef(new Map<string, string>());
 
   const selectedCatalog = useMemo(() => {
     if (selection?.type === "catalog") {
@@ -166,7 +189,15 @@ export function DataCatalogScene({
     }
     if (!preservePhysicalCatalogs) {
       hydratedCatalogIds.current.clear();
+      paginatedCatalogScopes.current.clear();
     }
+    recordPaginatedCatalogs(
+      paginatedCatalogScopes.current,
+      logicalCatalogResult.items,
+      "logical",
+      "",
+      true,
+    );
     logicalCatalogResult.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
     setCatalogs((current) => mergeCatalogPage(
       preservePhysicalCatalogs ? current : [],
@@ -199,6 +230,13 @@ export function DataCatalogScene({
     if (generation !== catalogQueryGeneration.current) {
       return;
     }
+    recordPaginatedCatalogs(
+      paginatedCatalogScopes.current,
+      result.items,
+      type,
+      connectorType,
+      pageOffset === 0,
+    );
     result.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
     setCatalogs((current) => mergeCatalogPage(
       current,
@@ -309,6 +347,9 @@ export function DataCatalogScene({
           generation !== catalogQueryGeneration.current ||
           selectedCatalogIdRef.current !== selection.id
         ) {
+          return;
+        }
+        if (paginatedCatalogScopes.current.has(catalog.id)) {
           return;
         }
         hydratedCatalogIds.current.add(catalog.id);

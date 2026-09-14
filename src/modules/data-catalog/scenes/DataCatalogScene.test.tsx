@@ -310,9 +310,10 @@ describe("DataCatalogScene", () => {
     });
   });
 
-  it("clears a batched deep-link placeholder when the same catalog page arrives", async () => {
+  it("keeps a paginated catalog in place when a later page resolves before its hydration", async () => {
     let resolveCatalog: (value: CatalogRecord) => void;
     let resolveFirstPage: (value: { items: CatalogRecord[]; total: number }) => void;
+    let resolveSecondPage: (value: { items: CatalogRecord[]; total: number }) => void;
     const beforeCatalog = { ...catalog, id: "before", name: "before" };
     const afterCatalog = { ...catalog, id: "after", name: "after" };
     const lastCatalog = { ...catalog, id: "last", name: "last" };
@@ -324,12 +325,13 @@ describe("DataCatalogScene", () => {
       if (query.type !== "physical") {
         return Promise.resolve({ items: [], total: 0 });
       }
-      if (query.page === 1) {
-        return new Promise((resolve) => {
+      return new Promise((resolve) => {
+        if (query.page === 1) {
           resolveFirstPage = resolve;
-        });
-      }
-      return Promise.resolve({ items: [lastCatalog], total: 4 });
+        } else {
+          resolveSecondPage = resolve;
+        }
+      });
     });
     listCatalogConnectorTypeStatsMock.mockResolvedValue([{
       catalogCount: 4,
@@ -350,17 +352,24 @@ describe("DataCatalogScene", () => {
       type: "physical",
     })));
 
-    await act(async () => {
-      resolveCatalog!(catalog);
-      await Promise.resolve();
+    act(() => {
       resolveFirstPage!({ items: [beforeCatalog, catalog, afterCatalog], total: 4 });
-      await Promise.resolve();
     });
     await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe(
       "before,catalog-1,after",
     ));
 
     fireEvent.click(screen.getByRole("button", { name: "load more physical" }));
+    await waitFor(() => expect(listCatalogsMock).toHaveBeenCalledWith(expect.objectContaining({
+      page: 2,
+      type: "physical",
+    })));
+    await act(async () => {
+      resolveSecondPage!({ items: [lastCatalog], total: 4 });
+      await Promise.resolve();
+      resolveCatalog!(catalog);
+      await Promise.resolve();
+    });
 
     await waitFor(() => expect(screen.getByTestId("catalog-ids").textContent).toBe(
       "before,catalog-1,after,last",
