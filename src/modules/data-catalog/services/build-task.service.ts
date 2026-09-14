@@ -442,7 +442,7 @@ export async function createBuildTask(
       modelDimensions: 0,
       fulltextFields: form.fulltextFields,
       fulltextAnalyzer: form.fulltextAnalyzer ?? "",
-      totalCount: resource?.rowCount ?? 0,
+      totalCount: Number(resource?.rowCount ?? 0),
       syncedCount: 0,
       createTime,
       finishTime: null,

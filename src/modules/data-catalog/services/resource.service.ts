@@ -123,8 +123,12 @@ function mapIndexConfigToBackend(
     ...(config.defaultKeywordIgnoreAbove !== undefined
       ? { default_keyword_ignore_above: config.defaultKeywordIgnoreAbove }
       : {}),
-    incremental_fields: config.incrementalFields,
-    primary_key_fields: config.primaryKeyFields,
+    ...(config.incrementalFields !== undefined
+      ? { incremental_fields: config.incrementalFields }
+      : {}),
+    ...(config.primaryKeyFields !== undefined
+      ? { primary_key_fields: config.primaryKeyFields }
+      : {}),
     default_fulltext_analyzer: config.defaultFulltextAnalyzer,
     default_embedding_model: config.defaultEmbeddingModel,
   };
@@ -233,7 +237,7 @@ type BackendResourceSummary = {
 type BackendResourceDetailFields = {
   column_count?: number;
   index_config?: BackendIndexConfig | null;
-  row_count?: number;
+  row_count?: number | string;
   schema_definition?: BackendSchemaField[] | null;
   source_metadata?: {
     foreign_keys?: unknown[];
@@ -481,7 +485,10 @@ export async function getCatalogResources(ids: string[]) {
     const chunk = uniqueIds.slice(index, index + 50);
     const response = await http.get<{ entries?: BackendResource[] }>(
       `/vega-backend/v1/resources/${chunk.join(",")}`,
-      { skipErrorToast: true },
+      {
+        skipErrorToast: true,
+        transformResponse: transformPrecisionSafeJSONResponse,
+      },
     );
     resources.push(...(response.data.entries ?? []).map(mapResource));
   }
@@ -772,7 +779,7 @@ export async function previewCatalogResource(
       return wait({ rows: [], total: 0 });
     }
 
-    const total = resource.rowCount ?? 0;
+    const total = Number(resource.rowCount ?? 0);
     const count = Math.max(0, Math.min(query.limit, total - query.offset));
     const usesLocalIndex = !query.ignoreLocalIndex &&
       resource.category === "table" &&

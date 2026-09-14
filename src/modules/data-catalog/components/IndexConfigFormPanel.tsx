@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Drawer, Input, Select, Space } from "antd";
+import { Alert, Drawer, Input, Select, Space, Tooltip } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -141,6 +141,7 @@ export function IndexConfigFormPanel({
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [primaryKeyFields, setPrimaryKeyFields] = useState<string[]>([]);
   const [incrementalFields, setIncrementalFields] = useState<string[]>([]);
+  const supportsBuild = resource.category !== "dataset";
   const [fieldEmbeddingModelGroups, setFieldEmbeddingModelGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [fieldKeywordGroups, setFieldKeywordGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
   const [fieldFulltextAnalyzerGroups, setFieldFulltextAnalyzerGroups] = useState<Record<string, ResourceFeatureDraft[]>>({});
@@ -492,12 +493,12 @@ export function IndexConfigFormPanel({
     });
   }, [eligibleEmbeddingModelGroups, eligibleFulltextAnalyzerGroups, eligibleKeywordGroups]);
   const invalidSavedPrimaryKeyFields = useMemo(
-    () => invalidKeyFields(schema, primaryKeyFields, isPrimaryKeyField),
-    [primaryKeyFields, schema],
+    () => supportsBuild ? invalidKeyFields(schema, primaryKeyFields, isPrimaryKeyField) : [],
+    [primaryKeyFields, schema, supportsBuild],
   );
   const invalidSavedIncrementalFields = useMemo(
-    () => invalidKeyFields(schema, incrementalFields, isIncrementalField),
-    [incrementalFields, schema],
+    () => supportsBuild ? invalidKeyFields(schema, incrementalFields, isIncrementalField) : [],
+    [incrementalFields, schema, supportsBuild],
   );
 
   const getFormValidationError = (includeCapabilityState = true): string | null => {
@@ -636,8 +637,8 @@ export function IndexConfigFormPanel({
         detail.schema.length ? detail.schema : schema,
         {
           defaultKeywordIgnoreAbove: Number(defaultKeywordIgnoreAbove),
-          primaryKeyFields,
-          incrementalFields,
+          primaryKeyFields: supportsBuild ? primaryKeyFields : [],
+          incrementalFields: supportsBuild ? incrementalFields : [],
           embeddingFields,
           embeddingModel: defaultModel?.id ?? "",
           fieldEmbeddingModels: {},
@@ -649,6 +650,13 @@ export function IndexConfigFormPanel({
           fulltextAnalyzer: defaultFulltextAnalyzer,
         },
       );
+      const nextIndexConfig = supportsBuild
+        ? indexConfig
+        : {
+            ...indexConfig,
+            incrementalFields: undefined,
+            primaryKeyFields: undefined,
+          };
 
       await updateCatalogResource(resource.id, {
         catalogId: detail.catalogId,
@@ -659,7 +667,7 @@ export function IndexConfigFormPanel({
         name: detail.name,
         sourceIdentifier: detail.sourceIdentifier,
         schema: nextSchema,
-        indexConfig,
+        indexConfig: nextIndexConfig,
       });
 
       setSchema(nextSchema);
@@ -734,8 +742,8 @@ export function IndexConfigFormPanel({
   const formValidationError = getFormValidationError();
   const configurationValidationError = getFormValidationError(false);
   const configurationIssues = [
-    ...(primaryKeyFields.length === 0 ? [t("dataCatalog.build.primaryKeyRequired")] : []),
-    ...(incrementalFields.length === 0 ? [t("dataCatalog.build.incrementalKeyRequired")] : []),
+    ...(supportsBuild && primaryKeyFields.length === 0 ? [t("dataCatalog.build.primaryKeyRequired")] : []),
+    ...(supportsBuild && incrementalFields.length === 0 ? [t("dataCatalog.build.incrementalKeyRequired")] : []),
     ...(configurationValidationError ? [configurationValidationError] : []),
   ];
   const buildReadinessIssues = [
@@ -949,19 +957,22 @@ export function IndexConfigFormPanel({
                       value={feature.value || INHERIT_VALUE}
                     />
                   )}
-                  <Input
-                    disabled={disabled || !featureNameEditable}
-                    onChange={(event) => {
-                      const copy = [...groups];
-                      copy[index] = { ...feature, name: event.target.value };
-                      updateFeatureGroups(kind, featureField.name, copy);
-                    }}
-                    placeholder={t("dataCatalog.build.featureNamePlaceholder")}
-                    title={!featureNameEditable
-                      ? t("dataCatalog.build.fixedFeatureNameHint")
-                      : undefined}
-                    value={feature.name}
-                  />
+                  <Tooltip title={!featureNameEditable
+                    ? t("dataCatalog.build.fixedFeatureNameHint")
+                    : undefined}>
+                    <span>
+                      <Input
+                        disabled={disabled || !featureNameEditable}
+                        onChange={(event) => {
+                          const copy = [...groups];
+                          copy[index] = { ...feature, name: event.target.value };
+                          updateFeatureGroups(kind, featureField.name, copy);
+                        }}
+                        placeholder={t("dataCatalog.build.featureNamePlaceholder")}
+                        value={feature.name}
+                      />
+                    </span>
+                  </Tooltip>
                   <Input
                     disabled={disabled}
                     onChange={(event) => {
@@ -1070,36 +1081,38 @@ export function IndexConfigFormPanel({
       ) : null}
 
       <div>
-        <div className={cx(
-          formStyles.configOverview,
-          hideBuildControls && formStyles.configOverviewTwoColumns,
-        )}>
-          <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.rolePrimaryKey")}</span>
-            <b title={fullFieldSummary(primaryKeyFields) || undefined}>{summarizeFields(primaryKeyFields)}</b>
-          </div>
-          <div className={formStyles.configMetric}>
-            <span>{t("dataCatalog.build.roleIncrementalKey")}</span>
-            <b title={fullFieldSummary(incrementalFields) || undefined}>{summarizeFields(incrementalFields)}</b>
-          </div>
-          {!hideBuildControls ? (
+        {supportsBuild ? (
+          <div className={cx(
+            formStyles.configOverview,
+            hideBuildControls && formStyles.configOverviewTwoColumns,
+          )}>
             <div className={formStyles.configMetric}>
-              <span>{t("dataCatalog.build.configCanBuild")}</span>
-              <b>
-                {capabilityCheckPending
-                  ? t("dataCatalog.build.configChecking")
-                  : canBuild
-                  ? t("dataCatalog.build.configCanBuildYes")
-                  : t("dataCatalog.build.configCannotBuild")}
-              </b>
-              {!canBuild ? (
-                <small className={formStyles.configMetricHint} title={buildReadinessIssues.join(" · ")}>
-                  {buildReadinessIssues.join(" · ")}
-                </small>
-              ) : null}
+              <span>{t("dataCatalog.build.rolePrimaryKey")}</span>
+              <b title={fullFieldSummary(primaryKeyFields) || undefined}>{summarizeFields(primaryKeyFields)}</b>
             </div>
-          ) : null}
-        </div>
+            <div className={formStyles.configMetric}>
+              <span>{t("dataCatalog.build.roleIncrementalKey")}</span>
+              <b title={fullFieldSummary(incrementalFields) || undefined}>{summarizeFields(incrementalFields)}</b>
+            </div>
+            {!hideBuildControls ? (
+              <div className={formStyles.configMetric}>
+                <span>{t("dataCatalog.build.configCanBuild")}</span>
+                <b>
+                  {capabilityCheckPending
+                    ? t("dataCatalog.build.configChecking")
+                    : canBuild
+                    ? t("dataCatalog.build.configCanBuildYes")
+                    : t("dataCatalog.build.configCannotBuild")}
+                </b>
+                {!canBuild ? (
+                  <small className={formStyles.configMetricHint} title={buildReadinessIssues.join(" · ")}>
+                    {buildReadinessIssues.join(" · ")}
+                  </small>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={formStyles.resourceDefaults}>
           <div className={formStyles.resourceDefaultsHead}>
@@ -1281,7 +1294,7 @@ export function IndexConfigFormPanel({
             </div>
           </div>
         </div>
-        {!hideBuildControls ? (
+        {supportsBuild && !hideBuildControls ? (
           <div className={formStyles.resourceDefaults}>
             <div className={formStyles.resourceDefaultsHead}>
               <div>

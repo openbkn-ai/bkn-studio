@@ -20,6 +20,9 @@ export type ResourceStatus = "active" | "deprecated" | "stale";
 /** Whether the Resource's local OpenSearch index is currently usable for queries. */
 export type ResourceLocalIndexStatus = "available" | "stale" | "unavailable";
 
+/** Safe integers stay numeric; int64 values outside JavaScript's safe range stay decimal strings. */
+export type ResourceRowCount = number | string;
+
 /** Field-level indexing capabilities: keyword, fulltext, and vector (aligned with Vega feature_type). */
 export type ResourceFeatureType = "keyword" | "fulltext" | "vector";
 
@@ -91,7 +94,7 @@ export type CatalogResource = {
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
   /** Resource row count returned by Vega; null when the backend did not calculate it. */
-  rowCount: number | null;
+  rowCount: ResourceRowCount | null;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];

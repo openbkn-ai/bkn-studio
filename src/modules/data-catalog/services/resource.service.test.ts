@@ -378,6 +378,34 @@ describe("resource.service · getCatalogResources", () => {
     ]);
   });
 
+  it("preserves an unsafe int64 row count from detail responses", async () => {
+    const rowCount = "9007199254740993";
+    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+      Promise.resolve({
+        data: config.transformResponse?.(
+          `{"entries":[{"catalog_id":"cat-1","category":"table","id":"res-1","name":"orders","row_count":${rowCount}}]}`,
+        ),
+      }),
+    );
+    const { getCatalogResources } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+    const { transformPrecisionSafeJSONResponse } = await import(
+      "@/framework/request/precision-safe-json"
+    );
+
+    const [resource] = await getCatalogResources(["res-1"]);
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/resources/res-1",
+      {
+        skipErrorToast: true,
+        transformResponse: transformPrecisionSafeJSONResponse,
+      },
+    );
+    expect(resource?.rowCount).toBe(rowCount);
+  });
+
   it("keeps missing source index and foreign-key counts unknown", async () => {
     getMock.mockResolvedValue({
       data: {
@@ -488,6 +516,39 @@ describe("resource.service · updateCatalogResource", () => {
       },
       source_identifier: "orders",
     });
+  });
+
+  it("omits unsupported dataset build keys from the request", async () => {
+    putMock.mockResolvedValue({});
+    getMock.mockResolvedValue({
+      data: {
+        catalog_id: "cat-1",
+        category: "dataset",
+        id: "res-1",
+        name: "documents",
+        schema_definition: [],
+      },
+    });
+    const { updateCatalogResource } = await import(
+      "@/modules/data-catalog/services/resource.service"
+    );
+
+    await updateCatalogResource("res-1", {
+      catalogId: "cat-1",
+      category: "dataset",
+      description: "",
+      expectedUpdateTime: 123,
+      indexConfig: {
+        defaultKeywordIgnoreAbove: 512,
+      },
+      name: "documents",
+      schema: [],
+      sourceIdentifier: "documents",
+    });
+
+    const request = putMock.mock.calls[0]?.[1] as { index_config?: Record<string, unknown> };
+    expect(request.index_config).not.toHaveProperty("primary_key_fields");
+    expect(request.index_config).not.toHaveProperty("incremental_fields");
   });
 });
 

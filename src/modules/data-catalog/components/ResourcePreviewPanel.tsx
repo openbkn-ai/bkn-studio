@@ -297,7 +297,7 @@ export function ResourcePreviewPanel({
   const fetched = offset + rows.length;
   const totalUnreliable = rows.length === pageSize && backendTotal <= fetched;
   const total = totalUnreliable
-    ? Math.max(backendTotal, resource.rowCount ?? 0, fetched)
+    ? Math.max(backendTotal, Number(resource.rowCount ?? 0), fetched)
     : Math.max(backendTotal, fetched);
   const columns = resource.schema;
 

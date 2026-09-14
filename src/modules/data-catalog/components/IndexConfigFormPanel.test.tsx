@@ -210,6 +210,8 @@ describe("IndexConfigFormPanel", () => {
     const fulltextName = featureNameInputs.find((input) => input.getAttribute("value") === "search");
     expect(keywordName?.hasAttribute("disabled")).toBe(true);
     expect(fulltextName?.hasAttribute("disabled")).toBe(false);
+    fireEvent.mouseEnter(keywordName?.parentElement as HTMLElement);
+    expect(await screen.findByText("dataCatalog.build.fixedFeatureNameHint")).toBeTruthy();
   });
 
   it("paginates field feature configuration with ten fields per page", async () => {
@@ -260,6 +262,38 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryAllByText("dataCatalog.build.roleEmbedding").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("dataCatalog.build.roleFulltext").length).toBeGreaterThan(0);
     expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
+  });
+
+  it("hides and removes build key fields for datasets", async () => {
+    const datasetResource: CatalogResource = {
+      ...resource,
+      category: "dataset",
+      indexConfig: {
+        incrementalFields: ["title"],
+        primaryKeyFields: ["title"],
+      },
+    };
+    getCatalogResourceMock.mockResolvedValue(datasetResource);
+    updateCatalogResourceMock.mockResolvedValue(datasetResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={datasetResource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dataCatalog.build.rolePrimaryKey")).toBeNull();
+    expect(screen.queryByText("dataCatalog.build.roleIncrementalKey")).toBeNull();
+    expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
+
+    fireEvent.click(await screen.findByRole("button", {
+      name: "dataCatalog.build.saveIndexConfig",
+    }));
+
+    await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
+    const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
+    expect(payload.indexConfig?.primaryKeyFields).toBeUndefined();
+    expect(payload.indexConfig?.incrementalFields).toBeUndefined();
   });
 
   it("does not submit index configuration when read-only", async () => {
