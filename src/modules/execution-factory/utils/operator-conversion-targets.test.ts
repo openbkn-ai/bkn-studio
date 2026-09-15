@@ -16,6 +16,7 @@ const operator: OperatorRecord = {
 const boxes: ToolboxRecord[] = [
   { boxId: "api-allowed", name: "API allowed", metadataType: "openapi", status: "published", operations: ["view", "modify"] },
   { boxId: "api-view", name: "API view", metadataType: "openapi", status: "published", operations: ["view"] },
+  { boxId: "api-no-operations", name: "API no operations", metadataType: "openapi", status: "published" },
   { boxId: "function", name: "Function", metadataType: "function", status: "published", operations: ["view", "modify"] },
   { boxId: "internal", name: "Internal", metadataType: "openapi", status: "published", operations: ["modify"], isInternal: true },
 ];

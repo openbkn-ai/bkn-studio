@@ -24,6 +24,6 @@ export function eligibleOperatorConversionTargets(
   return toolboxes.filter((toolbox) =>
     toolbox.metadataType === record?.metadataType &&
     !toolbox.isInternal &&
-    (toolbox.operations === undefined || toolbox.operations.includes("modify")),
+    toolbox.operations?.includes("modify") === true,
   );
 }
