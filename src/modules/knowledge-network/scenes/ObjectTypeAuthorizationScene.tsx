@@ -115,6 +115,10 @@ function mergeUsers(primary: AdminUser[], secondary: AdminUser[]) {
   return [...new Map([...primary, ...secondary].map((user) => [user.id, user])).values()];
 }
 
+function grantGranteeLabel(grant: ObjectGrant, user?: AdminUser) {
+  return grant.accessorName || grant.accessorAccount || user?.name;
+}
+
 function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
   const grouped = new Map<string, GrantSourceRow>();
   for (const record of records) {
@@ -713,12 +717,12 @@ export function ObjectTypeAuthorizationScene() {
     if (!sources.length) {
       return;
     }
-    const grantee = userMap.get(grant.accessorId);
+    const grantee = grantGranteeLabel(grant, userMap.get(grant.accessorId));
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("systemAdmin.objectGrants.deleteGrantConfirm", {
         count: sources.length || grant.operations.length,
-        name: grantee?.name || grant.accessorId,
+        name: grantee || t("systemAdmin.objectGrants.granteeUnresolved"),
       }),
       okButtonProps: { danger: true },
       okText: t("systemAdmin.objectGrants.deleteGrant"),
@@ -742,7 +746,9 @@ export function ObjectTypeAuthorizationScene() {
   };
 
   const sourceGrant = objectGrants.find((grant) => grant.accessorId === sourceAccessorId);
-  const sourceGrantee = sourceGrant ? userMap.get(sourceGrant.accessorId) : undefined;
+  const sourceGrantee = sourceGrant
+    ? grantGranteeLabel(sourceGrant, userMap.get(sourceGrant.accessorId))
+    : undefined;
   const sourceRows = collapseGrantSources(
     (sourceGrant?.grants ?? []).filter((source) => source.active),
   );
@@ -778,7 +784,7 @@ export function ObjectTypeAuthorizationScene() {
       content: t("systemAdmin.objectGrants.deleteSourceConfirm", {
         effect: t(`systemAdmin.objectGrants.effect.${source.effect}`),
         grantId: source.grantIds.join("、"),
-        name: sourceGrantee?.name || sourceGrant.accessorId,
+        name: sourceGrantee || t("systemAdmin.objectGrants.granteeUnresolved"),
         operation: baseOps.find((operation) => operation.key === source.operation)?.label ??
           source.operation,
         source: t(`systemAdmin.objectGrants.source.${source.policySource}`),
@@ -910,15 +916,21 @@ export function ObjectTypeAuthorizationScene() {
   const baseGrantColumns: ColumnsType<ObjectGrant> = [
     {
       dataIndex: "accessorId",
-      render: (id: string) => (
-        <div className={styles.subjectName}>
-          <Avatar icon={<UserOutlined />} size={34} />
-          <span>
-            <strong>{userMap.get(id)?.name || id}</strong>
-            <small>{userMap.get(id)?.account}</small>
-          </span>
-        </div>
-      ),
+      render: (id: string, grant: ObjectGrant) => {
+        const grantee = grantGranteeLabel(grant, userMap.get(id));
+        const account = grant.accessorAccount || userMap.get(id)?.account;
+        return (
+          <div className={styles.subjectName}>
+            <Avatar icon={<UserOutlined />} size={34} />
+            <span>
+              <Tooltip title={grantee ? undefined : id}>
+                <strong>{grantee || t("systemAdmin.objectGrants.granteeUnresolved")}</strong>
+              </Tooltip>
+              {account ? <small>{account}</small> : null}
+            </span>
+          </div>
+        );
+      },
       title: t("knowledgeNetwork.propertyAuthorizationUser"),
       width: 220,
     },

@@ -58,6 +58,9 @@ export type EffectiveDecision = {
 export type ObjectGrant = {
   /** Grantee user ID (backend accessor_id). */
   accessorId: string;
+  /** Display data returned by the object-scoped grants API when the subject is a user. */
+  accessorAccount?: string;
+  accessorName?: string;
   objId: string;
   /** Object name resolved by the frontend; the backend returns only type:id. Mock mode supplies it, real mode resolves it through domain services. */
   objName: string;

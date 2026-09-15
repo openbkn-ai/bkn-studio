@@ -249,6 +249,9 @@ export const systemAdminEnUS = {
       permissionAllowed: "Allowed",
       permissionDenied: "Denied",
       permissionNotGranted: "Not granted",
+      granteeLoading: "Loading user information…",
+      granteeUnresolved: "User information unavailable",
+      retryGranteeLookup: "Retry",
       drawerEmptyHelp: "Select a user and allowed operations above to add authorization",
       grantSource: "Grant source",
       sourceCount_one: "{{count}} source",
@@ -779,6 +782,7 @@ export const systemAdminEnUS = {
       targetFilterActive: "Filtered by target ID: {{id}}",
       empty: "No audit entries",
       targetUnknown: "object deleted or not found",
+      actorUnknown: "actor information unavailable",
       detailTitle: "Audit detail",
       viewDetail: "Detail",
       detail: {

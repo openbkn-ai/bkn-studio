@@ -26,6 +26,7 @@ import {
   formatAuditTime,
   getCachedUserSync,
   hydrateUserLookup,
+  isUserLookupId,
   listCachedUsers,
   primeUserLookupCache,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
@@ -96,9 +97,12 @@ export function AuditLogScene() {
   const userName = useCallback(
     (id: string) => {
       const user = userLookup.get(id);
-      return user ? userOptionLabel(user.name, user.account) : id;
+      if (user) {
+        return userOptionLabel(user.name, user.account);
+      }
+      return isUserLookupId(id) ? t("systemAdmin.audit.actorUnknown") : id;
     },
-    [userLookup],
+    [t, userLookup],
   );
 
   const resolveTarget = useMemo(() => {
@@ -335,8 +339,9 @@ export function AuditLogScene() {
         width: 168,
         render: (value: string) => {
           const actor = userLookup.get(value);
+          const actorUnknown = !actor && isUserLookupId(value);
           return (
-            <Tooltip title={userName(value)}>
+            <Tooltip title={actorUnknown ? value : userName(value)}>
               <span className={[styles.auditActionChip, layoutStyles.ellipsisCell].join(" ")}>
                 <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
                   {userName(value)}

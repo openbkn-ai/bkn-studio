@@ -110,4 +110,20 @@ describe("object-grant backend contract", () => {
       grantId: "grant-without-active",
     }));
   });
+
+  it("keeps grantee display fields returned by the object-scoped API", () => {
+    const result = mapObjectGrantEntry({
+      accessor_account: "b",
+      accessor_id: "user-1",
+      accessor_name: "普通用户 B",
+      operations: ["view_detail"],
+      resource: { id: "catalog-1", type: "catalog" },
+    });
+
+    expect(result).toMatchObject({
+      accessorAccount: "b",
+      accessorId: "user-1",
+      accessorName: "普通用户 B",
+    });
+  });
 });

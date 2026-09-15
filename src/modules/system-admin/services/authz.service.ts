@@ -458,6 +458,8 @@ export async function revokeCommunityBundle(grantId: string): Promise<void> {
 
 type BackendEntry = {
   accessor_id?: string;
+  accessor_account?: string;
+  accessor_name?: string;
   bundle?: "full_business_access";
   denied_operations?: string[];
   effective_decisions?: BackendEffectiveDecision[];
@@ -526,6 +528,8 @@ export function mapObjectGrantEntry(item: BackendEntry): ObjectGrant {
   const accessorId = item.accessor_id ?? "";
   return {
     accessorId,
+    accessorAccount: item.accessor_account,
+    accessorName: item.accessor_name,
     bundle: item.bundle,
     deniedOperations: item.denied_operations ?? [],
     effectiveDecisions: (item.effective_decisions ?? []).map(mapEffectiveDecision),
@@ -576,7 +580,7 @@ export async function listObjectGrantsForObject(
     // Shaped as AdminUser only so the shared display cache can be primed from it. The fields this
     // surface cannot know (roles, departments, enabled) stay empty rather than being invented.
     accounts: entries
-      .filter((entry) => entry.accessor_account)
+      .filter((entry) => entry.accessor_account || entry.accessor_name)
       .map((entry) => ({
         account: entry.accessor_account ?? "",
         accountType: "",

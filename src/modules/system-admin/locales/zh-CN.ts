@@ -249,6 +249,9 @@ export const systemAdminZhCN = {
       permissionAllowed: "已允许",
       permissionDenied: "已拒绝",
       permissionNotGranted: "未授予",
+      granteeLoading: "正在加载用户信息…",
+      granteeUnresolved: "用户信息无法解析",
+      retryGranteeLookup: "重试",
       drawerEmptyHelp: "请先在上方选择用户并配置允许操作",
       grantSource: "授权来源",
       sourceCount_one: "{{count}} 条来源",
@@ -776,6 +779,7 @@ export const systemAdminZhCN = {
       targetFilterActive: "已按对象 ID 筛选：{{id}}",
       empty: "暂无审计记录",
       targetUnknown: "对象已删除或不存在",
+      actorUnknown: "操作人信息无法解析",
       detailTitle: "审计详情",
       viewDetail: "详情",
       detail: {

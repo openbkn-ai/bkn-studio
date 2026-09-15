@@ -56,7 +56,7 @@ vi.mock("@/modules/system-admin/services/authz.service", () => ({
 vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
   getCachedDepartments: vi.fn(() => Promise.resolve([])),
   getCachedUserSync: mocks.getCachedUserSync,
-  hydrateUserLookup: vi.fn(() => Promise.resolve(undefined)),
+  hydrateUserLookup: vi.fn(() => Promise.resolve([])),
   primeUserLookupCache: vi.fn(),
 }));
 
@@ -153,6 +153,23 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.getAllByText("systemAdmin.objectGrants.readOnlySource")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "common.back" }));
     expect(screen.getByText("systemAdmin.objectGrants.grantDetails")).not.toBeNull();
+  });
+
+  it("renders the object-scoped response name without waiting for the user cache", async () => {
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({})], {
+        accessorAccount: "b",
+        accessorName: "普通用户 B",
+      })],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(screen.getByText("普通用户 B")).not.toBeNull();
+    expect(screen.getByText("b")).not.toBeNull();
+    expect(screen.queryByText("u-mate")).toBeNull();
   });
 
   it("revokes one direct source by stable grant_id", async () => {

@@ -208,8 +208,19 @@ export function ObjectAuthorizationScene() {
   );
 
   const resolveGrantee = useCallback(
-    (id: string) => {
+    (grant: Pick<ObjectGrant, "accessorAccount" | "accessorId" | "accessorName">) => {
       void lookupRevision;
+      const id = grant.accessorId;
+      if (grant.accessorName || grant.accessorAccount) {
+        const name = grant.accessorName || grant.accessorAccount || t("systemAdmin.objectGrants.granteeUnresolved");
+        return {
+          id,
+          name,
+          account: grant.accessorAccount,
+          label: grant.accessorAccount || name,
+          type: "user" as const,
+        };
+      }
       const user = getCachedUserSync(id);
       if (user) {
         return {
@@ -234,20 +245,20 @@ export function ObjectAuthorizationScene() {
 
       return {
         id,
-        name: id,
+        name: t("systemAdmin.objectGrants.granteeUnresolved"),
         account: undefined,
-        label: id,
+        label: t("systemAdmin.objectGrants.granteeUnresolved"),
         type: "user" as const,
       };
     },
-    [deptMap, lookupRevision],
+    [deptMap, lookupRevision, t],
   );
 
   const filteredGrants = useMemo(() => {
     if (granteeType === "all") {
       return grants;
     }
-    return grants.filter((grant) => resolveGrantee(grant.accessorId).type === granteeType);
+    return grants.filter((grant) => resolveGrantee(grant).type === granteeType);
   }, [granteeType, grants, resolveGrantee]);
 
   useEffect(() => {
@@ -324,11 +335,14 @@ export function ObjectAuthorizationScene() {
   }, []);
 
   const granteeCell = useCallback(
-    (accessorId: string) => {
-      const grantee = resolveGrantee(accessorId);
+    (grant: Pick<ObjectGrant, "accessorAccount" | "accessorId" | "accessorName">) => {
+      const grantee = resolveGrantee(grant);
       const label = <span className={styles.authzWhoName}>{grantee.label}</span>;
-      if (grantee.type === "user" && grantee.name !== grantee.label) {
-        return <Tooltip title={grantee.name}>{label}</Tooltip>;
+      if (grantee.type === "user") {
+        const title = grantee.name === t("systemAdmin.objectGrants.granteeUnresolved")
+          ? grantee.id
+          : grantee.name !== grantee.label ? grantee.name : undefined;
+        return <Tooltip title={title}>{label}</Tooltip>;
       }
       return label;
     },
@@ -425,7 +439,7 @@ export function ObjectAuthorizationScene() {
     {
       title: t("systemAdmin.objectGrants.columns.grantee"),
       dataIndex: "accessorId",
-      render: (value: string) => granteeCell(value),
+      render: (_value: string, grant) => granteeCell(grant),
     },
     {
       title: t("systemAdmin.objectGrants.columns.operations"),
@@ -515,7 +529,7 @@ export function ObjectAuthorizationScene() {
         <div className={styles.authzGroupList}>
           {groups.map((group) => {
             const accessorId = group.accessorId ?? "";
-            const grantee = resolveGrantee(accessorId);
+            const grantee = resolveGrantee({ accessorId });
             const pseudo: ObjectGrant = {
               accessorId,
               objType: "",
@@ -527,7 +541,15 @@ export function ObjectAuthorizationScene() {
               <div className={styles.authzGroup} key={accessorId}>
                 <div className={styles.authzGroupHead}>
                   <span className={styles.authzGroupTitle}>
-                    <span className={styles.authzGroupName}>{grantee.label}</span>
+                    <Tooltip
+                      title={
+                        grantee.name === t("systemAdmin.objectGrants.granteeUnresolved")
+                          ? grantee.id
+                          : grantee.name !== grantee.label ? grantee.name : undefined
+                      }
+                    >
+                      <span className={styles.authzGroupName}>{grantee.label}</span>
+                    </Tooltip>
                     <span className={styles.authzGroupCount}>
                       {t("systemAdmin.objectGrants.objectCount", { count: group.count })}
                     </span>

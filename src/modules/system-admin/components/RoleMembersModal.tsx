@@ -6,7 +6,7 @@
  */
 
 import type { ColumnsType } from "antd/es/table";
-import { Input, Modal, Tag } from "antd";
+import { Input, Modal, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -37,6 +37,10 @@ type RoleMembersModalProps = {
   role: AdminRole;
 };
 
+type ResolvedRoleMember = RoleMember & {
+  userLookup?: "loading" | "unresolved";
+};
+
 export function RoleMembersModal({
   departments,
   onChanged,
@@ -48,6 +52,8 @@ export function RoleMembersModal({
   const { message } = useAppServices();
   const [accessorIds, setAccessorIds] = useState<string[]>(role.accessorIds);
   const [userLabels, setUserLabels] = useState<Record<string, string>>({});
+  const [unresolvedUserLabelIds, setUnresolvedUserLabelIds] = useState<Set<string>>(() => new Set());
+  const [userLookupRevision, setUserLookupRevision] = useState(0);
   const [candidates, setCandidates] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -62,6 +68,7 @@ export function RoleMembersModal({
     if (!open) {
       setAccessorIds([]);
       setUserLabels({});
+      setUnresolvedUserLabelIds(new Set());
       setCandidates([]);
       setMemberSearch("");
       setPage(1);
@@ -86,7 +93,7 @@ export function RoleMembersModal({
       missing.map((id) =>
         getUser(id)
           .then((user) => ({ id, label: `${user.name}（${user.account}）` }))
-          .catch(() => ({ id, label: id })),
+          .catch(() => ({ id })),
       ),
     ).then((results) => {
       if (requestSeq !== userLabelRequestSeq.current) {
@@ -95,22 +102,61 @@ export function RoleMembersModal({
       setUserLabels((current) => {
         const next = { ...current };
         for (const item of results) {
-          next[item.id] = item.label;
+          if (item.label) {
+            next[item.id] = item.label;
+          }
+        }
+        return next;
+      });
+      setUnresolvedUserLabelIds((current) => {
+        const next = new Set(current);
+        for (const item of results) {
+          if (item.label) {
+            next.delete(item.id);
+          } else {
+            next.add(item.id);
+          }
         }
         return next;
       });
     });
-  }, [accessorIds, deptIdSet, open]);
+  }, [accessorIds, deptIdSet, open, userLookupRevision]);
 
   const resolveMember = useCallback(
-    (id: string): RoleMember => {
+    (id: string): ResolvedRoleMember => {
       if (deptIdSet.has(id)) {
         return { id, type: "department", label: deptPath(departments, id) };
       }
-      return { id, type: "user", label: userLabels[id] ?? id };
+      if (userLabels[id]) {
+        return { id, type: "user", label: userLabels[id] };
+      }
+      if (unresolvedUserLabelIds.has(id)) {
+        return {
+          id,
+          type: "user",
+          label: t("systemAdmin.objectGrants.granteeUnresolved"),
+          userLookup: "unresolved",
+        };
+      }
+      return {
+        id,
+        type: "user",
+        label: t("systemAdmin.objectGrants.granteeLoading"),
+        userLookup: "loading",
+      };
     },
-    [departments, deptIdSet, userLabels],
+    [departments, deptIdSet, t, unresolvedUserLabelIds, userLabels],
   );
+
+  const retryUserLabelLookup = useCallback((id: string) => {
+    loadedUserLabelIds.current.delete(id);
+    setUnresolvedUserLabelIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    setUserLookupRevision((current) => current + 1);
+  }, []);
 
   // Users only. bkn-safe accepts a department binding (204) but casbin holds no user→department
   // membership, so the policy never matches at enforce time — the binding looks applied and grants
@@ -198,7 +244,7 @@ export function RoleMembersModal({
 
   const muted = <span className={styles.mutedText}>—</span>;
 
-  const columns = useMemo<ColumnsType<RoleMember>>(
+  const columns = useMemo<ColumnsType<ResolvedRoleMember>>(
     () => [
       {
         title: t("systemAdmin.roles.membersModal.columns.member"),
@@ -206,7 +252,9 @@ export function RoleMembersModal({
         width: 320,
         render: (_, member) => (
           <div className={styles.nameCell}>
-            <span className={styles.nameTitle}>{member.label}</span>
+            <Tooltip title={member.userLookup ? member.id : undefined}>
+              <span className={styles.nameTitle}>{member.label}</span>
+            </Tooltip>
             <span className={styles.subText}>
               {member.type === "user"
                 ? t("systemAdmin.roles.membersModal.memberUser")
@@ -230,20 +278,31 @@ export function RoleMembersModal({
       {
         title: t("systemAdmin.roles.membersModal.columns.actions"),
         key: "actions",
-        width: 80,
+        width: 140,
         fixed: "right",
         render: (_, member) => (
-          <AppButton
-            className={[styles.actionLink, styles.actionDanger].join(" ")}
-            onClick={() => void removeMember(member.id)}
-            type="link"
-          >
-            {t("systemAdmin.roles.membersModal.remove")}
-          </AppButton>
+          <>
+            {member.userLookup === "unresolved" ? (
+              <AppButton
+                className={styles.actionLink}
+                onClick={() => retryUserLabelLookup(member.id)}
+                type="link"
+              >
+                {t("systemAdmin.objectGrants.retryGranteeLookup")}
+              </AppButton>
+            ) : null}
+            <AppButton
+              className={[styles.actionLink, styles.actionDanger].join(" ")}
+              onClick={() => void removeMember(member.id)}
+              type="link"
+            >
+              {t("systemAdmin.roles.membersModal.remove")}
+            </AppButton>
+          </>
         ),
       },
     ],
-    [removeMember, t],
+    [removeMember, retryUserLabelLookup, t],
   );
 
   return (
@@ -308,7 +367,7 @@ export function RoleMembersModal({
 
         <div className={modalStyles.memberPanel}>
           {filteredMembers.length ? (
-            <AppTable<RoleMember>
+            <AppTable<ResolvedRoleMember>
               className={modalStyles.memberTable}
               columns={columns}
               dataSource={pagedMembers}

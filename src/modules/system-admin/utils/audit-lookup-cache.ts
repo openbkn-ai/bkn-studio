@@ -76,12 +76,15 @@ export async function getCachedUser(id: string): Promise<AdminUser | null> {
   }
 }
 
-export async function hydrateUserLookup(ids: string[]) {
-  const missing = ids.filter((id) => isUserLookupId(id) && !isFresh(userCache.get(id)));
+export async function hydrateUserLookup(ids: string[]): Promise<string[]> {
+  const missing = [...new Set(ids)].filter(
+    (id) => isUserLookupId(id) && !isFresh(userCache.get(id)),
+  );
   if (!missing.length) {
-    return;
+    return [];
   }
-  await Promise.all(missing.map((id) => getCachedUser(id)));
+  const users = await Promise.all(missing.map((id) => getCachedUser(id)));
+  return missing.filter((_id, index) => users[index] === null);
 }
 
 export function getCachedUserSync(id: string): AdminUser | undefined {

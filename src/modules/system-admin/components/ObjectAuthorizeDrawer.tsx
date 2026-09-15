@@ -144,6 +144,8 @@ export function ObjectAuthorizeDrawer({
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
   const [enterpriseGrants, setEnterpriseGrants] = useState<EnterpriseObjectGrant[]>([]);
   const [departments, setDepartments] = useState<AdminDepartment[]>([]);
+  const [pendingLookupIds, setPendingLookupIds] = useState<Set<string>>(() => new Set());
+  const [unresolvedLookupIds, setUnresolvedLookupIds] = useState<Set<string>>(() => new Set());
   const [lookupRevision, setLookupRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -201,17 +203,26 @@ export function ObjectAuthorizeDrawer({
     setCandidateOperations([]);
   };
 
-  // Best-effort: departments and user details come from admin-path endpoints. Those reads now admit
-  // the holder of `authorize` on a concrete object as well as the platform administrator, so an
-  // owner gets real answers here — a narrower projection than an administrator sees, which is all
-  // this drawer displays. A failure still costs a label rather than the screen.
+  // The object-scoped grants endpoint is the primary source of grantee names. These best-effort
+  // lookups only enrich older responses that lack a display name; one failed lookup must never
+  // prevent the other from completing.
   const syncLookup = useCallback(async (accessorIds: string[]) => {
-    try {
-      setDepartments(await getCachedDepartments({ skipErrorToast: true }));
-      await hydrateUserLookup(accessorIds);
-    } catch {
-      // Leave whatever the cache already holds.
+    const ids = [...new Set(accessorIds.filter(Boolean))];
+    setPendingLookupIds((current) => new Set([...current, ...ids]));
+    const [departmentsResult, usersResult] = await Promise.allSettled([
+      getCachedDepartments({ skipErrorToast: true }),
+      hydrateUserLookup(ids),
+    ]);
+    if (departmentsResult.status === "fulfilled") {
+      setDepartments(departmentsResult.value);
     }
+    const unresolved = usersResult.status === "fulfilled" ? usersResult.value : ids;
+    setUnresolvedLookupIds((current) => new Set([...current, ...unresolved]));
+    setPendingLookupIds((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
     setLookupRevision((revision) => revision + 1);
   }, []);
 
@@ -222,6 +233,7 @@ export function ObjectAuthorizeDrawer({
       // Prime first: these accounts are the only source of names an owner has.
       primeUserLookupCache(accounts);
       setGrants(grantList);
+      setUnresolvedLookupIds(new Set());
       await syncLookup(grantList.map((grant) => grant.accessorId));
       if (enterpriseAvailable) {
         setEnterpriseGrants(await listEnterpriseObjectGrants({ resourceId: objId, resourceType: objType }));
@@ -251,8 +263,17 @@ export function ObjectAuthorizeDrawer({
   );
 
   const resolveGrantee = useCallback(
-    (id: string) => {
+    (grant: ObjectGrant) => {
       void lookupRevision;
+      const id = grant.accessorId;
+      if (grant.accessorName || grant.accessorAccount) {
+        return {
+          id,
+          name: grant.accessorName || grant.accessorAccount || id,
+          sub: grant.accessorAccount,
+          type: "user" as const,
+        };
+      }
       const user = getCachedUserSync(id);
       if (user) {
         return { id, name: user.name, sub: user.account, type: "user" as const };
@@ -261,9 +282,18 @@ export function ObjectAuthorizeDrawer({
       if (dept) {
         return { id, name: dept.name, sub: undefined, type: "department" as const };
       }
-      return { id, name: id, sub: undefined, type: "user" as const };
+      if (pendingLookupIds.has(id)) {
+        return { id, loading: true, name: t("systemAdmin.objectGrants.granteeLoading"), sub: id, type: "user" as const };
+      }
+      return {
+        id,
+        name: t("systemAdmin.objectGrants.granteeUnresolved"),
+        sub: id,
+        type: "user" as const,
+        unresolved: unresolvedLookupIds.has(id),
+      };
     },
-    [deptMap, lookupRevision],
+    [deptMap, lookupRevision, pendingLookupIds, t, unresolvedLookupIds],
   );
 
   const grantProtection = useCallback(
@@ -384,7 +414,7 @@ export function ObjectAuthorizeDrawer({
     if (!canRevoke || !sources.length) {
       return;
     }
-    const grantee = resolveGrantee(grant.accessorId);
+    const grantee = resolveGrantee(grant);
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("systemAdmin.objectGrants.deleteGrantConfirm", {
@@ -417,7 +447,7 @@ export function ObjectAuthorizeDrawer({
     if (!grant || dependentOperationsForGrant(grant, source.operation).length) {
       return;
     }
-    const grantee = resolveGrantee(grant.accessorId);
+    const grantee = resolveGrantee(grant);
     void modal.confirm({
       title: t("systemAdmin.objectGrants.deleteSourceTitle"),
       content: t("systemAdmin.objectGrants.deleteSourceConfirm", {
@@ -448,19 +478,33 @@ export function ObjectAuthorizeDrawer({
     {
       dataIndex: "accessorId",
       key: "grantee",
-      render: (accessorId: string) => {
-        const grantee = resolveGrantee(accessorId);
-        const grant = grants.find((candidateGrant) => candidateGrant.accessorId === accessorId);
-        const protection = grant ? grantProtection(grant) : undefined;
+      render: (_accessorId: string, grant: ObjectGrant) => {
+        const grantee = resolveGrantee(grant);
+        const protection = grantProtection(grant);
+        const granteeIsLoading = "loading" in grantee && grantee.loading;
+        const granteeIsUnresolved = "unresolved" in grantee && grantee.unresolved;
         return (
           <div className={styles.authzSubjectCell}>
             <span className={styles.authzAvatar}>
               {grantee.type === "department" ? <AppstoreOutlined /> : <UserOutlined />}
             </span>
             <span>
-              <strong>{grantee.name}</strong>
+              <Tooltip title={granteeIsUnresolved || granteeIsLoading ? grantee.id : undefined}>
+                <strong>{grantee.name}</strong>
+              </Tooltip>
               <small>{grantee.sub}</small>
             </span>
+            {granteeIsUnresolved ? (
+              <AppButton
+                onClick={() => {
+                  void syncLookup([grantee.id]);
+                }}
+                size="small"
+                type="link"
+              >
+                {t("systemAdmin.objectGrants.retryGranteeLookup")}
+              </AppButton>
+            ) : null}
             {protection?.eraseLocked ? (
               <Tooltip title={protection.reason}>
                 <LockOutlined />
