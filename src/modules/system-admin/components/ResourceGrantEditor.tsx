@@ -13,16 +13,12 @@ import { useTranslation } from "react-i18next";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
 import {
-  addOperationToGrant,
-  removeOperationFromGrant,
-} from "@/modules/system-admin/utils/resource-grant-operations";
-import {
   operationLabel,
-  operationsForType,
   ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
+import { useAuthorizationCatalog } from "@/modules/system-admin/hooks/use-authorization-catalog";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
@@ -38,6 +34,18 @@ type ResourceGrantEditorProps = {
 
 const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.id === b.id;
 
+type GrantOperation = { key: string; requires: string[] };
+
+function normalizeOperations(selected: string[], definitions: GrantOperation[]): string[] {
+  const requested = new Set(selected);
+  for (const operation of definitions) {
+    if (requested.has(operation.key)) {
+      operation.requires.forEach((requirement) => requested.add(requirement));
+    }
+  }
+  return definitions.filter((operation) => requested.has(operation.key)).map((operation) => operation.key);
+}
+
 export function ResourceGrantEditor({
   disabled,
   lockedResource,
@@ -46,6 +54,7 @@ export function ResourceGrantEditor({
   value,
 }: ResourceGrantEditorProps) {
   const { t } = useTranslation();
+  const { catalog, catalogLoading, operationsForType } = useAuthorizationCatalog();
   const [draftType, setDraftType] = useState<string>(
     lockedResource?.type ?? ROLE_GRANT_RESOURCE_TYPES[0].type,
   );
@@ -54,7 +63,7 @@ export function ResourceGrantEditor({
   const [draftOps, setDraftOps] = useState<string[]>([]);
   const [addingGrantKey, setAddingGrantKey] = useState<string | null>(null);
 
-  const ops = useMemo(() => operationsForType(draftType), [draftType]);
+  const ops = useMemo(() => operationsForType(draftType), [draftType, operationsForType]);
 
   const resolvedId = lockedResource ? lockedResource.id : wholeType ? WILDCARD : draftId.trim();
 
@@ -70,7 +79,7 @@ export function ResourceGrantEditor({
     const next = existing
       ? value.map((grant) =>
           grant === existing
-            ? { ...grant, operations: Array.from(new Set([...grant.operations, ...draftOps])) }
+            ? { ...grant, operations: normalizeOperations([...grant.operations, ...draftOps], ops) }
             : grant,
         )
       : [...value, { resource, operations: [...draftOps] }];
@@ -86,12 +95,29 @@ export function ResourceGrantEditor({
   };
 
   const addOperation = (grant: ResourceGrant, operation: string) => {
-    onChange(addOperationToGrant(value, grant, operation));
+    const definitions = operationsForType(grant.resource.type);
+    onChange(value.map((item) =>
+      sameResource(item.resource, grant.resource)
+        ? { ...item, operations: normalizeOperations([...item.operations, operation], definitions) }
+        : item,
+    ));
     setAddingGrantKey(null);
   };
 
   const removeOperation = (grant: ResourceGrant, operation: string) => {
-    onChange(removeOperationFromGrant(value, grant, operation));
+    const definitions = operationsForType(grant.resource.type);
+    const removed = new Set([operation]);
+    for (const definition of definitions) {
+      if (definition.requires.some((requirement) => removed.has(requirement))) {
+        removed.add(definition.key);
+      }
+    }
+    const remaining = grant.operations.filter((item) => !removed.has(item));
+    onChange(remaining.length
+      ? value.map((item) => sameResource(item.resource, grant.resource)
+        ? { ...item, operations: remaining }
+        : item)
+      : value.filter((item) => !sameResource(item.resource, grant.resource)));
   };
 
   return (
@@ -176,14 +202,17 @@ export function ResourceGrantEditor({
           {!lockedResource ? (
             <>
               <Select
+                disabled={catalogLoading}
                 onChange={(type) => {
                   setDraftType(type);
                   setDraftOps([]);
                 }}
-                options={ROLE_GRANT_RESOURCE_TYPES.map((item) => ({
-                  label: resourceTypeLabel(item.type),
-                  value: item.type,
-                }))}
+                options={ROLE_GRANT_RESOURCE_TYPES
+                  .filter((item) => catalog?.resourceTypes.some((resourceType) => resourceType.id === item.type))
+                  .map((item) => ({
+                    label: resourceTypeLabel(item.type),
+                    value: item.type,
+                  }))}
                 style={{ minWidth: 160 }}
                 value={draftType}
               />
@@ -212,14 +241,15 @@ export function ResourceGrantEditor({
             </>
           ) : null}
           <Select
+            disabled={catalogLoading}
             mode="multiple"
-            onChange={setDraftOps}
+            onChange={(selected) => setDraftOps(normalizeOperations(selected, ops))}
             options={ops.map((op) => ({ label: op.label, value: op.key }))}
             placeholder={t("systemAdmin.grant.operationsPlaceholder")}
             style={{ flex: 1, minWidth: 200 }}
             value={draftOps}
           />
-          <AppButton icon={<PlusOutlined />} onClick={addGrant} type="primary">
+          <AppButton disabled={catalogLoading} icon={<PlusOutlined />} onClick={addGrant} type="primary">
             {t("systemAdmin.grant.add")}
           </AppButton>
         </div>

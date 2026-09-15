@@ -17,9 +17,9 @@ import type { AdminRole } from "@/modules/system-admin/types/admin";
 import { roleDescription } from "@/modules/system-admin/utils/role-catalog";
 import {
   operationLabel,
-  operationsForType,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
+import { useAuthorizationCatalog } from "@/modules/system-admin/hooks/use-authorization-catalog";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
@@ -29,8 +29,6 @@ type CatalogAuthorizeModalProps = {
   onClose: () => void;
   open: boolean;
 };
-
-const CATALOG_OPS = operationsForType("catalog");
 
 type CatalogGrantRow = {
   operations: string[];
@@ -46,11 +44,23 @@ export function CatalogAuthorizeModal({
 }: CatalogAuthorizeModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const { catalogLoading, operationsForType } = useAuthorizationCatalog();
+  const catalogOps = useMemo(() => operationsForType("catalog"), [operationsForType]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(false);
   const [roleId, setRoleId] = useState<string>();
   const [ops, setOps] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  const selectOperations = useCallback((requested: string[]) => {
+    const selected = new Set(requested);
+    for (const operation of catalogOps) {
+      if (selected.has(operation.key)) {
+        operation.requires.forEach((requirement) => selected.add(requirement));
+      }
+    }
+    setOps(catalogOps.filter((operation) => selected.has(operation.key)).map((operation) => operation.key));
+  }, [catalogOps]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -171,14 +181,15 @@ export function CatalogAuthorizeModal({
           value={roleId}
         />
         <Select
+          disabled={catalogLoading}
           mode="multiple"
-          onChange={setOps}
-          options={CATALOG_OPS.map((op) => ({ label: op.label, value: op.key }))}
+          onChange={selectOperations}
+          options={catalogOps.map((op) => ({ label: op.label, value: op.key }))}
           placeholder={t("systemAdmin.authorize.operationsPlaceholder")}
           style={{ flex: 1, minWidth: 200 }}
           value={ops}
         />
-        <AppButton loading={busy} onClick={() => void handleGrant()} type="primary">
+        <AppButton disabled={catalogLoading} loading={busy} onClick={() => void handleGrant()} type="primary">
           {t("systemAdmin.authorize.grant")}
         </AppButton>
       </div>

@@ -42,16 +42,16 @@ import { formatTimestamp } from "@/modules/knowledge-network/services/shared/run
 
 const mockKnowledgeNetworkOperations = [
   "view_detail",
-  "data_query",
+  "query_data",
   "modify",
   "delete",
   "authorize",
-  "task_manage",
+  "execute",
 ];
 
 /** Local Studio mock data follows the same per-instance child contract as bkn-safe. */
-export const mockKnowledgeNetworkChildOperations = mockKnowledgeNetworkOperations.map((operation) =>
-  operation === "data_query" ? "query_data" : operation,
+export const mockKnowledgeNetworkChildOperations = mockKnowledgeNetworkOperations.filter(
+  (operation) => operation !== "authorize" && operation !== "execute",
 );
 
 export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [

@@ -37,6 +37,29 @@ describe("object-grant backend contract", () => {
       .toHaveLength(1);
   });
 
+  it("replaces the mock professional-rule operation slice", async () => {
+    const input = {
+      accessorId: "test-replacement-user",
+      effect: "allow" as const,
+      objId: "test-replacement-object",
+      objName: "Replacement object",
+      objType: "object_type",
+      operations: ["view_detail", "modify"],
+    };
+
+    await upsertObjectGrant(input);
+    await upsertObjectGrant({ ...input, operations: ["query_data"] });
+    const result = await listObjectGrants({
+      accessorId: input.accessorId,
+      resourceId: input.objId,
+      resourceType: input.objType,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.operations).toEqual(["query_data"]);
+    expect(result[0]?.grants?.map((source) => source.operation)).toEqual(["query_data"]);
+  });
+
   it("keeps source records and effective decisions separate", () => {
     const result = mapObjectGrantEntry({
       accessor_id: "user-1",

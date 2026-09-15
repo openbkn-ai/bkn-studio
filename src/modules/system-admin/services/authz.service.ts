@@ -318,7 +318,7 @@ export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {
 
 // ---- writes -----------------------------------------------------------------
 
-/** Creates independent source records. The mock keeps identical active sources idempotent. */
+/** Replaces one professional-rule source slice, matching bkn-safe's POST contract. */
 export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> {
   if (useMock) {
     const existing = grants.find((g) => sameTarget(g, input));
@@ -354,18 +354,14 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
     }
     const effect = input.effect ?? "allow";
     const target = existing ?? seed(input.objType, input.objId, input.accessorId, []);
-    const existingOperations = new Set((target.grants ?? [])
-      .filter(
-        (record) =>
-          record.active &&
-          !record.inherited &&
-          record.effect === effect &&
-          record.policySource === "professional_rule",
-      )
-      .map((record) => record.operation));
-    const created = input.operations
-      .filter((operation) => !existingOperations.has(operation))
-      .map((operation, index): GrantRecord => ({
+    const preservedSources = (target.grants ?? []).filter(
+      (record) =>
+        record.inherited ||
+        record.effect !== effect ||
+        record.policySource !== "professional_rule" ||
+        record.authoritySource !== "admin_authz",
+    );
+    const replacementSources = input.operations.map((operation, index): GrantRecord => ({
       active: true,
       accessorId: input.accessorId,
       authoritySource: "admin_authz",
@@ -374,8 +370,8 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
       inherited: false,
       operation,
       policySource: "professional_rule",
-      }));
-    target.grants = [...(target.grants ?? []), ...created];
+    }));
+    target.grants = [...preservedSources, ...replacementSources];
     target.operations = [...new Set(target.grants.filter((record) => record.active && record.effect === "allow").map((record) => record.operation))];
     target.deniedOperations = [...new Set(target.grants.filter((record) => record.active && record.effect === "deny").map((record) => record.operation))];
     target.effectiveDecisions = [...new Set([...target.operations, ...target.deniedOperations])].map(
