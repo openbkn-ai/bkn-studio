@@ -11,6 +11,7 @@ import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
@@ -20,7 +21,9 @@ import {
   isCapabilityUxV2,
 } from "@/modules/execution-factory/utils/capability-ux";
 import {
+  filterAuthorizedCapabilityCreateMenuItems,
   getCapabilityCreateMenuItems,
+  getCapabilityCreatePermission,
   resolveCapabilityAdpImportTab,
   type CapabilityCreateMenuAction,
 } from "@/modules/execution-factory/utils/capability-create-menu";
@@ -44,6 +47,8 @@ type CreateMenuProps = {
   onResourceCreated?: (payload: CreatedExecutionUnitPayload | CreatedCapabilityPayload) => void;
   variant?: "toolbar" | "empty";
 };
+
+const EMPTY_PERMISSIONS: string[] = [];
 
 function getCreatePermission(activeTab: ExecutionUnitTab) {
   switch (activeTab) {
@@ -104,6 +109,7 @@ export function CreateMenu({
   variant = "toolbar",
 }: CreateMenuProps) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
   const capabilityUxV2 = isCapabilityUxV2();
   const [legacyWizardOpen, setLegacyWizardOpen] = useState(false);
   const [capabilityWizardOpen, setCapabilityWizardOpen] = useState(false);
@@ -124,10 +130,18 @@ export function CreateMenu({
       : resolveCapabilityCreatePermission(activeTab)
     : getCreatePermission(activeTab);
   const importPermission = getImportPermission(activeTab);
-  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems(), []);
+  const currentPermissions = runtimeConfig.currentUser.permissions ?? EMPTY_PERMISSIONS;
+  const capabilityCreateItems = useMemo(
+    () =>
+      filterAuthorizedCapabilityCreateMenuItems(
+        getCapabilityCreateMenuItems(),
+        currentPermissions,
+      ),
+    [currentPermissions],
+  );
 
   useEffect(() => {
-    if (!autoOpen || !permission) {
+    if (!autoOpen || !permission || !currentPermissions.includes(permission)) {
       return;
     }
 
@@ -151,6 +165,7 @@ export function CreateMenu({
     activeTab,
     autoOpen,
     capabilityUxV2,
+    currentPermissions,
     onAutoOpenHandled,
     permission,
     useLegacyOperatorCreate,
@@ -178,6 +193,12 @@ export function CreateMenu({
   };
 
   const handleCapabilityAction = (action: CapabilityCreateMenuAction) => {
+    // Menu filtering is the primary UX guard. Keep this check as a defensive boundary for
+    // stale menu events and programmatic callers that try to open a different resource type.
+    if (!currentPermissions.includes(getCapabilityCreatePermission(action))) {
+      return;
+    }
+
     if (action === "import-adp") {
       setImportActiveTab(resolveCapabilityAdpImportTab(activeTab));
       setImportInitialKind("adp");
@@ -202,6 +223,10 @@ export function CreateMenu({
       </div>
     ),
   }));
+
+  if (capabilityUxV2 && !useLegacyOperatorCreate && capabilityCreateItems.length === 0) {
+    return null;
+  }
 
   const createButton = capabilityUxV2 && !useLegacyOperatorCreate ? (
     <Dropdown
@@ -247,7 +272,14 @@ export function CreateMenu({
 
   return (
     <>
-      <PermissionGate permissions={permission}>
+      <PermissionGate
+        mode="any"
+        permissions={
+          capabilityUxV2 && !useLegacyOperatorCreate
+            ? capabilityCreateItems.map((item) => getCapabilityCreatePermission(item.action))
+            : permission
+        }
+      >
         <div className={variant === "empty" ? styles.emptyCreateRow : styles.toolbarRow}>
           {createButton}
           {variant === "toolbar" && importPermission ? (

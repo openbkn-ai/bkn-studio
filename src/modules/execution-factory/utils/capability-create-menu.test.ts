@@ -8,23 +8,28 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  filterAuthorizedCapabilityCreateMenuItems,
   getCapabilityCreateMenuItems,
   resolveCapabilityAdpImportTab,
-} from "./capability-create-menu";
+} from "@/modules/execution-factory/utils/capability-create-menu";
 
-describe("capability-create-menu", () => {
+function visibleActions(permissions: string[]) {
+  return filterAuthorizedCapabilityCreateMenuItems(
+    getCapabilityCreateMenuItems(),
+    permissions,
+  ).map((item) => item.action);
+}
+
+describe("capability create menu authorization", () => {
   it("offers one create entry per capability tab, without import entries", () => {
     const items = getCapabilityCreateMenuItems();
 
-    // Matches list tabs one-to-one: API toolboxes, function sets, MCP services, and SKILL packages.
     expect(items.map((item) => item.action)).toEqual([
       "quick-api",
       "function",
       "mcp",
       "skill",
     ]);
-
-    // Import uses the toolbar Import action and no longer appears in Add capability.
     expect(items.map((item) => item.action)).not.toContain("import-openapi");
     expect(items.map((item) => item.action)).not.toContain("import-adp");
   });
@@ -42,5 +47,30 @@ describe("capability-create-menu", () => {
     expect(resolveCapabilityAdpImportTab("mcp")).toBe("mcp");
     expect(resolveCapabilityAdpImportTab("operator")).toBe("operator");
     expect(resolveCapabilityAdpImportTab("skill")).toBe("toolbox");
+  });
+
+  it("shows only Skill when the user has only skill:create", () => {
+    expect(visibleActions(["execution-factory:skill:create"])).toEqual(["skill"]);
+  });
+
+  it("uses toolbox:create for both API and function entries", () => {
+    expect(visibleActions(["execution-factory:toolbox:create"])).toEqual([
+      "quick-api",
+      "function",
+    ]);
+  });
+
+  it("shows only MCP when the user has only mcp:create", () => {
+    expect(visibleActions(["execution-factory:mcp:create"])).toEqual(["mcp"]);
+  });
+
+  it("shows the union for mixed grants and nothing without a create grant", () => {
+    expect(
+      visibleActions([
+        "execution-factory:toolbox:create",
+        "execution-factory:skill:create",
+      ]),
+    ).toEqual(["quick-api", "function", "skill"]);
+    expect(visibleActions([])).toEqual([]);
   });
 });

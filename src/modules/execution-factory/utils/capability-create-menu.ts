@@ -16,6 +16,29 @@ export type CapabilityCreateMenuItem = {
   descriptionKey: string;
 };
 
+const CREATE_PERMISSION_BY_ACTION: Record<CapabilityCreateMenuAction, string> = {
+  "advanced-operator": "execution-factory:operator:create",
+  function: "execution-factory:toolbox:create",
+  "import-adp": "execution-factory:impex:import",
+  "import-openapi": "execution-factory:toolbox:create",
+  mcp: "execution-factory:mcp:create",
+  "quick-api": "execution-factory:toolbox:create",
+  skill: "execution-factory:skill:create",
+};
+
+export function getCapabilityCreatePermission(action: CapabilityCreateMenuAction): string {
+  return CREATE_PERMISSION_BY_ACTION[action];
+}
+
+export function filterAuthorizedCapabilityCreateMenuItems(
+  items: CapabilityCreateMenuItem[],
+  currentPermissions: readonly string[],
+): CapabilityCreateMenuItem[] {
+  return items.filter((item) =>
+    currentPermissions.includes(getCapabilityCreatePermission(item.action)),
+  );
+}
+
 export function getCapabilityCreateMenuItems(): CapabilityCreateMenuItem[] {
   // Matches list tabs one-to-one: API toolboxes, function sets, MCP services, and SKILL packages.
   // Import uses the shared toolbar Import action. Keep only four creation types here without groups

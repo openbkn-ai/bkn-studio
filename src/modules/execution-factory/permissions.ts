@@ -7,27 +7,31 @@
 
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 
-/** Read grants that allow a user to enter execution-unit management. */
-export const executionFactoryViewPermissions = [
-  "execution-factory:operator:view",
-  "execution-factory:toolbox:view",
-  "execution-factory:mcp:view",
-  "execution-factory:skill:view",
-] as const;
-
-export const executionFactoryViewPermissionByTab: Record<ExecutionUnitTab, string> = {
-  operator: "execution-factory:operator:view",
-  toolbox: "execution-factory:toolbox:view",
-  mcp: "execution-factory:mcp:view",
-  skill: "execution-factory:skill:view",
+/** Grants that allow a user to enter a tab to view existing resources or create a new one. */
+export const executionFactoryAccessPermissionsByTab: Record<
+  ExecutionUnitTab,
+  readonly string[]
+> = {
+  operator: ["execution-factory:operator:view", "execution-factory:operator:create"],
+  toolbox: ["execution-factory:toolbox:view", "execution-factory:toolbox:create"],
+  mcp: ["execution-factory:mcp:view", "execution-factory:mcp:create"],
+  skill: ["execution-factory:skill:view", "execution-factory:skill:create"],
 };
 
-/** Keep management tabs aligned with the resource types the user can actually list. */
+export const executionFactoryAccessPermissions = Object.values(
+  executionFactoryAccessPermissionsByTab,
+).flat();
+
+/** Keep tabs available when the user can either list that resource type or create one. */
 export function filterAccessibleExecutionUnitTabs(
   tabs: ExecutionUnitTab[],
   currentPermissions: readonly string[],
 ): ExecutionUnitTab[] {
-  return tabs.filter((tab) => currentPermissions.includes(executionFactoryViewPermissionByTab[tab]));
+  return tabs.filter((tab) =>
+    executionFactoryAccessPermissionsByTab[tab].some((permission) =>
+      currentPermissions.includes(permission),
+    ),
+  );
 }
 
 /**
@@ -38,7 +42,7 @@ export function filterAccessibleExecutionUnitTabs(
 export function canAccessExecutionUnitManagement(
   currentPermissions: readonly string[],
 ): boolean {
-  return executionFactoryViewPermissions.some((permission) =>
+  return executionFactoryAccessPermissions.some((permission) =>
     currentPermissions.includes(permission),
   );
 }
