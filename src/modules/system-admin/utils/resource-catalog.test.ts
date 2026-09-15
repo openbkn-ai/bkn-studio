@@ -69,22 +69,19 @@ describe("resource-catalog", () => {
     for (const type of [
       "agent",
       "agent_tpl",
+      "concept_group",
       "connector_type",
       "data_flow",
+      "action_type",
+      "metric",
+      "object_type",
+      "relation_type",
       "risk_type",
       "stream_data_pipeline",
     ]) {
       expect(roleGrantTypes).not.toContain(type);
     }
-    expect(roleGrantTypes).toEqual(
-      expect.arrayContaining([
-        "concept_group",
-        "object_type",
-        "relation_type",
-        "action_type",
-        "metric",
-      ]),
-    );
+    expect(roleGrantTypes).toContain("knowledge_network");
   });
 
   it("uses the corrected names for catalog and resource", async () => {

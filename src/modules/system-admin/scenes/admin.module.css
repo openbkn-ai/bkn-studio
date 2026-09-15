@@ -1312,6 +1312,10 @@
   font-size: var(--admin-font-size-meta);
 }
 
+.grantLoadError {
+  flex: 1 1 100%;
+}
+
 .grantResourceName {
   display: inline-block;
   max-width: 260px;

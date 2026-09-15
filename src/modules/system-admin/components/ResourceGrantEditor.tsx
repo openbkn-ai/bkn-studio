@@ -6,11 +6,12 @@
  */
 
 import { DeleteOutlined, InfoCircleOutlined, LockOutlined, PlusOutlined } from "@ant-design/icons";
-import { Empty, Radio, Select, Spin, Tag, Tooltip } from "antd";
+import { Alert, Empty, Radio, Select, Spin, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { listAuthorizableObjectsPage } from "@/modules/system-admin/services/authz.service";
 import {
   resourceGrantNameKey,
@@ -75,6 +76,11 @@ export function ResourceGrantEditor({
   const [objects, setObjects] = useState<AuthorizableObject[]>([]);
   const [objectKeyword, setObjectKeyword] = useState("");
   const [objectLoading, setObjectLoading] = useState(false);
+  const [objectLoadError, setObjectLoadError] = useState<string | null>(null);
+  const [failedObjectRequest, setFailedObjectRequest] = useState<{
+    append: boolean;
+    page: number;
+  } | null>(null);
   const [objectPage, setObjectPage] = useState(0);
   const [objectTotal, setObjectTotal] = useState(0);
   const [resourceNames, setResourceNames] = useState<Map<string, { name: string; sub?: string }>>(
@@ -116,6 +122,8 @@ export function ResourceGrantEditor({
     }
     const request = ++objectRequestRef.current;
     setObjectLoading(true);
+    setObjectLoadError(null);
+    setFailedObjectRequest(null);
     try {
       const result = await listAuthorizableObjectsPage(draftType, {
         keyword: objectKeyword,
@@ -130,10 +138,10 @@ export function ResourceGrantEditor({
       });
       setObjectPage(page);
       setObjectTotal(result.total);
-    } catch {
+    } catch (error) {
       if (request === objectRequestRef.current) {
-        setObjects([]);
-        setObjectTotal(0);
+        setObjectLoadError(extractRequestErrorMessage(error));
+        setFailedObjectRequest({ append, page });
       }
     } finally {
       if (request === objectRequestRef.current) {
@@ -148,6 +156,8 @@ export function ResourceGrantEditor({
       setObjects([]);
       setObjectPage(0);
       setObjectTotal(0);
+      setObjectLoadError(null);
+      setFailedObjectRequest(null);
       return;
     }
     void loadObjectPage(0, false);
@@ -326,6 +336,7 @@ export function ResourceGrantEditor({
             <>
               <Select
                 allowClear
+                aria-label={t("systemAdmin.objectGrants.pickerObjectTypePlaceholder")}
                 onChange={(type) => {
                   setDraftType(type ?? "");
                   setDraftId("");
@@ -343,6 +354,7 @@ export function ResourceGrantEditor({
                   <div className={styles.grantScope}>
                     <span className={styles.grantScopeLabel}>{t("systemAdmin.grant.scopeLabel")}</span>
                     <Radio.Group
+                      aria-label={t("systemAdmin.grant.scopeLabel")}
                       onChange={(event) => {
                         const nextWholeType = event.target.value === "all";
                         setWholeType(nextWholeType);
@@ -360,6 +372,7 @@ export function ResourceGrantEditor({
                   </div>
                   {supportsSpecificResource && !effectiveWholeType ? (
                     <Select
+                      aria-label={t("systemAdmin.objectGrants.pickerObjectPlaceholder")}
                       className={styles.grantObjectSelect}
                       filterOption={false}
                       loading={objectLoading}
@@ -411,6 +424,30 @@ export function ResourceGrantEditor({
                     <span className={styles.grantScopeHint}>
                       {t("systemAdmin.grant.pickResourceFirst")}
                     </span>
+                  ) : null}
+                  {objectLoadError ? (
+                    <Alert
+                      action={
+                        <AppButton
+                          onClick={() => {
+                            if (failedObjectRequest) {
+                              void loadObjectPage(
+                                failedObjectRequest.page,
+                                failedObjectRequest.append,
+                              );
+                            }
+                          }}
+                          size="small"
+                          type="link"
+                        >
+                          {t("common.retry")}
+                        </AppButton>
+                      }
+                      className={styles.grantLoadError}
+                      message={objectLoadError}
+                      showIcon
+                      type="error"
+                    />
                   ) : null}
                 </>
               ) : null}
