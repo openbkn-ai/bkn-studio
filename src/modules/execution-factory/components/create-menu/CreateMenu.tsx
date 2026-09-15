@@ -12,6 +12,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { useAppServices } from "@/framework/context/use-app-services";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
@@ -21,6 +23,7 @@ import {
 } from "@/modules/execution-factory/utils/capability-ux";
 import {
   getCapabilityCreateMenuItems,
+  canCreateCapabilityMode,
   resolveCapabilityAdpImportTab,
   type CapabilityCreateMenuAction,
 } from "@/modules/execution-factory/utils/capability-create-menu";
@@ -38,6 +41,7 @@ import styles from "./create-menu.module.css";
 
 type CreateMenuProps = {
   activeTab: ExecutionUnitTab;
+  toolboxView?: "openapi" | "function";
   autoOpen?: boolean;
   onAutoOpenHandled?: () => void;
   onRefresh?: () => void;
@@ -45,12 +49,12 @@ type CreateMenuProps = {
   variant?: "toolbar" | "empty";
 };
 
-function getCreatePermission(activeTab: ExecutionUnitTab) {
+function getCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi" | "function") {
   switch (activeTab) {
     case "operator":
       return "execution-factory:operator:create";
     case "toolbox":
-      return "execution-factory:toolbox:create";
+      return toolboxView === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create";
     case "mcp":
       return "execution-factory:mcp:create";
     case "skill":
@@ -83,7 +87,7 @@ function getLegacyCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => s
   }
 }
 
-function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab) {
+function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi" | "function") {
   if (activeTab === "skill") {
     return "execution-factory:skill:create";
   }
@@ -92,11 +96,12 @@ function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab) {
     return "execution-factory:mcp:create";
   }
 
-  return "execution-factory:toolbox:create";
+  return toolboxView === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create";
 }
 
 export function CreateMenu({
   activeTab,
+  toolboxView,
   autoOpen = false,
   onAutoOpenHandled,
   onRefresh,
@@ -104,6 +109,8 @@ export function CreateMenu({
   variant = "toolbar",
 }: CreateMenuProps) {
   const { t } = useTranslation();
+  const { runtimeConfig } = useAppServices();
+  const currentPermissions = runtimeConfig.currentUser.permissions;
   const capabilityUxV2 = isCapabilityUxV2();
   const [legacyWizardOpen, setLegacyWizardOpen] = useState(false);
   const [capabilityWizardOpen, setCapabilityWizardOpen] = useState(false);
@@ -121,13 +128,20 @@ export function CreateMenu({
   const permission = capabilityUxV2
     ? useLegacyOperatorCreate
       ? "execution-factory:operator:create"
-      : resolveCapabilityCreatePermission(activeTab)
-    : getCreatePermission(activeTab);
+      : resolveCapabilityCreatePermission(activeTab, toolboxView)
+    : getCreatePermission(activeTab, toolboxView);
   const importPermission = getImportPermission(activeTab);
-  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems(), []);
+  const canCreate = Boolean(permission && hasPermissions({ currentPermissions, requiredPermissions: permission }));
+  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems().filter(
+    (item) => item.action !== "import-adp" && canCreateCapabilityMode(currentPermissions, item.action),
+  ), [currentPermissions]);
 
   useEffect(() => {
-    if (!autoOpen || !permission) {
+    if (!autoOpen) {
+      return;
+    }
+    if (!canCreate) {
+      onAutoOpenHandled?.();
       return;
     }
 
@@ -138,6 +152,9 @@ export function CreateMenu({
       } else if (activeTab === "skill") {
         setCapabilityAllowedModes(undefined);
         setCapabilityInitialMode("skill");
+      } else if (toolboxView === "function") {
+        setCapabilityAllowedModes(["function"]);
+        setCapabilityInitialMode("function");
       } else {
         setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
         setCapabilityInitialMode(undefined);
@@ -151,9 +168,11 @@ export function CreateMenu({
     activeTab,
     autoOpen,
     capabilityUxV2,
+    canCreate,
     onAutoOpenHandled,
     permission,
     useLegacyOperatorCreate,
+    toolboxView,
   ]);
 
   if (!permission) {
@@ -165,6 +184,7 @@ export function CreateMenu({
   };
 
   const openCapabilityMode = (mode: CapabilityUxMode) => {
+    if (!canCreateCapabilityMode(currentPermissions, mode)) return;
     setCapabilityAllowedModes(undefined);
     setCapabilityInitialMode(mode);
     setCapabilityWizardOpen(true);
@@ -172,6 +192,7 @@ export function CreateMenu({
 
   // HTTP API: enter the wizard through Add API or Import API cards rather than locking a single mode.
   const openHttpApiWizard = () => {
+    if (!canCreateCapabilityMode(currentPermissions, "quick-api")) return;
     setCapabilityAllowedModes(HTTP_API_CAPABILITY_MODES);
     setCapabilityInitialMode(undefined);
     setCapabilityWizardOpen(true);
@@ -179,6 +200,7 @@ export function CreateMenu({
 
   const handleCapabilityAction = (action: CapabilityCreateMenuAction) => {
     if (action === "import-adp") {
+      if (!importPermission || !hasPermissions({ currentPermissions, requiredPermissions: importPermission })) return;
       setImportActiveTab(resolveCapabilityAdpImportTab(activeTab));
       setImportInitialKind("adp");
       setImportOpen(true);
@@ -289,7 +311,7 @@ export function CreateMenu({
           onClose={() => setLegacyWizardOpen(false)}
           onRefresh={onRefresh}
           onResourceCreated={handleResourceCreated}
-          open={legacyWizardOpen}
+          open={legacyWizardOpen && canCreate}
         />
       ) : null}
       {importPermission || capabilityUxV2 ? (

@@ -34,6 +34,7 @@ import {
   operationsForType,
   ROLE_GRANT_RESOURCE_TYPES,
   resourceTypeLabel,
+  resourceTypeDescription,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
 
@@ -255,7 +256,9 @@ export function ResourceGrantEditor({
           {value.map((grant, index) => (
             <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}:${index}`}>
               <div className={styles.grantMeta}>
-                <Tag className={styles.roleTag}>{resourceTypeLabel(grant.resource.type)}</Tag>
+                <Tooltip title={resourceTypeDescription(grant.resource.type)}>
+                  <Tag className={styles.roleTag}>{resourceTypeLabel(grant.resource.type)}</Tag>
+                </Tooltip>
                 <span
                   className={[styles.slugChip, styles.grantResourceName].join(" ")}
                   title={grant.resource.id === WILDCARD ? undefined : grant.resource.id}
@@ -550,6 +553,9 @@ export function ResourceGrantEditor({
             </div>
           ) : null}
         </div>
+      ) : null}
+      {!disabled && resourceTypeDescription(draftType) ? (
+        <p>{resourceTypeDescription(draftType)}</p>
       ) : null}
     </div>
   );

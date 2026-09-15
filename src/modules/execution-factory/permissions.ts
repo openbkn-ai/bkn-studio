@@ -11,6 +11,7 @@ import type { ExecutionUnitTab } from "@/modules/execution-factory/components/ex
 export const executionFactoryViewPermissions = [
   "execution-factory:operator:view",
   "execution-factory:toolbox:view",
+  "execution-factory:function:view",
   "execution-factory:mcp:view",
   "execution-factory:skill:view",
 ] as const;
@@ -27,7 +28,9 @@ export function filterAccessibleExecutionUnitTabs(
   tabs: ExecutionUnitTab[],
   currentPermissions: readonly string[],
 ): ExecutionUnitTab[] {
-  return tabs.filter((tab) => currentPermissions.includes(executionFactoryViewPermissionByTab[tab]));
+  return tabs.filter((tab) => tab === "toolbox"
+    ? currentPermissions.includes("execution-factory:toolbox:view") || currentPermissions.includes("execution-factory:function:view")
+    : currentPermissions.includes(executionFactoryViewPermissionByTab[tab]));
 }
 
 /**

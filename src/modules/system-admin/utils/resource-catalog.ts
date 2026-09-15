@@ -79,7 +79,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   mcp: "MCP service",
   metric: "Metric",
   object_type: "Object type",
-  operator: "Function set",
+  operator: "Operator",
   resource: "Data resource",
   relation_type: "Relation type",
   risk_type: "Risk type",
@@ -88,6 +88,7 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   small_model: "Small model",
   stream_data_pipeline: "Stream data pipeline",
   tool_box: "API toolset",
+  function: "Function set",
 };
 
 const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
@@ -156,6 +157,7 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("large_model", ["display", "create", "modify", "delete"]),
   resourceType("operator", PUBLISHABLE),
   resourceType("tool_box", PUBLISHABLE),
+  resourceType("function", PUBLISHABLE),
   resourceType("skill", PUBLISHABLE),
   resourceType("mcp", PUBLISHABLE),
   resourceType("agent", [
@@ -253,4 +255,9 @@ function operationFallbackLabel(op: string): string {
 
 function resourceTypeFallbackLabel(type: string): string {
   return RESOURCE_FALLBACK_LABELS[type] ?? type;
+}
+
+export function resourceTypeDescription(type: string): string {
+  if (type !== "operator" && type !== "tool_box" && type !== "function") return "";
+  return i18n.t(`systemAdmin.resourceCatalog.descriptions.${type}`);
 }

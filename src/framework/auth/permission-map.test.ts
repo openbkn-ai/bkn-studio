@@ -103,7 +103,7 @@ describe("isStudioPermissionGranted", () => {
   });
 
   it("能力列表接受任一执行单元的查看权限", () => {
-    for (const type of ["operator", "tool_box", "mcp", "skill"]) {
+    for (const type of ["operator", "tool_box", "function", "mcp", "skill"]) {
       const viewOnly = flattenSafeGrants([
         { operations: ["view"], resource: { id: "*", type } },
       ]);
@@ -111,9 +111,13 @@ describe("isStudioPermissionGranted", () => {
     }
   });
 
-  it("函数归算子，与后端 #345 的门禁同口径", () => {
-    expect(isStudioPermissionGranted("execution-factory-lab:function:create", grants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", grants, false)).toBe(true);
+  it("函数授权独立于算子和 API 工具集", () => {
+    expect(isStudioPermissionGranted("execution-factory-lab:function:create", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", grants, false)).toBe(false);
+    const functionGrants = flattenSafeGrants([{ operations: ["create", "execute"], resource: { id: "*", type: "function" } }]);
+    expect(isStudioPermissionGranted("execution-factory-lab:function:create", functionGrants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", functionGrants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:toolbox:create", functionGrants, false)).toBe(false);
   });
 
   it("工具没有独立资源类型，写操作落到父工具箱的 modify", () => {
@@ -178,7 +182,7 @@ describe("执行工厂权限点覆盖", () => {
   it("除去有意不映的三条，其余全部可由 bkn-safe 授权解析", () => {
     // A user granted every operation on all four resource types should match every execution-factory permission point.
     const fullGrants = flattenSafeGrants(
-      ["operator", "tool_box", "mcp", "skill"].map((type) => ({
+      ["operator", "tool_box", "function", "mcp", "skill"].map((type) => ({
         operations: [
           "create",
           "modify",

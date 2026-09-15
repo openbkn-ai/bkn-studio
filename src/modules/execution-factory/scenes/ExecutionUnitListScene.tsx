@@ -954,7 +954,7 @@ export function ExecutionUnitListScene({
                 setPublishedPermTarget({
                   id: item.id,
                   name: item.name,
-                  type: AUTHZ_TYPE_BY_TAB[activeTab],
+                  type: activeTab === "toolbox" && item.metadataType === "function" ? "function" : AUTHZ_TYPE_BY_TAB[activeTab],
                   objectAuthorized: true,
                 });
               }
@@ -990,7 +990,7 @@ export function ExecutionUnitListScene({
         setAuthorizeTarget({
           id: item.id,
           name: item.name,
-          type: AUTHZ_TYPE_BY_TAB[activeTab],
+          type: activeTab === "toolbox" && item.metadataType === "function" ? "function" : AUTHZ_TYPE_BY_TAB[activeTab],
           objectAuthorized: hasExecutionUnitRecordOperation(item, "authorize"),
         });
         return;
@@ -1357,6 +1357,7 @@ export function ExecutionUnitListScene({
           <div className={styles.toolbarActions}>
             <CreateMenu
               activeTab={activeTab}
+              toolboxView={toolboxView}
               autoOpen={searchParams.get("create") === "1"}
               onAutoOpenHandled={() => {
                 const nextParams = new URLSearchParams(searchParams);
@@ -1524,6 +1525,7 @@ export function ExecutionUnitListScene({
                 {!marketMode && !hasOriginFilteredEmpty ? (
                   <CreateMenu
                     activeTab={activeTab}
+                    toolboxView={toolboxView}
                     onRefresh={reloadList}
                     onResourceCreated={handleCreateMenuResourceCreated}
                     variant="empty"

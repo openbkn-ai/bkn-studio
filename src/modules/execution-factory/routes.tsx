@@ -120,7 +120,7 @@ export const executionFactoryRoutes: RouteObject[] = [
     },
     element: withRouteLoading(
       <ExecutionUnitTabRedirect activeTab="toolbox" migrationFrom="toolboxes-new" openCreate />,
-      ["execution-factory:toolbox:create"],
+      ["execution-factory:toolbox:create", "execution-factory:function:create"],
     ),
   },
   {
@@ -132,7 +132,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxEditTitle",
       },
     },
-    element: withRouteLoading(<ToolboxFormPage mode="edit" />, ["execution-factory:toolbox:edit"]),
+    element: withRouteLoading(<ToolboxFormPage mode="edit" />, ["execution-factory:toolbox:edit", "execution-factory:function:edit"]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools",
@@ -143,7 +143,7 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxToolsPageTitle",
       },
     },
-    element: withRouteLoading(<ToolboxToolsPage />, ["execution-factory:toolbox:view"]),
+    element: withRouteLoading(<ToolboxToolsPage />, ["execution-factory:toolbox:view", "execution-factory:function:view"]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools/:toolId/edit",

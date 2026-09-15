@@ -42,6 +42,7 @@ export function McpToolImportedSection({ value = [], onChange }: McpToolImported
         const result = await listToolboxes({
           page: 1,
           pageSize: 100,
+          metadataType: "openapi",
         });
         setToolboxes(result.items);
         setBoxId((current) => current ?? result.items[0]?.boxId);

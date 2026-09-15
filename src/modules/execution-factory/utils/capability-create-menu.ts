@@ -7,6 +7,34 @@
 
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
 import type { CapabilityUxMode } from "@/modules/execution-factory/utils/capability-ux";
+import { hasPermissions } from "@/framework/permission/has-permissions";
+
+export function capabilityModePermission(mode: CapabilityUxMode, initialBoxId?: string): string {
+  switch (mode) {
+    case "quick-api":
+    case "import-openapi":
+      return initialBoxId ? "execution-factory:tool:create" : "execution-factory:toolbox:create";
+    case "function":
+      return "execution-factory:function:create";
+    case "mcp":
+      return "execution-factory:mcp:create";
+    case "skill":
+      return "execution-factory:skill:create";
+    case "advanced-operator":
+      return "execution-factory:operator:create";
+  }
+}
+
+export function canCreateCapabilityMode(
+  currentPermissions: string[],
+  mode: CapabilityUxMode,
+  initialBoxId?: string,
+): boolean {
+  return hasPermissions({
+    currentPermissions,
+    requiredPermissions: capabilityModePermission(mode, initialBoxId),
+  });
+}
 
 export type CapabilityCreateMenuAction = CapabilityUxMode | "import-adp";
 
