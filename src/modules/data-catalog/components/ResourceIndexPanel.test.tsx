@@ -180,7 +180,7 @@ describe("ResourceIndexPanel", () => {
           indexViewExplicit
           onIndexViewChange={vi.fn()}
           onRefresh={vi.fn()}
-          resource={{ ...resource, operations: ["modify"] }}
+          resource={{ ...resource, operations: ["view_detail"] }}
           tasks={[]}
         />
       </MemoryRouter>,
@@ -193,6 +193,29 @@ describe("ResourceIndexPanel", () => {
       hideBuildControls: true,
       readOnly: true,
     }));
+  });
+
+  it("keeps the config tab reachable but hides feature configuration without view_detail", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={modifiableCatalog}
+          indexView="config"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, operations: ["query_data"] }}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tab", { name: "dataCatalog.indexWorkspace.viewConfig" })).toBeEnabled();
+    expect(screen.getByText("dataCatalog.permissionRequired").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
+    expect(indexConfigFormPanelMock).not.toHaveBeenCalled();
   });
 
   it("keeps index configuration editable with catalog resource management permission", () => {
@@ -242,6 +265,27 @@ describe("ResourceIndexPanel", () => {
     );
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
     expect(onIndexViewChange).not.toHaveBeenCalledWith("config");
+  });
+
+  it("keeps task management independent of resource view_detail", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, operations: ["query_data"] }}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tab", { name: "dataCatalog.indexWorkspace.viewTasks" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "start task" })).toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.permissionRequired")).toBeNull();
   });
 
   it("keeps the task tab disabled and redirects dataset task deep links to config", async () => {

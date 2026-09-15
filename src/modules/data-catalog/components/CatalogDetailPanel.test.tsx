@@ -241,7 +241,7 @@ describe("CatalogDetailPanel authorize entry", () => {
       }],
       total: 1,
     });
-    renderPanel({ ...catalog, operations: ["task_manage", "view_detail"] }, onOpenResource);
+    renderPanel(catalog, onOpenResource);
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
     fireEvent.click(await screen.findByRole("menuitem", {
@@ -249,6 +249,95 @@ describe("CatalogDetailPanel authorize entry", () => {
     }));
 
     expect(onOpenResource).toHaveBeenCalledWith("dataset-1", "index");
+  });
+
+  it.each([
+    ["view-only", ["view_detail"]],
+    ["resource manager", ["resource_manage", "view_detail"]],
+    ["task manager", ["task_manage", "view_detail"]],
+  ])("shows the data-index entry for a %s with resource view_detail", async (_, catalogOperations) => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        category: "table",
+        columnCount: 1,
+        description: "",
+        expectedUpdateTime: 0,
+        id: "resource-1",
+        localIndexStatus: "unavailable",
+        name: "customers",
+        operations: ["view_detail"],
+        rowCount: 0,
+        schema: [],
+        sourceIdentifier: "db.customers",
+        updateTime: "",
+      }],
+      total: 1,
+    });
+    renderPanel({ ...catalog, operations: catalogOperations });
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    expect(screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", {
+      name: "dataCatalog.resourceWorkspace.tabSemanticUnderstanding",
+    })).toBeInTheDocument();
+  });
+
+  it("keeps the data-index entry when the resource omits view_detail", async () => {
+    const onOpenResource = vi.fn();
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        category: "table",
+        columnCount: 1,
+        description: "",
+        expectedUpdateTime: 0,
+        id: "resource-1",
+        localIndexStatus: "unavailable",
+        name: "customers",
+        operations: ["query_data"],
+        rowCount: 0,
+        schema: [],
+        sourceIdentifier: "db.customers",
+        updateTime: "",
+      }],
+      total: 1,
+    });
+    renderPanel({ ...catalog, operations: ["resource_manage", "task_manage", "view_detail"] }, onOpenResource);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" }));
+    expect(onOpenResource).toHaveBeenCalledWith("resource-1", "index");
+  });
+
+  it("keeps index configuration reachable when the resource is disabled", async () => {
+    const onOpenResource = vi.fn();
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        category: "table",
+        columnCount: 1,
+        description: "",
+        enabled: false,
+        expectedUpdateTime: 0,
+        id: "resource-1",
+        localIndexStatus: "unavailable",
+        name: "customers",
+        operations: ["view_detail"],
+        rowCount: 0,
+        schema: [],
+        sourceIdentifier: "db.customers",
+        updateTime: "",
+      }],
+      total: 1,
+    });
+    renderPanel(catalog, onOpenResource);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    const indexItem = screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" });
+    expect(indexItem).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(indexItem);
+    expect(onOpenResource).toHaveBeenCalledWith("resource-1", "index");
   });
 
   it("hides resource preview when query_data is unavailable", async () => {

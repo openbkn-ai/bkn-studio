@@ -381,7 +381,6 @@ export function CatalogDetailPanel({
         // checked after the resource detail has been loaded; list actions only use known states.
         const queryBlockReason = resourceQueryBlockReason(record, null);
         const previewDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
-        const indexDisabled = blockedByDisabledCatalog || queryBlockReason !== null;
         const previewLabel = t("dataCatalog.actions.preview");
         const indexLabel = t("dataCatalog.actions.dataIndex");
         const moreItems: NonNullable<MenuProps["items"]> = [
@@ -415,29 +414,10 @@ export function CatalogDetailPanel({
             ),
           });
         }
-        if (canManageResourceTasks) {
-          moreItems.push({
-            disabled: indexDisabled,
-            key: "index",
-            label: queryBlockReason ? (
-              <Tooltip
-                title={t(
-                  queryBlockReason === "missing"
-                    ? "dataCatalog.actions.indexMissingHint"
-                    : queryBlockReason === "disabled"
-                      ? "dataCatalog.actions.indexDisabledHint"
-                      : queryBlockReason === "stale"
-                        ? "dataCatalog.actions.indexStaleHint"
-                        : "dataCatalog.actions.indexMetadataUnavailableHint",
-                )}
-              >
-                <span>{indexLabel}</span>
-              </Tooltip>
-            ) : (
-              indexLabel
-            ),
-          });
-        }
+        moreItems.push({
+          key: "index",
+          label: indexLabel,
+        });
         if (!catalog.internal && canAuthorizeGrants) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({
@@ -453,7 +433,7 @@ export function CatalogDetailPanel({
             ),
           });
         }
-        if (!catalog.internal && canManageResourceTasks) {
+        if (!catalog.internal) {
           moreItems.push({
             key: "semantic-understanding",
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),

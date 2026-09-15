@@ -241,6 +241,30 @@ describe("ResourceWorkspaceScene", () => {
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
 
+  it("keeps semantic understanding unavailable for internal catalogs", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      internal: true,
+      name: "Internal Catalog",
+      operations: ["task_manage", "view_detail"],
+    });
+    const onTabChange = vi.fn();
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={onTabChange}
+        resourceId={staleResource.id}
+        tab="semantic-understanding"
+      />,
+    );
+
+    await waitFor(() => expect(onTabChange).toHaveBeenCalledWith("detail"));
+    expect(screen.queryByTestId("semantic-panel")).toBeNull();
+  });
+
   it("does not use global catalog grants for management actions on the current catalog", async () => {
     currentPermissions.value = [
       "catalog:resource_manage",

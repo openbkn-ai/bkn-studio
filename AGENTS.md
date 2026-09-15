@@ -11,7 +11,6 @@ Read this first, then load the relevant project documents below. Before working 
 | Architecture & module boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Development conventions | [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) |
 | Agent composition conventions | [AGENT_COMPOSITION_CHARTER.md](AGENT_COMPOSITION_CHARTER.md) |
-| Module owners (review routing) | [.github/CODEOWNERS](.github/CODEOWNERS) |
 | Issue templates (bug / feature / task) | [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/) |
 | Pull request template | [.github/pull_request_template.md](.github/pull_request_template.md) |
 

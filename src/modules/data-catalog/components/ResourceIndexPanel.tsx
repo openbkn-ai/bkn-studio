@@ -51,6 +51,7 @@ import type {
   CatalogResource,
 } from "@/modules/data-catalog/types/data-catalog";
 import { isActiveBuildTask } from "@/modules/data-catalog/utils/build-task-guards";
+import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import panelStyles from "./ResourceIndexPanel.module.css";
@@ -251,6 +252,7 @@ export function ResourceIndexPanel({
   const resourceBlockReason = resourceQueryBlockReason(resource);
   const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
+  const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const readOnly = isResourceIndexReadOnly(catalog, canModifyResource);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
   const canManageTaskActions = canManageBuildTasks;
@@ -529,7 +531,7 @@ export function ResourceIndexPanel({
       </div>
     ) : null;
 
-  const renderConfigTab = () => (
+  const renderConfigTab = () => canViewResourceDetail ? (
     <>
       {gateBanner}
       {!canModifyResource ? (
@@ -551,6 +553,8 @@ export function ResourceIndexPanel({
         />
       </div>
     </>
+  ) : (
+    <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
   );
 
   const renderTasksTab = () => (
