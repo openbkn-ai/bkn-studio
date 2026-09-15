@@ -60,6 +60,7 @@ type ListConfig = {
   nameField: string;
   nameParam: string;
   paging: Paging;
+  metadataType?: "openapi" | "function";
   path: string;
 };
 
@@ -71,7 +72,8 @@ const LIST_CONFIG: Record<string, ListConfig> = {
   small_model: { path: "/mf-model-manager/v1/small-model/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
   large_model: { path: "/mf-model-manager/v1/llm/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
   operator: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-  tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size" },
+  tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "openapi" },
+  function: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "function" },
   mcp: { path: "/agent-operator-integration/v1/mcp/list", envelope: "data", idField: "mcp_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
   skill: { path: "/agent-operator-integration/v1/skills", envelope: "data", idField: "skill_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
 };
@@ -105,7 +107,7 @@ async function listOne(type: string, keyword: string, offset = 0, limit = PAGE_S
 
   if (cfg.paging === "offset") {
     const response = await http.get<Record<string, unknown>>(cfg.path, {
-      params: { ...pagingParams(cfg.paging, offset, limit), [cfg.nameParam]: keyword || undefined },
+      params: { ...pagingParams(cfg.paging, offset, limit), [cfg.nameParam]: keyword || undefined, metadata_type: cfg.metadataType },
       skipErrorToast: true,
     });
     const objects = toObjects(response.data);
@@ -122,7 +124,7 @@ async function listOne(type: string, keyword: string, offset = 0, limit = PAGE_S
     Array.from({ length: pageCount }, (_, index) => http.get<Record<string, unknown>>(cfg.path, {
       params: {
         ...pagingParams(cfg.paging, firstPageOffset + index * PAGE_SIZE, PAGE_SIZE),
-        [cfg.nameParam]: keyword || undefined,
+        [cfg.nameParam]: keyword || undefined, metadata_type: cfg.metadataType,
       },
       skipErrorToast: true,
     })),
@@ -165,6 +167,7 @@ export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "knowledge_network",
   "operator",
   "tool_box",
+  "function",
   "mcp",
   "skill",
 ] as const;
@@ -312,6 +315,7 @@ const NAMES_CONFIG: Record<string, NamesConfig> = {
   large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
   operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
   tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
+  function: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   skill: { kind: "post", path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },

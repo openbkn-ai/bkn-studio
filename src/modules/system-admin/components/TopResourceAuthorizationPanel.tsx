@@ -49,6 +49,7 @@ const ICONS: Record<string, ReactNode> = {
   operator: <FunctionOutlined />,
   skill: <AppstoreOutlined />,
   tool_box: <ToolOutlined />,
+  function: <FunctionOutlined />,
 };
 
 const DEFAULT_PAGE_SIZE = 10;

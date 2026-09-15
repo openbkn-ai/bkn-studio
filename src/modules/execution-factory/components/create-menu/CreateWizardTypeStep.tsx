@@ -19,6 +19,7 @@ import type { ExecutionUnitTab } from "@/modules/execution-factory/components/ex
 import styles from "./create-menu.module.css";
 
 type CreateWizardTypeStepProps = {
+  allowedTabs?: ExecutionUnitTab[];
   onChange: (tab: ExecutionUnitTab) => void;
   value: ExecutionUnitTab;
 };
@@ -33,7 +34,7 @@ const TAB_OPTIONS: Array<{
   { key: "skill", icon: ThunderboltOutlined },
 ];
 
-export function CreateWizardTypeStep({ onChange, value }: CreateWizardTypeStepProps) {
+export function CreateWizardTypeStep({ allowedTabs, onChange, value }: CreateWizardTypeStepProps) {
   const { t } = useTranslation();
 
   return (
@@ -44,7 +45,7 @@ export function CreateWizardTypeStep({ onChange, value }: CreateWizardTypeStepPr
         value={value}
       >
         <div className={styles.wizardTypeGrid}>
-          {TAB_OPTIONS.map(({ key, icon: Icon }) => (
+          {TAB_OPTIONS.filter(({ key }) => !allowedTabs || allowedTabs.includes(key)).map(({ key, icon: Icon }) => (
             <label
               className={`${styles.optionCard} ${value === key ? styles.optionCardActive : ""}`}
               key={key}

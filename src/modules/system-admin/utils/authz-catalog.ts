@@ -23,6 +23,7 @@ export const AUTHZ_OBJECT_TYPES = [
   "risk_type",
   "operator",
   "tool_box",
+  "function",
   "mcp",
   "skill",
 ] as const;
@@ -34,6 +35,7 @@ export const AUTHZ_OBJECT_PICKER_TYPES = [
   "knowledge_network",
   "operator",
   "tool_box",
+  "function",
   "mcp",
   "skill",
 ] as const;
@@ -44,6 +46,7 @@ export const COMMUNITY_OBJECT_GRANT_TYPES = [
   "knowledge_network",
   "operator",
   "tool_box",
+  "function",
   "mcp",
   "skill",
 ] as const;

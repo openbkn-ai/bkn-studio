@@ -15,15 +15,15 @@
  * As a result, every non-super-admin user had an empty permission set on execution-factory
  * pages even when the backend granted `operator:create`.
  *
- * The execution-factory backend exposes only four resource types: operator, tool_box, mcp,
+ * The execution-factory backend exposes five resource types: operator, tool_box, function, mcp,
  * and skill (see adp/execution-factory/operator-integration/server/interfaces/logics_auth.go:53-58).
  * The mappings below align with the backend's actual authorization points.
  */
 
-/** Resource types supported by bkn-safe. The backend supports only these four. */
-type SafeResourceType = "operator" | "tool_box" | "mcp" | "skill";
+/** Resource types supported by bkn-safe. The backend supports these five. */
+type SafeResourceType = "operator" | "tool_box" | "function" | "mcp" | "skill";
 
-const ALL_RESOURCE_TYPES: SafeResourceType[] = ["operator", "tool_box", "mcp", "skill"];
+const ALL_RESOURCE_TYPES: SafeResourceType[] = ["operator", "tool_box", "function", "mcp", "skill"];
 
 /** Studio actions mapped to bkn-safe operations. Their vocabularies differ and need explicit alignment. */
 const ACTION_TO_OPERATION: Record<string, string> = {
@@ -42,13 +42,13 @@ const ACTION_TO_OPERATION: Record<string, string> = {
 /**
  * Studio entities mapped to bkn-safe resource types.
  *
- * Both capabilities and functions are forms of operators.
+ * Function sets have their own resource type; raw Function lab calls use the function root.
  * Tools have no standalone resource type; all tool-level operations are authorized on their
  * parent toolbox, as is consistently done by toolbox_handler.
  */
 const ENTITY_TO_RESOURCE_TYPE: Record<string, SafeResourceType> = {
   capability: "operator",
-  function: "operator",
+  function: "function",
   mcp: "mcp",
   operator: "operator",
   skill: "skill",
@@ -67,20 +67,22 @@ const OVERRIDES: Record<string, string[]> = {
   // The capability list contains all execution-unit kinds. Any resource view grant opens it;
   // the concrete resource APIs remain responsible for filtering and object-level checks.
   "capability:view": ALL_RESOURCE_TYPES.map((type) => `${type}:view`),
-  // Marketplace browsing: the backend uses public_access for all four resource types; there
+  // Marketplace browsing: the backend uses public_access for all five resource types; there
   // is no dedicated market resource type. bkn-safe also has a catalog resource type, but that
   // refers to the Vega data catalog, not this capability marketplace, and must not be mapped here.
   "catalog:view": ALL_RESOURCE_TYPES.map((type) => `${type}:public_access`),
   // Marketplace installation has no corresponding execution-factory endpoint, so keep the entry
   // hidden until the backend provides one.
   "catalog:install": [],
-  // Import/export: export requires read access to any of the four types; import creates the target type.
+  // Import/export: export requires read access to any of the five types; import creates the target type.
   "impex:export": ALL_RESOURCE_TYPES.map((type) => `${type}:view`),
   "impex:import": ALL_RESOURCE_TYPES.map((type) => `${type}:create`),
-  // Tools have no resource type of their own; write operations always use the parent toolbox's modify grant.
-  "tool:create": ["tool_box:modify"],
-  "tool:delete": ["tool_box:modify"],
-  "tool:edit": ["tool_box:modify"],
+  // Tools have no resource type of their own; writes use the stored parent box kind.
+  "tool:view": ["tool_box:view", "function:view"],
+  "tool:debug": ["tool_box:execute", "function:execute"],
+  "tool:create": ["tool_box:modify", "function:modify"],
+  "tool:delete": ["tool_box:modify", "function:modify"],
+  "tool:edit": ["tool_box:modify", "function:modify"],
 };
 
 /**

@@ -27,6 +27,8 @@ const services = vi.hoisted(() => ({
         "execution-factory:tool:delete",
         "execution-factory:tool:edit",
         "execution-factory:toolbox:edit",
+        "execution-factory:function:edit",
+        "execution-factory:function:debug",
       ],
     },
   },

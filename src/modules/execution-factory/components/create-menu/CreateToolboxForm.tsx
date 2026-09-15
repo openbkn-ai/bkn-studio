@@ -30,12 +30,14 @@ type FormValues = {
 type CreateToolboxFormProps = {
   formId?: string;
   lockMetadataType?: ToolboxMetadataType;
+  allowedMetadataTypes?: ToolboxMetadataType[];
   onCreated: (boxId: string) => void;
 };
 
 export function CreateToolboxForm({
   formId,
   lockMetadataType,
+  allowedMetadataTypes,
   onCreated,
 }: CreateToolboxFormProps) {
   const { t } = useTranslation();
@@ -43,6 +45,8 @@ export function CreateToolboxForm({
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
   const metadataType = Form.useWatch("metadataType", form);
+  const canCreateOpenApi = allowedMetadataTypes?.includes("openapi") ?? true;
+  const canCreateFunction = allowedMetadataTypes?.includes("function") ?? true;
 
   const metadataOptions = useMemo(
     () => [
@@ -58,18 +62,20 @@ export function CreateToolboxForm({
         title: t("executionFactory.metadataTypes.function"),
         desc: t("executionFactory.createToolboxFunctionDesc"),
       },
-    ],
-    [t],
+    ].filter((item) => item.key === "openapi" ? canCreateOpenApi : canCreateFunction),
+    [canCreateOpenApi, canCreateFunction, t],
   );
 
   useEffect(() => {
     form.setFieldsValue({
-      metadataType: lockMetadataType ?? "openapi",
+      metadataType: lockMetadataType ?? metadataOptions[0]?.key ?? "openapi",
       serviceUrl: "http://127.0.0.1:9000",
     });
-  }, [form, lockMetadataType]);
+  }, [form, lockMetadataType, metadataOptions]);
 
   const handleSubmit = async (values: FormValues) => {
+    if (allowedMetadataTypes && !allowedMetadataTypes.includes(values.metadataType)) return;
+    if (lockMetadataType && values.metadataType !== lockMetadataType) return;
     setSubmitting(true);
 
     try {

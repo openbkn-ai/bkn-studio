@@ -674,6 +674,7 @@ export const executionFactoryZhCN = {
     convertToToolTitle: "将算子转换为工具",
     targetToolbox: "目标工具箱",
     targetToolboxPlaceholder: "请选择工具箱",
+    convertTargetUnauthorized: "没有权限将此算子加入所选工具箱。",
     mcpListTitle: "MCP 管理",
     mcpListDescription: "管理 MCP 服务器配置。",
     mcpCreateTitle: "注册 MCP 服务器",

@@ -72,7 +72,7 @@ export function AddCapabilityModeStep({
   );
 
   const options = useMemo(() => {
-    if (!allowedModes?.length) {
+    if (!allowedModes) {
       return allOptions;
     }
 

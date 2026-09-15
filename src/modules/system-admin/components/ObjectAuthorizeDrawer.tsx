@@ -92,6 +92,7 @@ const OBJ_ICON: Record<string, ReactNode> = {
   large_model: <AppstoreOutlined />,
   operator: <FunctionOutlined />,
   tool_box: <ToolOutlined />,
+  function: <FunctionOutlined />,
   mcp: <ApiOutlined />,
   skill: <BulbOutlined />,
 };

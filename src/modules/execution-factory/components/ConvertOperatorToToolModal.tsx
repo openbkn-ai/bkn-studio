@@ -15,6 +15,7 @@ import { convertOperatorToTool } from "@/modules/execution-factory/services/tool
 import { listToolboxes } from "@/modules/execution-factory/services/toolbox.service";
 import type { OperatorRecord } from "@/modules/execution-factory/types/operator";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
+import { eligibleOperatorConversionTargets } from "@/modules/execution-factory/utils/operator-conversion-targets";
 
 type ConvertOperatorToToolModalProps = {
   onClose: () => void;
@@ -34,17 +35,19 @@ export function ConvertOperatorToToolModal({
   record,
 }: ConvertOperatorToToolModalProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<ConvertFormValues>();
   const [toolboxes, setToolboxes] = useState<ToolboxRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const eligibleToolboxes = eligibleOperatorConversionTargets(record, toolboxes, runtimeConfig.currentUser.permissions);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !record?.metadataType) {
       form.resetFields();
       setError(null);
+      setToolboxes([]);
       return;
     }
 
@@ -55,6 +58,7 @@ export function ConvertOperatorToToolModal({
         const listResult = await listToolboxes({
           page: 1,
           pageSize: 100,
+          metadataType: record.metadataType,
         });
         setToolboxes(listResult.items);
       } catch (caughtError) {
@@ -63,7 +67,7 @@ export function ConvertOperatorToToolModal({
         setLoading(false);
       }
     })();
-  }, [form, open]);
+  }, [form, open, record?.metadataType]);
 
   const handleConvert = async () => {
     if (!record) {
@@ -75,6 +79,9 @@ export function ConvertOperatorToToolModal({
 
     try {
       const values = await form.validateFields();
+      if (!eligibleToolboxes.some((toolbox) => toolbox.boxId === values.boxId)) {
+        throw new Error(t("executionFactory.convertTargetUnauthorized"));
+      }
       await convertOperatorToTool({
         boxId: values.boxId,
         operatorId: record.operatorId,
@@ -115,7 +122,7 @@ export function ConvertOperatorToToolModal({
         >
           <Select
             loading={loading}
-            options={toolboxes.map((item) => ({
+            options={eligibleToolboxes.map((item) => ({
               label: item.name,
               value: item.boxId,
             }))}

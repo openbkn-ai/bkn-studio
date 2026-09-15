@@ -34,6 +34,11 @@ export const systemAdminZhCN = {
       users: "用户",
     },
     resourceCatalog: {
+      descriptions: {
+        operator: "新建用于算子注册及 AI 生成函数；执行用于算子执行及临时代码执行（run_code），不授予新版函数集的创建权限。",
+        tool_box: "仅管控 API 工具集。新建用于创建集合，修改用于编辑 API，执行用于调用。",
+        function: "仅管控函数集。新建用于创建集合，修改用于编辑函数，执行用于调用。",
+      },
       operations: {
         "*": "全部操作",
         authorize: "授权",
@@ -91,7 +96,7 @@ export const systemAdminZhCN = {
         mcp: "MCP 服务",
         metric: "指标",
         object_type: "对象类",
-        operator: "函数集",
+        operator: "算子",
         relation_type: "关系类",
         resource: "数据资源",
         risk_type: "风险类",
@@ -100,6 +105,7 @@ export const systemAdminZhCN = {
         small_model: "小模型",
         stream_data_pipeline: "流式数据管道",
         tool_box: "API 工具集",
+        function: "函数集",
       },
     },
     roleCatalog: {

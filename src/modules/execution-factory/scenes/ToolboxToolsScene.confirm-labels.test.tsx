@@ -129,6 +129,12 @@ describe("ToolboxToolsScene tool status confirmation labels (#491)", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    services.runtimeConfig.currentUser.permissions = [
+      "execution-factory:tool:create",
+      "execution-factory:tool:delete",
+      "execution-factory:tool:edit",
+      "execution-factory:toolbox:edit",
+    ];
     api.getToolbox.mockResolvedValue({
       boxId: "box-1",
       metadataType: "openapi",
@@ -139,6 +145,19 @@ describe("ToolboxToolsScene tool status confirmation labels (#491)", () => {
     api.getToolDetail.mockImplementation((_boxId: string, toolId: string) =>
       Promise.resolve(TOOLS.find((tool) => tool.toolId === toolId)),
     );
+  });
+
+  it("hides API tool writes when the user can modify only function sets", async () => {
+    services.runtimeConfig.currentUser.permissions = [
+      "execution-factory:toolbox:view",
+      "execution-factory:function:edit",
+      "execution-factory:tool:create",
+      "execution-factory:tool:edit",
+    ];
+    renderScene();
+    await screen.findByText("Weather Toolbox");
+    expect((await railItem("get_weather")).queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole("button", { name: i18n.t("executionFactory.addApiButton") })).toBeNull();
   });
 
   describe.each(["en-US", "zh-CN"] as const)("in %s", (locale) => {

@@ -16,7 +16,7 @@ describe("filterAccessibleExecutionUnitTabs", () => {
   const tabs = ["operator", "toolbox", "mcp", "skill"] as const;
 
   it.each([
-    ["function", ["execution-factory:operator:view"], ["operator"]],
+    ["function", ["execution-factory:function:view"], ["toolbox"]],
     ["toolbox", ["execution-factory:toolbox:view"], ["toolbox"]],
     ["MCP", ["execution-factory:mcp:view"], ["mcp"]],
     ["Skill", ["execution-factory:skill:view"], ["skill"]],
