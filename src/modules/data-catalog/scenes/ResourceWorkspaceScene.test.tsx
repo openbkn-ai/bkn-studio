@@ -25,8 +25,17 @@ vi.mock("antd", () => ({
   Alert: ({ message, type }: { message: React.ReactNode; type?: string }) => <div data-alert-type={type}>{message}</div>,
   Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
-  Tabs: ({ activeKey, items }: { activeKey: string; items: Array<{ children: React.ReactNode; key: string }> }) => (
-    <>{items.find((item) => item.key === activeKey)?.children}</>
+  Tabs: ({ activeKey, items, onChange }: {
+    activeKey: string;
+    items: Array<{ children: React.ReactNode; key: string; label: React.ReactNode }>;
+    onChange?: (key: string) => void;
+  }) => (
+    <div data-testid="workspace-tabs" data-tab-keys={items.map((item) => item.key).join(",")}>
+      {items.map((item) => (
+        <button key={item.key} onClick={() => onChange?.(item.key)} type="button">{item.label}</button>
+      ))}
+      {items.find((item) => item.key === activeKey)?.children}
+    </div>
   ),
 }));
 
@@ -211,6 +220,77 @@ describe("ResourceWorkspaceScene", () => {
       "warning",
     );
     expect(screen.queryByTestId("detail-schema-name")).toBeNull();
+  });
+
+  it("keeps tab navigation and a warning visible when the resource read is forbidden", async () => {
+    getCatalogResourceMock.mockRejectedValue(new AxiosError(
+      "Forbidden",
+      undefined,
+      undefined,
+      undefined,
+      {
+        status: 403,
+        statusText: "Forbidden",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      },
+    ));
+
+    const onTabChange = vi.fn();
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={onTabChange}
+        resourceId={staleResource.id}
+        tab="index"
+      />,
+    );
+
+    expect(await screen.findByText("dataCatalog.permissionRequired")).toHaveAttribute(
+      "data-alert-type",
+      "warning",
+    );
+    expect(screen.getByTestId("workspace-tabs")).toHaveAttribute(
+      "data-tab-keys",
+      "detail,preview,index,semantic-understanding",
+    );
+    fireEvent.click(screen.getByText("dataCatalog.resourceWorkspace.tabDetail"));
+    expect(onTabChange).toHaveBeenCalledWith("detail");
+    expect(screen.queryByText("orders")).toBeNull();
+    expect(screen.queryByTestId("detail-schema-name")).toBeNull();
+    expect(getCatalogMock).not.toHaveBeenCalled();
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps server failures as errors rather than permission warnings", async () => {
+    getCatalogResourceMock.mockRejectedValue(new AxiosError(
+      "Unavailable",
+      undefined,
+      undefined,
+      undefined,
+      {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      },
+    ));
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    expect(await screen.findByText("Unavailable")).toHaveAttribute("data-alert-type", "error");
+    expect(screen.queryByTestId("workspace-tabs")).toBeNull();
   });
 
   it("does not load build tasks without task_manage on the parent catalog", async () => {
@@ -422,6 +502,43 @@ describe("ResourceWorkspaceScene", () => {
 
     expect((await screen.findByTestId("detail-schema-name")).textContent).toBe("订单编号");
     expect(screen.queryByTestId("workspace-spin")).toBeNull();
+  });
+
+  it("removes cached resource details when a tab refresh loses read permission", async () => {
+    getCatalogResourceMock
+      .mockResolvedValueOnce(staleResource)
+      .mockRejectedValueOnce(new AxiosError(
+        "Forbidden",
+        undefined,
+        undefined,
+        undefined,
+        {
+          status: 403,
+          statusText: "Forbidden",
+          headers: new AxiosHeaders(),
+          config: { headers: new AxiosHeaders() },
+          data: {},
+        },
+      ));
+
+    const props = {
+      indexView: "config" as const,
+      onIndexViewChange: vi.fn(),
+      onTabChange: vi.fn(),
+      resourceId: staleResource.id,
+      tab: "detail" as const,
+    };
+    const { rerender } = render(<ResourceWorkspaceScene {...props} />);
+    await screen.findByTestId("detail-schema-name");
+
+    rerender(<ResourceWorkspaceScene {...props} tab="preview" />);
+
+    expect(await screen.findByText("dataCatalog.permissionRequired")).toHaveAttribute(
+      "data-alert-type",
+      "warning",
+    );
+    expect(screen.queryByText("orders")).toBeNull();
+    expect(screen.queryByTestId("detail-schema-name")).toBeNull();
   });
 
   it("refreshes the resource once when entering detail after semantic understanding", async () => {

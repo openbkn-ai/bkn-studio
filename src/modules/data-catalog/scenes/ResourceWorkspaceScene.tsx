@@ -81,6 +81,7 @@ export function ResourceWorkspaceScene({
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [resourceReadForbidden, setResourceReadForbidden] = useState(false);
   const [detailEditing, setDetailEditing] = useState(false);
   const [resourceAction, setResourceAction] = useState<"discover" | "enabled" | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
@@ -92,6 +93,7 @@ export function ResourceWorkspaceScene({
     const resourceVersion = ++resourceVersionRef.current;
     const loadRequestId = ++loadRequestIdRef.current;
     setLoadError(null);
+    setResourceReadForbidden(false);
     setLoading(true);
 
     try {
@@ -127,6 +129,7 @@ export function ResourceWorkspaceScene({
 
       if (resourceVersionRef.current === resourceVersion) {
         setResource(detail);
+        setResourceReadForbidden(false);
       }
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
@@ -138,8 +141,10 @@ export function ResourceWorkspaceScene({
         resourceVersionRef.current === resourceVersion
         && loadRequestIdRef.current === loadRequestId
       ) {
+        const forbidden = isRequestForbidden(error);
         setResource(null);
-        setLoadError(extractRequestErrorMessage(error));
+        setResourceReadForbidden(forbidden);
+        setLoadError(forbidden ? null : extractRequestErrorMessage(error));
         setCatalog(null);
         setCatalogVisibilityRestricted(false);
         setTasks([]);
@@ -161,10 +166,19 @@ export function ResourceWorkspaceScene({
       const detail = await getCatalogResource(resourceId);
       if (detail && resourceVersionRef.current === resourceVersion) {
         setResource(detail);
+        setResourceReadForbidden(false);
       }
     } catch (error) {
       if (resourceVersionRef.current === resourceVersion) {
-        void message.error(extractRequestErrorMessage(error));
+        if (isRequestForbidden(error)) {
+          setResource(null);
+          setCatalog(null);
+          setTasks([]);
+          setResourceReadForbidden(true);
+          setLoadError(null);
+        } else {
+          void message.error(extractRequestErrorMessage(error));
+        }
       }
     }
   }, [message, resourceId]);
@@ -298,6 +312,42 @@ export function ResourceWorkspaceScene({
         <div className={styles.placeholder}>
           <Spin />
         </div>
+      </section>
+    );
+  }
+
+  if (resourceReadForbidden) {
+    const permissionWarning = (
+      <div className={styles.tabPanel}>
+        <Alert
+          action={<AppButton onClick={() => void loadAll()} type="link">{t("common.retry")}</AppButton>}
+          message={t("dataCatalog.permissionRequired")}
+          showIcon
+          type="warning"
+        />
+      </div>
+    );
+
+    return (
+      <section className={styles.contentSurface}>
+        <div className={styles.pageHeader}>
+          <SceneBackButton onClick={() => void navigate("/data-catalog")} />
+        </div>
+        <Tabs
+          activeKey={tab}
+          className={styles.pageTabs}
+          items={([
+            ["detail", "tabDetail"],
+            ["preview", "tabPreview"],
+            ["index", "tabIndex"],
+            ["semantic-understanding", "tabSemanticUnderstanding"],
+          ] as const).map(([key, label]) => ({
+            key,
+            label: t(`dataCatalog.resourceWorkspace.${label}`),
+            children: permissionWarning,
+          }))}
+          onChange={handleTabChange}
+        />
       </section>
     );
   }
