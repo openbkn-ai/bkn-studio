@@ -15,7 +15,7 @@ function strings(value: unknown): string[] { return Array.isArray(value) ? value
 export function recordedCallScope(operation: OperationResolution) {
  const envelope = record(operation.input);
  const input = envelope.mode === "inline" ? record(envelope.inline) : {};
- const explicitNetwork = text(input.kn_id);
+ const explicitNetwork = text(input.kn_id) || text(input.knowledge_network_id);
  const objectIds = [text(input.ot_id) || text(input.object_type_id)];
  if (operation.toolName === "get_object_types") objectIds.push(...strings(input.ids));
  const scopeConflict = Boolean(explicitNetwork && operation.knowledgeNetworkId && explicitNetwork !== operation.knowledgeNetworkId);
@@ -64,7 +64,7 @@ function recordedDefinitions(operation: OperationResolution, operations: Operati
  const scope=recordedCallScope(operation);
  if(!scope.networkId || scope.scopeConflict) return [];
  return operations.flatMap(source => {
-  if(source.callStatus!=="completed" || !["get_kn_detail","get_object_types","search_schema"].includes(source.toolName ?? "")) return [];
+  if(source.callStatus!=="completed" || !["get_kn_detail","get_object_types"].includes(source.toolName ?? "")) return [];
   const sourceScope=recordedCallScope(source);
   if(sourceScope.scopeConflict || sourceScope.networkId!==scope.networkId) return [];
   const envelope=record(source.output);

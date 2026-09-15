@@ -18,6 +18,10 @@ describe("recorded call scope", () => {
  it("keeps all explicitly requested definitions", () => {
   expect(recordedCallScope(operation({ kn_id: "n", ids: ["a", "b"] }, "get_object_types")).objectIds).toEqual(["a", "b"]);
  });
+ it("keeps the legacy explicit knowledge-network field", () => {
+  const op = operation({ knowledge_network_id: "network-a", ot_id: "asset" });
+  expect(recordedCallScope(op)).toMatchObject({ networkId: "network-a", objectIds: ["asset"] });
+ });
  it("does not turn code mentions or schema candidates into object targets", () => {
   expect(recordedCallScope(operation({ kn_id: "n", code: "query_object_instance(ot_id='asset')" }, "run_code")).objectIds).toEqual([]);
   expect(recordedCallScope(operation({ kn_id: "n", query: "asset" }, "search_schema")).objectIds).toEqual([]);
@@ -67,10 +71,11 @@ it("fills requested object names from recorded definitions without accepting for
 
 it("matches an explicitly requested metric to its recorded name and object scope", () => {
  const target=operation({kn_id:"n",metric_id:"m"},"query_metric");
- const source=operation({kn_id:"n"},"search_schema");source.callStatus="completed";
+ const source=operation({kn_id:"n"},"get_object_types");source.callStatus="completed";
  source.output={mode:"inline",inline:{structuredContent:{metric_types:[{id:"m",name:"可用量",scope_type:"object_type",scope_ref:"a"}],object_types:[{id:"a",name:"资产"}]}}};
  expect(recordedMetricTarget(target,[source])).toEqual({name:"可用量",objectId:"a",objectName:"资产"});
- expect(recordedMetricTarget(operation({kn_id:"n",query:"可用量"},"search_schema"),[source])).toBeUndefined();
+ const search={...source,operationId:"search",toolName:"search_schema"};
+ expect(recordedMetricTarget(target,[search])).toBeUndefined();
  source.callStatus="failed";
  expect(recordedMetricTarget(target,[source])).toBeUndefined();
 });
