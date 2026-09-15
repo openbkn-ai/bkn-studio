@@ -169,7 +169,9 @@ export function DataConnectListScene({
 
     try {
       const [typeResult, listResult] = await Promise.all([
-        connectorTypes.length === 0 ? listDataConnectConnectorTypes() : Promise.resolve(null),
+        connectorTypes.length === 0
+          ? listDataConnectConnectorTypes().catch(() => null)
+          : Promise.resolve(null),
         listDataConnectRecords(listQuery),
       ]);
 
@@ -553,16 +555,7 @@ export function DataConnectListScene({
         <TableSurface className={styles.tableSurface}>
           {loadError ? (
             <Alert
-              action={
-                <AppButton
-                  onClick={() => {
-                    void loadData();
-                  }}
-                  type="link"
-                >
-                  {t("common.retry")}
-                </AppButton>
-              }
+              description={t("dataConnect.loadErrorRefreshHint")}
               message={loadError}
               showIcon
               type="error"

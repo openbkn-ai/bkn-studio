@@ -33,7 +33,6 @@ export function AuthorizedResourceListPanel({
   const [items, setItems] = useState<CatalogResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +49,7 @@ export function AuthorizedResourceListPanel({
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [catalogId, reloadKey]);
+  }, [catalogId]);
 
   const columns: ColumnsType<CatalogResource> = [
     {
@@ -75,11 +74,7 @@ export function AuthorizedResourceListPanel({
     <TableSurface>
       {loading ? <Spin /> : error ? (
         <Alert
-          action={(
-            <AppButton onClick={() => setReloadKey((value) => value + 1)} type="link">
-              {t("common.retry")}
-            </AppButton>
-          )}
+          description={t("dataCatalog.loadErrorRefreshHint")}
           message={error}
           showIcon
           type="error"

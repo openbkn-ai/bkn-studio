@@ -439,6 +439,62 @@ describe("ResourceIndexPanel", () => {
     })));
   });
 
+  it("reports the latest task from an unfiltered first history page", async () => {
+    const latest = buildTask({ status: "running" });
+    const onLatestTaskLoaded = vi.fn();
+    listBuildTaskPageMock.mockResolvedValue({ items: [latest], total: 1 });
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onLatestTaskLoaded={onLatestTaskLoaded}
+          onRefresh={vi.fn()}
+          resource={resource}
+          taskStatusUnavailable
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(onLatestTaskLoaded).toHaveBeenCalledWith(resource.id, latest));
+    expect(onLatestTaskLoaded).toHaveBeenCalledOnce();
+  });
+
+  it("does not replace the latest task with a later history page", async () => {
+    const onLatestTaskLoaded = vi.fn();
+    listBuildTaskPageMock.mockImplementation(({ page }: { page: number }) => Promise.resolve({
+      items: [buildTask({ id: `page-${page}-task` })],
+      total: 21,
+    }));
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onLatestTaskLoaded={onLatestTaskLoaded}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(onLatestTaskLoaded).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "page 3" }));
+    await waitFor(() => expect(screen.getByTestId("task-page")).toHaveTextContent("3"));
+    await screen.findByText("page-3-task");
+    expect(onLatestTaskLoaded).toHaveBeenCalledOnce();
+  });
+
   it("refreshes the first history page when a task is started", async () => {
     listBuildTaskPageMock.mockResolvedValue({ items: [], total: 21 });
     render(
@@ -469,6 +525,7 @@ describe("ResourceIndexPanel", () => {
   });
 
   it("keeps the newest history page when an earlier request resolves late", async () => {
+    const onLatestTaskLoaded = vi.fn();
     let resolveFirstPage: (result: { items: BuildTask[]; total: number }) => void;
     let resolveThirdPage: (result: { items: BuildTask[]; total: number }) => void;
     const firstPage = new Promise<{ items: BuildTask[]; total: number }>((resolve) => {
@@ -487,6 +544,7 @@ describe("ResourceIndexPanel", () => {
           indexView="tasks"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
+          onLatestTaskLoaded={onLatestTaskLoaded}
           onRefresh={vi.fn()}
           resource={resource}
           tasks={[]}
@@ -511,9 +569,44 @@ describe("ResourceIndexPanel", () => {
 
     await waitFor(() => expect(screen.queryByText("stale-page-1-task")).toBeNull());
     expect(screen.getByText("page-3-task")).toBeTruthy();
+    expect(onLatestTaskLoaded).toHaveBeenCalledOnce();
+    expect(onLatestTaskLoaded).toHaveBeenCalledWith(resource.id, expect.objectContaining({
+      id: "initial-page-1-task",
+    }));
   });
 
-  it("shows a retryable error when loading task history fails", async () => {
+  it("does not report a history response after the panel unmounts", async () => {
+    let resolveHistory: (result: { items: BuildTask[]; total: number }) => void;
+    const history = new Promise<{ items: BuildTask[]; total: number }>((resolve) => {
+      resolveHistory = resolve;
+    });
+    const onLatestTaskLoaded = vi.fn();
+    listBuildTaskPageMock.mockReturnValue(history);
+
+    const { unmount } = render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onLatestTaskLoaded={onLatestTaskLoaded}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledOnce());
+    unmount();
+    resolveHistory!({ items: [buildTask({ id: "late-task" })], total: 1 });
+    await history;
+    expect(onLatestTaskLoaded).not.toHaveBeenCalled();
+  });
+
+  it("shows a manual refresh hint without a retry button when task history fails", async () => {
     listBuildTaskPageMock.mockRejectedValue(new Error("history unavailable"));
     render(
       <MemoryRouter>
@@ -531,10 +624,29 @@ describe("ResourceIndexPanel", () => {
     );
 
     await screen.findByText("history unavailable");
-    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 0 });
-    const callsBeforeRetry = listBuildTaskPageMock.mock.calls.length;
-    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
-    await waitFor(() => expect(listBuildTaskPageMock.mock.calls.length).toBeGreaterThan(callsBeforeRetry));
+    expect(screen.getByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+  });
+
+  it("does not report an empty index state when the latest task status is unknown", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, localIndexStatus: "available" }}
+          taskStatusUnavailable
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.resourceWorkspace.indexStatusUnavailable")).toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.resource.effectiveActive")).toBeNull();
   });
 
 });

@@ -190,4 +190,31 @@ describe("DataConnectListScene object permissions", () => {
       expect(onEdit).toHaveBeenCalledWith("catalog-manager");
     });
   });
+
+  it("shows a manual refresh hint without a retry button when connections fail to load", async () => {
+    listDataConnectRecordsMock.mockRejectedValue(new Error("connections unavailable"));
+    render(
+      <MemoryRouter>
+        <DataConnectListScene onEdit={onEdit} onOpenDiscovers={onOpenDiscovers} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("connections unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataConnect.loadErrorRefreshHint")).toBeInTheDocument();
+  });
+
+  it("keeps connection records visible when connector types fail to load", async () => {
+    listDataConnectConnectorTypesMock.mockRejectedValue(new Error("connector types unavailable"));
+    render(
+      <MemoryRouter>
+        <DataConnectListScene onEdit={onEdit} onOpenDiscovers={onOpenDiscovers} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId("record-catalog-view-only")).toBeInTheDocument();
+    expect(screen.getByTestId("record-catalog-manager")).toBeInTheDocument();
+    expect(screen.queryByText("connector types unavailable")).toBeNull();
+    expect(screen.queryByText("dataConnect.loadErrorRefreshHint")).toBeNull();
+  });
 });

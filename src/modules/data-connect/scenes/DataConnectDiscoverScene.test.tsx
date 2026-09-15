@@ -51,8 +51,12 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Alert: ({ action, children, message, type }: { action?: ReactNode; children?: ReactNode; message?: ReactNode; type?: string }) => (
-    <div data-alert-type={type}>{message}{children}{action}</div>
+  Alert: ({ action, children, description, message, type }: { action?: ReactNode; children?: ReactNode; description?: ReactNode; message?: ReactNode; type?: string }) => (
+    <div data-alert-type={type}>
+      {message}
+      {description ? <div>{description}</div> : null}
+      {children}{action}
+    </div>
   ),
   Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
     <input onChange={onChange} value={value} />
@@ -405,9 +409,26 @@ describe("DataConnectDiscoverScene", () => {
 
     expect(await screen.findByText("Catalog lookup failed")).toBeTruthy();
     expect(screen.queryByText("dataConnect.permissionRequired")).toBeNull();
-    expect(screen.getByRole("button", { name: "common.retry" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataConnect.loadErrorRefreshHint")).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["tasks", listTasksMock],
+    ["schedules", listSchedulesMock],
+  ])("shows a manual refresh hint without a retry button for %s errors", async (tab, listMock) => {
+    listMock.mockRejectedValue(new Error(`${tab} unavailable`));
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    if (tab === "schedules") {
+      fireEvent.click(await screen.findByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    }
+
+    expect(await screen.findByText(`${tab} unavailable`)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataConnect.loadErrorRefreshHint")).toBeTruthy();
   });
 
   it("refreshes the discover schedule version after an update conflict", async () => {

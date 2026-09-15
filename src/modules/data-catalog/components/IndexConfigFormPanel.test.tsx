@@ -819,7 +819,7 @@ describe("IndexConfigFormPanel", () => {
     ).toBeNull();
   });
 
-  it("retries analyzer capability loading for full-text resources", async () => {
+  it("asks for a page refresh without a retry button when analyzer loading fails", async () => {
     const fulltextResource: CatalogResource = {
       ...resource,
       schema: [{
@@ -841,12 +841,55 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    const retryButton = await screen.findByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" });
-    fireEvent.click(retryButton);
-    await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(2));
-    await waitFor(() => {
-      expect(screen.queryAllByText("dataCatalog.build.analyzersLoading")).toHaveLength(0);
-      expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull();
+    await screen.findAllByText("dataCatalog.build.analyzersLoadError");
+    expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull();
+    expect(screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).not.toHaveLength(0);
+  });
+
+  it("asks for a page refresh without an action button when model loading fails", async () => {
+    const vectorResource: CatalogResource = {
+      ...resource,
+      schema: [{
+        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+        name: "title",
+        type: "string",
+      }],
+    };
+    loadEmbeddingModelOptionsMock.mockResolvedValue({
+      errorMessage: "models unavailable",
+      options: [],
+      state: "error",
     });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={vectorResource} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(loadEmbeddingModelOptionsMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadModels" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "dataCatalog.build.goConnectModel" })).toBeNull();
+    expect(screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).not.toHaveLength(0);
+  });
+
+  it("keeps the model management action when no embedding models are available", async () => {
+    loadEmbeddingModelOptionsMock.mockResolvedValue({
+      errorMessage: null,
+      options: [],
+      state: "empty",
+    });
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("dataCatalog.build.noModels")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "dataCatalog.build.goConnectModel" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadModels" })).toBeNull();
+    expect(screen.queryAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).toHaveLength(0);
   });
 });

@@ -355,24 +355,6 @@ export function IndexConfigFormPanel({
     };
   }, [active, resource.id]);
 
-  const reloadEmbeddingModels = async () => {
-    setModelsLoadState("loading");
-    setModelsLoadError(null);
-    const preferred = defaultModelId ?? orphanSavedModel ?? "";
-    const loaded = await loadEmbeddingModelOptions();
-    setModels(loaded.options);
-    setModelsLoadState(loaded.state);
-    setModelsLoadError(loaded.errorMessage);
-    if (loaded.state === "ready") {
-      const orphan = findUnregisteredEmbeddingModel(loaded.options, [preferred, orphanSavedModel]);
-      setOrphanSavedModel(orphan);
-      setDefaultModelId(pickRegisteredEmbeddingModelId(loaded.options, preferred));
-    } else {
-      setOrphanSavedModel(preferred.trim() ? preferred.trim() : null);
-      setDefaultModelId(undefined);
-    }
-  };
-
   const reloadAnalyzerCapabilities = async () => {
     const requestId = analyzerRequestIdRef.current + 1;
     analyzerRequestIdRef.current = requestId;
@@ -1074,17 +1056,7 @@ export function IndexConfigFormPanel({
         <Alert message={t("dataCatalog.build.analyzersLoading")} showIcon type="info" />
       ) : fulltextFields.length > 0 && analyzersLoadFailed ? (
         <Alert
-          action={
-            <AppButton
-              onClick={() => {
-                void reloadAnalyzerCapabilities();
-              }}
-              size="small"
-              type="link"
-            >
-              {t("dataCatalog.build.retryLoadAnalyzers")}
-            </AppButton>
-          }
+          description={t("dataCatalog.resourceWorkspace.loadErrorRefreshHint")}
           message={t("dataCatalog.build.analyzersLoadError", {
             message: analyzersLoadError ?? t("dataCatalog.build.analyzersLoadErrorFallback"),
           })}
@@ -1267,28 +1239,7 @@ export function IndexConfigFormPanel({
                 />
               ) : modelsLoadFailed ? (
                 <Alert
-                  action={
-                    <Space size={4}>
-                      <AppButton
-                        onClick={() => {
-                          void reloadEmbeddingModels();
-                        }}
-                        size="small"
-                        type="link"
-                      >
-                        {t("dataCatalog.build.retryLoadModels")}
-                      </AppButton>
-                      <AppButton
-                        onClick={() => {
-                          void navigate("/model-resources/models");
-                        }}
-                        size="small"
-                        type="link"
-                      >
-                        {t("dataCatalog.build.goConnectModel")}
-                      </AppButton>
-                    </Space>
-                  }
+                  description={t("dataCatalog.resourceWorkspace.loadErrorRefreshHint")}
                   message={t("dataCatalog.build.modelsLoadError", {
                     message: modelsLoadError ?? t("dataCatalog.build.modelsLoadErrorFallback"),
                   })}

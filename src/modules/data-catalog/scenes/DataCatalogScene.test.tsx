@@ -124,6 +124,19 @@ describe("DataCatalogScene", () => {
     subscribeMockDbMock.mockImplementation(() => () => {});
   });
 
+  it("shows a manual refresh hint without a retry button when catalogs fail to load", async () => {
+    listCatalogsMock.mockRejectedValue(new Error("catalogs unavailable"));
+    render(
+      <MemoryRouter initialEntries={["/data-catalog"]}>
+        <DataCatalogScene selection={null} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("catalogs unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重试" })).toBeNull();
+    expect(screen.getByText("请稍后刷新页面再试。")).toBeInTheDocument();
+  });
+
   it("does not reload catalogs when selecting a catalog after the first load", async () => {
     render(
       <MemoryRouter initialEntries={["/data-catalog"]}>

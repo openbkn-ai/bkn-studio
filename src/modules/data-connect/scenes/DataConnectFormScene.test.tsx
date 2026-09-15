@@ -242,6 +242,17 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
+  it("shows a manual refresh hint without a retry button when connector types fail to load", async () => {
+    permissionState.values = new Set(["catalog:create"]);
+    listDataConnectConnectorTypesMock.mockRejectedValue(new Error("connectors unavailable"));
+
+    render(<DataConnectFormScene mode="create" />);
+
+    expect(await screen.findByText("connectors unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataConnect.loadErrorRefreshHint")).toBeInTheDocument();
+  });
+
   it("confirms before leaving a create form with unsaved changes", async () => {
     permissionState.values = new Set(["catalog:create"]);
     const onBack = vi.fn();

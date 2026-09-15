@@ -79,6 +79,7 @@ export function ResourceWorkspaceScene({
   const [catalog, setCatalog] = useState<CatalogRecord | null>(null);
   const [catalogVisibilityRestricted, setCatalogVisibilityRestricted] = useState(false);
   const [tasks, setTasks] = useState<BuildTask[]>([]);
+  const [taskStatusUnavailable, setTaskStatusUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [resourceReadForbidden, setResourceReadForbidden] = useState(false);
@@ -94,6 +95,7 @@ export function ResourceWorkspaceScene({
     const loadRequestId = ++loadRequestIdRef.current;
     setLoadError(null);
     setResourceReadForbidden(false);
+    setTaskStatusUnavailable(false);
     setLoading(true);
 
     try {
@@ -118,14 +120,21 @@ export function ResourceWorkspaceScene({
           }
           throw error;
         });
-      const latestTaskPage = hasCatalogOperation(catalogRecord, "task_manage")
-        ? await listBuildTaskPage({
+      let latestTasks: BuildTask[] = [];
+      let taskLoadFailed = false;
+      if (hasCatalogOperation(catalogRecord, "task_manage")) {
+        try {
+          const latestTaskPage = await listBuildTaskPage({
             direction: "desc",
             limit: 1,
             resourceId,
             sort: "create_time",
-          })
-        : { items: [] };
+          });
+          latestTasks = latestTaskPage.items;
+        } catch {
+          taskLoadFailed = true;
+        }
+      }
 
       if (resourceVersionRef.current === resourceVersion) {
         setResource(detail);
@@ -134,7 +143,8 @@ export function ResourceWorkspaceScene({
       if (loadRequestIdRef.current === loadRequestId) {
         setCatalog(catalogRecord);
         setCatalogVisibilityRestricted(catalogRecord === null);
-        setTasks(latestTaskPage.items);
+        setTasks(latestTasks);
+        setTaskStatusUnavailable(taskLoadFailed);
       }
     } catch (error) {
       if (
@@ -148,12 +158,19 @@ export function ResourceWorkspaceScene({
         setCatalog(null);
         setCatalogVisibilityRestricted(false);
         setTasks([]);
+        setTaskStatusUnavailable(false);
       }
     } finally {
       if (loadRequestIdRef.current === loadRequestId) {
         setLoading(false);
       }
     }
+  }, [resourceId]);
+
+  const handleLatestTaskLoaded = useCallback((loadedResourceId: string, latest: BuildTask | null) => {
+    if (loadedResourceId !== resourceId) return;
+    setTasks(latest ? [latest] : []);
+    setTaskStatusUnavailable(false);
   }, [resourceId]);
 
   useEffect(() => {
@@ -174,6 +191,7 @@ export function ResourceWorkspaceScene({
           setResource(null);
           setCatalog(null);
           setTasks([]);
+          setTaskStatusUnavailable(false);
           setResourceReadForbidden(true);
           setLoadError(null);
         } else {
@@ -320,7 +338,7 @@ export function ResourceWorkspaceScene({
     const permissionWarning = (
       <div className={styles.tabPanel}>
         <Alert
-          action={<AppButton onClick={() => void loadAll()} type="link">{t("common.retry")}</AppButton>}
+          description={t("dataCatalog.resourceWorkspace.permissionRefreshHint")}
           message={t("dataCatalog.permissionRequired")}
           showIcon
           type="warning"
@@ -356,11 +374,7 @@ export function ResourceWorkspaceScene({
     return (
       <section className={styles.contentSurface}>
         <Alert
-          action={
-            <AppButton onClick={() => void loadAll()} type="link">
-              {t("common.retry")}
-            </AppButton>
-          }
+          description={t("dataCatalog.resourceWorkspace.loadErrorRefreshHint")}
           message={loadError}
           showIcon
           type="error"
@@ -429,7 +443,9 @@ export function ResourceWorkspaceScene({
                   <span className={styles.contextDivider}>·</span>
                   <span className={styles.contextMeta}>
                     {t("dataCatalog.resource.headerIndexState")}{" "}
-                    {formatIndexStateLabel(indexState, t)}
+                    {taskStatusUnavailable
+                      ? t("dataCatalog.resourceWorkspace.indexStatusUnavailable")
+                      : formatIndexStateLabel(indexState, t)}
                   </span>
                 </>
               ) : null}
@@ -473,6 +489,14 @@ export function ResourceWorkspaceScene({
             ) : null}
           </Space>
         </div>
+
+        {taskStatusUnavailable ? (
+          <Alert
+            message={t("dataCatalog.resourceWorkspace.taskStatusUnavailable")}
+            showIcon
+            type="warning"
+          />
+        ) : null}
 
         {discoveryFailed || queryBlockReason ? (
           <Alert
@@ -579,8 +603,10 @@ export function ResourceWorkspaceScene({
                     indexView={indexView}
                     indexViewExplicit={indexViewExplicit}
                     onIndexViewChange={onIndexViewChange}
+                    onLatestTaskLoaded={handleLatestTaskLoaded}
                     onRefresh={loadAll}
                     resource={resource}
+                    taskStatusUnavailable={taskStatusUnavailable}
                     tasks={sortedTasks}
                   />
                 </div>

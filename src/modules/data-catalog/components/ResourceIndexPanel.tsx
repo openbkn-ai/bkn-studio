@@ -65,8 +65,10 @@ type ResourceIndexPanelProps = {
   indexViewExplicit?: boolean;
   indexView: ResourceIndexView;
   onIndexViewChange: (view: ResourceIndexView) => void;
+  onLatestTaskLoaded?: (resourceId: string, latest: BuildTask | null) => void;
   onRefresh: () => Promise<void> | void;
   resource: CatalogResource;
+  taskStatusUnavailable?: boolean;
   tasks: BuildTask[];
 };
 
@@ -174,8 +176,10 @@ export function ResourceIndexPanel({
   indexView,
   indexViewExplicit = false,
   onIndexViewChange,
+  onLatestTaskLoaded,
   onRefresh,
   resource,
+  taskStatusUnavailable = false,
   tasks,
 }: ResourceIndexPanelProps) {
   const { i18n, t } = useTranslation();
@@ -220,6 +224,16 @@ export function ResourceIndexPanel({
       if (requestId === historyRequestIdRef.current) {
         setHistoryTasks(result.items);
         setHistoryTotal(result.total);
+        if (
+          targetPage === 1
+          && direction === "desc"
+          && sort === "create_time"
+          && !modeFilter
+          && !executeTypeFilter
+          && statusFilter.length === 0
+        ) {
+          onLatestTaskLoaded?.(resource.id, result.items[0] ?? null);
+        }
       }
     } catch (error) {
       if (requestId === historyRequestIdRef.current) {
@@ -230,7 +244,7 @@ export function ResourceIndexPanel({
         setHistoryLoading(false);
       }
     }
-  }, [canViewTasks, direction, executeTypeFilter, modeFilter, resource.id, sort, statusFilter]);
+  }, [canViewTasks, direction, executeTypeFilter, modeFilter, onLatestTaskLoaded, resource.id, sort, statusFilter]);
 
   const refreshTasks = useCallback(async () => {
     await onRefresh();
@@ -242,6 +256,10 @@ export function ResourceIndexPanel({
     autoPickedRef.current = false;
     historyRequestIdRef.current += 1;
   }, [resource.id]);
+
+  useEffect(() => () => {
+    historyRequestIdRef.current += 1;
+  }, []);
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(
@@ -256,7 +274,7 @@ export function ResourceIndexPanel({
   const readOnly = isResourceIndexReadOnly(catalog, canModifyResource);
   const canManageBuildTasks = canManageResourceBuildTasks(resource, catalog);
   const canManageTaskActions = canManageBuildTasks;
-  const latest = state.latest;
+  const latest = taskStatusUnavailable ? null : state.latest;
   const activeTask = latest && CONTROLLABLE_TASK_STATUSES.has(latest.status) ? latest : null;
   const progressSource = progressTask(latest);
   const batchDeleteTargets = historyTasks.filter(
@@ -569,10 +587,12 @@ export function ResourceIndexPanel({
               {t("dataCatalog.indexWorkspace.statusCardTitle")}
             </span>
             <span className={panelStyles.statusStripValue}>
-              {statusSummary ??
-                (resource.localIndexStatus === "available"
-                  ? t("dataCatalog.resource.effectiveActive")
-                  : t("dataCatalog.resource.noEffectiveIndex"))}
+              {taskStatusUnavailable
+                ? t("dataCatalog.resourceWorkspace.indexStatusUnavailable")
+                : statusSummary ??
+                  (resource.localIndexStatus === "available"
+                    ? t("dataCatalog.resource.effectiveActive")
+                    : t("dataCatalog.resource.noEffectiveIndex"))}
             </span>
           </div>
           <div className={panelStyles.sectionActions}>
@@ -680,7 +700,7 @@ export function ResourceIndexPanel({
         </div>
         {historyError ? (
           <Alert
-            action={<AppButton onClick={() => void refreshTasks()} type="link">{t("common.retry")}</AppButton>}
+            description={t("dataCatalog.resourceWorkspace.loadErrorRefreshHint")}
             message={historyError}
             showIcon
             type="error"

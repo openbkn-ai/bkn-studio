@@ -10,6 +10,7 @@ export const dataConnectZhCN = {
     title: "数据连接",
     description: "在 BKN 平台中统一管理由 Vega 后端提供的数据连接实例。",
     permissionRequired: "当前账号权限不足，请联系管理员授权后再试。",
+    loadErrorRefreshHint: "请稍后刷新页面再试。",
     createTitle: "新建数据连接",
     editTitle: "编辑数据连接",
     createDescription: "先选择连接器类型，再完成连接配置。",

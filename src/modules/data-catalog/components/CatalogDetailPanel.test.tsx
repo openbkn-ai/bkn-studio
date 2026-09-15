@@ -102,6 +102,15 @@ describe("CatalogDetailPanel authorize entry", () => {
     }));
   });
 
+  it("shows a manual refresh hint without a retry button when resources fail to load", async () => {
+    listCatalogResourcePageMock.mockRejectedValue(new Error("resources unavailable"));
+    renderPanel(catalog);
+
+    expect(await screen.findByText("resources unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataCatalog.loadErrorRefreshHint")).toBeInTheDocument();
+  });
+
   // The bug: the button asked for admin-authz:grant, which no network_builder holds, so the person
   // who created the data connection could not share it — while bkn-safe was already accepting the
   // grant from them on /me/object-grants.

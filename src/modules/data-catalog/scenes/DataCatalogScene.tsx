@@ -502,11 +502,7 @@ export function DataCatalogScene({
     if (loadError) {
       return (
         <Alert
-          action={
-            <AppButton onClick={() => void loadAll()} type="link">
-              {t("common.retry")}
-            </AppButton>
-          }
+          description={t("dataCatalog.loadErrorRefreshHint")}
           message={loadError}
           showIcon
           type="error"
@@ -520,17 +516,7 @@ export function DataCatalogScene({
     ) {
       return (
         <Alert
-          action={
-            <AppButton
-              onClick={() => {
-                setSelectedCatalogError(null);
-                void loadAll();
-              }}
-              type="link"
-            >
-              {t("common.retry")}
-            </AppButton>
-          }
+          description={t("dataCatalog.loadErrorRefreshHint")}
           message={selectedCatalogError.message}
           showIcon
           type="error"

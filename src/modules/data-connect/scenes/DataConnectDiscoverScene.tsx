@@ -930,16 +930,7 @@ export function DataConnectDiscoverScene({
       <TableSurface className={styles.panelSection}>
         {scheduleError ? (
           <Alert
-            action={
-              <AppButton
-                onClick={() => {
-                  void loadSchedules();
-                }}
-                type="link"
-              >
-                {t("common.retry")}
-              </AppButton>
-            }
+            description={t("dataConnect.loadErrorRefreshHint")}
             message={scheduleError}
             showIcon
             type="error"
@@ -1031,16 +1022,7 @@ export function DataConnectDiscoverScene({
       <TableSurface className={styles.panelSection}>
         {taskError ? (
           <Alert
-            action={
-              <AppButton
-                onClick={() => {
-                  void loadTasks();
-                }}
-                type="link"
-              >
-                {t("common.retry")}
-              </AppButton>
-            }
+            description={t("dataConnect.loadErrorRefreshHint")}
             message={taskError}
             showIcon
             type="error"
@@ -1116,11 +1098,7 @@ export function DataConnectDiscoverScene({
         />
         {catalogError ? (
           <Alert
-            action={(
-              <AppButton onClick={() => void loadCatalogs()} type="link">
-                {t("common.retry")}
-              </AppButton>
-            )}
+            description={t("dataConnect.loadErrorRefreshHint")}
             message={catalogError}
             showIcon
             type="warning"

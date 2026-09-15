@@ -119,7 +119,6 @@ export function CatalogDetailPanel({
   const [resourceTotal, setResourceTotal] = useState(0);
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
   const [nameColumnWidth, setNameColumnWidth] = useState(() => {
@@ -197,7 +196,7 @@ export function CatalogDetailPanel({
     return () => {
       cancelled = true;
     };
-  }, [activeSchema, catalog.id, categoryFilter, page, pageSize, reloadKey, resourceKeyword]);
+  }, [activeSchema, catalog.id, categoryFilter, page, pageSize, resourceKeyword]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -547,11 +546,7 @@ export function CatalogDetailPanel({
           </div>
         ) : resourceLoadError ? (
           <Alert
-            action={
-              <AppButton onClick={() => setReloadKey((value) => value + 1)} type="link">
-                {t("common.retry")}
-              </AppButton>
-            }
+            description={t("dataCatalog.loadErrorRefreshHint")}
             message={resourceLoadError}
             showIcon
             type="error"

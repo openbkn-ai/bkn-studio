@@ -461,11 +461,7 @@ export function IndexBuildListScene() {
       <TableSurface className={sceneStyles.tableSurface}>
         {loadError ? (
           <Alert
-            action={
-              <AppButton onClick={() => void loadTasks()} type="link">
-                {t("common.retry")}
-              </AppButton>
-            }
+            description={t("dataCatalog.loadErrorRefreshHint")}
             message={loadError}
             showIcon
             type="error"

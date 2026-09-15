@@ -12,6 +12,7 @@ export const dataConnectEnUS = {
       "Manage connector instances provided by the Vega backend within the BKN platform console.",
     permissionRequired:
       "Your account does not have the required permission. Contact an administrator to request access.",
+    loadErrorRefreshHint: "Please refresh the page and try again later.",
     createTitle: "Create Data Connection",
     editTitle: "Edit Data Connection",
     createDescription:

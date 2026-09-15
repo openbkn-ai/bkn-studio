@@ -100,4 +100,20 @@ describe("TaskManagementTaskPanels", () => {
     await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
     expect(screen.getAllByText("dataCatalog.taskManagement.semantic.empty")).toHaveLength(1);
   });
+
+  it.each([
+    ["discover", DiscoverTaskListPanel, listDataConnectDiscoverTasksMock],
+    ["semantic", SemanticUnderstandingTaskListPanel, listSemanticUnderstandingTasksMock],
+  ])("shows a manual refresh hint without a retry button for %s task errors", async (_, Panel, listMock) => {
+    listMock.mockRejectedValue(new Error("tasks unavailable"));
+    render(
+      <MemoryRouter>
+        <Panel />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("tasks unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
+    expect(screen.getByText("dataCatalog.loadErrorRefreshHint")).toBeInTheDocument();
+  });
 });

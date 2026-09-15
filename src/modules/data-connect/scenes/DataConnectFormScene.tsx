@@ -509,16 +509,7 @@ export function DataConnectFormScene({
             </div>
           ) : loadError ? (
             <Alert
-              action={
-                <AppButton
-                  onClick={() => {
-                    window.location.reload();
-                  }}
-                  type="link"
-                >
-                  {t("common.retry")}
-                </AppButton>
-              }
+              description={t("dataConnect.loadErrorRefreshHint")}
               message={loadError}
               showIcon
               type="error"
