@@ -154,7 +154,8 @@ function resourceDescription(operation: OperationResolution, operations: Operati
     return resources.map((resource) => {
       const businessName = resource.objectName || resource.objectId;
       const physicalName = resource.name || resource.id;
-      return (businessName ? `${physicalName} → ${businessName}` : physicalName) + (direct.length ? "" : bpText("scope.recordedDefinition"));
+      const historicalSuffix = "nameConflict" in resource && resource.nameConflict ? bpText("scope.recordedDefinitionConflict") : bpText("scope.recordedDefinition");
+      return (businessName ? `${physicalName} → ${businessName}` : physicalName) + (direct.length ? "" : historicalSuffix);
     }).join(bpText("listSeparator"));
   }
   return recordedCallScope(operation).resourceIds.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");

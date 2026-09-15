@@ -52,6 +52,14 @@ it("uses only same-network recorded object definitions for historical resource d
  expect(recordedResourceMappings(target,[definition])).toEqual([]);
 });
 
+it("falls back to IDs when recorded resource names conflict", () => {
+ const target=operation({kn_id:"n",resource_id:"r"},"describe_resource");
+ const first=operation({kn_id:"n"},"get_object_types");first.callStatus="completed";
+ first.output={mode:"inline",inline:{structuredContent:{object_types:[{id:"asset",name:"资产",data_source:{type:"resource",id:"r",name:"资产台账"}}]}}};
+ const conflicting={...first,operationId:"conflicting",output:{mode:"inline",inline:{structuredContent:{object_types:[{id:"asset",name:"固定资产",data_source:{type:"resource",id:"r",name:"资产明细"}}]}}}};
+ expect(recordedResourceMappings(target,[first,conflicting])).toEqual([{id:"r",name:"",objectId:"asset",objectName:"",sourceOperationId:"op",nameConflict:true}]);
+});
+
 it("keeps every requested object when only one name was resolved",()=>{
  const op=operation({kn_id:"n",ids:["a","b"]},"get_object_types");op.elements=[{kind:"object",id:"a",name:"资产"}];
  expect(requestedObjectLabels(op)).toEqual(["资产","b"]);
@@ -72,7 +80,7 @@ it("fills requested object names from recorded definitions without accepting for
 it("matches an explicitly requested metric to its recorded name and object scope", () => {
  const target=operation({kn_id:"n",metric_id:"m"},"query_metric");
  const source=operation({kn_id:"n"},"get_object_types");source.callStatus="completed";
- source.output={mode:"inline",inline:{structuredContent:{metric_types:[{id:"m",name:"可用量",scope_type:"object_type",scope_ref:"a"}],object_types:[{id:"a",name:"资产"}]}}};
+ source.output={mode:"inline",inline:{structuredContent:{object_types:[{id:"a",name:"资产",related_metrics:[{id:"m",name:"可用量"}]}]}}};
  expect(recordedMetricTarget(target,[source])).toEqual({name:"可用量",objectId:"a",objectName:"资产"});
  const search={...source,operationId:"search",toolName:"search_schema"};
  expect(recordedMetricTarget(target,[search])).toBeUndefined();

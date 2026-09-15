@@ -172,7 +172,7 @@ export const bknTraceZhCN = {
           verificationEvidence: "核验证据", verifying: "BKN Agent 正在读取事实并核验源 BKN…",
         },
         agentNotRecorded: "未记录 Agent", analysis: { description: "从真实调用事实查看 Agent 如何使用业务知识网络。", title: "业务溯源分析" },
-        scope: { recordedDefinition: "（本轮定义记录）", resourceTarget: "以数据资源为目标，业务对象见资源映射", metricTarget: "指标 {{id}}（作用对象待核实）", codeTarget: "代码执行；业务对象以实际子调用为准", networkTarget: "知识网络范围，未指定单个业务对象" },
+        scope: { recordedDefinition: "（本轮定义记录）", recordedDefinitionConflict: "（本轮定义名称冲突，按 ID 显示）", resourceTarget: "以数据资源为目标，业务对象见资源映射", metricTarget: "指标 {{id}}（作用对象待核实）", codeTarget: "代码执行；业务对象以实际子调用为准", networkTarget: "知识网络范围，未指定单个业务对象" },
         binding: { scopeConflict: "请求网络与解析结果不一致，保留请求范围供核实", sourceUnavailable: "调用范围已记录；当时未能读取本体定义以补充名称和映射", requestRecorded: "请求范围已记录，尚未完成本体映射核验", ambiguous: "同一资源绑定到多个业务对象，无法唯一定位", permissionDenied: "无权读取源 BKN 定义，调用事实仍已保留", resolved: "调用事实与 BKN 正式定义映射", resourceMissing: "资源未绑定到业务对象", unresolved: "调用事实未能确定定位" },
         callCount: "{{count}} 次调用", callCount_one: "{{count}} 次调用", callCount_other: "{{count}} 次调用", columns: { duration: "耗时", evidence: "记录完整性", interactions: "交互轮次", question: "用户问题", result: "业务结果", startedAt: "开始时间", status: "会话状态" },
         conditionSeparator: "；", conversation: { title: "业务会话", titleWithAgent: "{{agent}} 的业务会话" },

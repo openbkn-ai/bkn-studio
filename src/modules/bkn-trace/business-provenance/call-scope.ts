@@ -32,8 +32,8 @@ export function recordedCallScope(operation: OperationResolution) {
 /** Display metadata from this interaction only; never a query result or claim. */
 export function recordedResourceMappings(operation: OperationResolution, operations: OperationResolution[]) {
  const scope=recordedCallScope(operation);
- const result: Array<{id:string;name:string;objectId:string;objectName:string;sourceOperationId:string}>=[];
- if (!scope.networkId || scope.scopeConflict) return result;
+ const result=new Map<string, {id:string;objectId:string;sourceOperationId:string;resourceNames:Set<string>;objectNames:Set<string>}>();
+ if (!scope.networkId || scope.scopeConflict) return [];
  for (const source of operations) {
   if (source.callStatus!=="completed" || !["get_object_types","get_kn_detail"].includes(source.toolName ?? "")) continue;
   const sourceScope=recordedCallScope(source);
@@ -48,16 +48,18 @@ export function recordedResourceMappings(operation: OperationResolution, operati
    const id=text(resource.id), objectId=text(object.id);
    if(resource.type!=="resource" || !scope.resourceIds.includes(id) || !objectId) continue;
    const name=text(resource.name), objectName=text(object.name);
-   const existing=result.find(item => item.id===id && item.objectId===objectId && (!item.name || !name || item.name===name) && (!item.objectName || !objectName || item.objectName===objectName));
-   if(existing) {
-    if(!existing.name && name) {existing.name=name;existing.sourceOperationId=source.operationId;}
-    if(!existing.objectName && objectName) existing.objectName=objectName;
-    continue;
-   }
-   result.push({id,name,objectId,objectName,sourceOperationId:source.operationId});
+   const key=`${id}\u0000${objectId}`;
+   const existing=result.get(key) ?? {id,objectId,sourceOperationId:source.operationId,resourceNames:new Set<string>(),objectNames:new Set<string>()};
+   if (!existing.resourceNames.size && name) existing.sourceOperationId=source.operationId;
+   if(name) existing.resourceNames.add(name);
+   if(objectName) existing.objectNames.add(objectName);
+   result.set(key,existing);
   }
  }
- return result;
+ return [...result.values()].map(item => {
+  const nameConflict=item.resourceNames.size>1 || item.objectNames.size>1;
+  return {id:item.id,name:nameConflict ? "" : [...item.resourceNames][0] ?? "",objectId:item.objectId,objectName:nameConflict ? "" : [...item.objectNames][0] ?? "",sourceOperationId:item.sourceOperationId,nameConflict};
+ });
 }
 
 function recordedDefinitions(operation: OperationResolution, operations: OperationResolution[], key: "object_types" | "metric_types"): Record<string, unknown>[] {
@@ -80,12 +82,13 @@ function recordedObjectName(operation: OperationResolution, operations: Operatio
 export function recordedMetricTarget(operation: OperationResolution, operations: OperationResolution[]) {
  const scope=recordedCallScope(operation);
  if(!scope.metricId) return undefined;
- const matches=recordedDefinitions(operation,operations,"metric_types").filter(item => text(item.id)===scope.metricId);
- const targets=[...new Set(matches.map(item => JSON.stringify({name:text(item.name),objectId:item.scope_type==="object_type" ? text(item.scope_ref) : ""})))];
+ const matches=recordedDefinitions(operation,operations,"object_types").flatMap(object =>
+  Array.isArray(object.related_metrics) ? object.related_metrics.map(record).filter(metric => text(metric.id)===scope.metricId && (!text(metric.kn_id) || text(metric.kn_id)===scope.networkId)).map(metric => ({metric,objectId:text(object.id)})) : []
+ );
+ const targets=[...new Set(matches.map(({metric,objectId}) => JSON.stringify({name:text(metric.name),objectId})))];
  if(targets.length!==1) return undefined;
  const first=matches[0];
- const objectId=first.scope_type==="object_type" ? text(first.scope_ref) : "";
- return {name:text(first.name),objectId,objectName:objectId ? recordedObjectName(operation,operations,objectId) : ""};
+ return {name:text(first.metric.name),objectId:first.objectId,objectName:recordedObjectName(operation,operations,first.objectId)};
 }
 export function requestedObjectLabels(operation: OperationResolution, operations: OperationResolution[] = []): string[] {
  const scope=recordedCallScope(operation);
