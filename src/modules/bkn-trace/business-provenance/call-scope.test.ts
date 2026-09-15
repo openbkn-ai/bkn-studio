@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { recordedCallScope, recordedResourceMappings, requestedObjectLabels } from "./call-scope";
+import { recordedCallScope, recordedResourceMappings, requestedObjectLabels, recordedMetricTarget } from "./call-scope";
 import type { OperationResolution } from "./business-provenance.service";
 const operation = (input: unknown, toolName = "query_object_instance"): OperationResolution => ({ operationId: "op", toolName, input: { mode: "inline", inline: input }, elements: [], missingFacts: ["source_unavailable"], status: "not_evaluable" });
 describe("recorded call scope", () => {
@@ -51,4 +51,26 @@ it("uses only same-network recorded object definitions for historical resource d
 it("keeps every requested object when only one name was resolved",()=>{
  const op=operation({kn_id:"n",ids:["a","b"]},"get_object_types");op.elements=[{kind:"object",id:"a",name:"资产"}];
  expect(requestedObjectLabels(op)).toEqual(["资产","b"]);
+});
+
+
+it("fills requested object names from recorded definitions without accepting foreign or conflicting names", () => {
+ const target=operation({kn_id:"n",ids:["a","b","missing"]},"get_object_types");
+ const source=operation({kn_id:"n"},"get_kn_detail");source.callStatus="completed";
+ source.output={mode:"inline",inline:{structuredContent:{object_types:[{id:"a",name:"资产"},{id:"b",name:"设备"}]}}};
+ expect(requestedObjectLabels(target,[source])).toEqual(["资产","设备","missing"]);
+ const conflict={...source,output:{mode:"inline",inline:{object_types:[{id:"a",name:"其他"}]}}};
+ expect(requestedObjectLabels(target,[source,conflict])).toEqual(["a","设备","missing"]);
+ source.input={mode:"inline",inline:{kn_id:"foreign"}};
+ expect(requestedObjectLabels(target,[source])).toEqual(["a","b","missing"]);
+});
+
+it("matches an explicitly requested metric to its recorded name and object scope", () => {
+ const target=operation({kn_id:"n",metric_id:"m"},"query_metric");
+ const source=operation({kn_id:"n"},"search_schema");source.callStatus="completed";
+ source.output={mode:"inline",inline:{structuredContent:{metric_types:[{id:"m",name:"可用量",scope_type:"object_type",scope_ref:"a"}],object_types:[{id:"a",name:"资产"}]}}};
+ expect(recordedMetricTarget(target,[source])).toEqual({name:"可用量",objectId:"a",objectName:"资产"});
+ expect(recordedMetricTarget(operation({kn_id:"n",query:"可用量"},"search_schema"),[source])).toBeUndefined();
+ source.callStatus="failed";
+ expect(recordedMetricTarget(target,[source])).toBeUndefined();
 });

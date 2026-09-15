@@ -30,7 +30,7 @@ import {
 } from "@/modules/bkn-trace/business-provenance/business-provenance.service";
 import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css";
 
-import { recordedCallScope, recordedResourceMappings, requestedObjectLabels } from "./call-scope";
+import { recordedCallScope, recordedResourceMappings, requestedObjectLabels, recordedMetricTarget } from "./call-scope";
 
 type View = "timeline" | "knowledge" | "evidence" | "execution";
 type KnowledgeSelection = { network: string; elementId: string; elementName: string };
@@ -192,7 +192,7 @@ function businessElementNames(operation: OperationResolution, kinds: string[]) {
 
 function requestedObjectDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
   const scope = recordedCallScope(operation);
-  const names = requestedObjectLabels(operation);
+  const names = requestedObjectLabels(operation, operations);
   if (scope.scopeConflict) return scope.objectIds.join(bpText("listSeparator")) || bpText("binding.scopeConflict");
   if (names.length) return names.join(bpText("listSeparator"));
   if (scope.objectIds.length) return scope.objectIds.join(bpText("listSeparator"));
@@ -200,7 +200,11 @@ function requestedObjectDescription(operation: OperationResolution, operations: 
   const mapped = mappings.map(item => item.objectName || item.objectId).filter(Boolean);
   if (mapped.length) return [...new Set(mapped)].join(bpText("listSeparator"));
   if (scope.resourceIds.length) return bpText("scope.resourceTarget");
-  if (scope.metricId) return bpText("scope.metricTarget", { id: scope.metricId });
+  if (scope.metricId) {
+    const metric = recordedMetricTarget(operation, operations);
+    if (metric?.objectId) return `${metric.name || scope.metricId} → ${metric.objectName || metric.objectId}${bpText("scope.recordedDefinition")}`;
+    return bpText("scope.metricTarget", { id: metric?.name || scope.metricId });
+  }
   if (operation.toolName === "run_code") return bpText("scope.codeTarget");
   return scope.networkId ? bpText("scope.networkTarget") : bpText("undetermined");
 }

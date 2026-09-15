@@ -60,11 +60,38 @@ export function recordedResourceMappings(operation: OperationResolution, operati
  return result;
 }
 
-export function requestedObjectLabels(operation: OperationResolution): string[] {
+function recordedDefinitions(operation: OperationResolution, operations: OperationResolution[], key: "object_types" | "metric_types"): Record<string, unknown>[] {
+ const scope=recordedCallScope(operation);
+ if(!scope.networkId || scope.scopeConflict) return [];
+ return operations.flatMap(source => {
+  if(source.callStatus!=="completed" || !["get_kn_detail","get_object_types","search_schema"].includes(source.toolName ?? "")) return [];
+  const sourceScope=recordedCallScope(source);
+  if(sourceScope.scopeConflict || sourceScope.networkId!==scope.networkId) return [];
+  const envelope=record(source.output);
+  if(envelope.mode!=="inline") return [];
+  const inline=record(envelope.inline), output=record(inline.structuredContent ?? inline);
+  return Array.isArray(output[key]) ? output[key].map(record).filter(item => !text(item.kn_id) || text(item.kn_id)===scope.networkId) : [];
+ });
+}
+function recordedObjectName(operation: OperationResolution, operations: OperationResolution[], id: string): string {
+ const names=[...new Set(recordedDefinitions(operation,operations,"object_types").filter(item => text(item.id)===id).map(item => text(item.name)).filter(Boolean))];
+ return names.length===1 ? names[0] : "";
+}
+export function recordedMetricTarget(operation: OperationResolution, operations: OperationResolution[]) {
+ const scope=recordedCallScope(operation);
+ if(!scope.metricId) return undefined;
+ const matches=recordedDefinitions(operation,operations,"metric_types").filter(item => text(item.id)===scope.metricId);
+ const targets=[...new Set(matches.map(item => JSON.stringify({name:text(item.name),objectId:item.scope_type==="object_type" ? text(item.scope_ref) : ""})))];
+ if(targets.length!==1) return undefined;
+ const first=matches[0];
+ const objectId=first.scope_type==="object_type" ? text(first.scope_ref) : "";
+ return {name:text(first.name),objectId,objectName:objectId ? recordedObjectName(operation,operations,objectId) : ""};
+}
+export function requestedObjectLabels(operation: OperationResolution, operations: OperationResolution[] = []): string[] {
  const scope=recordedCallScope(operation);
  if(scope.objectIds.length) return scope.objectIds.map(id => {
   const element=scope.scopeConflict ? undefined : operation.elements.find(item => item.kind==="object" && item.id===id);
-  return element?.name || id;
+  return element?.name || recordedObjectName(operation,operations,id) || id;
  });
  return scope.scopeConflict ? [] : operation.elements.filter(item=>item.kind==="object").map(item=>item.name || item.id);
 }
