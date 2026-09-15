@@ -1289,6 +1289,45 @@
   background: var(--admin-color-surface-subtle);
 }
 
+.grantScope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.grantScopeLabel {
+  color: var(--admin-color-secondary);
+  font-size: var(--admin-font-size-meta);
+  white-space: nowrap;
+}
+
+.grantObjectSelect {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.grantScopeHint {
+  color: var(--admin-color-muted);
+  font-size: var(--admin-font-size-meta);
+}
+
+.grantResourceName {
+  display: inline-block;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.roleGrantOperationPicker {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 8px;
+  min-width: 0;
+}
+
 /* ---- object-level authorize (list mode) ---- */
 
 .authzObjHead {

@@ -18,6 +18,7 @@ import { listKnowledgeNetworkMetrics } from "@/modules/knowledge-network/service
 import { listKnowledgeNetworkObjectTypes } from "@/modules/knowledge-network/services/object-type.service";
 import { listKnowledgeNetworkRelationTypes } from "@/modules/knowledge-network/services/relation-type.service";
 import type { AuthorizableObject, ObjectGrant } from "@/modules/system-admin/types/authz";
+import type { ResourceGrant } from "@/modules/system-admin/types/admin";
 import {
   AUTHZ_OBJECT_PICKER_TYPES,
   isAuthzObjectPickerType,
@@ -556,4 +557,40 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
     const resolved = nameCache.get(`${grant.objType}:${grant.objId}`);
     return resolved ? { ...grant, objName: resolved.name, objSub: resolved.sub } : grant;
   });
+}
+
+export type ResolvedResourceGrantName = {
+  name: string;
+  sub?: string;
+};
+
+export function resourceGrantNameKey(resourceType: string, resourceId: string) {
+  return `${resourceType}\u0000${resourceId}`;
+}
+
+/**
+ * Resolves role-grant object names using the same domain-service lookup as Permission Management.
+ * bkn-safe owns authorization tuples only, so it deliberately returns opaque resource IDs.
+ */
+export async function resolveResourceGrantNames(
+  grants: ResourceGrant[],
+): Promise<Map<string, ResolvedResourceGrantName>> {
+  const objectGrants: ObjectGrant[] = grants
+    .filter((grant) => grant.resource.id !== "*")
+    .map((grant) => ({
+      accessorId: "",
+      objId: grant.resource.id,
+      objName: grant.resource.id,
+      objType: grant.resource.type,
+      operations: [],
+    }));
+  const resolved = await resolveGrantNames(objectGrants);
+  return new Map(
+    resolved
+      .filter((grant) => grant.objName && grant.objName !== grant.objId)
+      .map((grant) => [
+        resourceGrantNameKey(grant.objType, grant.objId),
+        { name: grant.objName, sub: grant.objSub },
+      ]),
+  );
 }

@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   addOperationToGrant,
+  normalizeRoleOperations,
   removeOperationFromGrant,
 } from "@/modules/system-admin/utils/resource-grant-operations";
 import type { ResourceGrant } from "@/modules/system-admin/types/admin";
@@ -34,17 +35,28 @@ describe("ResourceGrantEditor operation changes", () => {
     expect(resolveRoleGrantId(true, draftId)).toBe("*");
   });
 
-  it("does not allow a role grant to be added without the all-resources scope", () => {
+  it("resolves a concrete resource id when all-resources scope is disabled", () => {
     const wholeType = false;
-    const draftId = "*";
-    const draftOps = ["view"];
+    const draftId = "  catalog-1  ";
 
-    expect(draftOps.length > 0 && wholeType && draftId !== "*").toBe(false);
+    expect(resolveRoleGrantId(wholeType, draftId)).toBe("catalog-1");
   });
 
   it("adds an operation to the existing resource grant without replacing other operations", () => {
     expect(addOperationToGrant([catalogGrant], catalogGrant, "create")).toEqual([
       { ...catalogGrant, operations: ["view_detail", "query", "create"] },
+    ]);
+  });
+
+  it("adds and protects the view prerequisite used by permission management", () => {
+    expect(normalizeRoleOperations("catalog", ["modify"])).toEqual(["view_detail", "modify"]);
+
+    const dependentGrant: ResourceGrant = {
+      resource: { type: "catalog", id: "catalog-1" },
+      operations: ["view_detail", "modify"],
+    };
+    expect(removeOperationFromGrant([dependentGrant], dependentGrant, "view_detail")).toEqual([
+      dependentGrant,
     ]);
   });
 

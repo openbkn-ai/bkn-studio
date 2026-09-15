@@ -6,8 +6,28 @@
  */
 
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
+import { operationsForType } from "@/modules/system-admin/utils/resource-catalog";
 
 const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.id === b.id;
+
+export function normalizeRoleOperations(resourceType: string, selected: string[]): string[] {
+  const definitions = new Map(
+    operationsForType(resourceType).map((operation) => [operation.key, operation]),
+  );
+  const normalized = new Set<string>();
+  const visiting = new Set<string>();
+  const addWithRequirements = (operation: string) => {
+    if (normalized.has(operation) || visiting.has(operation)) {
+      return;
+    }
+    visiting.add(operation);
+    definitions.get(operation)?.requires.forEach(addWithRequirements);
+    visiting.delete(operation);
+    normalized.add(operation);
+  };
+  selected.forEach(addWithRequirements);
+  return [...normalized];
+}
 
 export function addOperationToGrant(
   grants: ResourceGrant[],
@@ -16,7 +36,10 @@ export function addOperationToGrant(
 ): ResourceGrant[] {
   return grants.map((grant) =>
     sameResource(grant.resource, target.resource)
-      ? { ...grant, operations: Array.from(new Set([...grant.operations, operation])) }
+      ? {
+          ...grant,
+          operations: normalizeRoleOperations(grant.resource.type, [...grant.operations, operation]),
+        }
       : grant,
   );
 }
@@ -26,7 +49,10 @@ export function removeOperationFromGrant(
   target: ResourceGrant,
   operation: string,
 ): ResourceGrant[] {
-  const remainingOperations = target.operations.filter((item) => item !== operation);
+  const remainingOperations = normalizeRoleOperations(
+    target.resource.type,
+    target.operations.filter((item) => item !== operation),
+  );
   if (remainingOperations.length === 0) {
     return grants.filter((grant) => !sameResource(grant.resource, target.resource));
   }

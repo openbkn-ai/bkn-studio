@@ -54,6 +54,15 @@ describe("resource-catalog", () => {
     ]);
   });
 
+  it("keeps model management type-wide and links modify/delete to display", () => {
+    for (const type of ["small_model", "large_model"]) {
+      const operations = operationsForType(type);
+      expect(operations.map((operation) => operation.key)).not.toContain("execute");
+      expect(operations.find((operation) => operation.key === "modify")?.requires).toEqual(["display"]);
+      expect(operations.find((operation) => operation.key === "delete")?.requires).toEqual(["display"]);
+    }
+  });
+
   it("limits role grants to supported type-wide resource types", () => {
     const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
 

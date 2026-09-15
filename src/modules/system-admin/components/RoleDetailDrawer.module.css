@@ -104,7 +104,7 @@
 
 .grantItem {
   display: grid;
-  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 10px;
   align-items: flex-start;
   padding: 10px 12px;
@@ -119,6 +119,14 @@
   flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
+}
+
+.grantResource {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

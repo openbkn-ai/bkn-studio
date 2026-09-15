@@ -6,10 +6,14 @@
  */
 
 import { Drawer, Input, Space, Tag } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { AdminRole } from "@/modules/system-admin/types/admin";
+import {
+  resourceGrantNameKey,
+  resolveResourceGrantNames,
+} from "@/modules/system-admin/services/authz-objects.service";
 import { roleDescription } from "@/modules/system-admin/utils/role-catalog";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
@@ -50,7 +54,24 @@ export function RoleDetailDrawer({
 }: RoleDetailDrawerProps) {
   const { t, i18n } = useTranslation();
   const [grantSearch, setGrantSearch] = useState("");
+  const [resourceNames, setResourceNames] = useState<Map<string, { name: string; sub?: string }>>(
+    new Map(),
+  );
   const grantQuery = grantSearch.trim().toLowerCase();
+
+  useEffect(() => {
+    let active = true;
+    void resolveResourceGrantNames(role.permissions)
+      .then((names) => {
+        if (active) {
+          setResourceNames(names);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [role.permissions]);
 
   const updatedTime = useMemo(() => {
     if (!role.updatedAt) {
@@ -76,8 +97,10 @@ export function RoleDetailDrawer({
         const opsLabel = grant.operations
           .map((op) => (op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)))
           .join(" ");
-        const scope = grant.resource.id === WILDCARD ? t("systemAdmin.grant.wholeType") : grant.resource.id;
-        const haystack = `${grant.resource.type} ${typeLabel} ${scope} ${opsLabel}`.toLowerCase();
+        const scopeName = grant.resource.id === WILDCARD
+          ? t("systemAdmin.grant.wholeType")
+          : resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))?.name ?? grant.resource.id;
+        const haystack = `${grant.resource.type} ${typeLabel} ${scopeName} ${grant.resource.id} ${opsLabel}`.toLowerCase();
         if (!haystack.includes(grantQuery)) {
           return;
         }
@@ -87,7 +110,7 @@ export function RoleDetailDrawer({
       out.set(grant.resource.type, list);
     });
     return [...out.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [grantQuery, role.permissions, t]);
+  }, [grantQuery, resourceNames, role.permissions, t]);
 
   const shownGrantCount = useMemo(
     () => grantsByType.reduce((sum, [, grants]) => sum + grants.length, 0),
@@ -182,8 +205,13 @@ export function RoleDetailDrawer({
                     <div className={styles.grantList}>
                       {grants.map((grant) => (
                         <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}`}>
-                          <span className={appStyles.slugChip}>
-                            {grant.resource.id === WILDCARD ? t("systemAdmin.grant.wholeType") : grant.resource.id}
+                          <span
+                            className={[appStyles.slugChip, styles.grantResource].join(" ")}
+                            title={grant.resource.id === WILDCARD ? undefined : grant.resource.id}
+                          >
+                            {grant.resource.id === WILDCARD
+                              ? t("systemAdmin.grant.wholeType")
+                              : resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))?.name ?? grant.resource.id}
                           </span>
                           <div className={styles.grantOps}>
                             {grant.operations.map((op) => (
