@@ -307,6 +307,7 @@ let mockTasks: SemanticUnderstandingTask[] = [
 export async function listSemanticUnderstandingTasks(
   filters: SemanticUnderstandingTaskListFilters,
   window: { limit: number; offset: number },
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<{ items: SemanticUnderstandingTaskSummary[]; total: number }> {
   if (useMock) {
     const filtered = mockTasks.filter(
@@ -335,6 +336,7 @@ export async function listSemanticUnderstandingTasks(
   const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>(
     "/vega-backend/v1/semantic-understanding-tasks",
     {
+      ...options,
       params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window),
       paramsSerializer: { indexes: null },
     },

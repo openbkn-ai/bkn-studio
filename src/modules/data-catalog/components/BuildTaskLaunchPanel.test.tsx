@@ -230,6 +230,10 @@ describe("BuildTaskLaunchPanel", () => {
     });
     expect(resumeBuildTaskMock).not.toHaveBeenCalled();
     expect(onStarted).toHaveBeenCalledWith({ id: "task-running", status: "running" });
+    expect(screen.getByText("dataCatalog.build.activeTaskLocked")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
+    expect(createBuildTaskMock).toHaveBeenCalledTimes(1);
   });
 
   it("requires confirmation before building with excluded schema fields", async () => {

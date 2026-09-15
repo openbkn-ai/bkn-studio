@@ -206,7 +206,31 @@ describe("ResourceWorkspaceScene", () => {
       limit: 1,
       resourceId: staleResource.id,
       sort: "create_time",
-    }));
+    }, { skipErrorToast: true }));
+  });
+
+  it("refreshes index context without remounting the workspace or rechecking catalog permissions", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="tasks"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="index"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("index-task-status-unavailable")).toBeInTheDocument());
+    const refresh = indexPanelProps.value?.onRefresh as (() => Promise<void>) | undefined;
+    expect(refresh).toBeTypeOf("function");
+    await act(async () => { await refresh?.(); });
+
+    expect(getCatalogResourceMock).toHaveBeenCalledTimes(2);
+    expect(getCatalogMock).toHaveBeenCalledTimes(1);
+    expect(listBuildTaskPageMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("index-task-status-unavailable")).toBeInTheDocument();
   });
 
   it.each([403, 500])("keeps resource details when task status loading fails with %s", async (status) => {

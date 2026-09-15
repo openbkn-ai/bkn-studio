@@ -220,7 +220,7 @@ export function ResourceIndexPanel({
         resourceId: resource.id,
         sort,
         statuses: statusFilter.length ? statusFilter : undefined,
-      });
+      }, { skipErrorToast: true });
       if (requestId === historyRequestIdRef.current) {
         setHistoryTasks(result.items);
         setHistoryTotal(result.total);
@@ -660,9 +660,10 @@ export function ResourceIndexPanel({
               onGoConfigure={() => onIndexViewChange("config")}
               onStarted={() => {
                 setSelectedKeys([]);
+                const alreadyOnFirstPage = taskPage === 1;
                 setTaskPage(1);
                 void onRefresh();
-                void loadHistory(1, taskPageSize);
+                if (alreadyOnFirstPage) void loadHistory(1, taskPageSize);
               }}
               resource={resource}
             />

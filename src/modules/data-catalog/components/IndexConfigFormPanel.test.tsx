@@ -157,7 +157,60 @@ describe("IndexConfigFormPanel", () => {
       resourceId: resource.id,
       sort: "create_time",
       statuses: ["pending", "running", "stopping"],
-    }));
+    }, { skipErrorToast: true }));
+  });
+
+  it("keeps configuration editing locked when task status cannot be loaded", async () => {
+    listBuildTaskPageMock.mockRejectedValue(new Error("task status unavailable"));
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active canViewTasks resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable")).toBeInTheDocument();
+    expect(listBuildTaskPageMock).toHaveBeenCalledWith({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    }, { skipErrorToast: true });
+    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+    expect(updateCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps configuration editing locked until task status is confirmed", () => {
+    listBuildTaskPageMock.mockImplementation(() => new Promise(() => undefined));
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active canViewTasks resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+  });
+
+  it("checks task status before editing when task access becomes available", async () => {
+    listBuildTaskPageMock.mockImplementation(() => new Promise(() => undefined));
+    const { rerender } = render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active canViewTasks={false} resource={resource} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByRole("button", {
+      name: "dataCatalog.build.saveIndexConfig",
+    })).toBeEnabled());
+
+    rerender(
+      <MemoryRouter>
+        <IndexConfigFormPanel active canViewTasks resource={resource} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledTimes(1));
   });
 
   it("does not query task history without task_manage but keeps configuration editable", async () => {
@@ -273,9 +326,11 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole("button", {
+    const saveButton = await screen.findByRole("button", {
       name: "dataCatalog.build.saveIndexConfig",
-    }));
+    });
+    await waitFor(() => expect(saveButton).toBeEnabled());
+    fireEvent.click(saveButton);
 
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];

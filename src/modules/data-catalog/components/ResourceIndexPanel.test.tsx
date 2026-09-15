@@ -429,14 +429,14 @@ describe("ResourceIndexPanel", () => {
       page: 1,
       pageSize: 10,
       resourceId: resource.id,
-    })));
+    }), { skipErrorToast: true }));
     expect(listBuildTaskPageMock).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "page 3" }));
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.objectContaining({
       page: 3,
       pageSize: 10,
       resourceId: resource.id,
-    })));
+    }), { skipErrorToast: true }));
   });
 
   it("reports the latest task from an unfiltered first history page", async () => {
@@ -514,12 +514,18 @@ describe("ResourceIndexPanel", () => {
 
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: "page 3" }));
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 })));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 3 }), { skipErrorToast: true },
+    ));
     listBuildTaskPageMock.mockClear();
 
     fireEvent.click(screen.getByRole("button", { name: "start task" }));
 
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1 }),
+      { skipErrorToast: true },
+    ));
+    expect(listBuildTaskPageMock).toHaveBeenCalledTimes(1);
     const calls = listBuildTaskPageMock.mock.calls as unknown as Array<[{ page: number }]>;
     expect(calls.every(([query]) => query.page === 1)).toBe(true);
   });
@@ -552,16 +558,22 @@ describe("ResourceIndexPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1 }), { skipErrorToast: true },
+    ));
     await screen.findByRole("button", { name: "page 3" });
     listBuildTaskPageMock.mockClear();
     listBuildTaskPageMock.mockImplementation(({ page }: { page: number }) =>
       page === 1 ? firstPage : thirdPage,
     );
     fireEvent.click(screen.getByRole("button", { name: "reloadcommon.refresh" }));
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 })));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1 }), { skipErrorToast: true },
+    ));
     fireEvent.click(screen.getByRole("button", { name: "page 3" }));
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(expect.objectContaining({ page: 3 })));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 3 }), { skipErrorToast: true },
+    ));
     resolveThirdPage!({ items: [buildTask({ id: "page-3-task" })], total: 21 });
     await screen.findByText("page-3-task");
 
@@ -573,6 +585,48 @@ describe("ResourceIndexPanel", () => {
     expect(onLatestTaskLoaded).toHaveBeenCalledWith(resource.id, expect.objectContaining({
       id: "initial-page-1-task",
     }));
+  });
+
+  it("ignores an older history error after the selected page loads", async () => {
+    let rejectOld: (error: Error) => void = () => undefined;
+    const oldHistory = new Promise<{ items: BuildTask[]; total: number }>((_resolve, reject) => {
+      rejectOld = reject;
+    });
+    listBuildTaskPageMock.mockResolvedValue({ items: [], total: 21 });
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={manageableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1 }), { skipErrorToast: true },
+    ));
+    await screen.findByRole("button", { name: "page 3" });
+    listBuildTaskPageMock.mockImplementation(({ page }: { page: number }) =>
+      page === 1
+        ? oldHistory
+        : Promise.resolve({ items: [buildTask({ id: "page-3-task" })], total: 21 }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "reloadcommon.refresh" }));
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledTimes(2));
+    fireEvent.click(screen.getByRole("button", { name: "page 3" }));
+    expect(await screen.findByText("page-3-task")).toBeInTheDocument();
+
+    rejectOld(new Error("outdated history request failed"));
+    await oldHistory.catch(() => undefined);
+    expect(screen.queryByText("outdated history request failed")).toBeNull();
+    expect(screen.getByText("page-3-task")).toBeInTheDocument();
   });
 
   it("does not report a history response after the panel unmounts", async () => {
@@ -624,6 +678,10 @@ describe("ResourceIndexPanel", () => {
     );
 
     await screen.findByText("history unavailable");
+    expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceId: resource.id }),
+      { skipErrorToast: true },
+    );
     expect(screen.getByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
   });

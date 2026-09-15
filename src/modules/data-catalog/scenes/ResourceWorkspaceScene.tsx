@@ -129,7 +129,7 @@ export function ResourceWorkspaceScene({
             limit: 1,
             resourceId,
             sort: "create_time",
-          });
+          }, { skipErrorToast: true });
           latestTasks = latestTaskPage.items;
         } catch {
           taskLoadFailed = true;
@@ -184,6 +184,7 @@ export function ResourceWorkspaceScene({
       if (detail && resourceVersionRef.current === resourceVersion) {
         setResource(detail);
         setResourceReadForbidden(false);
+        return true;
       }
     } catch (error) {
       if (resourceVersionRef.current === resourceVersion) {
@@ -199,7 +200,28 @@ export function ResourceWorkspaceScene({
         }
       }
     }
+    return false;
   }, [message, resourceId]);
+
+  const refreshIndexContext = useCallback(async () => {
+    if (!await refreshResource() || !hasCatalogOperation(catalog, "task_manage")) return;
+    const resourceVersion = resourceVersionRef.current;
+    try {
+      const latestTaskPage = await listBuildTaskPage({
+        direction: "desc",
+        limit: 1,
+        resourceId,
+        sort: "create_time",
+      }, { skipErrorToast: true });
+      if (resourceVersionRef.current !== resourceVersion) return;
+      setTasks(latestTaskPage.items);
+      setTaskStatusUnavailable(false);
+    } catch {
+      if (resourceVersionRef.current === resourceVersion) {
+        setTaskStatusUnavailable(true);
+      }
+    }
+  }, [catalog, refreshResource, resourceId]);
 
   useEffect(() => {
     const previousTab = previousTabRef.current;
@@ -604,7 +626,7 @@ export function ResourceWorkspaceScene({
                     indexViewExplicit={indexViewExplicit}
                     onIndexViewChange={onIndexViewChange}
                     onLatestTaskLoaded={handleLatestTaskLoaded}
-                    onRefresh={loadAll}
+                    onRefresh={refreshIndexContext}
                     resource={resource}
                     taskStatusUnavailable={taskStatusUnavailable}
                     tasks={sortedTasks}

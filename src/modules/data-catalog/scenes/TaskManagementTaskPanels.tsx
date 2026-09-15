@@ -8,7 +8,7 @@
 import { DeleteOutlined, EllipsisOutlined, ReloadOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Space, Tag, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -123,12 +123,14 @@ export function DiscoverTaskListPanel() {
   const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const taskRequestIdRef = useRef(0);
   const canManageCatalogTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
   });
 
   const load = useCallback(async () => {
+    const requestId = ++taskRequestIdRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -140,17 +142,22 @@ export function DiscoverTaskListPanel() {
         statuses: statuses.length === 0 ? undefined : statuses,
         strategy,
         triggerType,
-      });
-      setTasks(result.items);
-      setTotal(result.total);
+      }, { skipErrorToast: true });
+      if (requestId === taskRequestIdRef.current) {
+        setTasks(result.items);
+        setTotal(result.total);
+      }
     } catch (loadError) {
-      setError(extractRequestErrorMessage(loadError));
+      if (requestId === taskRequestIdRef.current) setError(extractRequestErrorMessage(loadError));
     } finally {
-      setLoading(false);
+      if (requestId === taskRequestIdRef.current) setLoading(false);
     }
   }, [direction, page, pageSize, sort, statuses, strategy, triggerType]);
 
-  useEffect(() => void load(), [load]);
+  useEffect(() => {
+    void load();
+    return () => { taskRequestIdRef.current += 1; };
+  }, [load]);
   useEffect(() => {
     void listCatalogs({ keyword: "", page: 1, pageSize: 50, type: "physical" })
       .then((result) => setCatalogs(result.items))
@@ -322,7 +329,7 @@ export function DiscoverTaskListPanel() {
 }
 
 async function listSemanticTasks(page: number, pageSize: number, filters: SemanticTaskFilters) {
-  return listSemanticUnderstandingTasks(filters, { limit: pageSize, offset: (page - 1) * pageSize });
+  return listSemanticUnderstandingTasks(filters, { limit: pageSize, offset: (page - 1) * pageSize }, { skipErrorToast: true });
 }
 
 async function deleteSemanticTask(id: string) {
@@ -345,18 +352,27 @@ export function SemanticUnderstandingTaskListPanel() {
   const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const taskRequestIdRef = useRef(0);
   const canManageCatalogTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
   });
   const load = useCallback(async () => {
+    const requestId = ++taskRequestIdRef.current;
     setLoading(true); setError(null);
     try {
       const result = await listSemanticTasks(page, pageSize, { scope, statuses: statuses.length === 0 ? undefined : statuses, applyMode, applied, sort, direction });
-      setTasks(result.items); setTotal(result.total);
-    } catch (loadError) { setError(extractRequestErrorMessage(loadError)); } finally { setLoading(false); }
+      if (requestId === taskRequestIdRef.current) { setTasks(result.items); setTotal(result.total); }
+    } catch (loadError) {
+      if (requestId === taskRequestIdRef.current) setError(extractRequestErrorMessage(loadError));
+    } finally {
+      if (requestId === taskRequestIdRef.current) setLoading(false);
+    }
   }, [applied, applyMode, direction, page, pageSize, scope, sort, statuses]);
-  useEffect(() => void load(), [load]);
+  useEffect(() => {
+    void load();
+    return () => { taskRequestIdRef.current += 1; };
+  }, [load]);
   const active = tasks.some((item) => item.status === "pending" || item.status === "running");
   useEffect(() => { if (useMock || !active) return; const timer = window.setInterval(() => !document.hidden && void load(), 10_000); return () => window.clearInterval(timer); }, [active, load]);
   const batchDeleteTargets = tasks.filter(

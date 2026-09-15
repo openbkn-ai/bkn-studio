@@ -208,6 +208,7 @@ export function BuildTaskLaunchPanel({
         resourceId: resource.id,
         executeType: mode === "batch" ? executeType : undefined,
       });
+      setActiveTaskLookup({ resourceId: resource.id, status: "ready", task });
       message.success(t("dataCatalog.build.created", { id: task.id }));
       onStarted(task);
     } catch (persistError) {

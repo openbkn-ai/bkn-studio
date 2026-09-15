@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -115,5 +115,25 @@ describe("TaskManagementTaskPanels", () => {
     expect(await screen.findByText("tasks unavailable")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
     expect(screen.getByText("dataCatalog.loadErrorRefreshHint")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["discover", DiscoverTaskListPanel, listDataConnectDiscoverTasksMock],
+    ["semantic", SemanticUnderstandingTaskListPanel, listSemanticUnderstandingTasksMock],
+  ])("ignores an outdated %s task failure after refresh", async (_, Panel, listMock) => {
+    let rejectOlder!: (reason: Error) => void;
+    const older = new Promise((_, reject) => { rejectOlder = reject; });
+    listMock.mockReturnValueOnce(older).mockResolvedValueOnce({ items: [], total: 0 });
+    render(<MemoryRouter><Panel /></MemoryRouter>);
+
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: /common\.refresh/ }));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      rejectOlder(new Error("outdated failure"));
+      await older.catch(() => {});
+    });
+
+    await waitFor(() => expect(screen.queryByText("outdated failure")).toBeNull());
   });
 });

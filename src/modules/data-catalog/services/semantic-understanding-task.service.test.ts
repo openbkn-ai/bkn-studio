@@ -274,4 +274,19 @@ describe("semantic-understanding task list", () => {
 
     expect(result).toEqual({ items: [], total: 36 });
   });
+
+  it("forwards the local error-toast suppression option", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listSemanticUnderstandingTasks: listWithAPI } = await import(
+      "@/modules/data-catalog/services/semantic-understanding-task.service"
+    );
+
+    await listWithAPI({}, { limit: 10, offset: 0 }, { skipErrorToast: true });
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/semantic-understanding-tasks",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
 });

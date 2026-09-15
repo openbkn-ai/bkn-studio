@@ -138,7 +138,11 @@ export function IndexConfigFormPanel({
   const { message } = useAppServices();
   const navigate = useNavigate();
 
-  const [activeTask, setActiveTask] = useState<BuildTask | null>(null);
+  const [activeTaskLookup, setActiveTaskLookup] = useState<{
+    resourceId: string;
+    status: "skipped" | "loading" | "ready" | "error";
+    task: BuildTask | null;
+  }>({ resourceId: resource.id, status: "loading", task: null });
   const [schema, setSchema] = useState<ResourceSchemaField[]>(resource.schema);
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [primaryKeyFields, setPrimaryKeyFields] = useState<string[]>([]);
@@ -247,7 +251,6 @@ export function IndexConfigFormPanel({
     const resourceChanged = analyzerResourceIdRef.current !== resource.id;
     analyzerResourceIdRef.current = resource.id;
 
-    setActiveTask(null);
     setPrimaryKeyFields([]);
     setIncrementalFields([]);
     setFieldEmbeddingModelGroups({});
@@ -323,21 +326,26 @@ export function IndexConfigFormPanel({
 
   useEffect(() => {
     if (!active || readOnly || !canViewTasks) {
-      setActiveTask(null);
+      setActiveTaskLookup({ resourceId: resource.id, status: "skipped", task: null });
       return;
     }
 
     let current = true;
+    setActiveTaskLookup({ resourceId: resource.id, status: "loading", task: null });
     void listBuildTaskPage({
       direction: "desc",
       limit: 1,
       resourceId: resource.id,
       sort: "create_time",
       statuses: ["pending", "running", "stopping"],
-    }).then((result) => {
-      if (current) setActiveTask(result.items[0] ?? null);
+    }, { skipErrorToast: true }).then((result) => {
+      if (current) {
+        setActiveTaskLookup({ resourceId: resource.id, status: "ready", task: result.items[0] ?? null });
+      }
     }).catch(() => {
-      if (current) setActiveTask(null);
+      if (current) {
+        setActiveTaskLookup({ resourceId: resource.id, status: "error", task: null });
+      }
     });
 
     return () => {
@@ -374,8 +382,13 @@ export function IndexConfigFormPanel({
     [defaultModelId, models],
   );
 
+  const taskLookupCurrent = activeTaskLookup.resourceId === resource.id;
+  const activeTask = taskLookupCurrent ? activeTaskLookup.task : null;
+  const taskStatusPending = !readOnly && canViewTasks && (
+    !taskLookupCurrent || activeTaskLookup.status !== "ready"
+  );
   const activeTaskLocked = isActiveBuildTask(activeTask);
-  const actionsLocked = readOnly || activeTaskLocked;
+  const actionsLocked = readOnly || taskStatusPending || activeTaskLocked;
   const streamingActive =
     activeTask?.mode === "streaming" && isActiveBuildTask(activeTask);
   const featureConfigFieldNames = useMemo(
@@ -634,7 +647,9 @@ export function IndexConfigFormPanel({
     if (actionsLocked) {
       if (!readOnly) {
         setError(
-          streamingActive
+          taskStatusPending
+            ? t("dataCatalog.resourceWorkspace.taskStatusUnavailable")
+            : streamingActive
             ? t("dataCatalog.build.streamingActiveLocked")
             : t("dataCatalog.build.activeTaskLocked"),
         );
@@ -1052,6 +1067,9 @@ export function IndexConfigFormPanel({
       {!streamingActive && activeTaskLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
+      {taskLookupCurrent && activeTaskLookup.status === "error" && !readOnly && canViewTasks ? (
+        <Alert message={t("dataCatalog.resourceWorkspace.taskStatusUnavailable")} showIcon type="warning" />
+      ) : null}
       {fulltextFields.length > 0 && analyzersLoading ? (
         <Alert message={t("dataCatalog.build.analyzersLoading")} showIcon type="info" />
       ) : fulltextFields.length > 0 && analyzersLoadFailed ? (
@@ -1093,7 +1111,7 @@ export function IndexConfigFormPanel({
       {invalidSavedPrimaryKeyFields.length + invalidSavedIncrementalFields.length > 0 ? (
         <Alert
           action={!readOnly ? (
-            <AppButton disabled={activeTaskLocked} onClick={removeInvalidKeyFields} size="small" type="link">
+            <AppButton disabled={actionsLocked} onClick={removeInvalidKeyFields} size="small" type="link">
               {t("dataCatalog.build.removeInvalidKeyFields")}
             </AppButton>
           ) : undefined}
