@@ -14,6 +14,7 @@ import type { CatalogRecord } from "@/shared/catalog";
 type MockTreeNode = {
   children?: MockTreeNode[];
   key: Key;
+  title?: ReactNode;
 };
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -45,26 +46,36 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
     onExpand?: (keys: Key[]) => void;
     onSelect?: (keys: Key[]) => void;
     treeData?: MockTreeNode[];
-  }) => (
-    <>
-      <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
-      <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
-      <output data-testid="catalog-tree-keys">
-        {treeData.flatMap((root) => [
-          root.key,
-          ...(root.children ?? []).flatMap((child) => [
-            child.key,
-            ...(child.children ?? []).map((grandchild) => grandchild.key),
-          ]),
-        ]).join(",")}
-      </output>
-      <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
-      <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
-      <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
-      <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">load more logical catalogs</button>
-      <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
-    </>
-  ),
+  }) => {
+    const renderTitles = (nodes: MockTreeNode[]): ReactNode => nodes.map((node) => (
+      <div key={node.key}>
+        {node.title}
+        {node.children ? renderTitles(node.children) : null}
+      </div>
+    ));
+
+    return (
+      <>
+        <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
+        <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
+        <output data-testid="catalog-tree-keys">
+          {treeData.flatMap((root) => [
+            root.key,
+            ...(root.children ?? []).flatMap((child) => [
+              child.key,
+              ...(child.children ?? []).map((grandchild) => grandchild.key),
+            ]),
+          ]).join(",")}
+        </output>
+        <div data-testid="tree-titles">{renderTitles(treeData)}</div>
+        <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
+        <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
+        <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
+        <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">load more logical catalogs</button>
+        <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
+      </>
+    );
+  },
   BusinessTreePanel: ({ children, footer, headerActions }: { children: ReactNode; footer?: ReactNode; headerActions: ReactNode }) => (
     <div>
       {headerActions}
@@ -215,6 +226,34 @@ describe("CatalogTreePanel", () => {
       "catalog:logical-chinese",
       "catalog:logical-alpha",
     ].join(","));
+  });
+
+  it("exposes complete names for truncated catalog and schema nodes", async () => {
+    const physicalName = "ISSUE180_IV18007_PG17_physical_catalog_with_a_long_suffix";
+    const logicalName = "ISSUE180_IV18007_PG17_logical_catalog_with_a_long_suffix";
+    const schemaName = "ISSUE180_IV18007_PG17_schema_with_a_long_suffix";
+
+    render(
+      <CatalogTreePanel
+        catalogs={[
+          { ...makeCatalog("catalog-1", physicalName, "physical"), enabled: false, status: "disabled" },
+          makeCatalog("logical-long", logicalName, "logical"),
+        ]}
+        discoveringCatalogIds={["catalog-1"]}
+        onLoadCatalogSchemas={vi.fn().mockResolvedValue([schemaName])}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={{ id: "catalog-1", type: "catalog" }}
+      />,
+    );
+
+    expect(screen.getByText(physicalName)).toHaveAttribute("title", physicalName);
+    expect(screen.getByText(logicalName)).toHaveAttribute("title", logicalName);
+    expect(screen.getByText("common.disabled")).toBeInTheDocument();
+    expect(screen.getByText("dataCatalog.tree.discovering")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
+    await waitFor(() => expect(screen.getByText(schemaName)).toHaveAttribute("title", schemaName));
   });
 
   it("loads physical catalog schemas only when its node is expanded", async () => {

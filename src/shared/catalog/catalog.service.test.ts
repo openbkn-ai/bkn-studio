@@ -147,11 +147,12 @@ describe("catalog.service · mock listCatalogs", () => {
       "finance_dw",
     ]);
     expect(secondPage.items.map((catalog) => catalog.name)).toEqual([
-      "knowledge_index",
+      "ISSUE180_IV18007_PG17_orders_archive_20260915",
+      "ISSUE180_IV18007_PG17_orders_current_20260915",
     ]);
     expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
       "knowledge_index",
-      "finance_dw",
+      "ISSUE180_IV18007_PG17_orders_current_20260915",
     ]);
   });
 });

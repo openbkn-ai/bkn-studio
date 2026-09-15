@@ -8,6 +8,11 @@
 /* Data Catalog tree: only keep business-specific node hierarchy overrides here.
    Shared panel shell, search, collapse state, scrolling and base tree behavior
    live in framework/ui/common/BusinessTreePanel*. */
+.catalogTreeScroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .catalogTree:global(.ant-tree) {
   background: transparent;
   color: var(--color-text-primary);
@@ -40,10 +45,12 @@
 }
 
 .catalogTree :global(.ant-tree-node-content-wrapper) {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 34px;
   padding: 7px 10px !important;
   margin-left: 6px;
-  width: calc(100% - 6px);
+  width: 0;
   border-radius: 0 !important;
 }
 
@@ -61,6 +68,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  width: 100%;
 }
 
 .catalogTree :global(.ant-tree-node-selected) .catalogNodeName,
@@ -72,7 +80,6 @@
 .catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) :global(.ant-tree-node-content-wrapper) {
   min-height: 30px;
   margin-left: 2px;
-  width: calc(100% - 2px);
   padding-left: 6px !important;
   padding-top: 4px !important;
   padding-bottom: 4px !important;
@@ -81,7 +88,6 @@
 .catalogTree :global(.ant-tree-treenode:has(.scopeGroupTitle)) :global(.ant-tree-node-content-wrapper) {
   min-height: 30px;
   margin-left: 10px;
-  width: calc(100% - 10px);
   padding-top: 5px !important;
   padding-bottom: 5px !important;
 }
@@ -89,7 +95,6 @@
 .catalogTree :global(.ant-tree-treenode:has(.scopeLeafTitle)) :global(.ant-tree-node-content-wrapper) {
   min-height: 28px;
   margin-left: 16px;
-  width: calc(100% - 16px);
   padding-top: 4px !important;
   padding-bottom: 4px !important;
 }
@@ -114,7 +119,6 @@
 .catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper) {
   min-height: 34px;
   margin-left: 0;
-  width: 100%;
   padding: 8px 2px 8px 0 !important;
   background: transparent !important;
 }
@@ -158,6 +162,7 @@
 }
 
 .catalogNodeName {
+  flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

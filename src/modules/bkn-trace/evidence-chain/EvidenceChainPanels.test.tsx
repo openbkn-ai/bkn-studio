@@ -4,7 +4,6 @@
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
  * Conditions. See LICENSE for the full text.
  */
-import "@testing-library/jest-dom/vitest";
 import "@/app/locales/i18n";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

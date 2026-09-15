@@ -301,7 +301,7 @@ export function CatalogTreePanel({
           key: nodeKey,
           title: (
             <span className={styles.scopeLeafTitle}>
-              <span className={styles.scopeLeafName}>{schema}</span>
+              <span className={styles.scopeLeafName} title={schema}>{schema}</span>
             </span>
           ),
         };
@@ -366,7 +366,7 @@ export function CatalogTreePanel({
                 <span className={styles.catalogNodeIcon}>
                   <DatabaseOutlined className={styles.catalogIcon} />
                 </span>
-                <span className={styles.catalogNodeName}>{catalog.name}</span>
+                <span className={styles.catalogNodeName} title={catalog.name}>{catalog.name}</span>
                 {discoveringCatalogIds.includes(catalog.id) ? (
                   <span className={[styles.treeMiniTag, styles.treeMiniTagScan].join(" ")}>
                     {t("dataCatalog.tree.discovering")}
@@ -431,7 +431,7 @@ export function CatalogTreePanel({
             <span className={styles.catalogNodeIcon}>
               <AppstoreOutlined className={styles.logicalIcon} />
             </span>
-            <span className={styles.catalogNodeName}>{catalog.name}</span>
+            <span className={styles.catalogNodeName} title={catalog.name}>{catalog.name}</span>
             {isBuiltinLogicalCatalog(catalog) ? (
               <span className={styles.treeMiniTag}>{t("dataCatalog.tree.builtin")}</span>
             ) : dataCatalogCreationAvailable && hasCatalogOperation(catalog, "delete") ? (
@@ -696,6 +696,7 @@ export function CatalogTreePanel({
         searchPlaceholder={t("dataCatalog.tree.searchPlaceholder")}
         searchValue={searchValue}
         title={t("dataCatalog.title")}
+        treeScrollClassName={styles.catalogTreeScroll}
       >
         <BusinessTree
           className={styles.catalogTree}
