@@ -1142,7 +1142,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             <AppButton onClick={() => setSelectedKeys([])} size="small">
               {t("common.cancel")}
             </AppButton>
-            <PermissionGate permissions="execution-factory:tool:edit">
+            <PermissionGate permissions="execution-factory:function:edit">
               {/*
                 保存期间锁住：还没落库的函数扳状态只改本地 status，而 persistFunction
                 建工具用的是保存开始那一刻的快照状态，保存途中翻转会被静默吞掉。
@@ -1182,7 +1182,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             activeId={activeKey}
             emptyText={t("executionFactory.workbenchFunctionListEmptyFiltered")}
             footer={
-              <PermissionGate permissions="execution-factory:tool:create">
+              <PermissionGate permissions="execution-factory:function:edit">
                 <AppButton
                   block
                   className={styles.railAdd}
@@ -1253,7 +1253,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
             }}
             selectable
             selectedIds={selectedKeys}
-            statusPermission="execution-factory:tool:edit"
+            statusPermission="execution-factory:function:edit"
             title={t("executionFactory.workbenchFunctionList", { count: functions.length })}
           />
         </div>
@@ -1276,7 +1276,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                     />
                   </span>
                   <span className={styles.fnHeadActions}>
-                    <PermissionGate permissions="execution-factory:tool:edit">
+                    <PermissionGate permissions="execution-factory:function:edit">
                       <Tooltip title={t("executionFactory.workbenchStatusHint")}>
                         <span className={styles.fnStatusToggle}>
                           <Switch
@@ -1429,7 +1429,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                           {t("executionFactory.workbenchDirty")}
                         </span>
                       ) : null}
-                      <PermissionGate permissions="execution-factory:tool:edit">
+                      <PermissionGate permissions="execution-factory:function:edit">
                         <AppButton
                           disabled={!hasUnsavedChanges}
                           loading={saving}
@@ -1466,7 +1466,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
                     {t("executionFactory.workbenchConsoleNote")}
                   </span>
                   <span className={styles.consoleRun}>
-                    <PermissionGate permissions="execution-factory:tool:debug">
+                    <PermissionGate permissions="execution-factory:function:debug">
                       <Tooltip title={t("executionFactory.workbenchRunShortcut")}>
                         <AppButton
                           className={styles.runButton}

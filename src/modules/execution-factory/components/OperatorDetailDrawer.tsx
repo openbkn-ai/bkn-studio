@@ -33,6 +33,7 @@ import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import { ConvertOperatorToToolModal } from "./ConvertOperatorToToolModal";
+import { operatorConversionPermission } from "@/modules/execution-factory/utils/operator-conversion-targets";
 import { OperatorDebugModal } from "./OperatorDebugModal";
 import { OperatorHistoryDrawer } from "./OperatorHistoryDrawer";
 import { OperatorRunLogPanel } from "./OperatorRunLogPanel";
@@ -148,7 +149,7 @@ export function OperatorDetailDrawer({
               <AppButton onClick={() => setHistoryOpen(true)}>
                 {t("executionFactory.operatorHistoryAction")}
               </AppButton>
-              <PermissionGate permissions="execution-factory:tool:create">
+              <PermissionGate permissions={operatorConversionPermission(record.metadataType)}>
                 <AppButton onClick={() => setConvertOpen(true)}>
                   {t("executionFactory.convertToTool")}
                 </AppButton>

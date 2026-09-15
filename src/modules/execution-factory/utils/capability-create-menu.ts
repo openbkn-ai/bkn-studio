@@ -13,7 +13,7 @@ export function capabilityModePermission(mode: CapabilityUxMode, initialBoxId?: 
   switch (mode) {
     case "quick-api":
     case "import-openapi":
-      return initialBoxId ? "execution-factory:tool:create" : "execution-factory:toolbox:create";
+      return initialBoxId ? "execution-factory:toolbox:edit" : "execution-factory:toolbox:create";
     case "function":
       return "execution-factory:function:create";
     case "mcp":

@@ -685,6 +685,7 @@ export const executionFactoryEnUS = {
     convertToToolTitle: "Convert Operator to Tool",
     targetToolbox: "Target Toolbox",
     targetToolboxPlaceholder: "Select a toolbox",
+    convertTargetUnauthorized: "You cannot add this operator to the selected toolbox.",
     mcpListTitle: "MCP Management",
     mcpListDescription: "Manage MCP server configurations.",
     mcpCreateTitle: "Register MCP Server",

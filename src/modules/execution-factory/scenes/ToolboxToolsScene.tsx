@@ -165,6 +165,12 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   }, [loading, searchParams, setSearchParams, viewMode]);
 
   const isFunctionToolbox = toolbox?.metadataType === "function";
+  const boxToolModifyPermission = toolbox?.metadataType === "function"
+    ? "execution-factory:function:edit"
+    : toolbox?.metadataType === "openapi" ? "execution-factory:toolbox:edit" : "";
+  const boxToolDebugPermission = toolbox?.metadataType === "function"
+    ? "execution-factory:function:debug"
+    : toolbox?.metadataType === "openapi" ? "execution-factory:toolbox:debug" : "";
 
   const handleBack = () => {
     if (onBack) {
@@ -288,7 +294,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
     catalogContext ? (
       readOnly
     ) : (
-      <PermissionGate fallback={readOnly} permissions="execution-factory:tool:edit">
+      <PermissionGate fallback={readOnly} permissions={boxToolModifyPermission}>
         {editable}
       </PermissionGate>
     );
@@ -511,7 +517,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                 {renderToolboxExportButton()}
                 {/* 市场预览态（from=catalog）看的是别的域的工具箱，只读，不给任何编辑入口。 */}
                 {!catalogContext && !toolbox.isInternal ? (
-                  <PermissionGate permissions="execution-factory:toolbox:edit">
+                  <PermissionGate permissions={boxToolModifyPermission}>
                     <AppButton
                       onClick={() => {
                         void navigate(`/execution-factory/toolboxes/${boxId}/edit`);
@@ -522,7 +528,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                   </PermissionGate>
                 ) : null}
                 {!catalogContext ? (
-                  <PermissionGate permissions="execution-factory:tool:create">
+                  <PermissionGate permissions={boxToolModifyPermission}>
                     <AppButton
                       onClick={() => {
                         if (capabilityUxV2 && !isFunctionToolbox) {
@@ -581,7 +587,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                     <Alert message={t("executionFactory.functionToolCreateHint")} showIcon type="info" />
                   ) : null}
                   <Space>
-                    <PermissionGate permissions="execution-factory:tool:create">
+                    <PermissionGate permissions={boxToolModifyPermission}>
                       <AppButton
                         onClick={() => {
                           if (capabilityUxV2 && !isFunctionToolbox) {
@@ -616,7 +622,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                   <AppButton onClick={() => setSelectedToolIds([])} size="small">
                     {t("common.cancel")}
                   </AppButton>
-                  <PermissionGate permissions="execution-factory:tool:edit">
+                  <PermissionGate permissions={boxToolModifyPermission}>
                     <AppButton onClick={() => handleBatchStatus("enabled")} size="small">
                       {t("executionFactory.enable")}
                     </AppButton>
@@ -679,7 +685,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                 /* 与详情区状态开关同口径：需要 tool:edit。手工构造 ?from=catalog&action=edit
                    会让 viewMode 为假，靠这道门禁 + 上面的 disabled 兜住，避免改到别人域里
                    工具的启用状态。 */
-                statusPermission="execution-factory:tool:edit"
+                statusPermission={boxToolModifyPermission}
                 title={t("executionFactory.toolboxToolListTitle", {
                   count: items.length,
                 })}
@@ -703,7 +709,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                             但仍要门禁：没有 tool:edit 的人不该拿到这个入口，市场预览态（from=catalog）
                             更不该改到别人工具箱里的工具状态。状态文案不进门禁，只读用户也要看得到。
                           */}
-                          <PermissionGate permissions="execution-factory:tool:edit">
+                          <PermissionGate permissions={boxToolModifyPermission}>
                             <Switch
                               checked={selectedTool.status === "enabled"}
                               disabled={catalogContext}
@@ -804,7 +810,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                           与「编辑工具箱」按钮的 !catalogContext 守卫对齐。
                         */}
                         {!catalogContext ? (
-                          <PermissionGate permissions="execution-factory:tool:edit">
+                          <PermissionGate permissions={boxToolModifyPermission}>
                             <AppButton
                               onClick={() => setEditToolId(selectedTool.toolId)}
                               type="link"
@@ -813,7 +819,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                             </AppButton>
                           </PermissionGate>
                         ) : null}
-                        <PermissionGate permissions="execution-factory:tool:debug">
+                        <PermissionGate permissions={boxToolDebugPermission}>
                           <AppButton onClick={() => setDebugRecord(selectedTool)} type="primary">
                             {t("executionFactory.debug")}
                           </AppButton>

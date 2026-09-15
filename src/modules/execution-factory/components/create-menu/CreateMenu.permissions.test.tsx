@@ -181,6 +181,18 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.queryByText("Function form")).toBeNull();
   });
 
+  it("does not treat function modify as permission to add an API tool", () => {
+    state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(knownPermissions,
+      flattenSafeGrants([
+        { resource: { type: "tool_box", id: "box-api" }, operations: ["view"] },
+        { resource: { type: "function", id: "box-function" }, operations: ["modify"] },
+      ]), false);
+    render(<AddCapabilityWizard open initialBoxId="box-api" contextTab="toolbox"
+      initialMode="quick-api" lockInitialMode onClose={vi.fn()} />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("API form")).toBeNull();
+  });
+
   it("removes an open form when its permission is revoked", () => {
     grant("skill", ["create"]);
     const { rerender } = render(<AddCapabilityWizard open initialMode="skill" lockInitialMode onClose={vi.fn()} />);
