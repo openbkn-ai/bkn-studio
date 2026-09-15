@@ -19,29 +19,23 @@ import type {
   ObjectTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import {
-  formatResourceIndexStateLabel,
-  hasServingResourceIndex,
+  formatKnowledgeNetworkObjectTypeIndexStateLabel,
 } from "@/modules/knowledge-network/utils/resource-index-state";
-import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./OntologyInspectorPanel.module.css";
 
 type OntologyInspectorPanelProps = {
-  localIndexStatusByResourceId?: Map<string, ResourceLocalIndexStatus | undefined>;
   networkId: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   relationTypes: KnowledgeNetworkRelationTypeRecord[];
-  resourceIndexLoading?: boolean;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 };
 
 export function OntologyInspectorPanel({
-  localIndexStatusByResourceId,
   networkId,
   objectTypes,
   relationTypes,
-  resourceIndexLoading = false,
   selectedId,
   onSelect,
 }: OntologyInspectorPanelProps) {
@@ -53,27 +47,10 @@ export function OntologyInspectorPanel({
     if (!resourceId) {
       return "—";
     }
-    if (localIndexStatusByResourceId) {
-      if (resourceIndexLoading) {
-        return t("knowledgeNetwork.objectTypeResourceIndexLoading");
-      }
-      return formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t);
-    }
-    return record.hasIndex
-      ? t("knowledgeNetwork.previewIndexed")
-      : t("knowledgeNetwork.previewNotIndexed");
+    return formatKnowledgeNetworkObjectTypeIndexStateLabel(record.hasIndex, t);
   };
 
-  const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) => {
-    const resourceId = record.dataSource?.id;
-    if (localIndexStatusByResourceId && resourceId) {
-      if (resourceIndexLoading) {
-        return false;
-      }
-      return hasServingResourceIndex(localIndexStatusByResourceId.get(resourceId));
-    }
-    return record.hasIndex;
-  };
+  const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) => record.hasIndex;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);

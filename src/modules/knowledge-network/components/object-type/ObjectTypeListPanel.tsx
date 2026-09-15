@@ -22,8 +22,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
-import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
+import {
+  formatKnowledgeNetworkObjectTypeIndexStateLabel,
+} from "@/modules/knowledge-network/utils/resource-index-state";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
@@ -90,17 +91,6 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const boundResourceIds = useMemo(
-    () => items.map((item) => item.dataSource?.id),
-    [items],
-  );
-  const {
-    localIndexStatusByResourceId,
-    canLoadResourceIndexStates,
-    loading: resourceBuildTasksLoading,
-  } =
-    useResourceIndexStates(boundResourceIds);
-
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextTag = searchParams.get("tag") ?? "all";
@@ -406,13 +396,7 @@ export function ObjectTypeListPanel({
           return "--";
         }
 
-        const label = canLoadResourceIndexStates
-          ? resourceBuildTasksLoading
-            ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
-            : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
-          : record.hasIndex
-            ? t("knowledgeNetwork.previewIndexed")
-            : t("knowledgeNetwork.previewNotIndexed");
+        const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(record.hasIndex, t);
 
         return (
           <button

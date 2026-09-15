@@ -13,15 +13,12 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { hasPermissions } from "@/framework/permission/has-permissions";
-import { dataCatalogResourceStatusPermissions } from "@/modules/data-catalog/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import { getCatalogResources } from "@/modules/data-catalog/services/resource.service";
-import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import {
+  formatKnowledgeNetworkObjectTypeIndexStateLabel,
+} from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   classifyObjectTypeProxyReadFailure,
   getObjectTypeProxyReadFailureTranslationKeys,
@@ -168,7 +165,6 @@ export function ObjectTypeDetailScene() {
   const navigate = useNavigate();
   const location = useLocation();
   const { message, modal } = useAppServices();
-  const runtimeConfig = useRuntimeConfig();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
     objectTypeId: string;
@@ -223,9 +219,6 @@ export function ObjectTypeDetailScene() {
     useState<string | null>(null);
   const [relatedActionsPage, setRelatedActionsPage] = useState(1);
   const [relatedActionsPageSize, setRelatedActionsPageSize] = useState(10);
-  const [resourceLocalIndexStatus, setResourceLocalIndexStatus] =
-    useState<ResourceLocalIndexStatus | undefined>();
-  const [resourceBuildTasksLoading, setResourceBuildTasksLoading] = useState(false);
   const [dataPage, setDataPage] = useState(1);
   const [dataPageSize, setDataPageSize] = useState(10);
   const [logicPage, setLogicPage] = useState(1);
@@ -235,12 +228,6 @@ export function ObjectTypeDetailScene() {
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
-  const canLoadResourceIndexStates = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    mode: "any",
-    requiredPermissions: [...dataCatalogResourceStatusPermissions],
-  });
-
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
   const locationState = location.state as ObjectTypeDetailLocationState | null;
@@ -659,40 +646,6 @@ export function ObjectTypeDetailScene() {
     relatedRelationsLoadedObjectTypeId,
     shouldLoadRelatedRelations,
   ]);
-
-  useEffect(() => {
-    const resourceId = detail?.dataSource?.id;
-
-    if (!canLoadResourceIndexStates || !resourceId) {
-      setResourceLocalIndexStatus(undefined);
-      setResourceBuildTasksLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setResourceBuildTasksLoading(true);
-
-    void getCatalogResources([resourceId])
-      .then(([resource]) => {
-        if (!cancelled) {
-          setResourceLocalIndexStatus(resource?.localIndexStatus);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResourceLocalIndexStatus(undefined);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setResourceBuildTasksLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canLoadResourceIndexStates, detail?.dataSource?.id]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -1183,13 +1136,7 @@ export function ObjectTypeDetailScene() {
                   {t("knowledgeNetwork.objectTypeResourceIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
-                  {canLoadResourceIndexStates
-                    ? resourceBuildTasksLoading
-                      ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
-                      : formatResourceIndexStateLabel(resourceLocalIndexStatus, t)
-                    : detail.hasIndex
-                      ? t("knowledgeNetwork.previewIndexed")
-                      : t("knowledgeNetwork.previewNotIndexed")}
+                  {formatKnowledgeNetworkObjectTypeIndexStateLabel(detail.hasIndex, t)}
                 </span>
               </div>
             </div>

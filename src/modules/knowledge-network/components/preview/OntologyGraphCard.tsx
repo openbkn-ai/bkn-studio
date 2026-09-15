@@ -32,25 +32,19 @@ import type {
   KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/build-modeling-preview-graph";
-import { hasServingResourceIndex } from "@/modules/knowledge-network/utils/resource-index-state";
-import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
 
 import styles from "./OntologyGraphCard.module.css";
 
 type OntologyGraphCardProps = {
-  localIndexStatusByResourceId?: Map<string, ResourceLocalIndexStatus | undefined>;
   networkId: string;
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
-  resourceIndexLoading?: boolean;
 };
 
 export function OntologyGraphCard({
-  localIndexStatusByResourceId,
   networkId,
   objectTypes: objectTypesProp,
   relationTypes: relationTypesProp,
-  resourceIndexLoading = false,
 }: OntologyGraphCardProps) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -101,23 +95,10 @@ export function OntologyGraphCard({
     [objectTypes, relationTypes],
   );
 
-  const indexedIds = useMemo(() => {
-    if (localIndexStatusByResourceId) {
-      return new Set(
-        objectTypes
-          .filter((item) => {
-            const resourceId = item.dataSource?.id;
-            if (!resourceId) {
-              return false;
-            }
-            return hasServingResourceIndex(localIndexStatusByResourceId.get(resourceId));
-          })
-          .map((item) => item.id),
-      );
-    }
-
-    return new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id));
-  }, [localIndexStatusByResourceId, objectTypes]);
+  const indexedIds = useMemo(
+    () => new Set(objectTypes.filter((item) => item.hasIndex).map((item) => item.id)),
+    [objectTypes],
+  );
 
   // Concept-group membership from node to group ID for logical-group clustering. Group details supply member object types.
   const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
@@ -182,11 +163,9 @@ export function OntologyGraphCard({
           </div>
           <aside className={styles.graphAside}>
             <OntologyInspectorPanel
-              localIndexStatusByResourceId={localIndexStatusByResourceId}
               networkId={networkId}
               objectTypes={objectTypes}
               relationTypes={relationTypes}
-              resourceIndexLoading={resourceIndexLoading}
               selectedId={selectedId}
               onSelect={setSelectedId}
             />
