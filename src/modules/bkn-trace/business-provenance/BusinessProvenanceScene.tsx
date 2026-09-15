@@ -30,6 +30,8 @@ import {
 } from "@/modules/bkn-trace/business-provenance/business-provenance.service";
 import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css";
 
+import { recordedCallScope, recordedResourceMappings, requestedObjectLabels, recordedMetricTarget } from "./call-scope";
+
 type View = "timeline" | "knowledge" | "evidence" | "execution";
 type KnowledgeSelection = { network: string; elementId: string; elementName: string };
 type AgentSuggestion = { id?: string; category?: string; location?: string; problem?: string; sourceEvidence?: string; verificationEvidence?: string; change?: string; acceptance?: string };
@@ -145,16 +147,17 @@ function SourceText({
   </Popover>;
 }
 
-function resourceDescription(operation: OperationResolution) {
-  const resources = operation.query?.resources ?? [];
+function resourceDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
+  const direct = recordedCallScope(operation).resourceMappings;
+  const resources = direct.length ? direct : recordedResourceMappings(operation, operations);
   if (resources.length) {
     return resources.map((resource) => {
       const businessName = resource.objectName || resource.objectId;
       const physicalName = resource.name || resource.id;
-      return businessName ? `${businessName} · ${physicalName}` : physicalName;
+      return (businessName ? `${physicalName} → ${businessName}` : physicalName) + (direct.length ? "" : bpText("scope.recordedDefinition"));
     }).join(bpText("listSeparator"));
   }
-  return operation.query?.resourceIds?.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
+  return recordedCallScope(operation).resourceIds.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
 }
 
 function conditionValue(value: unknown) {
@@ -173,15 +176,37 @@ function operationResult(operation: OperationResolution, derivedFacts: BusinessP
 }
 
 function bindingDescription(operation: OperationResolution) {
+  const scope = recordedCallScope(operation);
+  if (scope.scopeConflict) return bpText("binding.scopeConflict");
+  if (operation.missingFacts.includes("source_unavailable") || operation.missingFacts.includes("source_bkn_reader")) return bpText("binding.sourceUnavailable");
   if (operation.status === "resolved") return bpText("binding.resolved");
   if (operation.status === "ambiguous") return bpText("binding.ambiguous");
   if (operation.status === "not_evaluable" && operation.missingFacts.includes("permission_denied")) return bpText("binding.permissionDenied");
   if (operation.missingFacts.includes("resource_binding")) return bpText("binding.resourceMissing");
-  return bpText("binding.unresolved");
+  return scope.networkId ? bpText("binding.requestRecorded") : bpText("binding.unresolved");
 }
 
 function businessElementNames(operation: OperationResolution, kinds: string[]) {
   return operation.elements.filter((item) => kinds.includes(item.kind)).map((item) => item.name || item.id).filter(Boolean);
+}
+
+function requestedObjectDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
+  const scope = recordedCallScope(operation);
+  const names = requestedObjectLabels(operation, operations);
+  if (scope.scopeConflict) return scope.objectIds.join(bpText("listSeparator")) || bpText("binding.scopeConflict");
+  if (names.length) return names.join(bpText("listSeparator"));
+  if (scope.objectIds.length) return scope.objectIds.join(bpText("listSeparator"));
+  const mappings = scope.resourceMappings.length ? scope.resourceMappings : recordedResourceMappings(operation, operations);
+  const mapped = mappings.map(item => item.objectName || item.objectId).filter(Boolean);
+  if (mapped.length) return [...new Set(mapped)].join(bpText("listSeparator"));
+  if (scope.resourceIds.length) return bpText("scope.resourceTarget");
+  if (scope.metricId) {
+    const metric = recordedMetricTarget(operation, operations);
+    if (metric?.objectId) return `${metric.name || scope.metricId} → ${metric.objectName || metric.objectId}${bpText("scope.recordedDefinition")}`;
+    return bpText("scope.metricTarget", { id: metric?.name || scope.metricId });
+  }
+  if (operation.toolName === "run_code") return bpText("scope.codeTarget");
+  return scope.networkId ? bpText("scope.networkTarget") : bpText("undetermined");
 }
 
 function propertyDescriptions(operation: OperationResolution) {
@@ -587,14 +612,14 @@ export function BusinessProvenanceScene() {
       <header><div><small>{bpText("detail.roundCall")}</small><b>{operationTitle(detailOperation)}</b></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span><Button type="text" aria-label={bpText("detail.close")} icon={<CloseOutlined />} onClick={() => setDetailOperation(undefined)} /></header>
       <section><h4>{bpText("detail.what")}</h4><p>{operationTitle(detailOperation)}</p></section>
       <section><h4>{bpText("detail.businessElement")}</h4><dl>
-        <dt>{bpText("knowledge.network")}</dt><dd>{detailOperation.knowledgeNetworkId || bpText("undetermined")}</dd>
-        <dt>{bpText("detail.businessObject")}</dt><dd>{businessElementNames(detailOperation, ["object"]).join(bpText("listSeparator")) || bpText("undetermined")}</dd>
+        <dt>{bpText("knowledge.network")}</dt><dd>{recordedCallScope(detailOperation).networkId || bpText("undetermined")}</dd>
+        <dt>{bpText("detail.businessObject")}</dt><dd>{requestedObjectDescription(detailOperation, projection?.operations)}</dd>
         {detailOperation.status === "ambiguous" && detailOperation.objects?.length ? <><dt>{bpText("detail.candidateObjects")}</dt><dd>{detailOperation.objects.map((object) => object.name || object.id).join(bpText("listSeparator"))}</dd></> : null}
         {businessElementNames(detailOperation, ["relation", "action", "metric"]).length ? <><dt>{bpText("detail.relationActionMetric")}</dt><dd>{businessElementNames(detailOperation, ["relation", "action", "metric"]).join(bpText("listSeparator"))}</dd></> : null}
         <dt>{bpText("detail.binding")}</dt><dd>{bindingDescription(detailOperation)}</dd>
         {projection?.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId) ? <><dt>{bpText("detail.conversationContext")}</dt><dd>{(() => { const source = projection.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId); return `${source?.sourceInteractionId} · ${source?.sourceOperationId}`; })()}</dd></> : null}
       </dl></section>
-      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation)}</dd></dl></section>
+      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation, projection?.operations)}</dd></dl></section>
       <section><h4>{bpText("detail.properties")}</h4>{propertyDescriptions(detailOperation).length ? propertyDescriptions(detailOperation).map((item) => <p key={item}>{item}</p>) : <p>{bpText("detail.noProperties")}</p>}</section>
       <section><h4>{bpText("detail.actualResult")}</h4><p>{operationResult(detailOperation, projection?.derivedFacts)}</p></section>
       {payloadText(detailOperation.input) ? <section><h4>{bpText("detail.recordedInput")}</h4><pre>{payloadText(detailOperation.input)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.input)}>{bpText("detail.copyPayload")}</Button></section> : null}
