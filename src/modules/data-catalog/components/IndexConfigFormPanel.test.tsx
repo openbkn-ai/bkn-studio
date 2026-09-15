@@ -327,18 +327,31 @@ describe("IndexConfigFormPanel", () => {
     expect(payload.indexConfig?.incrementalFields).toBeUndefined();
   });
 
-  it("does not submit index configuration when read-only", async () => {
+  it("does not submit index configuration when read-only", () => {
     render(
       <MemoryRouter>
-        <IndexConfigFormPanel active readOnly resource={resource} />
+        <IndexConfigFormPanel
+          active
+          readOnly
+          resource={{
+            ...resource,
+            indexConfig: { primaryKeyFields: ["missing_field"] },
+          }}
+        />
       </MemoryRouter>,
     );
 
-    const saveButton = await screen.findByRole("button", {
+    expect(screen.queryByRole("button", {
       name: "dataCatalog.build.saveIndexConfig",
-    });
-    expect(saveButton.getAttribute("disabled")).not.toBeNull();
-    fireEvent.click(saveButton);
+    })).toBeNull();
+    expect(screen.queryByRole("button", {
+      name: "dataCatalog.build.featureConfig",
+    })).toBeNull();
+    expect(screen.queryByRole("button", {
+      name: "dataCatalog.build.removeInvalidKeyFields",
+    })).toBeNull();
+    expect(screen.queryByText("dataCatalog.build.activeTaskLocked")).toBeNull();
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
 

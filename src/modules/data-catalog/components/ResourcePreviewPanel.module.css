@@ -39,20 +39,6 @@
   color: var(--color-text-secondary);
 }
 
-.gatePanel {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--color-warning-border);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
 .tableSection {
   display: flex;
   flex: 1;

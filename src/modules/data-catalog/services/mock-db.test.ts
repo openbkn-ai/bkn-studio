@@ -84,6 +84,19 @@ describe("data catalog discover-status mocks", () => {
     }
   });
 
+  it("provides a non-dataset resource with view-detail-only permissions", () => {
+    const resource = mockResources.find(
+      (item) => item.id === "res-permission-limited-orders",
+    );
+
+    expect(resource).toMatchObject({
+      catalogId: "cat-008",
+      category: "table",
+      name: "view_detail_only_orders",
+      operations: ["view_detail"],
+    });
+  });
+
   it("keeps mock task key fields compatible with their resource schema", () => {
     const resourcesById = new Map(mockResources.map((resource) => [resource.id, resource]));
 

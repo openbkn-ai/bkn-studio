@@ -480,12 +480,12 @@ export function DataConnectFormScene({
     record &&
     !hasCatalogOperation(record, "modify")
   ) {
-    return <Result status="403" subTitle={t("common.noPermission")} title="403" />;
+    return <Result status="403" subTitle={t("dataConnect.permissionRequired")} title="403" />;
   }
 
   return (
     <PermissionGate
-      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
+      fallback={<Result status="403" subTitle={t("dataConnect.permissionRequired")} title="403" />}
       permissions={permission}
     >
       <section className={styles.contentSurface}>

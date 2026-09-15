@@ -9,6 +9,7 @@ export const dataCatalogZhCN = {
   dataCatalog: {
     title: "数据目录",
     description: "浏览与治理数据资源，按连接查看表、视图与索引状态。",
+    permissionRequired: "当前账号权限不足，请联系管理员授权后再试。",
     catalogDetailTitle: "资源列表",
     resourceDetailTitle: "资源详情",
     indexWorkspace: {

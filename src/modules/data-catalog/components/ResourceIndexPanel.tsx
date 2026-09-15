@@ -196,6 +196,7 @@ export function ResourceIndexPanel({
   const [direction, setDirection] = useState<"asc" | "desc">("desc");
   const autoPickedRef = useRef(false);
   const historyRequestIdRef = useRef(0);
+  const supportsTaskView = resource.category !== "dataset";
   const canViewTasks = canViewResourceIndexTasks(resource, catalog);
   const resourceChanged = filtersResourceId !== resource.id;
 
@@ -305,10 +306,10 @@ export function ResourceIndexPanel({
   ]);
 
   useEffect(() => {
-    if (!canViewTasks && indexView === "tasks") {
+    if (!supportsTaskView && indexView === "tasks") {
       onIndexViewChange("config");
     }
-  }, [canViewTasks, indexView, onIndexViewChange]);
+  }, [indexView, onIndexViewChange, supportsTaskView]);
 
   useEffect(() => {
     if (!resourceChanged) return;
@@ -533,10 +534,9 @@ export function ResourceIndexPanel({
       {gateBanner}
       {!canModifyResource ? (
         <Alert
-          className={panelStyles.statusAlert}
           message={t("dataCatalog.build.configReadOnly")}
           showIcon
-          type="info"
+          type="warning"
         />
       ) : null}
       <div className={panelStyles.configureCard}>
@@ -740,7 +740,7 @@ export function ResourceIndexPanel({
             >
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </button>
-            {canViewTasks ? (
+            {supportsTaskView ? (
               <button
                 className={
                   indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab
@@ -769,7 +769,11 @@ export function ResourceIndexPanel({
           </div>
         </div>
 
-        {!canViewTasks || indexView === "config" ? renderConfigTab() : renderTasksTab()}
+        {!supportsTaskView || indexView === "config" ? renderConfigTab() : canViewTasks ? (
+          renderTasksTab()
+        ) : (
+          <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
+        )}
       </div>
 
       {detailTaskId ? (

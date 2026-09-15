@@ -10,7 +10,7 @@ import { MemoryRouter, useRoutes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/data-connect/scenes/DataConnectDiscoverScene", () => ({
-  DataConnectDiscoverScene: () => <div>common.noPermission</div>,
+  DataConnectDiscoverScene: () => <div>dataConnect.permissionRequired</div>,
 }));
 
 import { dataConnectRoutes } from "@/modules/data-connect/routes";
@@ -34,6 +34,6 @@ describe("data-connect routes", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(await screen.findByText("dataConnect.permissionRequired")).toBeTruthy();
   });
 });

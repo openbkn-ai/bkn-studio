@@ -51,8 +51,8 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Alert: ({ action, children, message }: { action?: ReactNode; children?: ReactNode; message?: ReactNode }) => (
-    <div>{message}{children}{action}</div>
+  Alert: ({ action, children, message, type }: { action?: ReactNode; children?: ReactNode; message?: ReactNode; type?: string }) => (
+    <div data-alert-type={type}>{message}{children}{action}</div>
   ),
   Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
     <input onChange={onChange} value={value} />
@@ -306,7 +306,7 @@ describe("DataConnectDiscoverScene", () => {
     });
   });
 
-  it("rejects a direct catalog route without task_manage on that catalog", async () => {
+  it("keeps discover tabs reachable without task_manage and skips protected requests", async () => {
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
       name: "Orders",
@@ -315,7 +315,15 @@ describe("DataConnectDiscoverScene", () => {
 
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(await screen.findByText("dataConnect.permissionRequired")).toHaveAttribute(
+      "data-alert-type",
+      "warning",
+    );
+    expect(screen.getByRole("button", { name: "dataConnect.discoverTabTasks" })).toBeTruthy();
+    const schedulesTab = screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" });
+    expect(schedulesTab).toBeTruthy();
+    fireEvent.click(schedulesTab);
+    expect(screen.getByText("dataConnect.permissionRequired")).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();
   });
@@ -365,7 +373,7 @@ describe("DataConnectDiscoverScene", () => {
       await firstLookup.promise;
     });
 
-    expect(screen.queryByText("common.noPermission")).toBeNull();
+    expect(screen.queryByText("dataConnect.permissionRequired")).toBeNull();
   });
 
   it("shows no permission only for a forbidden direct catalog lookup", async () => {
@@ -385,7 +393,7 @@ describe("DataConnectDiscoverScene", () => {
 
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    expect(await screen.findByText("common.noPermission")).toBeTruthy();
+    expect(await screen.findByText("dataConnect.permissionRequired")).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();
   });
@@ -396,7 +404,7 @@ describe("DataConnectDiscoverScene", () => {
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
     expect(await screen.findByText("Catalog lookup failed")).toBeTruthy();
-    expect(screen.queryByText("common.noPermission")).toBeNull();
+    expect(screen.queryByText("dataConnect.permissionRequired")).toBeNull();
     expect(screen.getByRole("button", { name: "common.retry" })).toBeTruthy();
     expect(listTasksMock).not.toHaveBeenCalled();
     expect(listSchedulesMock).not.toHaveBeenCalled();

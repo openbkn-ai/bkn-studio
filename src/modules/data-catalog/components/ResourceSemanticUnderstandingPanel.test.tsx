@@ -107,7 +107,7 @@ describe("ResourceSemanticUnderstandingPanel", () => {
     expect(screen.getAllByText("dataCatalog.semanticWorkspace.empty")).toHaveLength(1);
   });
 
-  it("hides task mutations when the current catalog omits task_manage", async () => {
+  it("shows no permission and skips requests when the current catalog omits task_manage", () => {
     render(
       <ResourceSemanticUnderstandingPanel
         active
@@ -116,7 +116,10 @@ describe("ResourceSemanticUnderstandingPanel", () => {
       />,
     );
 
-    await waitFor(() => expect(listSemanticUnderstandingTasksMock).toHaveBeenCalled());
+    expect(screen.getByText("dataCatalog.permissionRequired").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
+    expect(listSemanticUnderstandingTasksMock).not.toHaveBeenCalled();
     expect(screen.queryByText("dataCatalog.semanticWorkspace.create")).toBeNull();
     expect(screen.queryByText("dataCatalog.task.batchDelete")).toBeNull();
   });

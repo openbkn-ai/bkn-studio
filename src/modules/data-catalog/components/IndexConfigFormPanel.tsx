@@ -293,17 +293,19 @@ export function IndexConfigFormPanel({
         setSchemaLoading(false);
       }
 
-      try {
-        const result = await listBuildTaskPage({
-          direction: "desc",
-          limit: 1,
-          resourceId: resource.id,
-          sort: "create_time",
-          statuses: ["pending", "running", "stopping"],
-        });
-        setActiveTask(result.items[0] ?? null);
-      } catch {
-        setActiveTask(null);
+      if (!readOnly) {
+        try {
+          const result = await listBuildTaskPage({
+            direction: "desc",
+            limit: 1,
+            resourceId: resource.id,
+            sort: "create_time",
+            statuses: ["pending", "running", "stopping"],
+          });
+          setActiveTask(result.items[0] ?? null);
+        } catch {
+          setActiveTask(null);
+        }
       }
 
       try {
@@ -330,7 +332,7 @@ export function IndexConfigFormPanel({
         setDefaultModelId(undefined);
       }
     })();
-  }, [active, resource]);
+  }, [active, readOnly, resource]);
 
   useEffect(() => {
     if (!active) {
@@ -379,7 +381,8 @@ export function IndexConfigFormPanel({
     [defaultModelId, models],
   );
 
-  const actionsLocked = readOnly || isActiveBuildTask(activeTask);
+  const activeTaskLocked = isActiveBuildTask(activeTask);
+  const actionsLocked = readOnly || activeTaskLocked;
   const streamingActive =
     activeTask?.mode === "streaming" && isActiveBuildTask(activeTask);
   const featureConfigFieldNames = useMemo(
@@ -636,11 +639,13 @@ export function IndexConfigFormPanel({
       return;
     }
     if (actionsLocked) {
-      setError(
-        streamingActive
-          ? t("dataCatalog.build.streamingActiveLocked")
-          : t("dataCatalog.build.activeTaskLocked"),
-      );
+      if (!readOnly) {
+        setError(
+          streamingActive
+            ? t("dataCatalog.build.streamingActiveLocked")
+            : t("dataCatalog.build.activeTaskLocked"),
+        );
+      }
       return;
     }
 
@@ -899,14 +904,16 @@ export function IndexConfigFormPanel({
               {groups.length > 0 ? t("dataCatalog.build.featureGroupHint") : disabledReason || t("dataCatalog.build.featureEnableHint")}
             </div>
           </div>
-          <AppButton
-            disabled={disabled || groups.length > 0}
-            onClick={addFeature}
-            size="small"
-            type={groups.length === 0 ? "primary" : "default"}
-          >
-            {t("dataCatalog.build.addFeature")}
-          </AppButton>
+          {!readOnly ? (
+            <AppButton
+              disabled={disabled || groups.length > 0}
+              onClick={addFeature}
+              size="small"
+              type={groups.length === 0 ? "primary" : "default"}
+            >
+              {t("dataCatalog.build.addFeature")}
+            </AppButton>
+          ) : null}
         </div>
         {groups.length === 0 ? (
           <div className={formStyles.featureEmpty}>
@@ -1005,25 +1012,27 @@ export function IndexConfigFormPanel({
                     value={feature.description}
                   />
                 </div>
-                <AppButton
-                  disabled={disabled || required}
-                  onClick={() => {
-                    updateFeatureGroups(
-                      kind,
-                      featureField.name,
-                      groups.filter((_, cursor) => cursor !== index),
-                    );
-                  }}
-                  size="small"
-                  title={required
-                    ? t(isKeyword
-                      ? "dataCatalog.build.keywordRequiredHint"
-                      : "dataCatalog.build.fulltextRequiredHint")
-                    : undefined}
-                  type="link"
-                >
-                  {t("common.remove")}
-                </AppButton>
+                {!readOnly ? (
+                  <AppButton
+                    disabled={disabled || required}
+                    onClick={() => {
+                      updateFeatureGroups(
+                        kind,
+                        featureField.name,
+                        groups.filter((_, cursor) => cursor !== index),
+                      );
+                    }}
+                    size="small"
+                    title={required
+                      ? t(isKeyword
+                        ? "dataCatalog.build.keywordRequiredHint"
+                        : "dataCatalog.build.fulltextRequiredHint")
+                      : undefined}
+                    type="link"
+                  >
+                    {t("common.remove")}
+                  </AppButton>
+                ) : null}
               </div>
             ))}
           </div>
@@ -1041,7 +1050,7 @@ export function IndexConfigFormPanel({
       {streamingActive ? (
         <Alert message={t("dataCatalog.build.streamingActiveLocked")} showIcon type="warning" />
       ) : null}
-      {!streamingActive && actionsLocked ? (
+      {!streamingActive && activeTaskLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
       {fulltextFields.length > 0 && analyzersLoading ? (
@@ -1094,11 +1103,11 @@ export function IndexConfigFormPanel({
       ) : null}
       {invalidSavedPrimaryKeyFields.length + invalidSavedIncrementalFields.length > 0 ? (
         <Alert
-          action={
-            <AppButton disabled={actionsLocked} onClick={removeInvalidKeyFields} size="small" type="link">
+          action={!readOnly ? (
+            <AppButton disabled={activeTaskLocked} onClick={removeInvalidKeyFields} size="small" type="link">
               {t("dataCatalog.build.removeInvalidKeyFields")}
             </AppButton>
-          }
+          ) : undefined}
           message={t("dataCatalog.build.invalidKeyFields", {
             fields: [...invalidSavedPrimaryKeyFields, ...invalidSavedIncrementalFields].join(", "),
           })}
@@ -1479,14 +1488,16 @@ export function IndexConfigFormPanel({
                                         </span>
                                       ) : null}
                                     </div>
-                                    <AppButton
-                                      className={formStyles.featureConfigLink}
-                                      disabled={actionsLocked}
-                                      onClick={() => setFeatureField(field)}
-                                      type="link"
-                                    >
-                                      {t("dataCatalog.build.featureConfig")}
-                                    </AppButton>
+                                    {!readOnly ? (
+                                      <AppButton
+                                        className={formStyles.featureConfigLink}
+                                        disabled={activeTaskLocked}
+                                        onClick={() => setFeatureField(field)}
+                                        type="link"
+                                      >
+                                        {t("dataCatalog.build.featureConfig")}
+                                      </AppButton>
+                                    ) : null}
                                   </>
                                 ) : (
                                   <span className={formStyles.featureMiniEmpty}>
@@ -1600,18 +1611,20 @@ export function IndexConfigFormPanel({
         />
       ) : null}
 
-      <div className={formStyles.footer}>
-        <Space style={{ marginLeft: "auto" }}>
-          <AppButton
-            disabled={actionsLocked || saving || (fulltextFields.length > 0 && analyzerBlocked) || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
-            loading={saving}
-            onClick={() => void saveConfig()}
-            type="primary"
-          >
-            {t("dataCatalog.build.saveIndexConfig")}
-          </AppButton>
-        </Space>
-      </div>
+      {!readOnly ? (
+        <div className={formStyles.footer}>
+          <Space style={{ marginLeft: "auto" }}>
+            <AppButton
+              disabled={actionsLocked || saving || (fulltextFields.length > 0 && analyzerBlocked) || duplicateUnsupportedFeatureTypes.length > 0 || (embeddingFields.length > 0 && embeddingBlocked)}
+              loading={saving}
+              onClick={() => void saveConfig()}
+              type="primary"
+            >
+              {t("dataCatalog.build.saveIndexConfig")}
+            </AppButton>
+          </Space>
+        </div>
+      ) : null}
     </div>
   );
 }

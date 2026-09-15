@@ -186,7 +186,9 @@ describe("ResourceIndexPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("dataCatalog.build.configReadOnly")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.build.configReadOnly").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
     expect(indexConfigFormPanelMock).toHaveBeenCalledWith(expect.objectContaining({
       hideBuildControls: true,
       readOnly: true,
@@ -214,6 +216,55 @@ describe("ResourceIndexPanel", () => {
       hideBuildControls: false,
       readOnly: false,
     }));
+  });
+
+  it("keeps the task tab reachable without task_manage and skips task requests", () => {
+    const onIndexViewChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={{ ...modifiableCatalog, operations: ["resource_manage", "view_detail"] }}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={onIndexViewChange}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tab", { name: "dataCatalog.indexWorkspace.viewTasks" })).toBeEnabled();
+    expect(screen.getByText("dataCatalog.permissionRequired").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+    expect(onIndexViewChange).not.toHaveBeenCalledWith("config");
+  });
+
+  it("keeps the task tab disabled and redirects dataset task deep links to config", async () => {
+    const onIndexViewChange = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={modifiableCatalog}
+          indexView="tasks"
+          indexViewExplicit
+          onIndexViewChange={onIndexViewChange}
+          onRefresh={vi.fn()}
+          resource={{ ...resource, category: "dataset" }}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("tab", { name: "dataCatalog.indexWorkspace.viewTasks" })).toBeDisabled();
+    await waitFor(() => expect(onIndexViewChange).toHaveBeenCalledWith("config"));
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
 
   it("does not present a batch task total as the current index document count", () => {

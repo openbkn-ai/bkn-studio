@@ -1088,6 +1088,12 @@ export function DataConnectDiscoverScene({
     </div>
   );
 
+  const permissionDeniedPanel = (
+    <div className={styles.tabPanel}>
+      <Alert message={t("dataConnect.permissionRequired")} showIcon type="warning" />
+    </div>
+  );
+
   return (
     <>
       <section className={styles.contentSurface}>
@@ -1120,9 +1126,7 @@ export function DataConnectDiscoverScene({
             type="warning"
           />
         ) : null}
-        {catalogAccessDenied ? (
-          <Alert message={t("common.noPermission")} showIcon type="error" />
-        ) : catalogError ? null : (
+        {catalogError ? null : (
           <Tabs
             activeKey={activeTab}
             className={styles.pageTabs}
@@ -1133,12 +1137,12 @@ export function DataConnectDiscoverScene({
                   activeTaskCount > 0
                     ? `${t("dataConnect.discoverTabTasks")} (${activeTaskCount})`
                     : t("dataConnect.discoverTabTasks"),
-                children: tasksPanel,
+                children: catalogAccessDenied ? permissionDeniedPanel : tasksPanel,
               },
               {
                 key: "schedules",
                 label: t("dataConnect.discoverTabSchedules"),
-                children: schedulesPanel,
+                children: catalogAccessDenied ? permissionDeniedPanel : schedulesPanel,
               },
             ]}
             onChange={(key) => {

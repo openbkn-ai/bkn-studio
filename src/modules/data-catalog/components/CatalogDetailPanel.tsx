@@ -389,28 +389,32 @@ export function CatalogDetailPanel({
             key: "detail",
             label: t("common.detail"),
           },
-          {
-            disabled: previewDisabled || !hasCatalogResourceOperation(record, "query_data"),
+        ];
+        if (hasCatalogResourceOperation(record, "query_data")) {
+          moreItems.push({
+            disabled: previewDisabled,
             key: "preview",
-            label: queryBlockReason ? (
+            label: previewDisabled ? (
               <Tooltip
-                title={t(
-                  queryBlockReason === "missing"
-                    ? "dataCatalog.actions.previewMissingHint"
-                    : queryBlockReason === "disabled"
-                      ? "dataCatalog.actions.previewDisabledHint"
-                      : queryBlockReason === "stale"
-                        ? "dataCatalog.actions.previewStaleHint"
-                        : "dataCatalog.actions.previewMetadataUnavailableHint",
-                )}
+                title={blockedByDisabledCatalog
+                  ? t("dataCatalog.gate.catalogDisabledShort")
+                  : t(
+                    queryBlockReason === "missing"
+                      ? "dataCatalog.actions.previewMissingHint"
+                      : queryBlockReason === "disabled"
+                        ? "dataCatalog.actions.previewDisabledHint"
+                        : queryBlockReason === "stale"
+                          ? "dataCatalog.actions.previewStaleHint"
+                          : "dataCatalog.actions.previewMetadataUnavailableHint",
+                  )}
               >
                 <span>{previewLabel}</span>
               </Tooltip>
             ) : (
               previewLabel
             ),
-          },
-        ];
+          });
+        }
         if (canManageResourceTasks) {
           moreItems.push({
             disabled: indexDisabled,

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CopyOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
+import { CopyOutlined } from "@ant-design/icons";
 import { Alert, Button, Checkbox, Modal, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -245,10 +245,11 @@ export function ResourcePreviewPanel({
 
   if (disabled) {
     return (
-      <div className={styles.gatePanel}>
-        <ExclamationCircleOutlined />
-        <span>{disabledMessage ?? t("dataCatalog.gate.catalogDisabledShort")}</span>
-      </div>
+      <Alert
+        message={disabledMessage ?? t("dataCatalog.gate.catalogDisabledShort")}
+        showIcon
+        type="warning"
+      />
     );
   }
 
@@ -290,7 +291,7 @@ export function ResourcePreviewPanel({
         description={t("dataCatalog.preview.noQueryPermissionDescription")}
         message={t("dataCatalog.preview.noQueryPermission")}
         showIcon
-        type="info"
+        type="warning"
       />
     );
   }
@@ -364,7 +365,7 @@ export function ResourcePreviewPanel({
           description={t("dataCatalog.preview.noQueryPermissionDescription")}
           message={t("dataCatalog.preview.noQueryPermission")}
           showIcon
-          type="info"
+          type="warning"
         />
       ) : error ? (
         <Alert message={error} showIcon type="error" />

@@ -216,6 +216,31 @@ describe("ResourceWorkspaceScene", () => {
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
 
+  it("keeps semantic understanding reachable without task_manage", async () => {
+    getCatalogResourceMock.mockResolvedValue(staleResource);
+    getCatalogMock.mockResolvedValue({
+      id: "catalog-1",
+      internal: false,
+      name: "Catalog",
+      operations: ["view_detail"],
+    });
+    const onTabChange = vi.fn();
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={onTabChange}
+        resourceId={staleResource.id}
+        tab="semantic-understanding"
+      />,
+    );
+
+    expect(await screen.findByTestId("semantic-panel")).toBeTruthy();
+    expect(onTabChange).not.toHaveBeenCalledWith("detail");
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
   it("does not use global catalog grants for management actions on the current catalog", async () => {
     currentPermissions.value = [
       "catalog:resource_manage",

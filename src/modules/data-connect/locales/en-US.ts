@@ -10,6 +10,8 @@ export const dataConnectEnUS = {
     title: "Data Connection",
     description:
       "Manage connector instances provided by the Vega backend within the BKN platform console.",
+    permissionRequired:
+      "Your account does not have the required permission. Contact an administrator to request access.",
     createTitle: "Create Data Connection",
     editTitle: "Edit Data Connection",
     createDescription:

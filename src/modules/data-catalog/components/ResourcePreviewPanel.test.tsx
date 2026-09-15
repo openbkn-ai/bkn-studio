@@ -60,6 +60,22 @@ describe("ResourcePreviewPanel", () => {
     vi.clearAllMocks();
   });
 
+  it("uses the shared warning alert for a permission-disabled preview", () => {
+    render(
+      <ResourcePreviewPanel
+        active
+        disabled
+        disabledMessage="dataCatalog.permissionRequired"
+        resource={resource}
+      />,
+    );
+
+    expect(screen.getByText("dataCatalog.permissionRequired").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
+    expect(previewCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
   it("does not request preview data for a non-table resource with empty schema and no discover status", () => {
     render(
       <ResourcePreviewPanel
@@ -510,7 +526,9 @@ describe("ResourcePreviewPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("dataCatalog.preview.noQueryPermission")).toBeTruthy();
+      expect(screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert")).toHaveClass(
+        "ant-alert-warning",
+      );
     });
   });
 
@@ -527,7 +545,9 @@ describe("ResourcePreviewPanel", () => {
       />,
     );
 
-    expect(screen.getByText("dataCatalog.preview.noQueryPermission")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert")).toHaveClass(
+      "ant-alert-warning",
+    );
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
 

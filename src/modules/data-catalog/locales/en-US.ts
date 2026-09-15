@@ -9,6 +9,7 @@ export const dataCatalogEnUS = {
   dataCatalog: {
     title: "Data Catalog",
     description: "Browse and govern data resources. Filter by connection to inspect tables, views, and index status.",
+    permissionRequired: "Your account does not have the required permission. Contact an administrator to request access.",
     catalogDetailTitle: "Resources",
     resourceDetailTitle: "Resource Detail",
     indexWorkspace: {
