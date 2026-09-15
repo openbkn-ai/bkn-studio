@@ -69,7 +69,8 @@ vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => 
   useKnowledgeNetworkCanOperate: () => mocks.networkAuthorized,
 }));
 
-vi.mock("@/modules/knowledge-network/services/object-type.service", () => ({
+vi.mock("@/modules/knowledge-network/services/object-type.service", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/modules/knowledge-network/services/object-type.service")>()),
   getKnowledgeNetworkObjectTypeDetail: mocks.getDetail,
   updateKnowledgeNetworkObjectType: vi.fn(),
 }));
