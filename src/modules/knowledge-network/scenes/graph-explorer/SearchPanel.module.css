@@ -283,7 +283,7 @@
 }
 
 .stepFailed {
-  color: #b91c1c;
+  color: var(--color-error-text);
 }
 
 .answer {
