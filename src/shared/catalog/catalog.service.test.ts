@@ -45,6 +45,20 @@ describe("catalog.service · listCatalogs", () => {
     expect(lastParams()).toMatchObject({ type: "physical" });
   });
 
+  it("allows a caller to suppress the global error toast for its list request", async () => {
+    const { listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    await listCatalogs(
+      { keyword: "", page: 1, pageSize: 10, type: "physical" },
+      { skipErrorToast: true },
+    );
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
+
   it("keeps Vega's filtered total for physical catalog pages", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 23 } });
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");

@@ -111,10 +111,45 @@ describe("BuildTaskLaunchPanel", () => {
       resourceId: resource.id,
       sort: "create_time",
       statuses: ["pending", "running", "stopping"],
-    }));
+    }, { skipErrorToast: true }));
   });
 
-  it("allows a build whose persisted index feature is keyword-only", () => {
+  it("keeps build controls disabled when active task status cannot be loaded", async () => {
+    listBuildTaskPageMock.mockRejectedValue(new Error("task status unavailable"));
+
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={resource}
+      />,
+    );
+
+    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalled());
+    expect(await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps build controls disabled while active task status is still loading", () => {
+    listBuildTaskPageMock.mockImplementation(() => new Promise(() => undefined));
+
+    render(
+      <BuildTaskLaunchPanel
+        active
+        onGoConfigure={vi.fn()}
+        onStarted={vi.fn()}
+        resource={resource}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).toBeDisabled();
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+  });
+
+  it("allows a build whose persisted index feature is keyword-only", async () => {
     const keywordOnlyResource: CatalogResource = {
       ...resource,
       schema: [
@@ -137,9 +172,9 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     expect(screen.queryByText("dataCatalog.build.needConfigFirst")).toBeNull();
-    expect(screen.getByRole("button", {
+    await waitFor(() => expect(screen.getByRole("button", {
       name: /dataCatalog\.build\.startBuild/,
-    }).hasAttribute("disabled")).toBe(false);
+    })).not.toBeDisabled());
   });
 
   it("does not treat editor defaults as persisted build features", () => {
@@ -179,6 +214,7 @@ describe("BuildTaskLaunchPanel", () => {
       />,
     );
 
+    await waitFor(() => expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).not.toBeDisabled());
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
     expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -218,6 +254,7 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.build.excludedSchemaFieldsHint")).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).not.toBeDisabled());
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
     expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({

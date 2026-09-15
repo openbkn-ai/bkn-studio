@@ -268,7 +268,7 @@ export function ResourceIndexPanel({
   );
   const gate = resourceGateOf(catalog);
   const resourceBlockReason = resourceQueryBlockReason(resource);
-  const buildActionsDisabled = !gate.ok || resourceBlockReason !== null;
+  const buildActionsDisabled = !gate.ok || resourceBlockReason !== null || taskStatusUnavailable;
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const readOnly = isResourceIndexReadOnly(catalog, canModifyResource);

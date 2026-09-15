@@ -260,6 +260,23 @@ describe("createBuildTask", () => {
       expect(config.params).not.toHaveProperty("order_by");
       expect(config.params).not.toHaveProperty("order");
     });
+
+    it("allows an active-task status lookup to suppress the global error toast", async () => {
+      getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+      const { listBuildTaskPage } = await import(
+        "@/modules/data-catalog/services/build-task.service"
+      );
+
+      await listBuildTaskPage(
+        { limit: 1, resourceId: "resource-1", statuses: ["running"] },
+        { skipErrorToast: true },
+      );
+
+      expect(getMock).toHaveBeenCalledWith(
+        "/vega-backend/v1/build-tasks",
+        expect.objectContaining({ skipErrorToast: true }),
+      );
+    });
   });
 });
 

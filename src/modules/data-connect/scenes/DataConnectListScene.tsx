@@ -8,7 +8,7 @@
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -117,7 +117,7 @@ export function DataConnectListScene({
   const { message, modal } = useAppServices();
   const danger = useDangerDelete();
   const navigate = useNavigate();
-  const { pageState, query, reset, setKeyword, setPagination } = usePageState();
+  const { pageState, query, setKeyword, setPagination } = usePageState();
   const debouncedKeyword = useDebouncedValue(pageState.keyword.trim());
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
@@ -129,6 +129,8 @@ export function DataConnectListScene({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [connectorTypesRefreshVersion, setConnectorTypesRefreshVersion] = useState(0);
+  const dataRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (defaultKeyword) {
@@ -158,40 +160,46 @@ export function DataConnectListScene({
     () => new Map(connectorTypes.map((item) => [item.type, item.name])),
     [connectorTypes],
   );
-  const loadConnectorTypes = async () => {
-    const nextTypes = await listDataConnectConnectorTypes();
-    setConnectorTypes(nextTypes);
-  };
+
+  useEffect(() => {
+    let cancelled = false;
+    void listDataConnectConnectorTypes()
+      .then((nextTypes) => {
+        if (!cancelled) setConnectorTypes(nextTypes);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [connectorTypesRefreshVersion]);
 
   const loadData = useCallback(async () => {
+    const requestId = ++dataRequestIdRef.current;
     setLoading(true);
     setLoadError(null);
 
     try {
-      const [typeResult, listResult] = await Promise.all([
-        connectorTypes.length === 0
-          ? listDataConnectConnectorTypes().catch(() => null)
-          : Promise.resolve(null),
-        listDataConnectRecords(listQuery),
-      ]);
-
-      if (typeResult) {
-        setConnectorTypes(typeResult);
+      const listResult = await listDataConnectRecords(listQuery, { skipErrorToast: true });
+      if (requestId === dataRequestIdRef.current) {
+        setItems(listResult.items);
+        setTotal(listResult.total);
       }
-
-      setItems(listResult.items);
-      setTotal(listResult.total);
     } catch (error) {
-      setItems([]);
-      setTotal(0);
-      setLoadError(extractRequestErrorMessage(error));
+      if (requestId === dataRequestIdRef.current) {
+        setItems([]);
+        setTotal(0);
+        setLoadError(extractRequestErrorMessage(error));
+      }
     } finally {
-      setLoading(false);
+      if (requestId === dataRequestIdRef.current) setLoading(false);
     }
-  }, [connectorTypes.length, listQuery]);
+  }, [listQuery]);
 
   useEffect(() => {
     void loadData();
+    return () => {
+      dataRequestIdRef.current += 1;
+    };
   }, [loadData, refreshVersion]);
 
   const openDetail = useCallback((record: DataConnectRecord) => {
@@ -477,11 +485,8 @@ export function DataConnectListScene({
               <AppButton
                 icon={<ReloadOutlined />}
                 onClick={() => {
-                  reset();
-                  setSelectedConnectorType(undefined);
-                  setSelectedEnabled(undefined);
-                  setSelectedHealthStatus(undefined);
-                  void loadConnectorTypes();
+                  setConnectorTypesRefreshVersion((version) => version + 1);
+                  setRefreshVersion((version) => version + 1);
                 }}
               >
                 {t("common.refresh")}

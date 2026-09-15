@@ -83,6 +83,40 @@ describe("discover.service · task status contract", () => {
     expect(config.params.resource_id).toBe("resource-1");
     expect(config.params).not.toHaveProperty("queue_priority");
   });
+
+  it("passes an opted-in error-toast suppression to task list requests", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listDataConnectDiscoverTasks } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    await listDataConnectDiscoverTasks(
+      { catalogId: "catalog-1", page: 1, pageSize: 10 },
+      { skipErrorToast: true },
+    );
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/discover-tasks",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
+
+  it("passes an opted-in error-toast suppression to schedule list requests", async () => {
+    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { listDataConnectDiscoverSchedules } = await import(
+      "@/modules/data-connect/services/discover.service"
+    );
+
+    await listDataConnectDiscoverSchedules(
+      { catalogId: "catalog-1", keyword: "", page: 1, pageSize: 10 },
+      { skipErrorToast: true },
+    );
+
+    expect(getMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/discover-schedules",
+      expect.objectContaining({ skipErrorToast: true }),
+    );
+  });
 });
 
 describe("discover.service · update schedule", () => {

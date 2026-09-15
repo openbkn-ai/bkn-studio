@@ -242,12 +242,10 @@ export async function getDataConnectConnectorType(type: string) {
 
 export async function listDataConnectRecords(
   query: DataConnectListQuery,
+  options?: { skipErrorToast?: boolean },
 ): Promise<DataConnectListResult> {
-  if (useMock) {
-    return listCatalogs({ ...query, type: "physical" });
-  }
-
-  return listCatalogs({ ...query, type: "physical" });
+  const catalogQuery = { ...query, type: "physical" as const };
+  return options ? listCatalogs(catalogQuery, options) : listCatalogs(catalogQuery);
 }
 
 export async function getDataConnectRecord(id: string) {

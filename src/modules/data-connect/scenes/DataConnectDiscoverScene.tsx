@@ -290,7 +290,7 @@ export function DataConnectDiscoverScene({
         keyword: debouncedKeyword,
         page: schedulePage,
         pageSize: schedulePageSize,
-      });
+      }, { skipErrorToast: true });
       if (!isCurrentRequest()) return;
       setSchedules(result.items);
       setScheduleTotal(result.total);
@@ -327,7 +327,7 @@ export function DataConnectDiscoverScene({
         strategy: taskStrategyFilter,
         triggerType:
           taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
-      });
+      }, { skipErrorToast: true });
       if (!isCurrentRequest()) return;
       setTasks(result.items);
       setTaskTotal(result.total);
@@ -886,7 +886,7 @@ export function DataConnectDiscoverScene({
             <AppButton
               icon={<ReloadOutlined />}
               onClick={() => {
-                void Promise.all([loadSchedules(), loadCatalogs()]);
+                void loadSchedules();
               }}
             >
               {t("common.refresh")}

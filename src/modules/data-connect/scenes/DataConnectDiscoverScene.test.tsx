@@ -310,6 +310,40 @@ describe("DataConnectDiscoverScene", () => {
     });
   });
 
+  it("refreshes only the current schedule list without reloading the catalog or tasks", async () => {
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "common.refresh" }));
+
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalledTimes(2));
+    expect(listSchedulesMock.mock.calls[1]?.[0]).toEqual(listSchedulesMock.mock.calls[0]?.[0]);
+    expect(getCatalogMock).toHaveBeenCalledTimes(1);
+    expect(listTasksMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("opts both discover lists out of global error toasts while keeping inline failures", async () => {
+    listSchedulesMock.mockRejectedValue(new Error("schedule list unavailable"));
+    listTasksMock.mockRejectedValue(new Error("task list unavailable"));
+
+    render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+
+    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-1" }),
+      { skipErrorToast: true },
+    ));
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-1" }),
+      { skipErrorToast: true },
+    ));
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+    expect(await screen.findByText("schedule list unavailable")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabTasks" }));
+    expect(await screen.findByText("task list unavailable")).toBeInTheDocument();
+  });
+
   it("keeps discover tabs reachable without task_manage and skips protected requests", async () => {
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
@@ -366,6 +400,7 @@ describe("DataConnectDiscoverScene", () => {
     });
     await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
       expect.objectContaining({ catalogId: "catalog-2" }),
+      { skipErrorToast: true },
     ));
 
     await act(async () => {
@@ -694,11 +729,13 @@ describe("DataConnectDiscoverScene", () => {
     const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
     await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
       expect.objectContaining({ catalogId: "catalog-1" }),
+      { skipErrorToast: true },
     ));
 
     view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
     await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
       expect.objectContaining({ catalogId: "catalog-2" }),
+      { skipErrorToast: true },
     ));
     await act(async () => {
       secondTasks.resolve({ items: [task("catalog-2", "task-new")], total: 1 });
@@ -713,5 +750,30 @@ describe("DataConnectDiscoverScene", () => {
 
     expect(screen.queryByText("task-stale")).toBeNull();
     expect(screen.getByText("task-new")).toBeTruthy();
+  });
+
+  it("does not show an older task-list error after changing catalogs", async () => {
+    const oldTasks = deferred<{ items: ReturnType<typeof task>[]; total: number }>();
+    listTasksMock.mockImplementation(({ catalogId }: { catalogId?: string }) =>
+      catalogId === "catalog-1"
+        ? oldTasks.promise
+        : Promise.resolve({ items: [task("catalog-2", "task-new")], total: 1 }),
+    );
+
+    const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
+    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({ catalogId: "catalog-1" }),
+      { skipErrorToast: true },
+    ));
+
+    view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
+    expect(await screen.findByText("task-new")).toBeInTheDocument();
+
+    await act(async () => {
+      oldTasks.reject(new Error("outdated task request failed"));
+      await oldTasks.promise.catch(() => undefined);
+    });
+    expect(screen.queryByText("outdated task request failed")).toBeNull();
+    expect(screen.getByText("task-new")).toBeInTheDocument();
   });
 });

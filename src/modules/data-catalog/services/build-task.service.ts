@@ -312,6 +312,7 @@ function sortMockTasks(
  */
 export async function listBuildTaskPage(
   query: BuildTaskPageQuery,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<BuildTaskPageResult> {
   const pageSize = query.pageSize ?? 10;
   const limit = query.limit ?? pageSize;
@@ -361,7 +362,7 @@ export async function listBuildTaskPage(
 
   const response = await http.get<ListResponse<BackendBuildTaskSummary>>(
     "/vega-backend/v1/build-tasks",
-    { params, paramsSerializer: { indexes: null } },
+    { ...options, params, paramsSerializer: { indexes: null } },
   );
   return {
     items: response.data.entries.map(mapBuildTask),

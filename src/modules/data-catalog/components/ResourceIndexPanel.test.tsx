@@ -94,8 +94,8 @@ vi.mock("@/framework/ui/common/TableSurface", () => ({ TableSurface: ({ children
 vi.mock("@/modules/data-catalog/components/BuildProgress", () => ({ BuildProgress: () => null }));
 vi.mock("@/modules/data-catalog/components/BuildTaskDetailDrawer", () => ({ BuildTaskDetailDrawer: () => null }));
 vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({
-  BuildTaskLaunchPanel: ({ onStarted }: { onStarted: () => void }) => (
-    <button onClick={onStarted} type="button">start task</button>
+  BuildTaskLaunchPanel: ({ disabled, onStarted }: { disabled?: boolean; onStarted: () => void }) => (
+    <button disabled={disabled} onClick={onStarted} type="button">start task</button>
   ),
 }));
 vi.mock("@/modules/data-catalog/components/IndexConfigFormPanel", () => ({
@@ -501,7 +501,7 @@ describe("ResourceIndexPanel", () => {
       <MemoryRouter>
         <ResourceIndexPanel
           active
-          catalog={manageableCatalog}
+          catalog={{ ...manageableCatalog, enabled: true }}
           indexView="tasks"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
@@ -633,7 +633,7 @@ describe("ResourceIndexPanel", () => {
       <MemoryRouter>
         <ResourceIndexPanel
           active
-          catalog={manageableCatalog}
+          catalog={{ ...manageableCatalog, enabled: true }}
           indexView="tasks"
           indexViewExplicit
           onIndexViewChange={vi.fn()}
@@ -647,6 +647,7 @@ describe("ResourceIndexPanel", () => {
 
     expect(screen.getByText("dataCatalog.resourceWorkspace.indexStatusUnavailable")).toBeInTheDocument();
     expect(screen.queryByText("dataCatalog.resource.effectiveActive")).toBeNull();
+    expect(screen.getByRole("button", { name: "start task" })).toBeDisabled();
   });
 
 });

@@ -442,6 +442,7 @@ function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscove
 
 export async function listDataConnectDiscoverSchedules(
   query: DataConnectDiscoverScheduleListQuery,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<DataConnectDiscoverScheduleListResult> {
   if (useMock) {
     const filtered = filterSchedules(mockSchedules, query);
@@ -456,6 +457,7 @@ export async function listDataConnectDiscoverSchedules(
   const response = await http.get<ListResponse<BackendDiscoverSchedule>>(
     "/vega-backend/v1/discover-schedules",
     {
+      ...options,
       params: {
         catalog_id: query.catalogId,
         direction: "desc",
@@ -691,6 +693,7 @@ export async function deleteDataConnectDiscoverSchedule(id: string) {
 
 export async function listDataConnectDiscoverTasks(
   query: DataConnectDiscoverTaskListQuery,
+  options: { skipErrorToast?: boolean } = {},
 ): Promise<DataConnectDiscoverTaskListResult> {
   const pageSize = query.pageSize ?? 10;
   const limit = query.limit ?? pageSize;
@@ -708,6 +711,7 @@ export async function listDataConnectDiscoverTasks(
   const response = await http.get<ListResponse<BackendDiscoverTaskSummary>>(
     "/vega-backend/v1/discover-tasks",
     {
+      ...options,
       params: {
         catalog_id: query.catalogId,
         direction: query.direction ?? "desc",

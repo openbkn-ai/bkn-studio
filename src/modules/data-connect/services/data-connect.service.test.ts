@@ -80,6 +80,23 @@ describe("data-connect.service · test connection", () => {
     });
   });
 
+  it("passes the caller's error-toast preference to the catalog list", async () => {
+    listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
+    const { listDataConnectRecords } = await import(
+      "@/modules/data-connect/services/data-connect.service"
+    );
+
+    await listDataConnectRecords(
+      { keyword: "", page: 1, pageSize: 10 },
+      { skipErrorToast: true },
+    );
+
+    expect(listCatalogsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "physical" }),
+      { skipErrorToast: true },
+    );
+  });
+
   it("passes status and health filters through to the catalog list", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
     const { listDataConnectRecords } = await import(

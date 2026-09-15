@@ -122,7 +122,10 @@ function sortMockCatalogs(catalogs: CatalogRecord[], query: CatalogListQuery) {
   });
 }
 
-export async function listCatalogs(query: CatalogListQuery): Promise<CatalogListResult> {
+export async function listCatalogs(
+  query: CatalogListQuery,
+  options: { skipErrorToast?: boolean } = {},
+): Promise<CatalogListResult> {
   if (useMock) {
     const filtered = filterCatalogs(getMockCatalogs(), query);
     const sorted = sortMockCatalogs(filtered, query);
@@ -135,6 +138,7 @@ export async function listCatalogs(query: CatalogListQuery): Promise<CatalogList
   }
 
   const response = await http.get<ListResponse<BackendCatalogSummary>>("/vega-backend/v1/catalogs", {
+    ...options,
     params: {
       connector_type: query.connectorType || undefined,
       direction: query.direction ?? "desc",

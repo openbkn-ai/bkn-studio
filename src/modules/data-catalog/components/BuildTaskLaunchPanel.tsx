@@ -90,7 +90,11 @@ export function BuildTaskLaunchPanel({
 
   const [mode, setMode] = useState<BuildMode>("batch");
   const [executeType, setExecuteType] = useState<BuildTaskExecuteType>("full");
-  const [existingActive, setExistingActive] = useState<BuildTask | null>(null);
+  const [activeTaskLookup, setActiveTaskLookup] = useState<{
+    resourceId: string;
+    status: "loading" | "ready" | "error";
+    task: BuildTask | null;
+  }>({ resourceId: resource.id, status: "loading", task: null });
   const [error, setError] = useState<BuildTaskLaunchError | null>(null);
   const [models, setModels] = useState<SmallModel[]>([]);
   const [saving, setSaving] = useState(false);
@@ -153,28 +157,44 @@ export function BuildTaskLaunchPanel({
     if (!active) {
       return;
     }
+    let current = true;
     setMode("batch");
     setExecuteType("full");
     setError(null);
+    setActiveTaskLookup({ resourceId: resource.id, status: "loading", task: null });
     void listBuildTaskPage({
       direction: "desc",
       limit: 1,
       resourceId: resource.id,
       sort: "create_time",
       statuses: ["pending", "running", "stopping"],
-    })
+    }, { skipErrorToast: true })
       .then((result) => {
-        setExistingActive(result.items[0] ?? null);
+        if (current) {
+          setActiveTaskLookup({
+            resourceId: resource.id,
+            status: "ready",
+            task: result.items[0] ?? null,
+          });
+        }
       })
       .catch(() => {
-        setExistingActive(null);
+        if (current) {
+          setActiveTaskLookup({ resourceId: resource.id, status: "error", task: null });
+        }
       });
+    return () => {
+      current = false;
+    };
   }, [active, resource.id]);
 
+  const lookupCurrent = activeTaskLookup.resourceId === resource.id;
+  const existingActive = lookupCurrent ? activeTaskLookup.task : null;
+  const taskStatusReady = lookupCurrent && activeTaskLookup.status === "ready";
   const actionsLocked = isActiveBuildTask(existingActive);
   const streamingActive =
     existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
-  const controlsDisabled = disabled || actionsLocked;
+  const controlsDisabled = disabled || !taskStatusReady || actionsLocked;
   const startDisabled =
     controlsDisabled || !hasResourceConfig || batchNeedsKeyFields ||
     invalidConfiguredKeyFields.length > 0;
@@ -202,6 +222,7 @@ export function BuildTaskLaunchPanel({
   };
 
   const startBuild = () => {
+    if (disabled || !taskStatusReady) return;
     if (invalidConfiguredKeyFields.length > 0) {
       setError({ description: t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") }) });
       return;
@@ -299,6 +320,9 @@ export function BuildTaskLaunchPanel({
       ) : null}
       {!streamingActive && actionsLocked ? (
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
+      ) : null}
+      {lookupCurrent && activeTaskLookup.status === "error" && !disabled ? (
+        <Alert message={t("dataCatalog.resourceWorkspace.taskStatusUnavailable")} showIcon type="warning" />
       ) : null}
       {hasResourceConfig && batchNeedsKeyFields ? (
         <Alert
