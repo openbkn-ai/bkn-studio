@@ -70,7 +70,6 @@ import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 
 import styles from "./DataConnectDiscoverScene.module.css";
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 type ScheduleModalState =
   | { mode: "create"; scheduleId?: undefined }
   | { mode: "edit"; scheduleId: string }
@@ -232,10 +231,6 @@ export function DataConnectDiscoverScene({
     !catalogAccessDenied,
   );
 
-  const hasActiveTasks = useMemo(
-    () => tasks.some((item) => item.status === "pending" || item.status === "running"),
-    [tasks],
-  );
   const activeTaskCount = useMemo(
     () =>
       tasks.filter((item) => item.status === "pending" || item.status === "running")
@@ -451,20 +446,6 @@ export function DataConnectDiscoverScene({
       void loadTasks();
     }
   }, [catalogAccessConfirmed, loadTasks]);
-
-  useEffect(() => {
-    if (useMock || !hasActiveTasks) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      void Promise.all([loadSchedules(), loadTasks()]);
-    }, 8000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [hasActiveTasks, loadSchedules, loadTasks]);
 
   const scheduleColumns: ColumnsType<DataConnectDiscoverSchedule> = [
     {
@@ -1014,9 +995,6 @@ export function DataConnectDiscoverScene({
               </AppButton>
             </PermissionGate>
           </div>
-          {!useMock && hasActiveTasks ? (
-            <span className={styles.inlineHint}>{t("dataConnect.discoverAutoRefreshHint")}</span>
-          ) : null}
         </div>
       </div>
       <TableSurface className={styles.panelSection}>

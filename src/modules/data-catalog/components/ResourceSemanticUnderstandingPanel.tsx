@@ -40,8 +40,6 @@ import {
   parseSemanticUnderstandingSampleRowsInput,
 } from "./semantic-understanding-task-validation";
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-
 function formatTime(value: number) {
   if (!value) return "-";
   return formatDateTimeYmdHms(value < 100_000_000_000 ? value * 1000 : value);
@@ -173,15 +171,6 @@ export function ResourceSemanticUnderstandingPanel({
     const lastPage = Math.max(1, Math.ceil(total / pageSize));
     if (page > lastPage) setPage(lastPage);
   }, [page, pageSize, total]);
-
-  useEffect(() => {
-    if (useMock || !active || !canManageTasks || !tasks.some((task) => task.status === "pending" || task.status === "running")) return;
-    const timer = window.setInterval(() => {
-      void loadPage(page, pageSize);
-      void loadSummary();
-    }, 10_000);
-    return () => window.clearInterval(timer);
-  }, [active, canManageTasks, loadPage, loadSummary, page, pageSize, tasks]);
 
   const summary = summaryTask;
   const summaryPresentation =

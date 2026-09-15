@@ -32,7 +32,7 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   listBuildTaskPage: listBuildTaskPageMock,
 }));
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
-  subscribeMockDb: () => () => {},
+  subscribeMockDb: () => () => { },
 }));
 vi.mock("@/modules/data-catalog/hooks/use-build-task-actions", () => ({
   useBuildTaskActions: () => ({ pauseOrResume: vi.fn(), remove: vi.fn(), retry: vi.fn() }),
@@ -46,6 +46,27 @@ function deferred<T>() {
   const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
   return { promise, resolve, reject };
 }
+
+const runningTask = {
+  createTime: 1,
+  embeddingFields: [],
+  embeddingModel: "",
+  error: null,
+  finishTime: null,
+  fulltextAnalyzer: "",
+  fulltextFields: [],
+  id: "running-task",
+  incrementalFields: [],
+  lastProgressTime: null,
+  mode: "batch",
+  modelDimensions: 0,
+  primaryKeyFields: [],
+  resourceId: "resource-1",
+  startTime: 1,
+  status: "running",
+  syncedCount: 0,
+  totalCount: 1,
+};
 
 describe("IndexBuildListScene", () => {
   afterEach(() => {
@@ -80,42 +101,23 @@ describe("IndexBuildListScene", () => {
     );
     await act(async () => {
       older.reject(new Error("outdated failure"));
-      await older.promise.catch(() => {});
+      await older.promise.catch(() => { });
     });
 
     await waitFor(() => expect(screen.queryByText("outdated failure")).toBeNull());
     expect(screen.getByText("dataCatalog.task.empty")).toBeInTheDocument();
   });
 
-  it("suppresses the global toast for failed background polls", async () => {
+  it("does not schedule automatic refresh for a running task", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "false");
-    let poll!: () => void;
-    const nativeSetInterval = window.setInterval.bind(window);
-    vi.spyOn(window, "setInterval").mockImplementation((handler) => {
-      poll = () => handler();
-      return nativeSetInterval(() => {}, 10_000) as unknown as NodeJS.Timeout;
-    });
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
     const { IndexBuildListScene: LiveScene } = await import("./IndexBuildListScene");
-    listBuildTaskPageMock.mockResolvedValueOnce({
-      items: [{
-        createTime: 1, embeddingFields: [], embeddingModel: "", error: null,
-        finishTime: null, fulltextAnalyzer: "", fulltextFields: [], id: "running-task",
-        incrementalFields: [], lastProgressTime: null, mode: "batch", modelDimensions: 0,
-        primaryKeyFields: [], resourceId: "resource-1", startTime: 1, status: "running",
-        syncedCount: 0, totalCount: 1,
-      }],
-      total: 1,
-    }).mockRejectedValueOnce(new Error("poll failed"));
+    listBuildTaskPageMock.mockResolvedValue({ items: [runningTask], total: 1 });
     render(<MemoryRouter><LiveScene /></MemoryRouter>);
 
-    await waitFor(() => expect(poll).toBeTypeOf("function"));
-    await act(async () => { poll(); await Promise.resolve(); });
-
-    expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(
-      expect.any(Object),
-      { skipErrorToast: true },
-    );
-    expect(screen.queryByText("poll failed")).toBeNull();
+    expect(await screen.findByText("running-task")).toBeInTheDocument();
+    expect(setIntervalSpy).not.toHaveBeenCalledWith(expect.any(Function), 10_000);
+    expect(listBuildTaskPageMock).toHaveBeenCalledTimes(1);
   });
 });

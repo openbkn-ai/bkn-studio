@@ -62,7 +62,6 @@ const STATUS_OPTIONS: BuildTaskStatus[] = [
   "failed",
   "cancelled",
 ];
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 function EllipsisText({ text, title }: { text: string; title?: string }) {
   return (
@@ -93,7 +92,6 @@ export function IndexBuildListScene() {
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const taskRequestIdRef = useRef(0);
-  const foregroundLoadingRef = useRef(false);
   const canManageResourceTasks = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "catalog:task_manage",
@@ -137,7 +135,6 @@ export function IndexBuildListScene() {
 
   const loadTasks = useCallback(async () => {
     const requestId = ++taskRequestIdRef.current;
-    foregroundLoadingRef.current = true;
     setLoading(true);
     setLoadError(null);
     try {
@@ -152,24 +149,8 @@ export function IndexBuildListScene() {
       }
     } finally {
       if (requestId === taskRequestIdRef.current) {
-        foregroundLoadingRef.current = false;
         setLoading(false);
       }
-    }
-  }, [taskQuery]);
-
-  // Poll only tasks on the current page to prevent request volume growing with resource count.
-  const refreshTasksSilently = useCallback(async () => {
-    if (foregroundLoadingRef.current) return;
-    const requestId = ++taskRequestIdRef.current;
-    try {
-      const result = await listBuildTaskPage(taskQuery, { skipErrorToast: true });
-      if (requestId === taskRequestIdRef.current) {
-        setTasks(result.items);
-        setTotal(result.total);
-      }
-    } catch {
-      // Retain existing data when polling fails and wait for the next cycle.
     }
   }, [taskQuery]);
 
@@ -179,21 +160,6 @@ export function IndexBuildListScene() {
   }, [loadTasks]);
 
   useEffect(() => subscribeMockDb(() => void loadTasks()), [loadTasks]);
-
-  const hasActive = useMemo(() => tasks.some(isActiveBuildTask), [tasks]);
-
-  useEffect(() => {
-    if (useMock || !hasActive) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      if (document.hidden) {
-        return;
-      }
-      void refreshTasksSilently();
-    }, 10_000);
-    return () => window.clearInterval(timer);
-  }, [hasActive, refreshTasksSilently]);
 
   const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
     useBuildTaskActions(loadTasks);

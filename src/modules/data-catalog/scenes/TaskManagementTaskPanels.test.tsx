@@ -7,7 +7,7 @@
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   listCatalogsMock,
@@ -60,7 +60,24 @@ import {
   SemanticUnderstandingTaskListPanel,
 } from "./TaskManagementTaskPanels";
 
+function runningTask(kind: "discover" | "semantic") {
+  return kind === "discover" ? {
+    catalogId: "catalog-1", createTime: 1, creatorName: "User", id: "running-task",
+    progress: 10, queuePriority: 20, status: "running", strategy: "full",
+    triggerType: "manual",
+  } : {
+    agentId: "agent-1", applied: false, applyMode: "dry_run", catalogId: "catalog-1",
+    confidence: 0, confidenceThreshold: 0.8, createTime: 1,
+    creator: { id: "user-1", type: "user" }, id: "running-task", scope: "catalog",
+    status: "running",
+  };
+}
+
 describe("TaskManagementTaskPanels", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
@@ -135,5 +152,24 @@ describe("TaskManagementTaskPanels", () => {
     });
 
     await waitFor(() => expect(screen.queryByText("outdated failure")).toBeNull());
+  });
+
+  it.each(["discover", "semantic"] as const)("does not schedule automatic refresh for a running %s task", async (kind) => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    const { DiscoverTaskListPanel: LiveDiscover, SemanticUnderstandingTaskListPanel: LiveSemantic } = await import(
+      "./TaskManagementTaskPanels"
+    );
+    const listMock = kind === "discover"
+      ? listDataConnectDiscoverTasksMock
+      : listSemanticUnderstandingTasksMock;
+    listMock.mockResolvedValue({ items: [runningTask(kind)], total: 1 });
+    const Panel = kind === "discover" ? LiveDiscover : LiveSemantic;
+    render(<MemoryRouter><Panel /></MemoryRouter>);
+
+    expect(await screen.findByText("running-task")).toBeInTheDocument();
+    expect(setIntervalSpy).not.toHaveBeenCalledWith(expect.any(Function), 10_000);
+    expect(listMock).toHaveBeenCalledTimes(1);
   });
 });

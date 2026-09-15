@@ -45,8 +45,6 @@ import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./TaskManagementTaskPanels.module.css";
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-
 type SemanticTaskStatus = SemanticUnderstandingTaskSummary["status"];
 type SemanticTask = SemanticUnderstandingTaskSummary;
 type SemanticTaskFilters = SemanticUnderstandingTaskListFilters;
@@ -148,9 +146,13 @@ export function DiscoverTaskListPanel() {
         setTotal(result.total);
       }
     } catch (loadError) {
-      if (requestId === taskRequestIdRef.current) setError(extractRequestErrorMessage(loadError));
+      if (requestId === taskRequestIdRef.current) {
+        setError(extractRequestErrorMessage(loadError));
+      }
     } finally {
-      if (requestId === taskRequestIdRef.current) setLoading(false);
+      if (requestId === taskRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [direction, page, pageSize, sort, statuses, strategy, triggerType]);
 
@@ -168,13 +170,6 @@ export function DiscoverTaskListPanel() {
       .then((result) => setSchedules(result.items))
       .catch(() => setSchedules([]));
   }, []);
-  const active = tasks.some((item) => item.status === "pending" || item.status === "running");
-  useEffect(() => {
-    if (useMock || !active) return;
-    const timer = window.setInterval(() => !document.hidden && void load(), 10_000);
-    return () => window.clearInterval(timer);
-  }, [active, load]);
-
   const batchDeleteTargets = tasks.filter(
     (task) =>
       selectedKeys.includes(task.id) &&
@@ -364,17 +359,19 @@ export function SemanticUnderstandingTaskListPanel() {
       const result = await listSemanticTasks(page, pageSize, { scope, statuses: statuses.length === 0 ? undefined : statuses, applyMode, applied, sort, direction });
       if (requestId === taskRequestIdRef.current) { setTasks(result.items); setTotal(result.total); }
     } catch (loadError) {
-      if (requestId === taskRequestIdRef.current) setError(extractRequestErrorMessage(loadError));
+      if (requestId === taskRequestIdRef.current) {
+        setError(extractRequestErrorMessage(loadError));
+      }
     } finally {
-      if (requestId === taskRequestIdRef.current) setLoading(false);
+      if (requestId === taskRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [applied, applyMode, direction, page, pageSize, scope, sort, statuses]);
   useEffect(() => {
     void load();
     return () => { taskRequestIdRef.current += 1; };
   }, [load]);
-  const active = tasks.some((item) => item.status === "pending" || item.status === "running");
-  useEffect(() => { if (useMock || !active) return; const timer = window.setInterval(() => !document.hidden && void load(), 10_000); return () => window.clearInterval(timer); }, [active, load]);
   const batchDeleteTargets = tasks.filter(
     (task) =>
       selectedKeys.includes(task.id) &&

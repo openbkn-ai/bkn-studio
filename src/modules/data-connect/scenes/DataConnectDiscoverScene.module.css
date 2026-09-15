@@ -70,12 +70,6 @@
   font-size: 13px;
 }
 
-.inlineHint {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
 .filterSelectWide {
   width: 200px;
 }

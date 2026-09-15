@@ -127,7 +127,6 @@ export const dataConnectZhCN = {
     discoverDescription: "管理数据连接的定时探查计划，并查看最近的探查任务执行情况。",
     discoverToolbarHint:
       "探查计划对应 Vega 后端 discover-schedules，近期探查记录对应 discover-tasks。",
-    discoverAutoRefreshHint: "有执行中的任务，列表将自动刷新。",
     discoverCurrentConnection: "当前连接",
     discoverScheduleEnableConfirmTitle: "启用探查计划",
     discoverScheduleEnableConfirmDescription: '确认启用探查计划“{{name}}”吗？',
@@ -188,7 +187,6 @@ export const dataConnectZhCN = {
     discoverTaskTableTitle: "近期探查任务",
     discoverSelectedSchedule: '当前已按计划“{{name}}”进行筛选',
     discoverClearSelection: "清除筛选",
-    discoverTaskAutoRefreshing: "当前任务区正在自动刷新。",
     discoverScheduleEmpty: "暂无探查计划",
     discoverScheduleEmptyDescription:
       "先为数据连接创建探查计划，后续再在这里查看探查记录。",

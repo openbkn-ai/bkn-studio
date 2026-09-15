@@ -38,7 +38,6 @@ import {
 
 import styles from "./DataCatalogScene.module.css";
 
-const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const CATALOG_PAGE_SIZE = 100;
 
 const CatalogDetailPanel = lazy(
@@ -422,23 +421,6 @@ export function DataCatalogScene({
     () => discover.some((discover) => discover.status === "running"),
     [discover],
   );
-
-  const pollActive = useCallback(() => {
-    void loadDiscovers();
-  }, [loadDiscovers]);
-
-  useEffect(() => {
-    if (useMock || !hasActiveWork) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      if (document.hidden) {
-        return;
-      }
-      void pollActive();
-    }, 10_000);
-    return () => window.clearInterval(timer);
-  }, [hasActiveWork, pollActive]);
 
   const prevActiveRef = useRef(hasActiveWork);
   useEffect(() => {
