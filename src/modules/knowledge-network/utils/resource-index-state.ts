@@ -7,18 +7,12 @@
 
 import type { TFunction } from "i18next";
 
-import type { ResourceLocalIndexStatus } from "@/modules/data-catalog/types/data-catalog";
-
-/** Resource local_index_status is the authoritative query-availability signal. */
-export function hasServingResourceIndex(status: ResourceLocalIndexStatus | undefined) {
-  return status === "available";
-}
-
-export function formatResourceIndexStateLabel(
-  status: ResourceLocalIndexStatus | undefined,
-  t: TFunction,
-) {
-  return status === "available"
-    ? t("dataCatalog.indexState.built")
-    : t("dataCatalog.indexState.none");
+/**
+ * Knowledge-network pages deliberately rely on their own authorized `hasIndex` summary.
+ * They must not query data-catalog resource details from the browser merely to refine this label.
+ */
+export function formatKnowledgeNetworkObjectTypeIndexStateLabel(hasIndex: boolean, t: TFunction) {
+  return hasIndex
+    ? t("knowledgeNetwork.previewIndexed")
+    : t("knowledgeNetwork.previewNotIndexed");
 }

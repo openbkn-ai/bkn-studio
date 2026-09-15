@@ -19,8 +19,9 @@ import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { OntologyGraphCard } from "@/modules/knowledge-network/components/preview/OntologyGraphCard";
-import { useResourceIndexStates } from "@/modules/knowledge-network/hooks/useResourceIndexStates";
-import { formatResourceIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
+import {
+  formatKnowledgeNetworkObjectTypeIndexStateLabel,
+} from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   getKnowledgeNetworkObjectTypeDetail,
   listKnowledgeNetworkObjectTypes,
@@ -166,17 +167,6 @@ export function OverviewOntologyBlock({
     [objectTypes],
   );
 
-  const boundResourceIds = useMemo(
-    () => objectTypes.map((item) => item.dataSource?.id),
-    [objectTypes],
-  );
-  const {
-    localIndexStatusByResourceId,
-    canLoadResourceIndexStates,
-    loading: resourceIndexLoading,
-  } =
-    useResourceIndexStates(boundResourceIds);
-
   const renderResourceIndexState = useCallback(
     (entity: KnowledgeNetworkObjectTypeRecord) => {
       const resourceId = entity.dataSource?.id;
@@ -184,17 +174,11 @@ export function OverviewOntologyBlock({
         return <span className={styles.muted}>—</span>;
       }
 
-      const label = canLoadResourceIndexStates
-        ? resourceIndexLoading
-          ? t("knowledgeNetwork.objectTypeResourceIndexLoading")
-          : formatResourceIndexStateLabel(localIndexStatusByResourceId.get(resourceId), t)
-        : entity.hasIndex
-          ? t("knowledgeNetwork.previewIndexed")
-          : t("knowledgeNetwork.previewNotIndexed");
+      const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(entity.hasIndex, t);
 
       return <span>{label}</span>;
     },
-    [canLoadResourceIndexStates, localIndexStatusByResourceId, resourceIndexLoading, t],
+    [t],
   );
 
   const entityColumns: ColumnsType<KnowledgeNetworkObjectTypeRecord> = useMemo(
@@ -337,13 +321,9 @@ export function OverviewOntologyBlock({
     <div className={styles.block}>
       <Spin spinning={previewLoading}>
         <OntologyGraphCard
-          localIndexStatusByResourceId={
-            canLoadResourceIndexStates ? localIndexStatusByResourceId : undefined
-          }
           networkId={networkId}
           objectTypes={objectTypes}
           relationTypes={relationTypes}
-          resourceIndexLoading={canLoadResourceIndexStates && resourceIndexLoading}
         />
       </Spin>
 
