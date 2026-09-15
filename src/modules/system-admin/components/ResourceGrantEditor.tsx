@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { listAuthorizableObjectsPage } from "@/modules/system-admin/services/authz.service";
 import {
@@ -75,6 +76,7 @@ export function ResourceGrantEditor({
   const [addingGrantKey, setAddingGrantKey] = useState<string | null>(null);
   const [objects, setObjects] = useState<AuthorizableObject[]>([]);
   const [objectKeyword, setObjectKeyword] = useState("");
+  const debouncedObjectKeyword = useDebouncedValue(objectKeyword.trim(), 300);
   const [objectLoading, setObjectLoading] = useState(false);
   const [objectLoadError, setObjectLoadError] = useState<string | null>(null);
   const [failedObjectRequest, setFailedObjectRequest] = useState<{
@@ -126,7 +128,7 @@ export function ResourceGrantEditor({
     setFailedObjectRequest(null);
     try {
       const result = await listAuthorizableObjectsPage(draftType, {
-        keyword: objectKeyword,
+        keyword: debouncedObjectKeyword,
         page,
       });
       if (request !== objectRequestRef.current) {
@@ -148,7 +150,7 @@ export function ResourceGrantEditor({
         setObjectLoading(false);
       }
     }
-  }, [draftType, effectiveWholeType, objectKeyword, supportsSpecificResource]);
+  }, [debouncedObjectKeyword, draftType, effectiveWholeType, supportsSpecificResource]);
 
   useEffect(() => {
     if (!supportsSpecificResource || effectiveWholeType) {
