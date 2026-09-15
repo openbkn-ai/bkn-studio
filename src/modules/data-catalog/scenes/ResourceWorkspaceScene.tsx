@@ -193,6 +193,7 @@ export function ResourceWorkspaceScene({
   const gate = catalogVisibilityRestricted ? { ok: true } : resourceGateOf(catalog);
   const canManageCatalogTasks = hasCatalogOperation(catalog, "task_manage");
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
+  const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const canQueryResource = hasCatalogResourceOperation(resource, "query_data");
   const canAuthorizeResource = Boolean(!catalog?.internal && canAuthorizeGrants);
   // Internal catalogs do not support semantic-understanding tasks. Missing task permission is
@@ -204,6 +205,10 @@ export function ResourceWorkspaceScene({
   const resourceMissing = queryBlockReason === "missing";
   const resourceStale = queryBlockReason === "stale";
   const metadataUnavailable = queryBlockReason === "metadata_unavailable";
+
+  useEffect(() => {
+    if (!canViewResourceDetail) setDetailEditing(false);
+  }, [canViewResourceDetail]);
 
   useEffect(() => {
     if (hideSemanticUnderstanding && tab === "semantic-understanding") {
@@ -483,15 +488,19 @@ export function ResourceWorkspaceScene({
               label: t("dataCatalog.resourceWorkspace.tabDetail"),
               children: (
                 <div className={styles.tabPanel}>
-                  <ResourceDetailPanel
-                    active={tab === "detail"}
-                    canEdit={canModifyResource}
-                    catalog={catalog}
-                    onEditingChange={setDetailEditing}
-                    onResourceRefreshed={handleResourceRefreshed}
-                    onUpdated={loadAll}
-                    resource={resource}
-                  />
+                  {canViewResourceDetail ? (
+                    <ResourceDetailPanel
+                      active={tab === "detail"}
+                      canEdit={canModifyResource}
+                      catalog={catalog}
+                      onEditingChange={setDetailEditing}
+                      onResourceRefreshed={handleResourceRefreshed}
+                      onUpdated={loadAll}
+                      resource={resource}
+                    />
+                  ) : (
+                    <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
+                  )}
                 </div>
               ),
             },

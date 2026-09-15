@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorDetails, extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
@@ -53,6 +53,7 @@ import styles from "./shared.module.css";
 
 export type IndexConfigFormPanelProps = {
   active: boolean;
+  canViewTasks?: boolean;
   hideBuildControls?: boolean;
   onSaved?: () => void;
   readOnly?: boolean;
@@ -127,6 +128,7 @@ function coerceFeatureDraftRecord(
 
 export function IndexConfigFormPanel({
   active,
+  canViewTasks = true,
   hideBuildControls = false,
   onSaved,
   readOnly = false,
@@ -293,21 +295,6 @@ export function IndexConfigFormPanel({
         setSchemaLoading(false);
       }
 
-      if (!readOnly) {
-        try {
-          const result = await listBuildTaskPage({
-            direction: "desc",
-            limit: 1,
-            resourceId: resource.id,
-            sort: "create_time",
-            statuses: ["pending", "running", "stopping"],
-          });
-          setActiveTask(result.items[0] ?? null);
-        } catch {
-          setActiveTask(null);
-        }
-      }
-
       try {
         setModelsLoadState("loading");
         setModelsLoadError(null);
@@ -333,6 +320,30 @@ export function IndexConfigFormPanel({
       }
     })();
   }, [active, readOnly, resource]);
+
+  useEffect(() => {
+    if (!active || readOnly || !canViewTasks) {
+      setActiveTask(null);
+      return;
+    }
+
+    let current = true;
+    void listBuildTaskPage({
+      direction: "desc",
+      limit: 1,
+      resourceId: resource.id,
+      sort: "create_time",
+      statuses: ["pending", "running", "stopping"],
+    }).then((result) => {
+      if (current) setActiveTask(result.items[0] ?? null);
+    }).catch(() => {
+      if (current) setActiveTask(null);
+    });
+
+    return () => {
+      current = false;
+    };
+  }, [active, canViewTasks, readOnly, resource.id]);
 
   useEffect(() => {
     if (!active) {
@@ -702,7 +713,13 @@ export function IndexConfigFormPanel({
       onSaved?.();
     } catch (persistError) {
       if (extractRequestStatus(persistError) === 409) {
-        setError(t("dataCatalog.build.configConflict"));
+        const code = extractRequestErrorDetails(persistError).code;
+        setError(t(
+          code === "VegaBackend.BuildTask.Exist"
+          || code === "VegaBackend.BuildTask.HasRunningExecution"
+            ? "dataCatalog.build.activeTaskLocked"
+            : "dataCatalog.build.configConflict",
+        ));
       } else {
         setError(extractRequestErrorMessage(persistError));
       }

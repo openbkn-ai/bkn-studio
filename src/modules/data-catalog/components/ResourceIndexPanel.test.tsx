@@ -99,7 +99,7 @@ vi.mock("@/modules/data-catalog/components/BuildTaskLaunchPanel", () => ({
   ),
 }));
 vi.mock("@/modules/data-catalog/components/IndexConfigFormPanel", () => ({
-  IndexConfigFormPanel: (props: { readOnly: boolean }) => {
+  IndexConfigFormPanel: (props: { canViewTasks?: boolean; readOnly: boolean }) => {
     indexConfigFormPanelMock(props);
     return (
       <output data-testid="index-config-read-only">
@@ -239,6 +239,29 @@ describe("ResourceIndexPanel", () => {
       hideBuildControls: false,
       readOnly: false,
     }));
+  });
+
+  it("keeps configuration editable without task_manage while withholding task access", () => {
+    render(
+      <MemoryRouter>
+        <ResourceIndexPanel
+          active
+          catalog={{ ...modifiableCatalog, operations: ["resource_manage", "view_detail"] }}
+          indexView="config"
+          indexViewExplicit
+          onIndexViewChange={vi.fn()}
+          onRefresh={vi.fn()}
+          resource={resource}
+          tasks={[]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(indexConfigFormPanelMock).toHaveBeenCalledWith(expect.objectContaining({
+      canViewTasks: false,
+      readOnly: false,
+    }));
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
   });
 
   it("keeps the task tab reachable without task_manage and skips task requests", () => {

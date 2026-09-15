@@ -544,6 +544,7 @@ export function ResourceIndexPanel({
       <div className={panelStyles.configureCard}>
         <IndexConfigFormPanel
           active={active && indexView === "config"}
+          canViewTasks={canViewTasks}
           hideBuildControls={readOnly}
           onSaved={() => {
             void onRefresh();

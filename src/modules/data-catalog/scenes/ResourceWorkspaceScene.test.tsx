@@ -22,7 +22,7 @@ const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 
 vi.mock("antd", () => ({
-  Alert: ({ message }: { message: React.ReactNode }) => <div>{message}</div>,
+  Alert: ({ message, type }: { message: React.ReactNode; type?: string }) => <div data-alert-type={type}>{message}</div>,
   Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
   Tabs: ({ activeKey, items }: { activeKey: string; items: Array<{ children: React.ReactNode; key: string }> }) => (
@@ -191,6 +191,26 @@ describe("ResourceWorkspaceScene", () => {
     expect(screen.queryByText("Forbidden")).toBeNull();
     expect(getCatalogMock).toHaveBeenCalledWith(staleResource.catalogId, { skipErrorToast: true });
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the detail tab reachable but hides resource details without view_detail", async () => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, operations: ["query_data"] });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    expect(await screen.findByText("dataCatalog.permissionRequired")).toHaveAttribute(
+      "data-alert-type",
+      "warning",
+    );
+    expect(screen.queryByTestId("detail-schema-name")).toBeNull();
   });
 
   it("does not load build tasks without task_manage on the parent catalog", async () => {
