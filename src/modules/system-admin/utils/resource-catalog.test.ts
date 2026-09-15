@@ -77,6 +77,9 @@ describe("resource-catalog", () => {
       "object_type",
       "relation_type",
       "risk_type",
+      "safe_admin",
+      "small_model",
+      "large_model",
       "stream_data_pipeline",
     ]) {
       expect(roleGrantTypes).not.toContain(type);

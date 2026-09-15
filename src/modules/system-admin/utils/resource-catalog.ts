@@ -193,6 +193,9 @@ const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
   "object_type",
   "relation_type",
   "risk_type",
+  "safe_admin",
+  "small_model",
+  "large_model",
   "stream_data_pipeline",
 ]);
 
