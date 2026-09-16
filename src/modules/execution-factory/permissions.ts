@@ -45,3 +45,14 @@ export function canAccessExecutionUnitManagement(
     currentPermissions.includes(permission),
   );
 }
+
+export type ToolboxView = "openapi" | "function";
+
+/** API toolboxes and Function sets are separate resources and must not share a list tab. */
+export function filterAccessibleToolboxViews(currentPermissions: readonly string[]): ToolboxView[] {
+  return ([
+    ["openapi", "execution-factory:toolbox:view"],
+    ["function", "execution-factory:function:view"],
+  ] as const).filter(([, permission]) => currentPermissions.includes(permission))
+    .map(([view]) => view);
+}

@@ -248,3 +248,29 @@ describe("ExecutionUnitListScene lifecycle confirmation labels (#491)", () => {
     });
   });
 });
+
+describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
+  beforeEach(() => {
+    services.runtimeConfig.currentUser.permissions = ["execution-factory:function:view"];
+    window.localStorage.clear();
+    api.listToolboxes.mockResolvedValue({ items: [], total: 0 });
+    api.listOperatorCategories.mockResolvedValue([]);
+  });
+
+  it("redirects a Function-only user away from the API view and hides the API tab", async () => {
+    renderScene("?activeTab=toolbox&toolboxView=openapi");
+
+    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeNull();
+    await waitFor(() => expect(api.listToolboxes.mock.calls).toContainEqual([expect.objectContaining({ metadataType: "function" })]));
+  });
+
+  it("shows only the API view for an API-only user", async () => {
+    services.runtimeConfig.currentUser.permissions = ["execution-factory:toolbox:view"];
+    renderScene("?activeTab=toolbox&toolboxView=function");
+
+    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") })).toBeNull();
+    await waitFor(() => expect(api.listToolboxes.mock.calls).toContainEqual([expect.objectContaining({ metadataType: "openapi" })]));
+  });
+});

@@ -124,6 +124,14 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.queryByText(labels.api)).toBeNull();
   });
 
+  it("shows cross-tab create when the current tab has no create grant", async () => {
+    grant("skill", ["view"]);
+    state.runtimeConfig.currentUser.permissions.push("execution-factory:mcp:create");
+    await openMenu("skill");
+    expect(screen.getByText(labels.mcp)).toBeTruthy();
+    expect(screen.queryByText(labels.skill)).toBeNull();
+  });
+
   it.each([{ operations: [] }, { operations: ["view"] }])("hides creation and rejects auto-open without create ($operations)", ({ operations }) => {
     grant("tool_box", operations);
     const handled = vi.fn();

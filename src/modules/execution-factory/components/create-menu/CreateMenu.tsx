@@ -135,6 +135,9 @@ export function CreateMenu({
   const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems().filter(
     (item) => item.action !== "import-adp" && canCreateCapabilityMode(currentPermissions, item.action),
   ), [currentPermissions]);
+  // The Capability UX menu is intentionally cross-resource: its entries already enforce each
+  // resource's create grant, so the trigger must be visible when any entry is permitted.
+  const canShowCapabilityCreateMenu = capabilityCreateItems.length > 0;
 
   useEffect(() => {
     if (!autoOpen) {
@@ -269,25 +272,47 @@ export function CreateMenu({
 
   return (
     <>
-      <PermissionGate permissions={permission}>
-        <div className={variant === "empty" ? styles.emptyCreateRow : styles.toolbarRow}>
-          {createButton}
-          {variant === "toolbar" && importPermission ? (
-            <PermissionGate permissions={importPermission}>
-              <AppButton
-                icon={<UploadOutlined />}
-                onClick={() => {
-                  setImportActiveTab(activeTab);
-                  setImportInitialKind(undefined);
-                  setImportOpen(true);
-                }}
-              >
-                {t("executionFactory.importButton")}
-              </AppButton>
-            </PermissionGate>
-          ) : null}
-        </div>
-      </PermissionGate>
+      {showAddCapabilityWizard ? (
+        canShowCapabilityCreateMenu ? (
+          <div className={variant === "empty" ? styles.emptyCreateRow : styles.toolbarRow}>
+            {createButton}
+            {variant === "toolbar" && importPermission ? (
+              <PermissionGate permissions={importPermission}>
+                <AppButton
+                  icon={<UploadOutlined />}
+                  onClick={() => {
+                    setImportActiveTab(activeTab);
+                    setImportInitialKind(undefined);
+                    setImportOpen(true);
+                  }}
+                >
+                  {t("executionFactory.importButton")}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+          </div>
+        ) : null
+      ) : (
+        <PermissionGate permissions={permission}>
+          <div className={variant === "empty" ? styles.emptyCreateRow : styles.toolbarRow}>
+            {createButton}
+            {variant === "toolbar" && importPermission ? (
+              <PermissionGate permissions={importPermission}>
+                <AppButton
+                  icon={<UploadOutlined />}
+                  onClick={() => {
+                    setImportActiveTab(activeTab);
+                    setImportInitialKind(undefined);
+                    setImportOpen(true);
+                  }}
+                >
+                  {t("executionFactory.importButton")}
+                </AppButton>
+              </PermissionGate>
+            ) : null}
+          </div>
+        </PermissionGate>
+      )}
 
       {showAddCapabilityWizard ? (
         <AddCapabilityWizard

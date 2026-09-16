@@ -14,7 +14,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
-import { filterAccessibleExecutionUnitTabs } from "@/modules/execution-factory/permissions";
+import {
+  filterAccessibleExecutionUnitTabs,
+  filterAccessibleToolboxViews,
+  type ToolboxView,
+} from "@/modules/execution-factory/permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -131,21 +135,22 @@ function scheduleIdleTask(task: () => void, timeoutMs: number): IdleTaskHandle {
   };
 }
 
-type ToolboxView = "openapi" | "function";
-
-function resolveToolboxView(param: string | null): ToolboxView {
-  if (param === "function" || param === "openapi") {
+function resolveToolboxView(
+  param: string | null,
+  accessibleViews: readonly ToolboxView[],
+): ToolboxView {
+  if ((param === "function" || param === "openapi") && accessibleViews.includes(param)) {
     return param;
   }
 
   if (typeof window !== "undefined") {
     const stored = window.localStorage.getItem(TOOLBOX_VIEW_STORAGE_KEY);
-    if (stored === "function" || stored === "openapi") {
+    if ((stored === "function" || stored === "openapi") && accessibleViews.includes(stored)) {
       return stored;
     }
   }
 
-  return "openapi";
+  return accessibleViews[0] ?? "openapi";
 }
 
 function resolveActiveTab(
@@ -313,6 +318,10 @@ export function ExecutionUnitListScene({
       ? [...accessibleTabs, "operator" as const]
       : accessibleTabs;
   }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
+  const accessibleToolboxViews = useMemo(
+    () => filterAccessibleToolboxViews(runtimeConfig.currentUser.permissions ?? []),
+    [runtimeConfig.currentUser.permissions],
+  );
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),
   );
@@ -322,7 +331,7 @@ export function ExecutionUnitListScene({
   /** Code-function subview under toolboxes, filtered by backend metadata_type. */
   /** Toolboxes split into mutually exclusive API-toolbox and function views, matching create-menu categories. */
   const [toolboxView, setToolboxView] = useState<ToolboxView>(() =>
-    resolveToolboxView(searchParams.get("toolboxView")),
+    resolveToolboxView(searchParams.get("toolboxView"), accessibleToolboxViews),
   );
   const functionTabKey = "toolbox:function";
   const openapiTabKey = "toolbox:openapi";
@@ -419,7 +428,7 @@ export function ExecutionUnitListScene({
     const param = searchParams.get("activeTab");
     const resolved = resolveActiveTab(param, defaultTab, resolvableTabs);
     const viewParam = searchParams.get("toolboxView");
-    const resolvedView = resolveToolboxView(viewParam);
+    const resolvedView = resolveToolboxView(viewParam, accessibleToolboxViews);
 
     setActiveTab(resolved);
     if (resolved === "toolbox") {
@@ -442,7 +451,7 @@ export function ExecutionUnitListScene({
       nextParams.delete("toolboxView");
     }
     setSearchParams(nextParams, { replace: true });
-  }, [defaultTab, resolvableTabs, searchParams, setSearchParams]);
+  }, [accessibleToolboxViews, defaultTab, resolvableTabs, searchParams, setSearchParams]);
 
   /**
    * Toolboxes, MCPs, and Skills have dedicated detail pages, so cards navigate directly instead of
@@ -782,32 +791,19 @@ export function ExecutionUnitListScene({
           }
 
           // Toolboxes are two mutually exclusive server-filtered views; do not retain a combined entry.
-          return [
-            {
-              key: openapiTabKey,
-              label: (
-                <span className={styles.tabLabel}>
-                  {t("executionFactory.openapiToolboxTab")}
-                  {tabCounts.openapi === undefined ? null : (
-                    <span className={styles.tabLabelCount}>{tabCounts.openapi}</span>
-                  )}
-                </span>
-              ),
-            },
-            {
-              key: functionTabKey,
-              label: (
-                <span className={styles.tabLabel}>
-                  {t("executionFactory.functionToolboxTab")}
-                  {tabCounts.function === undefined ? null : (
-                    <span className={styles.tabLabelCount}>{tabCounts.function}</span>
-                  )}
-                </span>
-              ),
-            },
-          ];
+          return accessibleToolboxViews.map((view) => ({
+            key: view === "function" ? functionTabKey : openapiTabKey,
+            label: (
+              <span className={styles.tabLabel}>
+                {t(view === "function" ? "executionFactory.functionToolboxTab" : "executionFactory.openapiToolboxTab")}
+                {tabCounts[view] === undefined ? null : (
+                  <span className={styles.tabLabelCount}>{tabCounts[view]}</span>
+                )}
+              </span>
+            ),
+          }));
         }),
-    [activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
+    [accessibleToolboxViews, activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
   );
 
   const statusOptions = useMemo(() => {
