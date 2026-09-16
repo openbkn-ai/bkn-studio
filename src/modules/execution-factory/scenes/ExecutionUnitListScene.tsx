@@ -319,8 +319,10 @@ export function ExecutionUnitListScene({
       : accessibleTabs;
   }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
   const accessibleToolboxViews = useMemo(
-    () => filterAccessibleToolboxViews(runtimeConfig.currentUser.permissions ?? []),
-    [runtimeConfig.currentUser.permissions],
+    () => marketMode
+      ? (["openapi", "function"] as const)
+      : filterAccessibleToolboxViews(runtimeConfig.currentUser.permissions ?? []),
+    [marketMode, runtimeConfig.currentUser.permissions],
   );
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
     resolveActiveTab(searchParams.get("activeTab"), defaultTab, resolvableTabs),

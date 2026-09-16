@@ -7,7 +7,7 @@
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ModalFuncProps } from "antd";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
@@ -121,6 +121,11 @@ function renderScene(search: string) {
       />
     </MemoryRouter>,
   );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
 }
 
 /** Opens the card's action menu and picks the lifecycle item, the way a user starts the change. */
@@ -251,8 +256,10 @@ describe("ExecutionUnitListScene lifecycle confirmation labels (#491)", () => {
 
 describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     services.runtimeConfig.currentUser.permissions = ["execution-factory:function:view"];
     window.localStorage.clear();
+    api.listToolboxMarket.mockResolvedValue({ items: [], total: 0 });
     api.listToolboxes.mockResolvedValue({ items: [], total: 0 });
     api.listOperatorCategories.mockResolvedValue([]);
   });
@@ -272,5 +279,33 @@ describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
     expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeTruthy();
     expect(screen.queryByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") })).toBeNull();
     await waitFor(() => expect(api.listToolboxes.mock.calls).toContainEqual([expect.objectContaining({ metadataType: "openapi" })]));
+  });
+
+  it("keeps both toolbox views in the catalog for a catalog-only user", async () => {
+    services.runtimeConfig.currentUser.permissions = ["execution-factory:catalog:view"];
+    render(
+      <MemoryRouter initialEntries={["/execution-factory/catalog?activeTab=toolbox&toolboxView=function"]}>
+        <ExecutionUnitListScene
+          descriptionKey="executionFactory.catalogDescription"
+          marketMode
+          titleKey="executionFactory.catalogTitle"
+          toolbarHintKey="executionFactory.catalogToolbarHint"
+        />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeTruthy();
+    expect(screen.getByRole("tab", {
+      name: new RegExp(`^${i18n.t("executionFactory.functionToolboxTab")}`),
+      selected: true,
+    })).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe("/execution-factory/catalog?activeTab=toolbox&toolboxView=function");
+    await waitFor(() => expect(api.listToolboxMarket).toHaveBeenCalledWith(expect.objectContaining({
+      metadataType: "function",
+      page: 1,
+      pageSize: 20,
+    })));
+    expect(api.listToolboxes).not.toHaveBeenCalled();
   });
 });
