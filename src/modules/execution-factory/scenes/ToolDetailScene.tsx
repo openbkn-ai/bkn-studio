@@ -177,15 +177,15 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
     metadataType === "function"
       ? { inputs: functionInputs, outputs: functionOutputs }
       : undefined;
+  const editPermission = metadataType === "function"
+    ? "execution-factory:function:edit"
+    : "execution-factory:toolbox:edit";
+  const debugPermission = metadataType === "function"
+    ? "execution-factory:function:debug"
+    : "execution-factory:toolbox:debug";
 
   return (
-    <PermissionGate
-      fallback={
-        <Alert message={t("common.noPermission")} showIcon type="warning" />
-      }
-      permissions="execution-factory:tool:edit"
-    >
-      <CrudFormPage
+    <CrudFormPage
         description={t("executionFactory.toolDetailDescription")}
         onBack={handleBack}
         title={t("executionFactory.toolDetailTitle")}
@@ -193,7 +193,11 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
         {loading ? <Spin /> : null}
         {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
         {!loading && !loadError ? (
-          <div className={styles.formSurfaceWide}>
+          <PermissionGate
+            fallback={<Alert message={t("common.noPermission")} showIcon type="warning" />}
+            permissions={editPermission}
+          >
+            <div className={styles.formSurfaceWide}>
             <Form form={form} layout="vertical">
               <HttpToolLifecyclePanel
                 advancedConfig={
@@ -220,22 +224,24 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                   </>
                 }
                 debugWorkbench={
-                  <div ref={debugSectionRef}>
-                    <ToolDebugPanel
-                      boxId={boxId}
-                      functionInput={functionInput}
-                      ioSpec={ioSpec}
-                      onRunComplete={handleDebugRunComplete}
-                      record={{
-                        toolId,
-                        name: toolName ?? toolId,
-                        status: "enabled",
-                        method: endpoint?.method,
-                        path: endpoint?.path,
-                        serverUrl: endpoint?.serverUrl,
-                      }}
-                    />
-                  </div>
+                  <PermissionGate permissions={debugPermission}>
+                    <div ref={debugSectionRef}>
+                      <ToolDebugPanel
+                        boxId={boxId}
+                        functionInput={functionInput}
+                        ioSpec={ioSpec}
+                        onRunComplete={handleDebugRunComplete}
+                        record={{
+                          toolId,
+                          name: toolName ?? toolId,
+                          status: "enabled",
+                          method: endpoint?.method,
+                          path: endpoint?.path,
+                          serverUrl: endpoint?.serverUrl,
+                        }}
+                      />
+                    </div>
+                  </PermissionGate>
                 }
                 ioPreview={
                   <ToolIoPanel
@@ -264,7 +270,7 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
             </Form>
             <div className={styles.formActions}>
               <AppButton onClick={handleBack}>{t("common.cancel")}</AppButton>
-              <PermissionGate permissions="execution-factory:tool:debug">
+              <PermissionGate permissions={debugPermission}>
                 <AppButton
                   onClick={() =>
                     debugSectionRef.current?.scrollIntoView({
@@ -280,9 +286,9 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                 {t("common.save")}
               </AppButton>
             </div>
-          </div>
+            </div>
+          </PermissionGate>
         ) : null}
-      </CrudFormPage>
-    </PermissionGate>
+    </CrudFormPage>
   );
 }

@@ -57,7 +57,7 @@ const ROLE_RESOURCE_TYPE_GROUPS = [
     types: ["knowledge_network", "concept_group", "object_type", "relation_type", "action_type", "metric"],
   },
   { key: "model", types: ["small_model", "large_model"] },
-  { key: "execution", types: ["operator", "tool_box", "mcp", "skill"] },
+  { key: "execution", types: ["operator", "tool_box", "function", "mcp", "skill"] },
   { key: "system", types: ["admin-user", "admin-dept", "admin-role", "admin-authz", "admin-audit", "safe_admin"] },
 ] as const;
 

@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
@@ -100,7 +101,7 @@ export function ToolboxDetailDrawer({
   open,
 }: ToolboxDetailDrawerProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const [form] = Form.useForm<ToolboxEditInput>();
   const [record, setRecord] = useState<ToolboxRecord | null>(null);
   const [loading, setLoading] = useState(false);
@@ -109,6 +110,15 @@ export function ToolboxDetailDrawer({
   const [submitting, setSubmitting] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
   const auditUserDirectory = useAuditUserDirectory();
+  const editPermission = record?.metadataType === "function"
+    ? "execution-factory:function:edit"
+    : record?.metadataType === "openapi"
+      ? "execution-factory:toolbox:edit"
+      : "";
+  const canEditRecord = Boolean(editPermission && hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: editPermission,
+  }));
 
   const loadRecord = useCallback(async (targetBoxId: string) => {
     setLoading(true);
@@ -145,8 +155,8 @@ export function ToolboxDetailDrawer({
       return;
     }
 
-    setEditing(initialEditMode);
-  }, [boxId, initialEditMode, marketMode, open]);
+    setEditing(initialEditMode && canEditRecord);
+  }, [boxId, canEditRecord, initialEditMode, marketMode, open]);
 
   useEffect(() => {
     if (!record || !editing) {
@@ -168,7 +178,7 @@ export function ToolboxDetailDrawer({
   };
 
   const handleSave = async () => {
-    if (!record?.boxId || !record.metadataType) {
+    if (!record?.boxId || !record.metadataType || !canEditRecord) {
       return;
     }
 
@@ -329,7 +339,7 @@ export function ToolboxDetailDrawer({
               </PermissionGate>
             ) : null}
             {!record.isInternal ? (
-              <PermissionGate permissions="execution-factory:toolbox:edit">
+              <PermissionGate permissions={editPermission}>
                 <AppButton onClick={() => setEditing(true)}>
                   {t("executionFactory.cardMenu.edit")}
                 </AppButton>

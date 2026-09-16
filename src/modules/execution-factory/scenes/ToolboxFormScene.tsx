@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import type { ToolboxFormSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { CrudFormPage } from "@/framework/scaffold/CrudFormPage";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -38,12 +39,25 @@ export function ToolboxFormScene({
   onSubmitSuccess,
 }: ToolboxFormSceneProps) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [form] = Form.useForm<ToolboxMutationInput>();
+  const currentPermissions = runtimeConfig.currentUser.permissions;
+  const canCreateApi = hasPermissions({
+    currentPermissions,
+    requiredPermissions: "execution-factory:toolbox:create",
+  });
+  const canCreateFunction = hasPermissions({
+    currentPermissions,
+    requiredPermissions: "execution-factory:function:create",
+  });
+  const [createMetadataType, setCreateMetadataType] = useState<ToolboxMetadataType>(
+    canCreateApi ? "openapi" : "function",
+  );
   const [loading, setLoading] = useState(mode === "edit");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadedMetadataType, setLoadedMetadataType] = useState<ToolboxMetadataType | undefined>();
   /** Type cannot change during editing but must be sent on save, so capture it on load. */
   const loadedMetadataTypeRef = useRef<ToolboxMetadataType | undefined>(undefined);
   const metadataType = Form.useWatch("metadataType", form) as
@@ -55,7 +69,7 @@ export function ToolboxFormScene({
       if (mode !== "edit" || !boxId) {
         form.setFieldsValue({
           category: "other_category",
-          metadataType: "openapi",
+          metadataType: createMetadataType,
         });
         return;
       }
@@ -66,6 +80,7 @@ export function ToolboxFormScene({
       try {
         const record = await getToolbox(boxId);
         loadedMetadataTypeRef.current = record.metadataType;
+        setLoadedMetadataType(record.metadataType);
         form.setFieldsValue({
           category: record.categoryType ?? record.categoryName,
           description: record.description,
@@ -79,11 +94,15 @@ export function ToolboxFormScene({
         setLoading(false);
       }
     })();
-  }, [boxId, form, mode]);
+  }, [boxId, createMetadataType, form, mode]);
 
-  const permission =
-    mode === "create"
-      ? "execution-factory:toolbox:create"
+  const effectiveMetadataType = mode === "edit" ? loadedMetadataType : createMetadataType;
+  const permission = mode === "create"
+    ? effectiveMetadataType === "function"
+      ? "execution-factory:function:create"
+      : "execution-factory:toolbox:create"
+    : effectiveMetadataType === "function"
+      ? "execution-factory:function:edit"
       : "execution-factory:toolbox:edit";
   const pageTitle =
     mode === "create"
@@ -160,19 +179,17 @@ export function ToolboxFormScene({
   };
 
   return (
-    <PermissionGate
-      fallback={
-        <Result status="403" subTitle={t("common.noPermission")} title="403" />
-      }
-      permissions={permission}
-    >
-      <CrudFormPage description={pageDescription} title={pageTitle}>
+    <CrudFormPage description={pageDescription} title={pageTitle}>
         {loading ? <Spin /> : null}
         {!loading && loadError ? (
           <Alert message={loadError} showIcon type="error" />
         ) : null}
         {!loading && !loadError ? (
-          <div className={styles.formSurface}>
+          <PermissionGate
+            fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
+            permissions={permission}
+          >
+            <div className={styles.formSurface}>
             <p className={styles.formHint}>
               {mode === "create"
                 ? metadataType === "function"
@@ -195,13 +212,19 @@ export function ToolboxFormScene({
                   name="metadataType"
                   rules={[{ required: true, message: t("common.required") }]}
                 >
-                  <Radio.Group>
-                    <Radio value="openapi">
-                      {t("executionFactory.metadataTypes.openapi")}
-                    </Radio>
-                    <Radio value="function">
-                      {t("executionFactory.metadataTypes.function")}
-                    </Radio>
+                  <Radio.Group
+                    onChange={(event) => setCreateMetadataType(event.target.value as ToolboxMetadataType)}
+                  >
+                    {canCreateApi ? (
+                      <Radio value="openapi">
+                        {t("executionFactory.metadataTypes.openapi")}
+                      </Radio>
+                    ) : null}
+                    {canCreateFunction ? (
+                      <Radio value="function">
+                        {t("executionFactory.metadataTypes.function")}
+                      </Radio>
+                    ) : null}
                   </Radio.Group>
                 </Form.Item>
               ) : null}
@@ -236,9 +259,9 @@ export function ToolboxFormScene({
                 {t("common.save")}
               </AppButton>
             </div>
-          </div>
+            </div>
+          </PermissionGate>
         ) : null}
-      </CrudFormPage>
-    </PermissionGate>
+    </CrudFormPage>
   );
 }
