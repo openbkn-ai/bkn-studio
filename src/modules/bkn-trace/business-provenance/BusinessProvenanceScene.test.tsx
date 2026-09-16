@@ -77,7 +77,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("关联轮次")).not.toBeNull();
   });
 
-  it("keeps evidence and execution beside the existing time and knowledge views", async () => {
+  it("keeps only timeline, evidence, and execution views", async () => {
     window.history.replaceState({}, "", "/observability/business-provenance?conversation_id=conv-linked");
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-linked", questionPreview: "关联会话", interactionCount: 2 }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-one", questionPreview: "问题甲" }, { interactionId: "int-two", questionPreview: "问题乙" }], total: 2 });
@@ -85,7 +85,9 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     render(<BusinessProvenanceScene />);
     await waitFor(() => expect(getInteraction).toHaveBeenCalledWith("int-one"));
     expect(await screen.findByText("时间链视图")).toBeTruthy();
-    expect(screen.getByText("知识网络视图")).toBeTruthy();
+    expect(screen.getByText("证据链")).toBeTruthy();
+    expect(screen.getByText("执行链路")).toBeTruthy();
+    expect(screen.queryByText("知识网络视图")).toBeNull();
     fireEvent.click(screen.getByText("证据链"));
     expect(await screen.findByText("saved-evidence:int-one:evidence")).toBeTruthy();
     getInteraction.mockClear(); getMarkdown.mockClear(); getAnalysisHistory.mockClear();
@@ -360,13 +362,9 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 		expect(screen.getByText("缺少可复用的供应商关系")).not.toBeNull();
 		expect(screen.getByText("op-1")).not.toBeNull();
 		expect(screen.getByText("purchase_order")).not.toBeNull();
-		expect(screen.getByText("重放后可通过正式关系查询供应商")).not.toBeNull();
+    expect(screen.getByText("重放后可通过正式关系查询供应商")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
-    fireEvent.click(screen.getByText("知识网络视图", { exact: true }));
-    fireEvent.click(await screen.findByRole("button", { name: /物料请购单/ }));
-    expect(await screen.findByText("关联调用")).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /查询物料请购单/ }));
-    await waitFor(() => expect(screen.queryByText("关联调用")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "调用详情" }));
     expect(screen.getByText("做了什么")).not.toBeNull();
   }, 60_000);
 
