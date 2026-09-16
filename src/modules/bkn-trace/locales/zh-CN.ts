@@ -183,6 +183,7 @@ export const bknTraceZhCN = {
           relationActionMetric: "关系 / 行动 / 指标", resource: "资源", roundCall: "本轮业务调用", what: "做了什么",
         },
         durationMinutes: "{{minutes}} 分{{seconds}} 秒", durationNotRecorded: "耗时未记录", durationSeconds: "{{count}} 秒",
+        element: { logic: "逻辑/函数" },
         errors: { factsLoad: "调用事实加载失败", interactionsLoad: "交互轮次加载失败", markdownLoad: "过程事实 Markdown 加载失败" },
         evidence: { byRound: "按轮次查看", complete: "记录完整", partial: "记录有缺口" },
         filters: { agent: "Agent / 应用", endedAt: "结束时间", evidence: "记录完整性", keyword: "搜索问题、结果或会话 ID", network: "知识网络", startedAt: "开始时间", status: "会话状态" },

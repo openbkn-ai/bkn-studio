@@ -183,6 +183,7 @@ export const bknTraceEnUS = {
           relationActionMetric: "Relations / actions / metrics", resource: "Resource", roundCall: "Business call in this interaction", what: "What it did",
         },
         durationMinutes: "{{minutes}}m {{seconds}}s", durationNotRecorded: "Duration not recorded", durationSeconds: "{{count}}s",
+        element: { logic: "Logic / function" },
         errors: { factsLoad: "Failed to load call facts", interactionsLoad: "Failed to load interactions", markdownLoad: "Failed to load process-fact Markdown" },
         evidence: { byRound: "View by interaction", complete: "Record complete", partial: "Record has gaps" },
         filters: { agent: "Agent / application", endedAt: "End time", evidence: "Record completeness", keyword: "Search question, result, or conversation ID", network: "Knowledge network", startedAt: "Start time", status: "Conversation status" },

@@ -395,6 +395,25 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(screen.getByText("调用范围已记录；当时未能读取本体定义以补充名称和映射")).not.toBeNull();
   });
 
+  it("labels logic elements in call details", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-logic", questionPreview: "计算库存", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-logic", questionPreview: "计算库存" }], total: 1 });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-logic", conversationContext: [], derivedFacts: [], contextRelations: [],
+      operations: [{
+        operationId: "op-logic", toolName: "run_code", callStatus: "completed", status: "resolved", missingFacts: [],
+        elements: [{ kind: "logic", id: "inventory_available", name: "库存可用量" }],
+      }],
+    });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "计算库存" }));
+    await screen.findByText("本轮输入（原文）");
+    fireEvent.click(await screen.findByRole("button", { name: "调用详情" }));
+
+    expect(await screen.findByText("库存可用量（inventory_available）· 逻辑/函数")).not.toBeNull();
+  });
+
   it("shows ambiguous BKN bindings as candidates instead of touched objects", async () => {
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-1", questionPreview: "查询采购", interactionCount: 1, agentName: "Supply Agent" }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-ambiguous", questionPreview: "查询采购" }], total: 1 });
