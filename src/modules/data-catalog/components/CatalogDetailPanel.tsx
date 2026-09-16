@@ -432,7 +432,7 @@ export function CatalogDetailPanel({
             ),
           });
         }
-        if (!catalog.internal) {
+        if (!catalog.internal && canManageResourceTasks) {
           moreItems.push({
             key: "semantic-understanding",
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),

@@ -1474,16 +1474,14 @@ export function IndexConfigFormPanel({
                                         </span>
                                       ) : null}
                                     </div>
-                                    {!readOnly ? (
-                                      <AppButton
-                                        className={formStyles.featureConfigLink}
-                                        disabled={activeTaskLocked}
-                                        onClick={() => setFeatureField(field)}
-                                        type="link"
-                                      >
-                                        {t("dataCatalog.build.featureConfig")}
-                                      </AppButton>
-                                    ) : null}
+                                    <AppButton
+                                      className={formStyles.featureConfigLink}
+                                      disabled={!readOnly && activeTaskLocked}
+                                      onClick={() => setFeatureField(field)}
+                                      type="link"
+                                    >
+                                      {t("dataCatalog.build.featureConfig")}
+                                    </AppButton>
                                   </>
                                 ) : (
                                   <span className={formStyles.featureMiniEmpty}>
@@ -1563,7 +1561,7 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleKeyword"),
               selectedKeywordGroups,
               [],
-              actionsLocked,
+              readOnly || actionsLocked,
               isFeatureConfigField(featureField.type),
             )}
             {renderFeatureRows(
@@ -1571,7 +1569,7 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleFulltext"),
               selectedFulltextGroups,
               analyzerOptions,
-              actionsLocked || !isTextField(featureField.type) || analyzerSelectionDisabled,
+              readOnly || actionsLocked || !isTextField(featureField.type) || analyzerSelectionDisabled,
               isTextType(featureField.type),
             )}
             {renderFeatureRows(
@@ -1579,7 +1577,7 @@ export function IndexConfigFormPanel({
               t("dataCatalog.build.roleEmbedding"),
               selectedEmbeddingGroups,
               modelOptions,
-              actionsLocked || embeddingBlocked,
+              readOnly || actionsLocked || embeddingBlocked,
             )}
             {!isTextField(featureField.type) ? (
               <Alert message={t("dataCatalog.build.fulltextTypeHint")} showIcon type="info" />
