@@ -26,6 +26,30 @@ const appServices = vi.hoisted(() => ({
     currentUser: { id: "u-admin", permissions: ["admin-authz:grant", "admin-authz:revoke"] },
   },
 }));
+const authorizationRegistry = vi.hoisted(() => ({
+  operationsForType: (type: string) => ({
+    action_type: [
+      { key: "view_detail", label: "view_detail", requires: [] },
+      { key: "modify", label: "modify", requires: ["view_detail"] },
+      { key: "delete", label: "delete", requires: ["view_detail"] },
+      { key: "execute", label: "execute", requires: [] },
+    ],
+    catalog: [
+      { key: "view_detail", label: "view_detail", requires: [] },
+      { key: "create", label: "create", requires: [] },
+      { key: "modify", label: "modify", requires: [] },
+      { key: "delete", label: "delete", requires: [] },
+      { key: "authorize", label: "authorize", requires: [] },
+      { key: "task_manage", label: "task_manage", requires: [] },
+      { key: "resource_manage", label: "resource_manage", requires: ["view_detail"] },
+      { key: "query_data", label: "query_data", requires: [] },
+    ],
+    resource: [
+      { key: "view_detail", label: "view_detail", requires: [] },
+      { key: "query_data", label: "query_data", requires: [] },
+    ],
+  }[type] ?? []),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -58,6 +82,14 @@ vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
   getCachedUserSync: mocks.getCachedUserSync,
   hydrateUserLookup: vi.fn(() => Promise.resolve([])),
   primeUserLookupCache: vi.fn(),
+}));
+vi.mock("@/modules/system-admin/hooks/use-authorization-registry", () => ({
+  useAuthorizationRegistry: () => ({
+    catalogError: undefined,
+    catalogLoading: false,
+    operationsForType: authorizationRegistry.operationsForType,
+    retryAuthorizationRegistry: vi.fn(),
+  }),
 }));
 
 import { ObjectAuthorizeDrawer } from "./ObjectAuthorizeDrawer";
@@ -235,7 +267,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     await act(async () => {});
 
     const viewOperation = screen.getByRole("button", { name: /view_detail/ });
-    fireEvent.click(screen.getByRole("button", { name: /modify/ }));
+    fireEvent.click(screen.getByRole("button", { name: /resource_manage/ }));
 
     expect(viewOperation.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(viewOperation);
@@ -363,14 +395,14 @@ describe("ObjectAuthorizeDrawer source records", () => {
   it("blocks deleting a prerequisite source while an allowed operation depends on it", async () => {
     const dependentGrant = grant([
       source({}),
-      source({ grantId: "grant-direct-modify", operation: "modify" }),
+      source({ grantId: "grant-direct-resource-manage", operation: "resource_manage" }),
     ]);
     dependentGrant.effectiveDecisions = [
       { basis: "direct", decision: "allow", operation: "view_detail", requires: [] },
       {
         basis: "direct",
         decision: "allow",
-        operation: "modify",
+        operation: "resource_manage",
         requires: ["view_detail"],
       },
     ];

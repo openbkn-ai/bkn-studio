@@ -91,16 +91,12 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   function: "Function set",
 };
 
-const CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+const CATALOG_CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+const CONNECTOR_TYPE_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize"];
 // Child resources delegate sharing through the knowledge-network root. They never carry
 // `authorize` or `task_manage`; action execution is expressed by `execute`.
-const KNOWLEDGE_NETWORK_CHILD_AUTHZ = [
-  "view_detail",
-  "create",
-  "modify",
-  "delete",
-  "query_data",
-];
+const STRUCTURAL_KNOWLEDGE_NETWORK_CHILD_AUTHZ = ["view_detail", "modify", "delete"];
+const SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ = ["view_detail", "query_data", "modify", "delete"];
 // An action type describes executable behavior, rather than data that can be
 // queried. Keep this vocabulary aligned with bkn-safe's action_type catalog:
 // it has no create or query_data operation.
@@ -108,7 +104,7 @@ const ACTION_TYPE_AUTHZ = ["view_detail", "modify", "delete", "execute"];
 // A data connection owns its tables: creating, editing and building one is judged on the catalog,
 // not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
 // lists match the operations bkn-safe actually stores on these types.
-const CATALOG_AUTHZ = [...CRUD_AUTHZ, "resource_manage", "query_data"];
+const CATALOG_AUTHZ = [...CATALOG_CRUD_AUTHZ, "resource_manage", "query_data"];
 const RESOURCE_AUTHZ = ["view_detail", "query_data"];
 const PUBLISHABLE = [
   "view",
@@ -125,7 +121,7 @@ const PUBLISHABLE = [
 export const RESOURCE_TYPES: ResourceTypeDef[] = [
   resourceType("catalog", CATALOG_AUTHZ),
   resourceType("resource", RESOURCE_AUTHZ),
-  resourceType("connector_type", CRUD_AUTHZ),
+  resourceType("connector_type", CONNECTOR_TYPE_AUTHZ),
   resourceType("knowledge_network", [
     "view_detail",
     "create",
@@ -135,29 +131,17 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     "authorize",
     "execute",
   ]),
-  resourceType("concept_group", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
-  resourceType("object_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
-  resourceType("relation_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("concept_group", STRUCTURAL_KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("object_type", SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("relation_type", SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ),
   resourceType("action_type", ACTION_TYPE_AUTHZ),
-  resourceType("metric", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
-  resourceType("risk_type", KNOWLEDGE_NETWORK_CHILD_AUTHZ),
-  resourceType("stream_data_pipeline", ["view_detail", "create", "modify", "delete", "authorize"]),
-  resourceType("data_flow", [
-    "list",
-    "view",
-    "create",
-    "modify",
-    "delete",
-    "manual_exec",
-    "run_statistics",
-    "run_with_app",
-    "display",
-  ]),
-  resourceType("small_model", ["display", "create", "modify", "delete"]),
-  resourceType("large_model", ["display", "create", "modify", "delete"]),
+  resourceType("metric", SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("risk_type", STRUCTURAL_KNOWLEDGE_NETWORK_CHILD_AUTHZ),
+  resourceType("small_model", ["create", "display", "modify", "delete", "execute"]),
+  resourceType("large_model", ["create", "display", "modify", "delete", "execute"]),
+  resourceType("function", PUBLISHABLE),
   resourceType("operator", PUBLISHABLE),
   resourceType("tool_box", PUBLISHABLE),
-  resourceType("function", PUBLISHABLE),
   resourceType("skill", PUBLISHABLE),
   resourceType("mcp", PUBLISHABLE),
   resourceType("agent", [
@@ -165,48 +149,45 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
     "publish",
     "unpublish",
     "unpublish_other_user_agent",
+    "publish_to_be_skill_agent",
+    "publish_to_be_web_sdk_agent",
+    "publish_to_be_api_agent",
+    "publish_to_be_data_flow_agent",
     "create_system_agent",
     "mgnt_built_in_agent",
     "see_trajectory_analysis",
-    "publish_to_be_api_agent",
-    "publish_to_be_data_flow_agent",
-    "publish_to_be_skill_agent",
-    "publish_to_be_web_sdk_agent",
   ]),
   resourceType("agent_tpl", ["publish", "unpublish", "unpublish_other_user_agent_tpl"]),
-  resourceType("admin-user", ["create", "edit", "delete", "toggle", "reset-password"]),
-  resourceType("admin-dept", ["create", "edit", "delete", "members"]),
-  resourceType("admin-role", ["create", "edit", "delete", "members", "permissions"]),
-  resourceType("admin-authz", ["grant", "revoke"]),
+  resourceType("admin-user", ["view", "create", "edit", "delete", "toggle", "reset-password"]),
+  resourceType("admin-dept", ["view", "create", "edit", "delete", "members"]),
+  resourceType("admin-role", ["view", "create", "edit", "delete", "members", "permissions"]),
+  resourceType("admin-authz", ["view", "grant", "revoke"]),
   resourceType("admin-audit", ["view"]),
   resourceType("safe_admin", ["manage"]),
+  resourceType("admin-license", ["view", "manage"]),
+  resourceType("admin-client", ["manage"]),
+  resourceType("admin-apikey", ["manage"]),
 ];
 
 /**
- * Resource types supported by role grants. Keep unsupported types out of the role editor without
- * removing them from the canonical catalog: existing grants must remain readable, and object
- * authorization still uses the full resource catalog where applicable.
+ * Roles grant type-wide capabilities. Keep unsupported or object-specific resource types out of
+ * the role editor without removing them from the canonical catalog: existing grants must remain
+ * readable, and object authorization still uses the full resource catalog where applicable.
  */
 const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
   "agent",
   "agent_tpl",
-  "concept_group",
   "connector_type",
-  "data_flow",
-  "action_type",
-  "metric",
-  "object_type",
-  "relation_type",
   "risk_type",
-  "safe_admin",
-  "small_model",
-  "large_model",
-  "stream_data_pipeline",
 ]);
 
 export const ROLE_GRANT_RESOURCE_TYPES = RESOURCE_TYPES.filter(
   (item) => !ROLE_GRANT_EXCLUDED_RESOURCE_TYPES.has(item.type),
 );
+
+export function isRoleGrantResourceType(type: string): boolean {
+  return !ROLE_GRANT_EXCLUDED_RESOURCE_TYPES.has(type);
+}
 
 const byType = new Map(RESOURCE_TYPES.map((item) => [item.type, item]));
 
@@ -239,15 +220,61 @@ export function operationsForType(type: string): OperationDef[] {
 }
 
 export function requiredOperationsFor(type: string, operation: string): string[] {
-  const operations = byType.get(type)?.operations ?? [];
-  const viewOperation = ["view_detail", "view", "display", "list"].find((candidate) =>
-    operations.includes(candidate),
-  );
-  if (!viewOperation || operation === viewOperation || operation === "create") {
-    return [];
-  }
-  return [viewOperation];
+  return LOCAL_OPERATION_REQUIREMENTS[`${type}:${operation}`] ?? [];
 }
+
+// Demo-mode fixture only. Production authoring reads the same explicit edges
+// from bkn-safe's /authz/registry endpoint; never infer an edge from a verb.
+const LOCAL_OPERATION_REQUIREMENTS: Record<string, string[]> = {
+  "catalog:resource_manage": ["view_detail"],
+  "connector_type:modify": ["view_detail"],
+  "connector_type:delete": ["view_detail"],
+  "connector_type:authorize": ["view_detail"],
+  "knowledge_network:modify": ["view_detail"],
+  "knowledge_network:delete": ["view_detail"],
+  "knowledge_network:authorize": ["view_detail"],
+  "concept_group:modify": ["view_detail"],
+  "concept_group:delete": ["view_detail"],
+  "object_type:modify": ["view_detail"],
+  "object_type:delete": ["view_detail"],
+  "relation_type:modify": ["view_detail"],
+  "relation_type:delete": ["view_detail"],
+  "action_type:modify": ["view_detail"],
+  "action_type:delete": ["view_detail"],
+  "metric:modify": ["view_detail"],
+  "metric:delete": ["view_detail"],
+  "risk_type:modify": ["view_detail"],
+  "risk_type:delete": ["view_detail"],
+  "function:modify": ["view"],
+  "function:delete": ["view"],
+  "function:publish": ["view"],
+  "function:unpublish": ["view"],
+  "function:authorize": ["view"],
+  "tool_box:modify": ["view"],
+  "tool_box:delete": ["view"],
+  "tool_box:publish": ["view"],
+  "tool_box:unpublish": ["view"],
+  "tool_box:authorize": ["view"],
+  "mcp:modify": ["view"],
+  "mcp:delete": ["view"],
+  "mcp:publish": ["view"],
+  "mcp:unpublish": ["view"],
+  "mcp:authorize": ["view"],
+  "operator:modify": ["view"],
+  "operator:delete": ["view"],
+  "operator:publish": ["view"],
+  "operator:unpublish": ["view"],
+  "operator:authorize": ["view"],
+  "skill:modify": ["view"],
+  "skill:delete": ["view"],
+  "skill:publish": ["view"],
+  "skill:unpublish": ["view"],
+  "skill:authorize": ["view"],
+  "small_model:modify": ["display"],
+  "small_model:delete": ["display"],
+  "large_model:modify": ["display"],
+  "large_model:delete": ["display"],
+};
 
 function operationFallbackLabel(op: string): string {
   return OPERATION_FALLBACK_LABELS[op] ?? op;

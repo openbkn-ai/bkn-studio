@@ -195,6 +195,7 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
           <ResourceGrantEditor
             disabled={permissionsReadOnly}
             onChange={setGrants}
+            typeWideOnly
             value={grants}
           />
         </Form.Item>

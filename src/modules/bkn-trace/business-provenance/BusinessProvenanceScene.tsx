@@ -8,7 +8,7 @@
 import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Empty, Input, Popover, Result, Segmented, Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
@@ -30,8 +30,9 @@ import {
 } from "@/modules/bkn-trace/business-provenance/business-provenance.service";
 import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css";
 
-type View = "timeline" | "knowledge" | "evidence" | "execution";
-type KnowledgeSelection = { network: string; elementId: string; elementName: string };
+import { recordedCallScope, recordedResourceMappings, requestedObjectLabels, recordedMetricTarget } from "./call-scope";
+
+type View = "timeline" | "evidence" | "execution";
 type AgentSuggestion = { id?: string; category?: string; location?: string; problem?: string; sourceEvidence?: string; verificationEvidence?: string; change?: string; acceptance?: string };
 type AgentAdvice = { verdicts: Record<string, string | undefined>; conclusion?: string; suggestions: AgentSuggestion[]; notEvaluable?: string };
 type ConversationLoadState = "failed" | "forbidden" | "not-installed";
@@ -145,16 +146,18 @@ function SourceText({
   </Popover>;
 }
 
-function resourceDescription(operation: OperationResolution) {
-  const resources = operation.query?.resources ?? [];
+function resourceDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
+  const direct = recordedCallScope(operation).resourceMappings;
+  const resources = direct.length ? direct : recordedResourceMappings(operation, operations);
   if (resources.length) {
     return resources.map((resource) => {
       const businessName = resource.objectName || resource.objectId;
       const physicalName = resource.name || resource.id;
-      return businessName ? `${businessName} · ${physicalName}` : physicalName;
+      const historicalSuffix = "nameConflict" in resource && resource.nameConflict ? bpText("scope.recordedDefinitionConflict") : bpText("scope.recordedDefinition");
+      return (businessName ? `${physicalName} → ${businessName}` : physicalName) + (direct.length ? "" : historicalSuffix);
     }).join(bpText("listSeparator"));
   }
-  return operation.query?.resourceIds?.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
+  return recordedCallScope(operation).resourceIds.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
 }
 
 function conditionValue(value: unknown) {
@@ -173,15 +176,37 @@ function operationResult(operation: OperationResolution, derivedFacts: BusinessP
 }
 
 function bindingDescription(operation: OperationResolution) {
+  const scope = recordedCallScope(operation);
+  if (scope.scopeConflict) return bpText("binding.scopeConflict");
+  if (operation.missingFacts.includes("source_unavailable") || operation.missingFacts.includes("source_bkn_reader")) return bpText("binding.sourceUnavailable");
   if (operation.status === "resolved") return bpText("binding.resolved");
   if (operation.status === "ambiguous") return bpText("binding.ambiguous");
   if (operation.status === "not_evaluable" && operation.missingFacts.includes("permission_denied")) return bpText("binding.permissionDenied");
   if (operation.missingFacts.includes("resource_binding")) return bpText("binding.resourceMissing");
-  return bpText("binding.unresolved");
+  return scope.networkId ? bpText("binding.requestRecorded") : bpText("binding.unresolved");
 }
 
 function businessElementNames(operation: OperationResolution, kinds: string[]) {
   return operation.elements.filter((item) => kinds.includes(item.kind)).map((item) => item.name || item.id).filter(Boolean);
+}
+
+function requestedObjectDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
+  const scope = recordedCallScope(operation);
+  const names = requestedObjectLabels(operation, operations);
+  if (scope.scopeConflict) return scope.objectIds.join(bpText("listSeparator")) || bpText("binding.scopeConflict");
+  if (names.length) return names.join(bpText("listSeparator"));
+  if (scope.objectIds.length) return scope.objectIds.join(bpText("listSeparator"));
+  const mappings = scope.resourceMappings.length ? scope.resourceMappings : recordedResourceMappings(operation, operations);
+  const mapped = mappings.map(item => item.objectName || item.objectId).filter(Boolean);
+  if (mapped.length) return [...new Set(mapped)].join(bpText("listSeparator"));
+  if (scope.resourceIds.length) return bpText("scope.resourceTarget");
+  if (scope.metricId) {
+    const metric = recordedMetricTarget(operation, operations);
+    if (metric?.objectId) return `${metric.name || scope.metricId} → ${metric.objectName || metric.objectId}${bpText("scope.recordedDefinition")}`;
+    return bpText("scope.metricTarget", { id: metric?.name || scope.metricId });
+  }
+  if (operation.toolName === "run_code") return bpText("scope.codeTarget");
+  return scope.networkId ? bpText("scope.networkTarget") : bpText("undetermined");
 }
 
 function propertyDescriptions(operation: OperationResolution) {
@@ -190,10 +215,6 @@ function propertyDescriptions(operation: OperationResolution) {
     if (item.kind === "logic") return `${name}（${item.id}）· ${bpText("element.logic")}`;
     return `${name}（${item.id}）${item.field ? ` → ${item.field}` : ""}`;
   });
-}
-
-function elementKindText(kind: string) {
-  return ({ object: bpText("element.object"), relation: bpText("element.relation"), action: bpText("element.action"), property: bpText("element.property"), logic: bpText("element.logic"), metric: bpText("element.metric") } as Record<string, string>)[kind] || kind;
 }
 
 function conversationTitle(conversation: BusinessProvenanceConversation) {
@@ -284,24 +305,6 @@ function adviceMarkdown(advice: AgentAdvice) {
   return `# ${bpText("agent.markdownTitle")}\n\n## ${bpText("agent.verdicts")}\n\n${verdicts}\n\n## ${bpText("agent.recommendations")}\n\n${recommendations || bpText("agent.noRecommendations")}${advice.notEvaluable ? `\n\n## ${bpText("agent.unableToDetermine")}\n\n${advice.notEvaluable}` : ""}`;
 }
 
-function knowledgeGroups(projection: BusinessProvenanceInteraction) {
-  const groups = new Map<string, Map<string, { kind: string; id: string; name: string; operationIds: string[] }>>();
-  projection.operations.forEach((operation) => {
-    const network = operation.knowledgeNetworkId || bpText("networkUnresolved");
-    const elements = groups.get(network) ?? new Map<string, { kind: string; id: string; name: string; operationIds: string[] }>();
-    operation.elements.forEach((element) => {
-      const key = `${element.kind}:${element.id}`;
-      const existing = elements.get(key) ?? { kind: element.kind, id: element.id, name: element.name || element.id, operationIds: [] };
-      if (!existing.operationIds.includes(operation.operationId)) existing.operationIds.push(operation.operationId);
-      elements.set(key, existing);
-    });
-    groups.set(network, elements);
-  });
-  return [...groups.entries()]
-    .map(([network, elements]) => [network, [...elements.values()]] as const)
-    .filter(([, elements]) => elements.length > 0);
-}
-
 export function BusinessProvenanceScene() {
   const { t } = useTranslation();
   const [linkedConversationId] = useState(() => new URLSearchParams(window.location.search).get("conversation_id")?.trim() ?? "");
@@ -327,9 +330,8 @@ export function BusinessProvenanceScene() {
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
-  const needsProjection = view === "timeline" || view === "knowledge";
+  const needsProjection = view === "timeline";
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
-  const [knowledgeSelection, setKnowledgeSelection] = useState<KnowledgeSelection>();
   const [loading, setLoading] = useState(true);
   const [conversationLoadState, setConversationLoadState] = useState<ConversationLoadState>();
   const [analysisStarting, setAnalysisStarting] = useState(false);
@@ -368,7 +370,7 @@ export function BusinessProvenanceScene() {
     let current = true;
     setInteractions([]); setInteractionTotal(0); setSelectedInteraction(undefined);
     setInteractionListLoading(true); setInteractionListError(false);
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setProjectionUnavailable(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
+    setProjection(undefined); setDetailOperation(undefined); setProjectionUnavailable(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
       .then((page) => { if (current) { setInteractions(page.entries); setInteractionTotal(page.total); setSelectedInteraction(page.entries[0]); } })
       .catch(() => { if (current) { setInteractionListError(true); message.error(bpText("errors.interactionsLoad")); } })
@@ -379,14 +381,13 @@ export function BusinessProvenanceScene() {
     if (!selectedInteraction || !needsProjection) {
       setProjection(undefined);
       setDetailOperation(undefined);
-      setKnowledgeSelection(undefined);
       setInteractionDetailLoading(false);
       setInteractionDetailError(false);
       setProjectionUnavailable(false);
       return;
     }
     let current = true;
-    setProjection(undefined); setDetailOperation(undefined); setKnowledgeSelection(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
+    setProjection(undefined); setDetailOperation(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
     setAnalysisMarkdown(""); setAnalysisMarkdownLoading(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
       .then((value) => {
@@ -421,12 +422,6 @@ export function BusinessProvenanceScene() {
       .finally(() => { if (current) setInteractionDetailLoading(false); });
     return () => { current = false; };
   }, [interactionReload, needsProjection, selectedInteraction]);
-
-  const groups = useMemo(() => projection ? knowledgeGroups(projection) : [], [projection]);
-  const selectedKnowledgeCalls = useMemo(() => {
-    if (!projection || !knowledgeSelection) return [];
-    return projection.operations.filter((operation) => operation.elements.some((element) => element.id === knowledgeSelection.elementId));
-  }, [knowledgeSelection, projection]);
 
   const startAnalysis = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown.trim()) return;
@@ -549,7 +544,7 @@ export function BusinessProvenanceScene() {
         <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); setKnowledgeSelection(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.knowledge"), value: "knowledge" }, { label: bpText("views.evidence"), value: "evidence" }, { label: bpText("views.execution"), value: "execution" }]} />
+        <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.evidence"), value: "evidence" }, { label: bpText("views.execution"), value: "execution" }]} />
         {(view === "evidence" || view === "execution") && selectedInteraction && !interactionListLoading ? <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel={view} onPanelChange={setView} /> : interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
           <section className={styles.interactionSummary}>
             <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
@@ -557,7 +552,7 @@ export function BusinessProvenanceScene() {
               <div><h4>{bpText("rounds.inputOriginal")}</h4><SourceText title={bpText("rounds.inputOriginal")} preview={selectedInteraction?.questionPreview} original={projection.interactionQuestion} viewLabel={bpText("rounds.viewFullInput")} onCopy={copySourceText} /></div>
               <div><h4>{bpText("rounds.outputOriginal")}</h4><SourceText title={bpText("rounds.outputOriginal")} preview={selectedInteraction?.resultPreview} original={projection.interactionResult} viewLabel={bpText("rounds.viewFullOutput")} onCopy={copySourceText} /></div>
             </div>
-            <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setKnowledgeSelection(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
+            <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
           </section>
           {view === "timeline" ? <section className={styles.timeline}>
             <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
@@ -571,30 +566,22 @@ export function BusinessProvenanceScene() {
                 <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>{bpText("operation.detail")}</Button>
               </article>
             </div>)}
-          </section> : view === "knowledge" ? <section className={styles.knowledgeCanvas}>
-            <p className={styles.knowledgePath}>{bpText("knowledge.path")}</p>
-            {groups.length ? groups.map(([network, elements]) => <div className={styles.knowledgeGrid} key={network}>
-              <section className={styles.knowledgeColumn}><h3><span>1</span>{bpText("knowledge.network")}</h3><article className={styles.networkCard}><b>{network}</b><small>{network}</small></article><p className={styles.candidateNote}>{bpText("knowledge.observedOnly")}</p></section>
-              <section className={styles.knowledgeColumn}><h3><span>2</span>{bpText("knowledge.observed")}</h3>{elements.map((element) => <button key={`${element.kind}:${element.id}`} className={knowledgeSelection?.elementId === element.id ? styles.knowledgeSelected : ""} onClick={() => setKnowledgeSelection({ network, elementId: element.id, elementName: element.name })}><b>{element.name}</b><small>{elementKindText(element.kind)} · {bpText("knowledge.deterministicCalls", { count: element.operationIds.length })}</small></button>)}</section>
-              <section className={styles.knowledgeColumn}><h3><span>3</span>{bpText("knowledge.relations")}</h3>{projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).length ? projection.contextRelations.filter((relation) => relation.knowledgeNetworkId === network).map((relation) => <article className={styles.contextCard} key={relation.id}><b>{relation.name || relation.id}</b><small>{bpText("knowledge.contextOnly")}</small></article>) : <p className={styles.emptyContext}>{bpText("knowledge.noContext")}</p>}</section>
-            </div>) : <Empty description={bpText("knowledge.empty")} />}
           </section> : null}
         </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>
-    {view === "knowledge" && knowledgeSelection && !detailOperation ? <aside className={styles.knowledgeInspector}><header><small>{bpText("knowledge.observed")}</small><b>{knowledgeSelection.elementName}</b><Button type="text" icon={<CloseOutlined />} aria-label={bpText("knowledge.closeDetail")} onClick={() => setKnowledgeSelection(undefined)} /></header><section><h4>{bpText("knowledge.factBoundary")}</h4><p>{bpText("knowledge.factBoundaryDescription", { count: selectedKnowledgeCalls.length })}</p></section><section><h4>{bpText("knowledge.relatedCalls")}</h4>{selectedKnowledgeCalls.map((operation) => <button key={operation.operationId} onClick={() => { setKnowledgeSelection(undefined); setDetailOperation(operation); }}><b>{operationTitle(operation)}</b><small>{operation.toolName || bpText("interfaceNotRecorded")} · {operationCondition(operation)}</small></button>)}</section></aside> : null}
     {detailOperation ? <aside className={styles.detailPanel}>
       <header><div><small>{bpText("detail.roundCall")}</small><b>{operationTitle(detailOperation)}</b></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span><Button type="text" aria-label={bpText("detail.close")} icon={<CloseOutlined />} onClick={() => setDetailOperation(undefined)} /></header>
       <section><h4>{bpText("detail.what")}</h4><p>{operationTitle(detailOperation)}</p></section>
       <section><h4>{bpText("detail.businessElement")}</h4><dl>
-        <dt>{bpText("knowledge.network")}</dt><dd>{detailOperation.knowledgeNetworkId || bpText("undetermined")}</dd>
-        <dt>{bpText("detail.businessObject")}</dt><dd>{businessElementNames(detailOperation, ["object"]).join(bpText("listSeparator")) || bpText("undetermined")}</dd>
+        <dt>{bpText("filters.network")}</dt><dd>{recordedCallScope(detailOperation).networkId || bpText("undetermined")}</dd>
+        <dt>{bpText("detail.businessObject")}</dt><dd>{requestedObjectDescription(detailOperation, projection?.operations)}</dd>
         {detailOperation.status === "ambiguous" && detailOperation.objects?.length ? <><dt>{bpText("detail.candidateObjects")}</dt><dd>{detailOperation.objects.map((object) => object.name || object.id).join(bpText("listSeparator"))}</dd></> : null}
         {businessElementNames(detailOperation, ["relation", "action", "metric"]).length ? <><dt>{bpText("detail.relationActionMetric")}</dt><dd>{businessElementNames(detailOperation, ["relation", "action", "metric"]).join(bpText("listSeparator"))}</dd></> : null}
         <dt>{bpText("detail.binding")}</dt><dd>{bindingDescription(detailOperation)}</dd>
         {projection?.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId) ? <><dt>{bpText("detail.conversationContext")}</dt><dd>{(() => { const source = projection.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId); return `${source?.sourceInteractionId} · ${source?.sourceOperationId}`; })()}</dd></> : null}
       </dl></section>
-      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation)}</dd></dl></section>
+      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation, projection?.operations)}</dd></dl></section>
       <section><h4>{bpText("detail.properties")}</h4>{propertyDescriptions(detailOperation).length ? propertyDescriptions(detailOperation).map((item) => <p key={item}>{item}</p>) : <p>{bpText("detail.noProperties")}</p>}</section>
       <section><h4>{bpText("detail.actualResult")}</h4><p>{operationResult(detailOperation, projection?.derivedFacts)}</p></section>
       {payloadText(detailOperation.input) ? <section><h4>{bpText("detail.recordedInput")}</h4><pre>{payloadText(detailOperation.input)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.input)}>{bpText("detail.copyPayload")}</Button></section> : null}

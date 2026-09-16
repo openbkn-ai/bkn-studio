@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, configure, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
@@ -50,6 +50,8 @@ vi.mock("react-i18next", async (importOriginal) => {
 });
 
 describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
+  // Ant Design mounts dialogs asynchronously; allow slower local rendering.
+  configure({ asyncUtilTimeout: 5_000 });
   beforeEach(() => {
     window.history.replaceState({}, "", "/observability/business-provenance");
     getConversations.mockReset();
@@ -75,7 +77,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(await screen.findByText("关联轮次")).not.toBeNull();
   });
 
-  it("keeps evidence and execution beside the existing time and knowledge views", async () => {
+  it("keeps only timeline, evidence, and execution views", async () => {
     window.history.replaceState({}, "", "/observability/business-provenance?conversation_id=conv-linked");
     getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-linked", questionPreview: "关联会话", interactionCount: 2 }], total: 1 });
     getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-one", questionPreview: "问题甲" }, { interactionId: "int-two", questionPreview: "问题乙" }], total: 2 });
@@ -83,7 +85,9 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     render(<BusinessProvenanceScene />);
     await waitFor(() => expect(getInteraction).toHaveBeenCalledWith("int-one"));
     expect(await screen.findByText("时间链视图")).toBeTruthy();
-    expect(screen.getByText("知识网络视图")).toBeTruthy();
+    expect(screen.getByText("证据链")).toBeTruthy();
+    expect(screen.getByText("执行链路")).toBeTruthy();
+    expect(screen.queryByText("知识网络视图")).toBeNull();
     fireEvent.click(screen.getByText("证据链"));
     expect(await screen.findByText("saved-evidence:int-one:evidence")).toBeTruthy();
     getInteraction.mockClear(); getMarkdown.mockClear(); getAnalysisHistory.mockClear();
@@ -358,13 +362,9 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 		expect(screen.getByText("缺少可复用的供应商关系")).not.toBeNull();
 		expect(screen.getByText("op-1")).not.toBeNull();
 		expect(screen.getByText("purchase_order")).not.toBeNull();
-		expect(screen.getByText("重放后可通过正式关系查询供应商")).not.toBeNull();
+    expect(screen.getByText("重放后可通过正式关系查询供应商")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "关闭 BKN Agent 分析" }));
-    fireEvent.click(screen.getByText("知识网络视图", { exact: true }));
-    fireEvent.click(await screen.findByRole("button", { name: /物料请购单/ }));
-    expect(await screen.findByText("关联调用")).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /查询物料请购单/ }));
-    await waitFor(() => expect(screen.queryByText("关联调用")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "调用详情" }));
     expect(screen.getByText("做了什么")).not.toBeNull();
   }, 60_000);
 
@@ -376,6 +376,42 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
 
     const questionButton = await screen.findByRole("button", { name: question });
     expect(questionButton.getAttribute("aria-label")).toBe(question);
+  });
+
+  it("retains the explicit target of a failed historical query when ontology reading failed", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId:"conv-scope",questionPreview:"核实资产",interactionCount:1 }],total:1 });
+    getInteractions.mockResolvedValue({ entries:[{interactionId:"int-scope",questionPreview:"核实资产"}],total:1 });
+    getInteraction.mockResolvedValue({interactionId:"int-scope",conversationContext:[],derivedFacts:[],contextRelations:[],operations:[{
+      operationId:"op-scope",toolName:"query_object_instance",status:"not_evaluable",callStatus:"failed",elements:[],missingFacts:["source_unavailable"],
+      input:{mode:"inline",inline:{kn_id:"network-assets",ot_id:"asset-record"}},error:{mode:"inline",inline:{message:"查询失败"}},
+    }]});
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button",{name:"核实资产"}));
+    fireEvent.click(await screen.findByRole("button", {name: /轮次未记录.*核实资产/}));
+    await screen.findByText("本轮输入（原文）");
+    fireEvent.click(await screen.findByRole("button",{name:"调用详情"}));
+    expect(await screen.findByText("network-assets",{exact:true})).not.toBeNull();
+    expect(screen.getByText("asset-record",{exact:true})).not.toBeNull();
+    expect(screen.getByText("调用范围已记录；当时未能读取本体定义以补充名称和映射")).not.toBeNull();
+  });
+
+  it("labels logic elements in call details", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-logic", questionPreview: "计算库存", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-logic", questionPreview: "计算库存" }], total: 1 });
+    getInteraction.mockResolvedValue({
+      interactionId: "int-logic", conversationContext: [], derivedFacts: [], contextRelations: [],
+      operations: [{
+        operationId: "op-logic", toolName: "run_code", callStatus: "completed", status: "resolved", missingFacts: [],
+        elements: [{ kind: "logic", id: "inventory_available", name: "库存可用量" }],
+      }],
+    });
+
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "计算库存" }));
+    await screen.findByText("本轮输入（原文）");
+    fireEvent.click(await screen.findByRole("button", { name: "调用详情" }));
+
+    expect(await screen.findByText("库存可用量（inventory_available）· 逻辑/函数")).not.toBeNull();
   });
 
   it("shows ambiguous BKN bindings as candidates instead of touched objects", async () => {
@@ -434,7 +470,7 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     await screen.findByText("本轮输入（原文）");
     fireEvent.click(await screen.findByRole("button", { name: "调用详情" }));
     expect((await screen.findAllByText("SQL 条件见下方完整 SQL")).length).toBeGreaterThan(0);
-    expect(screen.getByText("采购订单 · supply.bkn_supply_po")).not.toBeNull();
+    expect(screen.getByText("supply.bkn_supply_po → 采购订单")).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "关闭调用详情" }));
     fireEvent.click(screen.getByRole("button", { name: "交给 BKN Agent 分析" }));
     await screen.findByRole("textbox", { name: "待分析 Markdown" });

@@ -487,7 +487,7 @@ describe("IndexConfigFormPanel", () => {
     expect(payload.indexConfig?.incrementalFields).toBeUndefined();
   });
 
-  it("does not submit index configuration when read-only", () => {
+  it("allows inspecting feature configuration but does not submit it when read-only", async () => {
     render(
       <MemoryRouter>
         <IndexConfigFormPanel
@@ -496,6 +496,11 @@ describe("IndexConfigFormPanel", () => {
           resource={{
             ...resource,
             indexConfig: { primaryKeyFields: ["missing_field"] },
+            schema: [{
+              features: [{ config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" }],
+              name: "title",
+              type: "string",
+            }],
           }}
         />
       </MemoryRouter>,
@@ -504,9 +509,13 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByRole("button", {
       name: "dataCatalog.build.saveIndexConfig",
     })).toBeNull();
-    expect(screen.queryByRole("button", {
+    fireEvent.click(await screen.findByRole("button", {
       name: "dataCatalog.build.featureConfig",
-    })).toBeNull();
+    }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    for (const input of screen.getAllByDisplayValue("256")) {
+      expect(input).toBeDisabled();
+    }
     expect(screen.queryByRole("button", {
       name: "dataCatalog.build.removeInvalidKeyFields",
     })).toBeNull();

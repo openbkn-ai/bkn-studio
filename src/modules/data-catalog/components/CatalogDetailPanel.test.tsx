@@ -287,9 +287,43 @@ describe("CatalogDetailPanel authorize entry", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
     expect(screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", {
+  });
+
+  it.each([
+    ["view-only", ["view_detail"], false],
+    ["resource manager", ["resource_manage", "view_detail"], false],
+    ["task manager", ["task_manage", "view_detail"], true],
+  ])("shows semantic understanding only for a %s", async (_, catalogOperations, visible) => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [{
+        catalogId: "catalog-1",
+        category: "table",
+        columnCount: 1,
+        description: "",
+        expectedUpdateTime: 0,
+        id: "resource-1",
+        localIndexStatus: "unavailable",
+        name: "customers",
+        operations: ["view_detail"],
+        rowCount: 0,
+        schema: [],
+        sourceIdentifier: "db.customers",
+        updateTime: "",
+      }],
+      total: 1,
+    });
+    renderPanel({ ...catalog, operations: catalogOperations });
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    const semanticUnderstanding = screen.queryByRole("menuitem", {
       name: "dataCatalog.resourceWorkspace.tabSemanticUnderstanding",
-    })).toBeInTheDocument();
+    });
+
+    if (visible) {
+      expect(semanticUnderstanding).toBeInTheDocument();
+    } else {
+      expect(semanticUnderstanding).toBeNull();
+    }
   });
 
   it("keeps the data-index entry when the resource omits view_detail", async () => {

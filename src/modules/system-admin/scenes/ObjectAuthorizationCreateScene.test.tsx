@@ -13,10 +13,14 @@ const listUsersMock = vi.hoisted(() => vi.fn());
 const listUsersPageMock = vi.hoisted(() => vi.fn());
 const upsertObjectGrantMock = vi.hoisted(() => vi.fn());
 const capability = vi.hoisted((): { current: string } => ({ current: "available" }));
+const translation = vi.hoisted(() => ({
+  i18n: { exists: () => false, language: "zh-CN" },
+  t: (key: string) => key,
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ i18n: { language: "zh-CN" }, t: (key: string) => key }),
+  useTranslation: () => translation,
 }));
 
 vi.mock("react-router-dom", () => ({

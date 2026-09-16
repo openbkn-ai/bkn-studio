@@ -23,6 +23,7 @@ import { useCapability } from "@/framework/entitlement/use-entitlement";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { listUsers } from "@/modules/system-admin/services/admin.service";
@@ -39,7 +40,8 @@ import {
   isAuthzObjectPickerType,
   isCommunityObjectGrantType,
 } from "@/modules/system-admin/utils/authz-catalog";
-import { operationsForType, resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
+import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
+import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
 
 import styles from "./admin.module.css";
 
@@ -84,6 +86,13 @@ export function ObjectAuthorizationCreateScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
+  const {
+    catalog,
+    catalogError,
+    catalogLoading,
+    operationsForType,
+    retryAuthorizationRegistry,
+  } = useAuthorizationRegistry();
   const fineGrainedCapability = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
   const fineGrained = fineGrainedCapability === "available";
   // Deep link from the object's own page (`?object=catalog::<id>`), so an administrator sent here
@@ -149,7 +158,7 @@ export function ObjectAuthorizationCreateScene() {
       return [];
     }
     return operationsForType(selectedObject.objType).filter((op) => !HIDDEN_INSTANCE_OPS.has(op.key));
-  }, [selectedObject]);
+  }, [operationsForType, selectedObject]);
 
   const activeRequirements = useMemo(
     () =>
@@ -291,11 +300,12 @@ export function ObjectAuthorizationCreateScene() {
         options: group.types
           .filter((type) =>
             (AUTHZ_OBJECT_PICKER_TYPES as readonly string[]).includes(type) &&
-            (fineGrained || isCommunityObjectGrantType(type)),
+            (fineGrained || isCommunityObjectGrantType(type)) &&
+            Boolean(catalog?.resourceTypes.some((resourceType) => resourceType.id === type)),
           )
           .map((type) => ({ label: resourceTypeLabel(type), value: type })),
       })),
-    [fineGrained, t],
+    [catalog, fineGrained, t],
   );
 
   const toggleOp = (opKey: string) => {
@@ -316,7 +326,8 @@ export function ObjectAuthorizationCreateScene() {
   const selectedOperations = ops.filter((op) => opKeys.includes(op.key));
   const canSubmit = Boolean(
     selectedObject && granteeIds.length > 0 &&
-      (fineGrained ? opKeys.length > 0 : bundleSelected),
+      (fineGrained ? opKeys.length > 0 : bundleSelected) &&
+      !catalogLoading,
   );
   const nextActionKey = !selectedObject
     ? "systemAdmin.objectGrants.summaryNextPickObject"
@@ -443,6 +454,7 @@ export function ObjectAuthorizationCreateScene() {
         </div>
       </header>
 
+      <AuthorizationRegistryFailureAlert error={catalogError} onRetry={retryAuthorizationRegistry} />
       {loadError ? (
         <Alert
           action={
@@ -475,6 +487,7 @@ export function ObjectAuthorizationCreateScene() {
                     allowClear
                     aria-label={t("systemAdmin.objectGrants.pickerObjectTypePlaceholder")}
                     className={styles.createObjectTypeSelect}
+                    disabled={catalogLoading}
                     onChange={(value) => {
                       setObjectType(value);
                       setObjectValue(undefined);
@@ -609,6 +622,7 @@ export function ObjectAuthorizationCreateScene() {
                           })}
                         </span>
                         <AppButton
+                          disabled={catalogLoading}
                           onClick={() => setOpKeys(ops.map((op) => op.key))}
                           size="small"
                           type="link"
@@ -616,7 +630,7 @@ export function ObjectAuthorizationCreateScene() {
                           {t("systemAdmin.objectGrants.selectAllOperations")}
                         </AppButton>
                         <AppButton
-                          disabled={opKeys.length === 0}
+                          disabled={catalogLoading || opKeys.length === 0}
                           onClick={() => setOpKeys([])}
                           size="small"
                           type="link"
@@ -639,6 +653,7 @@ export function ObjectAuthorizationCreateScene() {
                               opKeys.includes(op.key) ? styles.chipOptSelected : "",
                               prerequisiteLocked ? styles.chipRequired : "",
                             ].join(" ")}
+                            disabled={catalogLoading}
                             key={op.key}
                             onClick={() => toggleOp(op.key)}
                             title={`${op.label} (${op.key})`}

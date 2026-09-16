@@ -12,14 +12,15 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { listRoles, setRolePermission } from "@/modules/system-admin/services/admin.service";
 import type { AdminRole } from "@/modules/system-admin/types/admin";
 import { roleDescription } from "@/modules/system-admin/utils/role-catalog";
 import {
   operationLabel,
-  operationsForType,
   WILDCARD,
 } from "@/modules/system-admin/utils/resource-catalog";
+import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
 
@@ -29,8 +30,6 @@ type CatalogAuthorizeModalProps = {
   onClose: () => void;
   open: boolean;
 };
-
-const CATALOG_OPS = operationsForType("catalog");
 
 type CatalogGrantRow = {
   operations: string[];
@@ -46,11 +45,28 @@ export function CatalogAuthorizeModal({
 }: CatalogAuthorizeModalProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  const {
+    catalogError,
+    catalogLoading,
+    operationsForType,
+    retryAuthorizationRegistry,
+  } = useAuthorizationRegistry();
+  const catalogOps = useMemo(() => operationsForType("catalog"), [operationsForType]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [loading, setLoading] = useState(false);
   const [roleId, setRoleId] = useState<string>();
   const [ops, setOps] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  const selectOperations = useCallback((requested: string[]) => {
+    const selected = new Set(requested);
+    for (const operation of catalogOps) {
+      if (selected.has(operation.key)) {
+        operation.requires.forEach((requirement) => selected.add(requirement));
+      }
+    }
+    setOps(catalogOps.filter((operation) => selected.has(operation.key)).map((operation) => operation.key));
+  }, [catalogOps]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,6 +171,7 @@ export function CatalogAuthorizeModal({
       <p className={styles.subText} style={{ marginTop: 0 }}>
         {t("systemAdmin.authorize.subtitle")}
       </p>
+      <AuthorizationRegistryFailureAlert error={catalogError} onRetry={retryAuthorizationRegistry} />
 
       <div className={styles.grantAddRow} style={{ marginBottom: 16 }}>
         <Select
@@ -171,14 +188,15 @@ export function CatalogAuthorizeModal({
           value={roleId}
         />
         <Select
+          disabled={catalogLoading}
           mode="multiple"
-          onChange={setOps}
-          options={CATALOG_OPS.map((op) => ({ label: op.label, value: op.key }))}
+          onChange={selectOperations}
+          options={catalogOps.map((op) => ({ label: op.label, value: op.key }))}
           placeholder={t("systemAdmin.authorize.operationsPlaceholder")}
           style={{ flex: 1, minWidth: 200 }}
           value={ops}
         />
-        <AppButton loading={busy} onClick={() => void handleGrant()} type="primary">
+        <AppButton disabled={catalogLoading} loading={busy} onClick={() => void handleGrant()} type="primary">
           {t("systemAdmin.authorize.grant")}
         </AppButton>
       </div>

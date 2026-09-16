@@ -137,6 +137,9 @@ export const systemAdminZhCN = {
       addOperation: "添加操作",
       operationsPlaceholder: "选择操作",
     },
+    authorizationRegistry: {
+      loadFailed: "无法加载当前权限目录。请重试；目录加载成功前不能修改权限。",
+    },
     authorize: {
       title: "授权 · {{name}}",
       subtitle: "把这条数据连接授权给某个角色：选择角色，勾选允许的操作；撤销点「收回」。",
