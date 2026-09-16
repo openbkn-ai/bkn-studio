@@ -6,7 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,11 +15,27 @@ import { ToolDetailScene } from "@/modules/execution-factory/scenes/ToolDetailSc
 import { ToolboxFormScene } from "@/modules/execution-factory/scenes/ToolboxFormScene";
 
 const mocks = vi.hoisted(() => ({
+  createToolbox: vi.fn(),
+  fetchCurrentUser: vi.fn(),
   permissions: [] as string[],
+  navigate: vi.fn(),
   getToolbox: vi.fn(),
   getToolDetail: vi.fn(),
   updateToolbox: vi.fn(),
   updateTool: vi.fn(),
+}));
+
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => mocks.navigate,
+}));
+
+vi.mock("@/framework/auth/current-user", () => ({
+  fetchCurrentUser: mocks.fetchCurrentUser,
+}));
+
+vi.mock("@/modules/execution-factory/utils/metadata-content", () => ({
+  validateOpenApiDocumentText: () => ({ ok: true }),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -39,6 +55,7 @@ vi.mock("@/framework/scaffold/CrudFormPage", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/services/toolbox.service", () => ({
+  createToolbox: mocks.createToolbox,
   getToolbox: mocks.getToolbox,
   getToolboxMarket: mocks.getToolbox,
   updateToolbox: mocks.updateToolbox,
@@ -77,7 +94,7 @@ vi.mock("@/modules/execution-factory/components/ToolboxMetadataFormFields", () =
 }));
 
 vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
-  OpenApiSpecInput: () => null,
+  OpenApiSpecInput: (props: ComponentProps<"textarea">) => <textarea {...props} />,
 }));
 
 vi.mock("@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout", () => ({
@@ -126,6 +143,11 @@ beforeEach(() => {
     metadataType: "function",
     status: "enabled",
   });
+  mocks.fetchCurrentUser.mockResolvedValue({
+    id: "user-1",
+    permissions: ["execution-factory:function:view", "execution-factory:toolbox:view"],
+    roles: [],
+  });
 });
 
 afterEach(cleanup);
@@ -161,6 +183,33 @@ describe("Function and API edit boundaries", () => {
     fireEvent.click(await screen.findByRole("radio", { name: "executionFactory.metadataTypes.function" }));
     expect(await screen.findByRole("button", { name: "common.save" })).toBeTruthy();
     expect(screen.queryByText("403")).toBeNull();
+  });
+
+  it.each([
+    {
+      grant: "execution-factory:function:create",
+      metadataType: "function",
+      target: "/execution-factory/toolboxes/box-created/tools?create=1",
+    },
+    {
+      grant: "execution-factory:toolbox:create",
+      metadataType: "openapi",
+      target: "/execution-factory/units?activeTab=toolbox&toolboxView=openapi",
+    },
+  ])("refreshes owner permissions before routing a create-only $metadataType user", async ({ grant, metadataType, target }) => {
+    mocks.permissions = [grant];
+    mocks.createToolbox.mockResolvedValue({ boxId: "box-created" });
+    render(<MemoryRouter><ToolboxFormScene mode="create" /></MemoryRouter>);
+
+    await screen.findByRole("button", { name: "common.save" });
+    if (metadataType === "openapi") {
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "openapi: 3.0.0" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(mocks.createToolbox).toHaveBeenCalledWith(expect.objectContaining({ metadataType })));
+    await waitFor(() => expect(mocks.fetchCurrentUser).toHaveBeenCalledOnce());
+    expect(mocks.navigate).toHaveBeenCalledWith(target);
   });
 
   it("opens the Function form with only Function modify and denies the API form", async () => {

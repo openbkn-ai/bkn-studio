@@ -321,7 +321,9 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         setToolbox(record);
         setBoxName(record.name);
         setBoxCategory(record.categoryType ?? record.categoryName);
-        setFunctions(loaded.length > 0 ? loaded : [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)]);
+        // A view-only caller must not receive an unsaved local draft merely by opening an empty
+        // toolbox. Editors still get the draft that starts the creation flow.
+        setFunctions(loaded.length > 0 ? loaded : canEditFunction ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)] : []);
         setActiveKey(loaded[0]?.key ?? null);
       } catch (error) {
         if (!cancelled) {
@@ -337,7 +339,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     return () => {
       cancelled = true;
     };
-  }, [boxId]);
+  }, [boxId, canEditFunction]);
 
   useEffect(() => {
     if (!activeKey && functions.length > 0) {
@@ -840,7 +842,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
    * state updates; silent suppresses messages for implicit derivations.
    */
   const handleDeriveParams = async (
-    options?: { silent?: boolean },
+    options?: { persist?: boolean; silent?: boolean },
   ): Promise<FunctionParameterDef[] | null> => {
     if (!active) {
       return null;
@@ -859,17 +861,19 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         return null;
       }
 
-      derivedCodeRef.current[active.key] = active.code;
-      patchActive({
-        ...(inferred.name && !active.name ? { name: inferred.name } : {}),
-        ...(inferred.description && !active.description
-          ? { description: inferred.description }
-          : {}),
-        // Supported derivation is authoritative: no-argument functions can return [] or omit
-        // the field, and both must clear inputs to avoid retaining parameters from a prior function.
-        inputs: inferred.inputs ?? [],
-        ...(inferred.outputs ? { outputs: inferred.outputs } : {}),
-      });
+      if (options?.persist ?? canEditFunction) {
+        derivedCodeRef.current[active.key] = active.code;
+        patchActive({
+          ...(inferred.name && !active.name ? { name: inferred.name } : {}),
+          ...(inferred.description && !active.description
+            ? { description: inferred.description }
+            : {}),
+          // Supported derivation is authoritative: no-argument functions can return [] or omit
+          // the field, and both must clear inputs to avoid retaining parameters from a prior function.
+          inputs: inferred.inputs ?? [],
+          ...(inferred.outputs ? { outputs: inferred.outputs } : {}),
+        });
+      }
       if (!options?.silent) {
         void message.success(t("executionFactory.functionDeriveApplied"));
       }
@@ -957,7 +961,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       // Re-derive changed code before execution to avoid sending stale parameters.
       let inputs = active.inputs;
       if (needsDerive(active)) {
-        const derived = await handleDeriveParams({ silent: true });
+        const derived = await handleDeriveParams({ persist: canEditFunction, silent: true });
         if (derived) {
           inputs = derived;
         }

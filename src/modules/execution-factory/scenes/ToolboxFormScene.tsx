@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { fetchCurrentUser } from "@/framework/auth/current-user";
 import type { ToolboxFormSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -148,6 +149,10 @@ export function ToolboxFormScene({
           ...values,
           metadataType: values.metadataType ?? "openapi",
         });
+
+        // A creation grants its creator owner access. Refresh before routing so a
+        // create-only user can immediately open the newly created resource.
+        runtimeConfig.currentUser = await fetchCurrentUser();
 
         if (values.metadataType === "function") {
           void message.success(t("common.success"));

@@ -154,6 +154,18 @@ describe("FunctionWorkbenchScene function status confirmation labels (#491)", ()
     expect(api.deleteTools).not.toHaveBeenCalled();
   });
 
+  it("does not create an unsaved draft for a view-only user opening an empty toolbox", async () => {
+    services.runtimeConfig.currentUser.permissions = ["execution-factory:function:view"];
+    api.listTools.mockResolvedValue({ boxId: "box-1", items: [], page: 1, pageSize: 50, total: 0 });
+    const addEventListener = vi.spyOn(window, "addEventListener");
+
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+
+    await waitFor(() => expect(api.listTools).toHaveBeenCalled());
+    expect(addEventListener.mock.calls.some(([type]) => type === "beforeunload")).toBe(false);
+    addEventListener.mockRestore();
+  });
+
   describe.each(["en-US", "zh-CN"] as const)("in %s", (locale) => {
     const labels = LABELS[locale];
 
