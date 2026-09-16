@@ -41,5 +41,5 @@ export function ExecutionUnitCreatePage({ activeTab }: ExecutionUnitCreatePagePr
     })();
   };
 
-  return <CreateMenu activeTab={activeTab} autoOpen onResourceCreated={handleCreated} />;
+  return <CreateMenu activeTab={activeTab} autoOpen dedicatedMode={activeTab} onResourceCreated={handleCreated} />;
 }

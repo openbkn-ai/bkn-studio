@@ -41,6 +41,7 @@ import styles from "./create-menu.module.css";
 
 type CreateMenuProps = {
   activeTab: ExecutionUnitTab;
+  dedicatedMode?: "mcp" | "skill";
   toolboxView?: "openapi" | "function";
   autoOpen?: boolean;
   onAutoOpenHandled?: () => void;
@@ -101,6 +102,7 @@ function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab, toolboxV
 
 export function CreateMenu({
   activeTab,
+  dedicatedMode,
   toolboxView,
   autoOpen = false,
   onAutoOpenHandled,
@@ -133,8 +135,10 @@ export function CreateMenu({
   const importPermission = getImportPermission(activeTab);
   const canCreate = Boolean(permission && hasPermissions({ currentPermissions, requiredPermissions: permission }));
   const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems().filter(
-    (item) => item.action !== "import-adp" && canCreateCapabilityMode(currentPermissions, item.action),
-  ), [currentPermissions]);
+    (item) => item.action !== "import-adp"
+      && (!dedicatedMode || item.action === dedicatedMode)
+      && canCreateCapabilityMode(currentPermissions, item.action),
+  ), [currentPermissions, dedicatedMode]);
   // The Capability UX menu is intentionally cross-resource: its entries already enforce each
   // resource's create grant, so the trigger must be visible when any entry is permitted.
   const canShowCapabilityCreateMenu = capabilityCreateItems.length > 0;
@@ -187,6 +191,7 @@ export function CreateMenu({
   };
 
   const openCapabilityMode = (mode: CapabilityUxMode) => {
+    if (dedicatedMode && mode !== dedicatedMode) return;
     if (!canCreateCapabilityMode(currentPermissions, mode)) return;
     setCapabilityAllowedModes(undefined);
     setCapabilityInitialMode(mode);

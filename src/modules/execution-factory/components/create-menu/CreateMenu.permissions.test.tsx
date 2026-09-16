@@ -124,6 +124,16 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.queryByText(labels.api)).toBeNull();
   });
 
+  it.each(["mcp", "skill"] as const)("keeps the %s create route on its own resource", async (tab) => {
+    grant(tab, ["create"]);
+    state.runtimeConfig.currentUser.permissions.push("execution-factory:toolbox:create");
+    render(<CreateMenu activeTab={tab} dedicatedMode={tab} />);
+    fireEvent.click(screen.getByRole("button", { name: /executionFactory.addCapabilityButton/ }));
+    await screen.findByRole("menu");
+    expect(screen.getByText(labels[tab])).toBeTruthy();
+    expect(screen.queryByText(labels.api)).toBeNull();
+  });
+
   it("shows cross-tab create when the current tab has no create grant", async () => {
     grant("skill", ["view"]);
     state.runtimeConfig.currentUser.permissions.push("execution-factory:mcp:create");
