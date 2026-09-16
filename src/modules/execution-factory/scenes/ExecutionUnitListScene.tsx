@@ -12,6 +12,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { buildAppPath } from "@/app/router/app-paths";
+import { refreshCurrentUser } from "@/framework/auth/current-user";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import {
@@ -852,21 +854,22 @@ export function ExecutionUnitListScene({
         setDetailOperatorId(id);
         return;
       }
-      if (tab === "toolbox") {
-        if (toolId) {
-          void navigate(`/execution-factory/toolboxes/${id}/tools?toolId=${toolId}`);
-          return;
+      const destination = tab === "toolbox"
+        ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
+        : tab === "mcp"
+          ? `/execution-factory/mcp/${id}`
+          : `/execution-factory/skills/${id}`;
+
+      void (async () => {
+        try {
+          runtimeConfig.currentUser = await refreshCurrentUser();
+          void navigate(destination);
+        } catch {
+          window.location.assign(buildAppPath(destination));
         }
-        void navigate(`/execution-factory/toolboxes/${id}/tools?create=1`);
-        return;
-      }
-      if (tab === "mcp") {
-        void navigate(`/execution-factory/mcp/${id}`);
-        return;
-      }
-      void navigate(`/execution-factory/skills/${id}`);
+      })();
     },
-    [navigate, reloadList],
+    [navigate, reloadList, runtimeConfig],
   );
 
   /**

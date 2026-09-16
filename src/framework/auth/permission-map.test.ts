@@ -130,6 +130,24 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("execution-factory:tool:edit", withoutToolboxModify, false)).toBe(false);
   });
 
+  it("API 工具调试权限由已声明的 toolbox:debug 和 tool_box:execute 派生", () => {
+    const permission = "execution-factory:toolbox:debug";
+    const executeGrants = flattenSafeGrants([
+      { operations: ["execute"], resource: { id: "*", type: "tool_box" } },
+    ]);
+    const functionGrants = flattenSafeGrants([
+      { operations: ["execute"], resource: { id: "*", type: "function" } },
+    ]);
+    const wildcardGrants = flattenSafeGrants([
+      { operations: ["*"], resource: { id: "*", type: "*" } },
+    ]);
+
+    expect(defaultDevPermissions).toContain(permission);
+    expect(deriveStudioPermissions(defaultDevPermissions, executeGrants, false)).toContain(permission);
+    expect(deriveStudioPermissions(defaultDevPermissions, functionGrants, false)).not.toContain(permission);
+    expect(deriveStudioPermissions(defaultDevPermissions, wildcardGrants, false)).toContain(permission);
+  });
+
   it("市场浏览按 public_access 判定，不误用 bkn-safe 的同名 catalog 数据目录", () => {
     // A catalog data-directory grant without any public_access must not enable the marketplace entry.
     const onlyDataCatalog = flattenSafeGrants([

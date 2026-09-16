@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 
 
 
+import { buildAppPath } from "@/app/router/app-paths";
+import { refreshCurrentUser } from "@/framework/auth/current-user";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { canCreateCapabilityMode } from "@/modules/execution-factory/utils/capability-create-menu";
 
@@ -298,18 +300,21 @@ export function AddCapabilityWizard({
       return;
     }
 
+    const destination = (mode === "debug" || mode === "edit") && createdNextStep.toolId
+      ? `/execution-factory/toolboxes/${createdNextStep.boxId}/tools/${createdNextStep.toolId}/edit${
+        mode === "debug" ? "?focus=debug" : ""
+      }`
+      : `/execution-factory/toolboxes/${createdNextStep.boxId}/tools`;
     handleClose();
 
-    if ((mode === "debug" || mode === "edit") && createdNextStep.toolId) {
-      void navigate(
-        `/execution-factory/toolboxes/${createdNextStep.boxId}/tools/${createdNextStep.toolId}/edit${
-          mode === "debug" ? "?focus=debug" : ""
-        }`,
-      );
-      return;
-    }
-
-    void navigate(`/execution-factory/toolboxes/${createdNextStep.boxId}/tools`);
+    void (async () => {
+      try {
+        runtimeConfig.currentUser = await refreshCurrentUser();
+        void navigate(destination);
+      } catch {
+        window.location.assign(buildAppPath(destination));
+      }
+    })();
   };
 
 

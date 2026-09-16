@@ -26,6 +26,7 @@ export const executionFactoryModuleManifest = {
     "execution-factory:toolbox:edit",
     "execution-factory:toolbox:publish",
     "execution-factory:toolbox:delete",
+    "execution-factory:toolbox:debug",
     "execution-factory:tool:view",
     "execution-factory:tool:create",
     "execution-factory:tool:edit",
