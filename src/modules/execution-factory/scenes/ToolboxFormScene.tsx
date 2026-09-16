@@ -130,6 +130,21 @@ export function ToolboxFormScene({
     void navigate(buildListUrl(form.getFieldValue("metadataType") as ToolboxMetadataType));
   };
 
+  /**
+   * Creating a toolbox grants its creator owner access. If the in-place refresh fails, load the
+   * destination afresh so CurrentUserLoader retries instead of misreporting a successful create
+   * as an error and leaving the caller on a form they can no longer submit.
+   */
+  const refreshPermissionsBeforeNavigate = async (destination: string) => {
+    try {
+      runtimeConfig.currentUser = await fetchCurrentUser();
+      return true;
+    } catch {
+      window.location.assign(destination);
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
     const values = await form.validateFields();
 
@@ -149,16 +164,28 @@ export function ToolboxFormScene({
           ...values,
           metadataType: values.metadataType ?? "openapi",
         });
+        const destination = values.metadataType === "function"
+          ? `/execution-factory/toolboxes/${record.boxId}/tools?create=1`
+          : buildListUrl(values.metadataType);
 
-        // A creation grants its creator owner access. Refresh before routing so a
-        // create-only user can immediately open the newly created resource.
-        runtimeConfig.currentUser = await fetchCurrentUser();
-
-        if (values.metadataType === "function") {
-          void message.success(t("common.success"));
-          void navigate(`/execution-factory/toolboxes/${record.boxId}/tools?create=1`);
+        if (!(await refreshPermissionsBeforeNavigate(destination))) {
           return;
         }
+
+        void message.success(t("common.success"));
+
+        if (values.metadataType === "function") {
+          void navigate(destination);
+          return;
+        }
+
+        if (onSubmitSuccess) {
+          onSubmitSuccess();
+          return;
+        }
+
+        void navigate(destination);
+        return;
       } else if (boxId) {
         await updateToolbox({
           ...values,
