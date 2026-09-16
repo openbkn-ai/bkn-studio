@@ -126,12 +126,16 @@ describe("creation permissions (#670 / #672)", () => {
 
   it.each(["mcp", "skill"] as const)("keeps the %s create route on its own resource", async (tab) => {
     grant(tab, ["create"]);
-    state.runtimeConfig.currentUser.permissions.push("execution-factory:toolbox:create");
+    state.runtimeConfig.currentUser.permissions.push(
+      "execution-factory:toolbox:create",
+      "execution-factory:impex:import",
+    );
     render(<CreateMenu activeTab={tab} dedicatedMode={tab} />);
     fireEvent.click(screen.getByRole("button", { name: /executionFactory.addCapabilityButton/ }));
     await screen.findByRole("menu");
     expect(screen.getByText(labels[tab])).toBeTruthy();
     expect(screen.queryByText(labels.api)).toBeNull();
+    expect(screen.queryByRole("button", { name: "executionFactory.importButton" })).toBeNull();
   });
 
   it("shows cross-tab create when the current tab has no create grant", async () => {
@@ -169,6 +173,14 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.getByText("executionFactory.executionUnitTabs.operator")).toBeTruthy();
     expect(screen.queryByText("executionFactory.executionUnitTabs.toolbox")).toBeNull();
     expect(screen.queryByText("executionFactory.executionUnitTabs.mcp")).toBeNull();
+  });
+
+  it("keeps the retained legacy wizard on the requested create resource", () => {
+    grant("mcp", ["create"]);
+    state.runtimeConfig.currentUser.permissions.push("execution-factory:toolbox:create");
+    render(<CreateExecutionUnitWizard allowedTabsOverride={["mcp"]} initialTab="mcp" onClose={vi.fn()} open />);
+    expect(screen.getByText("executionFactory.executionUnitTabs.mcp")).toBeTruthy();
+    expect(screen.queryByText("executionFactory.executionUnitTabs.toolbox")).toBeNull();
   });
 
   it("rejects a locked unauthorized initial mode and an empty override", () => {

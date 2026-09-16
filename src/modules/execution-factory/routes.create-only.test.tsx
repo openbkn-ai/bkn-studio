@@ -50,16 +50,21 @@ vi.mock("@/modules/execution-factory/components/create-menu/CreateExecutionUnitW
 vi.mock("@/modules/execution-factory/components/create-menu/ImportResourceModal", () => ({
   ImportResourceModal: () => null,
 }));
+vi.mock("@/modules/execution-factory/pages/McpDetailPage", () => ({
+  McpDetailPage: () => <output>mcp detail</output>,
+}));
+vi.mock("@/modules/execution-factory/pages/SkillDetailPage", () => ({
+  SkillDetailPage: () => <output>skill detail</output>,
+}));
 
 function CreateRoute() {
   const location = useLocation();
-  const route = useRoutes([
-    ...executionFactoryRoutes.filter((item) =>
-      item.path === "execution-factory/mcp/new" || item.path === "execution-factory/skills/new",
-    ),
-    { path: "execution-factory/mcp/:mcpId", element: <output>mcp detail</output> },
-    { path: "execution-factory/skills/:skillId", element: <output>skill detail</output> },
-  ]);
+  const route = useRoutes(executionFactoryRoutes.filter((item) => [
+    "execution-factory/mcp/new",
+    "execution-factory/skills/new",
+    "execution-factory/mcp/:mcpId",
+    "execution-factory/skills/:skillId",
+  ].includes(item.path ?? "")));
   return <>{route}<output data-testid="current-path">{location.pathname}</output></>;
 }
 
@@ -88,6 +93,7 @@ describe("execution factory create-only routes", () => {
     await waitFor(() => expect(screen.getByTestId("current-path").textContent).toBe(
       `/execution-factory/${kind === "mcp" ? "mcp" : "skills"}/new-id`,
     ));
+    expect(await screen.findByText(`${kind} detail`)).toBeTruthy();
     expect(services.refreshCurrentUser).toHaveBeenCalledOnce();
     expect(services.runtimeConfig.currentUser.permissions).toContain(`execution-factory:${kind}:view`);
   });

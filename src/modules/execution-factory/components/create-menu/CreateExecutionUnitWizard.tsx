@@ -29,6 +29,7 @@ export type CreatedExecutionUnitPayload = {
 };
 
 type CreateExecutionUnitWizardProps = {
+  allowedTabsOverride?: readonly ExecutionUnitTab[];
   initialTab: ExecutionUnitTab;
   onClose: () => void;
   onRefresh?: () => void;
@@ -37,6 +38,7 @@ type CreateExecutionUnitWizardProps = {
 };
 
 export function CreateExecutionUnitWizard({
+  allowedTabsOverride,
   initialTab,
   onClose,
   onRefresh,
@@ -50,10 +52,10 @@ export function CreateExecutionUnitWizard({
     requiredPermissions: kind === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create",
   }));
   const allowedTabs = (["operator", "toolbox", "mcp", "skill"] as const).filter((tab) =>
-    tab === "toolbox" ? allowedMetadataTypes.length > 0 : hasPermissions({
+    (!allowedTabsOverride || allowedTabsOverride.includes(tab)) && (tab === "toolbox" ? allowedMetadataTypes.length > 0 : hasPermissions({
       currentPermissions: runtimeConfig.currentUser.permissions,
       requiredPermissions: `execution-factory:${tab}:create`,
-    }),
+    })),
   );
   const navigate = useNavigate();
   const [step, setStep] = useState(0);

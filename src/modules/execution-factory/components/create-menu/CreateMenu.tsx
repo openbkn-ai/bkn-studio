@@ -132,15 +132,15 @@ export function CreateMenu({
       ? "execution-factory:operator:create"
       : resolveCapabilityCreatePermission(activeTab, toolboxView)
     : getCreatePermission(activeTab, toolboxView);
-  const importPermission = getImportPermission(activeTab);
+  const importPermission = dedicatedMode ? null : getImportPermission(activeTab);
   const canCreate = Boolean(permission && hasPermissions({ currentPermissions, requiredPermissions: permission }));
   const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems().filter(
     (item) => item.action !== "import-adp"
       && (!dedicatedMode || item.action === dedicatedMode)
       && canCreateCapabilityMode(currentPermissions, item.action),
   ), [currentPermissions, dedicatedMode]);
-  // The Capability UX menu is intentionally cross-resource: its entries already enforce each
-  // resource's create grant, so the trigger must be visible when any entry is permitted.
+  // Shared management pages offer cross-resource creation; dedicated routes only expose their
+  // own resource. Each visible entry enforces its own create grant.
   const canShowCapabilityCreateMenu = capabilityCreateItems.length > 0;
 
   useEffect(() => {
@@ -337,6 +337,7 @@ export function CreateMenu({
       ) : null}
       {showLegacyCreateWizard ? (
         <CreateExecutionUnitWizard
+          allowedTabsOverride={dedicatedMode ? [dedicatedMode] : undefined}
           initialTab={activeTab}
           onClose={() => setLegacyWizardOpen(false)}
           onRefresh={onRefresh}
