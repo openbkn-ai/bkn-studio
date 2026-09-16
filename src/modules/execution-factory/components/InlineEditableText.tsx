@@ -21,6 +21,8 @@ type InlineEditableTextProps = {
   multiline?: boolean;
   onChange: (next: string) => void;
   placeholder?: string;
+  /** Display the current text without exposing an edit affordance. */
+  readOnly?: boolean;
   rows?: number;
   value: string;
 };
@@ -37,6 +39,7 @@ export function InlineEditableText({
   multiline = false,
   onChange,
   placeholder,
+  readOnly = false,
   rows = 3,
   value,
 }: InlineEditableTextProps) {
@@ -76,7 +79,7 @@ export function InlineEditableText({
     setEditing(false);
   };
 
-  if (editing) {
+  if (editing && !readOnly) {
     const shared = {
       // Editing mode needs the same width constraint, or the input expands across the row and crowds adjacent content.
       className,
@@ -108,6 +111,20 @@ export function InlineEditableText({
         onPressEnter={commit}
         ref={inputRef as never}
       />
+    );
+  }
+
+  if (readOnly) {
+    return (
+      <span className={`${styles.display} ${block ? styles.displayBlock : ""} ${className ?? ""}`}>
+        <span
+          className={`${styles.text} ${multiline ? styles.textMultiline : ""} ${
+            value ? "" : styles.placeholder
+          }`}
+        >
+          {value || emptyLabel}
+        </span>
+      </span>
     );
   }
 

@@ -48,6 +48,7 @@ type ParameterNodeProps = {
   onChange: (next: FunctionParameterDef) => void;
   onRemove: () => void;
   parameter: FunctionParameterDef;
+  readOnly?: boolean;
   /** The array's single child is structural, so users must not name, add, or remove it. */
   fixedSlot?: boolean;
 };
@@ -58,6 +59,7 @@ function ParameterNode({
   onChange,
   onRemove,
   parameter,
+  readOnly = false,
 }: ParameterNodeProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
@@ -91,7 +93,7 @@ function ParameterNode({
         )}
         <Input
           className={styles.name}
-          disabled={fixedSlot}
+          disabled={fixedSlot || readOnly}
           onChange={(event) => patch({ name: event.target.value })}
           placeholder={t("executionFactory.parameterName")}
           size="small"
@@ -99,6 +101,7 @@ function ParameterNode({
         />
         <Select
           className={styles.type}
+          disabled={readOnly}
           onChange={(value) => onChange(normalizeAfterTypeChange({ ...parameter, type: value }))}
           options={TYPE_OPTIONS.map((value) => ({ label: value, value }))}
           size="small"
@@ -107,12 +110,12 @@ function ParameterNode({
         <label className={styles.required}>
           <Checkbox
             checked={Boolean(parameter.required)}
-            disabled={fixedSlot}
+            disabled={fixedSlot || readOnly}
             onChange={(event) => patch({ required: event.target.checked })}
           />
           {t("executionFactory.parameterRequired")}
         </label>
-        {fixedSlot ? null : (
+        {fixedSlot || readOnly ? null : (
           <button
             aria-label={t("common.delete")}
             className={styles.remove}
@@ -125,6 +128,7 @@ function ParameterNode({
       </div>
       <div className={styles.descRow}>
         <Input
+          disabled={readOnly}
           onChange={(event) => patch({ description: event.target.value })}
           placeholder={t("executionFactory.parameterDescriptionPlaceholder")}
           size="small"
@@ -147,9 +151,10 @@ function ParameterNode({
                   patch({ sub_parameters: children.filter((_, at) => at !== index) })
                 }
                 parameter={child}
+                readOnly={readOnly}
               />
             ))}
-            {parameter.type === "object" ? (
+            {parameter.type === "object" && !readOnly ? (
               <AppButton
                 className={styles.addSubButton}
                 icon={<PlusOutlined />}
@@ -175,6 +180,7 @@ type FunctionParameterTreeProps = {
   addLabel: string;
   emptyText: string;
   onChange: (next: FunctionParameterDef[]) => void;
+  readOnly?: boolean;
   value?: FunctionParameterDef[];
 };
 
@@ -182,6 +188,7 @@ export function FunctionParameterTree({
   addLabel,
   emptyText,
   onChange,
+  readOnly = false,
   value,
 }: FunctionParameterTreeProps) {
   const parameters = value ?? [];
@@ -200,16 +207,17 @@ export function FunctionParameterTree({
           }}
           onRemove={() => onChange(parameters.filter((_, at) => at !== index))}
           parameter={parameter}
+          readOnly={readOnly}
         />
       ))}
-      <AppButton
+      {!readOnly ? <AppButton
         className={styles.addButton}
         icon={<PlusOutlined />}
         onClick={() => onChange([...parameters, { name: "", type: "string", required: false }])}
         size="small"
       >
         {addLabel}
-      </AppButton>
+      </AppButton> : null}
     </div>
   );
 }

@@ -64,10 +64,10 @@ const TITLE_KEY = {
   skill: "Skills",
 } as const;
 
-/** Permission enforced by the concrete execution-factory detail route for each row kind. */
-const DETAIL_VIEW_PERMISSION: Record<CapabilitySectionKind, string> = {
+/** Function rows point to an editor, which requires Function edit permission. */
+const DETAIL_LINK_PERMISSION: Record<CapabilitySectionKind, string> = {
   api: "execution-factory:tool:view",
-  function: "execution-factory:tool:view",
+  function: "execution-factory:function:edit",
   mcp: "execution-factory:mcp:view",
   skill: "execution-factory:skill:view",
 };
@@ -177,13 +177,16 @@ export function CapabilityListPanel({
   const toolKind: "api" | "function" | undefined =
     kind === "api" || kind === "function" ? kind : undefined;
   const factoryTab = isSkill ? "skill" : isMcp ? "mcp" : "toolbox";
+  const factoryManagementPermission = kind === "function"
+    ? "execution-factory:function:view"
+    : executionFactoryViewPermissionByTab[factoryTab];
   const canViewExecutionFactory = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: executionFactoryViewPermissionByTab[factoryTab],
+    requiredPermissions: factoryManagementPermission,
   });
   const canViewCapabilityDetail = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: DETAIL_VIEW_PERMISSION[kind],
+    requiredPermissions: DETAIL_LINK_PERMISSION[kind],
   });
 
   const filtered = useMemo(() => {
@@ -447,9 +450,11 @@ export function CapabilityListPanel({
                 void navigate(
                   isSkill
                     ? "/execution-factory/units?activeTab=skill"
-                    : isMcp
+                  : isMcp
                       ? "/execution-factory/units?activeTab=mcp"
-                      : "/execution-factory/units?activeTab=toolbox",
+                      : kind === "function"
+                        ? "/execution-factory/units?activeTab=toolbox&toolboxView=function"
+                        : "/execution-factory/units?activeTab=toolbox",
                 );
               }}
               type="link"

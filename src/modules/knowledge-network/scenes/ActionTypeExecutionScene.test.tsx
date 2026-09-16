@@ -203,6 +203,24 @@ describe("ActionTypeExecutionScene review regressions", () => {
     expect(screen.queryByText("box-1/tool-1")).toBeNull();
   });
 
+  it("resolves a Function action source with Function view access", async () => {
+    mocks.permissions.current = ["execution-factory:function:view"];
+    mocks.getDetail.mockResolvedValue(
+      createDetail({ boxId: "box-1", toolId: "tool-1", type: "tool" }),
+    );
+    mocks.resolveDisplay.mockResolvedValue({
+      boxId: "box-1",
+      boxName: "Functions",
+      toolId: "tool-1",
+      toolName: "Normalize order",
+      type: "tool",
+    });
+
+    render(<ActionTypeExecutionScene />);
+
+    expect(await screen.findByText("Functions/Normalize order")).not.toBeNull();
+  });
+
   it("does not flash the readonly warning while modify access is loading", async () => {
     mocks.search.current = "tab=config";
     mocks.accessState.current = {

@@ -157,7 +157,7 @@ describe("CapabilityListPanel restricted empty state", () => {
   });
 
   it.each([
-    ["function", "execution-factory:toolbox:view"],
+    ["function", "execution-factory:function:view"],
     ["api", "execution-factory:toolbox:view"],
     ["mcp", "execution-factory:mcp:view"],
     ["skill", "execution-factory:skill:view"],
@@ -174,7 +174,7 @@ describe("CapabilityListPanel restricted empty state", () => {
   it.each([
     [
       "function",
-      "execution-factory:tool:view",
+      "execution-factory:function:edit",
       "/execution-factory/toolboxes/box-1/tools/capability-1/edit",
     ],
     [
@@ -198,5 +198,15 @@ describe("CapabilityListPanel restricted empty state", () => {
     expect(mocks.navigate).toHaveBeenCalledWith(expectedPath, {
       state: { returnTo: "/knowledge-network/kn-1/capabilities?kind=all" },
     });
+  });
+
+  it("opens the Function management view for a Function-only user", () => {
+    mocks.permissions.current = ["execution-factory:function:view"];
+    renderPanel("function");
+
+    fireEvent.click(screen.getByText("knowledgeNetwork.capabilityManageInFactory"));
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      "/execution-factory/units?activeTab=toolbox&toolboxView=function",
+    );
   });
 });

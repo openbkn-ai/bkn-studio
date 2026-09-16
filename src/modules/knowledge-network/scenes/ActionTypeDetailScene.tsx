@@ -45,7 +45,11 @@ export function ActionTypeDetailScene() {
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "execution-factory:toolbox:view",
+    mode: "any",
+    requiredPermissions: [
+      "execution-factory:toolbox:view",
+      "execution-factory:function:view",
+    ],
   });
   const canViewMcp = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,

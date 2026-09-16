@@ -24,10 +24,15 @@ const PACKAGE_NAME_PATTERN = /^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$/;
 
 type FunctionDependencyPanelProps = {
   onChange: (next: FunctionDependency[]) => void;
+  readOnly?: boolean;
   value: FunctionDependency[];
 };
 
-export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyPanelProps) {
+export function FunctionDependencyPanel({
+  onChange,
+  readOnly = false,
+  value,
+}: FunctionDependencyPanelProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [draftName, setDraftName] = useState("");
@@ -35,6 +40,9 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
   const [versionsByName, setVersionsByName] = useState<Record<string, string[]>>({});
 
   const handleAdd = async () => {
+    if (readOnly) {
+      return;
+    }
     const name = draftName.trim();
     if (!name) {
       return;
@@ -79,6 +87,7 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
           <span className={styles.depName}>{item.name}</span>
           <Select
             className={styles.depVersion}
+            disabled={readOnly}
             onChange={(version) =>
               onChange(value.map((entry, at) => (at === index ? { ...entry, version } : entry)))
             }
@@ -89,18 +98,19 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
             size="small"
             value={item.version}
           />
-          <button
+          {readOnly ? null : <button
             aria-label={t("common.delete")}
             className={styles.depRemove}
             onClick={() => onChange(value.filter((_, at) => at !== index))}
             type="button"
           >
             <CloseOutlined />
-          </button>
+          </button>}
         </div>
       ))}
       <div className={styles.depAdd}>
         <Input
+          disabled={readOnly}
           onChange={(event) => setDraftName(event.target.value)}
           onKeyDown={(keyEvent) => {
             // Chinese IME candidate selection also presses Enter, so do not treat it as submit during composition.
@@ -112,7 +122,7 @@ export function FunctionDependencyPanel({ onChange, value }: FunctionDependencyP
           size="small"
           value={draftName}
         />
-        <AppButton icon={<PlusOutlined />} loading={adding} onClick={() => void handleAdd()} size="small">
+        <AppButton disabled={readOnly} icon={<PlusOutlined />} loading={adding} onClick={() => void handleAdd()} size="small">
           {t("common.add")}
         </AppButton>
       </div>

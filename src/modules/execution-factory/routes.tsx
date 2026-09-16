@@ -118,10 +118,12 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxCreateTitle",
       },
     },
-    element: withRouteLoading(
-      <ExecutionUnitTabRedirect activeTab="toolbox" migrationFrom="toolboxes-new" openCreate />,
-      ["execution-factory:toolbox:create", "execution-factory:function:create"],
-    ),
+    // Creation must not be routed through the list page: a role may legitimately have
+    // create without view, and the list page would reject that caller before the form opens.
+    element: withRouteLoading(<ToolboxFormPage mode="create" />, [
+      "execution-factory:toolbox:create",
+      "execution-factory:function:create",
+    ]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/edit",

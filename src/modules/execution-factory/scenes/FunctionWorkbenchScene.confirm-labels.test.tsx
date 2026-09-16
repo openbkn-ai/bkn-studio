@@ -112,6 +112,15 @@ async function confirmedDialog() {
 describe("FunctionWorkbenchScene function status confirmation labels (#491)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    services.runtimeConfig.currentUser.permissions = [
+      "execution-factory:tool:create",
+      "execution-factory:tool:debug",
+      "execution-factory:tool:delete",
+      "execution-factory:tool:edit",
+      "execution-factory:toolbox:edit",
+      "execution-factory:function:edit",
+      "execution-factory:function:debug",
+    ];
     api.getToolbox.mockResolvedValue({
       boxId: "box-1",
       metadataType: "function",
@@ -132,6 +141,17 @@ describe("FunctionWorkbenchScene function status confirmation labels (#491)", ()
         functionInput: { code: "def handler(event):\n    return event\n", inputs: [], outputs: [] },
       });
     });
+  });
+
+  it("does not expose function mutations to a view-only user", async () => {
+    services.runtimeConfig.currentUser.permissions = ["execution-factory:function:view"];
+
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+
+    await railItem("sum_orders");
+    expect(screen.queryByRole("button", { name: "executionFactory.cardMenu.more" })).toBeNull();
+    expect(screen.queryByText(i18n.t("common.save"))).toBeNull();
+    expect(api.deleteTools).not.toHaveBeenCalled();
   });
 
   describe.each(["en-US", "zh-CN"] as const)("in %s", (locale) => {
