@@ -18,6 +18,11 @@ const UnitManagementListPage = lazy(async () => {
   return { default: module.UnitManagementListPage };
 });
 
+const ExecutionUnitCreatePage = lazy(async () => {
+  const module = await import("@/modules/execution-factory/pages/ExecutionUnitCreatePage");
+  return { default: module.ExecutionUnitCreatePage };
+});
+
 const CatalogListPage = lazy(async () => {
   const module = await import("@/modules/execution-factory/pages/CatalogListPage");
   return { default: module.CatalogListPage };
@@ -182,7 +187,7 @@ export const executionFactoryRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(
-      <ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp-new" openCreate />,
+      <ExecutionUnitCreatePage activeTab="mcp" />,
       ["execution-factory:mcp:create"],
     ),
   },
@@ -221,7 +226,7 @@ export const executionFactoryRoutes: RouteObject[] = [
       },
     },
     element: withRouteLoading(
-      <ExecutionUnitTabRedirect activeTab="skill" migrationFrom="skills-new" openCreate />,
+      <ExecutionUnitCreatePage activeTab="skill" />,
       ["execution-factory:skill:create"],
     ),
   },
