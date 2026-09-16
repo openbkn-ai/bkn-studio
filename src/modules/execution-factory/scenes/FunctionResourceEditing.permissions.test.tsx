@@ -15,8 +15,9 @@ import { ToolDetailScene } from "@/modules/execution-factory/scenes/ToolDetailSc
 import { ToolboxFormScene } from "@/modules/execution-factory/scenes/ToolboxFormScene";
 
 const mocks = vi.hoisted(() => ({
+  buildAppPath: vi.fn((path: string) => path),
   createToolbox: vi.fn(),
-  fetchCurrentUser: vi.fn(),
+  refreshCurrentUser: vi.fn(),
   permissions: [] as string[],
   navigate: vi.fn(),
   getToolbox: vi.fn(),
@@ -25,13 +26,18 @@ const mocks = vi.hoisted(() => ({
   updateTool: vi.fn(),
 }));
 
+vi.mock("@/app/router/app-paths", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/app/router/app-paths")>()),
+  buildAppPath: mocks.buildAppPath,
+}));
+
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
   useNavigate: () => mocks.navigate,
 }));
 
 vi.mock("@/framework/auth/current-user", () => ({
-  fetchCurrentUser: mocks.fetchCurrentUser,
+  refreshCurrentUser: mocks.refreshCurrentUser,
 }));
 
 vi.mock("@/modules/execution-factory/utils/metadata-content", () => ({
@@ -129,6 +135,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.buildAppPath.mockImplementation((path: string) => path);
   mocks.permissions = [];
   mocks.getToolbox.mockResolvedValue({
     boxId: "box-1",
@@ -143,7 +150,7 @@ beforeEach(() => {
     metadataType: "function",
     status: "enabled",
   });
-  mocks.fetchCurrentUser.mockResolvedValue({
+  mocks.refreshCurrentUser.mockResolvedValue({
     id: "user-1",
     permissions: ["execution-factory:function:view", "execution-factory:toolbox:view"],
     roles: [],
@@ -208,8 +215,24 @@ describe("Function and API edit boundaries", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => expect(mocks.createToolbox).toHaveBeenCalledWith(expect.objectContaining({ metadataType })));
-    await waitFor(() => expect(mocks.fetchCurrentUser).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mocks.refreshCurrentUser).toHaveBeenCalledOnce());
     expect(mocks.navigate).toHaveBeenCalledWith(target);
+  });
+
+  it("uses the basename-aware path when a create-only Function refresh fails", async () => {
+    mocks.permissions = ["execution-factory:function:create"];
+    mocks.createToolbox.mockResolvedValue({ boxId: "box-created" });
+    mocks.refreshCurrentUser.mockRejectedValue(new Error("temporary failure"));
+    // A fragment is a safe same-document target in jsdom while still proving the full-reload path.
+    mocks.buildAppPath.mockReturnValue("#reload-after-permission-refresh");
+    render(<MemoryRouter><ToolboxFormScene mode="create" /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole("button", { name: "common.save" }));
+
+    await waitFor(() => expect(mocks.buildAppPath).toHaveBeenCalledWith(
+      "/execution-factory/toolboxes/box-created/tools?create=1",
+    ));
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
   it("opens the Function form with only Function modify and denies the API form", async () => {

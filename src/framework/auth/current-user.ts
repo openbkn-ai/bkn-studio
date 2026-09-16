@@ -53,6 +53,37 @@ export const anonymousRuntimeUser: RuntimeUser = {
   roles: [],
 };
 
+function assembleRuntimeUser(me: MeResponse, perm: MePermissionsResponse): RuntimeUser {
+  const safeGrants = flattenSafeGrants(perm.permissions);
+  const isAdmin = Boolean(perm.is_admin);
+  // A resource wildcard means super administrator and covers every operation on every resource type, so per-point derivation is unnecessary.
+  const hasResourceWildcard = safeGrants.has("*:*");
+  const roles = me.roles ?? [];
+
+  return {
+    id: me.id ?? null,
+    isAdmin,
+    // `/me` and `/me/permissions` fail independently. Preserve wildcard-derived
+    // super-admin access even when the identity request is temporarily unavailable.
+    isSuperAdmin: hasResourceWildcard || isSuperAdmin(roles),
+    name: me.name || me.account || me.id || null,
+    roles,
+    permissions: hasResourceWildcard
+      ? [...defaultDevPermissions]
+      : deriveStudioPermissions(defaultDevPermissions, safeGrants, isAdmin),
+  };
+}
+
+function loadCurrentUserRequests() {
+  return [
+    http.get<MeResponse>("/safe/v1/me", { skipErrorToast: true }),
+    http.get<MePermissionsResponse>("/safe/v1/me/permissions", {
+      params: { scope: "type" },
+      skipErrorToast: true,
+    }),
+  ] as const;
+}
+
 /**
  * Loads the current user's identity and permissions after login and assembles a RuntimeUser.
  *
@@ -73,39 +104,21 @@ export const anonymousRuntimeUser: RuntimeUser = {
  * permissions-load failure, preventing a transient error from retaining the all-permission default user.
  */
 export async function fetchCurrentUser(): Promise<RuntimeUser> {
-  const [meResult, permResult] = await Promise.allSettled([
-    http.get<MeResponse>("/safe/v1/me", { skipErrorToast: true }),
-    // scope=type is sufficient at startup to render navigation and menus. It reduces responses
-    // from linear growth with object grants to type-scale size. The backend aggregates operations
-    // outside type-level grants into instance_operations, and flattenSafeGrants includes them, so
-    // entry visibility is unaffected. Older backends ignore this unknown parameter, allowing independent rollout.
-    http.get<MePermissionsResponse>("/safe/v1/me/permissions", {
-      params: { scope: "type" },
-      skipErrorToast: true,
-    }),
-  ]);
-
+  const [meResult, permResult] = await Promise.allSettled(loadCurrentUserRequests());
   const me: MeResponse = meResult.status === "fulfilled" ? meResult.value.data : {};
   // Permission endpoint failure produces an empty grant set and therefore no permissions, rather than retaining the caller's all-permission default.
   const perm: MePermissionsResponse =
     permResult.status === "fulfilled" ? permResult.value.data : {};
 
-  const safeGrants = flattenSafeGrants(perm.permissions);
-  const isAdmin = Boolean(perm.is_admin);
-  // A resource wildcard means super administrator and covers every operation on every resource type, so per-point derivation is unnecessary.
-  const hasResourceWildcard = safeGrants.has("*:*");
-  const roles = me.roles ?? [];
+  return assembleRuntimeUser(me, perm);
+}
 
-  return {
-    id: me.id ?? null,
-    isAdmin,
-    // `/me` and `/me/permissions` fail independently. Preserve wildcard-derived
-    // super-admin access even when the identity request is temporarily unavailable.
-    isSuperAdmin: hasResourceWildcard || isSuperAdmin(roles),
-    name: me.name || me.account || me.id || null,
-    roles,
-    permissions: hasResourceWildcard
-      ? [...defaultDevPermissions]
-      : deriveStudioPermissions(defaultDevPermissions, safeGrants, isAdmin),
-  };
+/**
+ * Refreshes identity and grants after an operation that changes the caller's ownership. Unlike
+ * startup loading, this rejects when either source is unavailable so callers can retry via a full
+ * app load instead of routing with known-stale permissions.
+ */
+export async function refreshCurrentUser(): Promise<RuntimeUser> {
+  const [meResult, permResult] = await Promise.all(loadCurrentUserRequests());
+  return assembleRuntimeUser(meResult.data, permResult.data);
 }

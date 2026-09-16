@@ -18,6 +18,11 @@ async function importFetchCurrentUser() {
   return module.fetchCurrentUser;
 }
 
+async function importRefreshCurrentUser() {
+  const module = await import("@/framework/auth/current-user");
+  return module.refreshCurrentUser;
+}
+
 function meOk(data: Record<string, unknown>) {
   return Promise.resolve({ data } as never);
 }
@@ -180,5 +185,14 @@ describe("fetchCurrentUser — 权限来源不可用时 fail-closed", () => {
     expect(user.permissions).toEqual([]);
     expect(user.name).toBeNull();
     expect(user.roles).toEqual([]);
+  });
+
+  it("严格刷新在权限来源失败时拒绝，让创建完成后的跳转可以重新加载", async () => {
+    mockGet.mockImplementation((url: string) =>
+      url === "/safe/v1/me" ? meOk({ id: "u1" }) : Promise.reject(new Error("500")),
+    );
+
+    const refreshCurrentUser = await importRefreshCurrentUser();
+    await expect(refreshCurrentUser()).rejects.toThrow("500");
   });
 });

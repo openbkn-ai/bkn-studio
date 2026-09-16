@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { fetchCurrentUser } from "@/framework/auth/current-user";
+import { buildAppPath } from "@/app/router/app-paths";
+import { refreshCurrentUser } from "@/framework/auth/current-user";
 import type { ToolboxFormSceneProps } from "@/modules/execution-factory/contracts/scenes";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -137,10 +138,10 @@ export function ToolboxFormScene({
    */
   const refreshPermissionsBeforeNavigate = async (destination: string) => {
     try {
-      runtimeConfig.currentUser = await fetchCurrentUser();
+      runtimeConfig.currentUser = await refreshCurrentUser();
       return true;
     } catch {
-      window.location.assign(destination);
+      window.location.assign(buildAppPath(destination));
       return false;
     }
   };
