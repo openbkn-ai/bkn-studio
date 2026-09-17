@@ -78,7 +78,7 @@ const record = {
   healthCheckResult: "",
   healthStatus: "healthy",
   id: "catalog-1",
-  internal: false,
+  builtin: false,
   lastCheckTime: "-",
   metadata: {},
   mode: "standard",

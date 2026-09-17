@@ -446,7 +446,7 @@ describe("ResourceWorkspaceScene", () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
-      internal: false,
+      builtin: false,
       name: "Catalog",
       operations: ["view_detail"],
     });
@@ -469,7 +469,7 @@ describe("ResourceWorkspaceScene", () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
-      internal: false,
+      builtin: false,
       name: "Catalog",
       operations: ["view_detail"],
     });
@@ -494,7 +494,7 @@ describe("ResourceWorkspaceScene", () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
     getCatalogMock.mockResolvedValue({
       id: "catalog-1",
-      internal: true,
+      builtin: true,
       name: "Internal Catalog",
       operations: ["task_manage", "view_detail"],
     });

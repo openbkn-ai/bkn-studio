@@ -16,10 +16,10 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 import type { CatalogRecord } from "@/shared/catalog";
 
 const catalog = (
-  internal: boolean,
-  operations = internal ? [] : ["task_manage", "view_detail"],
+  builtin: boolean,
+  operations = builtin ? [] : ["task_manage", "view_detail"],
 ) => ({
-  internal,
+  builtin,
   operations,
 }) as CatalogRecord;
 const resource = (category: CatalogResource["category"]) => ({ category }) as CatalogResource;

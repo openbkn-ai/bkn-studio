@@ -131,12 +131,12 @@ const resource: CatalogResource = {
 };
 
 const manageableCatalog = {
-  internal: false,
+  builtin: false,
   operations: ["task_manage", "view_detail"],
 } as CatalogRecord;
 
 const modifiableCatalog = {
-  internal: false,
+  builtin: false,
   operations: ["resource_manage", "task_manage", "view_detail"],
 } as CatalogRecord;
 

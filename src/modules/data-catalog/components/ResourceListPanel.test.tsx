@@ -57,7 +57,7 @@ const catalog: CatalogRecord = {
   healthCheckResult: "",
   healthStatus: "healthy",
   id: "catalog-1",
-  internal: false,
+  builtin: false,
   lastCheckTime: null,
   metadata: {},
   mode: "",
@@ -167,7 +167,7 @@ describe("ResourceListPanel", () => {
   // Built-in catalogs stay read-only in Studio, owner row or not.
   it("hides the entry on an internal catalog", async () => {
     currentPermissions.value = ["admin-authz:grant"];
-    renderPanel({ ...catalog, internal: true, operations: ["view_detail", "authorize"] });
+    renderPanel({ ...catalog, builtin: true, operations: ["view_detail", "authorize"] });
     await act(async () => {});
 
     expect(screen.queryByText("dataCatalog.catalog.authorize")).toBeNull();

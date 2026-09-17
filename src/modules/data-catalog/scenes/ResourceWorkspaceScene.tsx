@@ -249,10 +249,10 @@ export function ResourceWorkspaceScene({
   const canModifyResource = hasCatalogOperation(catalog, "resource_manage");
   const canViewResourceDetail = hasCatalogResourceOperation(resource, "view_detail");
   const canQueryResource = hasCatalogResourceOperation(resource, "query_data");
-  const canAuthorizeResource = Boolean(!catalog?.internal && canAuthorizeGrants);
+  const canAuthorizeResource = Boolean(!catalog?.builtin && canAuthorizeGrants);
   // Internal catalogs do not support semantic-understanding tasks. Missing task permission is
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
-  const hideSemanticUnderstanding = Boolean(catalog?.internal);
+  const hideSemanticUnderstanding = Boolean(catalog?.builtin);
   const discoveryFailed = resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
@@ -460,7 +460,7 @@ export function ResourceWorkspaceScene({
                   </span>
                 </>
               ) : null}
-              {!catalog?.internal ? (
+              {!catalog?.builtin ? (
                 <>
                   <span className={styles.contextDivider}>·</span>
                   <span className={styles.contextMeta}>

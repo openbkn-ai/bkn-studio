@@ -87,7 +87,7 @@ export type CatalogRecord = {
   healthStatus: CatalogHealthStatus;
   id: string;
   /** System-managed catalogs are visible but must remain read-only in Studio. */
-  internal: boolean;
+  builtin: boolean;
   lastCheckTime: CatalogTimestamp;
   metadata: Record<string, unknown>;
   mode: string;

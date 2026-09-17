@@ -12,7 +12,7 @@ export function isResourceIndexReadOnly(
   catalog: CatalogRecord | null,
   canModifyResource = true,
 ) {
-  return Boolean(catalog?.internal) || !canModifyResource;
+  return Boolean(catalog?.builtin) || !canModifyResource;
 }
 
 export function canManageResourceBuildTasks(

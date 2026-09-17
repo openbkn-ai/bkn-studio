@@ -39,20 +39,20 @@ describe("catalog-mapper · health status", () => {
     expect(catalog.lastCheckTime).toBe(lastCheckTime);
     expect(catalog.healthCheckResult).toBe("Connection test succeeded.");
     expect(catalog.healthStatus).toBe("healthy");
-    expect(catalog.internal).toBe(false);
+    expect(catalog.builtin).toBe(false);
   });
 
-  it("preserves the backend internal marker", () => {
+  it("maps the backend built_in marker to the domain builtin property", () => {
     const catalog = mapBackendCatalog({
       connector_type: "",
       enabled: true,
-      id: "catalog-internal",
-      internal: true,
+      id: "catalog-builtin",
+      built_in: true,
       name: "system-catalog",
       type: "logical",
     });
 
-    expect(catalog.internal).toBe(true);
+    expect(catalog.builtin).toBe(true);
   });
 
 	it("preserves schemas from catalog details while list summaries are refreshed", () => {

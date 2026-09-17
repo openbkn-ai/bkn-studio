@@ -25,7 +25,7 @@ export type BackendCatalogSummary = {
   health_check_result?: string;
   health_check_status?: string;
   id: string;
-  internal?: boolean;
+  built_in?: boolean;
   last_check_time?: number;
   name: string;
   operations?: string[];
@@ -94,7 +94,7 @@ function mapCatalogRecord(
     enabled: item.enabled,
     status: item.enabled ? "enabled" : "disabled",
     healthStatus: normalizeHealthStatus(item.health_check_status),
-    internal: item.internal ?? false,
+    builtin: item.built_in ?? false,
     healthCheckResult: item.health_check_result ?? "",
     lastCheckTime: normalizeCatalogTimestamp(item.last_check_time),
     expectedUpdateTime: item.update_time ?? 0,

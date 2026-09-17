@@ -293,7 +293,7 @@ export async function createLogicalCatalog(input: { description?: string; name: 
     const now = Date.now();
     prependMockCatalog({
       id: crypto.randomUUID(),
-      internal: false,
+      builtin: false,
       name: input.name,
       description: input.description ?? "",
       connectorType: "",
@@ -406,7 +406,7 @@ export async function updateCatalog(
       enabled: input.enabled,
       expected_update_time: input.expectedUpdateTime,
       id,
-      internal: false,
+      builtin: false,
       name: input.name,
       tags: input.tags,
     },
@@ -441,7 +441,7 @@ options: CatalogMutationOptions = {},
     ));
     prependMockCatalog({
       id,
-      internal: false,
+      builtin: false,
       name: input.name,
       description: input.description,
       connectorType: input.connectorType,

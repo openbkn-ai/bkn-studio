@@ -96,7 +96,7 @@ const catalog: CatalogRecord = {
   healthCheckResult: "",
   healthStatus: "unchecked",
   id: "catalog-1",
-  internal: false,
+  builtin: false,
   lastCheckTime: null,
   metadata: {},
   mode: "",

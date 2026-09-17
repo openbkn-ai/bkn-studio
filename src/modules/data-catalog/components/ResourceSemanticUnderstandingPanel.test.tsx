@@ -69,7 +69,7 @@ const resource: CatalogResource = {
 
 const manageableCatalog = {
   id: "catalog-1",
-  internal: false,
+  builtin: false,
   operations: ["task_manage", "view_detail"],
 } as CatalogRecord;
 

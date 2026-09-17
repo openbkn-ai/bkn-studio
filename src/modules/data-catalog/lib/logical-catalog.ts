@@ -11,7 +11,7 @@ const BUILTIN_TAG_SET = new Set(["builtin", "built-in", "internal", "system"]);
 
 /** Identify built-in logical catalogs only by explicit system markers to avoid affecting user-created items. */
 export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
-  if (catalog.internal) {
+  if (catalog.builtin) {
     return true;
   }
 

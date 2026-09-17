@@ -122,7 +122,7 @@ function record(id: string, operations: string[]): DataConnectRecord {
     healthCheckResult: "",
     healthStatus: "healthy",
     id,
-    internal: false,
+    builtin: false,
     lastCheckTime: null,
     metadata: {},
     mode: "direct",

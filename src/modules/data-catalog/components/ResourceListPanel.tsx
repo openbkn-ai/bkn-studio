@@ -146,12 +146,12 @@ export function ResourceListPanel({
   // what its creator holds (vega writes it at create time); admin-authz:grant is the platform-wide
   // point. Asking only the second one hid the button from every person who built a data connection.
   const ownsCatalogAuthorize = hasCatalogOperation(catalog, "authorize");
-  const canAuthorizeCatalog = !catalog.internal && (ownsCatalogAuthorize || canAuthorizeGrants);
+  const canAuthorizeCatalog = !catalog.builtin && (ownsCatalogAuthorize || canAuthorizeGrants);
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
     canAuthorizeCatalog ||
-    (dataCatalogCreationAvailable && !physical && !catalog.internal);
+    (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
 
@@ -417,7 +417,7 @@ export function ResourceListPanel({
           key: "index",
           label: indexLabel,
         });
-        if (!catalog.internal && canAuthorizeGrants) {
+        if (!catalog.builtin && canAuthorizeGrants) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({
             key: "authorize",
@@ -432,7 +432,7 @@ export function ResourceListPanel({
             ),
           });
         }
-        if (!catalog.internal && canManageResourceTasks) {
+        if (!catalog.builtin && canManageResourceTasks) {
           moreItems.push({
             key: "semantic-understanding",
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
@@ -489,7 +489,7 @@ export function ResourceListPanel({
       {showOperationBar ? <div className={styles.operationBar}>
         <div className={styles.operationPrimary}>
           <div className={styles.toolbarActions}>
-            {dataCatalogCreationAvailable && !physical && !catalog.internal && canManageResources ? (
+            {dataCatalogCreationAvailable && !physical && !catalog.builtin && canManageResources ? (
                 <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                   {t("dataCatalog.resource.create")}
                 </AppButton>
@@ -563,7 +563,7 @@ export function ResourceListPanel({
                 >
                   {t("dataCatalog.catalog.goDiscoverToDiscover")}
                 </AppButton>
-              ) : !physical && !catalog.internal ? (
+              ) : !physical && !catalog.builtin ? (
                 dataCatalogCreationAvailable && canManageResources ? (
                     <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                       {t("dataCatalog.resource.create")}
