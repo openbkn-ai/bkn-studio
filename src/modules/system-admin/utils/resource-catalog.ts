@@ -102,11 +102,11 @@ const SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ = ["view_detail", "query_data", "modi
 // queried. Keep this vocabulary aligned with bkn-safe's action_type catalog:
 // it has no create or query_data operation.
 const ACTION_TYPE_AUTHZ = ["view_detail", "modify", "delete", "execute"];
-// A data connection owns its tables: creating, editing and building one is judged on the catalog,
-// not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
-// lists match the operations bkn-safe actually stores on these types.
+// A data connection owns its tables: creating and building one is judged on the catalog. Resource
+// modification and deletion are still explicit resource operations, with bkn-safe falling back to
+// the parent catalog's resource_manage permission when they are not granted directly.
 const CATALOG_AUTHZ = [...CATALOG_CRUD_AUTHZ, "resource_manage", "query_data", "data_write"];
-const RESOURCE_AUTHZ = ["view_detail", "query_data", "data_write"];
+const RESOURCE_AUTHZ = ["view_detail", "modify", "delete", "query_data", "data_write"];
 const PUBLISHABLE = [
   "view",
   "create",

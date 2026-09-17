@@ -20,8 +20,8 @@ describe("resource-catalog", () => {
     await i18n.changeLanguage("en-US");
 
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
-    expect(operationLabel("knowledge_network", "query_data")).toBe("Query data");
-    expect(operationsForType("catalog").map((item) => item.label)).toContain("View details");
+    expect(operationLabel("knowledge_network", "query_data")).toBe("Query");
+    expect(operationsForType("catalog").map((item) => item.label)).toContain("View");
   });
 
   /**
@@ -47,10 +47,13 @@ describe("resource-catalog", () => {
     );
   });
 
-  it("offers a table only the two verbs it still declares", () => {
+  it("offers every data resource operation the backend accepts", () => {
     expect(operationsForType("resource").map((item) => item.key)).toEqual([
       "view_detail",
+      "modify",
+      "delete",
       "query_data",
+      "data_write",
     ]);
   });
 

@@ -38,7 +38,7 @@ type ResourceGrantEditorProps = {
 
 const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.id === b.id;
 
-type GrantOperation = { key: string; label: string; requires: string[] };
+type GrantOperation = { description?: string; key: string; label: string; requires: string[] };
 
 const ROLE_RESOURCE_TYPE_GROUPS = [
   { key: "data", types: ["catalog"] },
@@ -289,8 +289,11 @@ export function ResourceGrantEditor({
         <div className={styles.grantList}>
           {value.map((grant, index) => {
             const grantCanEdit = canEditGrant(grant);
+            const operationDefinitions = new Map(
+              operationsForType(grant.resource.type).map((operation) => [operation.key, operation]),
+            );
             const requiredOperations = new Set(
-              operationsForType(grant.resource.type)
+              [...operationDefinitions.values()]
                 .filter((operation) => grant.operations.includes(operation.key))
                 .flatMap((operation) => operation.requires),
             );
@@ -308,27 +311,30 @@ export function ResourceGrantEditor({
                   </span>
                 </div>
                 <div className={styles.chipRow}>
-                  {grant.operations.map((op) => (
-                    <Tag
-                      closable={grantCanEdit && !requiredOperations.has(op)}
-                      className={styles.permChip}
-                      key={op}
-                      onClose={(event) => {
-                        event.preventDefault();
-                        if (grantCanEdit) removeOperation(grant, op);
-                      }}
-                      title={requiredOperations.has(op)
-                        ? t("systemAdmin.objectGrants.requiredBySelection")
-                        : undefined}
-                    >
-                      {grant.resource.id === WILDCARD || op === "*"
-                        ? op === "*"
-                          ? t("systemAdmin.grant.allOps")
-                          : operationLabel(grant.resource.type, op)
-                        : operationLabel(grant.resource.type, op)
-                      }
-                    </Tag>
-                  ))}
+                  {grant.operations.map((op) => {
+                    const operation = operationDefinitions.get(op);
+                    const title = [
+                      operation?.description,
+                      requiredOperations.has(op) ? t("systemAdmin.objectGrants.requiredBySelection") : undefined,
+                    ].filter(Boolean).join("\n");
+                    return (
+                      <Tooltip key={op} title={title || undefined}>
+                        <Tag
+                          closable={grantCanEdit && !requiredOperations.has(op)}
+                          className={styles.permChip}
+                          onClose={(event) => {
+                            event.preventDefault();
+                            if (grantCanEdit) removeOperation(grant, op);
+                          }}
+                          title={title || undefined}
+                        >
+                          {op === "*"
+                            ? t("systemAdmin.grant.allOps")
+                            : operationLabel(grant.resource.type, op)}
+                        </Tag>
+                      </Tooltip>
+                    );
+                  })}
                   {grantCanEdit && !grant.operations.includes("*") ? (
                     addingGrantKey === `${grant.resource.type}:${grant.resource.id}:${index}` ? (
                       <Select
@@ -339,7 +345,14 @@ export function ResourceGrantEditor({
                           grant,
                           operationsForType(grant.resource.type),
                         )
-                          .map((operation) => ({ label: operation.label, value: operation.key }))}
+                          .map((operation) => ({
+                            label: (
+                              <Tooltip title={operation.description}>
+                                <span>{operation.label}</span>
+                              </Tooltip>
+                            ),
+                            value: operation.key,
+                          }))}
                         placeholder={t("systemAdmin.grant.operationsPlaceholder")}
                         size="small"
                         style={{ minWidth: 150 }}
@@ -514,7 +527,7 @@ export function ResourceGrantEditor({
                         disabled={!canEdit}
                         key={operation.key}
                         onClick={() => toggleDraftOperation(operation.key)}
-                        title={`${operation.label} (${operation.key})`}
+                        title={operation.description ?? `${operation.label} (${operation.key})`}
                         type="button"
                       >
                         <span className={styles.chipLabelRow}>

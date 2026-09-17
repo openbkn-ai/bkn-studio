@@ -940,15 +940,18 @@ export function ObjectTypeAuthorizationScene() {
   const sourceColumns: ColumnsType<GrantSourceRow> = [
     {
       key: "operation",
-      render: (_value, source) => (
-        <div className={styles.sourceOperationCell}>
-          <strong>
-            {baseOps.find((operation) => operation.key === source.operation)?.label ??
-              source.operation}
-          </strong>
-          <code>{source.operation}</code>
-        </div>
-      ),
+      render: (_value, source) => {
+        const operation = baseOps.find((candidate) => candidate.key === source.operation);
+        const description = operation?.description ?? source.operation;
+        return (
+          <Tooltip title={description}>
+            <div className={styles.sourceOperationCell} title={description}>
+              <strong>{operation?.label ?? source.operation}</strong>
+              <code>{source.operation}</code>
+            </div>
+          </Tooltip>
+        );
+      },
       title: t("systemAdmin.objectGrants.columns.operations"),
       width: 140,
     },
@@ -1088,12 +1091,13 @@ export function ObjectTypeAuthorizationScene() {
         return visibleDecisions.length ? (
           <div className={styles.effectivePermissions}>
             {visibleDecisions.map(({ operation, state }) => (
-              <Tooltip key={operation.key} title={operation.key}>
+              <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                 <span
                   aria-label={t(`systemAdmin.objectGrants.permission${
                     state === "allow" ? "Allowed" : "Denied"
                   }`, { operation: operation.label })}
                   className={`${styles.permissionDecision} ${styles[`permissionDecision_${state}`]}`}
+                  title={operation.description ?? operation.key}
                 >
                   {state === "allow" ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
                   {operation.label}
@@ -1233,7 +1237,7 @@ export function ObjectTypeAuthorizationScene() {
                   ({ requirement }) => requirement.key === operation.key,
                 );
                 return (
-                  <Tooltip key={operation.key} title={operation.key}>
+                  <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                     <button
                       aria-label={operation.key}
                       aria-pressed={selected}
@@ -1242,6 +1246,7 @@ export function ObjectTypeAuthorizationScene() {
                         : styles.baseGrantOperation}
                       disabled={catalogLoading}
                       onClick={() => toggleCandidateOperation(operation.key)}
+                      title={operation.description ?? operation.key}
                       type="button"
                     >
                       {operation.label}

@@ -632,7 +632,7 @@ export function ObjectAuthorizeDrawer({
                   return (
                     <Tooltip
                       key={operation.key}
-                      title={`${operation.key} · ${decisionLabel} · ${t(`systemAdmin.objectGrants.basis.${decision.basis}`)}`}
+                      title={`${operation.description ?? operation.key} · ${decisionLabel} · ${t(`systemAdmin.objectGrants.basis.${decision.basis}`)}`}
                     >
                       <span
                         aria-label={`${operation.label}: ${decisionLabel}`}
@@ -750,10 +750,12 @@ export function ObjectAuthorizeDrawer({
         const operation = ops.find((candidateOperation) =>
           candidateOperation.key === source.operation);
         return (
-          <div className={styles.authzSourceOperationCell}>
-            <strong>{operation?.label ?? source.operation}</strong>
-            <code>{source.operation}</code>
-          </div>
+          <Tooltip title={operation?.description ?? source.operation}>
+            <div className={styles.authzSourceOperationCell}>
+              <strong>{operation?.label ?? source.operation}</strong>
+              <code>{source.operation}</code>
+            </div>
+          </Tooltip>
         );
       },
       title: t("systemAdmin.objectGrants.columns.operations"),
