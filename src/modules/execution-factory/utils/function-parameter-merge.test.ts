@@ -167,6 +167,35 @@ describe("isSameParameterList", () => {
     expect(isSameParameterList([{ name: "a", description: "" }], [{ name: "a" }])).toBe(true);
   });
 
+  it("ignores parameter order at every level, as the backend stores parameters sorted by name", () => {
+    expect(
+      isSameParameterList(
+        [
+          { name: "discount", type: "number" },
+          {
+            name: "order",
+            type: "object",
+            sub_parameters: [
+              { name: "cost_price", type: "number" },
+              { name: "price", type: "number" },
+            ],
+          },
+        ],
+        [
+          {
+            name: "order",
+            type: "object",
+            sub_parameters: [
+              { name: "price", type: "number" },
+              { name: "cost_price", type: "number" },
+            ],
+          },
+          { name: "discount", type: "number" },
+        ],
+      ),
+    ).toBe(true);
+  });
+
   it("detects a changed nested description", () => {
     expect(
       isSameParameterList(

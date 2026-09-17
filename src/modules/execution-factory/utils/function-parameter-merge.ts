@@ -71,18 +71,21 @@ export function mergeInferredParameters(
 }
 
 function canonical(parameters: FunctionParameterDef[] | undefined): unknown {
-  return (parameters ?? []).map((parameter) => ({
-    description: parameter.description?.trim() ? parameter.description : undefined,
-    name: parameter.name,
-    required: parameter.required,
-    sub_parameters: parameter.sub_parameters ? canonical(parameter.sub_parameters) : undefined,
-    type: parameter.type,
-  }));
+  return (parameters ?? [])
+    .map((parameter, index) => ({
+      description: parameter.description?.trim() ? parameter.description : undefined,
+      key: matchKey(parameter, index),
+      required: parameter.required,
+      sub_parameters: parameter.sub_parameters ? canonical(parameter.sub_parameters) : undefined,
+      type: parameter.type,
+    }))
+    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 }
 
 /**
- * Compares two contracts regardless of key order, which differs between a loaded detail and a
- * merge result, so re-inferring unchanged code does not mark the function as edited.
+ * Compares two contracts regardless of key order and parameter order. The backend stores
+ * parameters sorted by name while infer-schema returns signature order, and arguments are passed
+ * by name, so re-inferring unchanged code must not mark the function as edited.
  */
 export function isSameParameterList(
   a: FunctionParameterDef[] | undefined,

@@ -153,9 +153,10 @@ describe("FunctionWorkbenchScene parameter descriptions", () => {
       status: "enabled",
       functionInput: {
         code: "def handler(price: float, cost_price: float):\n    return price - cost_price\n",
+        // Stored sorted by name, as the backend returns them; inference follows the signature.
         inputs: [
-          { description: "销售价", name: "price", required: true, type: "number" },
           { description: "成本价", name: "cost_price", required: true, type: "number" },
+          { description: "销售价", name: "price", required: true, type: "number" },
         ],
         outputs: [],
       },
