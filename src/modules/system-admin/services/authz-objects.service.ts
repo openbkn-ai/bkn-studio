@@ -103,8 +103,8 @@ export async function listDomainObjectsPage(
 }
 
 /**
- * Resource roots shown by the authorization workbench. Object-level resource authorization has
- * been removed, so only resource types supported by bkn-safe are displayed.
+ * Resource roots shown by the authorization workbench. Child resource types are loaded only after
+ * a root is expanded, through bkn-safe with the root as their parent.
  */
 export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "catalog",
@@ -169,24 +169,55 @@ export async function listTopLevelAuthzObjects(
 }
 
 export function listTopResourceChildCategories(root: AuthorizableObject): string[] {
-  // The catalog API is flat for now. Parent/child authorization will be restored only after the
-  // unified catalog supports parent_type/parent_id.
-  void root;
+  if (root.type === "catalog") return ["resource"];
+  if (root.type === "knowledge_network") {
+    return ["object_type", "relation_type", "action_type", "metric", "concept_group"];
+  }
   return [];
 }
 
 /**
- * Parent/child authorization is not supported by the current bkn-safe contract. Keep the export
- * as a harmless empty result while callers migrate to the flat catalog.
+ * Lists one child category through bkn-safe. The parent parameters keep the business-resource
+ * topology in the provider layer and never expose a direct business-service call to the browser.
  */
-export function listTopResourceChildren(
+export async function listTopResourceChildren(
   root: AuthorizableObject,
   category: string,
   query: { limit?: number; offset?: number } = {},
 ): Promise<TopResourceChildPage> {
-  void root;
-  void query;
-  return Promise.resolve({ category, children: [], total: 0 });
+  const isCatalogResource = root.type === "catalog" && category === "resource";
+  const isKnowledgeNetworkChild = root.type === "knowledge_network" && [
+    "object_type", "relation_type", "action_type", "metric", "concept_group",
+  ].includes(category);
+  if (!isCatalogResource && !isKnowledgeNetworkChild) {
+    return { category, children: [], total: 0 };
+  }
+  const response = await http.get<Record<string, unknown>>("/safe/v1/admin/authorization-resources", {
+    params: {
+      direction: "asc",
+      limit: query.limit ?? PAGE_SIZE,
+      name: undefined,
+      offset: query.offset ?? 0,
+      parent_id: root.id,
+      parent_type: root.type,
+      resource_type: category,
+      sort: "name",
+    },
+    skipErrorToast: true,
+  });
+  const entries = arrayFrom(response.data, "entries");
+  const totalValue = Number(response.data.total ?? entries.length);
+  return {
+    category,
+    children: entries.map((item) => ({
+      category,
+      id: str(item.id),
+      name: str(item.name) || str(item.id),
+      sub: root.name,
+      type: category,
+    })).filter((item) => item.id),
+    total: Number.isFinite(totalValue) ? totalValue : entries.length,
+  };
 }
 
 // 7.2 Resolve names by ID in batches.
