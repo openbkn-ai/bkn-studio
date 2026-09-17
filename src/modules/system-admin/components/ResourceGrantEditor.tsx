@@ -238,10 +238,10 @@ export function ResourceGrantEditor({
     const existing = value.find((grant) => sameResource(grant.resource, resource));
     const next = existing
       ? value.map((grant) =>
-          grant === existing
-            ? { ...grant, operations: normalizeOperations([...grant.operations, ...draftOps], ops) }
-            : grant,
-        )
+        grant === existing
+          ? { ...grant, operations: normalizeOperations([...grant.operations, ...draftOps], ops) }
+          : grant,
+      )
       : [...value, { resource, operations: [...draftOps] }];
     onChange(next);
     setDraftOps([]);
@@ -326,7 +326,6 @@ export function ResourceGrantEditor({
                             event.preventDefault();
                             if (grantCanEdit) removeOperation(grant, op);
                           }}
-                          title={title || undefined}
                         >
                           {op === "*"
                             ? t("systemAdmin.grant.allOps")

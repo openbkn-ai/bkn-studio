@@ -168,7 +168,7 @@ describe("ResourceGrantEditor operation changes", () => {
       }]);
   });
 
-  it("shows an operation description and locks an existing prerequisite while a selected operation depends on it", () => {
+  it("shows an operation description and locks an existing prerequisite while a selected operation depends on it", async () => {
     mockCatalogOperations();
     const dependentGrant: ResourceGrant = {
       resource: { type: "catalog", id: "catalog-1" },
@@ -186,6 +186,10 @@ describe("ResourceGrantEditor operation changes", () => {
     expect(modify?.querySelector(".ant-tag-close-icon")).not.toBeNull();
     expect(container.querySelectorAll(".ant-tag-close-icon")).toHaveLength(1);
 
-    expect(viewDetails).toHaveAttribute("title", "View the data catalog details.\n该操作是已选操作的前置条件，暂不可取消");
+    fireEvent.mouseEnter(viewDetails!);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      /View the data catalog details\.\s+该操作是已选操作的前置条件，暂不可取消/,
+    );
+    expect(viewDetails).not.toHaveAttribute("title");
   });
 });

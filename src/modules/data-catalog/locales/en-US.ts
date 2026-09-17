@@ -207,7 +207,7 @@ export const dataCatalogEnUS = {
       confidenceThreshold: "Confidence threshold",
       includeSamples: "Include sample data",
       includeSamplesHint: "Sample data will be sent to the semantic-understanding service without masking.",
-      includeSamplesPermissionHint: "Query data permission is required to include sample data.",
+      includeSamplesPermissionHint: "Query permission is required to include sample data.",
       sampleRows: "Sample rows (1–20)",
       sampleRowsRequired: "Enter the number of sample rows.",
       sampleRowsInvalid: "Enter an integer between 1 and 20."
@@ -492,7 +492,7 @@ export const dataCatalogEnUS = {
       saveIndexConfig: "Save Index Config",
       saveConfigSuccess: "Index config saved",
       unsavedIndexConfig: "Index config has unsaved changes. Save it before starting a build.",
-      configReadOnly: "Index configuration is read-only. Manage tables permission is required to edit or save it.",
+      configReadOnly: "Index configuration is read-only. Manage resources permission is required to edit or save it.",
       needConfigFirst: "Complete the configuration under Configure Index before starting a build.",
       editTitle: "Configure Index",
       editSubmit: "Start Build",

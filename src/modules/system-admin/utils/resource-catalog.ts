@@ -219,7 +219,11 @@ export function resourceTypeLabel(type: string): string {
   });
 }
 
-export function operationLabel(_type: string, op: string): string {
+export function operationLabel(type: string, op: string): string {
+  const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${op}`;
+  if (i18n.exists(typeLabelKey)) {
+    return i18n.t(typeLabelKey);
+  }
   return i18n.t(`systemAdmin.resourceCatalog.operations.${op}`, {
     defaultValue: operationFallbackLabel(op),
   });

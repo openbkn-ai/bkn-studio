@@ -21,6 +21,7 @@ describe("resource-catalog", () => {
 
     expect(resourceTypeLabel("knowledge_network")).toBe("Knowledge network");
     expect(operationLabel("knowledge_network", "query_data")).toBe("Query");
+    expect(operationLabel("catalog", "task_manage")).toBe("Manage tasks");
     expect(operationsForType("catalog").map((item) => item.label)).toContain("View");
   });
 
