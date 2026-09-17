@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,7 +44,7 @@ vi.mock("@/modules/system-admin/components/ObjectAuthorizeDrawer", () => ({
   },
 }));
 
-import { CatalogDetailPanel } from "./CatalogDetailPanel";
+import { ResourceListPanel } from "./ResourceListPanel";
 
 const catalog: CatalogRecord = {
   category: "database",
@@ -71,10 +71,14 @@ const catalog: CatalogRecord = {
   updaterName: "test",
 };
 
-function renderPanel(record: CatalogRecord, onOpenResource = vi.fn()) {
+function renderPanel(
+  record: CatalogRecord,
+  onOpenResource = vi.fn(),
+  initialEntry = "/",
+) {
   const view = render(
-    <MemoryRouter>
-      <CatalogDetailPanel
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <ResourceListPanel
         catalog={record}
         onCreateResource={vi.fn()}
         onOpenResource={onOpenResource}
@@ -84,7 +88,7 @@ function renderPanel(record: CatalogRecord, onOpenResource = vi.fn()) {
   return { ...view, onOpenResource };
 }
 
-describe("CatalogDetailPanel authorize entry", () => {
+describe("ResourceListPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentPermissions.value = [];
@@ -109,6 +113,15 @@ describe("CatalogDetailPanel authorize entry", () => {
     expect(await screen.findByText("resources unavailable")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
     expect(screen.getByText("dataCatalog.loadErrorRefreshHint")).toBeInTheDocument();
+  });
+
+  it("filters resources by the selected schema", async () => {
+    renderPanel(catalog, vi.fn(), "/data-catalog/catalog/catalog-1?schema=analytics");
+
+    await waitFor(() => expect(listCatalogResourcePageMock).toHaveBeenCalledWith(expect.objectContaining({
+      catalogId: "catalog-1",
+      schema: "analytics",
+    })));
   });
 
   // The bug: the button asked for admin-authz:grant, which no network_builder holds, so the person

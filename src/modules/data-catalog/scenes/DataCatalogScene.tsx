@@ -11,20 +11,18 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
+import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import {
   CatalogTreePanel,
   type CatalogTreeSelection,
 } from "@/modules/data-catalog/components/CatalogTreePanel";
-import { AuthorizedResourceListPanel } from "@/modules/data-catalog/components/AuthorizedResourceListPanel";
 import { ResourceFormDrawer } from "@/modules/data-catalog/components/ResourceFormDrawer";
 import { subscribeMockDb } from "@/modules/data-catalog/services/mock-db";
 import {
   countCatalogResources,
   isCatalogDiscovering,
-  listCatalogResourcePage,
   listCatalogDiscovers,
 } from "@/modules/data-catalog/services/resource.service";
 import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
@@ -41,8 +39,8 @@ import styles from "./DataCatalogScene.module.css";
 
 const CATALOG_PAGE_SIZE = 100;
 
-const CatalogDetailPanel = lazy(
-  () => import("@/modules/data-catalog/components/CatalogDetailPanel"),
+const ResourceListPanel = lazy(
+  () => import("@/modules/data-catalog/components/ResourceListPanel"),
 );
 
 export type DataCatalogSceneProps = {
@@ -139,7 +137,6 @@ export function DataCatalogScene({
   const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
   const [connectorTypeStats, setConnectorTypeStats] = useState<CatalogConnectorTypeStat[]>([]);
   const [selectedCatalogLoadingId, setSelectedCatalogLoadingId] = useState<string | null>(null);
-  const [restrictedCatalogId, setRestrictedCatalogId] = useState<string | null>(null);
   const [discover, setDiscovers] = useState<CatalogDiscoverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -331,7 +328,6 @@ export function DataCatalogScene({
     if (catalogs.some((catalog) => catalog.id === selection.id)) {
       setSelectedCatalogLoadingId(null);
       setSelectedCatalogError(null);
-      setRestrictedCatalogId(null);
       return;
     }
     if (selectedCatalogRequestIds.current.has(selection.id)) {
@@ -340,7 +336,6 @@ export function DataCatalogScene({
     selectedCatalogRequestIds.current.add(selection.id);
     setSelectedCatalogLoadingId(selection.id);
     setSelectedCatalogError(null);
-    setRestrictedCatalogId(null);
     const generation = catalogQueryGeneration.current;
     void getCatalog(selection.id, { skipErrorToast: true })
       .then((catalog) => {
@@ -352,7 +347,6 @@ export function DataCatalogScene({
           return;
         }
         setSelectedCatalogError(null);
-        setRestrictedCatalogId(null);
         if (paginatedCatalogScopes.current.has(catalog.id)) {
           return;
         }
@@ -365,27 +359,7 @@ export function DataCatalogScene({
           return [...current, catalog];
         });
       })
-      .catch(async (error) => {
-        if (isRequestForbidden(error)) {
-          try {
-            const resources = await listCatalogResourcePage({
-              catalogId: selection.id,
-              limit: 1,
-              offset: 0,
-            });
-            if (
-              resources.total > 0
-              && generation === catalogQueryGeneration.current
-              && selectedCatalogIdRef.current === selection.id
-            ) {
-              setSelectedCatalogError(null);
-              setRestrictedCatalogId(selection.id);
-              return;
-            }
-          } catch {
-            // Preserve the parent Catalog error when the child-level PEP cannot confirm access.
-          }
-        }
+      .catch((error) => {
         if (
           generation === catalogQueryGeneration.current &&
           selectedCatalogIdRef.current === selection.id
@@ -510,24 +484,6 @@ export function DataCatalogScene({
       );
     }
 
-    if (selection?.type === "catalog" && restrictedCatalogId === selection.id) {
-      return (
-        <AuthorizedResourceListPanel
-          catalogId={selection.id}
-          onOpenResource={openResourceWorkspace}
-        />
-      );
-    }
-
-    if (selection?.type === "catalog" && isCatalogSummaryOnly(selectedCatalog)) {
-      return (
-        <AuthorizedResourceListPanel
-          catalogId={selection.id}
-          onOpenResource={openResourceWorkspace}
-        />
-      );
-    }
-
     if (selection?.type === "catalog" && !selectedCatalog) {
       return (
         <EmptyStatePanel
@@ -594,7 +550,7 @@ export function DataCatalogScene({
             </div>
           }
         >
-          <CatalogDetailPanel
+          <ResourceListPanel
             catalog={selectedCatalog}
             onCreateResource={(catalogId) => setResourceDrawer({ catalogId, open: true })}
             onOpenResource={openResourceWorkspace}

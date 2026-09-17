@@ -32,7 +32,7 @@ import type { CatalogResource, ResourceDiscoverStatus } from "@/modules/data-cat
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
-import styles from "./CatalogDetailPanel.module.css";
+import styles from "./ResourceListPanel.module.css";
 
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
 
@@ -91,7 +91,7 @@ function getResourceNameTooltip(
   return resource.name || displayName;
 }
 
-type CatalogDetailPanelProps = {
+type ResourceListPanelProps = {
   catalog: CatalogRecord;
   onCreateResource: (catalogId: string) => void;
   onOpenResource: (
@@ -101,11 +101,11 @@ type CatalogDetailPanelProps = {
   ) => void;
 };
 
-export function CatalogDetailPanel({
+export function ResourceListPanel({
   catalog,
   onCreateResource,
   onOpenResource,
-}: CatalogDetailPanelProps) {
+}: ResourceListPanelProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
   const navigate = useNavigate();
@@ -634,4 +634,4 @@ export function CatalogDetailPanel({
   );
 }
 
-export default CatalogDetailPanel;
+export default ResourceListPanel;
