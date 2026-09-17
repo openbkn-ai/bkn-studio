@@ -885,6 +885,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       // because message state is asynchronous and finally needs the final artifact.
       let turn: Awaited<ReturnType<typeof lifecycle.beginTurn>> = null;
       let outcome: TurnOutcome = "completed";
+      let declaredOutcome: TurnOutcome | undefined;
       let answer = "";
       /** Whether this turn emitted an error chunk; finish must record failed. */
       let roundFailed = false;
@@ -901,7 +902,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
           resourceScope,
           session: lifecycle.session,
-          turn,
+          turn: turn && { ...turn, declareFinish: (declared) => { declaredOutcome = declared; } },
         });
 
         await runAgentChat({
@@ -935,8 +936,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         // Finish before setBusy(false) because one conversation allows one active interaction.
         // Stop returns normally, so use aborted state rather than outcome alone.
         const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
+        const recordedOutcome: TurnOutcome = controller.signal.aborted
+          ? "canceled"
+          : finalOutcome === "completed" ? (declaredOutcome ?? finalOutcome) : finalOutcome;
         if (turn) {
-          await turn.finish(controller.signal.aborted ? "canceled" : finalOutcome, answer).catch(() => undefined);
+          await turn.finish(recordedOutcome, answer).catch(() => undefined);
         }
         if (requestSequence === requestSequenceRef.current) {
           // Clear only if this is still the current turn.

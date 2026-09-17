@@ -165,6 +165,17 @@ describe("buildAgentTools", () => {
     expect(session.callTool).not.toHaveBeenCalled();
   });
 
+  it("接管 bkn_finish_interaction：保留模型声明的失败结论供流式收尾落库", async () => {
+    const declared = vi.fn();
+    const turn = { ...managedTurn(), declareFinish: declared };
+    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session: stubSession(), turn });
+
+    await runTool(tools.bkn_finish_interaction, { outcome: "failed", reason: "查询失败" });
+
+    expect(declared).toHaveBeenCalledWith("failed");
+    expect(turn.finish).not.toHaveBeenCalled();
+  });
+
   it("接管不改工具形状：后端 schema 原样透传给模型", () => {
     // Interception changes where a call lands, not what the tool looks like. Removing parameters
     // or enum values from the schema silently removes capabilities the model no longer knows exist.

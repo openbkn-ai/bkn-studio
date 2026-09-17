@@ -468,6 +468,7 @@ export function BusinessProvenanceScene() {
   const [roundsCollapsed, setRoundsCollapsed] = useState(() => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 1200px)").matches);
   const [timelineFilter, setTimelineFilter] = useState<"all" | "completed" | "failed">("all");
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
+  const [evidencePanel, setEvidencePanel] = useState<"evidence" | "execution">("evidence");
   const [loading, setLoading] = useState(true);
   const [conversationLoadState, setConversationLoadState] = useState<ConversationLoadState>();
   const [analysisStarting, setAnalysisStarting] = useState(false);
@@ -528,7 +529,7 @@ export function BusinessProvenanceScene() {
       return;
     }
     let current = true;
-    setProjection(undefined); setDetailOperation(undefined); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
+    setProjection(undefined); setDetailOperation(undefined); setTimelineFilter("all"); setEvidencePanel("evidence"); setInteractionDetailLoading(true); setInteractionDetailError(false); setProjectionUnavailable(false);
     setAnalysisMarkdown(""); setAnalysisMarkdownLoading(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisStreamText(""); setAnalysisPanelOpen(false); setAnalysisError(undefined); setAnalysisStarting(false);
     void getBusinessProvenanceInteraction(selectedInteraction.interactionId)
       .then((value) => {
@@ -670,6 +671,8 @@ export function BusinessProvenanceScene() {
     </section>
   </main>;
 
+  const visibleOperations = projection?.operations.map((operation, index) => ({ operation, index })).filter(({ operation }) => timelineFilter === "all" || operation.callStatus === timelineFilter) ?? [];
+
   return <main className={`${styles.page} ${styles.pageSurface}`}>
     <header className={styles.pageHeader}>
       <div><Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
@@ -703,8 +706,8 @@ export function BusinessProvenanceScene() {
           {view === "timeline" ? <section className={styles.timelineWorkspace}>
             <header className={styles.timelineHeader}><div><h3>{bpText("timeline.title")}</h3><p>{bpText("timeline.description")}</p></div><span>{bpText("callCount", { count: projection.operations.length })}</span></header>
             <div className={styles.timelineFilters} role="group" aria-label={bpText("timeline.filterLabel")}><button type="button" className={timelineFilter === "all" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("all"); setDetailOperation(projection.operations[0]); }}>{bpText("timeline.all", { count: projection.operations.length })}</button><button type="button" className={timelineFilter === "completed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("completed"); setDetailOperation(projection.operations.find(item => item.callStatus === "completed")); }}>{bpText("timeline.completed", { count: projection.operations.filter(item => item.callStatus === "completed").length })}</button><button type="button" className={timelineFilter === "failed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("failed"); setDetailOperation(projection.operations.find(item => item.callStatus === "failed")); }}>{bpText("timeline.failed", { count: projection.operations.filter(item => item.callStatus === "failed").length })}</button></div>
-            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : <div className={styles.timelineLayout}>
-              <div className={styles.timelineList}>{projection.operations.filter(operation => timelineFilter === "all" || operation.callStatus === timelineFilter).map((operation, index) => <button type="button" className={`${styles.timelineBusinessCard} ${detailOperation?.operationId === operation.operationId ? styles.timelineBusinessCardSelected : ""}`} key={operation.operationId} onClick={() => setDetailOperation(operation)}>
+            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : visibleOperations.length === 0 ? <Empty description={bpText("timeline.emptyFiltered")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : <div className={styles.timelineLayout}>
+              <div className={styles.timelineList}>{visibleOperations.map(({ operation, index }) => <button type="button" className={`${styles.timelineBusinessCard} ${detailOperation?.operationId === operation.operationId ? styles.timelineBusinessCardSelected : ""}`} key={operation.operationId} onClick={() => setDetailOperation(operation)}>
                 <span className={styles.timelineOrder}>{String(index + 1).padStart(2, "0")}</span><div><header><h4><OperationName operation={operation} /></h4><Tag color={operation.callStatus === "completed" ? "success" : "error"}>{statusLabel(operation.callStatus)}</Tag></header><dl><OperationSummaryRows operation={operation} operations={projection.operations} derivedFacts={projection.derivedFacts} /></dl><footer><small>{formatClock(operation.startedAt)} · {formatDuration(operation.durationMs)}</small></footer></div>
               </button>)}</div>
               <aside ref={timelineInspectorRef} className={styles.timelineInspector} aria-label={bpText("detail.roundCall")}>{detailOperation ? <>
@@ -715,7 +718,7 @@ export function BusinessProvenanceScene() {
                 {payloadText(detailOperation.error) ? <details><summary>{bpText("detail.recordedError")}</summary><pre>{payloadText(detailOperation.error)}</pre></details> : null}
               </> : <Empty description={bpText("timeline.selectCall")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}</aside>
             </div>}
-          </section> : <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel="evidence" />}
+          </section> : <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel={evidencePanel} onPanelChange={(next) => setEvidencePanel(next === "execution" ? "execution" : "evidence")} />}
         </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>

@@ -42,7 +42,7 @@ export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timel
     {failed && <Alert type="error" showIcon message={t(failed && !value ? "bknTrace.evidenceChain.current.readFailed" : "bknTrace.evidenceChain.current.failed")} />}
     {!busy && !failed && value?.status === "not_generated" && <p>{t("bknTrace.evidenceChain.current.empty")}</p>}
     {value?.view && (value.view.questionPairs?.length
-      ? <BusinessProvenance016 key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} panel={panel === "timeline" ? "timeline" : "evidence"} evidenceOnly={panel === "evidence" && !onPanelChange} onPanelChange={onPanelChange ? next => onPanelChange(next as TPanel) : undefined} />
+      ? <BusinessProvenance016 key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} panel={panel === "timeline" ? "timeline" : "evidence"} evidenceOnly={panel === "evidence"} onPanelChange={panel === "timeline" && onPanelChange ? next => onPanelChange(next as TPanel) : undefined} />
       : <EvidenceChainPanels key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} initialPanel={panel === "execution" ? "execution" : "evidence"} panel={panel === "execution" ? "execution" : "evidence"} onPanelChange={next => onPanelChange?.(next as TPanel)} />)}
   </section>;
 }

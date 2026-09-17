@@ -317,6 +317,8 @@ export function sanitizeLifecycleError(text: string): string {
  */
 export type AgentTurnScope = BknCallScope & {
   finish: (outcome: TurnOutcome, answer: string) => Promise<void>;
+  /** Records a model-declared terminal state until the streamed answer is complete. */
+  declareFinish?: (outcome: TurnOutcome) => void;
 };
 
 /** Model outcome to client-side turn outcome mapping. */
@@ -469,6 +471,7 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
             },
           }));
         }
+        turn.declareFinish?.(outcome);
         // A model can call this tool before it emits its final answer and may use
         // shorthand such as "see above" in the tool argument. Finalizing here
         // makes that shorthand the immutable recorded answer. Acknowledge the
