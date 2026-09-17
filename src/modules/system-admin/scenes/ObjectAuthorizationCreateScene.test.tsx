@@ -6,13 +6,16 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listAuthorizableObjectsPageMock = vi.hoisted(() => vi.fn());
 const listUsersMock = vi.hoisted(() => vi.fn());
 const listUsersPageMock = vi.hoisted(() => vi.fn());
 const upsertObjectGrantMock = vi.hoisted(() => vi.fn());
+const messageErrorMock = vi.hoisted(() => vi.fn());
 const capability = vi.hoisted((): { current: string } => ({ current: "available" }));
+const searchParams = vi.hoisted(() => new URLSearchParams());
 const translation = vi.hoisted(() => ({
   i18n: { exists: () => false, language: "zh-CN" },
   t: (key: string) => key,
@@ -26,12 +29,12 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("react-router-dom", () => ({
   useLocation: () => ({ state: null }),
   useNavigate: () => vi.fn(),
-  useSearchParams: () => [new URLSearchParams()],
+  useSearchParams: () => [searchParams],
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { error: vi.fn(), success: vi.fn() },
+    message: { error: messageErrorMock, success: vi.fn() },
     runtimeConfig: { currentUser: { permissions: ["admin-authz:grant"] } },
   }),
 }));
@@ -66,6 +69,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capability.current = "available";
+    searchParams.delete("object");
     listUsersMock.mockResolvedValue([]);
     listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
     listAuthorizableObjectsPageMock.mockResolvedValue({
@@ -102,6 +106,27 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     await act(async () => {});
 
     expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith("catalog", { keyword: "", page: 0 });
+  });
+
+  it("rejects wildcard-bearing objects in deep links", async () => {
+    capability.current = "not-installed";
+    searchParams.set("object", "catalog::*");
+    listUsersMock.mockResolvedValue([
+      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
+    ]);
+    listUsersPageMock.mockResolvedValue({
+      total: 1,
+      users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
+    });
+
+    render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+
+    expect(screen.getByRole("button", {
+      name: "systemAdmin.objectGrants.confirmGrant",
+    }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("systemAdmin.objectGrants.summaryNextPickObject")).not.toBeNull();
+    expect(upsertObjectGrantMock).not.toHaveBeenCalled();
   });
 
   it("omits model resources while keeping execution-factory resources", async () => {
@@ -278,7 +303,59 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
       objName: "Customer data",
       objSub: undefined,
       objType: "catalog",
+    }, { skipErrorToast: true });
+  });
+
+  it("shows one error when a grant request is rejected", async () => {
+    capability.current = "not-installed";
+    listUsersMock.mockResolvedValue([
+      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
+    ]);
+    listUsersPageMock.mockResolvedValue({
+      total: 1,
+      users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
     });
+    upsertObjectGrantMock.mockRejectedValueOnce(new axios.AxiosError(
+      "Request failed",
+      undefined,
+      undefined,
+      undefined,
+      {
+        config: { headers: new axios.AxiosHeaders() },
+        data: { description: "请求参数无效" },
+        headers: {},
+        status: 400,
+        statusText: "Bad Request",
+      },
+    ));
+
+    render(<ObjectAuthorizationCreateScene />);
+    await act(async () => {});
+
+    const [typePicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(typePicker);
+    fireEvent.click(screen.getByText("数据目录"));
+    await act(async () => {});
+
+    const [, objectPicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(objectPicker);
+    fireEvent.click(await screen.findByText("Customer data"));
+
+    const [, , granteePicker] = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(granteePicker);
+    fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
+
+    fireEvent.click(screen.getByRole("button", { name: /full_business_access/ }));
+    fireEvent.click(screen.getByRole("button", {
+      name: "systemAdmin.objectGrants.confirmGrant",
+    }));
+
+    await waitFor(() => expect(messageErrorMock).toHaveBeenCalledTimes(1));
+    expect(messageErrorMock).toHaveBeenCalledWith("请求参数无效");
+    expect(upsertObjectGrantMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accessorId: "user-1", objId: "catalog-1" }),
+      { skipErrorToast: true },
+    );
   });
 
   it("does not downgrade an unknown capability snapshot to Community grant creation", async () => {

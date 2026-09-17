@@ -341,7 +341,10 @@ export function summarizeGrants(list: ObjectGrant[]): AuthzSummary {
 // ---- writes -----------------------------------------------------------------
 
 /** Replaces one professional-rule source slice, matching bkn-safe's POST contract. */
-export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> {
+export async function upsertObjectGrant(
+  input: ObjectGrantInput,
+  options: { skipErrorToast?: boolean } = {},
+): Promise<void> {
   if (useMock) {
     const existing = grants.find((g) => sameTarget(g, input));
     if ("bundle" in input) {
@@ -427,7 +430,9 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
         operations: input.operations,
         resource: { type: input.objType, id: input.objId },
       };
-  await http.post(`${ADMIN}/object-grants`, payload);
+  await http.post(`${ADMIN}/object-grants`, payload, {
+    skipErrorToast: options.skipErrorToast,
+  });
 }
 
 /** Revokes a complete selection of source records atomically. */

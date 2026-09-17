@@ -49,8 +49,15 @@ function parseObjValue(value?: string): { objId: string; objType: string } | nul
   if (!value) {
     return null;
   }
-  const [type, id] = value.split("::");
-  if (!type || !id) {
+  const parts = value.split("::");
+  if (parts.length !== 2) {
+    return null;
+  }
+  const [type, id] = parts;
+  // Object-grant writes only accept concrete resource IDs. Casbin keyMatch
+  // treats a '*' anywhere in an ID as a wildcard, so URL state must not turn
+  // one into a selectable object before the server has a chance to reject it.
+  if (!type || !id || id.includes("*")) {
     return null;
   }
   return { objId: id, objType: type };
@@ -368,7 +375,7 @@ export function ObjectAuthorizationCreateScene() {
             objName: selectedObject.objName,
             objSub: selectedObject.objSub,
             objType: selectedObject.objType,
-          }),
+          }, { skipErrorToast: true }),
         ),
       );
       message.success(t("systemAdmin.objectGrants.toast.grantCreated"));
