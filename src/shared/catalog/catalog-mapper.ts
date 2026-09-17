@@ -58,9 +58,9 @@ function normalizeCatalogTimestamp(value?: number) {
 }
 
 function catalogSchemas(item: BackendCatalogSummary, metadata: Record<string, unknown>) {
-  if (item.schemas) {
-    return item.schemas;
-  }
+	if (item.schemas?.length) {
+		return item.schemas;
+	}
   const schemas = metadata.schemas;
   return Array.isArray(schemas)
     ? schemas.filter((schema): schema is string => typeof schema === "string")
