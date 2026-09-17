@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { extractRequestErrorDetails, extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ResourceGrantEditor } from "@/modules/system-admin/components/ResourceGrantEditor";
 import { authzPoints } from "@/modules/system-admin/permissions";
@@ -132,7 +132,13 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
         onSaved();
         onClose();
       } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
+        const details = extractRequestErrorDetails(error);
+        const name = values.name.trim();
+        void message.error(
+          details.code === "RESOURCE_EXISTED"
+            ? t("systemAdmin.errors.roleNameDuplicateWithName", { name })
+            : extractRequestErrorMessage(error),
+        );
       } finally {
         setSubmitting(false);
       }

@@ -682,7 +682,7 @@ export async function deleteDepartment(id: string): Promise<void> {
 
 export async function createRole(input: RoleInput): Promise<string> {
   if (useMock) {
-    if (roles.some((item) => item.name === input.name)) {
+    if (roles.some((item) => item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase())) {
       throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
     }
     const id = uid("role");
@@ -717,6 +717,9 @@ export async function updateRole(id: string, input: RoleInput): Promise<void> {
     }
     if (role.builtin) {
       throw new Error(i18n.t("systemAdmin.errors.builtinRoleCannotModify"));
+    }
+    if (roles.some((item) => item.id !== id && item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase())) {
+      throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
     }
     role.name = input.name;
     role.description = input.description;
