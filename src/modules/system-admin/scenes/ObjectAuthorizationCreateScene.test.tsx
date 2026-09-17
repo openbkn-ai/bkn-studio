@@ -122,7 +122,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
   it("keeps the operation code visible and explains a locked prerequisite separately", async () => {
     listAuthorizableObjectsPageMock.mockResolvedValue({
-      items: [{ id: "operator-1", name: "Order settlement", type: "operator" }], total: 1,
+      items: [{ id: "operator-1", name: "Order settlement", type: "function" }], total: 1,
     });
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});

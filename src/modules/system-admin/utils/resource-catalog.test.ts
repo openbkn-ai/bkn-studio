@@ -60,21 +60,22 @@ describe("resource-catalog", () => {
     for (const type of [
       "agent",
       "agent_tpl",
+      "action_type",
+      "concept_group",
       "connector_type",
+      "large_model",
+      "metric",
+      "object_type",
+      "relation_type",
+      "resource",
       "risk_type",
+      "safe_admin",
+      "small_model",
+      "operator",
     ]) {
       expect(roleGrantTypes).not.toContain(type);
     }
-    expect(roleGrantTypes).toEqual(
-      expect.arrayContaining([
-        "concept_group",
-        "object_type",
-        "relation_type",
-        "action_type",
-        "metric",
-        "function",
-      ]),
-    );
+    expect(roleGrantTypes).toEqual(expect.arrayContaining(["function", "knowledge_network"]));
   });
 
   it("uses the corrected names for catalog and resource", async () => {
@@ -87,7 +88,7 @@ describe("resource-catalog", () => {
   it("uses the execution-factory names for executable resource types", async () => {
     await i18n.changeLanguage("zh-CN");
 
-    expect(resourceTypeLabel("operator")).toBe("函数集");
+    expect(resourceTypeLabel("function")).toBe("函数集");
     expect(resourceTypeLabel("tool_box")).toBe("API 工具集");
     expect(resourceTypeLabel("mcp")).toBe("MCP 服务");
     expect(resourceTypeLabel("skill")).toBe("SKILL 包");

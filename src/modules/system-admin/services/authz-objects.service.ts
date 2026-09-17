@@ -70,6 +70,8 @@ const LIST_CONFIG: Record<string, ListConfig> = {
   knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
   small_model: { path: "/mf-model-manager/v1/small-model/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
   large_model: { path: "/mf-model-manager/v1/llm/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
+  function: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
+  // Retain the legacy key solely for resolving existing grants created before the registry renamed it.
   operator: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
   tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size" },
   mcp: { path: "/agent-operator-integration/v1/mcp/list", envelope: "data", idField: "mcp_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
@@ -163,7 +165,7 @@ export async function listDomainObjectsPage(
 export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "catalog",
   "knowledge_network",
-  "operator",
+  "function",
   "tool_box",
   "mcp",
   "skill",
@@ -310,6 +312,8 @@ type NamesConfig =
 const NAMES_CONFIG: Record<string, NamesConfig> = {
   small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
   large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
+  function: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
+  // Existing grants can still carry the legacy operator type.
   operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
   tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   skill: { kind: "post", path: "/agent-operator-integration/v1/skills/names" },

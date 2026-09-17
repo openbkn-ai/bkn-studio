@@ -13,7 +13,6 @@ import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog
 
 export const AUTHZ_OBJECT_TYPES = [
   "catalog",
-  "resource",
   "knowledge_network",
   "concept_group",
   "object_type",
@@ -21,7 +20,7 @@ export const AUTHZ_OBJECT_TYPES = [
   "action_type",
   "metric",
   "risk_type",
-  "operator",
+  "function",
   "tool_box",
   "mcp",
   "skill",
@@ -30,9 +29,8 @@ export const AUTHZ_OBJECT_TYPES = [
 /** Types whose concrete instances can currently be listed and selected for a new object grant. */
 export const AUTHZ_OBJECT_PICKER_TYPES = [
   "catalog",
-  "resource",
   "knowledge_network",
-  "operator",
+  "function",
   "tool_box",
   "mcp",
   "skill",
@@ -42,7 +40,7 @@ export const AUTHZ_OBJECT_PICKER_TYPES = [
 export const COMMUNITY_OBJECT_GRANT_TYPES = [
   "catalog",
   "knowledge_network",
-  "operator",
+  "function",
   "tool_box",
   "mcp",
   "skill",

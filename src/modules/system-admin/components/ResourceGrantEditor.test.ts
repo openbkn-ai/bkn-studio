@@ -135,6 +135,11 @@ describe("ResourceGrantEditor operation changes", () => {
     const onChange = vi.fn();
     render(createElement(ResourceGrantEditor, { onChange, value: [] }));
 
+    expect(screen.queryByRole("button", { name: /view details/i })).toBeNull();
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByText("Data catalog"));
+
     const viewDetails = screen.getByRole("button", { name: /view details/i });
     const modify = screen.getByRole("button", { name: /modify/i });
     expect(viewDetails).toHaveAttribute("aria-pressed", "false");

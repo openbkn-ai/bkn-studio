@@ -29,7 +29,7 @@ vi.mock("@/modules/system-admin/services/authz-objects.service", () => ({
   TOP_LEVEL_AUTHZ_RESOURCE_TYPES: [
     "catalog",
     "knowledge_network",
-    "operator",
+    "function",
     "tool_box",
     "mcp",
     "skill",
