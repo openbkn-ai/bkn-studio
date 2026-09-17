@@ -179,14 +179,14 @@ export function listTopResourceChildCategories(root: AuthorizableObject): string
  * Parent/child authorization is not supported by the current bkn-safe contract. Keep the export
  * as a harmless empty result while callers migrate to the flat catalog.
  */
-export async function listTopResourceChildren(
+export function listTopResourceChildren(
   root: AuthorizableObject,
   category: string,
   query: { limit?: number; offset?: number } = {},
 ): Promise<TopResourceChildPage> {
   void root;
   void query;
-  return { category, children: [], total: 0 };
+  return Promise.resolve({ category, children: [], total: 0 });
 }
 
 // 7.2 Resolve names by ID in batches.
