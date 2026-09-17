@@ -9,21 +9,21 @@
  * Translates resource grants issued by bkn-safe into permission points declared by Studio modules.
  *
  * The two sides use different naming schemes: bkn-safe emits `<resource_type>:<operation>`
- * (such as `operator:create`), while Studio declares `<module>:<entity>:<action>`
+ * (such as `function:create`), while Studio declares `<module>:<entity>:<action>`
  * (such as `execution-factory:operator:create`). Previously, current-user.ts compared
  * flattened `type:op` values directly with module permissions, which could never match.
  * As a result, every non-super-admin user had an empty permission set on execution-factory
- * pages even when the backend granted `operator:create`.
+ * pages even when the backend granted `function:create`.
  *
- * The execution-factory backend exposes only four resource types: operator, tool_box, mcp,
+ * The execution-factory backend exposes four managed resource types: function, tool_box, mcp,
  * and skill (see adp/execution-factory/operator-integration/server/interfaces/logics_auth.go:53-58).
  * The mappings below align with the backend's actual authorization points.
  */
 
-/** Resource types supported by bkn-safe. The backend supports only these four. */
-type SafeResourceType = "operator" | "tool_box" | "mcp" | "skill";
+/** Resource types used by execution-factory permission checks. */
+type SafeResourceType = "function" | "tool_box" | "mcp" | "skill";
 
-const ALL_RESOURCE_TYPES: SafeResourceType[] = ["operator", "tool_box", "mcp", "skill"];
+const ALL_RESOURCE_TYPES: SafeResourceType[] = ["function", "tool_box", "mcp", "skill"];
 
 /** Studio actions mapped to bkn-safe operations. Their vocabularies differ and need explicit alignment. */
 const ACTION_TO_OPERATION: Record<string, string> = {
@@ -42,15 +42,15 @@ const ACTION_TO_OPERATION: Record<string, string> = {
 /**
  * Studio entities mapped to bkn-safe resource types.
  *
- * Both capabilities and functions are forms of operators.
+ * The Studio operator tab is backed by bkn-safe's `function` resource type.
  * Tools have no standalone resource type; all tool-level operations are authorized on their
  * parent toolbox, as is consistently done by toolbox_handler.
  */
 const ENTITY_TO_RESOURCE_TYPE: Record<string, SafeResourceType> = {
-  capability: "operator",
-  function: "operator",
+  capability: "function",
+  function: "function",
   mcp: "mcp",
-  operator: "operator",
+  operator: "function",
   skill: "skill",
   tool: "tool_box",
   toolbox: "tool_box",

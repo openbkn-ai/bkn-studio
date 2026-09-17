@@ -38,7 +38,7 @@ const REAL_NON_ADMIN_GRANTS = [
       "public_access",
       "execute",
     ],
-    resource: { id: "*", type: "operator" },
+    resource: { id: "*", type: "function" },
   },
   {
     operations: ["create", "modify", "delete", "view", "publish", "unpublish", "execute"],
@@ -57,12 +57,12 @@ const REAL_NON_ADMIN_GRANTS = [
 describe("flattenSafeGrants", () => {
   it("展平成 type:op，缺资源类型的条目丢弃", () => {
     const flat = flattenSafeGrants([
-      { operations: ["create", "view"], resource: { id: "*", type: "operator" } },
+      { operations: ["create", "view"], resource: { id: "*", type: "function" } },
       { operations: ["create"], resource: { id: "*" } },
       { operations: undefined, resource: { type: "skill" } },
     ]);
 
-    expect(flat).toEqual(new Set(["operator:create", "operator:view"]));
+    expect(flat).toEqual(new Set(["function:create", "function:view"]));
   });
 
   it("空输入不炸", () => {
@@ -95,7 +95,7 @@ describe("isStudioPermissionGranted", () => {
     expect(isStudioPermissionGranted("catalog:task_manage", grants, false)).toBe(true);
   });
 
-  it("能力的写操作按 operator 判定，且 edit 落到 modify、debug 落到 execute", () => {
+  it("能力的写操作按 function 判定，且 edit 落到 modify、debug 落到 execute", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:capability:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:edit", grants, false)).toBe(true);
@@ -103,7 +103,7 @@ describe("isStudioPermissionGranted", () => {
   });
 
   it("能力列表接受任一执行单元的查看权限", () => {
-    for (const type of ["operator", "tool_box", "mcp", "skill"]) {
+    for (const type of ["function", "tool_box", "mcp", "skill"]) {
       const viewOnly = flattenSafeGrants([
         { operations: ["view"], resource: { id: "*", type } },
       ]);
@@ -111,9 +111,18 @@ describe("isStudioPermissionGranted", () => {
     }
   });
 
-  it("函数归算子，与后端 #345 的门禁同口径", () => {
+  it("函数权限与 bkn-safe 的 function 资源类型一致", () => {
     expect(isStudioPermissionGranted("execution-factory-lab:function:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory-lab:function:debug", grants, false)).toBe(true);
+  });
+
+  it("函数集页面不再把独立的 operator 资源授权当作 function 授权", () => {
+    const legacyOperatorGrants = flattenSafeGrants([
+      { operations: ["view", "create", "execute"], resource: { id: "*", type: "operator" } },
+    ]);
+
+    expect(isStudioPermissionGranted("execution-factory:operator:view", legacyOperatorGrants, false)).toBe(false);
+    expect(isStudioPermissionGranted("execution-factory:operator:view", grants, false)).toBe(true);
   });
 
   it("工具没有独立资源类型，写操作落到父工具箱的 modify", () => {
@@ -178,7 +187,7 @@ describe("执行工厂权限点覆盖", () => {
   it("除去有意不映的三条，其余全部可由 bkn-safe 授权解析", () => {
     // A user granted every operation on all four resource types should match every execution-factory permission point.
     const fullGrants = flattenSafeGrants(
-      ["operator", "tool_box", "mcp", "skill"].map((type) => ({
+      ["function", "tool_box", "mcp", "skill"].map((type) => ({
         operations: [
           "create",
           "modify",
@@ -227,9 +236,9 @@ describe("折叠通配契约", () => {
     expect(isStudioPermissionGranted("resource:query_data", globalWildcard, false)).toBe(true);
   });
 
-  it("类型级 operator:* 放行该类型全部动作,含实例映射", () => {
+  it("类型级 function:* 放行函数集对应的页面动作", () => {
     const typeWildcard = flattenSafeGrants([
-      { operations: ["*"], resource: { id: "*", type: "operator" } },
+      { operations: ["*"], resource: { id: "*", type: "function" } },
     ]);
 
     expect(isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false)).toBe(true);
