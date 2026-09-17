@@ -16,7 +16,7 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import { Alert, Empty, Input, Select, Spin, Tag } from "antd";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
@@ -71,6 +71,8 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
   const [children, setChildren] = useState<Record<string, TopResourceChildPage>>({});
   const [childPages, setChildPages] = useState<Record<string, ChildPageState>>({});
   const [loadingChildren, setLoadingChildren] = useState<Set<string>>(new Set());
+  const [childLoadErrors, setChildLoadErrors] = useState<Set<string>>(new Set());
+  const childRequestVersions = useRef(new Map<string, number>());
 
   useEffect(() => {
     let cancelled = false;
@@ -93,14 +95,29 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
 
   const loadChildPage = (root: AuthorizableObject, category: string, nextPage: ChildPageState) => {
     const key = `${root.type}:${root.id}:${category}`;
-    setChildPages((current) => ({ ...current, [key]: nextPage }));
+    const requestVersion = (childRequestVersions.current.get(key) ?? 0) + 1;
+    childRequestVersions.current.set(key, requestVersion);
     setLoadingChildren((current) => new Set(current).add(key));
+    setChildLoadErrors((current) => {
+      const errors = new Set(current);
+      errors.delete(key);
+      return errors;
+    });
     void listTopResourceChildren(root, category, {
       limit: nextPage.pageSize,
       offset: (nextPage.page - 1) * nextPage.pageSize,
     })
-      .then((result) => setChildren((current) => ({ ...current, [key]: result })))
+      .then((result) => {
+        if (childRequestVersions.current.get(key) !== requestVersion) return;
+        setChildren((current) => ({ ...current, [key]: result }));
+        setChildPages((current) => ({ ...current, [key]: nextPage }));
+      })
+      .catch(() => {
+        if (childRequestVersions.current.get(key) !== requestVersion) return;
+        setChildLoadErrors((current) => new Set(current).add(key));
+      })
       .finally(() => setLoadingChildren((current) => {
+        if (childRequestVersions.current.get(key) !== requestVersion) return current;
         const loading = new Set(current);
         loading.delete(key);
         return loading;
@@ -180,14 +197,23 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
                 const childKey = `${key}:${category}`;
                 const result = children[childKey];
                 const childPage = childPages[childKey] ?? { page: 1, pageSize: CHILD_PAGE_SIZE };
-                if (!result || result.total === 0) return null;
+                const failed = childLoadErrors.has(childKey);
+                const loadingChild = loadingChildren.has(childKey);
+                if (!result && !failed && loadingChild) return <div className={styles.topResourceLoading} key={category}><Spin size="small" /></div>;
+                if (!result && !failed) return null;
                 return <section className={styles.topResourceCategory} key={category}>
                   <div className={styles.topResourceCategoryHead}><span>{resourceTypeLabel(category)}</span></div>
-                  {result.children.map((child) => <div className={styles.topResourceChildRow} key={`${child.type}:${child.id}`}>
+                  {failed ? <Alert
+                    action={<AppButton onClick={() => loadChildPage(root, category, childPage)} type="link">{t("common.retry")}</AppButton>}
+                    message={t("systemAdmin.objectGrants.topResourceLoadError")}
+                    showIcon
+                    type="error"
+                  /> : null}
+                  {result?.children.map((child) => <div className={styles.topResourceChildRow} key={`${child.type}:${child.id}`}>
                     <div><strong>{child.name}</strong><small>{child.sub}</small></div>
                     <AppButton onClick={() => onManage(child)} type="link">{t("systemAdmin.objectGrants.manage")}</AppButton>
                   </div>)}
-                  <TablePaginationBar
+                  {result && result.total > 0 ? <TablePaginationBar
                     current={childPage.page}
                     onChange={(nextPage, nextPageSize) => loadChildPage(root, category, {
                       page: nextPageSize === childPage.pageSize ? nextPage : 1,
@@ -198,7 +224,7 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
                     showTotal={(count) => t("common.total", { total: count })}
                     size="small"
                     total={result.total}
-                  />
+                  /> : null}
                 </section>;
               })}
             </div> : null}

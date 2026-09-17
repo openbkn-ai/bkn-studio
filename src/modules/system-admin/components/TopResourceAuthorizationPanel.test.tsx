@@ -5,12 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listTopLevelAuthzObjectsMock = vi.hoisted(() => vi.fn());
 const listTopResourceChildrenMock = vi.hoisted(() => vi.fn());
 const paginationPropsMock = vi.hoisted(() => vi.fn());
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((nextResolve) => { resolve = nextResolve; });
+  return { promise, resolve };
+}
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -78,5 +84,50 @@ describe("TopResourceAuthorizationPanel", () => {
     screen.getByRole("button", { name: "systemAdmin.objectGrants.topResourceToggle" }).click();
     expect(await screen.findByText("金额核对")).not.toBeNull();
     expect(listTopResourceChildrenMock).toHaveBeenCalledWith(expect.objectContaining({ id: "kn-ecommerce" }), "action_type", { limit: 10, offset: 0 });
+  });
+
+  it("shows a retryable error when loading children fails", async () => {
+    listTopLevelAuthzObjectsMock.mockResolvedValue({
+      objects: [{ id: "kn-ecommerce", name: "电商经营决策知识网络", type: "knowledge_network" }], total: 1,
+    });
+    listTopResourceChildrenMock.mockRejectedValueOnce(new Error("unavailable"));
+    render(<TopResourceAuthorizationPanel fineGrained onManage={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "systemAdmin.objectGrants.topResourceToggle" }));
+
+    expect(await screen.findByText("systemAdmin.objectGrants.topResourceLoadError")).not.toBeNull();
+    expect(screen.getByText("common.retry")).not.toBeNull();
+  });
+
+  it("ignores a stale child page response", async () => {
+    const second = deferred<{ category: string; children: Array<Record<string, string>>; total: number }>();
+    const third = deferred<{ category: string; children: Array<Record<string, string>>; total: number }>();
+    listTopLevelAuthzObjectsMock.mockResolvedValue({
+      objects: [{ id: "kn-ecommerce", name: "电商经营决策知识网络", type: "knowledge_network" }], total: 1,
+    });
+    listTopResourceChildrenMock
+      .mockResolvedValueOnce({ category: "action_type", children: [{ category: "action_type", id: "kn-ecommerce/first", name: "第一页", sub: "电商经营决策知识网络", type: "action_type" }], total: 30 })
+      .mockImplementationOnce(() => second.promise)
+      .mockImplementationOnce(() => third.promise);
+    render(<TopResourceAuthorizationPanel fineGrained onManage={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "systemAdmin.objectGrants.topResourceToggle" }));
+    await screen.findByText("第一页");
+
+    const childPagination = paginationPropsMock.mock.calls
+      .map(([props]) => props as { onChange: (page: number, pageSize: number) => void; total: number })
+      .find((props) => props.total === 30)!;
+    act(() => {
+      childPagination.onChange(2, 10);
+      childPagination.onChange(3, 10);
+    });
+    await act(async () => {
+      third.resolve({ category: "action_type", children: [{ category: "action_type", id: "kn-ecommerce/third", name: "第三页", sub: "电商经营决策知识网络", type: "action_type" }], total: 30 });
+    });
+    await screen.findByText("第三页");
+    await act(async () => {
+      second.resolve({ category: "action_type", children: [{ category: "action_type", id: "kn-ecommerce/second", name: "第二页", sub: "电商经营决策知识网络", type: "action_type" }], total: 30 });
+    });
+    expect(screen.queryByText("第二页")).toBeNull();
+    expect(screen.getByText("第三页")).not.toBeNull();
   });
 });
