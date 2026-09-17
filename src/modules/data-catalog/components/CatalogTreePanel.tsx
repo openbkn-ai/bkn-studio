@@ -56,6 +56,7 @@ type CatalogTreePanelProps = {
   resourceCount: number;
   discoveringCatalogIds: string[];
   selection: CatalogTreeSelection | null;
+  summaryOnlyCatalogIds?: string[];
 };
 
 type LogicalFormValues = {
@@ -76,6 +77,7 @@ type TreeNodeMeta =
 
 const PHYSICAL_GROUP_KEY = "group:physical";
 const LOGICAL_GROUP_KEY = "group:logical";
+const EMPTY_SUMMARY_ONLY_CATALOG_IDS: string[] = [];
 
 function connectorKey(type: string) {
   return `connector:${type || "unknown"}`;
@@ -122,6 +124,7 @@ export function CatalogTreePanel({
   resourceCount,
   discoveringCatalogIds,
   selection,
+  summaryOnlyCatalogIds = EMPTY_SUMMARY_ONLY_CATALOG_IDS,
 }: CatalogTreePanelProps) {
   const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
@@ -139,8 +142,15 @@ export function CatalogTreePanel({
   const [form] = Form.useForm<LogicalFormValues>();
 
   const sortLocale = i18n.language || undefined;
+  const summaryOnlyCatalogIdSet = useMemo(
+    () => new Set(summaryOnlyCatalogIds),
+    [summaryOnlyCatalogIds],
+  );
 
   const loadCatalogSchemas = useCallback((catalogId: string, force = false) => {
+    if (summaryOnlyCatalogIdSet.has(catalogId)) {
+      return;
+    }
     const generation = schemaLoadGeneration.current;
     if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
       return;
@@ -170,7 +180,7 @@ export function CatalogTreePanel({
           loadingSchemaCatalogIds.current.delete(catalogId);
         }
       });
-  }, [onLoadCatalogSchemas]);
+  }, [onLoadCatalogSchemas, summaryOnlyCatalogIdSet]);
 
   useEffect(() => {
     messageRef.current = message;

@@ -26,3 +26,15 @@ export function hasCatalogOperation(
   }
   return catalog.operations?.includes("*") || catalog.operations?.includes(operation) || false;
 }
+
+/**
+ * A summary-only Catalog is discoverable because the account can access at
+ * least one child Resource. It is not authorization to read the Catalog
+ * itself or its configuration.
+ */
+export function isCatalogSummaryOnly(
+  catalog: Pick<CatalogRecord, "operations"> | null | undefined,
+) {
+  return hasCatalogOperation(catalog, "view_summary")
+    && !hasCatalogOperation(catalog, "view_detail");
+}

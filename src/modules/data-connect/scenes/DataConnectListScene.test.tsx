@@ -146,6 +146,7 @@ describe("DataConnectListScene object permissions", () => {
     listDataConnectRecordsMock.mockResolvedValue({
       items: [
         record("catalog-view-only", ["view_detail"]),
+        record("catalog-summary-only", ["view_summary"]),
         record("catalog-manager", [
           "delete",
           "modify",
@@ -165,11 +166,16 @@ describe("DataConnectListScene object permissions", () => {
     );
 
     const viewOnlyRow = await screen.findByTestId("record-catalog-view-only");
+    const summaryOnlyRow = await screen.findByTestId("record-catalog-summary-only");
     const managerRow = await screen.findByTestId("record-catalog-manager");
 
     expect(within(viewOnlyRow).getByRole("button", { name: "common.detail" })).toBeTruthy();
     expect(within(viewOnlyRow).queryByRole("button", {
       name: "dataConnect.discoverManage",
+    })).toBeNull();
+    expect(within(summaryOnlyRow).queryByRole("button", { name: "common.detail" })).toBeNull();
+    expect(within(summaryOnlyRow).queryByRole("button", {
+      name: "dataConnect.moreActions",
     })).toBeNull();
     for (const action of [
       "common.edit",

@@ -7,7 +7,10 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hasCatalogOperation } from "@/shared/catalog/catalog-operations";
+import {
+  hasCatalogOperation,
+  isCatalogSummaryOnly,
+} from "@/shared/catalog/catalog-operations";
 
 describe("hasCatalogOperation", () => {
   it("does not leak an operation from one catalog to another", () => {
@@ -21,5 +24,13 @@ describe("hasCatalogOperation", () => {
   it("honors object-level wildcards and fails closed without an object", () => {
     expect(hasCatalogOperation({ operations: ["*"] }, "delete")).toBe(true);
     expect(hasCatalogOperation(undefined, "delete")).toBe(false);
+  });
+
+  it("identifies the Catalog summary derived from child Resource access", () => {
+    expect(isCatalogSummaryOnly({ operations: ["view_summary"] })).toBe(true);
+    expect(isCatalogSummaryOnly({ operations: ["view_detail", "view_summary"] })).toBe(false);
+    expect(isCatalogSummaryOnly({ operations: ["modify"] })).toBe(false);
+    expect(isCatalogSummaryOnly({ operations: ["*"] })).toBe(false);
+    expect(isCatalogSummaryOnly(undefined)).toBe(false);
   });
 });

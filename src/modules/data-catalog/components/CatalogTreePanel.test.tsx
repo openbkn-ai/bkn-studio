@@ -303,6 +303,30 @@ describe("CatalogTreePanel", () => {
     await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(2));
   });
 
+  it("does not load schemas for a summary-only catalog", async () => {
+    const onLoadCatalogSchemas = vi.fn();
+    const catalog = {
+      ...makeCatalog("catalog-1", "orders", "physical"),
+      operations: ["view_summary"],
+    };
+
+    render(
+      <CatalogTreePanel
+        catalogs={[catalog]}
+        discoveringCatalogIds={[]}
+        onLoadCatalogSchemas={onLoadCatalogSchemas}
+        onRefresh={vi.fn()}
+        onSelectCatalog={vi.fn()}
+        resourceCount={0}
+        selection={null}
+        summaryOnlyCatalogIds={[catalog.id]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
+    await waitFor(() => expect(onLoadCatalogSchemas).not.toHaveBeenCalled());
+  });
+
   it("expands a connector group when its title is selected", () => {
     const catalog: CatalogRecord = {
       category: "table",

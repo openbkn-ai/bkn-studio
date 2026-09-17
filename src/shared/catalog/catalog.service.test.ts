@@ -165,8 +165,8 @@ describe("catalog.service · mock listCatalogs", () => {
       "ISSUE180_IV18007_PG17_orders_current_20260915",
     ]);
     expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
+      "summary_only_resource_catalog",
       "permission_limited_catalog",
-      "knowledge_index",
     ]);
   });
 });
@@ -430,7 +430,9 @@ describe("catalog.service · mock health check schedule", () => {
       type: "physical",
     });
 
-    const fullyManageableCatalogs = result.items.filter((catalog) => catalog.id !== "cat-008");
+    const fullyManageableCatalogs = result.items.filter(
+      (catalog) => catalog.id !== "cat-008" && catalog.id !== "cat-009",
+    );
     expect(fullyManageableCatalogs.length).toBeGreaterThan(0);
     for (const catalog of fullyManageableCatalogs) {
       expect(catalog.operations).toEqual([
@@ -445,6 +447,9 @@ describe("catalog.service · mock health check schedule", () => {
     }
     expect(result.items.find((catalog) => catalog.id === "cat-008")?.operations).toEqual([
       "view_detail",
+    ]);
+    expect(result.items.find((catalog) => catalog.id === "cat-009")?.operations).toEqual([
+      "view_summary",
     ]);
   });
 

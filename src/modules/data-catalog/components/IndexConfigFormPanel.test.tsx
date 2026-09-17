@@ -851,6 +851,17 @@ describe("IndexConfigFormPanel", () => {
     await screen.findByText("dataCatalog.build.activeTaskLocked");
     expect(screen.getByText("dataCatalog.build.configCanBuild")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.build.configCannotBuild")).toBeNull();
+    const featureConfigButton = screen.getByRole("button", {
+      name: "dataCatalog.build.featureConfig",
+    });
+    expect(featureConfigButton).toBeEnabled();
+    fireEvent.click(featureConfigButton);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    for (const addFeatureButton of screen.getAllByRole("button", {
+      name: "dataCatalog.build.addFeature",
+    })) {
+      expect(addFeatureButton).toBeDisabled();
+    }
   });
 
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {

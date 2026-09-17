@@ -97,6 +97,29 @@ describe("data catalog discover-status mocks", () => {
     });
   });
 
+  it.each([
+    "res-permission-limited-orders",
+    "res-summary-only-orders",
+  ])("provides all feature types for the view-detail-only Resource %s", (resourceId) => {
+    const resource = mockResources.find((item) => item.id === resourceId);
+    const featureTypes = resource?.schema.flatMap((field) => (
+      field.features?.map((feature) => feature.featureType) ?? []
+    ));
+
+    expect(featureTypes).toEqual(expect.arrayContaining(["keyword", "fulltext", "vector"]));
+  });
+
+  it("provides a visible Resource for the summary-only Catalog mock", () => {
+    const resource = mockResources.find((item) => item.id === "res-summary-only-orders");
+
+    expect(resource).toMatchObject({
+      catalogId: "cat-009",
+      category: "table",
+      name: "summary_only_orders",
+      operations: ["view_detail"],
+    });
+  });
+
   it("keeps mock task key fields compatible with their resource schema", () => {
     const resourcesById = new Map(mockResources.map((resource) => [resource.id, resource]));
 

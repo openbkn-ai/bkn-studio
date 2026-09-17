@@ -73,6 +73,11 @@ vi.mock("@/modules/data-catalog/services/resource.service", () => ({
 vi.mock("@/shared/catalog", () => ({
   catalogListAllQuery: () => ({ page: 1, pageSize: 100 }),
   getCatalog: getCatalogMock,
+  isCatalogSummaryOnly: (item: CatalogRecord | undefined) => (
+    item?.operations.includes("view_summary") === true
+    && item?.operations.includes("view_detail") !== true
+    && item?.operations.includes("*") !== true
+  ),
   listCatalogConnectorTypeStats: listCatalogConnectorTypeStatsMock,
   listCatalogs: listCatalogsMock,
 }));
@@ -264,6 +269,23 @@ describe("DataCatalogScene", () => {
     expect((await screen.findByTestId("authorized-catalog-id")).textContent).toBe("catalog-1");
     expect(screen.queryByText("Forbidden")).toBeNull();
     expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true });
+  });
+
+  it("opens a listed summary-only catalog through the restricted resource path", async () => {
+    listCatalogsMock.mockResolvedValue({
+      items: [{ ...catalog, operations: ["view_summary"] }],
+      total: 1,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/data-catalog/catalog/catalog-1"]}>
+        <DataCatalogScene selection={{ id: "catalog-1", type: "catalog" }} suppressAutoSelect />
+      </MemoryRouter>,
+    );
+
+    expect((await screen.findByTestId("authorized-catalog-id")).textContent).toBe("catalog-1");
+    expect(screen.queryByTestId("selected-catalog-id")).toBeNull();
+    expect(getCatalogMock).not.toHaveBeenCalled();
   });
 
   it("keeps the catalog error when no directly granted resource is available", async () => {

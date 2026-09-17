@@ -30,6 +30,7 @@ import {
 import type { CatalogDiscoverRecord } from "@/modules/data-catalog/types/data-catalog";
 import {
   getCatalog,
+  isCatalogSummaryOnly,
   listCatalogConnectorTypeStats,
   listCatalogs,
   type CatalogConnectorTypeStat,
@@ -163,6 +164,10 @@ export function DataCatalogScene({
     }
     return null;
   }, [catalogs, selection]);
+  const summaryOnlyCatalogIds = useMemo(
+    () => catalogs.filter(isCatalogSummaryOnly).map((catalog) => catalog.id),
+    [catalogs],
+  );
   const selectedCatalogRequestIds = useRef(new Set<string>());
   const selectedCatalogIdRef = useRef<string | null>(null);
 
@@ -309,7 +314,7 @@ export function DataCatalogScene({
   }, [catalogSearchInput, catalogSearchLoading, loadCatalogs, navigate, selection]);
 
   const loadDiscovers = useCallback(async () => {
-    if (!selectedCatalog) {
+    if (!selectedCatalog || isCatalogSummaryOnly(selectedCatalog)) {
       setDiscovers([]);
       return;
     }
@@ -330,6 +335,9 @@ export function DataCatalogScene({
 
   useEffect(() => {
     if (selection?.type !== "catalog") {
+      return;
+    }
+    if (loading) {
       return;
     }
     if (catalogs.some((catalog) => catalog.id === selection.id)) {
@@ -404,7 +412,7 @@ export function DataCatalogScene({
         selectedCatalogRequestIds.current.delete(selection.id);
         setSelectedCatalogLoadingId((current) => current === selection.id ? null : current);
       });
-  }, [catalogs, selection]);
+  }, [catalogs, loading, selection]);
 
   useEffect(() => {
     void loadDiscovers();
@@ -515,6 +523,15 @@ export function DataCatalogScene({
     }
 
     if (selection?.type === "catalog" && restrictedCatalogId === selection.id) {
+      return (
+        <AuthorizedResourceListPanel
+          catalogId={selection.id}
+          onOpenResource={openResourceWorkspace}
+        />
+      );
+    }
+
+    if (selection?.type === "catalog" && isCatalogSummaryOnly(selectedCatalog)) {
       return (
         <AuthorizedResourceListPanel
           catalogId={selection.id}
@@ -672,6 +689,7 @@ export function DataCatalogScene({
           resourceCount={resourceTotal}
           discoveringCatalogIds={discoveringCatalogIds}
           selection={selection}
+          summaryOnlyCatalogIds={summaryOnlyCatalogIds}
         />
         <section className={styles.detailSurface}>{renderDetail()}</section>
       </div>

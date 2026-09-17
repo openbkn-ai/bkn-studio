@@ -39,6 +39,7 @@ import {
 import {
   previewCatalogDeletion,
   hasCatalogOperation,
+  isCatalogSummaryOnly,
   type CatalogDeletionImpact,
 } from "@/shared/catalog";
 
@@ -314,12 +315,14 @@ export function DataConnectListScene({
   }, [danger, loadData, message, modal, t]);
 
   const buildActionMoreMenu = useCallback((record: DataConnectRecord): MenuProps => {
-    const items: NonNullable<MenuProps["items"]> = [
-      {
+    const items: NonNullable<MenuProps["items"]> = [];
+
+    if (!isCatalogSummaryOnly(record)) {
+      items.push({
         key: "detail",
         label: t("common.detail"),
-      },
-    ];
+      });
+    }
 
     if (hasCatalogOperation(record, "task_manage")) {
       items.push({
@@ -395,13 +398,17 @@ export function DataConnectListScene({
       width: 200,
       render: (_, record) => (
         <Tooltip title={record.description || "-"}>
-          <AppButton
-            className={styles.ellipsisLink}
-            onClick={() => openDetail(record)}
-            type="link"
-          >
+          {isCatalogSummaryOnly(record) ? (
             <span className={styles.cellEllipsis}>{record.name}</span>
-          </AppButton>
+          ) : (
+            <AppButton
+              className={styles.ellipsisLink}
+              onClick={() => openDetail(record)}
+              type="link"
+            >
+              <span className={styles.cellEllipsis}>{record.name}</span>
+            </AppButton>
+          )}
         </Tooltip>
       ),
     },
@@ -443,6 +450,9 @@ export function DataConnectListScene({
       width: 84,
       render: (_, record) => {
         const moreMenu = buildActionMoreMenu(record);
+        if (moreMenu.items?.length === 0) {
+          return null;
+        }
 
         return (
           <Space className={styles.actionGroup}>

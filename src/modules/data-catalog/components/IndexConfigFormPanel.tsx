@@ -1476,7 +1476,6 @@ export function IndexConfigFormPanel({
                                     </div>
                                     <AppButton
                                       className={formStyles.featureConfigLink}
-                                      disabled={!readOnly && activeTaskLocked}
                                       onClick={() => setFeatureField(field)}
                                       type="link"
                                     >
