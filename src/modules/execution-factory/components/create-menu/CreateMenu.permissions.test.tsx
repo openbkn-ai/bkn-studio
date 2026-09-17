@@ -155,23 +155,20 @@ describe("creation permissions (#670 / #672)", () => {
     expect(handled).toHaveBeenCalled();
   });
 
-  it("keeps operator grants separate from function-set creation", () => {
+  it("ignores retired operator grants for creation", () => {
     grant("operator", ["create", "execute"]);
-    const { rerender } = render(<CreateMenu activeTab="toolbox" autoOpen />);
+    render(<CreateMenu activeTab="operator" autoOpen />);
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.queryByText("Function form")).toBeNull();
-    rerender(<CreateMenu activeTab="operator" autoOpen />);
-    expect(screen.getByText("executionFactory.executionUnitTabs.operator")).toBeTruthy();
-    expect(screen.queryByText("executionFactory.executionUnitTabs.skill")).toBeNull();
+    expect(screen.queryByText("executionFactory.executionUnitTabs.operator")).toBeNull();
   });
 
   it("filters the retained legacy wizard and rejects unauthorized direct opening", () => {
-    grant("operator", ["create"]);
+    // The retired operator tab is backed by Function set grants.
+    grant("function", ["create"]);
     const { rerender } = render(<CreateExecutionUnitWizard open initialTab="skill" onClose={vi.fn()} />);
     expect(screen.queryByRole("dialog")).toBeNull();
     rerender(<CreateExecutionUnitWizard open initialTab="operator" onClose={vi.fn()} />);
     expect(screen.getByText("executionFactory.executionUnitTabs.operator")).toBeTruthy();
-    expect(screen.queryByText("executionFactory.executionUnitTabs.toolbox")).toBeNull();
     expect(screen.queryByText("executionFactory.executionUnitTabs.mcp")).toBeNull();
   });
 

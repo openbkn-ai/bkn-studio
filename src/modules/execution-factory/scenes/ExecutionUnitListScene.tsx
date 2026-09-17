@@ -91,9 +91,9 @@ import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectA
 
 import styles from "./execution-unit-list.module.css";
 
-// Execution-unit tab to bkn-safe object type; the backend type for toolbox is tool_box.
+// Execution-unit tabs retain their UI names; bkn-safe identifies the function tab as `function`.
 const AUTHZ_TYPE_BY_TAB: Record<ExecutionUnitTab, string> = {
-  operator: "operator",
+  operator: "function",
   toolbox: "tool_box",
   mcp: "mcp",
   skill: "skill",

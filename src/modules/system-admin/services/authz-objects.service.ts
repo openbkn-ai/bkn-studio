@@ -71,6 +71,7 @@ const LIST_CONFIG: Record<string, ListConfig> = {
   knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
   small_model: { path: "/mf-model-manager/v1/small-model/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
   large_model: { path: "/mf-model-manager/v1/llm/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
+  // Operators are retired; keep the lookup so existing operator grants still resolve names.
   operator: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
   tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "openapi" },
   function: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "function" },
@@ -165,9 +166,8 @@ export async function listDomainObjectsPage(
 export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "catalog",
   "knowledge_network",
-  "operator",
-  "tool_box",
   "function",
+  "tool_box",
   "mcp",
   "skill",
 ] as const;
@@ -313,6 +313,7 @@ type NamesConfig =
 const NAMES_CONFIG: Record<string, NamesConfig> = {
   small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
   large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
+  // Existing grants can still carry the retired operator type.
   operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
   tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   function: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },

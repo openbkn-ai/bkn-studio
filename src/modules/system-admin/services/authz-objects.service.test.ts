@@ -265,10 +265,12 @@ describe("authz object picker domain service", () => {
 
   it("跨类型聚合页不会把页内偏移错误换算为 page/page_size 页码", async () => {
     const catalogs = Array.from({ length: 3 }, (_, index) => ({ id: `catalog-${index + 1}`, name: `目录 ${index + 1}` }));
-    const operators = Array.from({ length: 20 }, (_, index) => ({ operator_id: `operator-${index + 1}`, name: `算子 ${index + 1}` }));
-    getMock.mockImplementation((path: string) => {
+    const functionSets = Array.from({ length: 20 }, (_, index) => ({ box_id: `function-${index + 1}`, box_name: `函数集 ${index + 1}` }));
+    getMock.mockImplementation((path: string, config?: { params?: { metadata_type?: string } }) => {
       if (path === "/vega-backend/v1/catalogs") return Promise.resolve({ data: { entries: catalogs, total_count: 3 } });
-      if (path === "/agent-operator-integration/v1/operator/info/list") return Promise.resolve({ data: { data: operators, total: 20 } });
+      if (path === "/agent-operator-integration/v1/tool-box/list" && config?.params?.metadata_type === "function") {
+        return Promise.resolve({ data: { data: functionSets, total: 20 } });
+      }
       return Promise.resolve({ data: { data: [], total: 0 } });
     });
 
@@ -277,11 +279,11 @@ describe("authz object picker domain service", () => {
 
     expect(firstPage.objects.map((item) => item.id)).toEqual([
       "catalog-1", "catalog-2", "catalog-3",
-      "operator-1", "operator-2", "operator-3", "operator-4", "operator-5", "operator-6", "operator-7",
+      "function-1", "function-2", "function-3", "function-4", "function-5", "function-6", "function-7",
     ]);
     expect(secondPage.objects.map((item) => item.id)).toEqual([
-      "operator-8", "operator-9", "operator-10", "operator-11", "operator-12",
-      "operator-13", "operator-14", "operator-15", "operator-16", "operator-17",
+      "function-8", "function-9", "function-10", "function-11", "function-12",
+      "function-13", "function-14", "function-15", "function-16", "function-17",
     ]);
   });
 

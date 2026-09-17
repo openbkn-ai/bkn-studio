@@ -191,6 +191,8 @@ const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
   "risk_type",
   "safe_admin",
   "small_model",
+  // Legacy operators are retired; keep the type only so existing grants still render.
+  "operator",
 ]);
 
 export const ROLE_GRANT_RESOURCE_TYPES = RESOURCE_TYPES.filter(

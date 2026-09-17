@@ -75,11 +75,11 @@ describe("resource-catalog", () => {
       "risk_type",
       "safe_admin",
       "small_model",
+      "operator",
     ]) {
       expect(roleGrantTypes).not.toContain(type);
     }
-    // Legacy operators and Function sets are separate bkn-safe resource types; both stay grantable.
-    expect(roleGrantTypes).toEqual(expect.arrayContaining(["operator", "function", "knowledge_network"]));
+    expect(roleGrantTypes).toEqual(expect.arrayContaining(["function", "knowledge_network"]));
   });
 
   it("uses the corrected names for catalog and resource", async () => {

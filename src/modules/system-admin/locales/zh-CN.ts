@@ -35,7 +35,7 @@ export const systemAdminZhCN = {
     },
     resourceCatalog: {
       descriptions: {
-        operator: "仅管控存量算子。新版函数集的创建、AI 生成和临时代码执行由函数集权限管控。",
+        operator: "存量算子授权，算子已下线，不再用于新授权。函数集的创建、AI 生成和临时代码执行由函数集权限管控。",
         tool_box: "仅管控 API 工具集。新建用于创建集合，修改用于编辑 API，执行用于调用。",
         function: "仅管控函数集。新建用于创建集合和 AI 生成函数，修改用于编辑函数，执行用于调用及临时代码执行。",
       },

@@ -35,7 +35,7 @@ export const systemAdminEnUS = {
     },
     resourceCatalog: {
       descriptions: {
-        operator: "Controls legacy operators only. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
+        operator: "Legacy operator grant. Operators are retired and not offered for new grants. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
         tool_box: "Controls API toolsets only. Create adds a set; Modify changes its APIs; Execute runs them.",
         function: "Controls function sets only. Create adds a set and allows AI function generation; Modify changes its functions; Execute runs them, including temporary code execution.",
       },

@@ -62,7 +62,7 @@ const FULL_BUSINESS_ACCESS = "full_business_access" as const;
 const OBJECT_TYPE_GROUPS = [
   { key: "data", types: ["catalog"] },
   { key: "knowledge", types: ["knowledge_network"] },
-  { key: "execution", types: ["operator", "tool_box", "function", "mcp", "skill"] },
+  { key: "execution", types: ["function", "tool_box", "mcp", "skill"] },
 ] as const;
 
 type ObjectGrantLocationState = {

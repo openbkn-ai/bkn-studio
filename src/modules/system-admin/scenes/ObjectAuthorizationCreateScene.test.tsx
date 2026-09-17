@@ -112,26 +112,24 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     fireEvent.mouseDown(typePicker);
 
     const executionGroup = screen.getByText("systemAdmin.objectGrants.objectTypeGroups.execution");
-    const operator = screen.getByText("算子");
-    const functionSet = screen.getByText("函数集");
+    const operator = screen.getByText("函数集");
 
     expect(screen.queryByText("systemAdmin.objectGrants.objectTypeGroups.model")).toBeNull();
     expect(screen.queryByText("小模型")).toBeNull();
     expect(screen.queryByText("大模型")).toBeNull();
     expect(executionGroup.compareDocumentPosition(operator) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(executionGroup.compareDocumentPosition(functionSet) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("keeps the operation code visible and explains a locked prerequisite separately", async () => {
     listAuthorizableObjectsPageMock.mockResolvedValue({
-      items: [{ id: "operator-1", name: "Order settlement", type: "operator" }], total: 1,
+      items: [{ id: "operator-1", name: "Order settlement", type: "function" }], total: 1,
     });
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
 
     const [typePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(typePicker);
-    fireEvent.click(screen.getByText("算子"));
+    fireEvent.click(screen.getByText("函数集"));
     await act(async () => {});
 
     const [, objectPicker] = screen.getAllByRole("combobox");
