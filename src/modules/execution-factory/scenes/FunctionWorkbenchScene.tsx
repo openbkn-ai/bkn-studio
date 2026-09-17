@@ -26,7 +26,7 @@ import {
 import { Alert, Drawer, Dropdown, Spin, Switch, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
@@ -73,6 +73,7 @@ import {
   type FunctionTemplateId,
 } from "@/modules/execution-factory/utils/function-templates";
 import { buildSampleEvent } from "@/modules/execution-factory/utils/function-sample-event";
+import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { buildJsonSchemaFromParameters } from "@/modules/execution-factory/utils/function-parameter-schema";
 import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import { collectToolboxPublishIssues } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
@@ -187,12 +188,15 @@ function emptyFunction(code: string): WorkbenchFunction {
 type FunctionWorkbenchSceneProps = {
   boxId: string;
   onBack?: () => void;
+  /** A linked capability may name a specific persisted Function in this toolbox. */
+  targetToolId?: string;
 };
 
-export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchSceneProps) {
+export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: FunctionWorkbenchSceneProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
+  const location = useLocation();
   const canEditFunction = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:function:edit",
@@ -283,10 +287,16 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       try {
         const record = await getToolbox(boxId);
         const listResult = await listTools(boxId, { page: 1, pageSize: MAX_LOADED_FUNCTIONS });
+        const detailIds = listResult.items.map((item) => item.toolId);
+        // A capability link can target a Function beyond the workbench's first-page rail. Load that
+        // item as well so the linked capability always opens the Function that was clicked.
+        if (targetToolId && !detailIds.includes(targetToolId)) {
+          detailIds.push(targetToolId);
+        }
         const details = await Promise.all(
-          listResult.items.map(async (item) => {
+          detailIds.map(async (toolId) => {
             try {
-              return await getToolDetail(boxId, item.toolId);
+              return await getToolDetail(boxId, toolId);
             } catch {
               return null;
             }
@@ -324,7 +334,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
         // A view-only caller must not receive an unsaved local draft merely by opening an empty
         // toolbox. Editors still get the draft that starts the creation flow.
         setFunctions(loaded.length > 0 ? loaded : canEditFunction ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)] : []);
-        setActiveKey(loaded[0]?.key ?? null);
+        setActiveKey(loaded.some((item) => item.key === targetToolId) ? targetToolId ?? null : loaded[0]?.key ?? null);
       } catch (error) {
         if (!cancelled) {
           setLoadError(extractRequestErrorMessage(error));
@@ -339,7 +349,7 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
     return () => {
       cancelled = true;
     };
-  }, [boxId, canEditFunction]);
+  }, [boxId, canEditFunction, targetToolId]);
 
   useEffect(() => {
     if (!activeKey && functions.length > 0) {
@@ -359,7 +369,10 @@ export function FunctionWorkbenchScene({ boxId, onBack }: FunctionWorkbenchScene
       }
 
       // Function workbench can only come from Function sets, so do not return to API toolboxes.
-      void navigate("/execution-factory/units?activeTab=toolbox&toolboxView=function");
+      void navigate(
+        readReturnTo(location.state) ?? "/execution-factory/units?activeTab=toolbox&toolboxView=function",
+        { replace: true },
+      );
     };
 
     // This discards the entire function body, not just a few form fields. Drafts live only in memory and are lost on exit.

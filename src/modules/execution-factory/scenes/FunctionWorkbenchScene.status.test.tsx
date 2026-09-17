@@ -17,6 +17,7 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("react-router-dom", () => ({
+  useLocation: () => ({ state: null }),
   useNavigate: () => vi.fn(),
 }));
 

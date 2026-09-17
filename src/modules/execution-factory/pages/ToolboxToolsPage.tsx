@@ -17,6 +17,7 @@ export function ToolboxToolsPage() {
   const { boxId } = useParams<{ boxId: string }>();
   const [searchParams] = useSearchParams();
   const catalogContext = searchParams.get("from") === "catalog";
+  const targetToolId = searchParams.get("toolId") ?? undefined;
   const [isFunctionToolbox, setIsFunctionToolbox] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function ToolboxToolsPage() {
 
   // Code functions use the workbench with code, parameters, and debugging together; OpenAPI and others remain on the tool-list page.
   return isFunctionToolbox ? (
-    <FunctionWorkbenchScene boxId={boxId} />
+    <FunctionWorkbenchScene boxId={boxId} targetToolId={targetToolId} />
   ) : (
     <ToolboxToolsScene boxId={boxId} />
   );

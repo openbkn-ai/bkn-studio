@@ -66,7 +66,7 @@ const TITLE_KEY = {
 
 /** A Function row opens its parent workbench, which supports read-only Function viewers. */
 const DETAIL_LINK_PERMISSION: Record<CapabilitySectionKind, string> = {
-  api: "execution-factory:tool:view",
+  api: "execution-factory:toolbox:view",
   function: "execution-factory:function:view",
   mcp: "execution-factory:mcp:view",
   skill: "execution-factory:skill:view",
@@ -137,7 +137,7 @@ function referencingSources(record: CapabilityBindingRecord): CapabilitySource[]
  */
 function executionFactoryPath(record: CapabilityBindingRecord, kind: CapabilitySectionKind) {
   if (kind === "function") {
-    return `/execution-factory/toolboxes/${record.boxId}/tools`;
+    return `/execution-factory/toolboxes/${record.boxId}/tools?toolId=${encodeURIComponent(record.capabilityId)}`;
   }
 
   switch (record.capabilityType) {
