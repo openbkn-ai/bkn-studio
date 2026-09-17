@@ -46,7 +46,6 @@ type CatalogTreePanelProps = {
   searchLoading?: boolean;
   searchValue?: string;
   onRefresh: () => Promise<void> | void;
-  onLoadCatalogSchemas: (catalogId: string) => Promise<string[]>;
   onLoadCatalogsByConnectorType?: (connectorType: string, offset?: number) => Promise<void>;
   onSearch?: () => void;
   onSearchChange?: (keyword: string) => void;
@@ -56,7 +55,6 @@ type CatalogTreePanelProps = {
   resourceCount: number;
   discoveringCatalogIds: string[];
   selection: CatalogTreeSelection | null;
-  summaryOnlyCatalogIds?: string[];
 };
 
 type LogicalFormValues = {
@@ -77,8 +75,6 @@ type TreeNodeMeta =
 
 const PHYSICAL_GROUP_KEY = "group:physical";
 const LOGICAL_GROUP_KEY = "group:logical";
-const EMPTY_SUMMARY_ONLY_CATALOG_IDS: string[] = [];
-
 function connectorKey(type: string) {
   return `connector:${type || "unknown"}`;
 }
@@ -114,7 +110,6 @@ export function CatalogTreePanel({
   searchLoading = false,
   searchValue = keyword,
   onRefresh,
-  onLoadCatalogSchemas,
   onLoadCatalogsByConnectorType = async () => {},
   onSearch,
   onSearchChange = () => {},
@@ -124,64 +119,19 @@ export function CatalogTreePanel({
   resourceCount,
   discoveringCatalogIds,
   selection,
-  summaryOnlyCatalogIds = EMPTY_SUMMARY_ONLY_CATALOG_IDS,
 }: CatalogTreePanelProps) {
   const { t, i18n } = useTranslation();
   const { message, modal } = useAppServices();
   const messageRef = useRef(message);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([PHYSICAL_GROUP_KEY, LOGICAL_GROUP_KEY]);
   const [loadingConnectorTypeKeys, setLoadingConnectorTypeKeys] = useState<Set<string>>(() => new Set());
-  const [schemaNamesByCatalogId, setSchemaNamesByCatalogId] = useState<Record<string, string[]>>({});
   const expandedKeysRef = useRef(expandedKeys);
   const loadingConnectorTypeKeysRef = useRef(loadingConnectorTypeKeys);
-  const schemaNamesByCatalogIdRef = useRef<Record<string, string[]>>({});
-  const schemaLoadGeneration = useRef(0);
-  const loadingSchemaCatalogIds = useRef(new Map<string, number>());
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<LogicalFormValues>();
 
   const sortLocale = i18n.language || undefined;
-  const summaryOnlyCatalogIdSet = useMemo(
-    () => new Set(summaryOnlyCatalogIds),
-    [summaryOnlyCatalogIds],
-  );
-
-  const loadCatalogSchemas = useCallback((catalogId: string, force = false) => {
-    if (summaryOnlyCatalogIdSet.has(catalogId)) {
-      return;
-    }
-    const generation = schemaLoadGeneration.current;
-    if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
-      return;
-    }
-    if (!force && Object.hasOwn(schemaNamesByCatalogIdRef.current, catalogId)) {
-      return;
-    }
-    loadingSchemaCatalogIds.current.set(catalogId, generation);
-    void onLoadCatalogSchemas(catalogId)
-      .then((schemas) => {
-        if (schemaLoadGeneration.current !== generation) {
-          return;
-        }
-        setSchemaNamesByCatalogId((current) => {
-          const next = { ...current, [catalogId]: schemas };
-          schemaNamesByCatalogIdRef.current = next;
-          return next;
-        });
-      })
-      .catch((error) => {
-        if (schemaLoadGeneration.current === generation) {
-          void messageRef.current.error(extractRequestErrorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (loadingSchemaCatalogIds.current.get(catalogId) === generation) {
-          loadingSchemaCatalogIds.current.delete(catalogId);
-        }
-      });
-  }, [onLoadCatalogSchemas, summaryOnlyCatalogIdSet]);
-
   useEffect(() => {
     messageRef.current = message;
   }, [message]);
@@ -218,18 +168,6 @@ export function CatalogTreePanel({
         setLoadingConnectorTypeKeys(nextKeys);
       });
   }, [onLoadCatalogsByConnectorType]);
-
-  useEffect(() => {
-    schemaLoadGeneration.current += 1;
-    loadingSchemaCatalogIds.current.clear();
-    schemaNamesByCatalogIdRef.current = {};
-    setSchemaNamesByCatalogId({});
-
-    const expandedCatalogKeys = new Set(expandedKeysRef.current);
-    catalogs
-      .filter((catalog) => catalog.type !== "logical" && expandedCatalogKeys.has(catalogKey(catalog.id)))
-      .forEach((catalog) => loadCatalogSchemas(catalog.id, true));
-  }, [catalogs, loadCatalogSchemas]);
 
   const selectedCatalogId = selection?.id;
 
@@ -291,7 +229,7 @@ export function CatalogTreePanel({
     const requiredExpanded = new Set<string>([PHYSICAL_GROUP_KEY]);
 
     const attachCatalogChildren = (catalog: CatalogRecord): DataNode[] | undefined => {
-      const schemas = catalogSchemas(schemaNamesByCatalogId[catalog.id] ?? [], sortLocale);
+      const schemas = catalogSchemas(catalog.schemas ?? [], sortLocale);
       if (schemas.length === 0) {
         return undefined;
       }
@@ -367,9 +305,10 @@ export function CatalogTreePanel({
           ...group.catalogs.map((catalog) => {
           const nodeKey = catalogKey(catalog.id);
           metaMap.set(nodeKey, { catalogId: catalog.id, key: nodeKey, type: "catalog" });
+          const children = attachCatalogChildren(catalog);
           return {
-            children: attachCatalogChildren(catalog),
-            isLeaf: false,
+            children,
+            isLeaf: !children,
             key: nodeKey,
             title: (
               <span className={styles.catalogNodeTitle}>
@@ -601,7 +540,6 @@ export function CatalogTreePanel({
     query,
     loadingConnectorTypeKeys,
     discoveringCatalogIds,
-    schemaNamesByCatalogId,
     selectedCatalogId,
     sortLocale,
     t,
@@ -724,10 +662,6 @@ export function CatalogTreePanel({
                 loadCatalogsByConnectorType(meta.connectorType, 0);
                 continue;
               }
-              if (meta?.type !== "catalog") {
-                continue;
-              }
-              loadCatalogSchemas(meta.catalogId);
             }
           }}
           onSelect={(keys) => {
@@ -760,7 +694,6 @@ export function CatalogTreePanel({
                 const nextKeys = [...expandedKeysRef.current, key];
                 setExpandedKeys(nextKeys);
                 expandedKeysRef.current = nextKeys;
-                loadCatalogSchemas(meta.catalogId);
               }
               onSelectScope?.(null);
               onSelectCatalog(meta.catalogId);

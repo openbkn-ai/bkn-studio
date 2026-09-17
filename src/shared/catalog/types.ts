@@ -93,6 +93,8 @@ export type CatalogRecord = {
   mode: string;
   name: string;
   operations: string[];
+  /** Schema names returned by the catalog list summary. */
+  schemas?: string[];
   status: CatalogRecordStatus;
   tags: string[];
   type: string;

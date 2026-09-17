@@ -7,9 +7,22 @@
 
 import { describe, expect, it } from "vitest";
 
-import { mapBackendCatalog } from "@/shared/catalog/catalog-mapper";
+import { mapBackendCatalog, mapBackendCatalogSummary } from "@/shared/catalog/catalog-mapper";
 
 describe("catalog-mapper · health status", () => {
+  it("maps schemas from the catalog summary without exposing metadata", () => {
+    const catalog = mapBackendCatalogSummary({
+      connector_type: "postgresql",
+      enabled: true,
+      id: "catalog-1",
+      name: "orders",
+      schemas: ["public", "analytics"],
+    });
+
+    expect(catalog.schemas).toEqual(["public", "analytics"]);
+    expect(catalog.metadata).toEqual({});
+  });
+
   it("maps the latest health check time from the catalog response", () => {
     const lastCheckTime = Date.UTC(2026, 6, 30, 8, 0, 0);
 
@@ -40,6 +53,18 @@ describe("catalog-mapper · health status", () => {
     });
 
     expect(catalog.internal).toBe(true);
+  });
+
+  it("preserves schemas from catalog details while list summaries are refreshed", () => {
+    const catalog = mapBackendCatalog({
+      connector_type: "postgresql",
+      enabled: true,
+      id: "catalog-1",
+      metadata: { schemas: ["public"] },
+      name: "orders",
+    });
+
+    expect(catalog.schemas).toEqual(["public"]);
   });
 
   it("uses the empty display value before the first health check", () => {

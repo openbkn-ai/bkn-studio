@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps, Key, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -125,7 +125,6 @@ describe("CatalogTreePanel", () => {
       <CatalogTreePanel
         catalogs={[]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -144,7 +143,6 @@ describe("CatalogTreePanel", () => {
         catalogs={[]}
         discoveringCatalogIds={[]}
         keyword="missing"
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -162,7 +160,6 @@ describe("CatalogTreePanel", () => {
         connectorTypeStats={[{ catalogCount: 1, catalogType: "physical", connectorType: "postgresql" }]}
         discoveringCatalogIds={[]}
         keyword="orders"
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -182,7 +179,6 @@ describe("CatalogTreePanel", () => {
           { catalogCount: 3, catalogType: "logical", connectorType: "" },
         ]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -206,7 +202,6 @@ describe("CatalogTreePanel", () => {
           makeCatalog("logical-alpha", "alpha", "logical"),
         ]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -228,7 +223,7 @@ describe("CatalogTreePanel", () => {
     ].join(","));
   });
 
-  it("exposes complete names for truncated catalog and schema nodes", async () => {
+  it("exposes complete names for truncated catalog and schema nodes", () => {
     const physicalName = "ISSUE180_IV18007_PG17_physical_catalog_with_a_long_suffix";
     const logicalName = "ISSUE180_IV18007_PG17_logical_catalog_with_a_long_suffix";
     const schemaName = "ISSUE180_IV18007_PG17_schema_with_a_long_suffix";
@@ -236,11 +231,15 @@ describe("CatalogTreePanel", () => {
     render(
       <CatalogTreePanel
         catalogs={[
-          { ...makeCatalog("catalog-1", physicalName, "physical"), enabled: false, status: "disabled" },
+          {
+            ...makeCatalog("catalog-1", physicalName, "physical"),
+            enabled: false,
+            schemas: [schemaName],
+            status: "disabled",
+          },
           makeCatalog("logical-long", logicalName, "logical"),
         ]}
         discoveringCatalogIds={["catalog-1"]}
-        onLoadCatalogSchemas={vi.fn().mockResolvedValue([schemaName])}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -252,12 +251,10 @@ describe("CatalogTreePanel", () => {
     expect(screen.getByText(logicalName)).toHaveAttribute("title", logicalName);
     expect(screen.getByText("common.disabled")).toBeInTheDocument();
     expect(screen.getByText("dataCatalog.tree.discovering")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
-    await waitFor(() => expect(screen.getByText(schemaName)).toHaveAttribute("title", schemaName));
+    expect(screen.getByText(schemaName)).toHaveAttribute("title", schemaName);
   });
 
-  it("loads physical catalog schemas only when its node is expanded", async () => {
-    const onLoadCatalogSchemas = vi.fn().mockResolvedValue(["public"]);
+  it("uses schemas from the catalog summary when a physical catalog is expanded", () => {
     const catalog: CatalogRecord = {
       category: "table",
       connectorConfig: {},
@@ -276,6 +273,7 @@ describe("CatalogTreePanel", () => {
       mode: "",
       name: "orders",
       operations: [],
+      schemas: ["public"],
       status: "enabled",
       tags: [],
       type: "physical",
@@ -285,46 +283,37 @@ describe("CatalogTreePanel", () => {
     const props: ComponentProps<typeof CatalogTreePanel> = {
       catalogs: [catalog],
       discoveringCatalogIds: [],
-      onLoadCatalogSchemas,
       onRefresh: vi.fn(),
       onSelectCatalog: vi.fn(),
       resourceCount: 0,
       selection: null,
     };
-    const { rerender } = render(<CatalogTreePanel {...props} />);
+    render(<CatalogTreePanel {...props} />);
 
     fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
-    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledWith("catalog-1"));
-    fireEvent.click(screen.getByRole("button", { name: "collapse catalog" }));
-    fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
-    expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(1);
-
-    rerender(<CatalogTreePanel {...props} catalogs={[{ ...catalog }]} />);
-    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("public")).toBeInTheDocument();
   });
 
-  it("does not load schemas for a summary-only catalog", async () => {
-    const onLoadCatalogSchemas = vi.fn();
+  it("expands a summary-only catalog using schemas from the catalog summary", () => {
     const catalog = {
       ...makeCatalog("catalog-1", "orders", "physical"),
       operations: ["view_summary"],
+      schemas: ["public"],
     };
 
     render(
       <CatalogTreePanel
         catalogs={[catalog]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={onLoadCatalogSchemas}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
         selection={null}
-        summaryOnlyCatalogIds={[catalog.id]}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "expand catalog" }));
-    await waitFor(() => expect(onLoadCatalogSchemas).not.toHaveBeenCalled());
+    expect(screen.getByText("public")).toBeInTheDocument();
   });
 
   it("expands a connector group when its title is selected", () => {
@@ -357,7 +346,6 @@ describe("CatalogTreePanel", () => {
       <CatalogTreePanel
         catalogs={[catalog]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={vi.fn()}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
         resourceCount={0}
@@ -402,7 +390,6 @@ describe("CatalogTreePanel", () => {
         catalogs={[catalog]}
         connectorTypeStats={[{ catalogCount: 2, catalogType: "logical", connectorType: "" }]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={vi.fn()}
         onLoadCatalogsByConnectorType={onLoadCatalogsByConnectorType}
         onRefresh={vi.fn()}
         onSelectCatalog={vi.fn()}
@@ -418,8 +405,7 @@ describe("CatalogTreePanel", () => {
     expect(onLoadCatalogsByConnectorType).toHaveBeenCalledTimes(1);
   });
 
-  it("expands a catalog and loads its schemas when its title is selected", async () => {
-    const onLoadCatalogSchemas = vi.fn().mockResolvedValue(["public"]);
+  it("expands a catalog when its title is selected", () => {
     const onSelectCatalog = vi.fn();
     const catalog: CatalogRecord = {
       category: "table",
@@ -450,7 +436,6 @@ describe("CatalogTreePanel", () => {
       <CatalogTreePanel
         catalogs={[catalog]}
         discoveringCatalogIds={[]}
-        onLoadCatalogSchemas={onLoadCatalogSchemas}
         onRefresh={vi.fn()}
         onSelectCatalog={onSelectCatalog}
         resourceCount={0}
@@ -462,6 +447,5 @@ describe("CatalogTreePanel", () => {
 
     expect(onSelectCatalog).toHaveBeenCalledWith("catalog-1");
     expect(screen.getByTestId("expanded-keys").textContent).toContain("catalog:catalog-1");
-    await waitFor(() => expect(onLoadCatalogSchemas).toHaveBeenCalledWith("catalog-1"));
   });
 });

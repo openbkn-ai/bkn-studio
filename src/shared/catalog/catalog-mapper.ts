@@ -29,6 +29,7 @@ export type BackendCatalogSummary = {
   last_check_time?: number;
   name: string;
   operations?: string[];
+  schemas?: string[];
   tags?: string[];
   type?: string;
   update_time?: number;
@@ -54,6 +55,16 @@ function normalizeHealthStatus(value?: string): CatalogHealthStatus {
 
 function normalizeCatalogTimestamp(value?: number) {
   return value || null;
+}
+
+function catalogSchemas(item: BackendCatalogSummary, metadata: Record<string, unknown>) {
+  if (item.schemas) {
+    return item.schemas;
+  }
+  const schemas = metadata.schemas;
+  return Array.isArray(schemas)
+    ? schemas.filter((schema): schema is string => typeof schema === "string")
+    : [];
 }
 
 export function inferConnectorCategory(connectorType: string) {
@@ -95,6 +106,7 @@ function mapCatalogRecord(
     connectorConfig,
     metadata,
     operations: item.operations ?? [],
+    schemas: catalogSchemas(item, metadata),
     type: item.type ?? "physical",
   };
 }

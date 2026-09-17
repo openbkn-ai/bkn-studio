@@ -278,8 +278,18 @@ let mockCatalogs: CatalogRecord[] = [
   },
 ];
 
+function summarySchemas(metadata: Record<string, unknown>) {
+  const schemas = metadata.schemas;
+  return Array.isArray(schemas)
+    ? schemas.filter((schema): schema is string => typeof schema === "string")
+    : [];
+}
+
 export function getMockCatalogs() {
-  return mockCatalogs;
+  return mockCatalogs.map((catalog) => ({
+    ...catalog,
+    schemas: catalog.schemas ?? summarySchemas(catalog.metadata),
+  }));
 }
 
 export function prependMockCatalog(record: CatalogRecord) {

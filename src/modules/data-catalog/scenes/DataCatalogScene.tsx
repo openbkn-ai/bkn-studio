@@ -164,10 +164,6 @@ export function DataCatalogScene({
     }
     return null;
   }, [catalogs, selection]);
-  const summaryOnlyCatalogIds = useMemo(
-    () => catalogs.filter(isCatalogSummaryOnly).map((catalog) => catalog.id),
-    [catalogs],
-  );
   const selectedCatalogRequestIds = useRef(new Set<string>());
   const selectedCatalogIdRef = useRef<string | null>(null);
 
@@ -255,14 +251,6 @@ export function DataCatalogScene({
       hydratedCatalogIds.current,
     ));
   }, [catalogKeyword]);
-
-  const loadCatalogSchemas = useCallback(async (catalogId: string) => {
-    const catalog = await getCatalog(catalogId);
-    const schemas = catalog?.metadata.schemas;
-    return Array.isArray(schemas)
-      ? schemas.filter((schema): schema is string => typeof schema === "string")
-      : [];
-  }, []);
 
   const refreshResourceTotal = useCallback(async () => {
     setResourceTotal(await countCatalogResources());
@@ -656,7 +644,6 @@ export function DataCatalogScene({
           onRefresh={async () => {
             await loadAll();
           }}
-          onLoadCatalogSchemas={loadCatalogSchemas}
           onLoadCatalogsByConnectorType={loadCatalogsByConnectorType}
           onSearch={handleCatalogSearch}
           onSearchChange={setCatalogSearchInput}
@@ -689,7 +676,6 @@ export function DataCatalogScene({
           resourceCount={resourceTotal}
           discoveringCatalogIds={discoveringCatalogIds}
           selection={selection}
-          summaryOnlyCatalogIds={summaryOnlyCatalogIds}
         />
         <section className={styles.detailSurface}>{renderDetail()}</section>
       </div>
