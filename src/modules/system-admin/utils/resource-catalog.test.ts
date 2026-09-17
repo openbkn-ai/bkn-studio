@@ -59,23 +59,27 @@ describe("resource-catalog", () => {
     const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
 
     for (const type of [
+      "admin-apikey",
+      "admin-client",
+      "admin-license",
       "agent",
       "agent_tpl",
+      "action_type",
+      "concept_group",
       "connector_type",
+      "large_model",
+      "metric",
+      "object_type",
+      "relation_type",
+      "resource",
       "risk_type",
+      "safe_admin",
+      "small_model",
     ]) {
       expect(roleGrantTypes).not.toContain(type);
     }
-    expect(roleGrantTypes).toEqual(
-      expect.arrayContaining([
-        "concept_group",
-        "object_type",
-        "relation_type",
-        "action_type",
-        "metric",
-        "function",
-      ]),
-    );
+    // Legacy operators and Function sets are separate bkn-safe resource types; both stay grantable.
+    expect(roleGrantTypes).toEqual(expect.arrayContaining(["operator", "function", "knowledge_network"]));
   });
 
   it("uses the corrected names for catalog and resource", async () => {

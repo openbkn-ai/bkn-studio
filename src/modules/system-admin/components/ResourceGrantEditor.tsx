@@ -47,7 +47,7 @@ const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.
 type GrantOperation = { key: string; label: string; requires: string[] };
 
 const ROLE_RESOURCE_TYPE_GROUPS = [
-  { key: "data", types: ["catalog", "resource", "connector_type"] },
+  { key: "data", types: ["catalog"] },
   {
     key: "knowledge",
     types: ["knowledge_network", "concept_group", "object_type", "relation_type", "action_type", "metric"],
@@ -115,11 +115,7 @@ export function ResourceGrantEditor({
         return option ? [option] : [];
       }),
     })).filter((group) => group.options.length);
-    const groupedTypes = new Set(grouped.flatMap((group) => group.options.map((option) => option.value)));
-    const ungrouped = availableRoleTypeOptions.filter((option) => !groupedTypes.has(option.value));
-    return ungrouped.length
-      ? [...grouped, { label: t("systemAdmin.objectGrants.objectTypeGroups.other"), options: ungrouped }]
-      : grouped;
+    return grouped;
   }, [availableRoleTypeOptions, t]);
   const roleTypeValues = useMemo(
     () => roleResourceTypeOptions.flatMap((group) => group.options.map((option) => option.value)),
@@ -138,7 +134,7 @@ export function ResourceGrantEditor({
   useEffect(() => {
     if (lockedResource || !registryReady) return;
     if (!roleTypeValues.includes(draftType)) {
-      setDraftType(roleTypeValues.includes("catalog") ? "catalog" : roleTypeValues[0] ?? "");
+      setDraftType("");
       setDraftOps([]);
     }
   }, [draftType, lockedResource, registryReady, roleTypeValues]);
