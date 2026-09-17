@@ -120,11 +120,11 @@ describe("TopResourceAuthorizationPanel", () => {
       childPagination.onChange(2, 10);
       childPagination.onChange(3, 10);
     });
-    await act(async () => {
+    act(() => {
       third.resolve({ category: "action_type", children: [{ category: "action_type", id: "kn-ecommerce/third", name: "第三页", sub: "电商经营决策知识网络", type: "action_type" }], total: 30 });
     });
     await screen.findByText("第三页");
-    await act(async () => {
+    act(() => {
       second.resolve({ category: "action_type", children: [{ category: "action_type", id: "kn-ecommerce/second", name: "第二页", sub: "电商经营决策知识网络", type: "action_type" }], total: 30 });
     });
     expect(screen.queryByText("第二页")).toBeNull();
