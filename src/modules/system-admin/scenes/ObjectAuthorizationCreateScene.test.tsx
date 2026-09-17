@@ -308,6 +308,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
   it("shows one error when a grant request is rejected", async () => {
     capability.current = "not-installed";
+    searchParams.set("object", "catalog::catalog-1");
     listUsersMock.mockResolvedValue([
       { account: "li.mubai", id: "user-1", name: "Mubai Li" },
     ]);
@@ -330,16 +331,9 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     ));
 
     render(<ObjectAuthorizationCreateScene />);
-    await act(async () => {});
-
-    const [typePicker] = screen.getAllByRole("combobox");
-    fireEvent.mouseDown(typePicker);
-    fireEvent.click(screen.getByText("数据目录"));
-    await act(async () => {});
-
-    const [, objectPicker] = screen.getAllByRole("combobox");
-    fireEvent.mouseDown(objectPicker);
-    fireEvent.click(await screen.findByText("Customer data"));
+    await waitFor(() => expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith(
+      "catalog", { keyword: "", page: 0 },
+    ));
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
