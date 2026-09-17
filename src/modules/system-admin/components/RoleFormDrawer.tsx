@@ -99,46 +99,45 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
     }
     void form.validateFields().then(async (values) => {
       setSubmitting(true);
+      const roleInput = {
+        name: values.name.trim(),
+        description: values.description.trim(),
+      };
+      let savedRoleId: string;
       try {
         if (isEdit && role) {
-          await updateRole(role.id, {
-            name: values.name.trim(),
-            description: values.description.trim(),
-          });
-          // Without admin-role:permissions, the editor is read-only and should have no difference.
-          // Skip explicitly to prevent a future change from sending a series of guaranteed-403 requests from a read-only diff.
-          if (canEditPermissions) {
-            const { adds, removes } = diffGrants(role.permissions, grants);
-            for (const grant of adds) {
-              await setRolePermission(role.id, true, grant);
-            }
-            for (const grant of removes) {
-              await setRolePermission(role.id, false, grant);
-            }
-          }
-          message.success(t("systemAdmin.roles.toast.saved"));
+          await updateRole(role.id, roleInput, { skipErrorToast: true });
+          savedRoleId = role.id;
         } else {
-          const newId = await createRole({
-            name: values.name.trim(),
-            description: values.description.trim(),
-          });
-          if (canEditPermissions) {
-            for (const grant of grants) {
-              await setRolePermission(newId, true, grant);
-            }
-          }
-          message.success(t("systemAdmin.roles.toast.created"));
+          savedRoleId = await createRole(roleInput, { skipErrorToast: true });
         }
+      } catch (error) {
+        const details = extractRequestErrorDetails(error);
+        void message.error(
+          details.code === "RESOURCE_EXISTED"
+            ? t("systemAdmin.errors.roleNameDuplicateWithName", { name: roleInput.name })
+            : extractRequestErrorMessage(error),
+        );
+        return;
+      }
+
+      try {
+        // Without admin-role:permissions, the editor is read-only and should have no difference.
+        // Skip explicitly to prevent a future change from sending a series of guaranteed-403 requests from a read-only diff.
+        if (canEditPermissions) {
+          const { adds, removes } = diffGrants(role?.permissions ?? [], grants);
+          for (const grant of adds) {
+            await setRolePermission(savedRoleId, true, grant, { skipErrorToast: true });
+          }
+          for (const grant of removes) {
+            await setRolePermission(savedRoleId, false, grant, { skipErrorToast: true });
+          }
+        }
+        message.success(isEdit ? t("systemAdmin.roles.toast.saved") : t("systemAdmin.roles.toast.created"));
         onSaved();
         onClose();
       } catch (error) {
-        const details = extractRequestErrorDetails(error);
-        const name = values.name.trim();
-        void message.error(
-          details.code === "RESOURCE_EXISTED"
-            ? t("systemAdmin.errors.roleNameDuplicateWithName", { name })
-            : extractRequestErrorMessage(error),
-        );
+        void message.error(extractRequestErrorMessage(error));
       } finally {
         setSubmitting(false);
       }

@@ -680,7 +680,10 @@ export async function deleteDepartment(id: string): Promise<void> {
 
 // ---- role writes ------------------------------------------------------------
 
-export async function createRole(input: RoleInput): Promise<string> {
+export async function createRole(
+  input: RoleInput,
+  options?: { skipErrorToast?: boolean },
+): Promise<string> {
   if (useMock) {
     if (roles.some((item) => item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase())) {
       throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
@@ -705,11 +708,15 @@ export async function createRole(input: RoleInput): Promise<string> {
   const created = await http.post<{ id: string }>(`${ADMIN}/roles`, {
     name: input.name,
     description: input.description,
-  });
+  }, { skipErrorToast: options?.skipErrorToast });
   return created.data.id;
 }
 
-export async function updateRole(id: string, input: RoleInput): Promise<void> {
+export async function updateRole(
+  id: string,
+  input: RoleInput,
+  options?: { skipErrorToast?: boolean },
+): Promise<void> {
   if (useMock) {
     const role = findRole(id);
     if (!role) {
@@ -730,7 +737,7 @@ export async function updateRole(id: string, input: RoleInput): Promise<void> {
   await http.put(`${ADMIN}/roles/${encodeURIComponent(id)}`, {
     name: input.name,
     description: input.description,
-  });
+  }, { skipErrorToast: options?.skipErrorToast });
 }
 
 export async function deleteRole(id: string): Promise<void> {
@@ -774,6 +781,7 @@ export async function setRolePermission(
   roleId: string,
   attach: boolean,
   perm: ResourceGrant,
+  options?: { skipErrorToast?: boolean },
 ): Promise<void> {
   if (useMock) {
     const role = findRole(roleId);
@@ -806,6 +814,7 @@ export async function setRolePermission(
     url: `${ADMIN}/roles/${encodeURIComponent(roleId)}/permissions`,
     method: attach ? "POST" : "DELETE",
     data: { resource: perm.resource, operations: perm.operations },
+    skipErrorToast: options?.skipErrorToast,
   });
 }
 
