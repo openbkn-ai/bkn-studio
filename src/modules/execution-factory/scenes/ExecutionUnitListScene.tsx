@@ -91,13 +91,23 @@ import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectA
 
 import styles from "./execution-unit-list.module.css";
 
-// Execution-unit tabs retain their UI names; bkn-safe identifies the function tab as `function`.
-const AUTHZ_TYPE_BY_TAB: Record<ExecutionUnitTab, string> = {
-  operator: "function",
-  toolbox: "tool_box",
-  mcp: "mcp",
-  skill: "skill",
-};
+/**
+ * bkn-safe object type for a list row, or null when the row cannot be authorized as an object.
+ *
+ * Operators are retired: their rows carry operator ids, which are neither a grantable type any
+ * more nor Function set (box id) resources, so the operator tab offers no object authorization.
+ */
+function resolveObjectAuthzType(tab: ExecutionUnitTab, item: ExecutionUnitCardItem): string | null {
+  switch (tab) {
+    case "toolbox":
+      return item.metadataType === "function" ? "function" : "tool_box";
+    case "mcp":
+    case "skill":
+      return tab;
+    default:
+      return null;
+  }
+}
 
 const ExecutionUnitListOverlays = lazy(async () => {
   const module = await import("@/modules/execution-factory/scenes/ExecutionUnitListOverlays");
@@ -947,15 +957,17 @@ export function ExecutionUnitListScene({
               await onConfirm();
               void message.success(t("common.success"));
               reloadList();
+              const authzType = resolveObjectAuthzType(activeTab, item);
               if (
                 !marketMode &&
                 nextStatus === "published" &&
+                authzType &&
                 hasExecutionUnitRecordOperation(item, "authorize")
               ) {
                 setPublishedPermTarget({
                   id: item.id,
                   name: item.name,
-                  type: activeTab === "toolbox" && item.metadataType === "function" ? "function" : AUTHZ_TYPE_BY_TAB[activeTab],
+                  type: authzType,
                   objectAuthorized: true,
                 });
               }
@@ -988,12 +1000,15 @@ export function ExecutionUnitListScene({
       };
 
       if (action === "authorize") {
-        setAuthorizeTarget({
-          id: item.id,
-          name: item.name,
-          type: activeTab === "toolbox" && item.metadataType === "function" ? "function" : AUTHZ_TYPE_BY_TAB[activeTab],
-          objectAuthorized: hasExecutionUnitRecordOperation(item, "authorize"),
-        });
+        const authzType = resolveObjectAuthzType(activeTab, item);
+        if (authzType) {
+          setAuthorizeTarget({
+            id: item.id,
+            name: item.name,
+            type: authzType,
+            objectAuthorized: hasExecutionUnitRecordOperation(item, "authorize"),
+          });
+        }
         return;
       }
 

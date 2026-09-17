@@ -133,6 +133,19 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
       expect.objectContaining({ operations: ["authorize"] }),
     );
   });
+
+  it("does not offer object authorization for retired operators", () => {
+    render(
+      <ExecutionUnitCardMenu
+        activeTab="operator"
+        item={buildItem("published", ["authorize", "delete"])}
+        onAction={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
+    expect(within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize")).toBeNull();
+  });
 });
 
 describe("ExecutionUnitCardMenu record permissions", () => {

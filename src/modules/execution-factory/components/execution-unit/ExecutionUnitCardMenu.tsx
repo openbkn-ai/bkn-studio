@@ -253,14 +253,17 @@ export function ExecutionUnitCardMenu({
     );
   }
 
-  pushMenuAction(
-    menuItems,
-    "authorize",
-    t("systemAdmin.objectGrants.authorize"),
-    onAction,
-    "authorize",
-    item,
-  );
+  // Retired operators have no object grant type; see resolveObjectAuthzType in ExecutionUnitListScene.
+  if (activeTab !== "operator") {
+    pushMenuAction(
+      menuItems,
+      "authorize",
+      t("systemAdmin.objectGrants.authorize"),
+      onAction,
+      "authorize",
+      item,
+    );
+  }
 
   pushMenuAction(menuItems, "delete", t("common.delete"), onAction, "delete", item, {
     danger: true,
