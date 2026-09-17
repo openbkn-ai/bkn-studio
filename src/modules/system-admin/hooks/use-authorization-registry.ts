@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   getAuthorizationRegistry,
+  grantableOperationsForType,
   mockAuthorizationRegistry,
   resetAuthorizationRegistryCache,
   type AuthorizationRegistry,
@@ -60,8 +61,7 @@ export function useAuthorizationRegistry() {
   }, []);
 
   const operationsForType = useCallback((type: string): CatalogOperationOption[] => {
-    const resourceType = catalog?.resourceTypes.find((item) => item.id === type);
-    return (resourceType?.operations ?? []).map((operation) => {
+    return grantableOperationsForType(catalog, type).map((operation) => {
       const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${operation.id}`;
       const labelKey = `systemAdmin.resourceCatalog.operations.${operation.id}`;
       const localizedName = i18n.exists(typeLabelKey)

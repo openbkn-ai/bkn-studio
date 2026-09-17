@@ -15,6 +15,7 @@ export type AuthorizationRegistryOperation = {
   description?: string;
   id: string;
   name: string;
+  grantable: boolean;
   parentOperation?: string;
   requires: string[];
 };
@@ -74,6 +75,7 @@ export type BackendAuthorizationRegistry = {
       description?: string;
       id?: string;
       name?: string;
+      grantable?: boolean;
       parent_operation?: string;
       requires?: string[];
     }>;
@@ -101,6 +103,7 @@ export function normalizeAuthorizationRegistry(input: BackendAuthorizationRegist
         ...(description ? { description } : {}),
         id: operationId,
         name: operation.name || operationId,
+        grantable: operation.grantable !== false,
         parentOperation: operation.parent_operation || undefined,
         requires: [...new Set(operation.requires ?? [])],
       };
@@ -131,8 +134,17 @@ export function mockAuthorizationRegistry(): AuthorizationRegistry {
       operations: mockOperationsForType(resourceType.type).map((operation) => ({
         id: operation.key,
         name: operation.label,
+        grantable: true,
         requires: operation.requires,
       })),
     })),
   };
+}
+
+export function grantableOperationsForType(
+  catalog: AuthorizationRegistry | undefined,
+  type: string,
+): AuthorizationRegistryOperation[] {
+  return catalog?.resourceTypes.find((item) => item.id === type)
+    ?.operations.filter((operation) => operation.grantable) ?? [];
 }

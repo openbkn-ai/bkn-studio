@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import {
+  grantableOperationsForType,
   mockAuthorizationRegistry,
   normalizeAuthorizationRegistry,
 } from "@/modules/system-admin/services/authorization-registry.service";
@@ -35,11 +36,30 @@ describe("authorization registry contract", () => {
       name: "Object Type",
       parentType: "knowledge_network",
       operations: [
-        { id: "view_detail", name: "View Detail", description: "Read this object type.", parentOperation: "view_detail", requires: [] },
-        { id: "query_data", name: "Query Data", parentOperation: "query_data", requires: [] },
-        { id: "modify", name: "Modify", parentOperation: "modify", requires: ["view_detail"] },
+        { id: "view_detail", name: "View Detail", description: "Read this object type.", grantable: true, parentOperation: "view_detail", requires: [] },
+        { id: "query_data", name: "Query Data", grantable: true, parentOperation: "query_data", requires: [] },
+        { id: "modify", name: "Modify", grantable: true, parentOperation: "modify", requires: ["view_detail"] },
       ],
     }]);
+  });
+
+  it("defaults legacy operations to grantable and hides explicitly read-only operations", () => {
+    const catalog = normalizeAuthorizationRegistry({
+      resource_types: [{
+        id: "catalog",
+        operations: [
+          { id: "view_detail" },
+          { id: "view_summary", grantable: false },
+        ],
+      }],
+    });
+
+    expect(catalog.resourceTypes[0]?.operations).toEqual([
+      { id: "view_detail", name: "view_detail", grantable: true, parentOperation: undefined, requires: [] },
+      { id: "view_summary", name: "view_summary", grantable: false, parentOperation: undefined, requires: [] },
+    ]);
+    expect(grantableOperationsForType(catalog, "catalog").map((operation) => operation.id))
+      .toEqual(["view_detail"]);
   });
 
   it("does not invent requirements for independent operations", () => {
