@@ -6,13 +6,17 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Spin } from "antd";
+import { Alert, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "@/framework/i18n/format";
 import { EvidenceChainPanels } from "./EvidenceChainPanels";
+import { BusinessProvenance016 } from "./BusinessProvenance016";
 import { generateCurrentExplanation, readCurrentExplanation, type CurrentExplanation } from "./current-explanation.service";
+import styles from "./CurrentExplanationPanel.module.css";
 
-export function CurrentExplanationPanel({ interactionId, panel, onPanelChange }: { interactionId: string; panel?: "evidence" | "execution"; onPanelChange?: (panel: "evidence" | "execution") => void }) {
+type ExplanationPanel = "timeline" | "evidence" | "execution";
+
+export function CurrentExplanationPanel<TPanel extends ExplanationPanel = "timeline" | "evidence">({ interactionId, panel, onPanelChange }: { interactionId: string; panel?: TPanel; onPanelChange?: (panel: TPanel) => void }) {
   const { t } = useTranslation();
   const [value, setValue] = useState<CurrentExplanation>();
   const [busy, setBusy] = useState(true);
@@ -32,13 +36,13 @@ export function CurrentExplanationPanel({ interactionId, panel, onPanelChange }:
     catch { if (request.current === token) setFailed(true); }
     finally { if (request.current === token) setBusy(false); }
   };
-  return <section>
-    <p>{t("bknTrace.evidenceChain.current.basis")}</p>
-    <Button loading={busy} onClick={() => failed && !value ? setReadAttempt(attempt => attempt + 1) : void generate()}>{t(failed && !value ? "bknTrace.evidenceChain.current.retryRead" : value?.view ? "bknTrace.evidenceChain.current.refresh" : "bknTrace.evidenceChain.current.generate")}</Button>
+  return <section className={styles.shell}>
+    <header className={styles.metaBar}><div><p>{t("bknTrace.evidenceChain.current.basis")}</p>{value?.generatedAt && <small>{t("bknTrace.evidenceChain.current.generatedAt", { time: formatDateTime(value.generatedAt) })}</small>}</div><button type="button" className={styles.metaAction} disabled={busy} onClick={() => failed && !value ? setReadAttempt(attempt => attempt + 1) : void generate()}>{t(failed && !value ? "bknTrace.evidenceChain.current.retryRead" : value?.view ? "bknTrace.evidenceChain.current.refresh" : "bknTrace.evidenceChain.current.generate")}</button></header>
     {busy && <Spin />}
     {failed && <Alert type="error" showIcon message={t(failed && !value ? "bknTrace.evidenceChain.current.readFailed" : "bknTrace.evidenceChain.current.failed")} />}
     {!busy && !failed && value?.status === "not_generated" && <p>{t("bknTrace.evidenceChain.current.empty")}</p>}
-    {value?.generatedAt && <p>{t("bknTrace.evidenceChain.current.generatedAt", { time: formatDateTime(value.generatedAt) })}</p>}
-    {value?.view && <EvidenceChainPanels key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} initialPanel={panel} panel={panel} onPanelChange={onPanelChange} />}
+    {value?.view && (value.view.questionPairs?.length
+      ? <BusinessProvenance016 key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} panel={panel === "timeline" ? "timeline" : "evidence"} evidenceOnly={panel === "evidence" && !onPanelChange} onPanelChange={onPanelChange ? next => onPanelChange(next as TPanel) : undefined} />
+      : <EvidenceChainPanels key={`${interactionId}:${value.generatedAt ?? ""}`} view={value.view} initialPanel={panel === "execution" ? "execution" : "evidence"} panel={panel === "execution" ? "execution" : "evidence"} onPanelChange={next => onPanelChange?.(next as TPanel)} />)}
   </section>;
 }

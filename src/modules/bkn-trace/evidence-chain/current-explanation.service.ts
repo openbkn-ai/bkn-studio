@@ -27,6 +27,26 @@ function parse(value: unknown, id: string): CurrentExplanation {
       if (!requirement || typeof requirement.id !== "string" || typeof requirement.label !== "string" || !["supported", "partial", "unsupported", "contradicted", "missing"].includes(requirement.status) || !Array.isArray(requirement.claimIds) || !requirement.claimIds.every(id => typeof id === "string")) throw new Error("invalid question requirement");
     }
   }
+  if (!optionalEnum(view.generationStatus, ["ready", "analysis_pending"])) throw new Error("invalid attribution state");
+  if (view.questionPairs !== undefined) {
+    if (!Array.isArray(view.questionPairs) || view.questionPairs.length > 64) throw new Error("invalid question pairs");
+    for (const pair of view.questionPairs) {
+      if (!pair || ![pair.id, pair.question, pair.answer, pair.summary, pair.status].every(value => typeof value === "string") || !Array.isArray(pair.claimIds) || !pair.claimIds.every(value => typeof value === "string")) throw new Error("invalid question pair");
+    }
+  }
+  if (view.selectedPairGraphs !== undefined) {
+    if (!view.selectedPairGraphs || typeof view.selectedPairGraphs !== "object" || Array.isArray(view.selectedPairGraphs) || Object.keys(view.selectedPairGraphs).length > 64) throw new Error("invalid pair graphs");
+    for (const graph of Object.values(view.selectedPairGraphs)) {
+      if (!graph || !Array.isArray(graph.claims) || !Array.isArray(graph.evidenceNodes) || !Array.isArray(graph.businessFunctions) || !Array.isArray(graph.executionSteps) || !Array.isArray(graph.schemaNodes) || !Array.isArray(graph.edges) || graph.edges.length > 2000) throw new Error("invalid pair graph");
+      if (graph.businessFunctions.some(item => !item || ![item.id, item.displayName, item.capabilityKind, item.businessPurpose, item.logicSummary, item.validationStatus].every(value => typeof value === "string") || !Array.isArray(item.operationIds) || !Array.isArray(item.supportsClaimIds) || !Array.isArray(item.schemaRefs) || !item.technicalExecution || !Array.isArray(item.technicalExecution.interfaceNames))) throw new Error("invalid business function");
+      if (graph.executionSteps.some(item => !item || ![item.id, item.operationId, item.businessRole, item.interfaceName, item.status, item.timeRailItemId].every(value => typeof value === "string") || typeof item.attempt !== "number")) throw new Error("invalid execution step");
+      if (graph.edges.some(edge => !edge || ![edge.edgeId, edge.kind, edge.fromId, edge.toId, edge.validationStatus].every(value => typeof value === "string") || !Array.isArray(edge.operationIds))) throw new Error("invalid provenance edge");
+    }
+  }
+  if (view.timeRail !== undefined) {
+    if (!Array.isArray(view.timeRail) || view.timeRail.length > 1000) throw new Error("invalid time rail");
+    if (view.timeRail.some(item => !item || ![item.id, item.operation_id, item.interface_name, item.protocol, item.status, item.started_at].every(value => typeof value === "string") || typeof item.order !== "number" || typeof item.attempt !== "number" || !item.input || typeof item.input.mode !== "string")) throw new Error("invalid time rail item");
+  }
   for (const graph of [view.execution, view.evidence]) {
     if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges) || graph.nodes.length > 500 || graph.edges.length > 1000) throw new Error("explanation graph budget");
     if (graph.nodes.some(n => !n || typeof n.id !== "string" || typeof n.label !== "string" || typeof n.kind !== "string" || !text(n.value) || !text(n.detail) || !text(n.technical)) || graph.edges.some(e => !e || ![e.id, e.source, e.target, e.label].every(v => typeof v === "string"))) throw new Error("invalid explanation graph");
@@ -38,6 +58,6 @@ export async function readCurrentExplanation(id: string): Promise<CurrentExplana
   return parse(response.data, id);
 }
 export async function generateCurrentExplanation(id: string): Promise<CurrentExplanation> {
-  const response = await http.post<unknown>(`/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`, {}, { skipErrorToast: true });
+  const response = await http.post<unknown>(`/agent-observability/v1/business-provenance/interactions/${encodeURIComponent(id)}/explanations`, {}, { skipErrorToast: true, timeout: 120_000 });
   return parse(response.data, id);
 }

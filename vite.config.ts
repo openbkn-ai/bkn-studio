@@ -41,6 +41,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, "");
   const devProxyOrigin = env.VITE_DEV_AUTH_ORIGIN || "http://127.0.0.1:9000";
   const vegaProxyTarget = env.VITE_VEGA_PROXY_TARGET?.trim() || devProxyOrigin;
+  const agentObservabilityProxyTarget =
+    env.VITE_AGENT_OBSERVABILITY_TARGET?.trim() ||
+    process.env.VITE_AGENT_OBSERVABILITY_TARGET?.trim() ||
+    "";
   const safeProxyTarget =
     env.VITE_SAFE_PROXY_TARGET?.trim() ||
     process.env.VITE_SAFE_PROXY_TARGET?.trim() ||
@@ -127,6 +131,19 @@ export default defineConfig(({ mode }) => {
           proxyTimeout: 120_000,
           target: agentRetrievalTarget,
         },
+        ...(agentObservabilityProxyTarget
+          ? {
+              // Run a new trace backend beside the installed gateway while all
+              // other APIs and the OAuth flow continue to use that gateway.
+              "/api/agent-observability": {
+                changeOrigin: true,
+                secure: false,
+                timeout: 120_000,
+                proxyTimeout: 120_000,
+                target: agentObservabilityProxyTarget,
+              },
+            }
+          : {}),
         ...(useMock
           ? {}
           : {

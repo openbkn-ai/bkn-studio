@@ -5,8 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { CloseOutlined, CopyOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Input, Popover, Result, Segmented, Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
+import { CloseOutlined, CopyOutlined, DownloadOutlined, MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Button, Empty, Input, Popover, Result, Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,7 +32,7 @@ import styles from "@/modules/bkn-trace/business-provenance/BusinessProvenanceSc
 
 import { recordedCallScope, recordedResourceMappings, requestedObjectLabels, recordedMetricTarget } from "./call-scope";
 
-type View = "timeline" | "evidence" | "execution";
+type View = "timeline" | "evidence";
 type AgentSuggestion = { id?: string; category?: string; location?: string; problem?: string; sourceEvidence?: string; verificationEvidence?: string; change?: string; acceptance?: string };
 type AgentAdvice = { verdicts: Record<string, string | undefined>; conclusion?: string; suggestions: AgentSuggestion[]; notEvaluable?: string };
 type ConversationLoadState = "failed" | "forbidden" | "not-installed";
@@ -81,24 +81,126 @@ function roundLabel(item: BusinessProvenanceInteractionListItem | undefined) {
   return bpText("roundNotRecorded");
 }
 
+const MCP_TOOL_NAMES = [
+  "bkn_finish_interaction", "bkn_start_interaction", "search_schema", "search_instance", "query_object_instance", "query_instance_subgraph", "explore_subgraph",
+  "get_logic_properties_values", "query_metric", "get_action_info", "execute_action", "get_action_execution", "list_action_executions", "list_knowledge_networks",
+  "get_kn_detail", "get_object_types", "get_relation_types", "run_sql", "run_cypher", "list_resources", "describe_resource", "list_skills", "get_skill_content",
+  "read_skill_file", "execute_skill", "run_code", "run_shell", "search_capabilities", "execute_tool",
+] as const;
+
+function toolBusinessTitle(toolName?: string) {
+  if (!toolName) return bpText("operation.call");
+  const key = `toolTitles.${toolName}`;
+  const translated = bpText(key);
+  return translated === key || translated.endsWith(`.${key}`) ? toolName : translated;
+}
+
 function operationTitle(operation: OperationResolution) {
   const primary = operation.elements.filter((item) => !["property", "logic"].includes(item.kind));
   const elements = (primary.length ? primary : operation.elements).map((item) => item.name || item.id).filter(Boolean);
-  if (operation.toolName === "run_sql") return elements.length ? bpText("operation.queryElements", { elements: elements.join(bpText("listSeparator")) }) : bpText("operation.runSql");
-  if (operation.toolName === "search_schema" || operation.toolName === "get_object_types") return bpText("operation.exploreSchema");
-  if (operation.toolName === "list_knowledge_networks") return bpText("operation.findNetwork");
-  if (operation.toolName === "query_object_instance") return elements.length ? bpText("operation.queryElements", { elements: elements.join(bpText("listSeparator")) }) : bpText("operation.queryObject");
-  return elements.length ? `${operation.toolName || bpText("operation.call")} · ${elements.join(bpText("listSeparator"))}` : operation.toolName || bpText("operation.detail");
+  if (["run_sql", "run_cypher", "query_object_instance"].includes(operation.toolName ?? "") && elements.length) return bpText("operation.queryElements", { elements: elements.join(bpText("listSeparator")) });
+  return toolBusinessTitle(operation.toolName);
 }
 
-function operationCondition(operation: OperationResolution) {
+function compactText(value: string, maxLength = 150) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  return compact.length > maxLength ? `${compact.slice(0, maxLength - 1)}…` : compact;
+}
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+function parseRecordedValue(value: unknown): unknown {
+  const payload = recordedPayload(value);
+  if (typeof payload !== "string") return payload;
+  try { return JSON.parse(payload) as unknown; } catch { return payload; }
+}
+
+function toolCallsFromCode(value: unknown) {
+  if (typeof value !== "string") return [];
+  return MCP_TOOL_NAMES.filter((toolName) => value.includes(`${toolName}(`)).map(toolBusinessTitle);
+}
+
+function inputRecord(operation: OperationResolution) {
+  const root = recordValue(parseRecordedValue(operation.input));
+  if (!root) return undefined;
+  return recordValue(root.json) ?? recordValue(root.arguments) ?? recordValue(root.parameters) ?? root;
+}
+
+function conditionOperator(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const operator = ({
+    "==": "=", eq: "=", equals: "=",
+    "!=": "≠", ne: "≠", not_equals: "≠",
+    gt: ">", gte: "≥", ge: "≥", lt: "<", lte: "≤", le: "≤",
+    in: "in", not_in: "notIn", contains: "contains", not_contains: "notContains",
+    and: "and", or: "or",
+  } as Record<string, string>)[value.toLowerCase()] ?? value;
+  return ["in", "notIn", "contains", "notContains", "and", "or"].includes(operator)
+    ? bpText(`operation.operators.${operator}`)
+    : operator;
+}
+
+function formatCondition(value: unknown): string {
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (/^(?:\[object Object\]\s*[,;；、]?\s*)+$/i.test(text)) return "";
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (typeof parsed === "object" && parsed !== null) return formatCondition(parsed);
+    } catch {
+      // Natural-language conditions are already useful as recorded.
+    }
+    return compactText(text);
+  }
+  if (Array.isArray(value)) return value.map(formatCondition).filter(Boolean).join(bpText("conditionSeparator"));
+  const condition = recordValue(value);
+  if (!condition) return conditionValue(value);
+
+  const field = [condition.field, condition.property, condition.column, condition.name].find((candidate) => typeof candidate === "string");
+  const operator = conditionOperator(condition.operation ?? condition.operator ?? condition.op);
+  const children = condition.sub_conditions ?? condition.subConditions ?? condition.conditions ?? condition.children;
+  if (Array.isArray(children)) {
+    const nested = children.map(formatCondition).filter(Boolean).join(bpText("conditionSeparator"));
+    if (nested) return operator ? `${operator}（${nested}）` : nested;
+  }
+  if (field && operator && Object.hasOwn(condition, "value")) return `${field} ${operator} ${conditionValue(condition.value)}`;
+  if (field && Object.hasOwn(condition, "value")) return `${field} = ${conditionValue(condition.value)}`;
+
+  return Object.entries(condition)
+    .filter(([key]) => !["value_from", "valueFrom"].includes(key))
+    .map(([key, item]) => `${key} = ${conditionValue(item)}`)
+    .join(bpText("conditionSeparator"));
+}
+
+function operationCondition(operation: OperationResolution): string | undefined {
   const condition = operation.query?.conditions;
-  if ((condition === undefined || condition === null) && operation.query?.sql) return bpText("operation.sqlConditionBelow");
-  if (condition === undefined || condition === null) return recordedPayload(operation.input) === undefined ? bpText("operation.conditionNotRecorded") : bpText("operation.recordedInputAvailable");
-  if (typeof condition === "string") return condition;
-  if (typeof condition === "object") return Object.entries(condition as Record<string, unknown>).map(([key, value]) => `${key} = ${conditionValue(value)}`).join(bpText("conditionSeparator"));
-  if (typeof condition === "number" || typeof condition === "boolean") return String(condition);
-  return bpText("operation.conditionNotRecorded");
+  if ((condition === undefined || condition === null) && operation.query?.sql) return bpText("operation.sqlSummary", { value: compactText(operation.query.sql) });
+  if (condition !== undefined && condition !== null) {
+    const formatted = formatCondition(condition);
+    if (formatted) return formatted;
+  }
+
+  const input = inputRecord(operation);
+  if (!input) return undefined;
+  const codeCalls = toolCallsFromCode(input.code);
+  if (operation.toolName === "run_code") return codeCalls.length ? bpText("operation.codeCalls", { calls: codeCalls.join(bpText("listSeparator")) }) : undefined;
+  if (typeof input.sql === "string") return bpText("operation.sqlSummary", { value: compactText(input.sql) });
+  if (typeof input.cypher === "string") return bpText("operation.cypherSummary", { value: compactText(input.cypher) });
+  if (typeof input.query === "string") return bpText(operation.toolName === "run_cypher" ? "operation.cypherSummary" : "operation.searchSummary", { value: compactText(input.query) });
+  if (operation.toolName === "run_shell" && typeof input.command === "string") return bpText("operation.commandSummary", { value: compactText(input.command) });
+  const embeddedCondition = input.condition ?? input.conditions ?? input.filter ?? input.filters;
+  if (embeddedCondition !== undefined) return formatCondition(embeddedCondition) || undefined;
+  const identity = [
+    ["kn_id", "operation.inputLabels.knowledgeNetwork"], ["resource_id", "operation.inputLabels.resource"], ["object_type_id", "operation.inputLabels.objectType"],
+    ["ot_id", "operation.inputLabels.objectType"], ["relation_type_id", "operation.inputLabels.relationType"], ["metric_id", "operation.inputLabels.metric"],
+    ["action_type_id", "operation.inputLabels.action"], ["skill_id", "operation.inputLabels.skill"], ["tool_name", "operation.inputLabels.tool"],
+    ["ids", "operation.inputLabels.objectTypes"], ["object_type_ids", "operation.inputLabels.objectTypes"], ["relation_type_ids", "operation.inputLabels.relationTypes"],
+  ] as const;
+  const facts = identity.flatMap(([key, label]) => input[key] === undefined ? [] : [`${bpText(label)}：${conditionValue(input[key])}`]);
+  return facts.length ? facts.join(bpText("conditionSeparator")) : undefined;
 }
 
 function recordedPayload(value: unknown): unknown {
@@ -146,51 +248,75 @@ function SourceText({
   </Popover>;
 }
 
-function resourceDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
-  const direct = recordedCallScope(operation).resourceMappings;
-  const resources = direct.length ? direct : recordedResourceMappings(operation, operations);
-  if (resources.length) {
-    return resources.map((resource) => {
-      const businessName = resource.objectName || resource.objectId;
-      const physicalName = resource.name || resource.id;
-      const historicalSuffix = "nameConflict" in resource && resource.nameConflict ? bpText("scope.recordedDefinitionConflict") : bpText("scope.recordedDefinition");
-      return (businessName ? `${physicalName} → ${businessName}` : physicalName) + (direct.length ? "" : historicalSuffix);
-    }).join(bpText("listSeparator"));
-  }
-  return recordedCallScope(operation).resourceIds.join(bpText("listSeparator")) || bpText("operation.resourceNotRecorded");
-}
-
-function conditionValue(value: unknown) {
+function conditionValue(value: unknown): string {
   if (value === null) return "null";
+  if (Array.isArray(value)) return value.map(conditionValue).join(bpText("listSeparator"));
   if (["string", "number", "boolean", "bigint"].includes(typeof value)) return `${value as string | number | boolean | bigint}`;
   if (typeof value === "object") return JSON.stringify(value);
   return typeof value;
 }
 
-function operationResult(operation: OperationResolution, derivedFacts: BusinessProvenanceInteraction["derivedFacts"] = []) {
-  if (operation.error) return bpText("operation.failedResult");
+function payloadMessage(value: unknown): string | undefined {
+  const payload = parseRecordedValue(value);
+  if (typeof payload === "string") return compactText(payload);
+  const record = recordValue(payload);
+  if (!record) return undefined;
+  if (Array.isArray(record.content)) {
+    for (const item of record.content) {
+      const text = recordValue(item)?.text;
+      if (typeof text === "string" && text.trim()) return compactText(text);
+    }
+  }
+  for (const key of ["message", "detail", "reason", "stderr", "error"]) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.trim()) return compactText(candidate);
+    const nested = payloadMessage(candidate);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
+function resultRecord(value: unknown): Record<string, unknown> | undefined {
+  const root = recordValue(parseRecordedValue(value));
+  if (!root) return undefined;
+  const structured = recordValue(root.structuredContent) ?? recordValue(root.structured_content) ?? recordValue(root.result);
+  if (structured) return structured;
+  if (Array.isArray(root.content)) {
+    for (const item of root.content) {
+      const text = recordValue(item)?.text;
+      if (typeof text !== "string") continue;
+      try {
+        const parsed = recordValue(JSON.parse(text) as unknown);
+        if (parsed) return parsed;
+      } catch { /* Non-JSON MCP text remains available as a concise output message. */ }
+    }
+  }
+  return root;
+}
+
+function operationResult(operation: OperationResolution, derivedFacts: BusinessProvenanceInteraction["derivedFacts"] = []): string | undefined {
+  if (operation.error) return payloadMessage(operation.error);
   if (derivedFacts.some((fact) => fact.rule === "changed_query_still_zero_result" && fact.operationId === operation.operationId)) return bpText("operation.changedQueryNoResult");
   if (operation.query?.resultCount !== undefined) return operation.query.resultCount === 0 ? bpText("operation.zeroRows") : bpText("operation.rows", { count: operation.query.resultCount });
-  if (operation.callStatus === "completed" && recordedPayload(operation.output) !== undefined) return bpText("operation.recordedOutputAvailable");
-  return operation.callStatus === "completed" ? bpText("operation.completedUnknownSize") : bpText("operation.resultNotRecorded");
+  const output = resultRecord(operation.output);
+  if (!output) return payloadMessage(operation.output);
+  const total = output.total_count ?? output.totalCount ?? output.row_count ?? output.rowCount;
+  if (typeof total === "number") return total === 0 ? bpText("operation.zeroRows") : bpText("operation.rows", { count: total });
+  for (const key of ["datas", "data", "rows", "items", "results"]) {
+    if (Array.isArray(output[key])) return output[key].length === 0 ? bpText("operation.zeroRows") : bpText("operation.rows", { count: output[key].length });
+  }
+  const countKeys = [
+    ["object_types", "operation.resultLabels.objectTypes"], ["relation_types", "operation.resultLabels.relationTypes"], ["action_types", "operation.resultLabels.actionTypes"],
+    ["metric_types", "operation.resultLabels.metricTypes"], ["knowledge_networks", "operation.resultLabels.networks"], ["columns", "operation.resultLabels.fields"],
+    ["resources", "operation.resultLabels.resources"], ["skills", "operation.resultLabels.skills"], ["tools", "operation.resultLabels.tools"],
+  ] as const;
+  const counts = countKeys.flatMap(([key, label]) => Array.isArray(output[key]) ? [bpText("operation.namedCount", { count: output[key].length, name: bpText(label) })] : []);
+  if (counts.length) return bpText("operation.countResult", { counts: counts.join(bpText("listSeparator")) });
+  const outputMessage = payloadMessage(output.stdout) ?? payloadMessage(output.stderr) ?? payloadMessage(output.message) ?? payloadMessage(output.summary) ?? payloadMessage(operation.output);
+  return outputMessage ? bpText("operation.outputSummary", { value: outputMessage }) : undefined;
 }
 
-function bindingDescription(operation: OperationResolution) {
-  const scope = recordedCallScope(operation);
-  if (scope.scopeConflict) return bpText("binding.scopeConflict");
-  if (operation.missingFacts.includes("source_unavailable") || operation.missingFacts.includes("source_bkn_reader")) return bpText("binding.sourceUnavailable");
-  if (operation.status === "resolved") return bpText("binding.resolved");
-  if (operation.status === "ambiguous") return bpText("binding.ambiguous");
-  if (operation.status === "not_evaluable" && operation.missingFacts.includes("permission_denied")) return bpText("binding.permissionDenied");
-  if (operation.missingFacts.includes("resource_binding")) return bpText("binding.resourceMissing");
-  return scope.networkId ? bpText("binding.requestRecorded") : bpText("binding.unresolved");
-}
-
-function businessElementNames(operation: OperationResolution, kinds: string[]) {
-  return operation.elements.filter((item) => kinds.includes(item.kind)).map((item) => item.name || item.id).filter(Boolean);
-}
-
-function requestedObjectDescription(operation: OperationResolution, operations: OperationResolution[] = []) {
+function requestedObjectDescription(operation: OperationResolution, operations: OperationResolution[] = []): string | undefined {
   const scope = recordedCallScope(operation);
   const names = requestedObjectLabels(operation, operations);
   if (scope.scopeConflict) return scope.objectIds.join(bpText("listSeparator")) || bpText("binding.scopeConflict");
@@ -199,22 +325,30 @@ function requestedObjectDescription(operation: OperationResolution, operations: 
   const mappings = scope.resourceMappings.length ? scope.resourceMappings : recordedResourceMappings(operation, operations);
   const mapped = mappings.map(item => item.objectName || item.objectId).filter(Boolean);
   if (mapped.length) return [...new Set(mapped)].join(bpText("listSeparator"));
-  if (scope.resourceIds.length) return bpText("scope.resourceTarget");
+  if (scope.resourceIds.length) return scope.resourceIds.join(bpText("listSeparator"));
   if (scope.metricId) {
     const metric = recordedMetricTarget(operation, operations);
     if (metric?.objectId) return `${metric.name || scope.metricId} → ${metric.objectName || metric.objectId}${bpText("scope.recordedDefinition")}`;
     return bpText("scope.metricTarget", { id: metric?.name || scope.metricId });
   }
-  if (operation.toolName === "run_code") return bpText("scope.codeTarget");
-  return scope.networkId ? bpText("scope.networkTarget") : bpText("undetermined");
+  if (operation.toolName === "run_code") {
+    const calls = toolCallsFromCode(inputRecord(operation)?.code);
+    return calls.length ? bpText("operation.callsObject", { calls: calls.join(bpText("listSeparator")) }) : undefined;
+  }
+  return scope.networkId ? bpText("operation.networkObject", { id: scope.networkId }) : undefined;
 }
 
-function propertyDescriptions(operation: OperationResolution) {
-  return operation.elements.filter((item) => item.kind === "property" || item.kind === "logic").map((item) => {
-    const name = item.name || item.id;
-    if (item.kind === "logic") return `${name}（${item.id}）· ${bpText("element.logic")}`;
-    return `${name}（${item.id}）${item.field ? ` → ${item.field}` : ""}`;
-  });
+function OperationName({ operation }: { operation: OperationResolution }) {
+  return <>{operationTitle(operation)}{operation.toolName ? <small className={styles.operationInterface}>（{operation.toolName}）</small> : null}</>;
+}
+
+function OperationSummaryRows({ operation, operations, derivedFacts }: { operation: OperationResolution; operations: OperationResolution[]; derivedFacts: BusinessProvenanceInteraction["derivedFacts"] }) {
+  const rows = [
+    [bpText("detail.businessObject"), requestedObjectDescription(operation, operations)],
+    [bpText("detail.condition"), operationCondition(operation)],
+    [bpText("detail.actualResult"), operationResult(operation, derivedFacts)],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+  return <>{rows.flatMap(([label, value]) => [<dt key={`${label}-label`}>{label}</dt>, <dd key={`${label}-value`}>{value}</dd>])}</>;
 }
 
 function conversationTitle(conversation: BusinessProvenanceConversation) {
@@ -307,7 +441,8 @@ function adviceMarkdown(advice: AgentAdvice) {
 
 export function BusinessProvenanceScene() {
   const { t } = useTranslation();
-  const [linkedConversationId] = useState(() => new URLSearchParams(window.location.search).get("conversation_id")?.trim() ?? "");
+  const [linkedConversationId] = useState(() => { const params = new URLSearchParams(window.location.search); return (params.get("conversation_id") ?? params.get("conversationId"))?.trim() ?? ""; });
+  const [linkedInteractionId] = useState(() => { const params = new URLSearchParams(window.location.search); return (params.get("interaction_id") ?? params.get("interactionId"))?.trim() ?? ""; });
   const [conversations, setConversations] = useState<BusinessProvenanceConversation[]>([]);
   const [conversationTotal, setConversationTotal] = useState(0);
   const [conversationPage, setConversationPage] = useState(1);
@@ -330,7 +465,8 @@ export function BusinessProvenanceScene() {
   const [projectionUnavailable, setProjectionUnavailable] = useState(false);
   const [interactionReload, setInteractionReload] = useState(0);
   const [view, setView] = useState<View>("timeline");
-  const needsProjection = view === "timeline";
+  const [roundsCollapsed, setRoundsCollapsed] = useState(() => typeof window.matchMedia === "function" && window.matchMedia("(max-width: 1200px)").matches);
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "completed" | "failed">("all");
   const [detailOperation, setDetailOperation] = useState<OperationResolution>();
   const [loading, setLoading] = useState(true);
   const [conversationLoadState, setConversationLoadState] = useState<ConversationLoadState>();
@@ -343,6 +479,11 @@ export function BusinessProvenanceScene() {
   const [analysisMarkdown, setAnalysisMarkdown] = useState("");
   const [analysisMarkdownLoading, setAnalysisMarkdownLoading] = useState(false);
   const conversationRequest = useRef(0);
+  const timelineInspectorRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (timelineInspectorRef.current) timelineInspectorRef.current.scrollTop = 0;
+  }, [detailOperation?.operationId]);
 
   const loadConversations = useCallback(async () => {
     const request = ++conversationRequest.current;
@@ -372,13 +513,13 @@ export function BusinessProvenanceScene() {
     setInteractionListLoading(true); setInteractionListError(false);
     setProjection(undefined); setDetailOperation(undefined); setProjectionUnavailable(false); setAnalysisResult(undefined); setAnalysisHistory([]); setAnalysisPanelOpen(false); setAnalysisError(undefined);
     void getBusinessProvenanceInteractions({ conversationId: selectedConversation.conversationId, page: 1, pageSize: 50, keyword: interactionKeyword })
-      .then((page) => { if (current) { setInteractions(page.entries); setInteractionTotal(page.total); setSelectedInteraction(page.entries[0]); } })
+      .then((page) => { if (current) { setInteractions(page.entries); setInteractionTotal(page.total); setSelectedInteraction(page.entries.find(item => item.interactionId === linkedInteractionId) || page.entries[0]); } })
       .catch(() => { if (current) { setInteractionListError(true); message.error(bpText("errors.interactionsLoad")); } })
       .finally(() => { if (current) setInteractionListLoading(false); });
     return () => { current = false; };
-  }, [interactionKeyword, selectedConversation]);
+  }, [interactionKeyword, linkedInteractionId, selectedConversation]);
   useEffect(() => {
-    if (!selectedInteraction || !needsProjection) {
+    if (!selectedInteraction) {
       setProjection(undefined);
       setDetailOperation(undefined);
       setInteractionDetailLoading(false);
@@ -393,6 +534,7 @@ export function BusinessProvenanceScene() {
       .then((value) => {
         if (!current) return;
         setProjection(value);
+        setDetailOperation(value.operations[0]);
         setAnalysisMarkdownLoading(true);
         void getBusinessProvenanceMarkdown(selectedInteraction.interactionId)
           .then((markdown) => { if (current) setAnalysisMarkdown(markdown); })
@@ -421,7 +563,7 @@ export function BusinessProvenanceScene() {
       })
       .finally(() => { if (current) setInteractionDetailLoading(false); });
     return () => { current = false; };
-  }, [interactionReload, needsProjection, selectedInteraction]);
+  }, [interactionReload, selectedInteraction]);
 
   const startAnalysis = useCallback(async () => {
     if (!selectedInteraction || !analysisMarkdown.trim()) return;
@@ -458,7 +600,7 @@ export function BusinessProvenanceScene() {
     if (!selectedInteraction || !analysisMarkdown) return;
     const url = URL.createObjectURL(new Blob([analysisMarkdown], { type: "text/markdown;charset=utf-8" }));
     const link = document.createElement("a");
-    link.href = url; link.download = `interaction-${selectedInteraction.interactionId}.md`; link.click();
+    link.href = url; link.download = `knowledge-network-optimization-${selectedInteraction.interactionId}.md`; link.click();
     URL.revokeObjectURL(url);
   }, [analysisMarkdown, selectedInteraction]);
 
@@ -533,62 +675,50 @@ export function BusinessProvenanceScene() {
       <div><Typography.Title level={3}>{bpText("analysis.title")}</Typography.Title><Typography.Text>{bpText("analysis.description")}</Typography.Text></div>
       <Button icon={<ReloadOutlined />} onClick={() => void loadConversations()}>{bpText("actions.refresh")}</Button>
     </header>
-    <section className={styles.workspace}>
+    <section className={`${styles.workspace} ${roundsCollapsed ? styles.workspaceRoundsCollapsed : ""}`}>
       <header className={styles.workspaceHeader}>
         <Button type="link" className={styles.backButton} onClick={() => { setSelectedConversation(undefined); setSelectedInteraction(undefined); setProjection(undefined); }}>← {bpText("actions.back")}</Button>
-        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span>{projection ? <span>{bpText("callCount", { count: projection.operations.length })}</span> : null}<span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
+        <div className={styles.conversationHeading}><h1>{conversationTitle(selectedConversation)}</h1><span>{selectedConversation.conversationId}</span><span>{bpText("interactionCount", { count: selectedConversation.interactionCount ?? interactionTotal })}</span><span>{selectedConversation.agentName || bpText("agentNotRecorded")}</span></div>
       </header>
-      <aside className={styles.roundSidebar}>
-        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: selectedConversation.interactionCount ?? interactionTotal, current: selectedInteraction?.roundNumber && selectedInteraction.roundNumber > 0 ? selectedInteraction.roundNumber : bpText("roundNotRecorded") })}</span></div></div>
+      <aside className={`${styles.roundSidebar} ${roundsCollapsed ? styles.roundSidebarCollapsed : ""}`}>
+        <div className={styles.roundSidebarTitle}><div><h3>{bpText("rounds.title")}</h3><span>{interactionListLoading ? bpText("rounds.loading") : bpText("rounds.summary", { total: selectedConversation.interactionCount ?? interactionTotal, current: selectedInteraction?.roundNumber && selectedInteraction.roundNumber > 0 ? selectedInteraction.roundNumber : bpText("roundNotRecorded") })}</span></div><Button type="text" className={styles.roundCollapseButton} aria-label={roundsCollapsed ? bpText("rounds.expand") : bpText("rounds.collapse")} icon={roundsCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setRoundsCollapsed((value) => !value)} /></div>
         <Input value={interactionKeyword} onChange={(event) => setInteractionKeyword(event.target.value)} prefix={<SearchOutlined />} placeholder={bpText("rounds.search")} />
-        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
+        <div className={styles.roundList}>{interactionListLoading ? <div className={styles.roundLoading}><Spin size="small" />{bpText("rounds.loading")}</div> : interactionListError ? <Alert type="error" showIcon message={bpText("errors.interactionsLoad")} /> : interactions.map((item) => <button key={item.interactionId} className={item.interactionId === selectedInteraction?.interactionId ? styles.roundSelected : ""} onClick={() => setSelectedInteraction(item)}><span className={styles.roundCompactLabel}>{item.roundNumber && item.roundNumber > 0 ? item.roundNumber : "•"}</span><b>{roundLabel(item)}</b><strong>{item.questionPreview || bpText("questionNotRecorded")}</strong><small>{formatClock(item.startedAt)} · {formatDuration(item.durationMs)} · {statusLabel(item.status)}</small></button>)}</div>
       </aside>
       <section className={styles.analysisPane}>
-        <Segmented className={styles.viewSwitch} value={view} onChange={(value) => { setView(value as View); setDetailOperation(undefined); }} options={[{ label: bpText("views.timeline"), value: "timeline" }, { label: bpText("views.evidence"), value: "evidence" }, { label: bpText("views.execution"), value: "execution" }]} />
-        {(view === "evidence" || view === "execution") && selectedInteraction && !interactionListLoading ? <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel={view} onPanelChange={setView} /> : interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection ? <>
+        {interactionListLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loading")}</span></div> : interactionDetailLoading ? <div className={styles.workspaceEmpty}><Spin size="large" /><span>{bpText("rounds.loadingFacts")}</span></div> : interactionDetailError ? <Result status="error" title={bpText("errors.factsLoad")} extra={<Button type="primary" onClick={() => setInteractionReload((value) => value + 1)}>{t("bknTrace.businessProvenance.retry")}</Button>} /> : projectionUnavailable ? <Result status="info" title={bpText("legacy.title")} subTitle={bpText("legacy.description")} extra={<><Button aria-label={bpText("legacy.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("legacy.copyMarkdown")}</Button><Button aria-label={bpText("legacy.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("legacy.downloadMarkdown")}</Button></>} /> : projection && selectedInteraction ? <>
           <section className={styles.interactionSummary}>
-            <header><span>{roundLabel(selectedInteraction)}</span><h2>{selectedInteraction?.questionPreview || bpText("roundQuestionNotRecorded")}</h2><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction?.startedAt)} · {formatDuration(selectedInteraction?.durationMs)} · {bpText("callCount", { count: projection.operations.length })} · {statusLabel(selectedInteraction?.status)}</small></header>
+            <header><div><span>{roundLabel(selectedInteraction)}</span><h2>{bpText("rounds.currentInteraction")}</h2></div><small>{selectedConversation.agentName || bpText("agentNotRecorded")} · {formatTime(selectedInteraction.startedAt)} · {formatDuration(selectedInteraction.durationMs)} · {statusLabel(selectedInteraction.status)}</small></header>
             <div className={styles.sourceTexts}>
-              <div><h4>{bpText("rounds.inputOriginal")}</h4><SourceText title={bpText("rounds.inputOriginal")} preview={selectedInteraction?.questionPreview} original={projection.interactionQuestion} viewLabel={bpText("rounds.viewFullInput")} onCopy={copySourceText} /></div>
-              <div><h4>{bpText("rounds.outputOriginal")}</h4><SourceText title={bpText("rounds.outputOriginal")} preview={selectedInteraction?.resultPreview} original={projection.interactionResult} viewLabel={bpText("rounds.viewFullOutput")} onCopy={copySourceText} /></div>
+              <div><h4>{bpText("rounds.inputOriginal")}</h4><SourceText title={bpText("rounds.inputOriginal")} preview={projection.interactionQuestion || selectedInteraction.questionPreview} original={projection.interactionQuestion} viewLabel={bpText("rounds.viewFullInput")} onCopy={copySourceText} /></div>
+              <div><h4>{bpText("rounds.outputOriginal")}</h4><SourceText title={bpText("rounds.outputOriginal")} preview={projection.interactionResult || selectedInteraction.resultPreview} original={projection.interactionResult} viewLabel={bpText("rounds.viewFullOutput")} onCopy={copySourceText} /></div>
             </div>
-            <footer><Button icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" onClick={() => { setDetailOperation(undefined); setAnalysisPanelOpen(true); }}>{bpText("actions.analyze")}</Button></footer>
+            <footer className={styles.interactionActions}>
+              <Button aria-label={bpText("actions.copyMarkdown")} icon={<CopyOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button>
+              <Button aria-label={bpText("actions.downloadMarkdown")} icon={<DownloadOutlined />} disabled={analysisMarkdownLoading || !analysisMarkdown} onClick={downloadMarkdown}>{bpText("actions.downloadMarkdown")}</Button>
+              <Button aria-label={bpText("actions.analyze")} type="primary" disabled={analysisMarkdownLoading || !analysisMarkdown.trim()} onClick={() => setAnalysisPanelOpen(true)}>{bpText("actions.analyze")}</Button>
+            </footer>
           </section>
-          {view === "timeline" ? <section className={styles.timeline}>
-            <div className={styles.inputNode}><i /><div><b>{bpText("rounds.input")}</b><span>{formatTime(selectedInteraction?.startedAt)}</span></div></div>
-            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : projection.operations.map((operation, index) => <div className={styles.timelineItem} key={operation.operationId}>
-              <div className={styles.timelineRail}><i />{index < projection.operations.length - 1 ? <span /> : null}</div>
-              <article className={styles.operationCard} onClick={() => setDetailOperation(operation)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter") setDetailOperation(operation); }}>
-                <header><h3>{operationTitle(operation)}</h3>{operation.elements[0] ? <Tag>{operation.elements[0].name || operation.elements[0].id}</Tag> : null}</header>
-                <p><b>{bpText("detail.condition")}:</b>{operationCondition(operation)}</p>
-                <small>{formatClock(operation.startedAt)} · {formatDuration(operation.durationMs)} · {operation.toolName || bpText("interfaceNotRecorded")}</small>
-                <p className={styles.operationResult}>{operationResult(operation, projection.derivedFacts)}</p>
-                <Button type="link" onClick={(event) => { event.stopPropagation(); setDetailOperation(operation); }}>{bpText("operation.detail")}</Button>
-              </article>
-            </div>)}
-          </section> : null}
+          <div className={styles.viewTabs} role="tablist" aria-label={bpText("views.label")}><button type="button" role="tab" aria-selected={view === "timeline"} className={view === "timeline" ? styles.viewTabSelected : ""} onClick={() => setView("timeline")}>{bpText("views.timeline")}</button><button type="button" role="tab" aria-selected={view === "evidence"} className={view === "evidence" ? styles.viewTabSelected : ""} onClick={() => setView("evidence")}>{bpText("views.evidence")}</button></div>
+          {view === "timeline" ? <section className={styles.timelineWorkspace}>
+            <header className={styles.timelineHeader}><div><h3>{bpText("timeline.title")}</h3><p>{bpText("timeline.description")}</p></div><span>{bpText("callCount", { count: projection.operations.length })}</span></header>
+            <div className={styles.timelineFilters} role="group" aria-label={bpText("timeline.filterLabel")}><button type="button" className={timelineFilter === "all" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("all"); setDetailOperation(projection.operations[0]); }}>{bpText("timeline.all", { count: projection.operations.length })}</button><button type="button" className={timelineFilter === "completed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("completed"); setDetailOperation(projection.operations.find(item => item.callStatus === "completed")); }}>{bpText("timeline.completed", { count: projection.operations.filter(item => item.callStatus === "completed").length })}</button><button type="button" className={timelineFilter === "failed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("failed"); setDetailOperation(projection.operations.find(item => item.callStatus === "failed")); }}>{bpText("timeline.failed", { count: projection.operations.filter(item => item.callStatus === "failed").length })}</button></div>
+            {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : <div className={styles.timelineLayout}>
+              <div className={styles.timelineList}>{projection.operations.filter(operation => timelineFilter === "all" || operation.callStatus === timelineFilter).map((operation, index) => <button type="button" className={`${styles.timelineBusinessCard} ${detailOperation?.operationId === operation.operationId ? styles.timelineBusinessCardSelected : ""}`} key={operation.operationId} onClick={() => setDetailOperation(operation)}>
+                <span className={styles.timelineOrder}>{String(index + 1).padStart(2, "0")}</span><div><header><h4><OperationName operation={operation} /></h4><Tag color={operation.callStatus === "completed" ? "success" : "error"}>{statusLabel(operation.callStatus)}</Tag></header><dl><OperationSummaryRows operation={operation} operations={projection.operations} derivedFacts={projection.derivedFacts} /></dl><footer><small>{formatClock(operation.startedAt)} · {formatDuration(operation.durationMs)}</small></footer></div>
+              </button>)}</div>
+              <aside ref={timelineInspectorRef} className={styles.timelineInspector} aria-label={bpText("detail.roundCall")}>{detailOperation ? <>
+                <header><div><small>{bpText("detail.roundCall")}</small><h3><OperationName operation={detailOperation} /></h3></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span></header>
+                <dl><OperationSummaryRows operation={detailOperation} operations={projection.operations} derivedFacts={projection.derivedFacts} /><dt>{bpText("detail.operationId")}</dt><dd><code>{detailOperation.operationId}</code></dd></dl>
+                {payloadText(detailOperation.input) ? <details><summary>{bpText("detail.recordedInput")}</summary><pre>{payloadText(detailOperation.input)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.input)}>{bpText("detail.copyPayload")}</Button></details> : null}
+                {payloadText(detailOperation.output) ? <details><summary>{bpText("detail.recordedOutput")}</summary><pre>{payloadText(detailOperation.output)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.output)}>{bpText("detail.copyPayload")}</Button></details> : null}
+                {payloadText(detailOperation.error) ? <details><summary>{bpText("detail.recordedError")}</summary><pre>{payloadText(detailOperation.error)}</pre></details> : null}
+              </> : <Empty description={bpText("timeline.selectCall")} image={Empty.PRESENTED_IMAGE_SIMPLE} />}</aside>
+            </div>}
+          </section> : <CurrentExplanationPanel key={selectedInteraction.interactionId} interactionId={selectedInteraction.interactionId} panel="evidence" />}
         </> : <Empty className={styles.workspaceEmpty} description={bpText("rounds.select")} />}
       </section>
     </section>
-    {detailOperation ? <aside className={styles.detailPanel}>
-      <header><div><small>{bpText("detail.roundCall")}</small><b>{operationTitle(detailOperation)}</b></div><span className={detailOperation.callStatus === "completed" ? styles.completed : styles.failed}>{statusLabel(detailOperation.callStatus)}</span><Button type="text" aria-label={bpText("detail.close")} icon={<CloseOutlined />} onClick={() => setDetailOperation(undefined)} /></header>
-      <section><h4>{bpText("detail.what")}</h4><p>{operationTitle(detailOperation)}</p></section>
-      <section><h4>{bpText("detail.businessElement")}</h4><dl>
-        <dt>{bpText("filters.network")}</dt><dd>{recordedCallScope(detailOperation).networkId || bpText("undetermined")}</dd>
-        <dt>{bpText("detail.businessObject")}</dt><dd>{requestedObjectDescription(detailOperation, projection?.operations)}</dd>
-        {detailOperation.status === "ambiguous" && detailOperation.objects?.length ? <><dt>{bpText("detail.candidateObjects")}</dt><dd>{detailOperation.objects.map((object) => object.name || object.id).join(bpText("listSeparator"))}</dd></> : null}
-        {businessElementNames(detailOperation, ["relation", "action", "metric"]).length ? <><dt>{bpText("detail.relationActionMetric")}</dt><dd>{businessElementNames(detailOperation, ["relation", "action", "metric"]).join(bpText("listSeparator"))}</dd></> : null}
-        <dt>{bpText("detail.binding")}</dt><dd>{bindingDescription(detailOperation)}</dd>
-        {projection?.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId) ? <><dt>{bpText("detail.conversationContext")}</dt><dd>{(() => { const source = projection.conversationContext.find((item) => item.knowledgeNetworkId === detailOperation.knowledgeNetworkId); return `${source?.sourceInteractionId} · ${source?.sourceOperationId}`; })()}</dd></> : null}
-      </dl></section>
-      <section><h4>{bpText("detail.how")}</h4><dl><dt>{bpText("detail.interface")}</dt><dd>{detailOperation.toolName || bpText("notRecorded")}</dd><dt>{bpText("detail.condition")}</dt><dd>{operationCondition(detailOperation)}</dd><dt>{bpText("detail.resource")}</dt><dd>{resourceDescription(detailOperation, projection?.operations)}</dd></dl></section>
-      <section><h4>{bpText("detail.properties")}</h4>{propertyDescriptions(detailOperation).length ? propertyDescriptions(detailOperation).map((item) => <p key={item}>{item}</p>) : <p>{bpText("detail.noProperties")}</p>}</section>
-      <section><h4>{bpText("detail.actualResult")}</h4><p>{operationResult(detailOperation, projection?.derivedFacts)}</p></section>
-      {payloadText(detailOperation.input) ? <section><h4>{bpText("detail.recordedInput")}</h4><pre>{payloadText(detailOperation.input)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.input)}>{bpText("detail.copyPayload")}</Button></section> : null}
-      {payloadText(detailOperation.output) ? <section><h4>{bpText("detail.recordedOutput")}</h4><pre>{payloadText(detailOperation.output)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.output)}>{bpText("detail.copyPayload")}</Button></section> : null}
-      {payloadText(detailOperation.error) ? <section><h4>{bpText("detail.recordedError")}</h4><pre>{payloadText(detailOperation.error)}</pre><Button size="small" icon={<CopyOutlined />} onClick={() => void copyPayload(detailOperation.error)}>{bpText("detail.copyPayload")}</Button></section> : null}
-      {detailOperation.query?.sql ? <section><h4>SQL</h4><pre>{detailOperation.query.sql}</pre></section> : null}
-    </aside> : null}
     {analysisPanelOpen ? (
       <div className={styles.agentDrawerMask}>
         <aside className={styles.agentPanel}>
@@ -605,7 +735,7 @@ export function BusinessProvenanceScene() {
           {!analysisStarting && !analysisResult && !analysisError ? <section className={styles.agentEditor}>
             <h4>{bpText("agent.markdownToAnalyze")}</h4>
             <p>{bpText("agent.editorDescription")}</p>
-            <Input.TextArea aria-label={bpText("agent.markdownToAnalyze")} value={analysisMarkdown} onChange={(event) => setAnalysisMarkdown(event.target.value)} autoSize={{ minRows: 14, maxRows: 24 }} disabled={analysisMarkdownLoading} placeholder={analysisMarkdownLoading ? bpText("agent.generatingMarkdown") : bpText("agent.markdownUnavailable")} />
+            <Input.TextArea aria-label={bpText("agent.markdownToAnalyze")} value={analysisMarkdown} readOnly autoSize={{ minRows: 14, maxRows: 24 }} disabled={analysisMarkdownLoading} placeholder={analysisMarkdownLoading ? bpText("agent.generatingMarkdown") : bpText("agent.markdownUnavailable")} />
             <div className={styles.agentEditorActions}><Button icon={<CopyOutlined />} disabled={!analysisMarkdown} onClick={() => void copyMarkdown()}>{bpText("actions.copyMarkdown")}</Button><Button icon={<DownloadOutlined />} disabled={!analysisMarkdown} onClick={() => void downloadMarkdown()}>{bpText("actions.downloadMarkdown")}</Button><Button type="primary" disabled={analysisMarkdownLoading || !analysisMarkdown.trim()} onClick={() => void startAnalysis()}>{bpText("agent.start")}</Button></div>
           </section> : null}
           {analysisStarting ? <section className={styles.agentLoading}><div><i /><strong>{bpText("agent.analyzingRound")}</strong><p>{analysisStreamText || bpText("agent.verifying")}</p></div></section> : null}

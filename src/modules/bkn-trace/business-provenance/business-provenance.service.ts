@@ -190,8 +190,8 @@ export async function getBusinessProvenanceMarkdown(interactionId: string): Prom
   return response.data;
 }
 
-// The browser submits the reviewed process-fact Markdown, but no Agent
-// selection, prompt template, or tool configuration.
+// The browser submits its displayed snapshot for request compatibility. The
+// server rebuilds the authoritative optimization Markdown from authorized facts.
 export async function streamBusinessProvenanceAnalysis(
   interactionId: string,
   markdown: string,

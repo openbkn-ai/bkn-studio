@@ -16,7 +16,7 @@ it("reads without generating and submits no version parameters", async () => {
   get.mockResolvedValue(value); post.mockResolvedValue(value);
   await readCurrentExplanation("i"); expect(post).not.toHaveBeenCalled();
   await generateCurrentExplanation("i");
-  expect(post).toHaveBeenCalledWith("/agent-observability/v1/business-provenance/interactions/i/explanations", {}, { skipErrorToast: true });
+  expect(post).toHaveBeenCalledWith("/agent-observability/v1/business-provenance/interactions/i/explanations", {}, { skipErrorToast: true, timeout: 120_000 });
 });
 it("rejects another interaction and unsupported response versions", async () => {
   for (const data of [{ schema_version: "2", interaction_id: "i", status: "not_generated" }, { schema_version: "1", interaction_id: "other", status: "not_generated" }]) {
@@ -59,4 +59,24 @@ it("rejects malformed question requirement coverage", async () => {
     },
   } });
   await expect(readCurrentExplanation("i")).rejects.toThrow("invalid question requirement");
+});
+
+it("accepts the 0.1.6 question-pair, function, graph, and deterministic time-rail contract", async () => {
+  get.mockResolvedValue({ data: {
+    schema_version: "1", interaction_id: "i", status: "ready", generated_at: "2026-09-17T00:00:00Z",
+    view: {
+      interactionId: "i", status: "completed", generationStatus: "ready",
+      claims: [{ id: "c", label: "库存 9", status: "located", supportStatus: "supported", attributionStatus: "explicit", nodeIds: ["e"] }],
+      execution: { nodes: [], edges: [] }, evidence: { nodes: [{ id: "e", label: "库存", kind: "result" }], edges: [] },
+      questionPairs: [{ id: "pair:r", question: "库存是多少", answer: "9", summary: "库存", status: "supported", claimIds: ["c"] }],
+      selectedPairGraphs: { "pair:r": {
+        claims: [], evidenceNodes: [], schemaNodes: [],
+        businessFunctions: [{ id: "f", displayName: "汇总库存", capabilityKind: "sql_query", businessPurpose: "汇总", businessInputs: [], logicSummary: "求和", businessOutputs: [], operationIds: ["op"], supportsClaimIds: ["c"], schemaRefs: [], technicalExecution: { interfaceNames: ["run_sql"], completeness: "complete" }, validationStatus: "verified" }],
+        executionSteps: [{ id: "step:op:1", operationId: "op", attempt: 1, businessRole: "汇总", interfaceName: "run_sql", status: "completed", timeRailItemId: "time:op:1" }],
+        edges: [{ edgeId: "edge", kind: "supports", fromId: "f", toId: "c", operationIds: ["op"], validationStatus: "verified" }],
+      } },
+      timeRail: [{ id: "time:op:1", order: 1, operation_id: "op", attempt: 1, interface_name: "run_sql", protocol: "mcp", status: "completed", started_at: "2026-09-17T00:00:00Z", input: { mode: "inline", media_type: "application/json", byte_length: 2, inline: {} } }],
+    },
+  } });
+  await expect(readCurrentExplanation("i")).resolves.toMatchObject({ status: "ready", view: { generationStatus: "ready", questionPairs: [{ id: "pair:r" }], timeRail: [{ interface_name: "run_sql" }] } });
 });

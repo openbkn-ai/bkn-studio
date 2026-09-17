@@ -17,7 +17,7 @@ it("only generates after the user requests evidence", async () => {
   read.mockResolvedValue({ status: "not_generated" }); generate.mockResolvedValue({ status: "not_generated" });
   render(<CurrentExplanationPanel interactionId="i" />);
   await waitFor(() => expect(read).toHaveBeenCalledWith("i"));
-  await waitFor(() => expect(screen.getByRole("button").className).not.toContain("ant-btn-loading"));
+  await screen.findByText(/尚未生成解释/);
   expect(generate).not.toHaveBeenCalled(); fireEvent.click(screen.getByRole("button"));
   await waitFor(() => expect(generate).toHaveBeenCalledWith("i"));
 });

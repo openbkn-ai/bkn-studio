@@ -454,24 +454,31 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
     });
   }
   if (def.name === "bkn_finish_interaction") {
-    const finish = turn.finish;
     return tool({
-      description: describe("Call it after the answer is done to finish this turn; Studio also finishes the turn if it is not called."),
+      description: describe("Call it after the answer is done. Studio persists the interaction only after the complete streamed answer has arrived."),
       inputSchema: jsonSchema(backendSchema),
-      execute: async (input: unknown): Promise<string> => {
+      execute: (input: unknown): Promise<string> => {
         const raw = textOf(input, "outcome");
         const outcome = MODEL_FINISH_OUTCOMES[raw];
         // Some backend outcomes, such as handed_off, have no client action here.
         if (!outcome) {
-          return JSON.stringify({
+          return Promise.resolve(JSON.stringify({
             error: {
               code: "unsupported_outcome",
               message: `Studio-managed interactions only support completed / failed / cancelled; received ${raw || "empty value"}.`,
             },
-          });
+          }));
         }
-        await finish(outcome, textOf(input, "answer") || textOf(input, "reason"));
-        return JSON.stringify({ ...turn.nextContext(), execution_status: outcome === "canceled" ? "canceled" : outcome });
+        // A model can call this tool before it emits its final answer and may use
+        // shorthand such as "see above" in the tool argument. Finalizing here
+        // makes that shorthand the immutable recorded answer. Acknowledge the
+        // model's lifecycle call, but let ChatPane finish the managed turn in its
+        // finally block with the complete text accumulated from the stream.
+        return Promise.resolve(JSON.stringify({
+          ...turn.nextContext(),
+          execution_status: outcome === "canceled" ? "canceled" : outcome,
+          persistence: "deferred_until_stream_complete",
+        }));
       },
     });
   }

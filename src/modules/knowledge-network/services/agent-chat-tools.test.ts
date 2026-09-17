@@ -146,7 +146,7 @@ describe("buildAgentTools", () => {
     expect(session.callTool).not.toHaveBeenCalled();
   });
 
-  it("接管 bkn_finish_interaction：走客户端的终结路径，不向后端直发", async () => {
+  it("接管 bkn_finish_interaction：等待完整流式答案后再由 ChatPane 终结", async () => {
     const session = stubSession();
     const turn = managedTurn();
     const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
@@ -156,8 +156,12 @@ describe("buildAgentTools", () => {
 
     const out = await runTool(tools.bkn_finish_interaction, { outcome: "completed", answer: "答完了" });
 
-    expect(turn.finish).toHaveBeenCalledWith("completed", "答完了");
-    expect(JSON.parse(out)).toMatchObject({ interaction_id: "int_1", execution_status: "completed" });
+    expect(turn.finish).not.toHaveBeenCalled();
+    expect(JSON.parse(out)).toMatchObject({
+      interaction_id: "int_1",
+      execution_status: "completed",
+      persistence: "deferred_until_stream_complete",
+    });
     expect(session.callTool).not.toHaveBeenCalled();
   });
 

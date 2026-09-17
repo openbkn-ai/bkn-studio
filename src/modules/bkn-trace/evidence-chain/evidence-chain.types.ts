@@ -75,4 +75,116 @@ export interface EvidenceChainView {
   execution: ChainGraph;
   evidence: ChainGraph;
   notices?: string[];
+  /** 0.1.6 attribution status. The deterministic time rail remains usable while analysis is pending. */
+  generationStatus?: "ready" | "analysis_pending";
+  questionPairs?: QuestionPairView[];
+  selectedPairGraphs?: Record<string, PairProvenanceGraph>;
+  timeRail?: TimeRailItem[];
+}
+
+export interface QuestionPairView {
+  id: string;
+  question: string;
+  answer: string;
+  summary: string;
+  status: string;
+  reasonCode?: string;
+  claimIds: string[];
+}
+
+export interface BusinessValueView {
+  name: string;
+  value?: string;
+  sourceKind?: string;
+  sourceRef?: string;
+  evidenceRefs?: string[];
+}
+
+export interface BusinessFunctionOutputView {
+  summary: string;
+  evidenceRefs: string[];
+  adoptedRowRefs: string[];
+}
+
+export interface AttributedBusinessFunctionView {
+  id: string;
+  displayName: string;
+  capabilityKind: string;
+  businessPurpose: string;
+  businessInputs: BusinessValueView[];
+  logicSummary: string;
+  businessOutputs: BusinessFunctionOutputView[];
+  operationIds: string[];
+  supportsClaimIds: string[];
+  schemaRefs: string[];
+  technicalExecution: {
+    interfaceNames: string[];
+    inputPayloadRef?: string;
+    outputPayloadRef?: string;
+    completeness: string;
+  };
+  validationStatus: string;
+  reasonCode?: string;
+}
+
+export interface AttributedExecutionStepView {
+  id: string;
+  operationId: string;
+  attempt: number;
+  businessRole: string;
+  interfaceName: string;
+  status: string;
+  timeRailItemId: string;
+}
+
+export interface ProvenanceEdgeView {
+  edgeId: string;
+  kind: string;
+  fromId: string;
+  toId: string;
+  operationIds: string[];
+  validationStatus: string;
+  reasonCode?: string;
+}
+
+export interface PairProvenanceGraph {
+  claims: ChainClaim[];
+  evidenceNodes: ChainNode[];
+  businessFunctions: AttributedBusinessFunctionView[];
+  executionSteps: AttributedExecutionStepView[];
+  schemaNodes: ChainNode[];
+  edges: ProvenanceEdgeView[];
+}
+
+export interface TimeRailPayload {
+  mode: string;
+  media_type: string;
+  byte_length: number;
+  inline?: unknown;
+  ref?: string;
+  omitted_reason?: string;
+}
+
+export interface TimeRailItem {
+  id: string;
+  order: number;
+  operation_id: string;
+  attempt: number;
+  parent_operation_id?: string;
+  interface_name: string;
+  protocol: string;
+  source_module?: string;
+  status: string;
+  started_at: string;
+  finished_at?: string;
+  duration_ms?: number;
+  input: TimeRailPayload;
+  output?: TimeRailPayload;
+  error?: TimeRailPayload;
+  capability?: {
+    manifest_id: string;
+    manifest_version: string;
+    evidence_contract: string;
+    resolution: string;
+  };
 }
