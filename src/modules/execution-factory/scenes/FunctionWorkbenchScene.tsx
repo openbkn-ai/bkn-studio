@@ -42,6 +42,7 @@ import {
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
+import { getResourceOperations } from "@/modules/model-resources/services/authorization.service";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import {
   executeFunction,
@@ -201,6 +202,19 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:function:edit",
   });
+  const canCreateFunction = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:function:create",
+  });
+  const mayExecuteFunction = hasPermissions({
+    currentPermissions: runtimeConfig.currentUser.permissions,
+    requiredPermissions: "execution-factory:function:debug",
+  });
+  // Function-set grants are aggregated into `function:debug` for navigation, but the ad-hoc
+  // run and schema endpoints authorize the distinct `function/adhoc` resource. Keep their UI
+  // aligned with that exact backend check instead of exposing controls that always return 403.
+  const [canExecuteAdhocFunction, setCanExecuteAdhocFunction] = useState(false);
+  const canGenerateFunction = canEditFunction && canCreateFunction;
 
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [boxName, setBoxName] = useState("");
@@ -253,6 +267,31 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     },
     [activeKey],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!mayExecuteFunction) {
+      setCanExecuteAdhocFunction(false);
+      return;
+    }
+
+    void getResourceOperations([{ type: "function", id: "adhoc" }])
+      .then((operations) => {
+        if (!cancelled) {
+          setCanExecuteAdhocFunction(operations[0]?.operation?.includes("execute") ?? false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanExecuteAdhocFunction(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mayExecuteFunction]);
 
   // AI generation needs a default LLM; hide the button when absent instead of letting users trigger an error.
   useEffect(() => {
@@ -857,7 +896,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
   const handleDeriveParams = async (
     options?: { persist?: boolean; silent?: boolean },
   ): Promise<FunctionParameterDef[] | null> => {
-    if (!active) {
+    if (!active || !canExecuteAdhocFunction) {
       return null;
     }
 
@@ -959,7 +998,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     Boolean(item.code.trim()) && derivedCodeRef.current[item.key] !== item.code;
 
   const handleRun = async () => {
-    if (!active) {
+    if (!active || !canExecuteAdhocFunction) {
       return;
     }
 
@@ -1428,7 +1467,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                           {t("executionFactory.functionInsertTemplate")}
                         </AppButton>
                       </Dropdown>
-                      {hasDefaultLlm ? (
+                      {hasDefaultLlm && canGenerateFunction ? (
                         <AppButton
                           icon={<ThunderboltOutlined />}
                           onClick={() => setAiOpen(true)}
@@ -1443,7 +1482,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                         icon={<ProfileOutlined />}
                         onClick={() => {
                           setDockTab("params");
-                          if (canEditFunction && needsDerive(active)) {
+                          if (canExecuteAdhocFunction && needsDerive(active)) {
                             void handleDeriveParams();
                           }
                         }}
@@ -1513,7 +1552,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                     {t("executionFactory.workbenchConsoleNote")}
                   </span>
                   <span className={styles.consoleRun}>
-                    <PermissionGate permissions="execution-factory:function:debug">
+                    {canExecuteAdhocFunction ? (
                       <Tooltip title={t("executionFactory.workbenchRunShortcut")}>
                         <AppButton
                           className={styles.runButton}
@@ -1528,7 +1567,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                           {t("executionFactory.workbenchRun")}
                         </AppButton>
                       </Tooltip>
-                    </PermissionGate>
+                    ) : null}
                   </span>
                 </div>
                 {consoleCollapsed ? null : (
@@ -1593,7 +1632,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
       </div>
 
       <Drawer
-        extra={canEditFunction ? (
+        extra={canExecuteAdhocFunction ? (
           <AppButton
             icon={<ReloadOutlined />}
             loading={deriving}
@@ -1700,7 +1739,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
           setDockTab("params");
         }}
         onClose={() => setAiOpen(false)}
-        open={canEditFunction && aiOpen}
+        open={canGenerateFunction && aiOpen}
       />
 
     </div>

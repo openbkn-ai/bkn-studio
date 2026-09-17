@@ -53,6 +53,14 @@ export function ToolboxFormScene({
     currentPermissions,
     requiredPermissions: "execution-factory:function:create",
   });
+  const canViewApi = hasPermissions({
+    currentPermissions,
+    requiredPermissions: "execution-factory:toolbox:view",
+  });
+  const canViewFunction = hasPermissions({
+    currentPermissions,
+    requiredPermissions: "execution-factory:function:view",
+  });
   const [createMetadataType, setCreateMetadataType] = useState<ToolboxMetadataType>(
     canCreateApi ? "openapi" : "function",
   );
@@ -128,7 +136,9 @@ export function ToolboxFormScene({
       return;
     }
 
-    void navigate(buildListUrl(form.getFieldValue("metadataType") as ToolboxMetadataType));
+    const selectedType = form.getFieldValue("metadataType") as ToolboxMetadataType;
+    const canViewSelectedType = selectedType === "function" ? canViewFunction : canViewApi;
+    void navigate(canViewSelectedType ? buildListUrl(selectedType) : "/home");
   };
 
   /**

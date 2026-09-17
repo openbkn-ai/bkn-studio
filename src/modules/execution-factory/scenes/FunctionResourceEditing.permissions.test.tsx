@@ -235,6 +235,22 @@ describe("Function and API edit boundaries", () => {
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { grant: "execution-factory:function:create", metadataType: "function" },
+    { grant: "execution-factory:toolbox:create", metadataType: "openapi" },
+  ])("returns a create-only $metadataType user to home on cancel", async ({ grant, metadataType }) => {
+    mocks.permissions = [grant];
+    render(<MemoryRouter><ToolboxFormScene mode="create" /></MemoryRouter>);
+
+    await screen.findByRole("button", { name: "common.cancel" });
+    if (metadataType === "openapi") {
+      expect(screen.getByRole("radio", { name: "executionFactory.metadataTypes.openapi" })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+
+    expect(mocks.navigate).toHaveBeenCalledWith("/home");
+  });
+
   it("opens the Function form with only Function modify and denies the API form", async () => {
     mocks.permissions = ["execution-factory:function:edit"];
     renderForm();

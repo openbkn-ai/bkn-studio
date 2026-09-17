@@ -54,8 +54,16 @@ vi.mock("@/modules/execution-factory/components/FunctionAiGenerateModal", () => 
 vi.mock("@/modules/execution-factory/scenes/function-workbench/FunctionDependencyPanel", () => ({
   FunctionDependencyPanel: () => null,
 }));
+const access = vi.hoisted(() => ({
+  getResourceOperations: vi.fn(),
+  listLlmModels: vi.fn(),
+}));
+
+vi.mock("@/modules/model-resources/services/authorization.service", () => ({
+  getResourceOperations: access.getResourceOperations,
+}));
 vi.mock("@/modules/model-resources/services/llm.service", () => ({
-  listLlmModels: vi.fn().mockResolvedValue({ items: [] }),
+  listLlmModels: access.listLlmModels,
 }));
 vi.mock("@/modules/execution-factory/services/category.service", () => ({
   listOperatorCategories: vi.fn().mockResolvedValue([]),
@@ -128,6 +136,8 @@ describe("FunctionWorkbenchScene function status confirmation labels (#491)", ()
       "execution-factory:function:edit",
       "execution-factory:function:debug",
     ];
+    access.getResourceOperations.mockResolvedValue([{ id: "adhoc", operation: ["execute"] }]);
+    access.listLlmModels.mockResolvedValue({ items: [] });
     api.getToolbox.mockResolvedValue({
       boxId: "box-1",
       metadataType: "function",
