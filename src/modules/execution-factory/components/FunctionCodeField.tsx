@@ -15,6 +15,7 @@ import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/
 import { FunctionExecuteModal } from "@/modules/execution-factory/components/FunctionExecuteModal";
 import { getPythonCodeTemplate } from "@/modules/execution-factory/services/template.service";
 import type { FunctionAiApplyResult } from "@/modules/execution-factory/utils/function-ai-content";
+import { useFunctionCodeAccess } from "@/modules/execution-factory/utils/use-function-code-access";
 
 const FALLBACK_TEMPLATE = "def handler(event):\n    return event\n";
 
@@ -32,6 +33,9 @@ export function FunctionCodeField({
 }: FunctionCodeFieldProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
+  // Hosts such as the legacy operator form gate the page by their own resource, but generation
+  // and ad-hoc runs are authorized on Function; hide what the backend would reject with 403.
+  const { canExecuteAdhoc, canGenerate } = useFunctionCodeAccess();
   const [executeOpen, setExecuteOpen] = useState(false);
   const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
 
@@ -67,18 +71,23 @@ export function FunctionCodeField({
         <AppButton onClick={() => void handleInsertTemplate()}>
           {t("executionFactory.functionInsertTemplate")}
         </AppButton>
-        <AppButton onClick={() => setAiGenerateOpen(true)}>
-          {t("executionFactory.functionAiGenerate")}
-        </AppButton>
-        <AppButton onClick={() => setExecuteOpen(true)}>
-          {t("executionFactory.runFunction")}
-        </AppButton>
+        {canGenerate ? (
+          <AppButton onClick={() => setAiGenerateOpen(true)}>
+            {t("executionFactory.functionAiGenerate")}
+          </AppButton>
+        ) : null}
+        {canExecuteAdhoc ? (
+          <AppButton onClick={() => setExecuteOpen(true)}>
+            {t("executionFactory.runFunction")}
+          </AppButton>
+        ) : null}
       </div>
       <CodeEditor height={320} language="python" onChange={onChange} value={value} />
       <FunctionExecuteModal
+        canGenerate={canGenerate}
         initialCode={value}
         onClose={() => setExecuteOpen(false)}
-        open={executeOpen}
+        open={canExecuteAdhoc && executeOpen}
       />
       <FunctionAiGenerateModal
         initialCode={value}
@@ -91,7 +100,7 @@ export function FunctionCodeField({
           onMetadataApply?.(result);
         }}
         onClose={() => setAiGenerateOpen(false)}
-        open={aiGenerateOpen}
+        open={canGenerate && aiGenerateOpen}
       />
     </>
   );

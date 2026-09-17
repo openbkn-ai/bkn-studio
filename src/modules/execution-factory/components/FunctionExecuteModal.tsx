@@ -16,6 +16,8 @@ import { executeFunction } from "@/modules/execution-factory/services/function.s
 import type { FunctionExecuteResult } from "@/modules/execution-factory/types/function";
 
 type FunctionExecuteModalProps = {
+  /** AI generation is authorized separately from running code. */
+  canGenerate: boolean;
   initialCode?: string;
   onClose: () => void;
   open: boolean;
@@ -27,6 +29,7 @@ type ExecuteFormValues = {
 };
 
 export function FunctionExecuteModal({
+  canGenerate,
   initialCode,
   onClose,
   open,
@@ -96,9 +99,11 @@ export function FunctionExecuteModal({
         <Form.Item label={t("executionFactory.functionCode")} name="code">
           <Input.TextArea rows={8} />
         </Form.Item>
-        <AppButton onClick={() => setAiGenerateOpen(true)} style={{ marginBottom: 16 }}>
-          {t("executionFactory.functionAiGenerate")}
-        </AppButton>
+        {canGenerate ? (
+          <AppButton onClick={() => setAiGenerateOpen(true)} style={{ marginBottom: 16 }}>
+            {t("executionFactory.functionAiGenerate")}
+          </AppButton>
+        ) : null}
         <Form.Item label={t("executionFactory.debugRequestBody")} name="eventPayload">
           <Input.TextArea placeholder="{}" rows={4} />
         </Form.Item>
@@ -124,7 +129,7 @@ export function FunctionExecuteModal({
           }
         }}
         onClose={() => setAiGenerateOpen(false)}
-        open={aiGenerateOpen}
+        open={canGenerate && aiGenerateOpen}
       />
     </Modal>
   );

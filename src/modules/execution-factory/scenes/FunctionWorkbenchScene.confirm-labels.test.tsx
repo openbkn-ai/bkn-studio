@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import { FunctionWorkbenchScene } from "@/modules/execution-factory/scenes/FunctionWorkbenchScene";
+import { inferFunctionSchema } from "@/modules/execution-factory/services/function.service";
 
 const router = vi.hoisted(() => ({
   location: { state: null as { returnTo?: string } | null },
@@ -181,6 +182,26 @@ describe("FunctionWorkbenchScene function status confirmation labels (#491)", ()
     await waitFor(() => expect(api.listTools).toHaveBeenCalled());
     expect(addEventListener.mock.calls.some(([type]) => type === "beforeunload")).toBe(false);
     addEventListener.mockRestore();
+  });
+
+  it("does not offer parameter derivation to a read-only user who may run ad-hoc code", async () => {
+    await i18n.changeLanguage("en-US");
+    services.runtimeConfig.currentUser.permissions = [
+      "execution-factory:function:view",
+      "execution-factory:function:debug",
+    ];
+
+    render(<FunctionWorkbenchScene boxId="box-1" />);
+
+    await railItem("sum_orders");
+    // The run control proves the ad-hoc execute check resolved before asserting derivation is absent.
+    expect(await screen.findByText(i18n.t("executionFactory.workbenchRun"))).toBeTruthy();
+    fireEvent.click(screen.getByText(i18n.t("executionFactory.workbenchParamsTab")));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(screen.queryByText(i18n.t("executionFactory.functionDeriveParams"))).toBeNull();
+    expect(inferFunctionSchema).not.toHaveBeenCalled();
+    expect(services.message.success).not.toHaveBeenCalled();
   });
 
   it("opens the linked Function and returns to its knowledge-network capability list", async () => {

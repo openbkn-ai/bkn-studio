@@ -42,7 +42,6 @@ import {
 import { FunctionAiGenerateModal } from "@/modules/execution-factory/components/FunctionAiGenerateModal";
 import { FunctionParameterTree } from "@/modules/execution-factory/components/FunctionParameterTree";
 import { InlineEditableText } from "@/modules/execution-factory/components/InlineEditableText";
-import { getResourceOperations } from "@/modules/model-resources/services/authorization.service";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import {
   executeFunction,
@@ -75,6 +74,7 @@ import {
 } from "@/modules/execution-factory/utils/function-templates";
 import { buildSampleEvent } from "@/modules/execution-factory/utils/function-sample-event";
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
+import { useFunctionCodeAccess } from "@/modules/execution-factory/utils/use-function-code-access";
 import { buildJsonSchemaFromParameters } from "@/modules/execution-factory/utils/function-parameter-schema";
 import { resolveToolStatusOkTextKey } from "@/modules/execution-factory/utils/status-confirm-ok-text";
 import { collectToolboxPublishIssues } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
@@ -202,19 +202,14 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:function:edit",
   });
-  const canCreateFunction = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "execution-factory:function:create",
-  });
-  const mayExecuteFunction = hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: "execution-factory:function:debug",
-  });
-  // Function-set grants are aggregated into `function:debug` for navigation, but the ad-hoc
-  // run and schema endpoints authorize the distinct `function/adhoc` resource. Keep their UI
-  // aligned with that exact backend check instead of exposing controls that always return 403.
-  const [canExecuteAdhocFunction, setCanExecuteAdhocFunction] = useState(false);
+  const {
+    canExecuteAdhoc: canExecuteAdhocFunction,
+    canGenerate: canCreateFunction,
+  } = useFunctionCodeAccess();
   const canGenerateFunction = canEditFunction && canCreateFunction;
+  // Derived parameters only land in the editable draft; a read-only caller would get a result
+  // that is thrown away. Runs still derive silently to build their request inputs.
+  const canDeriveParams = canEditFunction && canExecuteAdhocFunction;
 
   const [toolbox, setToolbox] = useState<ToolboxRecord | null>(null);
   const [boxName, setBoxName] = useState("");
@@ -267,31 +262,6 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     },
     [activeKey],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!mayExecuteFunction) {
-      setCanExecuteAdhocFunction(false);
-      return;
-    }
-
-    void getResourceOperations([{ type: "function", id: "adhoc" }])
-      .then((operations) => {
-        if (!cancelled) {
-          setCanExecuteAdhocFunction(operations[0]?.operation?.includes("execute") ?? false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCanExecuteAdhocFunction(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [mayExecuteFunction]);
 
   // AI generation needs a default LLM; hide the button when absent instead of letting users trigger an error.
   useEffect(() => {
@@ -913,7 +883,8 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
         return null;
       }
 
-      if (options?.persist ?? canEditFunction) {
+      const persist = options?.persist ?? canEditFunction;
+      if (persist) {
         derivedCodeRef.current[active.key] = active.code;
         patchActive({
           ...(inferred.name && !active.name ? { name: inferred.name } : {}),
@@ -926,7 +897,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
           ...(inferred.outputs ? { outputs: inferred.outputs } : {}),
         });
       }
-      if (!options?.silent) {
+      if (persist && !options?.silent) {
         void message.success(t("executionFactory.functionDeriveApplied"));
       }
       return inferred.inputs ?? [];
@@ -1482,7 +1453,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                         icon={<ProfileOutlined />}
                         onClick={() => {
                           setDockTab("params");
-                          if (canExecuteAdhocFunction && needsDerive(active)) {
+                          if (canDeriveParams && needsDerive(active)) {
                             void handleDeriveParams();
                           }
                         }}
@@ -1632,7 +1603,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
       </div>
 
       <Drawer
-        extra={canExecuteAdhocFunction ? (
+        extra={canDeriveParams ? (
           <AppButton
             icon={<ReloadOutlined />}
             loading={deriving}
