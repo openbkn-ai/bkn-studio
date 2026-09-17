@@ -73,6 +73,10 @@ import {
   type FunctionTemplateId,
 } from "@/modules/execution-factory/utils/function-templates";
 import { buildSampleEvent } from "@/modules/execution-factory/utils/function-sample-event";
+import {
+  isSameParameterList,
+  mergeInferredParameters,
+} from "@/modules/execution-factory/utils/function-parameter-merge";
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { useFunctionCodeAccess } from "@/modules/execution-factory/utils/use-function-code-access";
 import { buildJsonSchemaFromParameters } from "@/modules/execution-factory/utils/function-parameter-schema";
@@ -522,6 +526,14 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
         }),
       );
       setActiveKey((current) => (current ? (persisted.get(current)?.toolId ?? current) : current));
+      // The derivation record follows the item to its new key; otherwise the next params click
+      // treats the just-saved code as never inferred and runs inference again.
+      for (const [key, { toolId }] of persisted) {
+        if (key !== toolId && key in derivedCodeRef.current) {
+          derivedCodeRef.current[toolId] = derivedCodeRef.current[key];
+          delete derivedCodeRef.current[key];
+        }
+      }
     };
 
     try {
@@ -883,24 +895,34 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
         return null;
       }
 
+      // Supported derivation is authoritative for which parameters exist: no-argument functions
+      // can return [] or omit the field, and both must clear inputs to avoid retaining parameters
+      // from a prior function. Descriptions are hand-written, so they are merged in by name.
+      const inputs = mergeInferredParameters(active.inputs, inferred.inputs ?? []);
+      const outputs = inferred.outputs
+        ? mergeInferredParameters(active.outputs, inferred.outputs)
+        : undefined;
+
       const persist = options?.persist ?? canEditFunction;
       if (persist) {
         derivedCodeRef.current[active.key] = active.code;
-        patchActive({
+        const patch: Partial<WorkbenchFunction> = {
           ...(inferred.name && !active.name ? { name: inferred.name } : {}),
           ...(inferred.description && !active.description
             ? { description: inferred.description }
             : {}),
-          // Supported derivation is authoritative: no-argument functions can return [] or omit
-          // the field, and both must clear inputs to avoid retaining parameters from a prior function.
-          inputs: inferred.inputs ?? [],
-          ...(inferred.outputs ? { outputs: inferred.outputs } : {}),
-        });
+          ...(isSameParameterList(active.inputs, inputs) ? {} : { inputs }),
+          ...(outputs && !isSameParameterList(active.outputs, outputs) ? { outputs } : {}),
+        };
+        // Inferring code whose contract is already in place must not flag unsaved changes.
+        if (Object.keys(patch).length > 0) {
+          patchActive(patch);
+        }
       }
       if (persist && !options?.silent) {
         void message.success(t("executionFactory.functionDeriveApplied"));
       }
-      return inferred.inputs ?? [];
+      return inputs;
     } catch (error) {
       if (!options?.silent) {
         void message.error(extractRequestErrorMessage(error));
