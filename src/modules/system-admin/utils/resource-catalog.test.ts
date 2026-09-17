@@ -96,16 +96,21 @@ describe("resource-catalog", () => {
   });
 
   it("explains the separate operator and toolset grants in both locales", async () => {
+    // AI generation and temporary code execution are authorized on `function`, not `operator`.
     await i18n.changeLanguage("zh-CN");
-    expect(resourceTypeDescription("operator")).toContain("run_code");
+    expect(resourceTypeDescription("operator")).toContain("函数集权限");
     expect(resourceTypeDescription("tool_box")).toContain("修改");
     expect(resourceTypeDescription("function")).toContain("修改");
+    expect(resourceTypeDescription("function")).toContain("AI 生成");
+    expect(resourceTypeDescription("function")).toContain("临时代码执行");
     await i18n.changeLanguage("en-US");
     expect(resourceTypeLabel("operator")).toBe("Operator");
     expect(resourceTypeLabel("tool_box")).toBe("API toolset");
     expect(resourceTypeLabel("function")).toBe("Function set");
-    expect(resourceTypeDescription("operator")).toContain("run_code");
+    expect(resourceTypeDescription("operator")).toContain("Function set grants");
     expect(resourceTypeDescription("tool_box")).toContain("Modify");
+    expect(resourceTypeDescription("function")).toContain("AI function generation");
+    expect(resourceTypeDescription("function")).toContain("temporary code execution");
     expect(resourceTypeDescription("skill")).toBe("");
   });
 

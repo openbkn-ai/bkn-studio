@@ -35,9 +35,9 @@ export const systemAdminEnUS = {
     },
     resourceCatalog: {
       descriptions: {
-        operator: "Create allows operator registration and AI function generation. Execute allows operator execution and temporary code execution (run_code). These do not grant creation of function sets.",
+        operator: "Controls legacy operators only. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
         tool_box: "Controls API toolsets only. Create adds a set; Modify changes its APIs; Execute runs them.",
-        function: "Controls function sets only. Create adds a set; Modify changes its functions; Execute runs them.",
+        function: "Controls function sets only. Create adds a set and allows AI function generation; Modify changes its functions; Execute runs them, including temporary code execution.",
       },
       operations: {
         "*": "All operations",
