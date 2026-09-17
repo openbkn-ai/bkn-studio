@@ -118,6 +118,7 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             ? t("systemAdmin.errors.roleNameDuplicateWithName", { name: roleInput.name })
             : extractRequestErrorMessage(error),
         );
+        setSubmitting(false);
         return;
       }
 
