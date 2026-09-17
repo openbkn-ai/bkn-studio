@@ -12,6 +12,7 @@ import {
 } from "@/modules/system-admin/utils/resource-catalog";
 
 export type AuthorizationRegistryOperation = {
+  description?: string;
   id: string;
   name: string;
   parentOperation?: string;
@@ -70,6 +71,7 @@ export type BackendAuthorizationRegistry = {
     name?: string;
     parent_type?: string;
     operations?: Array<{
+      description?: string;
       id?: string;
       name?: string;
       parent_operation?: string;
@@ -94,7 +96,9 @@ export function normalizeAuthorizationRegistry(input: BackendAuthorizationRegist
         throw new Error(`Authorization registry contains an invalid operation for ${id}`);
       }
       operationIds.add(operationId);
+      const description = operation.description?.trim();
       return {
+        ...(description ? { description } : {}),
         id: operationId,
         name: operation.name || operationId,
         parentOperation: operation.parent_operation || undefined,

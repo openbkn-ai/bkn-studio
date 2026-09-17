@@ -992,7 +992,7 @@ export function ObjectAuthorizeDrawer({
                       ({ requirement }) => requirement.key === operation.key,
                     );
                     return (
-                      <Tooltip key={operation.key} title={operation.key}>
+                      <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                         <button
                           aria-label={`${operation.label} (${operation.key})`}
                           aria-pressed={selected}

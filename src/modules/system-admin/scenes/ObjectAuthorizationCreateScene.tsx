@@ -656,7 +656,7 @@ export function ObjectAuthorizationCreateScene() {
                             disabled={catalogLoading}
                             key={op.key}
                             onClick={() => toggleOp(op.key)}
-                            title={`${op.label} (${op.key})`}
+                            title={op.description ?? `${op.label} (${op.key})`}
                             type="button"
                           >
                             <span className={styles.chipLabelRow}>
