@@ -263,14 +263,21 @@ describe("authz object picker catalog service", () => {
     });
   });
 
-  it("父子资源接口未就绪时不再查询业务服务", async () => {
+  it("父子资源通过 bkn-safe 资源目录查询", async () => {
     const catalog = { id: "catalog-1", name: "销售目录", type: "catalog" } as const;
+    getMock.mockResolvedValue({ data: { entries: [{ id: "resource-11", name: "第 11 个资源" }], total: 1 } });
 
-    expect(listTopResourceChildCategories(catalog)).toEqual([]);
+    expect(listTopResourceChildCategories(catalog)).toEqual(["resource"]);
     await expect(listTopResourceChildren(catalog, "resource", { limit: 10, offset: 10 })).resolves.toEqual({
       category: "resource",
-      children: [], total: 0,
+      children: [{ category: "resource", id: "resource-11", name: "第 11 个资源", sub: "销售目录", type: "resource" }], total: 1,
     });
-    expect(getMock).not.toHaveBeenCalled();
+    expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
+      params: {
+        direction: "asc", limit: 10, name: undefined, offset: 10, parent_id: "catalog-1",
+        parent_type: "catalog", resource_type: "resource", sort: "name",
+      },
+      skipErrorToast: true,
+    });
   });
 });
