@@ -58,6 +58,9 @@ describe("resource-catalog", () => {
     const roleGrantTypes = ROLE_GRANT_RESOURCE_TYPES.map((item) => item.type);
 
     for (const type of [
+      "admin-apikey",
+      "admin-client",
+      "admin-license",
       "agent",
       "agent_tpl",
       "action_type",

@@ -175,6 +175,9 @@ export const RESOURCE_TYPES: ResourceTypeDef[] = [
  * readable, and object authorization still uses the full resource catalog where applicable.
  */
 const ROLE_GRANT_EXCLUDED_RESOURCE_TYPES = new Set([
+  "admin-apikey",
+  "admin-client",
+  "admin-license",
   "agent",
   "agent_tpl",
   "action_type",
