@@ -406,7 +406,7 @@ export async function updateCatalog(
       enabled: input.enabled,
       expected_update_time: input.expectedUpdateTime,
       id,
-      builtin: false,
+      built_in: false,
       name: input.name,
       tags: input.tags,
     },

@@ -676,7 +676,7 @@ describe("catalog.service · allow unhealthy", () => {
 
     expect(putMock).toHaveBeenCalledWith(
       "/vega-backend/v1/catalogs/catalog-1",
-      expect.objectContaining({ expected_update_time: 123 }),
+      expect.objectContaining({ built_in: false, expected_update_time: 123 }),
       {
         params: {
           allow_unhealthy: undefined,

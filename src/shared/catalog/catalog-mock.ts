@@ -38,7 +38,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Platform Admin",
     tags: ["crm", "core"],
     connectorConfig: {
-      host: "mariadb.builtin.example",
+      host: "mariadb.internal.example",
       port: 3306,
       username: "readonly",
       databases: ["customer_center", "crm_reporting"],
@@ -68,7 +68,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Search Team",
     tags: ["search"],
     connectorConfig: {
-      host: "search.builtin.example",
+      host: "search.internal.example",
       port: 9200,
       username: "search_admin",
       index_pattern: "knowledge-*",
@@ -97,7 +97,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Data Ops",
     tags: ["finance", "warehouse"],
     connectorConfig: {
-      host: "postgres.builtin.example",
+      host: "postgres.internal.example",
       port: 5432,
       database: "finance_dw",
       username: "etl_reader",
@@ -128,7 +128,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Platform Admin",
     tags: ["issue-664", "archive"],
     connectorConfig: {
-      host: "postgres.builtin.example",
+      host: "postgres.internal.example",
       port: 5432,
       database: "issue_664_archive",
       username: "readonly",
@@ -158,7 +158,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Platform Admin",
     tags: ["issue-664", "current"],
     connectorConfig: {
-      host: "postgres.builtin.example",
+      host: "postgres.internal.example",
       port: 5432,
       database: "issue_664_current",
       username: "readonly",
@@ -188,7 +188,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Permission Demo",
     tags: ["permission-demo", "view-detail-only"],
     connectorConfig: {
-      host: "postgres.builtin.example",
+      host: "postgres.internal.example",
       port: 5432,
       database: "permission_demo",
       username: "readonly",
@@ -218,7 +218,7 @@ let mockCatalogs: CatalogRecord[] = [
     creatorName: "Permission Demo",
     tags: ["permission-demo", "view-summary-only"],
     connectorConfig: {
-      host: "postgres.builtin.example",
+      host: "postgres.internal.example",
       port: 5432,
       database: "permission_demo",
       username: "readonly",
