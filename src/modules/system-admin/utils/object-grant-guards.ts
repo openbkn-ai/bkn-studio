@@ -5,27 +5,82 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { ObjectGrant } from "@/modules/system-admin/types/authz";
+import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
 
 /** The subject bkn-safe writes when the execution factory publishes something to everyone. */
 export const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
- * Whether bkn-safe will refuse a non-administrator write against this row (its
- * protectAuthorizeHolder guard), so a surface can lock it rather than offer a control that
- * always 403s.
+ * New records carry the authenticated user's ID in `createdBy`. Historical
+ * records sometimes stored the authority kind there instead; synthetic system
+ * actors are also not directory users. Only concrete user IDs should trigger a
+ * user lookup.
+ */
+export function grantCreatorUserId(source: GrantRecord): string | undefined {
+  const createdBy = source.createdBy?.trim();
+  if (
+    !createdBy ||
+    createdBy === source.authoritySource ||
+    createdBy.startsWith("system:")
+  ) {
+    return undefined;
+  }
+  return createdBy;
+}
+
+/**
+ * New object-scoped responses identify role subjects explicitly. The source
+ * fallback keeps Studio safe during a rolling deployment against an older
+ * bkn-safe: direct role permissions always carry the protected role source.
+ */
+export function isRoleGrantSubject(grant: ObjectGrant) {
+  return grant.accessorType === "role" ||
+    (grant.grants ?? []).some((source) => source.policySource === "role_permission");
+}
+
+/** Only real users may be resolved through the user-directory API. */
+export function isUserDirectorySubject(grant: ObjectGrant) {
+  return grant.accessorType !== "public" &&
+    grant.accessorId !== PUBLIC_ACCESSOR_ID &&
+    !isRoleGrantSubject(grant);
+}
+
+/**
+ * Whether bkn-safe will refuse a non-administrator write against this target
+ * regardless of source ownership.
  *
- * Two rows are off limits to a delegate, and both because the write erases: POST is
- * replace-semantics and DELETE removes everything the accessor holds.
- *
- * - A row carrying `authorize` — the object's creator, or anyone an administrator trusted with
- *   sharing. Letting a delegate rewrite it would let them take the object away from the person who
- *   made it, and `authorize` is administrator-conferred, so nobody outside the admin points could
- *   put it back. This covers the caller's OWN row.
- * - The public-access row, whose removal would un-publish the object platform-wide.
+ * Source-scoped writes no longer erase every permission held by the grantee, so
+ * an unrelated `authorize` source must not lock the caller's own ordinary
+ * source. The public accessor remains target-wide protected because changing it
+ * publishes or unpublishes the object for everyone.
  */
 export function isDelegateProtectedGrant(grant: ObjectGrant) {
-  return grant.accessorId === PUBLIC_ACCESSOR_ID || grant.operations.includes("authorize");
+  return grant.accessorId === PUBLIC_ACCESSOR_ID;
+}
+
+/**
+ * A delegated writer can manage only source records it created. Older records
+ * without a concrete creator are deliberately read-only for delegates: their
+ * ownership cannot be reconstructed safely. Platform authorization admins may
+ * manage every source through the administrator route.
+ */
+export function canManageGrantSource({
+  currentUserId,
+  isPlatformAuthzAdmin,
+  source,
+}: {
+  currentUserId: string | null | undefined;
+  isPlatformAuthzAdmin: boolean;
+  source: GrantRecord;
+}) {
+  return isPlatformAuthzAdmin || (
+    Boolean(currentUserId) &&
+    source.createdBy === currentUserId &&
+    source.policySource === "professional_rule" &&
+    source.authoritySource === "owner_delegate" &&
+    source.effect === "allow" &&
+    source.operation !== "authorize"
+  );
 }
 
 /**

@@ -6,7 +6,7 @@
  */
 
 import { Alert, Button, Spin } from "antd";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useParams } from "react-router-dom";
 
@@ -19,11 +19,22 @@ type KnowledgeNetworkModifyRouteGateProps = {
   children: ReactNode;
 };
 
-export function KnowledgeNetworkModifyRouteGate({
+type OperationRecord = {
+  operations?: string[];
+};
+
+type KnowledgeNetworkOperationRouteGateProps = {
+  children: ReactNode;
+  loadRecord: () => Promise<OperationRecord | null>;
+  redirectTo: string;
+};
+
+export function KnowledgeNetworkOperationRouteGate({
   children,
-}: KnowledgeNetworkModifyRouteGateProps) {
+  loadRecord,
+  redirectTo,
+}: KnowledgeNetworkOperationRouteGateProps) {
   const { t } = useTranslation();
-  const { networkId = "" } = useParams<{ networkId: string }>();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -33,7 +44,7 @@ export function KnowledgeNetworkModifyRouteGate({
 
     setAllowed(null);
     setError(null);
-    void getKnowledgeNetwork(networkId)
+    void loadRecord()
       .then((record) => {
         if (!cancelled) {
           setAllowed(hasKnowledgeNetworkRecordOperation(record, "modify"));
@@ -53,7 +64,7 @@ export function KnowledgeNetworkModifyRouteGate({
     return () => {
       cancelled = true;
     };
-  }, [networkId, reloadToken]);
+  }, [loadRecord, reloadToken]);
 
   if (error) {
     return (
@@ -75,13 +86,24 @@ export function KnowledgeNetworkModifyRouteGate({
   }
 
   if (!allowed) {
-    return (
-      <Navigate
-        replace
-        to={`/knowledge-network/workspace/${networkId}/overview`}
-      />
-    );
+    return <Navigate replace to={redirectTo} />;
   }
 
   return children;
+}
+
+export function KnowledgeNetworkModifyRouteGate({
+  children,
+}: KnowledgeNetworkModifyRouteGateProps) {
+  const { networkId = "" } = useParams<{ networkId: string }>();
+  const loadRecord = useCallback(() => getKnowledgeNetwork(networkId), [networkId]);
+
+  return (
+    <KnowledgeNetworkOperationRouteGate
+      loadRecord={loadRecord}
+      redirectTo={`/knowledge-network/workspace/${networkId}/overview`}
+    >
+      {children}
+    </KnowledgeNetworkOperationRouteGate>
+  );
 }

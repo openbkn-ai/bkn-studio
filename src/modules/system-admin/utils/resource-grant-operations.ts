@@ -6,9 +6,19 @@
  */
 
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
-import { operationsForType } from "@/modules/system-admin/utils/resource-catalog";
+import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
+import { operationsForType, WILDCARD } from "@/modules/system-admin/utils/resource-catalog";
 
 const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.id === b.id;
+
+export function availableOperationsForGrant(
+  grant: Pick<ResourceGrant, "resource" | "operations">,
+  definitions: ReturnType<typeof operationsForType>,
+) {
+  return definitions
+    .filter((operation) => grant.resource.id === WILDCARD || !HIDDEN_INSTANCE_OPS.has(operation.key))
+    .filter((operation) => !grant.operations.includes(operation.key));
+}
 
 export function normalizeRoleOperations(resourceType: string, selected: string[]): string[] {
   const definitions = new Map(

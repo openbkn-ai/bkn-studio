@@ -6,6 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   listDomainObjects,
   listDomainObjectsPage,
@@ -62,6 +63,8 @@ const authzObjects: AuthorizableObject[] = [
 const objMeta = (type: string, id: string) =>
   authzObjects.find((item) => item.type === type && item.id === id);
 
+const currentGrantorId = () => getRuntimeConfig().currentUser.id ?? undefined;
+
 const seed = (
   objType: string,
   objId: string,
@@ -73,6 +76,7 @@ const seed = (
     active: true,
     accessorId,
     authoritySource: "admin_authz",
+    createdBy: currentGrantorId(),
     effect: "allow",
     grantId: `mock-${objType}-${objId}-${accessorId}-${index}`,
     inherited: false,
@@ -350,6 +354,7 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
             active: true,
             accessorId: input.accessorId,
             authoritySource: "admin_authz",
+            createdBy: currentGrantorId(),
             effect: "allow",
             grantId: `mock-bundle-${Date.now()}`,
             inherited: false,
@@ -377,12 +382,14 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
         record.inherited ||
         record.effect !== effect ||
         record.policySource !== "professional_rule" ||
-        record.authoritySource !== "admin_authz",
+        record.authoritySource !== "admin_authz" ||
+        record.createdBy !== currentGrantorId(),
     );
     const replacementSources = input.operations.map((operation, index): GrantRecord => ({
       active: true,
       accessorId: input.accessorId,
       authoritySource: "admin_authz",
+      createdBy: currentGrantorId(),
       effect,
       grantId: `mock-${Date.now()}-${index}`,
       inherited: false,
@@ -423,15 +430,20 @@ export async function upsertObjectGrant(input: ObjectGrantInput): Promise<void> 
   await http.post(`${ADMIN}/object-grants`, payload);
 }
 
-/** Revokes exactly one source record. Other records for the same tuple remain untouched. */
-export async function revokeObjectGrant(grantId: string): Promise<void> {
+/** Revokes a complete selection of source records atomically. */
+export async function revokeObjectGrants(grantIds: string[]): Promise<void> {
+  const uniqueGrantIds = [...new Set(grantIds.filter(Boolean))];
+  if (!uniqueGrantIds.length) {
+    return;
+  }
   if (useMock) {
+    const revoked = new Set(uniqueGrantIds);
     grants = grants
       .map((grant) => {
-        if (!(grant.grants ?? []).some((record) => record.grantId === grantId)) {
+        if (!(grant.grants ?? []).some((record) => revoked.has(record.grantId))) {
           return grant;
         }
-        const sourceRecords = (grant.grants ?? []).filter((record) => record.grantId !== grantId);
+        const sourceRecords = (grant.grants ?? []).filter((record) => !revoked.has(record.grantId));
         if (!sourceRecords.length && !grant.bundle) {
           return null;
         }
@@ -456,11 +468,12 @@ export async function revokeObjectGrant(grantId: string): Promise<void> {
     await wait(undefined);
     return;
   }
-  await http.request({
-    url: `${ADMIN}/object-grants`,
-    method: "DELETE",
-    data: { grant_id: grantId },
-  });
+  await http.post(`${ADMIN}/object-grants/revoke`, { grant_ids: uniqueGrantIds });
+}
+
+/** Revokes exactly one source record. Other records for the same tuple remain untouched. */
+export async function revokeObjectGrant(grantId: string): Promise<void> {
+  await revokeObjectGrants([grantId]);
 }
 
 /** Community bundle revocation also uses its server-issued grant id. */
@@ -474,6 +487,7 @@ type BackendEntry = {
   accessor_id?: string;
   accessor_account?: string;
   accessor_name?: string;
+  accessor_type?: ObjectGrant["accessorType"];
   bundle?: "full_business_access";
   denied_operations?: string[];
   effective_decisions?: BackendEffectiveDecision[];
@@ -486,6 +500,7 @@ type BackendGrantRecord = {
   active?: boolean;
   accessor_id?: string;
   authority_source?: GrantRecord["authoritySource"];
+  created_by?: string | null;
   effect?: GrantRecord["effect"];
   grant_id?: string;
   inherited?: boolean;
@@ -508,6 +523,7 @@ function mapGrantRecord(item: BackendGrantRecord, accessorId: string): GrantReco
     active: item.active !== false,
     accessorId: item.accessor_id ?? accessorId,
     authoritySource: item.authority_source ?? "system",
+    createdBy: item.created_by ?? undefined,
     effect: item.effect ?? "allow",
     grantId: item.grant_id ?? "",
     inherited: item.inherited === true,
@@ -544,6 +560,7 @@ export function mapObjectGrantEntry(item: BackendEntry): ObjectGrant {
     accessorId,
     accessorAccount: item.accessor_account,
     accessorName: item.accessor_name,
+    accessorType: item.accessor_type,
     bundle: item.bundle,
     deniedOperations: item.denied_operations ?? [],
     effectiveDecisions: (item.effective_decisions ?? []).map(mapEffectiveDecision),
@@ -644,6 +661,19 @@ export async function revokeObjectGrantForObject(
   await http.delete("/safe/v1/me/object-grants", {
     data: { grant_id: grantId },
   });
+}
+
+/** Removes several sources selected from one object in one server transaction. */
+export async function revokeObjectGrantsForObject(grantIds: string[]): Promise<void> {
+  const uniqueGrantIds = [...new Set(grantIds.filter(Boolean))];
+  if (!uniqueGrantIds.length) {
+    return;
+  }
+  if (useMock) {
+    await revokeObjectGrants(uniqueGrantIds);
+    return;
+  }
+  await http.post("/safe/v1/me/object-grants/revoke", { grant_ids: uniqueGrantIds });
 }
 
 /**

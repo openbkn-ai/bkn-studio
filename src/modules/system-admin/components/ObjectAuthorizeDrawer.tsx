@@ -15,9 +15,11 @@ import {
   DatabaseOutlined,
   DeploymentUnitOutlined,
   FunctionOutlined,
+  GlobalOutlined,
   InfoCircleOutlined,
   LockOutlined,
   PlusOutlined,
+  TeamOutlined,
   ToolOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -39,6 +41,7 @@ import {
   listObjectGrantsForObject,
   listEnterpriseObjectGrants,
   revokeObjectGrantForObject,
+  revokeObjectGrantsForObject,
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
@@ -47,6 +50,9 @@ import {
   getCachedDepartments,
   getCachedUserSync,
   hydrateUserLookup,
+  hydrateUserLookupDetails,
+  isDeletedUserSync,
+  isUserLookupId,
   primeUserLookupCache,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
 import {
@@ -54,6 +60,11 @@ import {
   isCommunityObjectGrantType,
 } from "@/modules/system-admin/utils/authz-catalog";
 import {
+  canManageGrantSource,
+  grantCreatorUserId,
+  PUBLIC_ACCESSOR_ID,
+  isRoleGrantSubject,
+  isUserDirectorySubject,
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
 } from "@/modules/system-admin/utils/object-grant-guards";
@@ -139,12 +150,10 @@ export function ObjectAuthorizeDrawer({
     currentPermissions,
     requiredPermissions: authzPoints.revoke,
   });
-  // Either admin-authz point makes the caller a platform administrator, the party bkn-safe exempts
-  // from its per-row guard. The two points are held separately — a review role may carry `revoke`
-  // alone — so reading administrator status off `grant` would lock a revoke-only administrator out
-  // of rows the backend accepts from them. Which control they get is still decided per direction by
-  // canGrant/canRevoke below.
-  const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
+  // Source ownership is checked in the revoke direction. A caller holding only
+  // admin-authz:grant is still an ordinary object delegate when deleting and
+  // must not be offered controls the backend will reject.
+  const isPlatformAuthzRevoker = isAdminRevoker;
   const currentUserId = runtimeConfig.currentUser.id;
   const canGrant = objectAuthorized || isAdminGrantor;
   const canRevoke = objectAuthorized || isAdminRevoker;
@@ -214,18 +223,26 @@ export function ObjectAuthorizeDrawer({
   // The object-scoped grants endpoint is the primary source of grantee names. These best-effort
   // lookups only enrich older responses that lack a display name; one failed lookup must never
   // prevent the other from completing.
-  const syncLookup = useCallback(async (accessorIds: string[]) => {
-    const ids = [...new Set(accessorIds.filter(Boolean))];
+  const syncLookup = useCallback(async (accessorIds: string[], signal?: AbortSignal) => {
+    const ids = [...new Set(accessorIds.filter(isUserLookupId))];
     setPendingLookupIds((current) => new Set([...current, ...ids]));
     const [departmentsResult, usersResult] = await Promise.allSettled([
       getCachedDepartments({ skipErrorToast: true }),
-      hydrateUserLookup(ids),
+      hydrateUserLookupDetails(ids, { signal }),
     ]);
+    if (signal?.aborted) {
+      return;
+    }
     if (departmentsResult.status === "fulfilled") {
       setDepartments(departmentsResult.value);
     }
-    const unresolved = usersResult.status === "fulfilled" ? usersResult.value : ids;
-    setUnresolvedLookupIds((current) => new Set([...current, ...unresolved]));
+    const unresolved = usersResult.status === "fulfilled" ? usersResult.value.unavailable : ids;
+    setUnresolvedLookupIds((current) => {
+      const next = new Set(current);
+      ids.forEach((id) => next.delete(id));
+      unresolved.forEach((id) => next.add(id));
+      return next;
+    });
     setPendingLookupIds((current) => {
       const next = new Set(current);
       ids.forEach((id) => next.delete(id));
@@ -234,24 +251,37 @@ export function ObjectAuthorizeDrawer({
     setLookupRevision((revision) => revision + 1);
   }, []);
 
-  const loadRemote = useCallback(async () => {
+  const loadRemote = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
+      if (signal?.aborted) {
+        return;
+      }
       // Prime first: these accounts are the only source of names an owner has.
       primeUserLookupCache(accounts);
       setGrants(grantList);
       setUnresolvedLookupIds(new Set());
-      await syncLookup(grantList.map((grant) => grant.accessorId));
+      // Grant rows are usable before user-directory enrichment finishes. Keep
+      // the drawer interactive and fill creator labels in the background.
+      void syncLookup(grantList.flatMap((grant) => [
+        ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
+        ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
+      ]), signal);
       if (enterpriseAvailable) {
-        setEnterpriseGrants(await listEnterpriseObjectGrants({ resourceId: objId, resourceType: objType }));
+        const enterpriseGrants = await listEnterpriseObjectGrants({ resourceId: objId, resourceType: objType });
+        if (!signal?.aborted) {
+          setEnterpriseGrants(enterpriseGrants);
+        }
       } else {
         setEnterpriseGrants([]);
       }
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, [enterpriseAvailable, message, objId, objType, syncLookup]);
 
@@ -262,7 +292,9 @@ export function ObjectAuthorizeDrawer({
     setCandidate(prefillGranteeId);
     setCandidateOperations([]);
     setSourceAccessorId(undefined);
-    void loadRemote();
+    const controller = new AbortController();
+    void loadRemote(controller.signal);
+    return () => controller.abort();
   }, [loadRemote, open, prefillGranteeId]);
 
   const deptMap = useMemo(
@@ -274,6 +306,16 @@ export function ObjectAuthorizeDrawer({
     (grant: ObjectGrant) => {
       void lookupRevision;
       const id = grant.accessorId;
+      if (grant.accessorType === "public" || id === PUBLIC_ACCESSOR_ID) {
+        return { id, name: t("systemAdmin.objectGrants.publicSubject"), type: "public" as const };
+      }
+      if (isRoleGrantSubject(grant)) {
+        return {
+          id,
+          name: grant.accessorName || t("systemAdmin.objectGrants.roleSubject"),
+          type: "role" as const,
+        };
+      }
       if (grant.accessorName || grant.accessorAccount) {
         return {
           id,
@@ -291,12 +333,19 @@ export function ObjectAuthorizeDrawer({
         return { id, name: dept.name, sub: undefined, type: "department" as const };
       }
       if (pendingLookupIds.has(id)) {
-        return { id, loading: true, name: t("systemAdmin.objectGrants.granteeLoading"), sub: id, type: "user" as const };
+        return { id, loading: true, name: t("systemAdmin.objectGrants.granteeLoading"), type: "user" as const };
+      }
+      if (isDeletedUserSync(id)) {
+        return {
+          deleted: true,
+          id,
+          name: t("systemAdmin.objectGrants.deletedUser"),
+          type: "user" as const,
+        };
       }
       return {
         id,
         name: t("systemAdmin.objectGrants.granteeUnresolved"),
-        sub: id,
         type: "user" as const,
         unresolved: unresolvedLookupIds.has(id),
       };
@@ -304,26 +353,50 @@ export function ObjectAuthorizeDrawer({
     [deptMap, lookupRevision, pendingLookupIds, t, unresolvedLookupIds],
   );
 
+  const resolveGrantCreator = useCallback(
+    (source: GrantRecord) => {
+      void lookupRevision;
+      const id = grantCreatorUserId(source);
+      if (!id) {
+        return {
+          name: source.createdBy
+            ? t(`systemAdmin.objectGrants.authority.${source.authoritySource}`)
+            : t("systemAdmin.objectGrants.creatorNotRecorded"),
+        };
+      }
+      const user = getCachedUserSync(id);
+      if (user) {
+        return { name: user.name, sub: user.account };
+      }
+      if (pendingLookupIds.has(id)) {
+        return { name: t("systemAdmin.objectGrants.granteeLoading") };
+      }
+      if (isDeletedUserSync(id)) {
+        return { name: t("systemAdmin.objectGrants.deletedUser") };
+      }
+      return { name: t("systemAdmin.objectGrants.granteeUnresolved") };
+    },
+    [lookupRevision, pendingLookupIds, t],
+  );
+
   const grantProtection = useCallback(
     (grant: ObjectGrant) => {
-      const delegateLocked = !isPlatformAuthzAdmin && isDelegateProtectedGrant(grant);
+      const delegateLocked = !isPlatformAuthzRevoker && isDelegateProtectedGrant(grant);
       const selfAuthorizeLocked = isSelfAuthorizeLockout({
         currentUserId,
         grant,
         isAdminGrantor,
       });
       return {
-        eraseLocked: delegateLocked || selfAuthorizeLocked,
+        eraseLocked: delegateLocked,
         sourceWriteLocked: delegateLocked,
         reason: delegateLocked
             ? t("systemAdmin.objectGrants.delegateLocked")
-            : selfAuthorizeLocked
-              ? t("systemAdmin.objectGrants.selfAuthorizeLocked")
-              : undefined,
+            : undefined,
         selfAuthorizeLocked,
       };
     },
-    [currentUserId, isAdminGrantor, isPlatformAuthzAdmin, t],
+    [currentUserId, isAdminGrantor, isPlatformAuthzRevoker, t],
   );
 
   const visibleGrants = useMemo(
@@ -394,11 +467,25 @@ export function ObjectAuthorizeDrawer({
       }
       const protection = grantProtection(grant);
       return source.active && !source.inherited && source.policySource !== "role_permission" &&
+        canManageGrantSource({ currentUserId, isPlatformAuthzAdmin: isPlatformAuthzRevoker, source }) &&
         Boolean(source.grantId) && !protection.sourceWriteLocked &&
         !(protection.selfAuthorizeLocked && source.operation === "authorize");
     });
 
-  const dependentOperationsForGrant = (grant: ObjectGrant | undefined, requirementKey: string) => {
+  const dependentOperationsForGrant = (grant: ObjectGrant | undefined, source: GrantRecord) => {
+    if (source.effect !== "allow") {
+      return [];
+    }
+    const remainingRequirementSource = (grant?.grants ?? []).some(
+      (candidate) =>
+        candidate.active &&
+        candidate.effect === "allow" &&
+        candidate.operation === source.operation &&
+        candidate.grantId !== source.grantId,
+    );
+    if (remainingRequirementSource) {
+      return [];
+    }
     const allowedOperations = new Set(
       grant ? decisionsForGrant(grant)
         .filter((decision) => decision.decision === "allow")
@@ -406,7 +493,7 @@ export function ObjectAuthorizeDrawer({
     );
     return ops.filter(
       (operation) =>
-        allowedOperations.has(operation.key) && operation.requires.includes(requirementKey),
+        allowedOperations.has(operation.key) && operation.requires.includes(source.operation),
     );
   };
 
@@ -416,8 +503,8 @@ export function ObjectAuthorizeDrawer({
     }
     const sources = revocableSourcesForGrant(grant).sort(
       (left, right) =>
-        dependentOperationsForGrant(grant, left.operation).length -
-        dependentOperationsForGrant(grant, right.operation).length,
+        dependentOperationsForGrant(grant, left).length -
+        dependentOperationsForGrant(grant, right).length,
     );
     if (!canRevoke || !sources.length) {
       return;
@@ -434,9 +521,7 @@ export function ObjectAuthorizeDrawer({
       onOk: async () => {
         setBusy(true);
         try {
-          for (const source of sources) {
-            await revokeObjectGrantForObject(source.grantId);
-          }
+          await revokeObjectGrantsForObject(sources.map((source) => source.grantId));
           setSourceAccessorId(undefined);
           message.success(t("systemAdmin.objectGrants.toast.revoked"));
           await loadRemote();
@@ -452,7 +537,11 @@ export function ObjectAuthorizeDrawer({
   };
 
   const handleRevokeSource = (grant: ObjectGrant | undefined, source: GrantRecord) => {
-    if (!grant || dependentOperationsForGrant(grant, source.operation).length) {
+    if (
+      !grant ||
+      !canManageGrantSource({ currentUserId, isPlatformAuthzAdmin: isPlatformAuthzRevoker, source }) ||
+      dependentOperationsForGrant(grant, source).length
+    ) {
       return;
     }
     const grantee = resolveGrantee(grant);
@@ -489,18 +578,15 @@ export function ObjectAuthorizeDrawer({
       render: (_accessorId: string, grant: ObjectGrant) => {
         const grantee = resolveGrantee(grant);
         const protection = grantProtection(grant);
-        const granteeIsLoading = "loading" in grantee && grantee.loading;
         const granteeIsUnresolved = "unresolved" in grantee && grantee.unresolved;
         return (
           <div className={styles.authzSubjectCell}>
             <span className={styles.authzAvatar}>
-              {grantee.type === "department" ? <AppstoreOutlined /> : <UserOutlined />}
+              {grantee.type === "department" ? <AppstoreOutlined /> : grantee.type === "role" ? <TeamOutlined /> : grantee.type === "public" ? <GlobalOutlined /> : <UserOutlined />}
             </span>
             <span>
-              <Tooltip title={granteeIsUnresolved || granteeIsLoading ? grantee.id : undefined}>
-                <strong>{grantee.name}</strong>
-              </Tooltip>
-              <small>{grantee.sub}</small>
+              <strong>{grantee.name}</strong>
+              {grantee.sub ? <small>{grantee.sub}</small> : null}
             </span>
             {granteeIsUnresolved ? (
               <AppButton
@@ -701,6 +787,21 @@ export function ObjectAuthorizeDrawer({
       width: 132,
     },
     {
+      dataIndex: "createdBy",
+      key: "createdBy",
+      render: (_createdBy: string | undefined, source) => {
+        const creator = resolveGrantCreator(source);
+        return (
+          <span className={styles.authzSourceOperationCell}>
+            <strong>{creator.name}</strong>
+            {creator.sub ? <small>{creator.sub}</small> : null}
+          </span>
+        );
+      },
+      title: t("systemAdmin.objectGrants.actualGrantor"),
+      width: 148,
+    },
+    {
       dataIndex: "grantId",
       ellipsis: true,
       key: "grantId",
@@ -715,10 +816,7 @@ export function ObjectAuthorizeDrawer({
           candidateOperation.key === source.operation);
         const revocable = canRevoke && revocableSourcesForGrant(sourceGrant)
           .some((candidateSource) => candidateSource.grantId === source.grantId);
-        const blockingDependents = dependentOperationsForGrant(
-          sourceGrant,
-          source.operation,
-        );
+        const blockingDependents = dependentOperationsForGrant(sourceGrant, source);
         const deletionBlocked = blockingDependents.length > 0;
         return revocable ? (
           <Tooltip
@@ -794,7 +892,7 @@ export function ObjectAuthorizeDrawer({
         locale={{ emptyText: t("systemAdmin.objectGrants.sourceEmpty") }}
         pagination={false}
         rowKey="grantId"
-        scroll={{ x: 820 }}
+        scroll={{ x: 968 }}
         size="small"
         tableLayout="fixed"
       />

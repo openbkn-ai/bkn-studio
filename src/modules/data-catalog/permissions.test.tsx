@@ -113,11 +113,11 @@ describe("data-catalog permission points", () => {
     expect(manager).toContain(dataCatalogResourceManagePermission);
   });
 
-  it("the task-management menu entry and list route require task management", () => {
+  it("the task-management menu entry and list route stay visible without task management", () => {
     const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/task-management");
 
-    expect(navigationItem?.permission).toBe("catalog:task_manage");
-    expect(guardPermissionsOf("task-management")).toEqual(["catalog:task_manage"]);
+    expect(navigationItem?.permission).toBeUndefined();
+    expect(guardPermissionsOf("task-management")).toEqual([]);
   });
 
   it("a catalog task grant opens the task-management page", () => {
@@ -130,20 +130,20 @@ describe("data-catalog permission points", () => {
     expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
   });
 
-  it("a resource-only grant can enter the catalog but not catalog task management", () => {
+  it("a resource-only grant can enter the public catalog and task lists", () => {
     const permissions = permissionsOf([
       { resource: { type: "resource", id: "*" }, operations: ["view_detail", "query_data"] },
     ]);
 
     expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
-    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(false);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
   });
 
-  it("an ungranted user cannot enter Vega list pages", () => {
+  it("an ungranted user can enter Vega list pages", () => {
     const permissions = permissionsOf([]);
 
     expect(permissions).toEqual([]);
-    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(false);
-    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(false);
+    expect(canEnter(permissions, guardPermissionsOf("data-catalog"))).toBe(true);
+    expect(canEnter(permissions, guardPermissionsOf("task-management"))).toBe(true);
   });
 });

@@ -31,13 +31,14 @@ describe("consoleNavigation — 主线菜单顺序", () => {
 });
 
 describe("filterNavByPermission — 系统管理按功能独立授权", () => {
-  it("无权限用户不显示 Vega 业务入口", () => {
+  it("无权限用户显示首页和固定业务入口", () => {
     const group = systemGroup(filterNavByPermission(consoleNavigation, []));
     expect(group).toBeUndefined();
     expect(keys(filterNavByPermission(consoleNavigation, []))).toEqual([
       "home",
       "domain-knowledge-network",
       "execution-factory",
+      "general-business-knowledge-network",
       "observability",
     ]);
   });
@@ -83,7 +84,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     expect(keys(group!.children ?? [])).toEqual(["user-management", "log-management"]);
   });
 
-  it("审计角色看不到未授权的 Vega 业务入口", () => {
+  it("审计角色仍可看到固定业务入口", () => {
     const filtered = filterNavByPermission(consoleNavigation, [
       "admin-audit:view",
       "admin-user:view",
@@ -96,26 +97,19 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
       "home",
       "domain-knowledge-network",
       "execution-factory",
+      "general-business-knowledge-network",
       "observability",
       "system-management",
     ]);
   });
 
-  it("数据资源知识网络入口按子模块权限显示", () => {
+  it("数据资源知识网络入口不依赖菜单权限", () => {
     const filtered = filterNavByPermission(consoleNavigation, []);
-    expect(filtered.find(
-      (item) => item.key === "general-business-knowledge-network",
-    )).toBeUndefined();
-
-    const authorized = filterNavByPermission(consoleNavigation, [
-      "catalog:view_detail",
-      "catalog:task_manage",
-    ]);
-    const businessGroup = authorized.find(
+    const businessGroup = filtered.find(
       (item) => item.key === "general-business-knowledge-network",
     );
 
-    expect(keys(authorized)).toContain("home");
+    expect(keys(filtered)).toContain("home");
     expect(keys(businessGroup?.children ?? [])).toEqual([
       "data-connection",
       "data-catalog",

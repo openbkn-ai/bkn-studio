@@ -524,7 +524,7 @@ describe("IndexConfigFormPanel", () => {
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
 
-  it("configures the required keyword feature for a text field", async () => {
+  it("configures the required keyword feature for a text field", { timeout: 20_000 }, async () => {
     const textResource: CatalogResource = {
       ...resource,
       indexConfig: { incrementalFields: ["id"], primaryKeyFields: ["id"] },

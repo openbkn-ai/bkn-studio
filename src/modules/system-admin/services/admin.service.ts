@@ -299,7 +299,10 @@ export async function getRole(id: string, options?: { skipErrorToast?: boolean }
   return mapRole(response.data);
 }
 
-export async function getUser(id: string): Promise<AdminUser> {
+export async function getUser(
+  id: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<AdminUser> {
   if (useMock) {
     const user = findUser(id);
     if (!user) {
@@ -307,7 +310,9 @@ export async function getUser(id: string): Promise<AdminUser> {
     }
     return wait({ ...user, departmentIds: [...(user.departmentIds ?? [])] });
   }
-  const response = await http.get<BackendUser>(`${ADMIN}/users/${encodeURIComponent(id)}`);
+  const response = await http.get<BackendUser>(`${ADMIN}/users/${encodeURIComponent(id)}`, {
+    skipErrorToast: options?.skipErrorToast,
+  });
   const mapped = mapUser(response.data, true);
   if (!mapped.roleIds.length && response.data.roles?.length) {
     mapped.roleIds = response.data.roles;

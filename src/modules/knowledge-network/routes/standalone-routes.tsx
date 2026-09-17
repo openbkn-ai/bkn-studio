@@ -31,11 +31,37 @@ import {
   RelationTypeMappingPage,
   workspaceSectionPage,
 } from "@/modules/knowledge-network/routes/lazy-pages";
+import {
+  KnowledgeNetworkChildModifyRouteGate,
+  type KnowledgeNetworkChildRecordLoader,
+} from "@/modules/knowledge-network/routes/KnowledgeNetworkChildModifyRouteGate";
 import { KnowledgeNetworkModifyRouteGate } from "@/modules/knowledge-network/routes/KnowledgeNetworkModifyRouteGate";
 import { createKnowledgeNetworkRoute } from "@/modules/knowledge-network/routes/route-factory";
+import {
+  getKnowledgeNetworkActionTypeDetail,
+  getKnowledgeNetworkConceptGroup,
+  getKnowledgeNetworkMetric,
+  getKnowledgeNetworkObjectTypeDetail,
+  getKnowledgeNetworkRelationTypeDetail,
+} from "@/modules/knowledge-network/services/knowledge-network.service";
 
 function modifyRoute(element: ReactNode) {
   return <KnowledgeNetworkModifyRouteGate>{element}</KnowledgeNetworkModifyRouteGate>;
+}
+
+function childModifyRoute(
+  element: ReactNode,
+  resourceIdParam: string,
+  loadResource: KnowledgeNetworkChildRecordLoader,
+) {
+  return (
+    <KnowledgeNetworkChildModifyRouteGate
+      loadResource={loadResource}
+      resourceIdParam={resourceIdParam}
+    >
+      {element}
+    </KnowledgeNetworkChildModifyRouteGate>
+  );
 }
 
 export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
@@ -102,7 +128,11 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.conceptGroupEditDescription",
       titleKey: "knowledgeNetwork.conceptGroupEditTitle",
     },
-    modifyRoute(<ConceptGroupEditPage />),
+    childModifyRoute(
+      <ConceptGroupEditPage />,
+      "conceptGroupId",
+      getKnowledgeNetworkConceptGroup,
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups/:conceptGroupId/detail",
@@ -190,7 +220,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.metricEditDescription",
       titleKey: "knowledgeNetwork.metricEditTitle",
     },
-    modifyRoute(<MetricEditPage />),
+    childModifyRoute(<MetricEditPage />, "metricId", getKnowledgeNetworkMetric),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/metrics/:metricId/detail",
@@ -222,7 +252,11 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.objectTypeEditDescription",
       titleKey: "knowledgeNetwork.objectTypeEditTitle",
     },
-    modifyRoute(<ObjectTypeEditPage />),
+    childModifyRoute(
+      <ObjectTypeEditPage />,
+      "objectTypeId",
+      getKnowledgeNetworkObjectTypeDetail,
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/detail",
@@ -254,7 +288,11 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.relationTypeEditDescription",
       titleKey: "knowledgeNetwork.relationTypeEditTitle",
     },
-    modifyRoute(<RelationTypeEditPage />),
+    childModifyRoute(
+      <RelationTypeEditPage />,
+      "relationTypeId",
+      getKnowledgeNetworkRelationTypeDetail,
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/relation-types/:relationTypeId/detail",
@@ -270,7 +308,11 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.relationTypeMappingDescription",
       titleKey: "knowledgeNetwork.relationTypeMappingTitle",
     },
-    modifyRoute(<RelationTypeMappingPage />),
+    childModifyRoute(
+      <RelationTypeMappingPage />,
+      "relationTypeId",
+      getKnowledgeNetworkRelationTypeDetail,
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/create",
@@ -286,7 +328,11 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeEditDescription",
       titleKey: "knowledgeNetwork.actionTypeEditTitle",
     },
-    modifyRoute(<ActionTypeEditPage />),
+    childModifyRoute(
+      <ActionTypeEditPage />,
+      "actionTypeId",
+      getKnowledgeNetworkActionTypeDetail,
+    ),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/detail",

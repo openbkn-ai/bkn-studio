@@ -10,12 +10,16 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
+import { PUBLIC_ACCESSOR_ID } from "@/modules/system-admin/utils/object-grant-guards";
 
 const mocks = vi.hoisted(() => ({
   getCachedUserSync: vi.fn(),
+  hydrateUserLookupDetails: vi.fn(),
+  isDeletedUserSync: vi.fn(),
   listObjectGrantsForObject: vi.fn(),
   listUsersPage: vi.fn(),
   revokeObjectGrantForObject: vi.fn(),
+  revokeObjectGrantsForObject: vi.fn(),
   upsertObjectGrantForObject: vi.fn(),
   useCapability: vi.fn(),
 }));
@@ -75,12 +79,16 @@ vi.mock("@/modules/system-admin/services/authz.service", () => ({
   listEnterpriseObjectGrants: vi.fn(() => Promise.resolve([])),
   listObjectGrantsForObject: mocks.listObjectGrantsForObject,
   revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
+  revokeObjectGrantsForObject: mocks.revokeObjectGrantsForObject,
   upsertObjectGrantForObject: mocks.upsertObjectGrantForObject,
 }));
 vi.mock("@/modules/system-admin/utils/audit-lookup-cache", () => ({
   getCachedDepartments: vi.fn(() => Promise.resolve([])),
   getCachedUserSync: mocks.getCachedUserSync,
   hydrateUserLookup: vi.fn(() => Promise.resolve([])),
+  hydrateUserLookupDetails: mocks.hydrateUserLookupDetails,
+  isDeletedUserSync: mocks.isDeletedUserSync,
+  isUserLookupId: (id: string) => Boolean(id) && !id.startsWith("system:"),
   primeUserLookupCache: vi.fn(),
 }));
 vi.mock("@/modules/system-admin/hooks/use-authorization-registry", () => ({
@@ -143,7 +151,18 @@ describe("ObjectAuthorizeDrawer source records", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.useCapability.mockReturnValue("available");
-    mocks.getCachedUserSync.mockReturnValue(undefined);
+    mocks.getCachedUserSync.mockImplementation((id: string) => ({
+      account: "",
+      accountType: "local",
+      email: "",
+      enabled: true,
+      id,
+      name: id,
+      roleIds: [],
+      telephone: "",
+    }));
+    mocks.hydrateUserLookupDetails.mockResolvedValue({ deleted: [], unavailable: [] });
+    mocks.isDeletedUserSync.mockReturnValue(false);
     appServices.runtimeConfig.currentUser.id = "u-admin";
     appServices.runtimeConfig.currentUser.permissions = [
       "admin-authz:grant",
@@ -204,6 +223,97 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(screen.queryByText("u-mate")).toBeNull();
   });
 
+  it("shows the actual grantor name for each independent source", async () => {
+    mocks.getCachedUserSync.mockImplementation((id: string) => id === "u-grantor"
+      ? {
+          account: "grantor.account",
+          accountType: "local",
+          email: "",
+          enabled: true,
+          id,
+          name: "Grantor B",
+          roleIds: [],
+          telephone: "",
+        }
+      : undefined);
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({ createdBy: "u-grantor" })], {
+        accessorName: "Grantee C",
+      })],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+    fireEvent.click(screen.getByText("common.viewDetails"));
+
+    expect(screen.getAllByText("systemAdmin.objectGrants.actualGrantor")).not.toHaveLength(0);
+    expect(screen.getByText("Grantor B")).not.toBeNull();
+    expect(screen.getByText("grantor.account")).not.toBeNull();
+  });
+
+  it("labels a deleted grantee without exposing its internal ID or retrying a 404", async () => {
+    mocks.getCachedUserSync.mockReturnValue(undefined);
+    mocks.isDeletedUserSync.mockImplementation((id: string) => id === "u-mate");
+    mocks.hydrateUserLookupDetails.mockResolvedValue({ deleted: ["u-mate"], unavailable: [] });
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({})])],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(screen.getByText("systemAdmin.objectGrants.deletedUser")).not.toBeNull();
+    expect(screen.queryByText("u-mate")).toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.retryGranteeLookup")).toBeNull();
+  });
+
+  it("renders a role subject without looking it up as a deleted user", async () => {
+    mocks.getCachedUserSync.mockReturnValue(undefined);
+    mocks.isDeletedUserSync.mockImplementation((id: string) => id === "role-readers");
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({ accessorId: "role-readers" })], {
+        accessorId: "role-readers",
+        accessorName: "Readers",
+        accessorType: "role",
+      })],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(screen.getByText("Readers")).not.toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
+    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith(
+      [],
+      expect.any(Object),
+    );
+  });
+
+  it("renders the public subject without looking it up as a deleted user", async () => {
+    mocks.getCachedUserSync.mockReturnValue(undefined);
+    mocks.isDeletedUserSync.mockImplementation((id: string) => id === PUBLIC_ACCESSOR_ID);
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({ accessorId: PUBLIC_ACCESSOR_ID })], {
+        accessorId: PUBLIC_ACCESSOR_ID,
+        accessorType: "public",
+      })],
+    });
+
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    expect(screen.getByText("systemAdmin.objectGrants.publicSubject")).not.toBeNull();
+    expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
+    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith(
+      [],
+      expect.any(Object),
+    );
+  });
+
   it("revokes one direct source by stable grant_id", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [grant([source({})])] });
     render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
@@ -258,7 +368,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     };
     await config.onOk();
 
-    expect(mocks.revokeObjectGrantForObject).toHaveBeenCalledWith("grant-admin-view");
+    expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledWith(["grant-admin-view"]);
   });
 
   it("keeps prerequisites selected in the explicit operation picker", async () => {
@@ -416,31 +526,73 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect((deleteActions[1].closest("button") as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("protects public and authorize-holder rows from delegate deletion", async () => {
+  it("allows one duplicate prerequisite source to be revoked", async () => {
+    const duplicateGrant = grant([
+      source({ grantId: "grant-view-a" }),
+      source({ createdBy: "u-other", grantId: "grant-view-b" }),
+      source({ grantId: "grant-resource-manage", operation: "resource_manage" }),
+    ]);
+    duplicateGrant.effectiveDecisions = [
+      { basis: "direct", decision: "allow", operation: "view_detail", requires: [] },
+      {
+        basis: "direct",
+        decision: "allow",
+        operation: "resource_manage",
+        requires: ["view_detail"],
+      },
+    ];
+    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [duplicateGrant] });
+    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    await act(async () => {});
+
+    fireEvent.click(screen.getByText("common.viewDetails"));
+    const deleteActions = screen.getAllByText("systemAdmin.objectGrants.deleteGrant");
+    expect((deleteActions[0].closest("button") as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(deleteActions[0]);
+    const confirm = appServices.modal.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await confirm.onOk();
+
+    expect(mocks.revokeObjectGrantForObject).toHaveBeenCalledWith("grant-view-a");
+  });
+
+  it("keeps a grant-only owner scoped to its own sources beside authorize", async () => {
     const publicAccessorId = "00000000-0000-0000-0000-000000000000";
     appServices.runtimeConfig.currentUser.id = "u-owner";
-    appServices.runtimeConfig.currentUser.permissions = [];
+    appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant"];
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
       grants: [
         grant(
-          [source({ accessorId: "u-owner", grantId: "owner-authorize", operation: "authorize" })],
+          [
+            source({ accessorId: "u-owner", grantId: "owner-authorize", operation: "authorize" }),
+            source({
+              accessorId: "u-owner",
+              authoritySource: "owner_delegate",
+              createdBy: "u-owner",
+              grantId: "owner-view",
+            }),
+          ],
           { accessorId: "u-owner" },
         ),
         grant(
           [source({ accessorId: publicAccessorId, grantId: "public-view" })],
           { accessorId: publicAccessorId },
         ),
-        grant([source({})]),
+        grant([source({ authoritySource: "owner_delegate", createdBy: "u-owner" })]),
+        grant(
+          [source({ accessorId: "u-other", authoritySource: "owner_delegate", createdBy: "u-another" })],
+          { accessorId: "u-other" },
+        ),
       ],
     });
 
     render(<ObjectAuthorizeDrawer objectAuthorized objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
     await act(async () => {});
 
-    expect(rowDeleteButton("u-owner").disabled).toBe(true);
-    expect(rowDeleteButton(publicAccessorId).disabled).toBe(true);
+    expect(rowDeleteButton("u-owner").disabled).toBe(false);
+    expect(rowDeleteButton("systemAdmin.objectGrants.publicSubject").disabled).toBe(true);
     expect(rowDeleteButton("u-mate").disabled).toBe(false);
+    expect(rowDeleteButton("u-other").disabled).toBe(true);
   });
 
   it("prevents a revoke-only administrator from deleting their own authorize row", async () => {

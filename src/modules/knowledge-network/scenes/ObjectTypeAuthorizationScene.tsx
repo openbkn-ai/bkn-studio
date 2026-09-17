@@ -8,6 +8,7 @@
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
+  GlobalOutlined,
   InfoCircleOutlined,
   LockOutlined,
   PlusOutlined,
@@ -79,13 +80,25 @@ import {
 import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   listObjectGrantsForObject,
-  revokeObjectGrantForObject,
+  revokeObjectGrantsForObject,
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
 import type { GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
+import {
+  getCachedUserSync,
+  hydrateUserLookupDetails,
+  isDeletedUserSync,
+  isUserLookupId,
+  primeUserLookupCache,
+} from "@/modules/system-admin/utils/audit-lookup-cache";
 import { HIDDEN_INSTANCE_OPS } from "@/modules/system-admin/utils/authz-catalog";
 import {
+  canManageGrantSource,
+  grantCreatorUserId,
+  PUBLIC_ACCESSOR_ID,
+  isRoleGrantSubject,
+  isUserDirectorySubject,
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
 } from "@/modules/system-admin/utils/object-grant-guards";
@@ -127,6 +140,7 @@ function collapseGrantSources(records: GrantRecord[]): GrantSourceRow[] {
       record.accessorId,
       record.active,
       record.authoritySource,
+      record.createdBy,
       record.effect,
       record.inherited,
       record.operation,
@@ -168,6 +182,8 @@ export function ObjectTypeAuthorizationScene() {
   const [baseBusy, setBaseBusy] = useState(false);
   const [objectGrants, setObjectGrants] = useState<ObjectGrant[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [pendingUserIds, setPendingUserIds] = useState<Set<string>>(() => new Set());
+  const [userLookupRevision, setUserLookupRevision] = useState(0);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [candidateUserId, setCandidateUserId] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
@@ -185,7 +201,26 @@ export function ObjectTypeAuthorizationScene() {
   const [draft, setDraft] = useState<Map<string, PropertyAccessSelection>>(new Map());
   const [editingMaskProperty, setEditingMaskProperty] = useState<ObjectTypeDataProperty>();
 
-  const loadBase = useCallback(async () => {
+  const syncUserLookup = useCallback(async (rawIds: string[], signal?: AbortSignal) => {
+    const ids = [...new Set(rawIds.filter(isUserLookupId))];
+    setPendingUserIds((current) => new Set([...current, ...ids]));
+    try {
+      await hydrateUserLookupDetails(ids, { signal });
+    } catch {
+      // The source rows remain readable with an unavailable-user fallback.
+    } finally {
+      if (!signal?.aborted) {
+        setPendingUserIds((current) => {
+          const next = new Set(current);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+        setUserLookupRevision((revision) => revision + 1);
+      }
+    }
+  }, []);
+
+  const loadBase = useCallback(async (signal?: AbortSignal) => {
     setBaseLoading(true);
     try {
       const [grantResult, userResult, roleResult] = await Promise.all([
@@ -193,18 +228,32 @@ export function ObjectTypeAuthorizationScene() {
         listUsersPage({ limit: 500 }, { skipErrorToast: true }).catch(() => null),
         listRoles({ withMembers: true }).catch(() => null),
       ]);
+      if (signal?.aborted) {
+        return;
+      }
+      const directoryUsers = mergeUsers(userResult?.users ?? [], grantResult.accounts);
+      primeUserLookupCache(directoryUsers);
       setObjectGrants(grantResult.grants);
-      setUsers(mergeUsers(userResult?.users ?? [], grantResult.accounts));
+      setUsers(directoryUsers);
       setRoles(roleResult ?? []);
+      // Authorization data is ready now; enrich user labels without making
+      // the page wait for every historic grantor directory lookup.
+      void syncUserLookup(grantResult.grants.flatMap((grant) => [
+        ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
+        ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
+      ]), signal);
     } catch (error) {
       void message.error(extractRequestErrorMessage(error));
     } finally {
-      setBaseLoading(false);
+      if (!signal?.aborted) {
+        setBaseLoading(false);
+      }
     }
-  }, [message, objectTypeRef]);
+  }, [message, objectTypeRef, syncUserLookup]);
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
       .then((result) => {
@@ -222,9 +271,10 @@ export function ObjectTypeAuthorizationScene() {
           setLoading(false);
         }
       });
-    void loadBase();
+    void loadBase(controller.signal);
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [loadBase, message, networkId, objectTypeId]);
 
@@ -298,6 +348,31 @@ export function ObjectTypeAuthorizationScene() {
   );
 
   const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const directoryUser = useCallback((id: string) => {
+    void userLookupRevision;
+    return userMap.get(id) ?? getCachedUserSync(id);
+  }, [userLookupRevision, userMap]);
+  const resolveGrantSubject = useCallback((grant: ObjectGrant) => {
+    const id = grant.accessorId;
+    const user = directoryUser(id);
+    const name = grantGranteeLabel(grant, user);
+    const roleSubject = isRoleGrantSubject(grant);
+    const publicSubject = grant.accessorType === "public" || id === PUBLIC_ACCESSOR_ID;
+    return {
+      account: grant.accessorAccount || user?.account,
+      name: name || (publicSubject
+        ? t("systemAdmin.objectGrants.publicSubject")
+        : roleSubject
+        ? t("systemAdmin.objectGrants.roleSubject")
+        : pendingUserIds.has(id)
+        ? t("systemAdmin.objectGrants.granteeLoading")
+        : isDeletedUserSync(id)
+          ? t("systemAdmin.objectGrants.deletedUser")
+          : t("systemAdmin.objectGrants.granteeUnresolved")),
+      publicSubject,
+      roleSubject,
+    };
+  }, [directoryUser, pendingUserIds, t]);
   const roleMap = useMemo(() => new Map(roles.map((role) => [role.id, role])), [roles]);
   const currentSubjectRecord = subjectType === "user" ? userMap.get(subjectId ?? "") : roleMap.get(subjectId ?? "");
 
@@ -585,7 +660,7 @@ export function ObjectTypeAuthorizationScene() {
   });
   const canGrant = networkAuthorized || isAdminGrantor;
   const canRevoke = networkAuthorized || isAdminRevoker;
-  const isPlatformAuthzAdmin = isAdminGrantor || isAdminRevoker;
+  const isPlatformAuthzRevoker = isAdminRevoker;
   const baseOps = useMemo(
     () => operationsForType("object_type").filter(
       (operation) =>
@@ -607,8 +682,9 @@ export function ObjectTypeAuthorizationScene() {
   );
 
   const isProtectedBaseGrant = (grant: ObjectGrant) =>
-    (!isPlatformAuthzAdmin && isDelegateProtectedGrant(grant)) ||
-    isSelfAuthorizeLockout({
+    !isPlatformAuthzRevoker && isDelegateProtectedGrant(grant);
+  const isSelfAuthorizeSourceLocked = (grant: ObjectGrant, operation: string) =>
+    operation === "authorize" && isSelfAuthorizeLockout({
       currentUserId: runtimeConfig.currentUser.id,
       grant,
       isAdminGrantor,
@@ -626,6 +702,7 @@ export function ObjectTypeAuthorizationScene() {
       source.effect === "allow" &&
       source.policySource === "professional_rule" &&
       source.authoritySource === candidateAuthoritySource &&
+      source.createdBy === runtimeConfig.currentUser.id &&
       Boolean(source.grantId),
   );
   const candidateManagedOperations = new Set(
@@ -633,7 +710,9 @@ export function ObjectTypeAuthorizationScene() {
   );
   const candidateHasDuplicateManagedOperations =
     candidateManagedSources.length !== candidateManagedOperations.size;
-  const candidateWriteLocked = candidateGrant ? isProtectedBaseGrant(candidateGrant) : false;
+  const candidateWriteLocked = candidateGrant
+    ? !isAdminGrantor && isDelegateProtectedGrant(candidateGrant)
+    : false;
   const candidateHasChanges =
     candidateHasDuplicateManagedOperations ||
     candidateOperations.length !== candidateManagedOperations.size ||
@@ -649,7 +728,8 @@ export function ObjectTypeAuthorizationScene() {
           !source.inherited &&
           source.effect === "allow" &&
           source.policySource === "professional_rule" &&
-          source.authoritySource === candidateAuthoritySource,
+          source.authoritySource === candidateAuthoritySource &&
+          source.createdBy === runtimeConfig.currentUser.id,
       )
       .map((source) => source.operation))];
     setCandidateOperations(directOperations);
@@ -710,6 +790,12 @@ export function ObjectTypeAuthorizationScene() {
         source.active &&
         !source.inherited &&
         source.policySource !== "role_permission" &&
+        canManageGrantSource({
+          currentUserId: runtimeConfig.currentUser.id,
+          isPlatformAuthzAdmin: isPlatformAuthzRevoker,
+          source,
+        }) &&
+        !isSelfAuthorizeSourceLocked(grant, source.operation) &&
         Boolean(source.grantId),
     );
 
@@ -721,7 +807,7 @@ export function ObjectTypeAuthorizationScene() {
     if (!sources.length) {
       return;
     }
-    const grantee = grantGranteeLabel(grant, userMap.get(grant.accessorId));
+    const grantee = grantGranteeLabel(grant, directoryUser(grant.accessorId));
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("systemAdmin.objectGrants.deleteGrantConfirm", {
@@ -733,9 +819,7 @@ export function ObjectTypeAuthorizationScene() {
       onOk: async () => {
         setBaseBusy(true);
         try {
-          for (const source of sources) {
-            await revokeObjectGrantForObject(source.grantId);
-          }
+          await revokeObjectGrantsForObject(sources.map((source) => source.grantId));
           setSourceAccessorId(undefined);
           await loadBase();
           void message.success(t("systemAdmin.objectGrants.toast.revoked"));
@@ -750,12 +834,32 @@ export function ObjectTypeAuthorizationScene() {
   };
 
   const sourceGrant = objectGrants.find((grant) => grant.accessorId === sourceAccessorId);
-  const sourceGrantee = sourceGrant
-    ? grantGranteeLabel(sourceGrant, userMap.get(sourceGrant.accessorId))
-    : undefined;
+  const sourceGrantee = sourceGrant ? resolveGrantSubject(sourceGrant).name : undefined;
   const sourceRows = collapseGrantSources(
     (sourceGrant?.grants ?? []).filter((source) => source.active),
   );
+
+  const resolveGrantCreator = (source: GrantRecord) => {
+    const id = grantCreatorUserId(source);
+    if (!id) {
+      return {
+        name: source.createdBy
+          ? t(`systemAdmin.objectGrants.authority.${source.authoritySource}`)
+          : t("systemAdmin.objectGrants.creatorNotRecorded"),
+      };
+    }
+    const user = directoryUser(id);
+    if (user) {
+      return { name: user.name, sub: user.account };
+    }
+    if (pendingUserIds.has(id)) {
+      return { name: t("systemAdmin.objectGrants.granteeLoading") };
+    }
+    if (isDeletedUserSync(id)) {
+      return { name: t("systemAdmin.objectGrants.deletedUser") };
+    }
+    return { name: t("systemAdmin.objectGrants.granteeUnresolved") };
+  };
 
   const allowedOperationsForGrant = (grant: ObjectGrant) => new Set(
     grant.effectiveDecisions?.length
@@ -764,20 +868,42 @@ export function ObjectTypeAuthorizationScene() {
         .map((decision) => decision.operation)
       : grant.operations,
   );
+  const blockingDependentsForSource = (source: GrantSourceRow) => {
+    if (!sourceGrant || source.effect !== "allow") {
+      return [];
+    }
+    const remainingRequirementSource = (sourceGrant.grants ?? []).some(
+      (candidate) =>
+        candidate.active &&
+        candidate.effect === "allow" &&
+        candidate.operation === source.operation &&
+        !source.grantIds.includes(candidate.grantId),
+    );
+    if (remainingRequirementSource) {
+      return [];
+    }
+    const allowedOperations = allowedOperationsForGrant(sourceGrant);
+    return baseOps.filter(
+      (operation) =>
+        allowedOperations.has(operation.key) && operation.requires.includes(source.operation),
+    );
+  };
 
   const handleDeleteSource = (source: GrantSourceRow) => {
     if (!sourceGrant || !canRevoke || isProtectedBaseGrant(sourceGrant)) {
       return;
     }
-    const allowedOperations = allowedOperationsForGrant(sourceGrant);
-    const blockingDependents = baseOps.filter(
-      (operation) =>
-        allowedOperations.has(operation.key) && operation.requires.includes(source.operation),
-    );
+    const blockingDependents = blockingDependentsForSource(source);
     if (
       !source.active ||
       source.inherited ||
       source.policySource === "role_permission" ||
+      !canManageGrantSource({
+        currentUserId: runtimeConfig.currentUser.id,
+        isPlatformAuthzAdmin: isPlatformAuthzRevoker,
+        source,
+      }) ||
+      isSelfAuthorizeSourceLocked(sourceGrant, source.operation) ||
       !source.grantIds.length ||
       blockingDependents.length
     ) {
@@ -798,9 +924,7 @@ export function ObjectTypeAuthorizationScene() {
       onOk: async () => {
         setBaseBusy(true);
         try {
-          for (const grantId of source.grantIds) {
-            await revokeObjectGrantForObject(grantId);
-          }
+          await revokeObjectGrantsForObject(source.grantIds);
           await loadBase();
           void message.success(t("systemAdmin.objectGrants.toast.revoked"));
         } catch (error) {
@@ -848,6 +972,21 @@ export function ObjectTypeAuthorizationScene() {
       width: 128,
     },
     {
+      dataIndex: "createdBy",
+      key: "createdBy",
+      render: (_createdBy: string | undefined, source) => {
+        const creator = resolveGrantCreator(source);
+        return (
+          <span className={styles.sourceOperationCell}>
+            <strong>{creator.name}</strong>
+            {creator.sub ? <small>{creator.sub}</small> : null}
+          </span>
+        );
+      },
+      title: t("systemAdmin.objectGrants.actualGrantor"),
+      width: 140,
+    },
+    {
       dataIndex: "grantId",
       ellipsis: true,
       key: "grantId",
@@ -867,13 +1006,7 @@ export function ObjectTypeAuthorizationScene() {
       align: "right",
       key: "actions",
       render: (_value, source) => {
-        const allowedOperations = sourceGrant
-          ? allowedOperationsForGrant(sourceGrant)
-          : new Set<string>();
-        const blockingDependents = baseOps.filter(
-          (operation) =>
-            allowedOperations.has(operation.key) && operation.requires.includes(source.operation),
-        );
+        const blockingDependents = blockingDependentsForSource(source);
         const protectedGrant = sourceGrant ? isProtectedBaseGrant(sourceGrant) : true;
         const deleteDisabled =
           baseBusy ||
@@ -882,6 +1015,12 @@ export function ObjectTypeAuthorizationScene() {
           !source.active ||
           source.inherited ||
           source.policySource === "role_permission" ||
+          !canManageGrantSource({
+            currentUserId: runtimeConfig.currentUser.id,
+            isPlatformAuthzAdmin: isPlatformAuthzRevoker,
+            source,
+          }) ||
+          (sourceGrant ? isSelfAuthorizeSourceLocked(sourceGrant, source.operation) : true) ||
           !source.grantIds.length ||
           blockingDependents.length > 0;
         return (
@@ -920,16 +1059,13 @@ export function ObjectTypeAuthorizationScene() {
   const baseGrantColumns: ColumnsType<ObjectGrant> = [
     {
       dataIndex: "accessorId",
-      render: (id: string, grant: ObjectGrant) => {
-        const grantee = grantGranteeLabel(grant, userMap.get(id));
-        const account = grant.accessorAccount || userMap.get(id)?.account;
+      render: (_id: string, grant: ObjectGrant) => {
+        const { account, name: displayName, publicSubject, roleSubject } = resolveGrantSubject(grant);
         return (
           <div className={styles.subjectName}>
-            <Avatar icon={<UserOutlined />} size={34} />
+            <Avatar icon={publicSubject ? <GlobalOutlined /> : roleSubject ? <TeamOutlined /> : <UserOutlined />} size={34} />
             <span>
-              <Tooltip title={grantee ? undefined : id}>
-                <strong>{grantee || t("systemAdmin.objectGrants.granteeUnresolved")}</strong>
-              </Tooltip>
+              <strong>{displayName}</strong>
               {account ? <small>{account}</small> : null}
             </span>
           </div>
@@ -1213,7 +1349,7 @@ export function ObjectTypeAuthorizationScene() {
           locale={{ emptyText: t("systemAdmin.objectGrants.sourceEmpty") }}
           pagination={false}
           rowKey={(source) => source.grantIds.join("|")}
-          scroll={{ x: 680 }}
+          scroll={{ x: 820 }}
           size="small"
           tableLayout="fixed"
         />

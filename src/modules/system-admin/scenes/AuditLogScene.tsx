@@ -188,9 +188,13 @@ export function AuditLogScene() {
       return;
     }
     const ids = collectAuditUserIds(logs);
-    void hydrateUserLookup(ids).then(() => {
-      setLookupRevision((value) => value + 1);
+    const controller = new AbortController();
+    void hydrateUserLookup(ids, { signal: controller.signal }).then(() => {
+      if (!controller.signal.aborted) {
+        setLookupRevision((value) => value + 1);
+      }
     });
+    return () => controller.abort();
   }, [logs]);
 
   useEffect(() => {

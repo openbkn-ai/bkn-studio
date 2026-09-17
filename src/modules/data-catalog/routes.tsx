@@ -41,13 +41,17 @@ function withRouteLoading(permissions: string | string[], element: ReactNode) {
   );
 }
 
+function withPublicRouteLoading(element: ReactNode) {
+  return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
+}
+
 export const dataCatalogRoutes: RouteObject[] = [
   {
     path: "data-catalog",
     handle: {
       console: dataCatalogConsole,
     },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <DataCatalogPage />),
+    element: withPublicRouteLoading(<DataCatalogPage />),
     children: [
       {
         element: <></>,
@@ -87,7 +91,7 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.indexBuildTitle",
       },
     },
-    element: withRouteLoading("catalog:task_manage", <TaskManagementPage />),
+    element: withPublicRouteLoading(<TaskManagementPage />),
   },
 ];
 

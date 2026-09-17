@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   appServices: {
     message: { error: vi.fn(), success: vi.fn() },
     modal: { confirm: vi.fn() },
-    runtimeConfig: { currentUser: { permissions: [] as string[] } },
+    runtimeConfig: { currentUser: { id: "u-owner", permissions: [] as string[] } },
   },
   getUser: vi.fn(),
   getDetail: vi.fn(),
@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   networkAuthorized: true,
   propertyCapability: "available",
   revokeObjectGrantForObject: vi.fn(),
+  revokeObjectGrantsForObject: vi.fn(),
   snapshot: {
     capabilities: ["perm_fine_grained", "perm_object_level"],
     edition: "enterprise",
@@ -95,6 +96,7 @@ vi.mock("@/modules/system-admin/services/authz.service", () => ({
   listEnterpriseObjectGrants: mocks.listEnterpriseObjectGrants,
   listObjectGrantsForObject: mocks.listObjectGrantsForObject,
   revokeObjectGrantForObject: mocks.revokeObjectGrantForObject,
+  revokeObjectGrantsForObject: mocks.revokeObjectGrantsForObject,
   upsertObjectGrantForObject: mocks.upsertObjectGrantForObject,
 }));
 
@@ -240,6 +242,133 @@ describe("ObjectTypeAuthorizationScene", () => {
     }));
   });
 
+  it("uses the public subject label in the source drawer", async () => {
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["view_detail"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+    const publicAccessorId = "00000000-0000-0000-0000-000000000000";
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [{
+        accessorId: publicAccessorId,
+        accessorType: "public",
+        grants: [{
+          accessorId: publicAccessorId,
+          active: true,
+          authoritySource: "admin_authz",
+          effect: "allow",
+          grantId: "grant-public-view",
+          inherited: false,
+          operation: "view_detail",
+          policySource: "professional_rule",
+        }],
+        objId: "network-1/object-1",
+        objName: "Customer",
+        objSub: "network-1",
+        objType: "object_type",
+        operations: ["view_detail"],
+      }],
+    });
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    const row = (await screen.findByText("systemAdmin.objectGrants.publicSubject")).closest("tr");
+    fireEvent.click(within(row as HTMLElement).getByText("common.viewDetails"));
+    const sourceDrawer = await screen.findByRole("dialog");
+    expect(within(sourceDrawer).getByText(
+      /systemAdmin\.objectGrants\.publicSubject \/ systemAdmin\.objectGrants\.grantSource/,
+    )).not.toBeNull();
+    expect(within(sourceDrawer).queryByText(publicAccessorId)).toBeNull();
+  });
+
+  it("allows an owner to revoke one duplicate prerequisite source", async () => {
+    mocks.getDetail.mockResolvedValue({
+      color: "#356af6",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Customer",
+      operations: ["view_detail", "modify"],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "",
+      updaterName: "",
+    });
+    const owner = {
+      account: "owner.b",
+      accountType: "local",
+      email: "",
+      enabled: true,
+      id: "u-owner",
+      name: "Owner B",
+      roleIds: [],
+      telephone: "",
+    };
+    mocks.listUsersPage.mockResolvedValue({ users: [owner] });
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [owner],
+      grants: [{
+        accessorId: "u-owner",
+        grants: [
+          {
+            accessorId: "u-owner", active: true, authoritySource: "owner_delegate", createdBy: "u-owner",
+            effect: "allow", grantId: "grant-view-owner", inherited: false, operation: "view_detail",
+            policySource: "professional_rule",
+          },
+          {
+            accessorId: "u-owner", active: true, authoritySource: "owner_delegate", createdBy: "u-other",
+            effect: "allow", grantId: "grant-view-other", inherited: false, operation: "view_detail",
+            policySource: "professional_rule",
+          },
+          {
+            accessorId: "u-owner", active: true, authoritySource: "owner_delegate", createdBy: "u-owner",
+            effect: "allow", grantId: "grant-modify-owner", inherited: false, operation: "modify",
+            policySource: "professional_rule",
+          },
+        ],
+        objId: "network-1/object-1",
+        objName: "Customer",
+        objSub: "network-1",
+        objType: "object_type",
+        operations: ["view_detail", "modify"],
+      }],
+    });
+
+    render(<ObjectTypeAuthorizationScene />);
+
+    const row = (await screen.findByText("Owner B")).closest("tr");
+    fireEvent.click(within(row as HTMLElement).getByText("common.viewDetails"));
+    const sourceDrawer = await screen.findByRole("dialog");
+    const deleteActions = within(sourceDrawer).getAllByText("systemAdmin.objectGrants.deleteGrant");
+    expect((deleteActions[0].closest("button") as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(deleteActions[0]);
+    const confirm = mocks.appServices.modal.confirm.mock.calls[0]?.[0] as { onOk: () => Promise<void> };
+    await act(async () => confirm.onOk());
+
+    expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledWith(["grant-view-owner"]);
+  });
+
   it("replaces the managed source with the full edited operation set", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
@@ -279,6 +408,7 @@ describe("ObjectTypeAuthorizationScene", () => {
             accessorId: "user-1",
             active: true,
             authoritySource: "owner_delegate",
+            createdBy: "u-owner",
             effect: "allow",
             grantId: "grant-view",
             inherited: false,
@@ -289,6 +419,7 @@ describe("ObjectTypeAuthorizationScene", () => {
             accessorId: "user-1",
             active: true,
             authoritySource: "owner_delegate",
+            createdBy: "u-owner",
             effect: "allow",
             grantId: "grant-modify",
             inherited: false,
@@ -371,7 +502,14 @@ describe("ObjectTypeAuthorizationScene", () => {
       roleIds: [],
       telephone: "",
     };
-    mocks.listUsersPage.mockResolvedValue({ users: [alice] });
+    const owner = {
+      ...alice,
+      account: "owner.b",
+      builtin: false,
+      id: "u-owner",
+      name: "Owner B",
+    };
+    mocks.listUsersPage.mockResolvedValue({ users: [alice, owner] });
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [alice],
       grants: [{
@@ -506,6 +644,7 @@ describe("ObjectTypeAuthorizationScene", () => {
             accessorId: "user-1",
             active: true,
             authoritySource: "admin_authz",
+            createdBy: "u-owner",
             effect: "allow",
             grantId: "grant-view",
             inherited: false,
@@ -516,6 +655,7 @@ describe("ObjectTypeAuthorizationScene", () => {
             accessorId: "user-1",
             active: true,
             authoritySource: "admin_authz",
+            createdBy: "u-owner",
             effect: "allow",
             grantId: "grant-modify",
             inherited: false,
@@ -526,6 +666,7 @@ describe("ObjectTypeAuthorizationScene", () => {
             accessorId: "user-1",
             active: true,
             authoritySource: "admin_authz",
+            createdBy: "u-owner",
             effect: "allow",
             grantId: "grant-view-duplicate",
             inherited: false,
@@ -562,6 +703,10 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(within(sourceDrawer).getByText("grant-view")).not.toBeNull();
     expect(within(sourceDrawer).getByText("grant-modify")).not.toBeNull();
     expect(within(sourceDrawer).getAllByText("view_detail")).toHaveLength(1);
+    expect(within(sourceDrawer).getAllByText("systemAdmin.objectGrants.actualGrantor"))
+      .not.toHaveLength(0);
+    expect(within(sourceDrawer).getAllByText("Owner B")).not.toHaveLength(0);
+    expect(within(sourceDrawer).getAllByText("owner.b")).not.toHaveLength(0);
     expect(within(sourceDrawer).getByText("systemAdmin.objectGrants.collapsedSourceCount"))
       .not.toBeNull();
     fireEvent.click(within(sourceDrawer).getByRole("button", { name: "Close" }));
@@ -598,10 +743,10 @@ describe("ObjectTypeAuthorizationScene", () => {
     };
     await act(async () => confirm.onOk());
 
-    expect(mocks.revokeObjectGrantForObject.mock.calls).toEqual([
-      ["grant-view"],
-      ["grant-modify"],
-      ["grant-view-duplicate"],
+    expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledWith([
+      "grant-view",
+      "grant-modify",
+      "grant-view-duplicate",
     ]);
   });
 

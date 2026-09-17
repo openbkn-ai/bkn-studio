@@ -49,7 +49,7 @@ export const dataConnectRoutes: RouteObject[] = [
         titleKey: "dataConnect.title",
       },
     },
-    element: withRouteLoading("catalog:view_detail", <DataConnectListPage />),
+    element: withPageLoading(<DataConnectListPage />),
   },
   {
     path: "data-connect/new",

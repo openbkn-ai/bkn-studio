@@ -63,14 +63,6 @@ function renderGate(
           path="/knowledge-network/workspace/:networkId/object-types/create"
         />
         <Route
-          element={
-            <KnowledgeNetworkModifyRouteGate>
-              <div>modify form</div>
-            </KnowledgeNetworkModifyRouteGate>
-          }
-          path="/knowledge-network/workspace/:networkId/object-types/:objectTypeId/edit"
-        />
-        <Route
           element={<div>overview page</div>}
           path="/knowledge-network/workspace/:networkId/overview"
         />
@@ -96,14 +88,6 @@ describe("KnowledgeNetworkModifyRouteGate", () => {
     mockedGetKnowledgeNetwork.mockResolvedValue(createRecord(["view_detail"]));
 
     renderGate();
-
-    expect(await screen.findByText("overview page")).toBeTruthy();
-  });
-
-  it("does not bypass the gate for object type editing", async () => {
-    mockedGetKnowledgeNetwork.mockResolvedValue(createRecord(["view_detail"]));
-
-    renderGate("/knowledge-network/workspace/network-1/object-types/order/edit");
 
     expect(await screen.findByText("overview page")).toBeTruthy();
   });

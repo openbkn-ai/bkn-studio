@@ -5,10 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import i18n from "@/app/locales/i18n";
 import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
+
+type MockSelectOption = { label: string; options?: MockSelectOption[]; value?: string };
 
 vi.mock("@/modules/system-admin/services/authorization-registry.service", async (importOriginal) => {
   const service = await importOriginal<typeof import("@/modules/system-admin/services/authorization-registry.service")>();
@@ -21,9 +24,15 @@ vi.mock("@/modules/system-admin/services/authorization-registry.service", async 
 
 vi.mock("antd", async (importOriginal) => ({
   ...(await importOriginal<typeof import("antd")>()),
-  Select: ({ options }: { options?: Array<{ label: string; value: string }> }) => (
+  Select: ({ options }: { options?: MockSelectOption[] }) => (
     <div role="listbox">
-      {options?.map((option) => (
+      {options?.map((option) => option.options ? (
+        <div aria-label={option.label} key={option.label} role="group">
+          {option.options.map((child) => (
+            <div key={child.value} role="option">{child.label}</div>
+          ))}
+        </div>
+      ) : (
         <div key={option.value} role="option">{option.label}</div>
       ))}
     </div>
@@ -46,6 +55,9 @@ describe("ResourceGrantEditor resource choices", () => {
   it("offers Function as its own role grant resource after the registry loads", async () => {
     render(<ResourceGrantEditor onChange={vi.fn()} value={[]} />);
 
-    expect(await screen.findByRole("option", { name: resourceTypeLabel("function") })).toBeTruthy();
+    const executionGroup = await screen.findByRole("group", {
+      name: i18n.t("systemAdmin.objectGrants.objectTypeGroups.execution"),
+    });
+    expect(within(executionGroup).getByRole("option", { name: resourceTypeLabel("function") })).toBeTruthy();
   });
 });
