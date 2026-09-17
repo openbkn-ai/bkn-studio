@@ -14,11 +14,11 @@ const operator: OperatorRecord = {
   operatorId: "operator-api", name: "API operator", version: "1", status: "published", metadataType: "openapi",
 };
 const boxes: ToolboxRecord[] = [
-  { boxId: "api-allowed", name: "API allowed", metadataType: "openapi", status: "published", operations: ["view", "modify"] },
-  { boxId: "api-view", name: "API view", metadataType: "openapi", status: "published", operations: ["view"] },
+  // The management list only projects object-grant `authorize`, not `modify`.
+  { boxId: "api-authorized", name: "API authorized", metadataType: "openapi", status: "published", operations: ["authorize"] },
   { boxId: "api-no-operations", name: "API no operations", metadataType: "openapi", status: "published" },
-  { boxId: "function", name: "Function", metadataType: "function", status: "published", operations: ["view", "modify"] },
-  { boxId: "internal", name: "Internal", metadataType: "openapi", status: "published", operations: ["modify"], isInternal: true },
+  { boxId: "function", name: "Function", metadataType: "function", status: "published", operations: ["authorize"] },
+  { boxId: "internal", name: "Internal", metadataType: "openapi", status: "published", operations: ["authorize"], isInternal: true },
 ];
 
 describe("operator conversion targets", () => {
@@ -28,9 +28,9 @@ describe("operator conversion targets", () => {
     expect(operatorConversionPermission(undefined)).toBe("");
   });
 
-  it("keeps only matching, writable, non-internal API toolboxes", () => {
+  it("keeps matching non-internal API toolboxes when the list projects only authorize", () => {
     expect(eligibleOperatorConversionTargets(operator, boxes, ["execution-factory:toolbox:edit"])
-      .map((box) => box.boxId)).toEqual(["api-allowed"]);
+      .map((box) => box.boxId)).toEqual(["api-authorized", "api-no-operations"]);
     expect(eligibleOperatorConversionTargets(operator, boxes, ["execution-factory:function:edit"])).toEqual([]);
   });
 

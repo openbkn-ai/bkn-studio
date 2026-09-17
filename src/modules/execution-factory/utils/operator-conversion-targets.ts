@@ -21,9 +21,10 @@ export function eligibleOperatorConversionTargets(
 ): ToolboxRecord[] {
   const permission = operatorConversionPermission(record?.metadataType);
   if (!permission || !currentPermissions.includes(permission)) return [];
+  // Toolbox-list operations expose object-grant authorization only. The conversion API remains the
+  // authority for the selected toolbox's object-level modification permission.
   return toolboxes.filter((toolbox) =>
     toolbox.metadataType === record?.metadataType &&
-    !toolbox.isInternal &&
-    toolbox.operations?.includes("modify") === true,
+    !toolbox.isInternal,
   );
 }
