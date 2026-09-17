@@ -363,12 +363,12 @@ export function ObjectTypeAuthorizationScene() {
       name: name || (publicSubject
         ? t("systemAdmin.objectGrants.publicSubject")
         : roleSubject
-        ? t("systemAdmin.objectGrants.roleSubject")
-        : pendingUserIds.has(id)
-        ? t("systemAdmin.objectGrants.granteeLoading")
-        : isDeletedUserSync(id)
-          ? t("systemAdmin.objectGrants.deletedUser")
-          : t("systemAdmin.objectGrants.granteeUnresolved")),
+          ? t("systemAdmin.objectGrants.roleSubject")
+          : pendingUserIds.has(id)
+            ? t("systemAdmin.objectGrants.granteeLoading")
+            : isDeletedUserSync(id)
+              ? t("systemAdmin.objectGrants.deletedUser")
+              : t("systemAdmin.objectGrants.granteeUnresolved")),
       publicSubject,
       roleSubject,
     };
@@ -940,15 +940,18 @@ export function ObjectTypeAuthorizationScene() {
   const sourceColumns: ColumnsType<GrantSourceRow> = [
     {
       key: "operation",
-      render: (_value, source) => (
-        <div className={styles.sourceOperationCell}>
-          <strong>
-            {baseOps.find((operation) => operation.key === source.operation)?.label ??
-              source.operation}
-          </strong>
-          <code>{source.operation}</code>
-        </div>
-      ),
+      render: (_value, source) => {
+        const operation = baseOps.find((candidate) => candidate.key === source.operation);
+        const description = operation?.description ?? source.operation;
+        return (
+          <Tooltip title={description}>
+            <div className={styles.sourceOperationCell}>
+              <strong>{operation?.label ?? source.operation}</strong>
+              <code>{source.operation}</code>
+            </div>
+          </Tooltip>
+        );
+      },
       title: t("systemAdmin.objectGrants.columns.operations"),
       width: 140,
     },
@@ -1027,10 +1030,10 @@ export function ObjectTypeAuthorizationScene() {
           <Tooltip
             title={blockingDependents.length
               ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
-                  dependents: blockingDependents.map((operation) => operation.label).join("、"),
-                  requirement: baseOps.find((operation) => operation.key === source.operation)?.label ??
-                    source.operation,
-                })
+                dependents: blockingDependents.map((operation) => operation.label).join("、"),
+                requirement: baseOps.find((operation) => operation.key === source.operation)?.label ??
+                  source.operation,
+              })
               : protectedGrant
                 ? t("systemAdmin.objectGrants.delegateLocked")
                 : source.inherited || source.policySource === "role_permission"
@@ -1088,11 +1091,10 @@ export function ObjectTypeAuthorizationScene() {
         return visibleDecisions.length ? (
           <div className={styles.effectivePermissions}>
             {visibleDecisions.map(({ operation, state }) => (
-              <Tooltip key={operation.key} title={operation.key}>
+              <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                 <span
-                  aria-label={t(`systemAdmin.objectGrants.permission${
-                    state === "allow" ? "Allowed" : "Denied"
-                  }`, { operation: operation.label })}
+                  aria-label={t(`systemAdmin.objectGrants.permission${state === "allow" ? "Allowed" : "Denied"
+                    }`, { operation: operation.label })}
                   className={`${styles.permissionDecision} ${styles[`permissionDecision_${state}`]}`}
                 >
                   {state === "allow" ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
@@ -1233,7 +1235,7 @@ export function ObjectTypeAuthorizationScene() {
                   ({ requirement }) => requirement.key === operation.key,
                 );
                 return (
-                  <Tooltip key={operation.key} title={operation.key}>
+                  <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                     <button
                       aria-label={operation.key}
                       aria-pressed={selected}
@@ -1259,11 +1261,11 @@ export function ObjectTypeAuthorizationScene() {
                   ? "systemAdmin.objectGrants.grantNeedsUser"
                   : candidateWriteLocked
                     ? "systemAdmin.objectGrants.delegateLocked"
-                  : !candidateOperations.length
-                    ? "systemAdmin.objectGrants.grantNeedsOperation"
-                    : !candidateHasChanges
-                      ? "systemAdmin.objectGrants.grantNoChanges"
-                    : "systemAdmin.objectGrants.grantReady",
+                    : !candidateOperations.length
+                      ? "systemAdmin.objectGrants.grantNeedsOperation"
+                      : !candidateHasChanges
+                        ? "systemAdmin.objectGrants.grantNoChanges"
+                        : "systemAdmin.objectGrants.grantReady",
                 { count: candidateOperations.length },
               )}
             </span>
@@ -1546,10 +1548,10 @@ export function ObjectTypeAuthorizationScene() {
               pagination={
                 propertyRows.length > PROPERTY_PAGE_SIZE
                   ? {
-                      defaultPageSize: PROPERTY_PAGE_SIZE,
-                      pageSizeOptions: [50, 100, 200],
-                      showSizeChanger: true,
-                    }
+                    defaultPageSize: PROPERTY_PAGE_SIZE,
+                    pageSizeOptions: [50, 100, 200],
+                    showSizeChanger: true,
+                  }
                   : false
               }
               rowKey="name"
@@ -1594,11 +1596,11 @@ export function ObjectTypeAuthorizationScene() {
               title={
                 tooManyChanges
                   ? t("knowledgeNetwork.propertyAuthorizationBatchLimit", {
-                      count: MAX_PROPERTY_GRANT_CHANGES,
-                    })
+                    count: MAX_PROPERTY_GRANT_CHANGES,
+                  })
                   : invalidMaskedProperties.length
-                  ? t("knowledgeNetwork.propertyAuthorizationMaskedMissing")
-                  : undefined
+                    ? t("knowledgeNetwork.propertyAuthorizationMaskedMissing")
+                    : undefined
               }
             >
               <span>

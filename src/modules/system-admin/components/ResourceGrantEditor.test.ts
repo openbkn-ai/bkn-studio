@@ -12,7 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const registryMocks = vi.hoisted(() => ({
   catalog: undefined as undefined | { resourceTypes: Array<{ id: string }> },
   catalogLoading: true,
-  operationsForType: vi.fn<(type: string) => Array<{ key: string; label: string; requires: string[] }>>(
+  operationsForType: vi.fn<(type: string) => Array<{ description?: string; key: string; label: string; requires: string[] }>>(
     () => [],
   ),
   resourceTypeOptions: vi.fn<() => Array<{ label: string; value: string }>>(() => []),
@@ -121,9 +121,9 @@ describe("ResourceGrantEditor operation changes", () => {
     registryMocks.catalogLoading = false;
     registryMocks.operationsForType.mockImplementation((type) => type === "catalog"
       ? [
-        { key: "view_detail", label: "View details", requires: [] },
-        { key: "create", label: "Create", requires: [] },
-        { key: "modify", label: "Modify", requires: ["view_detail"] },
+        { description: "View the data catalog details.", key: "view_detail", label: "View details", requires: [] },
+        { description: "Create a data catalog.", key: "create", label: "Create", requires: [] },
+        { description: "Modify a data catalog.", key: "modify", label: "Modify", requires: ["view_detail"] },
       ]
       : []);
     registryMocks.resourceTypeOptions.mockReturnValue([{ label: "Data catalog", value: "catalog" }]);
@@ -160,10 +160,15 @@ describe("ResourceGrantEditor operation changes", () => {
     };
 
     expect(availableOperationsForGrant(specificGrant, registryMocks.operationsForType("catalog")))
-      .toEqual([{ key: "modify", label: "Modify", requires: ["view_detail"] }]);
+      .toEqual([{
+        description: "Modify a data catalog.",
+        key: "modify",
+        label: "Modify",
+        requires: ["view_detail"],
+      }]);
   });
 
-  it("locks an existing prerequisite while a selected operation depends on it", () => {
+  it("shows an operation description and locks an existing prerequisite while a selected operation depends on it", async () => {
     mockCatalogOperations();
     const dependentGrant: ResourceGrant = {
       resource: { type: "catalog", id: "catalog-1" },
@@ -175,10 +180,16 @@ describe("ResourceGrantEditor operation changes", () => {
       value: [dependentGrant],
     }));
 
-    const viewDetails = screen.getByText("查看详情").closest(".ant-tag");
+    const viewDetails = screen.getByText("查看").closest(".ant-tag");
     const modify = screen.getByText("修改").closest(".ant-tag");
     expect(viewDetails?.querySelector(".ant-tag-close-icon")).toBeNull();
     expect(modify?.querySelector(".ant-tag-close-icon")).not.toBeNull();
     expect(container.querySelectorAll(".ant-tag-close-icon")).toHaveLength(1);
+
+    fireEvent.mouseEnter(viewDetails!);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      /View the data catalog details\.\s+该操作是已选操作的前置条件，暂不可取消/,
+    );
+    expect(viewDetails).not.toHaveAttribute("title");
   });
 });

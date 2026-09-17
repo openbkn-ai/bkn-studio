@@ -27,8 +27,9 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   authorize: "Authorize",
   create: "Create",
   create_system_agent: "Create system agent",
+  data_write: "Write data",
   delete: "Delete",
-  display: "Display",
+  display: "View",
   edit: "Edit",
   execute: "Execute",
   grant: "Grant",
@@ -45,9 +46,9 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   publish_to_be_data_flow_agent: "Publish as data flow agent",
   publish_to_be_skill_agent: "Publish as skill agent",
   publish_to_be_web_sdk_agent: "Publish as Web SDK agent",
-  query_data: "Query data",
+  query_data: "Query",
   "reset-password": "Reset password",
-  resource_manage: "Manage tables",
+  resource_manage: "Manage resources",
   revoke: "Revoke",
   run_statistics: "Run statistics",
   run_with_app: "Run with app",
@@ -59,7 +60,7 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   unpublish_other_user_agent_tpl: "Unpublish another user's agent template",
   use: "Use",
   view: "View",
-  view_detail: "View details",
+  view_detail: "View",
 };
 
 const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
@@ -101,11 +102,11 @@ const SCHEMA_KNOWLEDGE_NETWORK_CHILD_AUTHZ = ["view_detail", "query_data", "modi
 // queried. Keep this vocabulary aligned with bkn-safe's action_type catalog:
 // it has no create or query_data operation.
 const ACTION_TYPE_AUTHZ = ["view_detail", "modify", "delete", "execute"];
-// A data connection owns its tables: creating, editing and building one is judged on the catalog,
-// not on the table (openbkn-ai/bkn-foundry#986). The table itself declares only these two. Both
-// lists match the operations bkn-safe actually stores on these types.
-const CATALOG_AUTHZ = [...CATALOG_CRUD_AUTHZ, "resource_manage", "query_data"];
-const RESOURCE_AUTHZ = ["view_detail", "query_data"];
+// A data connection owns its tables: creating and building one is judged on the catalog. Resource
+// modification and deletion are still explicit resource operations, with bkn-safe falling back to
+// the parent catalog's resource_manage permission when they are not granted directly.
+const CATALOG_AUTHZ = [...CATALOG_CRUD_AUTHZ, "resource_manage", "query_data", "data_write"];
+const RESOURCE_AUTHZ = ["view_detail", "modify", "delete", "query_data", "data_write"];
 const PUBLISHABLE = [
   "view",
   "create",
@@ -219,7 +220,11 @@ export function resourceTypeLabel(type: string): string {
   });
 }
 
-export function operationLabel(_type: string, op: string): string {
+export function operationLabel(type: string, op: string): string {
+  const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${op}`;
+  if (i18n.exists(typeLabelKey)) {
+    return i18n.t(typeLabelKey);
+  }
   return i18n.t(`systemAdmin.resourceCatalog.operations.${op}`, {
     defaultValue: operationFallbackLabel(op),
   });

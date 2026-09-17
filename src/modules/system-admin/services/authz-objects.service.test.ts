@@ -113,54 +113,79 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
   });
 });
 
-describe("authz object picker domain service", () => {
+describe("authz object picker catalog service", () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
   });
 
-  it("keeps the backend total and requests the requested offset page", async () => {
+  it("keeps the backend total and requests the requested offset page through bkn-safe", async () => {
     getMock.mockResolvedValue({
-      data: { entries: [{ id: "catalog-101", name: "Beyond first page" }], total_count: 2_018 },
+      data: { entries: [{ id: "catalog-101", name: "Beyond first page" }], total: 2_018 },
     });
 
     await expect(listDomainObjectsPage("catalog", { page: 1 })).resolves.toEqual({
       items: [{ id: "catalog-101", name: "Beyond first page", type: "catalog" }], total: 2_018,
     });
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      params: { limit: 100, name: undefined, offset: 100 }, skipErrorToast: true,
+    expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
+      params: {
+        direction: "asc", limit: 100, name: undefined, offset: 100, resource_type: "catalog", sort: "name",
+      }, skipErrorToast: true,
     });
   });
 
-  it("passes a keyword to the domain API instead of filtering a loaded page", async () => {
+  it("passes a keyword to bkn-safe instead of filtering a loaded page", async () => {
     getMock.mockResolvedValue({
-      data: { entries: [{ id: "catalog-2000", name: "Needle" }], total_count: 1 },
+      data: { entries: [{ id: "catalog-2000", name: "Needle" }], total: 1 },
     });
 
     await listDomainObjectsPage("catalog", { keyword: "Needle" });
 
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      params: { limit: 100, name: "Needle", offset: 0 }, skipErrorToast: true,
+    expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
+      params: {
+        direction: "asc", limit: 100, name: "Needle", offset: 0, resource_type: "catalog", sort: "name",
+      }, skipErrorToast: true,
     });
   });
 
   it("requests the final partial page without treating it as another full page", async () => {
     getMock.mockResolvedValue({
-      data: { entries: Array.from({ length: 18 }, (_, index) => ({ id: `catalog-${index}`, name: `Catalog ${index}` })), total_count: 2_018 },
+      data: { entries: Array.from({ length: 18 }, (_, index) => ({ id: `catalog-${index}`, name: `Catalog ${index}` })), total: 2_018 },
     });
 
     const result = await listDomainObjectsPage("catalog", { page: 20 });
 
     expect(result.items).toHaveLength(18);
     expect(result.total).toBe(2_018);
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      params: { limit: 100, name: undefined, offset: 2_000 }, skipErrorToast: true,
+    expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
+      params: {
+        direction: "asc", limit: 100, name: undefined, offset: 2_000, resource_type: "catalog", sort: "name",
+      }, skipErrorToast: true,
     });
   });
 
   it("does not turn an unsupported type into a request", async () => {
     await expect(listDomainObjectsPage("object_type")).resolves.toEqual({ items: [], total: 0 });
     expect(getMock).not.toHaveBeenCalled();
+  });
+
+  it("函数集授权按工具集 box_id 取名，不走算子接口", async () => {
+    postMock.mockResolvedValue({ data: { entries: [{ id: "box-fn-1", name: "金额核对" }] } });
+
+    const [resolved] = await resolveGrantNames([{
+      accessorId: "u1",
+      objId: "box-fn-1",
+      objName: "box-fn-1",
+      objType: "function",
+      operations: ["view"],
+    }]);
+
+    expect(resolved.objName).toBe("金额核对");
+    expect(postMock).toHaveBeenCalledWith(
+      "/agent-operator-integration/v1/tool-box/names",
+      { ids: ["box-fn-1"] },
+      { skipErrorToast: true },
+    );
   });
 
   it("知识网络子对象显示业务名称和所属知识网络，而不是 opaque 复合 ID", async () => {
@@ -203,11 +228,11 @@ describe("authz object picker domain service", () => {
     expect(resolved.objSub).toBe("销售数据目录");
   });
 
-  it("顶级资源按领域接口的 offset/limit 分页，不拉取完整资源集", async () => {
+  it("顶级资源按 bkn-safe 的 offset/limit 分页，不拉取完整资源集", async () => {
     getMock.mockResolvedValue({
       data: {
         entries: [{ id: "kn-21", name: "第 21 个知识网络" }],
-        total_count: 53,
+        total: 53,
       },
     });
 
@@ -220,36 +245,30 @@ describe("authz object picker domain service", () => {
       objects: [{ id: "kn-21", name: "第 21 个知识网络", type: "knowledge_network" }],
       total: 53,
     });
-    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks", {
-      params: { limit: 20, name_pattern: "电商", offset: 20 },
+    expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
+      params: {
+        direction: "asc", limit: 20, name: "电商", offset: 20, resource_type: "knowledge_network", sort: "name",
+      },
       skipErrorToast: true,
     });
   });
 
   it("清空顶级资源类型时聚合各类型总数，仍按全局页码取资源", async () => {
-    getMock.mockImplementation((path: string, options: { params: Record<string, number> }) => {
-      const { limit, offset } = options.params;
-      if (path === "/vega-backend/v1/catalogs") {
+    getMock.mockImplementation((_path: string, options: { params: Record<string, string | number> }) => {
+      const { limit, offset, resource_type: resourceType } = options.params;
+      if (resourceType === "catalog") {
+        return Promise.resolve({ data: { entries: offset === 2 ? [{ id: "catalog-3", name: "第三个目录" }] : [], total: 3 } });
+      }
+      if (resourceType === "knowledge_network") {
         return Promise.resolve({
-          data: {
-            entries: offset === 2 ? [{ id: "catalog-3", name: "第三个目录" }] : [],
-            total_count: 3,
-          },
+          data: { entries: limit === 3 ? [
+            { id: "kn-1", name: "第一个知识网络" },
+            { id: "kn-2", name: "第二个知识网络" },
+            { id: "kn-3", name: "第三个知识网络" },
+          ] : [], total: 5 },
         });
       }
-      if (path === "/bkn-backend/v1/knowledge-networks") {
-        return Promise.resolve({
-          data: {
-            entries: limit === 3 ? [
-              { id: "kn-1", name: "第一个知识网络" },
-              { id: "kn-2", name: "第二个知识网络" },
-              { id: "kn-3", name: "第三个知识网络" },
-            ] : [],
-            total_count: 5,
-          },
-        });
-      }
-      return Promise.resolve({ data: { data: [], total: 0 } });
+      return Promise.resolve({ data: { entries: [], total: 0 } });
     });
 
     await expect(listTopLevelAuthzObjects(undefined, "", { limit: 4, offset: 2 })).resolves.toEqual({
@@ -263,54 +282,14 @@ describe("authz object picker domain service", () => {
     });
   });
 
-  it("跨类型聚合页不会把页内偏移错误换算为 page/page_size 页码", async () => {
-    const catalogs = Array.from({ length: 3 }, (_, index) => ({ id: `catalog-${index + 1}`, name: `目录 ${index + 1}` }));
-    const functionSets = Array.from({ length: 20 }, (_, index) => ({ box_id: `function-${index + 1}`, box_name: `函数集 ${index + 1}` }));
-    getMock.mockImplementation((path: string, config?: { params?: { metadata_type?: string } }) => {
-      if (path === "/vega-backend/v1/catalogs") return Promise.resolve({ data: { entries: catalogs, total_count: 3 } });
-      if (path === "/agent-operator-integration/v1/tool-box/list" && config?.params?.metadata_type === "function") {
-        return Promise.resolve({ data: { data: functionSets, total: 20 } });
-      }
-      return Promise.resolve({ data: { data: [], total: 0 } });
-    });
-
-    const firstPage = await listTopLevelAuthzObjects(undefined, "", { limit: 10, offset: 0 });
-    const secondPage = await listTopLevelAuthzObjects(undefined, "", { limit: 10, offset: 10 });
-
-    expect(firstPage.objects.map((item) => item.id)).toEqual([
-      "catalog-1", "catalog-2", "catalog-3",
-      "function-1", "function-2", "function-3", "function-4", "function-5", "function-6", "function-7",
-    ]);
-    expect(secondPage.objects.map((item) => item.id)).toEqual([
-      "function-8", "function-9", "function-10", "function-11", "function-12",
-      "function-13", "function-14", "function-15", "function-16", "function-17",
-    ]);
-  });
-
-  it("数据目录的子资源按所属目录分页，并保留后端总数", async () => {
-    getMock.mockResolvedValue({
-      data: {
-        entries: [{ id: "resource-11", name: "第 11 个资源" }],
-        total_count: 37,
-      },
-    });
+  it("父子资源接口未就绪时不再查询业务服务", async () => {
     const catalog = { id: "catalog-1", name: "销售目录", type: "catalog" } as const;
 
-    expect(listTopResourceChildCategories(catalog)).toEqual(["resource"]);
+    expect(listTopResourceChildCategories(catalog)).toEqual([]);
     await expect(listTopResourceChildren(catalog, "resource", { limit: 10, offset: 10 })).resolves.toEqual({
       category: "resource",
-      children: [{
-        category: "resource",
-        id: "resource-11",
-        name: "第 11 个资源",
-        sub: "销售目录",
-        type: "resource",
-      }],
-      total: 37,
+      children: [], total: 0,
     });
-    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
-      params: { catalog_id: "catalog-1", limit: 10, offset: 10 },
-      skipErrorToast: true,
-    });
+    expect(getMock).not.toHaveBeenCalled();
   });
 });

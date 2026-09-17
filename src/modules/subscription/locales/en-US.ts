@@ -56,7 +56,7 @@ export const subscriptionEnUS = {
         bullets: {
           b1: "Row-level permissions on object types",
           b2: "Column-level permissions on object types, four property tiers",
-          b3: "Data masking",
+          b3: "Column Masking",
           b4: "Audit of row and column permission changes",
         },
         description: "Enterprise object-rule compatibility and property-level controls",

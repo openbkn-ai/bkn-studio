@@ -11,10 +11,10 @@ import { operationsForType, WILDCARD } from "@/modules/system-admin/utils/resour
 
 const sameResource = (a: ResourceRef, b: ResourceRef) => a.type === b.type && a.id === b.id;
 
-export function availableOperationsForGrant(
+export function availableOperationsForGrant<Operation extends { key: string }>(
   grant: Pick<ResourceGrant, "resource" | "operations">,
-  definitions: ReturnType<typeof operationsForType>,
-) {
+  definitions: Operation[],
+): Operation[] {
   return definitions
     .filter((operation) => grant.resource.id === WILDCARD || !HIDDEN_INSTANCE_OPS.has(operation.key))
     .filter((operation) => !grant.operations.includes(operation.key));

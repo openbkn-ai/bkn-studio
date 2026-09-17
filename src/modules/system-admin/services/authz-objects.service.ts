@@ -5,12 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-// Resolves object IDs to names through domain services; bkn-safe does not provide this.
-// See section 7 of bkn-foundry/bkn-safe/docs/frontend-object-grants-integration.md:
-//   7.1 List instances (id + name, searchable and paginated) for the new-grant object picker.
-//   7.2 Resolve names by ID in batches for grant-list and group display.
-// Domain APIs use different field names, envelopes, and paging parameters, so normalize them to {id, name} here.
-// Used only in real mode; authz.service includes seed data for mock mode.
+// Lists authorization targets through bkn-safe and resolves existing grant IDs through domain
+// services. bkn-safe intentionally provides only the former capability. The catalog returns a
+// flat, searchable and paginated { id, name } list; existing-grant name resolution remains on
+// the domain APIs until bkn-safe adds an ID batch resolver. Used only in real mode;
+// authz.service includes seed data for mock mode.
 import { http } from "@/framework/request/http";
 import { listKnowledgeNetworkActionTypes } from "@/modules/knowledge-network/services/action-type.service";
 import { listKnowledgeNetworkConceptGroups } from "@/modules/knowledge-network/services/concept-group.service";
@@ -52,39 +51,6 @@ const str = (value: unknown): string =>
       ? String(value)
       : "";
 
-type Paging = "offset" | "page-size" | "page-page_size";
-
-type ListConfig = {
-  envelope: "entries" | "data";
-  idField: string;
-  nameField: string;
-  nameParam: string;
-  paging: Paging;
-  metadataType?: "openapi" | "function";
-  path: string;
-};
-
-// 7.1 List instances.
-const LIST_CONFIG: Record<string, ListConfig> = {
-  catalog: { path: "/vega-backend/v1/catalogs", envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
-  resource: { path: "/vega-backend/v1/resources", envelope: "entries", idField: "id", nameField: "name", nameParam: "name", paging: "offset" },
-  knowledge_network: { path: "/bkn-backend/v1/knowledge-networks", envelope: "entries", idField: "id", nameField: "name", nameParam: "name_pattern", paging: "offset" },
-  small_model: { path: "/mf-model-manager/v1/small-model/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "model_name", paging: "page-size" },
-  large_model: { path: "/mf-model-manager/v1/llm/list", envelope: "data", idField: "model_id", nameField: "model_name", nameParam: "name", paging: "page-size" },
-  // Operators are retired; keep the lookup so existing operator grants still resolve names.
-  operator: { path: "/agent-operator-integration/v1/operator/info/list", envelope: "data", idField: "operator_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-  tool_box: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "openapi" },
-  function: { path: "/agent-operator-integration/v1/tool-box/list", envelope: "data", idField: "box_id", nameField: "box_name", nameParam: "name", paging: "page-page_size", metadataType: "function" },
-  mcp: { path: "/agent-operator-integration/v1/mcp/list", envelope: "data", idField: "mcp_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-  skill: { path: "/agent-operator-integration/v1/skills", envelope: "data", idField: "skill_id", nameField: "name", nameParam: "name", paging: "page-page_size" },
-};
-
-function pagingParams(paging: Paging, offset = 0, limit = PAGE_SIZE): Record<string, number> {
-  if (paging === "offset") return { offset, limit };
-  if (paging === "page-size") return { page: Math.floor(offset / limit) + 1, size: limit };
-  return { page: Math.floor(offset / limit) + 1, page_size: limit };
-}
-
 function arrayFrom(body: unknown, key: "entries" | "data"): Record<string, unknown>[] {
   const raw = (body as Record<string, unknown>)?.[key];
   return Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
@@ -93,48 +59,25 @@ function arrayFrom(body: unknown, key: "entries" | "data"): Record<string, unkno
 type ObjectPage = { objects: AuthorizableObject[]; total: number };
 
 async function listOne(type: string, keyword: string, offset = 0, limit = PAGE_SIZE): Promise<ObjectPage> {
-  const cfg = LIST_CONFIG[type];
-  if (!cfg) {
+  if (!isAuthzObjectPickerType(type)) {
     return { objects: [], total: 0 };
   }
-
-  const toObjects = (body: Record<string, unknown>) => arrayFrom(body, cfg.envelope)
-    .map((item) => ({ type, id: str(item[cfg.idField]), name: str(item[cfg.nameField]) || str(item[cfg.idField]) }))
+  const response = await http.get<Record<string, unknown>>("/safe/v1/admin/authorization-resources", {
+    params: {
+      direction: "asc",
+      limit,
+      name: keyword || undefined,
+      offset,
+      resource_type: type,
+      sort: "name",
+    },
+    skipErrorToast: true,
+  });
+  const objects = arrayFrom(response.data, "entries")
+    .map((item) => ({ type, id: str(item.id), name: str(item.name) || str(item.id) }))
     .filter((object) => object.id);
-  const totalFrom = (body: Record<string, unknown>, fallback: number) => {
-    const total = Number(body.total_count ?? body.total ?? fallback);
-    return Number.isFinite(total) ? total : fallback;
-  };
-
-  if (cfg.paging === "offset") {
-    const response = await http.get<Record<string, unknown>>(cfg.path, {
-      params: { ...pagingParams(cfg.paging, offset, limit), [cfg.nameParam]: keyword || undefined, metadata_type: cfg.metadataType },
-      skipErrorToast: true,
-    });
-    const objects = toObjects(response.data);
-    return { objects, total: totalFrom(response.data, objects.length) };
-  }
-
-  // Page-based APIs cannot take an arbitrary offset. Fetch their stable PAGE_SIZE pages and
-  // trim the requested slice locally; using the aggregate's remaining offset as page size would
-  // otherwise turn an offset such as 7 into page 1 and duplicate the preceding seven records.
-  const pageOffset = offset % PAGE_SIZE;
-  const firstPageOffset = offset - pageOffset;
-  const pageCount = Math.ceil((pageOffset + limit) / PAGE_SIZE);
-  const responses = await Promise.all(
-    Array.from({ length: pageCount }, (_, index) => http.get<Record<string, unknown>>(cfg.path, {
-      params: {
-        ...pagingParams(cfg.paging, firstPageOffset + index * PAGE_SIZE, PAGE_SIZE),
-        [cfg.nameParam]: keyword || undefined, metadata_type: cfg.metadataType,
-      },
-      skipErrorToast: true,
-    })),
-  );
-  const objects = responses.flatMap((response) => toObjects(response.data));
-  return {
-    objects: objects.slice(pageOffset, pageOffset + limit),
-    total: totalFrom(responses[0]?.data ?? {}, objects.length),
-  };
+  const total = Number(response.data.total ?? objects.length);
+  return { objects, total: Number.isFinite(total) ? total : objects.length };
 }
 
 // List types that have a concrete-instance endpoint. Object-grant history can include additional
@@ -147,7 +90,7 @@ export async function listDomainObjects(type?: string, keyword = ""): Promise<Au
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value.objects : []));
 }
 
-/** Lists one picker type through its domain API. Errors deliberately propagate so the picker can retry. */
+/** Lists one picker type through bkn-safe. Errors deliberately propagate so the picker can retry. */
 export async function listDomainObjectsPage(
   type: string,
   { keyword = "", page = 0 }: { keyword?: string; page?: number } = {},
@@ -160,8 +103,8 @@ export async function listDomainObjectsPage(
 }
 
 /**
- * Resource roots shown by the authorization workbench. `resource` is intentionally absent: it is
- * managed below its owning catalog. Knowledge-network children are likewise loaded on expansion.
+ * Resource roots shown by the authorization workbench. Object-level resource authorization has
+ * been removed, so only resource types supported by bkn-safe are displayed.
  */
 export const TOP_LEVEL_AUTHZ_RESOURCE_TYPES = [
   "catalog",
@@ -193,7 +136,7 @@ export async function listTopLevelAuthzObjects(
   const limit = query.limit ?? PAGE_SIZE;
   if (type) return listOne(type, keyword, offset, limit);
 
-  // Domain services do not expose a shared top-resource endpoint. Build one stable virtual page
+  // bkn-safe exposes one type per request. Build one stable virtual page
   // from their totals instead of fetching just the first page from every type and silently losing
   // later resources. A type whose service is temporarily unavailable is omitted from this view;
   // selecting that type still surfaces its direct request error to the caller.
@@ -225,83 +168,25 @@ export async function listTopLevelAuthzObjects(
   return { objects: pages.flatMap((page) => page.objects), total };
 }
 
-const KNOWLEDGE_NETWORK_CHILD_CATEGORIES = [
-  "object_type",
-  "relation_type",
-  "action_type",
-  "metric",
-  "concept_group",
-] as const;
-
-const KNOWLEDGE_NETWORK_CHILD_PATHS: Record<(typeof KNOWLEDGE_NETWORK_CHILD_CATEGORIES)[number], string> = {
-  object_type: "object-types",
-  relation_type: "relation-types",
-  action_type: "action-types",
-  metric: "metrics",
-  concept_group: "concept-groups",
-};
-
 export function listTopResourceChildCategories(root: AuthorizableObject): string[] {
-  if (root.type === "catalog") return ["resource"];
-  if (root.type === "knowledge_network") return [...KNOWLEDGE_NETWORK_CHILD_CATEGORIES];
+  // The catalog API is flat for now. Parent/child authorization will be restored only after the
+  // unified catalog supports parent_type/parent_id.
+  void root;
   return [];
 }
 
-function childPage(
-  root: AuthorizableObject,
-  category: string,
-  body: unknown,
-): TopResourceChildPage {
-  const entries = arrayFrom(body, "entries");
-  const totalValue = Number((body as Record<string, unknown>)?.total_count ?? entries.length);
-  const total = Number.isFinite(totalValue) ? totalValue : entries.length;
-  return {
-    category,
-    children: entries
-      .map((item) => ({
-        category,
-        id: root.type === "knowledge_network" ? `${root.id}/${str(item.id)}` : str(item.id),
-        name: str(item.name) || str(item.id),
-        sub: root.name,
-        type: category,
-      }))
-      .filter((item) => item.id && item.name),
-    total,
-  };
-}
-
 /**
- * Lists one category below a top-level resource. Every category has independent pagination: a
- * catalog has resources, while a knowledge network has five child resource categories. Keeping
- * their pages independent avoids mixing object types, relations and actions into an unstable
- * aggregate order.
+ * Parent/child authorization is not supported by the current bkn-safe contract. Keep the export
+ * as a harmless empty result while callers migrate to the flat catalog.
  */
-export async function listTopResourceChildren(
+export function listTopResourceChildren(
   root: AuthorizableObject,
   category: string,
   query: { limit?: number; offset?: number } = {},
 ): Promise<TopResourceChildPage> {
-  const limit = query.limit ?? PAGE_SIZE;
-  const offset = query.offset ?? 0;
-  if (root.type === "catalog" && category === "resource") {
-    const response = await http.get<Record<string, unknown>>("/vega-backend/v1/resources", {
-      params: { catalog_id: root.id, limit, offset },
-      skipErrorToast: true,
-    });
-    return childPage(root, category, response.data);
-  }
-  if (root.type === "knowledge_network" && category in KNOWLEDGE_NETWORK_CHILD_PATHS) {
-    const path = KNOWLEDGE_NETWORK_CHILD_PATHS[category as keyof typeof KNOWLEDGE_NETWORK_CHILD_PATHS];
-    const response = await http.get<Record<string, unknown>>(
-      `/bkn-backend/v1/knowledge-networks/${root.id}/${path}`,
-      {
-        params: { direction: "desc", limit, offset, sort: "update_time" },
-        skipErrorToast: true,
-      },
-    );
-    return childPage(root, category, response.data);
-  }
-  return { category, children: [], total: 0 };
+  void root;
+  void query;
+  return Promise.resolve({ category, children: [], total: 0 });
 }
 
 // 7.2 Resolve names by ID in batches.
@@ -313,10 +198,11 @@ type NamesConfig =
 const NAMES_CONFIG: Record<string, NamesConfig> = {
   small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
   large_model: { kind: "post", path: "/mf-model-manager/v1/llm/names" },
+  // Function set grants carry toolbox box ids, not operator ids.
+  function: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   // Existing grants can still carry the retired operator type.
   operator: { kind: "post", path: "/agent-operator-integration/v1/operator/names" },
   tool_box: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
-  function: { kind: "post", path: "/agent-operator-integration/v1/tool-box/names" },
   skill: { kind: "post", path: "/agent-operator-integration/v1/skills/names" },
   knowledge_network: { kind: "post", path: "/bkn-backend/v1/knowledge-networks/names" },
   catalog: { kind: "vega", path: "/vega-backend/v1/catalogs" },

@@ -26,10 +26,17 @@ const ACTION_MAP: Record<string, string> = {
   "DELETE roles.permissions": "role_revoke",
   "POST role-bindings": "role_bind",
   "DELETE role-bindings": "role_unbind",
+  "PATCH property-grants": "property_grants_update",
 };
 
 export function auditActionToken(method: string, action: string): string {
   return ACTION_MAP[`${method} ${action}`] ?? "";
 }
 
-export const AUDIT_RESOURCES = ["users", "departments", "roles", "role-bindings"] as const;
+export const AUDIT_RESOURCES = [
+  "users",
+  "departments",
+  "roles",
+  "role-bindings",
+  "property-grants",
+] as const;

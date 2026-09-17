@@ -17,6 +17,7 @@ import {
 } from "@/modules/system-admin/services/authorization-registry.service";
 
 export type CatalogOperationOption = {
+  description?: string;
   key: string;
   label: string;
   requires: string[];
@@ -60,13 +61,28 @@ export function useAuthorizationRegistry() {
 
   const operationsForType = useCallback((type: string): CatalogOperationOption[] => {
     const resourceType = catalog?.resourceTypes.find((item) => item.id === type);
-    return (resourceType?.operations ?? []).map((operation) => ({
-      key: operation.id,
-      label: i18n.exists(`systemAdmin.resourceCatalog.operations.${operation.id}`)
-        ? t(`systemAdmin.resourceCatalog.operations.${operation.id}`)
-        : operation.name,
-      requires: operation.requires,
-    }));
+    return (resourceType?.operations ?? []).map((operation) => {
+      const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${operation.id}`;
+      const labelKey = `systemAdmin.resourceCatalog.operations.${operation.id}`;
+      const localizedName = i18n.exists(typeLabelKey)
+        ? t(typeLabelKey)
+        : i18n.exists(labelKey)
+          ? t(labelKey)
+          : undefined;
+      const label = (localizedName ?? operation.name) || operation.id;
+
+      const typeDescriptionKey = `systemAdmin.resourceCatalog.operationDescriptions.${type}.${operation.id}`;
+      const description = i18n.exists(typeDescriptionKey)
+        ? t(typeDescriptionKey)
+        : (operation.description ?? localizedName ?? operation.name) || operation.id;
+
+      return {
+        description,
+        key: operation.id,
+        label,
+        requires: operation.requires,
+      };
+    });
   }, [catalog, i18n, t]);
 
   const resourceTypeOptions = useCallback((types?: readonly string[]) => {

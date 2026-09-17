@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Modal, Select, Tag } from "antd";
+import { Modal, Select, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -191,7 +191,14 @@ export function CatalogAuthorizeModal({
           disabled={catalogLoading}
           mode="multiple"
           onChange={selectOperations}
-          options={catalogOps.map((op) => ({ label: op.label, value: op.key }))}
+          options={catalogOps.map((op) => ({
+            label: (
+              <Tooltip title={op.description ?? op.key}>
+                <span>{op.label}</span>
+              </Tooltip>
+            ),
+            value: op.key,
+          }))}
           placeholder={t("systemAdmin.authorize.operationsPlaceholder")}
           style={{ flex: 1, minWidth: 200 }}
           value={ops}

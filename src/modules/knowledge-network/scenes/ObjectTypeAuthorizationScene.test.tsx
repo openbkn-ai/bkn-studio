@@ -369,6 +369,9 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(mocks.revokeObjectGrantsForObject).toHaveBeenCalledWith(["grant-view-owner"]);
   });
 
+  // This exercise uses the real Ant Design directory picker and its portal options.
+  // It is consistently close to the global 10-second unit-test limit under CI load,
+  // so keep a bounded per-test allowance instead of making the suite-wide limit lax.
   it("replaces the managed source with the full edited operation set", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
@@ -471,7 +474,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     });
     expect(mocks.revokeObjectGrantForObject).not.toHaveBeenCalled();
     unmount();
-  });
+  }, 20_000);
 
   it("does not copy administrator operations into an owner grant", async () => {
     mocks.getDetail.mockResolvedValue({
