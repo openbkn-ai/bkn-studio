@@ -123,9 +123,10 @@ export function FunctionExecuteModal({
       ) : null}
       <FunctionAiGenerateModal
         initialCode={codeValue}
-        onApply={(content) => {
-          if (typeof content === "string") {
-            form.setFieldValue("code", content);
+        onApply={(result) => {
+          // This modal only edits code; inferred metadata has no field to land in here.
+          if (result.type === "code") {
+            form.setFieldValue("code", result.code);
           }
         }}
         onClose={() => setAiGenerateOpen(false)}
