@@ -64,10 +64,10 @@ const TITLE_KEY = {
   skill: "Skills",
 } as const;
 
-/** Function rows point to an editor, which requires Function edit permission. */
+/** A Function row opens its parent workbench, which supports read-only Function viewers. */
 const DETAIL_LINK_PERMISSION: Record<CapabilitySectionKind, string> = {
   api: "execution-factory:tool:view",
-  function: "execution-factory:function:edit",
+  function: "execution-factory:function:view",
   mcp: "execution-factory:mcp:view",
   skill: "execution-factory:skill:view",
 };
@@ -135,7 +135,11 @@ function referencingSources(record: CapabilityBindingRecord): CapabilitySource[]
  * Where the asset itself lives; a binding is only a reference to it. An MCP tool has no page of its
  * own — it is addressed by name inside its Server — so it points at the Server.
  */
-function executionFactoryPath(record: CapabilityBindingRecord) {
+function executionFactoryPath(record: CapabilityBindingRecord, kind: CapabilitySectionKind) {
+  if (kind === "function") {
+    return `/execution-factory/toolboxes/${record.boxId}/tools`;
+  }
+
   switch (record.capabilityType) {
     case "skill":
       return `/execution-factory/skills/${record.capabilityId}`;
@@ -311,7 +315,7 @@ export function CapabilityListPanel({
           <AppButton
             onClick={() => {
               // The detail scene's back button returns here rather than to its own list page.
-              void navigate(executionFactoryPath(record), { state: buildReturnToState(location) });
+              void navigate(executionFactoryPath(record, kind), { state: buildReturnToState(location) });
             }}
             type="link"
           >

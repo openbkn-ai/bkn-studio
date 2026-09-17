@@ -174,8 +174,8 @@ describe("CapabilityListPanel restricted empty state", () => {
   it.each([
     [
       "function",
-      "execution-factory:function:edit",
-      "/execution-factory/toolboxes/box-1/tools/capability-1/edit",
+      "execution-factory:function:view",
+      "/execution-factory/toolboxes/box-1/tools",
     ],
     [
       "api",
