@@ -38,6 +38,7 @@ describe("resource-catalog", () => {
     expect(operations).toEqual(
       expect.arrayContaining([
         "view_detail",
+        "view_summary",
         "create",
         "modify",
         "delete",
@@ -57,6 +58,23 @@ describe("resource-catalog", () => {
       "query_data",
       "data_write",
     ]);
+  });
+
+  it("keeps derived catalog summaries read-only and mirrors Vega visibility requirements", () => {
+    const catalogOperations = operationsForType("catalog");
+
+    expect(catalogOperations.find((item) => item.key === "view_summary")?.grantable).toBe(false);
+    expect(catalogOperations.find((item) => item.key === "query_data")?.requires).toEqual([
+      "view_detail",
+    ]);
+    expect(catalogOperations.find((item) => item.key === "data_write")?.requires).toEqual([
+      "view_detail",
+    ]);
+    for (const key of ["modify", "delete", "query_data", "data_write"]) {
+      expect(operationsForType("resource").find((item) => item.key === key)?.requires).toEqual([
+        "view_detail",
+      ]);
+    }
   });
 
   it("limits role grants to supported type-wide resource types", () => {
@@ -178,7 +196,7 @@ describe("resource-catalog", () => {
     ]);
   });
 
-  it("uses only catalog-declared authoring prerequisites", () => {
+  it("uses only bkn-safe-declared authoring prerequisites", () => {
     expect(
       operationsForType("action_type").find((item) => item.key === "execute")?.requires,
     ).toEqual([]);
@@ -192,7 +210,7 @@ describe("resource-catalog", () => {
     }
     expect(
       operationsForType("resource").find((item) => item.key === "query_data")?.requires,
-    ).toEqual([]);
+    ).toEqual(["view_detail"]);
   });
 
   it("localizes every knowledge-network child resource type in Chinese", async () => {

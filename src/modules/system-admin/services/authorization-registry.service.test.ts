@@ -153,7 +153,7 @@ describe("authorization registry contract", () => {
       result.current.operationsForType("catalog").find((item) => item.key === "data_write"),
     ).toMatchObject({
       description:
-        "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission.",
+        "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission. Also requires the data catalog view permission.",
       label: "Write",
     });
     expect(
@@ -166,7 +166,7 @@ describe("authorization registry contract", () => {
         result.current.operationsForType("catalog").find((item) => item.key === "data_write"),
       ).toMatchObject({
         description:
-          "仅可写入或删除数据集文档，不支持操作 MariaDB/MySQL 等物理表数据。当目录下数据资源未显式授予写入权限时，可回退到数据目录的写入权限。",
+          "仅可写入或删除数据集文档，不支持操作 MariaDB/MySQL 等物理表数据。当目录下数据资源未显式授予写入权限时，可回退到数据目录的写入权限。需要同时具有查看数据目录权限。",
         label: "写入",
       }),
     );

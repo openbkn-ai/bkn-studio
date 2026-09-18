@@ -84,6 +84,7 @@ export const systemAdminEnUS = {
         use: "Use",
         view: "View",
         view_detail: "View",
+        view_summary: "View summary",
         catalog: {
           authorize: "Authorize",
           create: "Create",
@@ -94,6 +95,7 @@ export const systemAdminEnUS = {
           resource_manage: "Manage resources",
           task_manage: "Manage tasks",
           view_detail: "View",
+          view_summary: "View summary",
         },
         resource: {
           data_write: "Write",
@@ -125,6 +127,8 @@ export const systemAdminEnUS = {
         catalog: {
           view_detail:
             "View the data catalog configuration and overview. When a data resource in the catalog is not explicitly granted view permission, access falls back to the data catalog view permission.",
+          view_summary:
+            "View the data catalog summary for navigation. bkn-safe computes this operation during authorization reads; it cannot be configured as an allow or deny rule.",
           create: "Create a data catalog.",
           modify:
             "Modify the data catalog configuration and configure its health-check schedule; this does not include data resources in the catalog. Also requires the data catalog view permission.",
@@ -136,21 +140,21 @@ export const systemAdminEnUS = {
           resource_manage:
             "Manage data resources and their configuration in the data catalog. When a data resource in the catalog is not explicitly granted modify or delete permission, access falls back to the data catalog resource-management permission. Also requires the data catalog view permission.",
           query_data:
-            "Query data in the data catalog’s resources, including datasets and physical tables. When a data resource in the catalog is not explicitly granted query permission, access falls back to the data catalog query permission.",
+            "Query data in the data catalog’s resources, including datasets and physical tables. When a data resource in the catalog is not explicitly granted query permission, access falls back to the data catalog query permission. Also requires the data catalog view permission.",
           data_write:
-            "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission.",
+            "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission. Also requires the data catalog view permission.",
         },
         resource: {
           view_detail:
             "View the data resource configuration, schema, and content. When not explicitly granted, access falls back to the parent data catalog's view permission.",
           modify:
-            "Modify the data resource configuration. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
+            "Modify the data resource configuration. When not explicitly granted, access falls back to the parent data catalog's resource-management permission. Also requires the data resource view permission.",
           delete:
-            "Delete the data resource. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
+            "Delete the data resource. When not explicitly granted, access falls back to the parent data catalog's resource-management permission. Also requires the data resource view permission.",
           query_data:
-            "Query data in the data resource. When not explicitly granted, access falls back to the parent data catalog's query permission.",
+            "Query data in the data resource. When not explicitly granted, access falls back to the parent data catalog's query permission. Also requires the data resource view permission.",
           data_write:
-            "Write or delete dataset documents only; physical-table data cannot be modified. When not explicitly granted, access falls back to the parent data catalog's data-write permission.",
+            "Write or delete dataset documents only; physical-table data cannot be modified. When not explicitly granted, access falls back to the parent data catalog's data-write permission. Also requires the data resource view permission.",
         },
         connector_type: {
           view_detail: "View detailed configuration and content for the connector type.",

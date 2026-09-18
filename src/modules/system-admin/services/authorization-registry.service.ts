@@ -139,7 +139,7 @@ export function mockAuthorizationRegistry(): AuthorizationRegistry {
       operations: mockOperationsForType(resourceType.type).map((operation) => ({
         id: operation.key,
         name: operation.label,
-        grantable: true,
+        grantable: operation.grantable !== false,
         requires: operation.requires,
       })),
     })),

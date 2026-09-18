@@ -238,8 +238,18 @@ let roles: AdminRole[] = [
     builtin: true,
     source: "business",
     permissions: [
-      grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
-      grant("resource", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
+      grant("catalog", "*", [
+        "view_detail",
+        "create",
+        "modify",
+        "delete",
+        "authorize",
+        "task_manage",
+        "resource_manage",
+        "query_data",
+        "data_write",
+      ]),
+      grant("resource", "*", ["view_detail", "modify", "delete", "query_data", "data_write"]),
       grant("knowledge_network", "*", [
         "view_detail",
         "create",

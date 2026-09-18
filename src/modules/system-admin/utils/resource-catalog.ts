@@ -8,6 +8,7 @@
 import i18n from "@/app/locales/i18n";
 
 export type OperationDef = {
+  grantable?: boolean;
   key: string;
   label: string;
   /** Authoring prerequisite. Effective availability still comes exclusively from bkn-safe. */
@@ -61,6 +62,7 @@ const OPERATION_FALLBACK_LABELS: Record<string, string> = {
   use: "Use",
   view: "View",
   view_detail: "View",
+  view_summary: "View summary",
 };
 
 const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
@@ -112,7 +114,14 @@ const ACTION_TYPE_AUTHZ = ["view_detail", "modify", "delete", "execute"];
 // A data connection owns its tables: creating and building one is judged on the catalog. Resource
 // modification and deletion are still explicit resource operations, with bkn-safe falling back to
 // the parent catalog's resource_manage permission when they are not granted directly.
-const CATALOG_AUTHZ = [...CATALOG_CRUD_AUTHZ, "resource_manage", "query_data", "data_write"];
+const CATALOG_AUTHZ = [
+  "view_detail",
+  "view_summary",
+  ...CATALOG_CRUD_AUTHZ.slice(1),
+  "resource_manage",
+  "query_data",
+  "data_write",
+];
 const RESOURCE_AUTHZ = ["view_detail", "modify", "delete", "query_data", "data_write"];
 const PUBLISHABLE = [
   "view",
@@ -239,6 +248,7 @@ export function operationLabel(type: string, op: string): string {
 
 export function operationsForType(type: string): OperationDef[] {
   return (byType.get(type)?.operations ?? []).map((op) => ({
+    ...(op === "view_summary" ? { grantable: false } : {}),
     key: op,
     label: operationLabel(type, op),
     requires: requiredOperationsFor(type, op),
@@ -252,7 +262,13 @@ export function requiredOperationsFor(type: string, operation: string): string[]
 // Demo-mode fixture only. Production authoring reads the same explicit edges
 // from bkn-safe's /authz/registry endpoint; never infer an edge from a verb.
 const LOCAL_OPERATION_REQUIREMENTS: Record<string, string[]> = {
+  "catalog:query_data": ["view_detail"],
+  "catalog:data_write": ["view_detail"],
   "catalog:resource_manage": ["view_detail"],
+  "resource:modify": ["view_detail"],
+  "resource:delete": ["view_detail"],
+  "resource:query_data": ["view_detail"],
+  "resource:data_write": ["view_detail"],
   "connector_type:modify": ["view_detail"],
   "connector_type:delete": ["view_detail"],
   "connector_type:authorize": ["view_detail"],
