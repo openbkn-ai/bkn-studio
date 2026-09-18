@@ -332,7 +332,9 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
       }),
     );
 
-    const [, , granteePicker] = screen.getAllByRole("combobox");
+    const granteePicker = await screen.findByRole("combobox", {
+      name: "systemAdmin.objectGrants.pickerGranteePlaceholder",
+    });
     fireEvent.mouseDown(granteePicker);
     fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
