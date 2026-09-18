@@ -162,6 +162,17 @@ describe("ResourceListPanel", () => {
     );
   });
 
+  it("does not render a resize handle for the resource-name column", async () => {
+    renderPanel(catalog);
+
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ direction: "asc", sort: "name" }),
+      ),
+    );
+    expect(screen.queryByRole("separator")).toBeNull();
+  });
+
   // The bug: the button asked for admin-authz:grant, which no network_builder holds, so the person
   // who created the data connection could not share it — while bkn-safe was already accepting the
   // grant from them on /me/object-grants.

@@ -14,7 +14,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -148,17 +148,6 @@ export function ResourceListPanel({
   const [resourceLoadError, setResourceLoadError] = useState<string | null>(null);
   const [authorizeOpen, setAuthorizeOpen] = useState(false);
   const [authorizeResource, setAuthorizeResource] = useState<CatalogResource | null>(null);
-  const [nameColumnWidth, setNameColumnWidth] = useState(() => {
-    try {
-      const value = window.localStorage.getItem("data-catalog.resourceNameColumnWidth");
-      const parsed = value ? Number(value) : NaN;
-      return Number.isFinite(parsed) && parsed >= 160 ? parsed : 260;
-    } catch {
-      return 260;
-    }
-  });
-  const resizingRef = useRef<{ startX: number; startWidth: number } | null>(null);
-
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
@@ -253,39 +242,6 @@ export function ResourceListPanel({
     statusFilter,
   ]);
 
-  useEffect(() => {
-    const handleMove = (event: MouseEvent) => {
-      if (!resizingRef.current) {
-        return;
-      }
-      const delta = event.clientX - resizingRef.current.startX;
-      const next = Math.max(160, resizingRef.current.startWidth + delta);
-      setNameColumnWidth(next);
-    };
-
-    const handleUp = () => {
-      if (!resizingRef.current) {
-        return;
-      }
-      resizingRef.current = null;
-      try {
-        window.localStorage.setItem(
-          "data-catalog.resourceNameColumnWidth",
-          String(nameColumnWidth),
-        );
-      } catch {
-        // ignore
-      }
-    };
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-  }, [nameColumnWidth]);
-
   const resourceColumns: ColumnsType<CatalogResource> = [
     {
       dataIndex: "name",
@@ -294,21 +250,8 @@ export function ResourceListPanel({
       sorter: true,
       sortDirections: ["ascend", "descend"],
       sortOrder: nameSortDirection === "asc" ? "ascend" : "descend",
-      width: nameColumnWidth,
-      title: (
-        <div className={styles.resizableHeader}>
-          <span>{t("dataCatalog.resource.name")}</span>
-          <span
-            className={styles.resizeHandle}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              resizingRef.current = { startX: event.clientX, startWidth: nameColumnWidth };
-            }}
-            role="separator"
-          />
-        </div>
-      ),
+      width: 260,
+      title: t("dataCatalog.resource.name"),
       render: (_, record) => {
         const displayName = deriveDisplayName(record, catalog.connectorType);
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
