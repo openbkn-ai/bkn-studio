@@ -119,12 +119,17 @@ jobs:
           # Discover all boundary-test files to keep this safety net in sync
           # when a boundary contract is added or renamed.
           mapfile -d '' -t boundary_tests < <(
-            rg --files -0 -g '*boundary.test.ts' -g '*boundary.test.tsx' | sort -z
+            find . \
+              \( -path './.git' -o -path './node_modules' -o -path './dist' -o -path './.claude' \) -prune -o \
+              -type f \( -name '*boundary.test.ts' -o -name '*boundary.test.tsx' \) -print0 | sort -z
           )
 
-          if [ "${#boundary_tests[@]}" -gt 0 ]; then
-            pnpm exec vitest --run "${boundary_tests[@]}"
+          if [ "${#boundary_tests[@]}" -eq 0 ]; then
+            echo "No boundary contract tests were discovered." >&2
+            exit 1
           fi
+
+          pnpm exec vitest --run "${boundary_tests[@]}"
 
       - name: Type check
         run: pnpm exec tsc -b --pretty false
