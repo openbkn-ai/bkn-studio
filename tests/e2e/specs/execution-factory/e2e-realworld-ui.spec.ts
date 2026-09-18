@@ -12,10 +12,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { apiUrl, assertBackendReady } from "../../helpers/common";
-import {
-  cloneToolboxImpexForCreate,
-  buildImpexImportName,
-} from "../../helpers/impex";
+import { cloneToolboxImpexForCreate, buildImpexImportName } from "../../helpers/impex";
 import {
   debugToolFromToolsPage,
   debugMcpToolFromDetailPage,
@@ -33,13 +30,14 @@ import {
 import { buildMultiEndpointOpenApiSpec } from "../../helpers/toolbox";
 import { buildUniqueName } from "../../helpers/common";
 import { buildLogBridgeLogsUrl } from "../../helpers/log-bridge";
-import { AMAP_MCP_SSE_URL, LOCAL_MCP_SSE_DOCKER_URL, parseMcpSseViaApi } from "../../helpers/mcp-realworld";
+import {
+  AMAP_MCP_SSE_URL,
+  LOCAL_MCP_SSE_DOCKER_URL,
+  parseMcpSseViaApi,
+} from "../../helpers/mcp-realworld";
 import { buildOfflineWeatherApiUrl } from "../../helpers/oss-mock";
 import { cleanupMcpViaApi } from "../../helpers/mcp";
-import {
-  cleanupOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
+import { cleanupOperatorViaApi, type RegisteredOperator } from "../../helpers/operator";
 import {
   buildSkillName,
   buildSkillZipBuffer,
@@ -234,7 +232,9 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
     const operatorBody = (await operators.json()) as {
       data?: Array<{ operator_id: string; name?: string; version?: string }>;
     };
-    const created = operatorBody.data?.find((item) => item.name === toolName || item.name === operatorName);
+    const created = operatorBody.data?.find(
+      (item) => item.name === toolName || item.name === operatorName,
+    );
     if (created?.operator_id && created.version) {
       createdOperators.push({
         operatorId: created.operator_id,
@@ -284,9 +284,7 @@ test.describe("Execution Factory — Realworld UI scenarios", () => {
     expect(boxId).toBeTruthy();
     createdBoxIds.push(boxId);
 
-    const tools = await request.get(
-      apiUrl(`/tool-box/${boxId}/tools/list?page=1&page_size=20`),
-    );
+    const tools = await request.get(apiUrl(`/tool-box/${boxId}/tools/list?page=1&page_size=20`));
     expect(tools.ok()).toBeTruthy();
     const toolsBody = (await tools.json()) as {
       data?: unknown[];

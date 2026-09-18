@@ -97,17 +97,15 @@ describe("isCapabilityAvailable", () => {
   });
 
   it("装了没买也不可用", () => {
-    expect(
-      isCapabilityAvailable("rbac_basic", snapshot({ extensions: ["rbac_basic"] })),
-    ).toBe(false);
+    expect(isCapabilityAvailable("rbac_basic", snapshot({ extensions: ["rbac_basic"] }))).toBe(
+      false,
+    );
   });
 });
 
 describe("shouldOfferUpgrade", () => {
   it("只有装了没买才出升级引导", () => {
-    expect(
-      shouldOfferUpgrade("rbac_basic", snapshot({ extensions: ["rbac_basic"] })),
-    ).toBe(true);
+    expect(shouldOfferUpgrade("rbac_basic", snapshot({ extensions: ["rbac_basic"] }))).toBe(true);
   });
 
   // 买了证书也用不了，因为镜像里压根没这段代码——这种引导是在卖一个解决不了问题

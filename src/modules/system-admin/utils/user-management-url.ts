@@ -100,10 +100,7 @@ export function readSelectedDeptId(params: URLSearchParams): string | null {
   return readUserManagementFilters(params).deptId;
 }
 
-export function applySelectedDeptId(
-  base: URLSearchParams,
-  deptId: string | null,
-): URLSearchParams {
+export function applySelectedDeptId(base: URLSearchParams, deptId: string | null): URLSearchParams {
   return applyUserManagementFilters(base, {
     ...readUserManagementFilters(base),
     deptId,

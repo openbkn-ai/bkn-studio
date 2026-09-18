@@ -166,28 +166,21 @@ function filterMockModelQuotas(query: ModelQuotaListQuery): ModelQuotaListResult
   };
 }
 
-export async function listModelQuotas(
-  query: ModelQuotaListQuery,
-): Promise<ModelQuotaListResult> {
+export async function listModelQuotas(query: ModelQuotaListQuery): Promise<ModelQuotaListResult> {
   if (useMock) {
     return filterMockModelQuotas(query);
   }
 
-  const response = await http.get<BackendModelQuotaListResponse>(
-    `${API_PREFIX}/model-quota/list`,
-    {
-      params: {
-        page: query.page,
-        size: query.size,
-        order: query.order ?? "desc",
-        rule: query.rule ?? "update_time",
-        name: query.name ?? "",
-        ...(query.apiModel && query.apiModel !== "all"
-          ? { api_model: query.apiModel }
-          : {}),
-      },
+  const response = await http.get<BackendModelQuotaListResponse>(`${API_PREFIX}/model-quota/list`, {
+    params: {
+      page: query.page,
+      size: query.size,
+      order: query.order ?? "desc",
+      rule: query.rule ?? "update_time",
+      name: query.name ?? "",
+      ...(query.apiModel && query.apiModel !== "all" ? { api_model: query.apiModel } : {}),
     },
-  );
+  });
 
   const payload = response.data;
 
@@ -313,11 +306,9 @@ export async function listUserQuotas(confId: string): Promise<UserQuotaListResul
     const quota = mockModelQuotas.find((item) => item.confId === confId);
     const items = mockUserQuotas.filter((item) => item.modelQuotaId === confId);
     const inputRemain =
-      (quota?.inputTokens ?? 0) -
-      items.reduce((sum, item) => sum + (item.inputTokens ?? 0), 0);
+      (quota?.inputTokens ?? 0) - items.reduce((sum, item) => sum + (item.inputTokens ?? 0), 0);
     const outputRemain =
-      (quota?.outputTokens ?? 0) -
-      items.reduce((sum, item) => sum + (item.outputTokens ?? 0), 0);
+      (quota?.outputTokens ?? 0) - items.reduce((sum, item) => sum + (item.outputTokens ?? 0), 0);
 
     return {
       items,
@@ -326,18 +317,15 @@ export async function listUserQuotas(confId: string): Promise<UserQuotaListResul
     };
   }
 
-  const response = await http.get<BackendUserQuotaListResponse>(
-    `${API_PREFIX}/user-quota/list`,
-    {
-      params: {
-        conf_id: confId,
-        page: 1,
-        size: 1000,
-        rule: "update_time",
-        order: "desc",
-      },
+  const response = await http.get<BackendUserQuotaListResponse>(`${API_PREFIX}/user-quota/list`, {
+    params: {
+      conf_id: confId,
+      page: 1,
+      size: 1000,
+      rule: "update_time",
+      order: "desc",
     },
-  );
+  });
   const payload = response.data;
 
   return {
@@ -355,12 +343,14 @@ export async function saveUserQuotas(items: UserQuotaSaveItem[]): Promise<boolea
   if (useMock) {
     items.forEach((item) => {
       const existingIndex = mockUserQuotas.findIndex(
-        (record) =>
-          record.modelQuotaId === item.modelQuotaId && record.userId === item.userId,
+        (record) => record.modelQuotaId === item.modelQuotaId && record.userId === item.userId,
       );
 
       const nextRecord: UserQuotaRecord = {
-        userQuotaId: existingIndex >= 0 ? mockUserQuotas[existingIndex].userQuotaId : `uq-${mockUserQuotas.length + 1}`,
+        userQuotaId:
+          existingIndex >= 0
+            ? mockUserQuotas[existingIndex].userQuotaId
+            : `uq-${mockUserQuotas.length + 1}`,
         userId: item.userId,
         userName: item.userName,
         inputTokens: item.inputTokens,

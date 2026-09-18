@@ -36,14 +36,22 @@ function propertiesOf(schema: unknown): JsonRecord {
 
 function requiredOf(schema: unknown): Set<string> {
   const record = asRecord(schema);
-  return new Set(Array.isArray(record?.required) ? record.required.filter((value): value is string => typeof value === "string") : []);
+  return new Set(
+    Array.isArray(record?.required)
+      ? record.required.filter((value): value is string => typeof value === "string")
+      : [],
+  );
 }
 
 function typeOf(schema: unknown): string {
   const record = asRecord(schema);
   if (!record) return "unknown";
   const declared = record.type;
-  if (Array.isArray(declared)) return declared.filter((value): value is string => typeof value === "string").join(" | ") || "unknown";
+  if (Array.isArray(declared))
+    return (
+      declared.filter((value): value is string => typeof value === "string").join(" | ") ||
+      "unknown"
+    );
   if (typeof declared === "string") {
     if (declared !== "array") return declared;
     const itemType = typeOf(record.items);
@@ -54,7 +62,13 @@ function typeOf(schema: unknown): string {
   return "unknown";
 }
 
-function fieldOf(name: string, schema: unknown, path: string, depth: number, required: boolean): McpSchemaField {
+function fieldOf(
+  name: string,
+  schema: unknown,
+  path: string,
+  depth: number,
+  required: boolean,
+): McpSchemaField {
   const record = asRecord(schema) ?? {};
   return {
     name,
@@ -73,17 +87,24 @@ function nestedFields(schema: unknown, path: string, depth: number): McpSchemaDo
   const record = asRecord(schema);
   if (!record) return { fields: [], truncated: false };
   const objectSchema = record.type === "array" ? record.items : schema;
-  if (depth >= 4) return { fields: [], truncated: Object.keys(propertiesOf(objectSchema)).length > 0 };
+  if (depth >= 4)
+    return { fields: [], truncated: Object.keys(propertiesOf(objectSchema)).length > 0 };
   const props = propertiesOf(objectSchema);
   const required = requiredOf(objectSchema);
   const suffix = record.type === "array" ? "[]" : "";
-  return Object.entries(props).reduce<McpSchemaDocumentation>((documentation, [name, child]) => {
-    const childPath = `${path}${suffix}.${name}`;
-    const nested = nestedFields(child, childPath, depth + 1);
-    documentation.fields.push(fieldOf(name, child, childPath, depth, required.has(name)), ...nested.fields);
-    documentation.truncated ||= nested.truncated;
-    return documentation;
-  }, { fields: [], truncated: false });
+  return Object.entries(props).reduce<McpSchemaDocumentation>(
+    (documentation, [name, child]) => {
+      const childPath = `${path}${suffix}.${name}`;
+      const nested = nestedFields(child, childPath, depth + 1);
+      documentation.fields.push(
+        fieldOf(name, child, childPath, depth, required.has(name)),
+        ...nested.fields,
+      );
+      documentation.truncated ||= nested.truncated;
+      return documentation;
+    },
+    { fields: [], truncated: false },
+  );
 }
 
 /** Flattens object and array properties while retaining an indentation depth for rendering. */
@@ -95,19 +116,32 @@ export function schemaFields(schema: unknown): McpSchemaField[] {
 export function schemaDocumentation(schema: unknown): McpSchemaDocumentation {
   const props = propertiesOf(schema);
   const required = requiredOf(schema);
-  return Object.entries(props).reduce<McpSchemaDocumentation>((documentation, [name, child]) => {
-    const nested = nestedFields(child, name, 1);
-    documentation.fields.push(fieldOf(name, child, name, 0, required.has(name)), ...nested.fields);
-    documentation.truncated ||= nested.truncated;
-    return documentation;
-  }, { fields: [], truncated: false });
+  return Object.entries(props).reduce<McpSchemaDocumentation>(
+    (documentation, [name, child]) => {
+      const nested = nestedFields(child, name, 1);
+      documentation.fields.push(
+        fieldOf(name, child, name, 0, required.has(name)),
+        ...nested.fields,
+      );
+      documentation.truncated ||= nested.truncated;
+      return documentation;
+    },
+    { fields: [], truncated: false },
+  );
 }
 
 /** Separates Studio-managed lifecycle data from parameters a person is expected to choose. */
-export function splitInputSchemaFields(schema: unknown): { businessFields: McpSchemaField[]; traceFields: McpSchemaField[]; truncated: boolean } {
+export function splitInputSchemaFields(schema: unknown): {
+  businessFields: McpSchemaField[];
+  traceFields: McpSchemaField[];
+  truncated: boolean;
+} {
   const documentation = schemaDocumentation(schema);
   const { fields } = documentation;
-  const isTraceField = (field: McpSchemaField) => field.path === "bkn_context" || field.path.startsWith("bkn_context.") || field.path.startsWith("bkn_context[]");
+  const isTraceField = (field: McpSchemaField) =>
+    field.path === "bkn_context" ||
+    field.path.startsWith("bkn_context.") ||
+    field.path.startsWith("bkn_context[]");
   return {
     businessFields: fields.filter((field) => !isTraceField(field)),
     traceFields: fields.filter(isTraceField),

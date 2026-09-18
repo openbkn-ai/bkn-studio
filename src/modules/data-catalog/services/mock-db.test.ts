@@ -7,10 +7,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  isIncrementalField,
-  isPrimaryKeyField,
-} from "@/modules/data-catalog/lib/build-guards";
+import { isIncrementalField, isPrimaryKeyField } from "@/modules/data-catalog/lib/build-guards";
 
 import {
   mockBuildTasks,
@@ -37,9 +34,24 @@ describe("data catalog discover-status mocks", () => {
 
   it("uses only Vega canonical field types", () => {
     const canonicalTypes = new Set([
-      "integer", "unsigned integer", "float", "decimal", "string", "text",
-      "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
-      "json", "point", "shape", "vector", "other",
+      "integer",
+      "unsigned integer",
+      "float",
+      "decimal",
+      "string",
+      "text",
+      "date",
+      "time",
+      "datetime",
+      "timestamp",
+      "ip",
+      "boolean",
+      "binary",
+      "json",
+      "point",
+      "shape",
+      "vector",
+      "other",
     ]);
 
     expect(
@@ -54,11 +66,25 @@ describe("data catalog discover-status mocks", () => {
   it("provides a 20-field index configuration demo with supported and fallback source types", () => {
     const resource = mockResources.find((item) => item.id === "res-index-config-demo");
     expect(resource?.schema).toHaveLength(20);
-    expect(new Set(resource?.schema.map((field) => field.type))).toEqual(new Set([
-      "integer", "unsigned integer", "float", "decimal", "string", "text",
-      "date", "time", "datetime", "timestamp", "ip", "boolean", "binary",
-      "json", "other",
-    ]));
+    expect(new Set(resource?.schema.map((field) => field.type))).toEqual(
+      new Set([
+        "integer",
+        "unsigned integer",
+        "float",
+        "decimal",
+        "string",
+        "text",
+        "date",
+        "time",
+        "datetime",
+        "timestamp",
+        "ip",
+        "boolean",
+        "binary",
+        "json",
+        "other",
+      ]),
+    );
     expect(resource?.sourceMetadata).toEqual({
       foreignKeyCount: 1,
       indexCount: 3,
@@ -85,9 +111,7 @@ describe("data catalog discover-status mocks", () => {
   });
 
   it("provides a non-dataset resource with view-detail-only permissions", () => {
-    const resource = mockResources.find(
-      (item) => item.id === "res-permission-limited-orders",
-    );
+    const resource = mockResources.find((item) => item.id === "res-permission-limited-orders");
 
     expect(resource).toMatchObject({
       catalogId: "cat-008",
@@ -97,17 +121,17 @@ describe("data catalog discover-status mocks", () => {
     });
   });
 
-  it.each([
-    "res-permission-limited-orders",
-    "res-summary-only-orders",
-  ])("provides all feature types for the view-detail-only Resource %s", (resourceId) => {
-    const resource = mockResources.find((item) => item.id === resourceId);
-    const featureTypes = resource?.schema.flatMap((field) => (
-      field.features?.map((feature) => feature.featureType) ?? []
-    ));
+  it.each(["res-permission-limited-orders", "res-summary-only-orders"])(
+    "provides all feature types for the view-detail-only Resource %s",
+    (resourceId) => {
+      const resource = mockResources.find((item) => item.id === resourceId);
+      const featureTypes = resource?.schema.flatMap(
+        (field) => field.features?.map((feature) => feature.featureType) ?? [],
+      );
 
-    expect(featureTypes).toEqual(expect.arrayContaining(["keyword", "fulltext", "vector"]));
-  });
+      expect(featureTypes).toEqual(expect.arrayContaining(["keyword", "fulltext", "vector"]));
+    },
+  );
 
   it("provides a visible Resource for the summary-only Catalog mock", () => {
     const resource = mockResources.find((item) => item.id === "res-summary-only-orders");
@@ -149,59 +173,52 @@ describe("data catalog discover-status mocks", () => {
   });
 
   it("completes build-task catalog and resource references", () => {
-    expect(mockBuildTasks).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        catalogId: "cat-001",
-        catalogName: "customer_master",
-        resourceId: "res-customers",
-        resourceName: "customers",
-      }),
-    ]));
+    expect(mockBuildTasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          catalogId: "cat-001",
+          catalogName: "customer_master",
+          resourceId: "res-customers",
+          resourceName: "customers",
+        }),
+      ]),
+    );
   });
 
   it("includes a completed batch task with no source rows", () => {
-    expect(mockBuildTasks).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: "bt-empty-01",
-        status: "completed",
-        syncedCount: 0,
-        totalCount: 0,
-      }),
-    ]));
+    expect(mockBuildTasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "bt-empty-01",
+          status: "completed",
+          syncedCount: 0,
+          totalCount: 0,
+        }),
+      ]),
+    );
   });
 
   it("includes a partially progressed cancelled batch task", () => {
-    expect(mockBuildTasks).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: "bt-cancelled-01",
-        status: "cancelled",
-        syncedCount: 24_030,
-        totalCount: 96_120,
-      }),
-    ]));
+    expect(mockBuildTasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "bt-cancelled-01",
+          status: "cancelled",
+          syncedCount: 24_030,
+          totalCount: 96_120,
+        }),
+      ]),
+    );
   });
 
   it("covers every Vega build-task status", () => {
-    expect(new Set(mockBuildTasks.map((task) => task.status))).toEqual(new Set([
-      "pending",
-      "running",
-      "stopping",
-      "stopped",
-      "completed",
-      "failed",
-      "cancelled",
-    ]));
+    expect(new Set(mockBuildTasks.map((task) => task.status))).toEqual(
+      new Set(["pending", "running", "stopping", "stopped", "completed", "failed", "cancelled"]),
+    );
   });
 
   it("provides one resource for every discover status in customer_master", () => {
-    const expectedStatuses = [
-      "error",
-      "missing",
-      "new",
-      "restored",
-      "unchanged",
-      "updated",
-    ];
+    const expectedStatuses = ["error", "missing", "new", "restored", "unchanged", "updated"];
     const resources = mockResources.filter(
       (resource) =>
         resource.catalogId === "cat-001" &&
@@ -212,9 +229,7 @@ describe("data catalog discover-status mocks", () => {
       [...expectedStatuses].sort(),
     );
 
-    const errorResources = resources.filter(
-      (resource) => resource.lastDiscoverStatus === "error",
-    );
+    const errorResources = resources.filter((resource) => resource.lastDiscoverStatus === "error");
     expect(errorResources.some((resource) => resource.schema.length === 0)).toBe(true);
     expect(errorResources.some((resource) => resource.schema.length > 0)).toBe(true);
   });

@@ -140,7 +140,11 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
       dataIndex: "expiresAt",
       width: 170,
       render: (value: string | null) =>
-        value ? formatTime(value) : <span className={styles.muted}>{t("apiKeys.neverExpire")}</span>,
+        value ? (
+          formatTime(value)
+        ) : (
+          <span className={styles.muted}>{t("apiKeys.neverExpire")}</span>
+        ),
     },
     {
       title: t("apiKeys.columns.lastUsed"),

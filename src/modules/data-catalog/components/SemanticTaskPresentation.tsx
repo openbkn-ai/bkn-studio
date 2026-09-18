@@ -32,12 +32,7 @@ export function SemanticTaskStatusTag({ status }: { status: SemanticUnderstandin
 export function SemanticTaskAppliedTag({ applied }: { applied: boolean }) {
   const { t } = useTranslation();
   return (
-    <span
-      className={[
-        styles.tag,
-        applied ? styles.taskSucceeded : styles.taskPending,
-      ].join(" ")}
-    >
+    <span className={[styles.tag, applied ? styles.taskSucceeded : styles.taskPending].join(" ")}>
       {t(
         applied
           ? "dataCatalog.taskManagement.applied.applied"

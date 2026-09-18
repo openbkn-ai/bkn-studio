@@ -50,7 +50,5 @@ export function ExecutionUnitTabRedirect({
     void message.info(t("executionFactory.routeMigrated"));
   }, [location.pathname, message, migrationFrom, t]);
 
-  return (
-    <Navigate replace to={`/execution-factory/units?${nextParams.toString()}`} />
-  );
+  return <Navigate replace to={`/execution-factory/units?${nextParams.toString()}`} />;
 }

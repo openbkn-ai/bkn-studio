@@ -35,10 +35,9 @@ export async function executeFunctionViaApi(
 }
 
 export async function getFunctionPromptViaApi(request: APIRequestContext) {
-  const response = await request.get(
-    `${API_PREFIX}/ai_generate/prompt/python_function_generator`,
-    { headers: defaultApiHeaders() },
-  );
+  const response = await request.get(`${API_PREFIX}/ai_generate/prompt/python_function_generator`, {
+    headers: defaultApiHeaders(),
+  });
   await expectOk(response, "Get function AI prompt");
   return response.json();
 }

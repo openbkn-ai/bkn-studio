@@ -15,14 +15,14 @@ import {
 } from "@/modules/knowledge-network/services/metric.service";
 
 vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/knowledge-network/services/shared/runtime")>(
-    "@/modules/knowledge-network/services/shared/runtime",
-  );
+  const actual = await vi.importActual<
+    typeof import("@/modules/knowledge-network/services/shared/runtime")
+  >("@/modules/knowledge-network/services/shared/runtime");
 
   return {
     ...actual,
     useMock: true,
-    wait: <T,>(value: T) => Promise.resolve(value),
+    wait: <T>(value: T) => Promise.resolve(value),
   };
 });
 

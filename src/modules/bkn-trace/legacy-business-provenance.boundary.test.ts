@@ -22,7 +22,11 @@ describe("business provenance replacement boundary", () => {
   it("does not retain legacy business projection clients in the shared access-profile service", () => {
     const source = readFileSync(join(moduleRoot, "services/trace.service.ts"), "utf8");
 
-    expect(source).not.toMatch(/business-provenance|business-graph|evidence-chain|snapshot-preview/);
-    expect(source).not.toMatch(/getRequestSummaries|getConversationSummaries|getInteractionSummaries/);
+    expect(source).not.toMatch(
+      /business-provenance|business-graph|evidence-chain|snapshot-preview/,
+    );
+    expect(source).not.toMatch(
+      /getRequestSummaries|getConversationSummaries|getInteractionSummaries/,
+    );
   });
 });

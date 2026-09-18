@@ -22,7 +22,7 @@ export function unwrapSingleEntryResponse<T>(
 
   if (isSingleEntryResponseEnvelope<T>(value)) {
     const { entries } = value;
-    return Array.isArray(entries) && entries.length > 0 ? entries[0] ?? null : null;
+    return Array.isArray(entries) && entries.length > 0 ? (entries[0] ?? null) : null;
   }
 
   return value;

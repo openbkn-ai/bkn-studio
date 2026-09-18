@@ -23,7 +23,13 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { destroy: vi.fn(), error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    message: {
+      destroy: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      warning: vi.fn(),
+    },
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: {
@@ -104,7 +110,6 @@ vi.mock("@/modules/execution-factory/services/tool.service", () => ({
   updateTool,
   updateToolStatus,
 }));
-
 
 /** The params toolbar button also carries a count badge, so find it through its label. */
 function paramsButton(): HTMLElement {
@@ -211,7 +216,10 @@ describe("FunctionWorkbenchScene parameter descriptions", () => {
     await waitFor(() => {
       expect(updateToolStatus).toHaveBeenCalledWith("box-1", ["tool-new"], "enabled");
     });
-    const [, created] = createTool.mock.calls[0] as [string, { functionInput?: { inputs?: unknown } }];
+    const [, created] = createTool.mock.calls[0] as [
+      string,
+      { functionInput?: { inputs?: unknown } },
+    ];
     expect(created.functionInput?.inputs).toEqual([
       { description: "销售价", name: "price", required: true, type: "number" },
     ]);

@@ -70,7 +70,7 @@ export async function registerOpenApiBundle(
   );
 
   const body = response.data;
-  if (!body.box_id || !(body.tool_ids?.length)) {
+  if (!body.box_id || !body.tool_ids?.length) {
     throw new Error("OpenAPI bundle registration failed");
   }
 

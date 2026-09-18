@@ -20,21 +20,32 @@ describe("index build list filters", () => {
     );
 
     expect(filters).toEqual({ executeType: undefined, mode: "batch", statuses: [] });
-    expect(applyIndexBuildListFilters(
-      new URLSearchParams("catalogId=cat-001&resourceId=res-001"),
-      filters,
-    ).toString()).toBe("mode=batch");
+    expect(
+      applyIndexBuildListFilters(
+        new URLSearchParams("catalogId=cat-001&resourceId=res-001"),
+        filters,
+      ).toString(),
+    ).toBe("mode=batch");
   });
 
   it("persists a valid execution-type filter and ignores an invalid value", () => {
-    expect(readIndexBuildListFilters(new URLSearchParams("execute_type=incremental")))
-      .toEqual({ executeType: "incremental", mode: undefined, statuses: [] });
-    expect(readIndexBuildListFilters(new URLSearchParams("execute_type=streaming")))
-      .toEqual({ executeType: undefined, mode: undefined, statuses: [] });
-    expect(applyIndexBuildListFilters(
-      new URLSearchParams(),
-      { executeType: "full", mode: undefined, statuses: [] },
-    ).toString()).toBe("execute_type=full");
+    expect(readIndexBuildListFilters(new URLSearchParams("execute_type=incremental"))).toEqual({
+      executeType: "incremental",
+      mode: undefined,
+      statuses: [],
+    });
+    expect(readIndexBuildListFilters(new URLSearchParams("execute_type=streaming"))).toEqual({
+      executeType: undefined,
+      mode: undefined,
+      statuses: [],
+    });
+    expect(
+      applyIndexBuildListFilters(new URLSearchParams(), {
+        executeType: "full",
+        mode: undefined,
+        statuses: [],
+      }).toString(),
+    ).toBe("execute_type=full");
   });
 });
 

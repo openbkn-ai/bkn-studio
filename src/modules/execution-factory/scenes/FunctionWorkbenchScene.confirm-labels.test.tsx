@@ -211,10 +211,7 @@ describe("FunctionWorkbenchScene function status confirmation labels (#491)", ()
     render(<FunctionWorkbenchScene boxId="box-1" targetToolId="tool-2" />);
 
     const selected = await screen.findByRole("option", { name: /rank_customers/ });
-    expect(selected).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(selected).toHaveAttribute("aria-selected", "true");
 
     fireEvent.click(screen.getByLabelText(/返回|Back/));
     expect(router.navigate).toHaveBeenCalledWith(

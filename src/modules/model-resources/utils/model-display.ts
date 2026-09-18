@@ -34,7 +34,7 @@ export function getModelSeriesOptions(t: TFunction) {
 export function getModelSeriesLabel(series?: string, t?: TFunction) {
   const item = MODEL_SERIES_DEFINITIONS.find((entry) => entry.value === series);
   if (!item) return series ?? "--";
-  return item.labelKey && t ? t(item.labelKey) : item.label ?? series ?? "--";
+  return item.labelKey && t ? t(item.labelKey) : (item.label ?? series ?? "--");
 }
 
 export function formatNumberWithCommas(value?: number | string) {

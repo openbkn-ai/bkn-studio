@@ -7,10 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  LOCALE_COOKIE_NAME,
-  LOCALE_STORAGE_KEY,
-} from "@/framework/i18n/locale";
+import { LOCALE_COOKIE_NAME, LOCALE_STORAGE_KEY } from "@/framework/i18n/locale";
 import { startStandaloneApp } from "@/framework/runtime/bootstrap";
 
 vi.mock("react-dom/client", () => ({

@@ -51,19 +51,38 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Alert: ({ action, children, description, message, type }: { action?: ReactNode; children?: ReactNode; description?: ReactNode; message?: ReactNode; type?: string }) => (
+  Alert: ({
+    action,
+    children,
+    description,
+    message,
+    type,
+  }: {
+    action?: ReactNode;
+    children?: ReactNode;
+    description?: ReactNode;
+    message?: ReactNode;
+    type?: string;
+  }) => (
     <div data-alert-type={type}>
       {message}
       {description ? <div>{description}</div> : null}
-      {children}{action}
+      {children}
+      {action}
     </div>
   ),
-  Input: ({ onChange, value }: { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void; value?: string }) => (
-    <input onChange={onChange} value={value} />
-  ),
+  Input: ({
+    onChange,
+    value,
+  }: {
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    value?: string;
+  }) => <input onChange={onChange} value={value} />,
   Select: ({ options = [] }: { options?: Array<{ label: ReactNode; value: string }> }) => (
     <div data-testid="catalog-options">
-      {options.map((option) => <span key={option.value}>{option.label}</span>)}
+      {options.map((option) => (
+        <span key={option.value}>{option.label}</span>
+      ))}
     </div>
   ),
   Space: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
@@ -86,7 +105,9 @@ vi.mock("antd", () => ({
       {items.find((item) => item.key === activeKey)?.children}
     </div>
   ),
-  Tag: ({ children, color }: { children?: ReactNode; color?: string }) => <span data-color={color}>{children}</span>,
+  Tag: ({ children, color }: { children?: ReactNode; color?: string }) => (
+    <span data-color={color}>{children}</span>
+  ),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -98,11 +119,19 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
-  AppTable: ({ columns, dataSource, rowSelection }: {
+  AppTable: ({
+    columns,
+    dataSource,
+    rowSelection,
+  }: {
     columns: Array<{
       dataIndex?: string;
       filters?: unknown[];
-      render?: (_value: unknown, record: { id: string; progress?: number; status?: string }, index: number) => ReactNode;
+      render?: (
+        _value: unknown,
+        record: { id: string; progress?: number; status?: string },
+        index: number,
+      ) => ReactNode;
     }>;
     dataSource: Array<{ id: string; progress?: number; status?: string }>;
     rowSelection?: {
@@ -110,11 +139,17 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
       selectedRowKeys: string[];
     };
   }) => (
-    <div data-filter-columns={columns.filter((column) => column.filters).length} data-testid="app-table">
+    <div
+      data-filter-columns={columns.filter((column) => column.filters).length}
+      data-testid="app-table"
+    >
       {rowSelection ? (
         <>
           <output data-testid="selected-task-keys">{rowSelection.selectedRowKeys.join(",")}</output>
-          <button onClick={() => rowSelection.onChange(dataSource[0] ? [dataSource[0].id] : [])} type="button">
+          <button
+            onClick={() => rowSelection.onChange(dataSource[0] ? [dataSource[0].id] : [])}
+            type="button"
+          >
             select first task
           </button>
         </>
@@ -123,12 +158,21 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
         <div key={record.id}>
           {record.status !== undefined
             ? columns
-              .filter((column) => column.dataIndex === "id" || column.dataIndex === "status" || column.dataIndex === "progress")
-              .map((column) => (
-                <div key={column.dataIndex}>
-                  {column.render?.(record[column.dataIndex as "id" | "progress" | "status"], record, index)}
-                </div>
-              ))
+                .filter(
+                  (column) =>
+                    column.dataIndex === "id" ||
+                    column.dataIndex === "status" ||
+                    column.dataIndex === "progress",
+                )
+                .map((column) => (
+                  <div key={column.dataIndex}>
+                    {column.render?.(
+                      record[column.dataIndex as "id" | "progress" | "status"],
+                      record,
+                      index,
+                    )}
+                  </div>
+                ))
             : columns.at(-1)?.render?.(undefined, record, index)}
         </div>
       ))}
@@ -165,25 +209,39 @@ vi.mock("@/modules/data-connect/components/DataConnectPageHeader", () => ({
 }));
 
 vi.mock("@/modules/data-connect/components/DataConnectDiscoverTaskDrawer", () => ({
-  DataConnectDiscoverTaskDrawer: ({ taskId }: { taskId: string }) => <output>drawer:{taskId}</output>,
+  DataConnectDiscoverTaskDrawer: ({ taskId }: { taskId: string }) => (
+    <output>drawer:{taskId}</output>
+  ),
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverRunNowModal", () => ({
-  DiscoverRunNowModal: ({ onSubmit, open, submitting }: {
+  DiscoverRunNowModal: ({
+    onSubmit,
+    open,
+    submitting,
+  }: {
     onSubmit: (strategy: "full_sync") => Promise<void>;
     open: boolean;
     submitting: boolean;
-  }) => open ? (
-    <>
-      <output>run now modal</output>
-      <output data-testid="run-now-submitting">{String(submitting)}</output>
-      <button onClick={() => void onSubmit("full_sync")} type="button">submit run now</button>
-    </>
-  ) : null,
+  }) =>
+    open ? (
+      <>
+        <output>run now modal</output>
+        <output data-testid="run-now-submitting">{String(submitting)}</output>
+        <button onClick={() => void onSubmit("full_sync")} type="button">
+          submit run now
+        </button>
+      </>
+    ) : null,
 }));
 
 vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
-  DiscoverScheduleFormModal: ({ initialValue, onCancel, onSubmit, submitting }: {
+  DiscoverScheduleFormModal: ({
+    initialValue,
+    onCancel,
+    onSubmit,
+    submitting,
+  }: {
     initialValue: { expectedUpdateTime: number } | null;
     onCancel: () => void;
     onSubmit: (payload: {
@@ -196,34 +254,37 @@ vi.mock("@/modules/data-connect/components/DiscoverScheduleFormModal", () => ({
       strategy: "full_sync";
     }) => Promise<void>;
     submitting: boolean;
-  }) => initialValue ? (
-    <>
-      <output data-testid="schedule-submitting">{String(submitting)}</output>
-      <button onClick={onCancel} type="button">cancel schedule</button>
-      <button
-        onClick={() => void onSubmit({
-          catalogId: "catalog-1",
-          cronExpr: "0 * * * *",
-          enabled: true,
-          endTime: undefined,
-          name: "nightly",
-          startTime: undefined,
-          strategy: "full_sync",
-        })}
-        type="button"
-      >
-        submit schedule {initialValue.expectedUpdateTime}
-      </button>
-    </>
-  ) : null,
+  }) =>
+    initialValue ? (
+      <>
+        <output data-testid="schedule-submitting">{String(submitting)}</output>
+        <button onClick={onCancel} type="button">
+          cancel schedule
+        </button>
+        <button
+          onClick={() =>
+            void onSubmit({
+              catalogId: "catalog-1",
+              cronExpr: "0 * * * *",
+              enabled: true,
+              endTime: undefined,
+              name: "nightly",
+              startTime: undefined,
+              strategy: "full_sync",
+            })
+          }
+          type="button"
+        >
+          submit schedule {initialValue.expectedUpdateTime}
+        </button>
+      </>
+    ) : null,
 }));
 
 vi.mock("@/shared/catalog", () => ({
   getCatalog: getCatalogMock,
-  hasCatalogOperation: (
-    catalog: { operations?: string[] } | null | undefined,
-    operation: string,
-  ) => Boolean(catalog?.operations?.includes("*") || catalog?.operations?.includes(operation)),
+  hasCatalogOperation: (catalog: { operations?: string[] } | null | undefined, operation: string) =>
+    Boolean(catalog?.operations?.includes("*") || catalog?.operations?.includes(operation)),
 }));
 
 vi.mock("@/modules/data-connect/services/discover.service", () => ({
@@ -301,9 +362,7 @@ describe("DataConnectDiscoverScene", () => {
     triggerDiscoverMock.mockResolvedValue({ id: "discover-task-new" });
     listSchedulesMock.mockResolvedValue({ items: [schedule(100)], total: 1 });
     listTasksMock.mockResolvedValue({ items: [], total: 0 });
-    getScheduleMock
-      .mockResolvedValueOnce(schedule(100))
-      .mockResolvedValue(schedule(200));
+    getScheduleMock.mockResolvedValueOnce(schedule(100)).mockResolvedValue(schedule(200));
     updateScheduleMock.mockRejectedValue({
       isAxiosError: true,
       response: { status: 409 },
@@ -330,14 +389,18 @@ describe("DataConnectDiscoverScene", () => {
 
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
-    await waitFor(() => expect(listSchedulesMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-1" }),
-      { skipErrorToast: true },
-    ));
-    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-1" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listSchedulesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-1" }),
+        { skipErrorToast: true },
+      ),
+    );
+    await waitFor(() =>
+      expect(listTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-1" }),
+        { skipErrorToast: true },
+      ),
+    );
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
     expect(await screen.findByText("schedule list unavailable")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabTasks" }));
@@ -380,16 +443,14 @@ describe("DataConnectDiscoverScene", () => {
       id === "catalog-1" ? firstLookup.promise : secondLookup.promise,
     );
     const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
-    await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith(
-      "catalog-1",
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(getCatalogMock).toHaveBeenCalledWith("catalog-1", { skipErrorToast: true }),
+    );
 
     view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
-    await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith(
-      "catalog-2",
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(getCatalogMock).toHaveBeenCalledWith("catalog-2", { skipErrorToast: true }),
+    );
     await act(async () => {
       secondLookup.resolve({
         id: "catalog-2",
@@ -398,10 +459,12 @@ describe("DataConnectDiscoverScene", () => {
       });
       await secondLookup.promise;
     });
-    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-2" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-2" }),
+        { skipErrorToast: true },
+      ),
+    );
 
     await act(async () => {
       firstLookup.resolve({
@@ -416,19 +479,15 @@ describe("DataConnectDiscoverScene", () => {
   });
 
   it("shows no permission only for a forbidden direct catalog lookup", async () => {
-    getCatalogMock.mockRejectedValue(new AxiosError(
-      "Forbidden",
-      undefined,
-      undefined,
-      undefined,
-      {
+    getCatalogMock.mockRejectedValue(
+      new AxiosError("Forbidden", undefined, undefined, undefined, {
         status: 403,
         statusText: "Forbidden",
         headers: new AxiosHeaders(),
         config: { headers: new AxiosHeaders() },
         data: {},
-      },
-    ));
+      }),
+    );
 
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
@@ -458,7 +517,9 @@ describe("DataConnectDiscoverScene", () => {
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
     if (tab === "schedules") {
-      fireEvent.click(await screen.findByRole("button", { name: "dataConnect.discoverTabSchedules" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "dataConnect.discoverTabSchedules" }),
+      );
     }
 
     expect(await screen.findByText(`${tab} unavailable`)).toBeTruthy();
@@ -514,7 +575,10 @@ describe("DataConnectDiscoverScene", () => {
   it("clears the submitting state when a schedule modal closes during submission", async () => {
     let resolveUpdate: (() => void) | undefined;
     updateScheduleMock.mockImplementationOnce(
-      () => new Promise<void>((resolve) => { resolveUpdate = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUpdate = resolve;
+        }),
     );
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
@@ -528,21 +592,25 @@ describe("DataConnectDiscoverScene", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getByTestId("schedule-submitting").textContent).toBe("false"));
+    await waitFor(() =>
+      expect(screen.getByTestId("schedule-submitting").textContent).toBe("false"),
+    );
   });
 
   it("renders pending task status and progress with the neutral color", async () => {
     listTasksMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        createTime: 100,
-        id: "discover-task-pending",
-        progress: 0,
-        queuePriority: 10,
-        status: "pending",
-        strategy: "full_sync",
-        triggerType: "manual",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          createTime: 100,
+          id: "discover-task-pending",
+          progress: 0,
+          queuePriority: 10,
+          status: "pending",
+          strategy: "full_sync",
+          triggerType: "manual",
+        },
+      ],
       total: 1,
     });
 
@@ -562,16 +630,18 @@ describe("DataConnectDiscoverScene", () => {
 
   it("clears selected tasks and task details when the catalog changes", async () => {
     listTasksMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        createTime: 100,
-        id: "discover-task-1",
-        progress: 100,
-        queuePriority: 10,
-        status: "completed",
-        strategy: "full_sync",
-        triggerType: "manual",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          createTime: 100,
+          id: "discover-task-1",
+          progress: 100,
+          queuePriority: 10,
+          status: "completed",
+          strategy: "full_sync",
+          triggerType: "manual",
+        },
+      ],
       total: 1,
     });
 
@@ -632,15 +702,13 @@ describe("DataConnectDiscoverScene", () => {
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverTabSchedules" }));
     fireEvent.click(screen.getByRole("button", { name: "dataConnect.discoverRunSchedule" }));
     const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as
-      | { onOk?: () => Promise<void> }
-      | undefined;
+      { onOk?: () => Promise<void> } | undefined;
     expect(confirmation?.onOk).toBeTypeOf("function");
 
     view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
-    await waitFor(() => expect(getCatalogMock).toHaveBeenCalledWith(
-      "catalog-2",
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(getCatalogMock).toHaveBeenCalledWith("catalog-2", { skipErrorToast: true }),
+    );
     await act(async () => {
       await confirmation?.onOk?.();
     });
@@ -689,18 +757,19 @@ describe("DataConnectDiscoverScene", () => {
   it("does not refresh the previous catalog after a pending mutation completes", async () => {
     const deletion = deferred<void>();
     deleteTaskMock.mockReturnValueOnce(deletion.promise);
-    listTasksMock.mockImplementation(({ catalogId }: { catalogId?: string }) => Promise.resolve({
-      items: [task(catalogId ?? "", catalogId === "catalog-1" ? "task-old" : "task-new")],
-      total: 1,
-    }));
+    listTasksMock.mockImplementation(({ catalogId }: { catalogId?: string }) =>
+      Promise.resolve({
+        items: [task(catalogId ?? "", catalogId === "catalog-1" ? "task-old" : "task-new")],
+        total: 1,
+      }),
+    );
     const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
     await screen.findByText("task-old");
     fireEvent.click(screen.getByRole("button", { name: "select first task" }));
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.task.batchDelete (1)" }));
     const confirmation = appServicesMock.modal.confirm.mock.calls.at(-1)?.[0] as
-      | { onOk?: () => Promise<void> }
-      | undefined;
+      { onOk?: () => Promise<void> } | undefined;
     expect(confirmation?.onOk).toBeTypeOf("function");
     const deletionResult = confirmation?.onOk?.();
     await waitFor(() => expect(deleteTaskMock).toHaveBeenCalledWith("task-old"));
@@ -715,9 +784,11 @@ describe("DataConnectDiscoverScene", () => {
 
     expect(screen.queryByText("task-old")).toBeNull();
     expect(screen.getByText("task-new")).toBeTruthy();
-    expect(listTasksMock.mock.calls.filter(([query]) => (
-      (query as { catalogId?: string }).catalogId === "catalog-1"
-    ))).toHaveLength(1);
+    expect(
+      listTasksMock.mock.calls.filter(
+        ([query]) => (query as { catalogId?: string }).catalogId === "catalog-1",
+      ),
+    ).toHaveLength(1);
   });
 
   it("does not replace the new catalog task list with a stale response", async () => {
@@ -727,16 +798,20 @@ describe("DataConnectDiscoverScene", () => {
       catalogId === "catalog-1" ? firstTasks.promise : secondTasks.promise,
     );
     const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
-    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-1" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-1" }),
+        { skipErrorToast: true },
+      ),
+    );
 
     view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
-    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-2" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-2" }),
+        { skipErrorToast: true },
+      ),
+    );
     await act(async () => {
       secondTasks.resolve({ items: [task("catalog-2", "task-new")], total: 1 });
       await secondTasks.promise;
@@ -761,10 +836,12 @@ describe("DataConnectDiscoverScene", () => {
     );
 
     const view = render(<DataConnectDiscoverScene catalogId="catalog-1" />);
-    await waitFor(() => expect(listTasksMock).toHaveBeenCalledWith(
-      expect.objectContaining({ catalogId: "catalog-1" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({ catalogId: "catalog-1" }),
+        { skipErrorToast: true },
+      ),
+    );
 
     view.rerender(<DataConnectDiscoverScene catalogId="catalog-2" />);
     expect(await screen.findByText("task-new")).toBeInTheDocument();

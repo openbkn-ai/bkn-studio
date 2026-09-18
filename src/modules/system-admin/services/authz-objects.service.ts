@@ -58,21 +58,29 @@ function arrayFrom(body: unknown, key: "entries" | "data"): Record<string, unkno
 
 type ObjectPage = { objects: AuthorizableObject[]; total: number };
 
-async function listOne(type: string, keyword: string, offset = 0, limit = PAGE_SIZE): Promise<ObjectPage> {
+async function listOne(
+  type: string,
+  keyword: string,
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<ObjectPage> {
   if (!isAuthzObjectPickerType(type)) {
     return { objects: [], total: 0 };
   }
-  const response = await http.get<Record<string, unknown>>("/safe/v1/admin/authorization-resources", {
-    params: {
-      direction: "asc",
-      limit,
-      name: keyword || undefined,
-      offset,
-      resource_type: type,
-      sort: "name",
+  const response = await http.get<Record<string, unknown>>(
+    "/safe/v1/admin/authorization-resources",
+    {
+      params: {
+        direction: "asc",
+        limit,
+        name: keyword || undefined,
+        offset,
+        resource_type: type,
+        sort: "name",
+      },
+      skipErrorToast: true,
     },
-    skipErrorToast: true,
-  });
+  );
   const objects = arrayFrom(response.data, "entries")
     .map((item) => ({ type, id: str(item.id), name: str(item.name) || str(item.id) }))
     .filter((object) => object.id);
@@ -82,10 +90,11 @@ async function listOne(type: string, keyword: string, offset = 0, limit = PAGE_S
 
 // List types that have a concrete-instance endpoint. Object-grant history can include additional
 // types, but new grants must not offer a type whose instances cannot be selected.
-export async function listDomainObjects(type?: string, keyword = ""): Promise<AuthorizableObject[]> {
-  const types = type
-    ? (isAuthzObjectPickerType(type) ? [type] : [])
-    : AUTHZ_OBJECT_PICKER_TYPES;
+export async function listDomainObjects(
+  type?: string,
+  keyword = "",
+): Promise<AuthorizableObject[]> {
+  const types = type ? (isAuthzObjectPickerType(type) ? [type] : []) : AUTHZ_OBJECT_PICKER_TYPES;
   const settled = await Promise.allSettled(types.map((item) => listOne(item, keyword)));
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value.objects : []));
 }
@@ -146,7 +155,7 @@ export async function listTopLevelAuthzObjects(
       result: await listOne(resourceType, keyword, 0, 1),
     })),
   );
-  const sections = counted.flatMap((item) => item.status === "fulfilled" ? [item.value] : []);
+  const sections = counted.flatMap((item) => (item.status === "fulfilled" ? [item.value] : []));
   const total = sections.reduce((sum, item) => sum + item.result.total, 0);
   let remainingOffset = offset;
   let remainingLimit = limit;
@@ -186,45 +195,48 @@ export async function listTopResourceChildren(
   query: { limit?: number; offset?: number } = {},
 ): Promise<TopResourceChildPage> {
   const isCatalogResource = root.type === "catalog" && category === "resource";
-  const isKnowledgeNetworkChild = root.type === "knowledge_network" && [
-    "object_type", "relation_type", "action_type", "metric", "concept_group",
-  ].includes(category);
+  const isKnowledgeNetworkChild =
+    root.type === "knowledge_network" &&
+    ["object_type", "relation_type", "action_type", "metric", "concept_group"].includes(category);
   if (!isCatalogResource && !isKnowledgeNetworkChild) {
     return { category, children: [], total: 0 };
   }
-  const response = await http.get<Record<string, unknown>>("/safe/v1/admin/authorization-resources", {
-    params: {
-      direction: "asc",
-      limit: query.limit ?? PAGE_SIZE,
-      name: undefined,
-      offset: query.offset ?? 0,
-      parent_id: root.id,
-      parent_type: root.type,
-      resource_type: category,
-      sort: "name",
+  const response = await http.get<Record<string, unknown>>(
+    "/safe/v1/admin/authorization-resources",
+    {
+      params: {
+        direction: "asc",
+        limit: query.limit ?? PAGE_SIZE,
+        name: undefined,
+        offset: query.offset ?? 0,
+        parent_id: root.id,
+        parent_type: root.type,
+        resource_type: category,
+        sort: "name",
+      },
+      skipErrorToast: true,
     },
-    skipErrorToast: true,
-  });
+  );
   const entries = arrayFrom(response.data, "entries");
   const totalValue = Number(response.data.total ?? entries.length);
   return {
     category,
-    children: entries.map((item) => ({
-      category,
-      id: str(item.id),
-      name: str(item.name) || str(item.id),
-      sub: root.name,
-      type: category,
-    })).filter((item) => item.id),
+    children: entries
+      .map((item) => ({
+        category,
+        id: str(item.id),
+        name: str(item.name) || str(item.id),
+        sub: root.name,
+        type: category,
+      }))
+      .filter((item) => item.id),
     total: Number.isFinite(totalValue) ? totalValue : entries.length,
   };
 }
 
 // 7.2 Resolve names by ID in batches.
 type NamesConfig =
-  | { kind: "post"; path: string }
-  | { kind: "vega"; path: string }
-  | { kind: "mcp" };
+  { kind: "post"; path: string } | { kind: "vega"; path: string } | { kind: "mcp" };
 
 const NAMES_CONFIG: Record<string, NamesConfig> = {
   small_model: { kind: "post", path: "/mf-model-manager/v1/small-model/names" },
@@ -263,7 +275,11 @@ function splitKnowledgeChildId(id: string): { childId: string; networkId: string
   return { networkId: id.slice(0, separator), childId: id.slice(separator + 1) };
 }
 
-function collectNamePairs(payload: unknown, idField: string, nameField: string): Array<[string, string]> {
+function collectNamePairs(
+  payload: unknown,
+  idField: string,
+  nameField: string,
+): Array<[string, string]> {
   const body = payload as Record<string, unknown>;
   const list = Array.isArray(payload)
     ? (payload as Record<string, unknown>[])
@@ -348,7 +364,7 @@ async function resolveResourceNames(ids: string[]): Promise<Map<string, Resolved
           { params: { ignore_missing: true }, skipErrorToast: true },
         );
         const entries = Array.isArray(response.data.entries)
-          ? response.data.entries as Record<string, unknown>[]
+          ? (response.data.entries as Record<string, unknown>[])
           : [];
         for (const entry of entries) {
           const id = str(entry.id);
@@ -364,7 +380,9 @@ async function resolveResourceNames(ids: string[]): Promise<Map<string, Resolved
   );
   let catalogNames = new Map<string, string>();
   try {
-    catalogNames = await namesFor("catalog", [...new Set([...resources.values()].map((item) => item.catalogId).filter(Boolean))]);
+    catalogNames = await namesFor("catalog", [
+      ...new Set([...resources.values()].map((item) => item.catalogId).filter(Boolean)),
+    ]);
   } catch {
     // The catalog ID is still useful parent context when its display name is unavailable.
   }
@@ -382,7 +400,10 @@ async function resolveResourceNames(ids: string[]): Promise<Map<string, Resolved
 // the cache lasts for the SPA session.
 const nameCache = new Map<string, ResolvedName>();
 
-async function resolveKnowledgeChildNames(type: string, ids: string[]): Promise<Map<string, ResolvedName>> {
+async function resolveKnowledgeChildNames(
+  type: string,
+  ids: string[],
+): Promise<Map<string, ResolvedName>> {
   const resolveChildren = KNOWLEDGE_CHILD_RESOLVERS[type];
   const resolved = new Map<string, ResolvedName>();
   if (!resolveChildren) return resolved;
@@ -455,14 +476,20 @@ export async function resolveGrantNames(grants: ObjectGrant[]): Promise<ObjectGr
             nameCache.set(`${type}:${id}`, value);
           }
         }
-        const resourceNames = type === "resource" ? await resolveResourceNames([...ids]) : new Map<string, ResolvedName>();
+        const resourceNames =
+          type === "resource"
+            ? await resolveResourceNames([...ids])
+            : new Map<string, ResolvedName>();
         for (const [id, value] of resourceNames) {
           nameCache.set(`${type}:${id}`, value);
         }
         // This is normally empty for knowledge-network children. Keep the generic
         // fallback for mixed/legacy object keys that a domain endpoint did not resolve.
-        const unresolvedIds = [...ids].filter((id) => !childNames.has(id) && !resourceNames.has(id));
-        const map = type === "resource" ? new Map<string, string>() : await namesFor(type, unresolvedIds);
+        const unresolvedIds = [...ids].filter(
+          (id) => !childNames.has(id) && !resourceNames.has(id),
+        );
+        const map =
+          type === "resource" ? new Map<string, string>() : await namesFor(type, unresolvedIds);
         for (const [id, name] of map) {
           nameCache.set(`${type}:${id}`, { name });
         }

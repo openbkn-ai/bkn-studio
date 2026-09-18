@@ -30,7 +30,8 @@ export const modelResourcesZhCN = {
       duplicateConfigNoDisplayPermission: "模型配置已存在，但你无权查看或切换该模型。",
       duplicateConfigAlreadyDefault: "该模型已经是默认模型。",
       duplicateConfigSetDefaultTitle: "模型配置已存在",
-      duplicateConfigSetDefaultContent: "该模型配置已存在，是否将已有模型“{{name}}”切换为默认模型？",
+      duplicateConfigSetDefaultContent:
+        "该模型配置已存在，是否将已有模型“{{name}}”切换为默认模型？",
       duplicateConfigSetDefaultOk: "确认切换默认",
       deleteSuccess: "模型已删除",
       deleteFailed: "模型删除失败",
@@ -128,7 +129,8 @@ export const modelResourcesZhCN = {
           "- 关闭功能后，无需配置使用额度，所有用户均可无限制使用，且系统会自动保留用户之前用掉的额度记录，但会把之前设置的“额度规则”清零。",
         defaultModel: "设为默认模型",
         llmDefaultModelHint: "未设置默认大模型时会自动设为默认；开启后将替换当前默认大模型。",
-        smallDefaultModelHint: "当前类型未设置默认模型时会自动设为默认；开启后将替换同类型默认模型。",
+        smallDefaultModelHint:
+          "当前类型未设置默认模型时会自动设为默认；开启后将替换同类型默认模型。",
         enterPlaceholder: "请输入",
         secretKey: "Secret Key",
         selectPlaceholder: "请选择",
@@ -152,7 +154,8 @@ export const modelResourcesZhCN = {
         method1_2: "HTTP",
         method2: "方式二：SDK",
         sdkDescribe1: "API 在设计上完美兼容 OpenAI 的 Python SDK，只需要简单配置即可使用。",
-        sdkDescribe2: "安装 OpenAI SDK。请确保使用的 Python 版本至少为 3.7.1，OpenAI SDK 版本不低于 1.0.0。",
+        sdkDescribe2:
+          "安装 OpenAI SDK。请确保使用的 Python 版本至少为 3.7.1，OpenAI SDK 版本不低于 1.0.0。",
         codeExample: "代码示例",
       },
       monitor: {

@@ -21,9 +21,10 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({
     i18n: { language },
     t: (key: string, options?: { name?: string }) => {
-      const locale = language === "zh-CN"
-        ? { common: commonZhCN.common, systemAdmin: systemAdminZhCN.systemAdmin }
-        : { common: commonEnUS.common, systemAdmin: systemAdminEnUS.systemAdmin };
+      const locale =
+        language === "zh-CN"
+          ? { common: commonZhCN.common, systemAdmin: systemAdminZhCN.systemAdmin }
+          : { common: commonEnUS.common, systemAdmin: systemAdminEnUS.systemAdmin };
       if (key === "common.custom") return locale.common.custom;
       if (key === "systemAdmin.roles.builtin") return locale.systemAdmin.roles.builtin;
       if (key === "common.basicInfo") return locale.common.basicInfo;

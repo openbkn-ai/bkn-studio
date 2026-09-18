@@ -68,15 +68,9 @@ describe("mask-rule", () => {
   });
 
   it("previews number and date rules", () => {
-    expect(previewMaskRule("integer", { kind: "round", step: 1000 }, "123456")).toBe(
-      "123000",
-    );
+    expect(previewMaskRule("integer", { kind: "round", step: 1000 }, "123456")).toBe("123000");
     expect(
-      previewMaskRule(
-        "date",
-        { granularity: "year", kind: "date_granularity" },
-        "1990-03-18",
-      ),
+      previewMaskRule("date", { granularity: "year", kind: "date_granularity" }, "1990-03-18"),
     ).toBe("1990-01-01");
   });
 });

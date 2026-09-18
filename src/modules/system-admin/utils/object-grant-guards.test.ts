@@ -93,34 +93,60 @@ describe("isSelfAuthorizeLockout", () => {
 
 describe("canManageGrantSource", () => {
   it("allows a delegate to manage only its own concrete source", () => {
-    expect(canManageGrantSource({ currentUserId: "u-b", isPlatformAuthzAdmin: false, source: source("u-b") })).toBe(true);
-    expect(canManageGrantSource({ currentUserId: "u-b", isPlatformAuthzAdmin: false, source: source("u-a") })).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
+        source: source("u-b"),
+      }),
+    ).toBe(true);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
+        source: source("u-a"),
+      }),
+    ).toBe(false);
   });
 
   it("keeps authorize and non-delegated source kinds protected from a delegate", () => {
-    expect(canManageGrantSource({
-      currentUserId: "u-b",
-      isPlatformAuthzAdmin: false,
-      source: { ...source("u-b"), operation: "authorize" },
-    })).toBe(false);
-    expect(canManageGrantSource({
-      currentUserId: "u-b",
-      isPlatformAuthzAdmin: false,
-      source: { ...source("u-b"), authoritySource: "admin_authz" },
-    })).toBe(false);
-    expect(canManageGrantSource({
-      currentUserId: "u-b",
-      isPlatformAuthzAdmin: false,
-      source: { ...source("u-b"), effect: "deny" },
-    })).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
+        source: { ...source("u-b"), operation: "authorize" },
+      }),
+    ).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
+        source: { ...source("u-b"), authoritySource: "admin_authz" },
+      }),
+    ).toBe(false);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-b",
+        isPlatformAuthzAdmin: false,
+        source: { ...source("u-b"), effect: "deny" },
+      }),
+    ).toBe(false);
   });
 
   it("keeps unattributable historical sources read-only for delegates", () => {
-    expect(canManageGrantSource({ currentUserId: "u-b", isPlatformAuthzAdmin: false, source: source() })).toBe(false);
+    expect(
+      canManageGrantSource({ currentUserId: "u-b", isPlatformAuthzAdmin: false, source: source() }),
+    ).toBe(false);
   });
 
   it("allows a platform authorization administrator to manage every source", () => {
-    expect(canManageGrantSource({ currentUserId: "u-admin", isPlatformAuthzAdmin: true, source: source("u-a") })).toBe(true);
+    expect(
+      canManageGrantSource({
+        currentUserId: "u-admin",
+        isPlatformAuthzAdmin: true,
+        source: source("u-a"),
+      }),
+    ).toBe(true);
   });
 });
 
@@ -137,17 +163,21 @@ describe("isRoleGrantSubject", () => {
   it("recognizes both the current response field and older role-permission rows", () => {
     const ordinary = grant("u-mate", ["view_detail"]);
     expect(isRoleGrantSubject({ ...ordinary, accessorType: "role" })).toBe(true);
-    expect(isRoleGrantSubject({
-      ...ordinary,
-      grants: [{ ...source(), policySource: "role_permission" }],
-    })).toBe(true);
+    expect(
+      isRoleGrantSubject({
+        ...ordinary,
+        grants: [{ ...source(), policySource: "role_permission" }],
+      }),
+    ).toBe(true);
     expect(isRoleGrantSubject(ordinary)).toBe(false);
   });
 });
 
 describe("isUserDirectorySubject", () => {
   it("excludes role and public subjects from user-directory lookup", () => {
-    expect(isUserDirectorySubject({ ...grant("u-mate", ["view_detail"]), accessorType: "role" })).toBe(false);
+    expect(
+      isUserDirectorySubject({ ...grant("u-mate", ["view_detail"]), accessorType: "role" }),
+    ).toBe(false);
     expect(isUserDirectorySubject(grant(PUBLIC_ACCESSOR_ID, ["view_detail"]))).toBe(false);
     expect(isUserDirectorySubject(grant("u-mate", ["view_detail"]))).toBe(true);
   });

@@ -46,10 +46,7 @@ function riskClassName(risk: EndpointRisk) {
   return `${styles.risk} ${styles.riskLow}`;
 }
 
-export function OpenApiEndpointReview({
-  limit = 12,
-  openapiSpec,
-}: OpenApiEndpointReviewProps) {
+export function OpenApiEndpointReview({ limit = 12, openapiSpec }: OpenApiEndpointReviewProps) {
   const { t } = useTranslation();
   const operations = useMemo(() => extractOpenApiOperationsIo(openapiSpec), [openapiSpec]);
   const visibleOperations = operations.slice(0, limit);
@@ -105,11 +102,7 @@ export function OpenApiEndpointReview({
         </thead>
         <tbody>
           {visibleOperations.map((operation) => {
-            const risk = inferEndpointRisk(
-              operation.method,
-              operation.path,
-              operation.summary,
-            );
+            const risk = inferEndpointRisk(operation.method, operation.path, operation.summary);
             const inputCount = operation.io.parameters.length;
             const responseCount = Object.keys(operation.io.responses ?? {}).length;
 

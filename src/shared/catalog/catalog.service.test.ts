@@ -19,7 +19,8 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 function lastParams(): Record<string, unknown> {
-  const call = getMock.mock.calls.at(-1) as [string, { params?: Record<string, unknown> }] | undefined;
+  const call = getMock.mock.calls.at(-1) as
+    [string, { params?: Record<string, unknown> }] | undefined;
   return call?.[1]?.params ?? {};
 }
 
@@ -63,8 +64,9 @@ describe("catalog.service · listCatalogs", () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 23 } });
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");
 
-    await expect(listCatalogs({ keyword: "", page: 2, pageSize: 10, type: "physical" }))
-      .resolves.toEqual({ items: [], total: 23 });
+    await expect(
+      listCatalogs({ keyword: "", page: 2, pageSize: 10, type: "physical" }),
+    ).resolves.toEqual({ items: [], total: 23 });
   });
 
   it("passes enabled and health-status filters to Vega", async () => {
@@ -110,12 +112,10 @@ describe("catalog.service · listCatalogs", () => {
 
     await listCatalogConnectorTypeStats("orders");
 
-    expect(getMock).toHaveBeenCalledWith(
-      "/vega-backend/v1/catalogs/stats/by-connector-type",
-      { params: { name: "orders" } },
-    );
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs/stats/by-connector-type", {
+      params: { name: "orders" },
+    });
   });
-
 });
 
 describe("catalog.service · mock listCatalogs", () => {
@@ -197,9 +197,7 @@ describe("catalog.service · deletion preflight", () => {
         semantic_understanding_tasks: { blocking: 0, will_cancel: 2 },
       },
     });
-    const { previewCatalogDeletion } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { previewCatalogDeletion } = await import("@/shared/catalog/catalog.service");
 
     await expect(previewCatalogDeletion("catalog-1")).resolves.toEqual({
       blockers: ["discover_tasks_running"],
@@ -213,13 +211,10 @@ describe("catalog.service · deletion preflight", () => {
       resources: 4,
       semanticUnderstandingTasks: { blocking: 0, willCancel: 2 },
     });
-    expect(deleteMock).toHaveBeenCalledWith(
-      "/vega-backend/v1/catalogs/catalog-1",
-      {
-        params: { dry_run: true },
-        skipErrorToast: true,
-      },
-    );
+    expect(deleteMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs/catalog-1", {
+      params: { dry_run: true },
+      skipErrorToast: true,
+    });
   });
 });
 
@@ -238,9 +233,7 @@ describe("catalog.service · test connection", () => {
     postMock.mockResolvedValue({
       data: { message: "Connection test succeeded.", success: true },
     });
-    const { testCatalogConnectionConfig } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { testCatalogConnectionConfig } = await import("@/shared/catalog/catalog.service");
 
     const result = await testCatalogConnectionConfig({
       connectorConfig: { database: "orders", host: "db.example.com" },
@@ -265,9 +258,7 @@ describe("catalog.service · test connection", () => {
     postMock.mockResolvedValue({
       data: { message: "Connection refused.", success: false },
     });
-    const { testCatalogConnection } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { testCatalogConnection } = await import("@/shared/catalog/catalog.service");
 
     const result = await testCatalogConnection("catalog-1");
 
@@ -298,9 +289,7 @@ describe("catalog.service · health check schedule", () => {
 
   it("includes the schedule when creating a physical catalog", async () => {
     postMock.mockResolvedValue({ data: { id: "catalog-1" } });
-    const { createPhysicalCatalog } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { createPhysicalCatalog } = await import("@/shared/catalog/catalog.service");
 
     await createPhysicalCatalog(
       {
@@ -318,23 +307,27 @@ describe("catalog.service · health check schedule", () => {
       },
     );
 
-    expect(postMock).toHaveBeenCalledWith("/vega-backend/v1/catalogs", {
-      connector_config: { host: "db.example.com" },
-      connector_type: "postgresql",
-      description: "",
-      enabled: true,
-      health_check_schedule: {
-        cron_expr: undefined,
-        mode: "inherit",
+    expect(postMock).toHaveBeenCalledWith(
+      "/vega-backend/v1/catalogs",
+      {
+        connector_config: { host: "db.example.com" },
+        connector_type: "postgresql",
+        description: "",
+        enabled: true,
+        health_check_schedule: {
+          cron_expr: undefined,
+          mode: "inherit",
+        },
+        name: "orders",
+        tags: [],
       },
-      name: "orders",
-      tags: [],
-    }, {
-      params: {
-        allow_unhealthy: true,
+      {
+        params: {
+          allow_unhealthy: true,
+        },
+        skipErrorToast: true,
       },
-      skipErrorToast: true,
-    });
+    );
   });
 
   it("maps a catalog health check schedule", async () => {
@@ -348,9 +341,7 @@ describe("catalog.service · health check schedule", () => {
         update_time: 1_785_398_400_000,
       },
     });
-    const { getCatalogHealthCheckSchedule } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { getCatalogHealthCheckSchedule } = await import("@/shared/catalog/catalog.service");
 
     const schedule = await getCatalogHealthCheckSchedule("catalog-1");
 
@@ -380,9 +371,7 @@ describe("catalog.service · health check schedule", () => {
         update_time: 124,
       },
     });
-    const { updateCatalogHealthCheckSchedule } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { updateCatalogHealthCheckSchedule } = await import("@/shared/catalog/catalog.service");
 
     const schedule = await updateCatalogHealthCheckSchedule(
       "catalog-1",
@@ -493,9 +482,7 @@ describe("catalog.service · mock health check schedule", () => {
   });
 
   it("schedules inherit mode at the next default cron boundary", async () => {
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
-      Date.parse("2026-08-19T10:37:12Z"),
-    );
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-08-19T10:37:12Z"));
     try {
       const { getCatalogHealthCheckSchedule, updateCatalogHealthCheckSchedule } =
         await import("@/shared/catalog/catalog.service");
@@ -506,9 +493,7 @@ describe("catalog.service · mock health check schedule", () => {
         current.expectedUpdateTime,
       );
 
-      expect(inherited.nextRun).toBe(
-        calculateNextHourlyCronRun("0 * * * *", Date.now()),
-      );
+      expect(inherited.nextRun).toBe(calculateNextHourlyCronRun("0 * * * *", Date.now()));
     } finally {
       nowSpy.mockRestore();
     }
@@ -551,15 +536,12 @@ describe("catalog.service · mock health check schedule", () => {
         schedule.expectedUpdateTime - 1,
       ),
     ).rejects.toMatchObject({ response: { status: 409 } });
-    await expect(getCatalogHealthCheckSchedule("cat-001")).resolves.toEqual(
-      schedule,
-    );
+    await expect(getCatalogHealthCheckSchedule("cat-001")).resolves.toEqual(schedule);
   });
 
   it("matches catalog update validation and not-found precedence", async () => {
-    const { getCatalog, setCatalogEnabled, updateCatalog } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { getCatalog, setCatalogEnabled, updateCatalog } =
+      await import("@/shared/catalog/catalog.service");
     const catalog = await getCatalog("cat-001");
     expect(catalog).not.toBeNull();
     if (!catalog) {
@@ -584,9 +566,7 @@ describe("catalog.service · mock health check schedule", () => {
       },
     });
 
-    await expect(
-      updateCatalog("missing-catalog", input),
-    ).rejects.toMatchObject({
+    await expect(updateCatalog("missing-catalog", input)).rejects.toMatchObject({
       response: {
         data: { error_code: "VegaBackend.Catalog.NotFound" },
         status: 404,
@@ -610,9 +590,7 @@ describe("catalog.service · mock health check schedule", () => {
         status: 409,
       },
     });
-    await expect(
-      setCatalogEnabled("missing-catalog", true),
-    ).rejects.toMatchObject({
+    await expect(setCatalogEnabled("missing-catalog", true)).rejects.toMatchObject({
       response: {
         data: { error_code: "VegaBackend.Catalog.NotFound" },
         status: 404,
@@ -621,12 +599,8 @@ describe("catalog.service · mock health check schedule", () => {
   });
 
   it("rejects health check schedules for missing and logical catalogs", async () => {
-    const {
-      getCatalogHealthCheckSchedule,
-      updateCatalogHealthCheckSchedule,
-    } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { getCatalogHealthCheckSchedule, updateCatalogHealthCheckSchedule } =
+      await import("@/shared/catalog/catalog.service");
 
     await expect(
       updateCatalogHealthCheckSchedule("cat-001", { mode: "disabled" }, 0),
@@ -637,12 +611,12 @@ describe("catalog.service · mock health check schedule", () => {
       },
     });
 
-    await expect(
-      getCatalogHealthCheckSchedule("missing-catalog"),
-    ).rejects.toMatchObject({ response: { status: 404 } });
-    await expect(
-      getCatalogHealthCheckSchedule("adp_bkn_catalog"),
-    ).rejects.toMatchObject({ response: { status: 400 } });
+    await expect(getCatalogHealthCheckSchedule("missing-catalog")).rejects.toMatchObject({
+      response: { status: 404 },
+    });
+    await expect(getCatalogHealthCheckSchedule("adp_bkn_catalog")).rejects.toMatchObject({
+      response: { status: 400 },
+    });
   });
 });
 
@@ -659,9 +633,7 @@ describe("catalog.service · allow unhealthy", () => {
   });
 
   it("only sends allow_unhealthy when explicitly requested", async () => {
-    const { updateCatalog } = await import(
-      "@/shared/catalog/catalog.service"
-    );
+    const { updateCatalog } = await import("@/shared/catalog/catalog.service");
     const input = {
       connectorConfig: { host: "db.example.com" },
       connectorType: "postgresql",

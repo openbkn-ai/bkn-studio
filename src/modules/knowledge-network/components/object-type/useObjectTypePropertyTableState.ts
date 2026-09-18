@@ -6,7 +6,14 @@
  */
 
 import type { TableProps } from "antd";
-import { useMemo, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 
 import {
   getDisplayedColumns,
@@ -115,13 +122,18 @@ export function useObjectTypePropertyTableState() {
 
   const tableColumns = useMemo(() => {
     return columnOrderRef.current
-      .map((columnKey) =>
-        ObjectTypePropertyTableColumns.find((column) => column.key === columnKey),
-      )
-      .filter((column): column is (typeof ObjectTypePropertyTableColumns)[number] => Boolean(column));
+      .map((columnKey) => ObjectTypePropertyTableColumns.find((column) => column.key === columnKey))
+      .filter((column): column is (typeof ObjectTypePropertyTableColumns)[number] =>
+        Boolean(column),
+      );
   }, [columnOrderVersion]);
 
-  const handleTableChange: ObjectTypePropertyTableOnChange = (_pagination, _filters, sorter, extra) => {
+  const handleTableChange: ObjectTypePropertyTableOnChange = (
+    _pagination,
+    _filters,
+    sorter,
+    extra,
+  ) => {
     if (extra.action !== "sort") {
       return;
     }

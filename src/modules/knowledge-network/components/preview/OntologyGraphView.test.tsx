@@ -19,9 +19,7 @@ const graph = {
     { color: "#2563eb", id: "customer", name: "Customer" },
     { color: "#16a34a", id: "order", name: "Order" },
   ],
-  edges: [
-    { id: "places", name: "Places", sourceId: "customer", targetId: "order" },
-  ],
+  edges: [{ id: "places", name: "Places", sourceId: "customer", targetId: "order" }],
 };
 
 describe("OntologyGraphView", () => {
@@ -45,5 +43,4 @@ describe("OntologyGraphView", () => {
     expect(edgeArrows[1]?.getAttribute("class")).toContain("edgeArrowActive");
     expect(screen.getByText("Places").getAttribute("class")).toContain("edgeLabel");
   });
-
 });

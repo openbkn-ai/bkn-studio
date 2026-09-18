@@ -52,9 +52,7 @@ describe("connector-template · SQL Server", () => {
 
   it("provides SQL Server defaults and field guidance", () => {
     expect(getConnectorConfigDefaults(sqlServerConnector)).toEqual({ port: 1433 });
-    expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
-      "例如 1433",
-    );
+    expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe("例如 1433");
     expect(getConnectorFieldPlaceholder("options", "object", "sqlserver")).toBe(
       '例如 {"encrypt":true,"trustservercertificate":false}',
     );
@@ -136,12 +134,7 @@ describe("connector-template · SQL Server", () => {
       filterConnectorTypes([sqlServerConnector, openSearchConnector], "structured", " Search "),
     ).toEqual([openSearchConnector]);
     expect(
-      filterConnectorTypes(
-        [sqlServerConnector, openSearchConnector],
-        "structured",
-        "",
-        "搜索引擎",
-      ),
+      filterConnectorTypes([sqlServerConnector, openSearchConnector], "structured", "", "搜索引擎"),
     ).toEqual([openSearchConnector]);
 
     const anyShareConnector: DataConnectConnectorType = {
@@ -171,9 +164,7 @@ describe("connector-template · SQL Server", () => {
     expect(getConnectorTemplateMeta(sqlServerConnector).description).toBe(
       "Connect Microsoft SQL Server relational databases.",
     );
-    expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe(
-      "For example: 1433",
-    );
+    expect(getConnectorFieldPlaceholder("port", "integer", "sqlserver")).toBe("For example: 1433");
     expect(getConnectorFieldPlaceholder("schemas", "array", "sqlserver")).toBe(
       "Leave empty to discover all accessible schemas, or enter each name and press Enter",
     );
@@ -249,23 +240,29 @@ describe("connector-template · SQL Server", () => {
       postgresql: ["host", "port", "username", "password", "database", "schemas", "options"],
       sqlserver: ["host", "port", "username", "password", "database", "schemas", "options"],
       opensearch: ["host", "port", "username", "password", "index_pattern"],
-      anyshare: ["protocol", "host", "port", "auth_type", "token", "app_id", "app_secret", "doc_lib_type", "paths"],
+      anyshare: [
+        "protocol",
+        "host",
+        "port",
+        "auth_type",
+        "token",
+        "app_id",
+        "app_secret",
+        "doc_lib_type",
+        "paths",
+      ],
     } as const;
 
     for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
       for (const fieldName of fields) {
-        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
-          zhLabels[fieldName],
-        );
+        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(zhLabels[fieldName]);
       }
     }
 
     await i18n.changeLanguage("en-US");
     for (const [connectorType, fields] of Object.entries(builtInConnectorFieldKeys)) {
       for (const fieldName of fields) {
-        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(
-          enLabels[fieldName],
-        );
+        expect(humanizeConnectorFieldLabel(fieldName, connectorType)).toBe(enLabels[fieldName]);
       }
     }
   });
@@ -288,12 +285,8 @@ describe("connector-template · SQL Server", () => {
     expect(isConnectorFieldVisible("anyshare", "token", { auth_type: 1 })).toBe(true);
     expect(isConnectorFieldVisible("anyshare", "token", { auth_type: 2 })).toBe(false);
     expect(isConnectorFieldRequired("anyshare", "token", false, { auth_type: 1 })).toBe(true);
-    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 1 })).toBe(
-      false,
-    );
-    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 2 })).toBe(
-      true,
-    );
+    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 1 })).toBe(false);
+    expect(isConnectorFieldRequired("anyshare", "app_secret", false, { auth_type: 2 })).toBe(true);
   });
 });
 

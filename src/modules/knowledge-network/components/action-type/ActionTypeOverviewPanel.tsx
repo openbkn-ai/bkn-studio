@@ -52,9 +52,7 @@ function formatConditionLabel(
     return t("knowledgeNetwork.actionTypeEmptyValue");
   }
 
-  const operationLabel = t(
-    `knowledgeNetwork.actionTypeConditionOperation_${condition.operation}`,
-  );
+  const operationLabel = t(`knowledgeNetwork.actionTypeConditionOperation_${condition.operation}`);
   const valueLabel = Array.isArray(condition.value)
     ? condition.value.join(", ")
     : condition.value !== undefined && condition.value !== null
@@ -158,61 +156,63 @@ export function ActionTypeOverviewPanel({
         <section className={`${styles.panel} ${styles.rulePanel}`}>
           <h2>{t("knowledgeNetwork.actionTypeRuleConfig")}</h2>
           <div className={styles.ruleList}>
-          <section className={styles.ruleSection}>
-            <div className={styles.ruleHeading}>
-              <span>1</span>
-              <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
-            </div>
-            <div className={styles.infoGrid}>
-              <div>
-                <span>{t("knowledgeNetwork.actionTypeObject")}</span>
-                <ObjectTypeCell
-                  emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
-                  objectType={boundObjectType}
-                />
+            <section className={styles.ruleSection}>
+              <div className={styles.ruleHeading}>
+                <span>1</span>
+                <h4>{t("knowledgeNetwork.actionTypeTriggerRule")}</h4>
               </div>
-              <div>
-                <span>{t("knowledgeNetwork.actionTypeKind")}</span>
-                <strong>{actionKindLabel}</strong>
+              <div className={styles.infoGrid}>
+                <div>
+                  <span>{t("knowledgeNetwork.actionTypeObject")}</span>
+                  <ObjectTypeCell
+                    emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                    objectType={boundObjectType}
+                  />
+                </div>
+                <div>
+                  <span>{t("knowledgeNetwork.actionTypeKind")}</span>
+                  <strong>{actionKindLabel}</strong>
+                </div>
+                <div className={styles.fullWidthItem}>
+                  <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
+                  <strong>{conditionLabel}</strong>
+                </div>
               </div>
-              <div className={styles.fullWidthItem}>
-                <span>{t("knowledgeNetwork.actionTypeTriggerCondition")}</span>
-                <strong>{conditionLabel}</strong>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section className={styles.ruleSection}>
-            <div className={styles.ruleHeading}>
-              <span>2</span>
-              <h4>{t("knowledgeNetwork.actionTypeExecutionTool")}</h4>
-            </div>
-            <ActionTypeExecutionConfigTable
-              canResolveActionSource={canResolveActionSource}
-              detail={detail}
-              networkId={networkId}
-            />
-          </section>
+            <section className={styles.ruleSection}>
+              <div className={styles.ruleHeading}>
+                <span>2</span>
+                <h4>{t("knowledgeNetwork.actionTypeExecutionTool")}</h4>
+              </div>
+              <ActionTypeExecutionConfigTable
+                canResolveActionSource={canResolveActionSource}
+                detail={detail}
+                networkId={networkId}
+              />
+            </section>
 
-          <section className={styles.ruleSection}>
-            <div className={styles.ruleHeading}>
-              <span>3</span>
-              <h4>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</h4>
-            </div>
-            <div className={styles.infoGrid}>
-              <div>
-                <span>{t("knowledgeNetwork.actionTypeAffectedObject")}</span>
-                <ObjectTypeCell
-                  emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
-                  objectType={affectedObjectType}
-                />
+            <section className={styles.ruleSection}>
+              <div className={styles.ruleHeading}>
+                <span>3</span>
+                <h4>{t("knowledgeNetwork.actionTypeImpactDeclaration")}</h4>
               </div>
-              <div className={styles.fullWidthItem}>
-                <span>{t("knowledgeNetwork.actionTypeAffectDescription")}</span>
-                <strong>{detail.affect?.comment || t("knowledgeNetwork.actionTypeEmptyValue")}</strong>
+              <div className={styles.infoGrid}>
+                <div>
+                  <span>{t("knowledgeNetwork.actionTypeAffectedObject")}</span>
+                  <ObjectTypeCell
+                    emptyLabel={t("knowledgeNetwork.actionTypeEmptyValue")}
+                    objectType={affectedObjectType}
+                  />
+                </div>
+                <div className={styles.fullWidthItem}>
+                  <span>{t("knowledgeNetwork.actionTypeAffectDescription")}</span>
+                  <strong>
+                    {detail.affect?.comment || t("knowledgeNetwork.actionTypeEmptyValue")}
+                  </strong>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
           </div>
         </section>
       </div>

@@ -5,12 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApartmentOutlined,
-  CheckOutlined,
-  SearchOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { ApartmentOutlined, CheckOutlined, SearchOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Empty, Input, Select, Spin, Tree, TreeSelect } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -81,9 +76,8 @@ function buildDepartmentTree(
   const byParent = new Map<string | null, AdminDepartment[]>();
   const ids = new Set(departments.map((department) => department.id));
   for (const department of departments) {
-    const parentId = department.parentId && ids.has(department.parentId)
-      ? department.parentId
-      : null;
+    const parentId =
+      department.parentId && ids.has(department.parentId) ? department.parentId : null;
     const siblings = byParent.get(parentId) ?? [];
     siblings.push(department);
     byParent.set(parentId, siblings);
@@ -140,7 +134,7 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   const inline = presentation === "inline";
   const multiple = props.mode === "multiple";
   const selectedIds = useMemo(
-    () => multiple ? (props.value ?? []) : props.value ? [props.value] : [],
+    () => (multiple ? (props.value ?? []) : props.value ? [props.value] : []),
     [multiple, props.value],
   );
   const [open, setOpen] = useState(false);
@@ -152,7 +146,8 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   const [departmentLoading, setDepartmentLoading] = useState(false);
   const [visibleUsers, setVisibleUsers] = useState<AdminUser[]>(initialUsers);
   const [knownUsers, setKnownUsers] = useState<Record<string, AdminUser>>(() =>
-    mergeUsers({}, initialUsers));
+    mergeUsers({}, initialUsers),
+  );
   const [userLoading, setUserLoading] = useState(false);
   const [moreUsersLoading, setMoreUsersLoading] = useState(false);
   const [loadedUserCount, setLoadedUserCount] = useState(initialUsers.length);
@@ -200,18 +195,18 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     setMoreUsersLoading(false);
     setHasMoreUsers(false);
     void Promise.resolve()
-      .then(() => listUsersPage(
-        {
-          departmentId: activeDepartmentId !== ALL_DEPARTMENTS
-            ? activeDepartmentId
-            : undefined,
-          includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
-          limit: USER_PAGE_LIMIT,
-          offset: 0,
-          search: debouncedSearch || undefined,
-        },
-        { skipErrorToast: true },
-      ))
+      .then(() =>
+        listUsersPage(
+          {
+            departmentId: activeDepartmentId !== ALL_DEPARTMENTS ? activeDepartmentId : undefined,
+            includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
+            limit: USER_PAGE_LIMIT,
+            offset: 0,
+            search: debouncedSearch || undefined,
+          },
+          { skipErrorToast: true },
+        ),
+      )
       .then((result) => {
         if (sequence !== requestSequence.current) {
           return;
@@ -236,12 +231,7 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
           setUserLoading(false);
         }
       });
-  }, [
-    active,
-    activeDepartmentId,
-    debouncedSearch,
-    disabledIdSet,
-  ]);
+  }, [active, activeDepartmentId, debouncedSearch, disabledIdSet]);
 
   const loadMoreUsers = useCallback(() => {
     if (!active || !hasMoreUsers || userLoading || moreUsersLoading) {
@@ -251,18 +241,18 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     const offset = loadedUserCount;
     setMoreUsersLoading(true);
     void Promise.resolve()
-      .then(() => listUsersPage(
-        {
-          departmentId: activeDepartmentId !== ALL_DEPARTMENTS
-            ? activeDepartmentId
-            : undefined,
-          includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
-          limit: USER_PAGE_LIMIT,
-          offset,
-          search: debouncedSearch || undefined,
-        },
-        { skipErrorToast: true },
-      ))
+      .then(() =>
+        listUsersPage(
+          {
+            departmentId: activeDepartmentId !== ALL_DEPARTMENTS ? activeDepartmentId : undefined,
+            includeSubtree: activeDepartmentId !== ALL_DEPARTMENTS,
+            limit: USER_PAGE_LIMIT,
+            offset,
+            search: debouncedSearch || undefined,
+          },
+          { skipErrorToast: true },
+        ),
+      )
       .then((result) => {
         if (sequence !== requestSequence.current) {
           return;
@@ -304,7 +294,8 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
       missing.map((userId) =>
         Promise.resolve()
           .then(() => getUser(userId))
-          .catch(() => null)),
+          .catch(() => null),
+      ),
     ).then((users) => {
       const resolved = users.filter((user): user is AdminUser => Boolean(user));
       if (resolved.length) {
@@ -314,10 +305,10 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   }, [knownUsers, selectedIds]);
 
   const departmentTree = useMemo(
-    () => buildDepartmentTree(
-      departments,
-      (count) => t("systemAdmin.userPicker.memberCount", { count }),
-    ),
+    () =>
+      buildDepartmentTree(departments, (count) =>
+        t("systemAdmin.userPicker.memberCount", { count }),
+      ),
     [departments, t],
   );
 
@@ -335,9 +326,11 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
         ? selectedIds.filter((id) => id !== userId)
         : [...selectedIds, userId];
       props.onChange?.(next);
-      onUsersChange?.(next
-        .map((id) => knownUsers[id] ?? visibleUsers.find((user) => user.id === id))
-        .filter((user): user is AdminUser => Boolean(user)));
+      onUsersChange?.(
+        next
+          .map((id) => knownUsers[id] ?? visibleUsers.find((user) => user.id === id))
+          .filter((user): user is AdminUser => Boolean(user)),
+      );
       return;
     }
     props.onChange?.(userId);
@@ -353,9 +346,9 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
     if (multiple) {
       const next = Array.isArray(nextValue) ? nextValue : [];
       props.onChange?.(next);
-      onUsersChange?.(next
-        .map((id) => knownUsers[id])
-        .filter((user): user is AdminUser => Boolean(user)));
+      onUsersChange?.(
+        next.map((id) => knownUsers[id]).filter((user): user is AdminUser => Boolean(user)),
+      );
     } else {
       const next = typeof nextValue === "string" ? nextValue : undefined;
       props.onChange?.(next);
@@ -367,29 +360,36 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
   const searchHint = activeDepartment
     ? t("systemAdmin.userPicker.searchWithinDepartment", { department: activeDepartment.name })
     : t("systemAdmin.userPicker.searchAllUsers");
-  const panelTitle = activeDepartment?.name
-    ?? (debouncedSearch
+  const panelTitle =
+    activeDepartment?.name ??
+    (debouncedSearch
       ? t("systemAdmin.userPicker.searchResults")
-      : inline ? t("systemAdmin.userPicker.users") : t("systemAdmin.userPicker.allUsers"));
-  const resultSummary = disabledUserIds.length > 0
-    ? hasMoreUsers || loadedUserCount < userTotal
-      ? t("systemAdmin.userPicker.loadedSelectableCount", { count: visibleUsers.length })
-      : t("systemAdmin.userPicker.resultCount", { count: visibleUsers.length })
-    : hasMoreUsers || loadedUserCount < userTotal
-    ? t("systemAdmin.userPicker.resultRange", {
-      count: userTotal,
-      from: 1,
-      to: loadedUserCount,
-    })
-    : t("systemAdmin.userPicker.resultCount", { count: userTotal });
-  const inlineDepartmentTree = useMemo<DirectoryTreeNode[]>(() => [
-    {
-      key: ALL_DEPARTMENTS,
-      title: t("systemAdmin.userPicker.allOrganizations"),
-      value: ALL_DEPARTMENTS,
-    },
-    ...departmentTree,
-  ], [departmentTree, t]);
+      : inline
+        ? t("systemAdmin.userPicker.users")
+        : t("systemAdmin.userPicker.allUsers"));
+  const resultSummary =
+    disabledUserIds.length > 0
+      ? hasMoreUsers || loadedUserCount < userTotal
+        ? t("systemAdmin.userPicker.loadedSelectableCount", { count: visibleUsers.length })
+        : t("systemAdmin.userPicker.resultCount", { count: visibleUsers.length })
+      : hasMoreUsers || loadedUserCount < userTotal
+        ? t("systemAdmin.userPicker.resultRange", {
+            count: userTotal,
+            from: 1,
+            to: loadedUserCount,
+          })
+        : t("systemAdmin.userPicker.resultCount", { count: userTotal });
+  const inlineDepartmentTree = useMemo<DirectoryTreeNode[]>(
+    () => [
+      {
+        key: ALL_DEPARTMENTS,
+        title: t("systemAdmin.userPicker.allOrganizations"),
+        value: ALL_DEPARTMENTS,
+      },
+      ...departmentTree,
+    ],
+    [departmentTree, t],
+  );
   const panelBusy = loading || userLoading;
   const pickerPanel = (
     <div
@@ -398,14 +398,20 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
         styles.pickerPanel,
         inline ? styles.pickerPanelInline : "",
         inline ? className : "",
-      ].filter(Boolean).join(" ")}
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-presentation={presentation}
-      onMouseDown={inline ? undefined : (event) => {
-        if (!(event.target instanceof HTMLInputElement)) {
-          event.preventDefault();
-        }
-        event.stopPropagation();
-      }}
+      onMouseDown={
+        inline
+          ? undefined
+          : (event) => {
+              if (!(event.target instanceof HTMLInputElement)) {
+                event.preventDefault();
+              }
+              event.stopPropagation();
+            }
+      }
       role={inline ? "group" : undefined}
     >
       {inline ? (
@@ -450,9 +456,14 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
           />
         </div>
       )}
-      <div className={inline
-        ? styles.panelBodyInline
-        : departments.length ? styles.panelBody : styles.panelBodyFlat}
+      <div
+        className={
+          inline
+            ? styles.panelBodyInline
+            : departments.length
+              ? styles.panelBody
+              : styles.panelBodyFlat
+        }
       >
         {!inline && departments.length ? (
           <aside className={styles.organizationPane}>
@@ -462,9 +473,9 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
             </div>
             <button
               aria-pressed={activeDepartmentId === ALL_DEPARTMENTS}
-              className={activeDepartmentId === ALL_DEPARTMENTS
-                ? styles.allUsersActive
-                : styles.allUsers}
+              className={
+                activeDepartmentId === ALL_DEPARTMENTS ? styles.allUsersActive : styles.allUsers
+              }
               disabled={disabled}
               onClick={() => {
                 setSearch("");
@@ -515,34 +526,40 @@ export function DirectoryUserPicker(props: DirectoryUserPickerProps) {
             role="listbox"
           >
             {panelBusy ? (
-              <div className={styles.loadingState}><Spin size="small" /></div>
-            ) : visibleUsers.length ? visibleUsers.map((user) => {
-              const selected = selectedIds.includes(user.id);
-              const unavailable = disabled || user.enabled === false;
-              return (
-                <button
-                  aria-disabled={unavailable}
-                  aria-selected={selected}
-                  className={selected ? styles.memberSelected : styles.member}
-                  disabled={unavailable}
-                  key={user.id}
-                  onClick={() => changeSelection(user.id)}
-                  role="option"
-                  type="button"
-                >
-                  <Avatar className={styles.avatar} icon={<UserOutlined />} size={30} />
-                  <span className={styles.memberIdentity}>
-                    <strong>{displayName(user)}</strong>
-                    <small>{user.account || user.id}</small>
-                  </span>
-                  {user.enabled === false ? (
-                    <span className={styles.disabledStatus}>
-                      {t("systemAdmin.userPicker.disabledUser")}
+              <div className={styles.loadingState}>
+                <Spin size="small" />
+              </div>
+            ) : visibleUsers.length ? (
+              visibleUsers.map((user) => {
+                const selected = selectedIds.includes(user.id);
+                const unavailable = disabled || user.enabled === false;
+                return (
+                  <button
+                    aria-disabled={unavailable}
+                    aria-selected={selected}
+                    className={selected ? styles.memberSelected : styles.member}
+                    disabled={unavailable}
+                    key={user.id}
+                    onClick={() => changeSelection(user.id)}
+                    role="option"
+                    type="button"
+                  >
+                    <Avatar className={styles.avatar} icon={<UserOutlined />} size={30} />
+                    <span className={styles.memberIdentity}>
+                      <strong>{displayName(user)}</strong>
+                      <small>{user.account || user.id}</small>
                     </span>
-                  ) : selected ? <CheckOutlined className={styles.checkIcon} /> : null}
-                </button>
-              );
-            }) : (
+                    {user.enabled === false ? (
+                      <span className={styles.disabledStatus}>
+                        {t("systemAdmin.userPicker.disabledUser")}
+                      </span>
+                    ) : selected ? (
+                      <CheckOutlined className={styles.checkIcon} />
+                    ) : null}
+                  </button>
+                );
+              })
+            ) : (
               <Empty
                 className={styles.emptyState}
                 description={t("systemAdmin.userPicker.empty")}

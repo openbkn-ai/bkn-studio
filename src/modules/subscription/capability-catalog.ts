@@ -29,12 +29,7 @@ import type { Edition } from "@/framework/entitlement/edition";
  * 改 minEdition 等于静默改动合同范围),所以这份快照对齐它们即可,名称与描述走 i18n。
  */
 export type CapabilityCategory =
-  | "dataConnect"
-  | "modeling"
-  | "observability"
-  | "operations"
-  | "permission"
-  | "semantic";
+  "dataConnect" | "modeling" | "observability" | "operations" | "permission" | "semantic";
 
 export type CapabilityCatalogEntry = {
   category: CapabilityCategory;
@@ -69,10 +64,18 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
 ];
 
 export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
-  { category: "permission", key: CAPABILITIES.RBAC_BASIC,
-    reportedByEndpoint: true, minEdition: "professional" },
-  { category: "permission", key: CAPABILITIES.PERM_FINE_GRAINED,
-    reportedByEndpoint: true, minEdition: "professional" },
+  {
+    category: "permission",
+    key: CAPABILITIES.RBAC_BASIC,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+  },
+  {
+    category: "permission",
+    key: CAPABILITIES.PERM_FINE_GRAINED,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+  },
   {
     category: "dataConnect",
     key: "connector_certified",
@@ -104,8 +107,12 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     minEdition: "community",
     sinceVersion: "0.1.3",
   },
-  { category: "permission", key: CAPABILITIES.PERM_OBJECT_LEVEL,
-    reportedByEndpoint: true, minEdition: "enterprise" },
+  {
+    category: "permission",
+    key: CAPABILITIES.PERM_OBJECT_LEVEL,
+    reportedByEndpoint: true,
+    minEdition: "enterprise",
+  },
   {
     category: "observability",
     key: CAPABILITIES.BUSINESS_PROVENANCE,
@@ -121,9 +128,7 @@ export function capabilitiesIntroducedBy(edition: Edition): CapabilityCatalogEnt
   return CAPABILITY_CATALOG.filter((entry) => entry.minEdition === edition);
 }
 
-export function capabilitiesByCategory(
-  category: CapabilityCategory,
-): CapabilityCatalogEntry[] {
+export function capabilitiesByCategory(category: CapabilityCategory): CapabilityCatalogEntry[] {
   return CAPABILITY_CATALOG.filter((entry) => entry.category === category);
 }
 

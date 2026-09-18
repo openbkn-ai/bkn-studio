@@ -8,10 +8,7 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  hasPermissions,
-  type PermissionCheckMode,
-} from "@/framework/permission/has-permissions";
+import { hasPermissions, type PermissionCheckMode } from "@/framework/permission/has-permissions";
 
 type PermissionGateProps = PropsWithChildren<{
   fallback?: ReactNode;
@@ -34,4 +31,3 @@ export function PermissionGate({
 
   return allowed ? children : fallback;
 }
-

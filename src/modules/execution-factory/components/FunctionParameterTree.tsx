@@ -28,9 +28,7 @@ function normalizeAfterTypeChange(parameter: FunctionParameterDef): FunctionPara
     const existing = parameter.sub_parameters?.[0];
     return {
       ...parameter,
-      sub_parameters: [
-        existing ?? { name: ARRAY_ITEM_NAME, type: "string", required: true },
-      ],
+      sub_parameters: [existing ?? { name: ARRAY_ITEM_NAME, type: "string", required: true }],
     };
   }
 
@@ -147,9 +145,7 @@ function ParameterNode({
                 fixedSlot={parameter.type === "array"}
                 key={index}
                 onChange={(next) => replaceChild(index, next)}
-                onRemove={() =>
-                  patch({ sub_parameters: children.filter((_, at) => at !== index) })
-                }
+                onRemove={() => patch({ sub_parameters: children.filter((_, at) => at !== index) })}
                 parameter={child}
                 readOnly={readOnly}
               />
@@ -210,14 +206,16 @@ export function FunctionParameterTree({
           readOnly={readOnly}
         />
       ))}
-      {!readOnly ? <AppButton
-        className={styles.addButton}
-        icon={<PlusOutlined />}
-        onClick={() => onChange([...parameters, { name: "", type: "string", required: false }])}
-        size="small"
-      >
-        {addLabel}
-      </AppButton> : null}
+      {!readOnly ? (
+        <AppButton
+          className={styles.addButton}
+          icon={<PlusOutlined />}
+          onClick={() => onChange([...parameters, { name: "", type: "string", required: false }])}
+          size="small"
+        >
+          {addLabel}
+        </AppButton>
+      ) : null}
     </div>
   );
 }

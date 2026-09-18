@@ -36,11 +36,7 @@ type ResourceColorSelectProps = {
   value?: string;
 };
 
-export function ResourceColorSelect({
-  inModal = true,
-  onChange,
-  value,
-}: ResourceColorSelectProps) {
+export function ResourceColorSelect({ inModal = true, onChange, value }: ResourceColorSelectProps) {
   const [open, setOpen] = useState(false);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -91,10 +87,7 @@ export function ResourceColorSelect({
       destroyOnHidden
       getPopupContainer={() => {
         if (inModal) {
-          return (
-            (document.querySelector(".ant-modal-wrap") as HTMLElement) ??
-            document.body
-          );
+          return (document.querySelector(".ant-modal-wrap") as HTMLElement) ?? document.body;
         }
 
         return document.getElementById("root") ?? document.body;
@@ -104,10 +97,7 @@ export function ResourceColorSelect({
       trigger="click"
     >
       <button className={styles.trigger} type="button">
-        <span
-          className={styles.prefixSwatch}
-          style={{ backgroundColor: selectedColor }}
-        />
+        <span className={styles.prefixSwatch} style={{ backgroundColor: selectedColor }} />
         <DownOutlined className={styles.triggerIcon} />
       </button>
     </Popover>

@@ -21,7 +21,10 @@ import {
 } from "@/modules/system-admin/services/authz-objects.service";
 import type { AuthorizableObject } from "@/modules/system-admin/types/authz";
 import type { ResourceGrant, ResourceRef } from "@/modules/system-admin/types/admin";
-import { HIDDEN_INSTANCE_OPS, isAuthzObjectPickerType } from "@/modules/system-admin/utils/authz-catalog";
+import {
+  HIDDEN_INSTANCE_OPS,
+  isAuthzObjectPickerType,
+} from "@/modules/system-admin/utils/authz-catalog";
 import {
   operationLabel,
   isRoleGrantResourceType,
@@ -50,11 +53,21 @@ const ROLE_RESOURCE_TYPE_GROUPS = [
   { key: "data", types: ["catalog"] },
   {
     key: "knowledge",
-    types: ["knowledge_network", "concept_group", "object_type", "relation_type", "action_type", "metric"],
+    types: [
+      "knowledge_network",
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+    ],
   },
   { key: "model", types: ["small_model", "large_model"] },
   { key: "execution", types: ["function", "tool_box", "mcp", "skill"] },
-  { key: "system", types: ["admin-user", "admin-dept", "admin-role", "admin-authz", "admin-audit", "safe_admin"] },
+  {
+    key: "system",
+    types: ["admin-user", "admin-dept", "admin-role", "admin-authz", "admin-audit", "safe_admin"],
+  },
 ] as const;
 
 function normalizeOperations(selected: string[], definitions: GrantOperation[]): string[] {
@@ -64,7 +77,9 @@ function normalizeOperations(selected: string[], definitions: GrantOperation[]):
       operation.requires.forEach((requirement) => requested.add(requirement));
     }
   }
-  return definitions.filter((operation) => requested.has(operation.key)).map((operation) => operation.key);
+  return definitions
+    .filter((operation) => requested.has(operation.key))
+    .map((operation) => operation.key);
 }
 
 export function ResourceGrantEditor({
@@ -82,9 +97,7 @@ export function ResourceGrantEditor({
     resourceTypeOptions,
     retryAuthorizationRegistry,
   } = useAuthorizationRegistry();
-  const [draftType, setDraftType] = useState<string>(
-    lockedResource?.type ?? "",
-  );
+  const [draftType, setDraftType] = useState<string>(lockedResource?.type ?? "");
   const [draftId, setDraftId] = useState<string>(lockedResource?.id ?? "");
   const [wholeType, setWholeType] = useState<boolean>(!lockedResource);
   const [draftOps, setDraftOps] = useState<string[]>([]);
@@ -94,10 +107,15 @@ export function ResourceGrantEditor({
   const debouncedObjectKeyword = useDebouncedValue(objectKeyword.trim(), 300);
   const [objectLoading, setObjectLoading] = useState(false);
   const [objectLoadError, setObjectLoadError] = useState<string | null>(null);
-  const [failedObjectRequest, setFailedObjectRequest] = useState<{ append: boolean; page: number } | null>(null);
+  const [failedObjectRequest, setFailedObjectRequest] = useState<{
+    append: boolean;
+    page: number;
+  } | null>(null);
   const [objectPage, setObjectPage] = useState(0);
   const [objectTotal, setObjectTotal] = useState(0);
-  const [resourceNames, setResourceNames] = useState<Map<string, { name: string; sub?: string }>>(new Map());
+  const [resourceNames, setResourceNames] = useState<Map<string, { name: string; sub?: string }>>(
+    new Map(),
+  );
   const objectRequestRef = useRef(0);
 
   const registryReady = Boolean(catalog?.resourceTypes.length) && !catalogLoading && !catalogError;
@@ -124,12 +142,16 @@ export function ResourceGrantEditor({
   const supportsSpecificResource = isAuthzObjectPickerType(draftType);
   const effectiveWholeType = !supportsSpecificResource || wholeType;
   const ops = useMemo(
-    () => operationsForType(draftType).filter((operation) =>
-      effectiveWholeType || !HIDDEN_INSTANCE_OPS.has(operation.key)),
+    () =>
+      operationsForType(draftType).filter(
+        (operation) => effectiveWholeType || !HIDDEN_INSTANCE_OPS.has(operation.key),
+      ),
     [draftType, effectiveWholeType, operationsForType],
   );
   const draftContractReady = ops.length > 0;
-  const canConfigureOperations = Boolean(draftType && draftContractReady && (effectiveWholeType || draftId));
+  const canConfigureOperations = Boolean(
+    draftType && draftContractReady && (effectiveWholeType || draftId),
+  );
 
   useEffect(() => {
     if (lockedResource || !registryReady) return;
@@ -139,33 +161,36 @@ export function ResourceGrantEditor({
     }
   }, [draftType, lockedResource, registryReady, roleTypeValues]);
 
-  const loadObjectPage = useCallback(async (page: number, append: boolean) => {
-    if (!supportsSpecificResource || effectiveWholeType) return;
-    const request = ++objectRequestRef.current;
-    setObjectLoading(true);
-    setObjectLoadError(null);
-    setFailedObjectRequest(null);
-    try {
-      const result = await listAuthorizableObjectsPage(draftType, {
-        keyword: debouncedObjectKeyword,
-        page,
-      });
-      if (request !== objectRequestRef.current) return;
-      setObjects((previous) => {
-        const candidates = append ? [...previous, ...result.items] : result.items;
-        return [...new Map(candidates.map((item) => [item.id, item])).values()];
-      });
-      setObjectPage(page);
-      setObjectTotal(result.total);
-    } catch (error) {
-      if (request === objectRequestRef.current) {
-        setObjectLoadError(extractRequestErrorMessage(error));
-        setFailedObjectRequest({ append, page });
+  const loadObjectPage = useCallback(
+    async (page: number, append: boolean) => {
+      if (!supportsSpecificResource || effectiveWholeType) return;
+      const request = ++objectRequestRef.current;
+      setObjectLoading(true);
+      setObjectLoadError(null);
+      setFailedObjectRequest(null);
+      try {
+        const result = await listAuthorizableObjectsPage(draftType, {
+          keyword: debouncedObjectKeyword,
+          page,
+        });
+        if (request !== objectRequestRef.current) return;
+        setObjects((previous) => {
+          const candidates = append ? [...previous, ...result.items] : result.items;
+          return [...new Map(candidates.map((item) => [item.id, item])).values()];
+        });
+        setObjectPage(page);
+        setObjectTotal(result.total);
+      } catch (error) {
+        if (request === objectRequestRef.current) {
+          setObjectLoadError(extractRequestErrorMessage(error));
+          setFailedObjectRequest({ append, page });
+        }
+      } finally {
+        if (request === objectRequestRef.current) setObjectLoading(false);
       }
-    } finally {
-      if (request === objectRequestRef.current) setObjectLoading(false);
-    }
-  }, [debouncedObjectKeyword, draftType, effectiveWholeType, supportsSpecificResource]);
+    },
+    [debouncedObjectKeyword, draftType, effectiveWholeType, supportsSpecificResource],
+  );
 
   useEffect(() => {
     if (!supportsSpecificResource || effectiveWholeType) {
@@ -183,16 +208,21 @@ export function ResourceGrantEditor({
   useEffect(() => {
     let active = true;
     void resolveResourceGrantNames(value).then(
-      (names) => { if (active) setResourceNames(names); },
+      (names) => {
+        if (active) setResourceNames(names);
+      },
       () => undefined,
     );
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [value]);
 
   const objectOptions = useMemo(() => {
-    const candidates = draftId && !objects.some((item) => item.id === draftId)
-      ? [{ id: draftId, name: draftId, type: draftType }, ...objects]
-      : objects;
+    const candidates =
+      draftId && !objects.some((item) => item.id === draftId)
+        ? [{ id: draftId, name: draftId, type: draftType }, ...objects]
+        : objects;
     return candidates.map((item) => ({
       label: item.sub ? `${item.name} (${item.sub})` : item.name,
       value: item.id,
@@ -200,19 +230,24 @@ export function ResourceGrantEditor({
   }, [draftId, draftType, objects]);
 
   const draftRequirements = useMemo(
-    () => ops.flatMap((requirement) => {
-      const dependents = ops.filter((operation) =>
-        draftOps.includes(operation.key) && operation.requires.includes(requirement.key));
-      return dependents.length ? [{ dependents, requirement }] : [];
-    }),
+    () =>
+      ops.flatMap((requirement) => {
+        const dependents = ops.filter(
+          (operation) =>
+            draftOps.includes(operation.key) && operation.requires.includes(requirement.key),
+        );
+        return dependents.length ? [{ dependents, requirement }] : [];
+      }),
     [draftOps, ops],
   );
 
   const toggleDraftOperation = (operationKey: string) => {
     setDraftOps((previous) => {
       if (previous.includes(operationKey)) {
-        const requiredBySelected = ops.some((operation) =>
-          previous.includes(operation.key) && operation.requires.includes(operationKey));
+        const requiredBySelected = ops.some(
+          (operation) =>
+            previous.includes(operation.key) && operation.requires.includes(operationKey),
+        );
         return requiredBySelected ? previous : previous.filter((key) => key !== operationKey);
       }
       return normalizeOperations([...previous, operationKey], ops);
@@ -223,12 +258,19 @@ export function ResourceGrantEditor({
     if (!canEdit) return false;
     const definitions = operationsForType(grant.resource.type);
     const definedOperations = new Set(definitions.map((operation) => operation.key));
-    return definitions.length > 0 && grant.operations.every(
-      (operation) => operation === WILDCARD || definedOperations.has(operation),
+    return (
+      definitions.length > 0 &&
+      grant.operations.every(
+        (operation) => operation === WILDCARD || definedOperations.has(operation),
+      )
     );
   };
 
-  const resolvedId = lockedResource ? lockedResource.id : effectiveWholeType ? WILDCARD : draftId.trim();
+  const resolvedId = lockedResource
+    ? lockedResource.id
+    : effectiveWholeType
+      ? WILDCARD
+      : draftId.trim();
 
   const addGrant = () => {
     if (
@@ -244,10 +286,10 @@ export function ResourceGrantEditor({
     const existing = value.find((grant) => sameResource(grant.resource, resource));
     const next = existing
       ? value.map((grant) =>
-        grant === existing
-          ? { ...grant, operations: normalizeOperations([...grant.operations, ...draftOps], ops) }
-          : grant,
-      )
+          grant === existing
+            ? { ...grant, operations: normalizeOperations([...grant.operations, ...draftOps], ops) }
+            : grant,
+        )
       : [...value, { resource, operations: [...draftOps] }];
     onChange(next);
     setDraftOps([]);
@@ -264,11 +306,16 @@ export function ResourceGrantEditor({
   const addOperation = (grant: ResourceGrant, operation: string) => {
     if (!canEditGrant(grant)) return;
     const definitions = operationsForType(grant.resource.type);
-    onChange(value.map((item) =>
-      sameResource(item.resource, grant.resource)
-        ? { ...item, operations: normalizeOperations([...item.operations, operation], definitions) }
-        : item,
-    ));
+    onChange(
+      value.map((item) =>
+        sameResource(item.resource, grant.resource)
+          ? {
+              ...item,
+              operations: normalizeOperations([...item.operations, operation], definitions),
+            }
+          : item,
+      ),
+    );
     setAddingGrantKey(null);
   };
 
@@ -282,11 +329,13 @@ export function ResourceGrantEditor({
     if (requiredBySelectedOperation) return;
 
     const remaining = grant.operations.filter((item) => item !== operation);
-    onChange(remaining.length
-      ? value.map((item) => sameResource(item.resource, grant.resource)
-        ? { ...item, operations: remaining }
-        : item)
-      : value.filter((item) => !sameResource(item.resource, grant.resource)));
+    onChange(
+      remaining.length
+        ? value.map((item) =>
+            sameResource(item.resource, grant.resource) ? { ...item, operations: remaining } : item,
+          )
+        : value.filter((item) => !sameResource(item.resource, grant.resource)),
+    );
   };
 
   return (
@@ -304,7 +353,10 @@ export function ResourceGrantEditor({
                 .flatMap((operation) => operation.requires),
             );
             return (
-              <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}:${index}`}>
+              <div
+                className={styles.grantItem}
+                key={`${grant.resource.type}:${grant.resource.id}:${index}`}
+              >
                 <div className={styles.grantMeta}>
                   <Tooltip title={resourceTypeDescription(grant.resource.type)}>
                     <Tag className={styles.roleTag}>{resourceTypeLabel(grant.resource.type)}</Tag>
@@ -315,7 +367,9 @@ export function ResourceGrantEditor({
                   >
                     {grant.resource.id === WILDCARD
                       ? t("systemAdmin.grant.wholeType")
-                      : resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))?.name ?? grant.resource.id}
+                      : (resourceNames.get(
+                          resourceGrantNameKey(grant.resource.type, grant.resource.id),
+                        )?.name ?? grant.resource.id)}
                   </span>
                 </div>
                 <div className={styles.chipRow}>
@@ -323,8 +377,12 @@ export function ResourceGrantEditor({
                     const operation = operationDefinitions.get(op);
                     const title = [
                       operation?.description,
-                      requiredOperations.has(op) ? t("systemAdmin.objectGrants.requiredBySelection") : undefined,
-                    ].filter(Boolean).join("\n");
+                      requiredOperations.has(op)
+                        ? t("systemAdmin.objectGrants.requiredBySelection")
+                        : undefined,
+                    ]
+                      .filter(Boolean)
+                      .join("\n");
                     return (
                       <Tooltip key={op} title={title || undefined}>
                         <Tag
@@ -351,15 +409,14 @@ export function ResourceGrantEditor({
                         options={availableOperationsForGrant(
                           grant,
                           operationsForType(grant.resource.type),
-                        )
-                          .map((operation) => ({
-                            label: (
-                              <Tooltip title={operation.description}>
-                                <span>{operation.label}</span>
-                              </Tooltip>
-                            ),
-                            value: operation.key,
-                          }))}
+                        ).map((operation) => ({
+                          label: (
+                            <Tooltip title={operation.description}>
+                              <span>{operation.label}</span>
+                            </Tooltip>
+                          ),
+                          value: operation.key,
+                        }))}
                         placeholder={t("systemAdmin.grant.operationsPlaceholder")}
                         size="small"
                         style={{ minWidth: 150 }}
@@ -368,7 +425,11 @@ export function ResourceGrantEditor({
                       <Tooltip title={t("systemAdmin.grant.addOperation")}>
                         <AppButton
                           icon={<PlusOutlined />}
-                          onClick={() => setAddingGrantKey(`${grant.resource.type}:${grant.resource.id}:${index}`)}
+                          onClick={() =>
+                            setAddingGrantKey(
+                              `${grant.resource.type}:${grant.resource.id}:${index}`,
+                            )
+                          }
                           size="small"
                           type="link"
                         >
@@ -401,7 +462,10 @@ export function ResourceGrantEditor({
 
       {!disabled ? (
         <>
-          <AuthorizationRegistryFailureAlert error={catalogError} onRetry={retryAuthorizationRegistry} />
+          <AuthorizationRegistryFailureAlert
+            error={catalogError}
+            onRetry={retryAuthorizationRegistry}
+          />
           <div className={styles.grantAddRow}>
             {!lockedResource ? (
               <>
@@ -424,7 +488,9 @@ export function ResourceGrantEditor({
                 {draftType ? (
                   <>
                     <div className={styles.grantScope}>
-                      <span className={styles.grantScopeLabel}>{t("systemAdmin.grant.scopeLabel")}</span>
+                      <span className={styles.grantScopeLabel}>
+                        {t("systemAdmin.grant.scopeLabel")}
+                      </span>
                       <Radio.Group
                         aria-label={t("systemAdmin.grant.scopeLabel")}
                         disabled={!canEdit}
@@ -450,14 +516,24 @@ export function ResourceGrantEditor({
                         disabled={!canEdit}
                         filterOption={false}
                         loading={objectLoading}
-                        notFoundContent={objectLoading ? <Spin size="small" /> : t("systemAdmin.objectGrants.pickerNoResults")}
+                        notFoundContent={
+                          objectLoading ? (
+                            <Spin size="small" />
+                          ) : (
+                            t("systemAdmin.objectGrants.pickerNoResults")
+                          )
+                        }
                         onChange={(id: string) => {
                           setDraftId(id);
                           setObjectKeyword("");
                         }}
                         onPopupScroll={(event) => {
                           const target = event.currentTarget;
-                          if (target.scrollTop + target.clientHeight >= target.scrollHeight - 24 && !objectLoading && objects.length < objectTotal) {
+                          if (
+                            target.scrollTop + target.clientHeight >= target.scrollHeight - 24 &&
+                            !objectLoading &&
+                            objects.length < objectTotal
+                          ) {
                             void loadObjectPage(objectPage + 1, true);
                           }
                         }}
@@ -469,7 +545,10 @@ export function ResourceGrantEditor({
                             <div className={styles.objectPickerStatus}>
                               {objectLoading
                                 ? t("systemAdmin.objectGrants.pickerLoading")
-                                : t("systemAdmin.objectGrants.pickerCount", { loaded: objects.length, total: objectTotal })}
+                                : t("systemAdmin.objectGrants.pickerCount", {
+                                    loaded: objects.length,
+                                    total: objectTotal,
+                                  })}
                             </div>
                           </>
                         )}
@@ -481,17 +560,25 @@ export function ResourceGrantEditor({
                       />
                     ) : null}
                     {!supportsSpecificResource ? (
-                      <span className={styles.grantScopeHint}>{t("systemAdmin.grant.specificResourcesUnavailable")}</span>
+                      <span className={styles.grantScopeHint}>
+                        {t("systemAdmin.grant.specificResourcesUnavailable")}
+                      </span>
                     ) : null}
                     {!effectiveWholeType && !draftId ? (
-                      <span className={styles.grantScopeHint}>{t("systemAdmin.grant.pickResourceFirst")}</span>
+                      <span className={styles.grantScopeHint}>
+                        {t("systemAdmin.grant.pickResourceFirst")}
+                      </span>
                     ) : null}
                     {objectLoadError ? (
                       <Alert
                         action={
                           <AppButton
                             onClick={() => {
-                              if (failedObjectRequest) void loadObjectPage(failedObjectRequest.page, failedObjectRequest.append);
+                              if (failedObjectRequest)
+                                void loadObjectPage(
+                                  failedObjectRequest.page,
+                                  failedObjectRequest.append,
+                                );
                             }}
                             size="small"
                             type="link"
@@ -512,25 +599,53 @@ export function ResourceGrantEditor({
             {canConfigureOperations ? (
               <div className={styles.roleGrantOperationPicker}>
                 <div className={styles.authzGrantFieldHead}>
-                  <span className={styles.authzGrantFieldLabel}>{t("systemAdmin.objectGrants.grantOperationsLabel")}</span>
+                  <span className={styles.authzGrantFieldLabel}>
+                    {t("systemAdmin.objectGrants.grantOperationsLabel")}
+                  </span>
                   <div className={styles.authzGrantFieldActions}>
-                    <span>{t("systemAdmin.objectGrants.selectedOperationCount", { selected: draftOps.length, total: ops.length })}</span>
-                    <AppButton disabled={!canEdit || !ops.length || draftOps.length === ops.length} onClick={() => setDraftOps(ops.map((operation) => operation.key))} size="small" type="link">
+                    <span>
+                      {t("systemAdmin.objectGrants.selectedOperationCount", {
+                        selected: draftOps.length,
+                        total: ops.length,
+                      })}
+                    </span>
+                    <AppButton
+                      disabled={!canEdit || !ops.length || draftOps.length === ops.length}
+                      onClick={() => setDraftOps(ops.map((operation) => operation.key))}
+                      size="small"
+                      type="link"
+                    >
                       {t("systemAdmin.objectGrants.selectAllOperations")}
                     </AppButton>
-                    <AppButton disabled={!canEdit || !draftOps.length} onClick={() => setDraftOps([])} size="small" type="link">
+                    <AppButton
+                      disabled={!canEdit || !draftOps.length}
+                      onClick={() => setDraftOps([])}
+                      size="small"
+                      type="link"
+                    >
                       {t("systemAdmin.objectGrants.clearOperations")}
                     </AppButton>
                   </div>
                 </div>
-                <div aria-label={t("systemAdmin.objectGrants.grantOperationsLabel")} className={styles.authzCreateOperationGrid} role="group">
+                <div
+                  aria-label={t("systemAdmin.objectGrants.grantOperationsLabel")}
+                  className={styles.authzCreateOperationGrid}
+                  role="group"
+                >
                   {ops.map((operation) => {
-                    const prerequisiteLocked = draftRequirements.some(({ requirement }) => requirement.key === operation.key);
+                    const prerequisiteLocked = draftRequirements.some(
+                      ({ requirement }) => requirement.key === operation.key,
+                    );
                     const selected = draftOps.includes(operation.key);
                     return (
                       <button
                         aria-pressed={selected}
-                        className={[styles.chipOpt, styles.authzCreateOperation, selected ? styles.chipOptSelected : "", prerequisiteLocked ? styles.chipRequired : ""].join(" ")}
+                        className={[
+                          styles.chipOpt,
+                          styles.authzCreateOperation,
+                          selected ? styles.chipOptSelected : "",
+                          prerequisiteLocked ? styles.chipRequired : "",
+                        ].join(" ")}
                         disabled={!canEdit}
                         key={operation.key}
                         onClick={() => toggleDraftOperation(operation.key)}
@@ -539,7 +654,14 @@ export function ResourceGrantEditor({
                       >
                         <span className={styles.chipLabelRow}>
                           <span className={styles.chipCode}>{operation.label}</span>
-                          {prerequisiteLocked ? <Tooltip title={t("systemAdmin.objectGrants.requiredBySelection")}><LockOutlined aria-label={t("systemAdmin.objectGrants.requiredBySelection")} className={styles.chipLock} /></Tooltip> : null}
+                          {prerequisiteLocked ? (
+                            <Tooltip title={t("systemAdmin.objectGrants.requiredBySelection")}>
+                              <LockOutlined
+                                aria-label={t("systemAdmin.objectGrants.requiredBySelection")}
+                                className={styles.chipLock}
+                              />
+                            </Tooltip>
+                          ) : null}
                         </span>
                         <span className={styles.chipType}>{operation.key}</span>
                       </button>
@@ -549,14 +671,26 @@ export function ResourceGrantEditor({
                 {draftRequirements.length ? (
                   <div className={styles.requirementNotice}>
                     <InfoCircleOutlined />
-                    <div>{draftRequirements.map(({ dependents, requirement }) => (
-                      <div key={requirement.key}>{t("systemAdmin.objectGrants.requiredSelectionNotice", { dependents: dependents.map((item) => item.label).join("、"), requirement: requirement.label })}</div>
-                    ))}</div>
+                    <div>
+                      {draftRequirements.map(({ dependents, requirement }) => (
+                        <div key={requirement.key}>
+                          {t("systemAdmin.objectGrants.requiredSelectionNotice", {
+                            dependents: dependents.map((item) => item.label).join("、"),
+                            requirement: requirement.label,
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
                 <div className={styles.authzGrantFooter}>
                   <span>{t("systemAdmin.grant.allowOnlyHint")}</span>
-                  <AppButton disabled={!canEdit || !draftOps.length} icon={<PlusOutlined />} onClick={addGrant} type="primary">
+                  <AppButton
+                    disabled={!canEdit || !draftOps.length}
+                    icon={<PlusOutlined />}
+                    onClick={addGrant}
+                    type="primary"
+                  >
                     {t("systemAdmin.grant.add")}
                   </AppButton>
                 </div>

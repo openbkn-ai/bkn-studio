@@ -40,9 +40,7 @@ export type FunctionExecuteResult = {
   stdout?: string;
 };
 
-export type FunctionAiGenerateType =
-  | "python_function_generator"
-  | "metadata_param_generator";
+export type FunctionAiGenerateType = "python_function_generator" | "metadata_param_generator";
 
 export type FunctionAiGenerateInput = {
   type: FunctionAiGenerateType;

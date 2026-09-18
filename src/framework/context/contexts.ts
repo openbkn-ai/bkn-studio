@@ -24,7 +24,6 @@ export type PendingContextValue = {
   updateLocale: (locale: SupportedLocale) => Promise<void>;
 };
 
-export const AppServicesContext =
-  createContext<AppServicesContextValue | null>(null);
+export const AppServicesContext = createContext<AppServicesContextValue | null>(null);
 
 export const PendingContext = createContext<PendingContextValue | null>(null);

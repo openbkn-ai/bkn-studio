@@ -193,9 +193,7 @@ export async function listLlmModels(query: LlmListQuery): Promise<LlmListResult>
       order: query.order ?? "desc",
       rule: query.rule ?? "update_time",
       name: query.name ?? "",
-      ...(query.modelType && query.modelType !== "all"
-        ? { model_type: query.modelType }
-        : {}),
+      ...(query.modelType && query.modelType !== "all" ? { model_type: query.modelType } : {}),
     },
   });
 
@@ -274,9 +272,7 @@ export async function updateLlmModel(payload: LlmSavePayload) {
  * Scoped responses include is_admin; when true, operationsFor returns full actions,
  * including modify, so high-risk default-model actions can be shown.
  */
-export async function getLlmItemPermissions(
-  modelIds: string[],
-): Promise<Record<string, string[]>> {
+export async function getLlmItemPermissions(modelIds: string[]): Promise<Record<string, string[]>> {
   if (useMock) {
     return Object.fromEntries(
       modelIds.map((modelId) => [

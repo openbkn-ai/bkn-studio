@@ -7,11 +7,9 @@
 
 import { getRuntimeConfig } from "@/framework/runtime/config";
 
-
 export function getExecutionFactoryApiHeaders() {
   const runtime = getRuntimeConfig();
-  const headers: Record<string, string> = {
-  };
+  const headers: Record<string, string> = {};
 
   if (runtime.currentUser.id) {
     headers.user_id = runtime.currentUser.id;

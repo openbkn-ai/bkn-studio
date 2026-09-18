@@ -41,15 +41,7 @@ export type BackendMetadata = {
   summary?: string;
 };
 
-const HTTP_METHODS = new Set([
-  "delete",
-  "get",
-  "head",
-  "options",
-  "patch",
-  "post",
-  "put",
-]);
+const HTTP_METHODS = new Set(["delete", "get", "head", "options", "patch", "post", "put"]);
 
 /** Backend validates metadata description length before applying form description. */
 export const CAPABILITY_DESCRIPTION_MAX_LENGTH = 2048;
@@ -73,9 +65,7 @@ export type OpenApiDocumentAnalysis =
   | { ok: false; reason: string };
 
 export type OpenApiSpecSource =
-  | { kind: "paste" }
-  | { kind: "file"; fileName?: string }
-  | { kind: "url"; url: string };
+  { kind: "paste" } | { kind: "file"; fileName?: string } | { kind: "url"; url: string };
 
 export type ResolvedOpenApiServiceUrl =
   | { ok: true; source: "absolute" | "resolved-relative"; url: string }
@@ -172,9 +162,7 @@ function isFullOpenApiDocument(value: unknown): value is Record<string, unknown>
   );
 }
 
-function collectOpenApiOperations(
-  paths: Record<string, unknown>,
-): OpenApiOperationPreview[] {
+function collectOpenApiOperations(paths: Record<string, unknown>): OpenApiOperationPreview[] {
   const operations: OpenApiOperationPreview[] = [];
 
   for (const [path, pathItem] of Object.entries(paths)) {
@@ -204,10 +192,7 @@ function collectOpenApiOperations(
   return operations;
 }
 
-function resolveComponentRefPath(
-  doc: Record<string, unknown>,
-  ref: string,
-): boolean {
+function resolveComponentRefPath(doc: Record<string, unknown>, ref: string): boolean {
   if (!ref.startsWith("#/components/")) {
     return true;
   }
@@ -245,9 +230,7 @@ function collectLocalComponentRefs(value: unknown, refs: Set<string>): void {
   Object.values(record).forEach((nested) => collectLocalComponentRefs(nested, refs));
 }
 
-function findBrokenComponentRef(
-  doc: Record<string, unknown>,
-): string | undefined {
+function findBrokenComponentRef(doc: Record<string, unknown>): string | undefined {
   const refs = new Set<string>();
 
   collectLocalComponentRefs(doc, refs);
@@ -298,9 +281,7 @@ function findOperationDescriptionTooLong(
   return undefined;
 }
 
-export function analyzeOpenApiDocumentText(
-  openapiSpec?: string,
-): OpenApiDocumentAnalysis {
+export function analyzeOpenApiDocumentText(openapiSpec?: string): OpenApiDocumentAnalysis {
   const parseResult = parseOpenApiDocumentText(openapiSpec);
   if (!parseResult.ok) {
     return parseResult;
@@ -575,8 +556,7 @@ export function rewriteOpenApiOperationSummaries(openapiSpec: string): string {
       }
 
       const operationRecord = operation as Record<string, unknown>;
-      const rawSummary =
-        typeof operationRecord.summary === "string" ? operationRecord.summary : "";
+      const rawSummary = typeof operationRecord.summary === "string" ? operationRecord.summary : "";
       const safeSummary =
         normalizeGeneratedCapabilityName(rawSummary) ??
         normalizeGeneratedCapabilityName(`${method}_${path}`) ??
@@ -685,9 +665,10 @@ export function validateOpenApiDocumentText(
   return { ok: true };
 }
 
-export function extractOpenApiMetadataHints(
-  openapiSpec?: string,
-): { title?: string; description?: string } {
+export function extractOpenApiMetadataHints(openapiSpec?: string): {
+  title?: string;
+  description?: string;
+} {
   if (!openapiSpec?.trim()) {
     return {};
   }
@@ -731,9 +712,7 @@ export function parseOpenApiDataPayload(
   return parsed.document;
 }
 
-export function mapFunctionContent(
-  metadata?: BackendMetadata,
-): FunctionInputPayload | undefined {
+export function mapFunctionContent(metadata?: BackendMetadata): FunctionInputPayload | undefined {
   const content = metadata?.function_content;
 
   if (!content?.code) {

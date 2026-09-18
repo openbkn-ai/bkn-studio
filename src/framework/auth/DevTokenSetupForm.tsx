@@ -43,8 +43,8 @@ export function DevTokenSetupForm({ onSaved }: DevTokenSetupFormProps) {
         <h1 className={styles.title}>{t("auth.devTokenTitle")}</h1>
         <p className={styles.description}>{t("auth.devTokenDescription")}</p>
         <p className={styles.hint}>
-          {t("auth.devTokenEnvPrefix")} <code>.env.local</code>{" "}
-          {t("auth.devTokenEnvMiddle")} <code>VITE_DEV_ACCESS_TOKEN</code>
+          {t("auth.devTokenEnvPrefix")} <code>.env.local</code> {t("auth.devTokenEnvMiddle")}{" "}
+          <code>VITE_DEV_ACCESS_TOKEN</code>
           {t("auth.devTokenEnvSuffix")}
         </p>
 

@@ -5,7 +5,18 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Collapse, Dropdown, Input, Pagination, Select, Steps, Tag, Tooltip, message } from "antd";
+import {
+  Alert,
+  Collapse,
+  Dropdown,
+  Input,
+  Pagination,
+  Select,
+  Steps,
+  Tag,
+  Tooltip,
+  message,
+} from "antd";
 import type { MenuProps } from "antd";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -117,7 +128,9 @@ export function CapabilityLabListScene() {
   }, [load]);
 
   useEffect(() => {
-    void listGroups().then(setGroups).catch(() => setGroups([]));
+    void listGroups()
+      .then(setGroups)
+      .catch(() => setGroups([]));
   }, []);
 
   useEffect(() => {
@@ -180,12 +193,7 @@ export function CapabilityLabListScene() {
   );
 
   const buildMenuItem = useCallback(
-    (
-      key: string,
-      title: string,
-      description: string,
-      onClick: () => void,
-    ) => ({
+    (key: string, title: string, description: string, onClick: () => void) => ({
       key,
       disabled: !canUseMenuItem(key),
       label: menuLabel(title, description),
@@ -411,7 +419,9 @@ export function CapabilityLabListScene() {
           ) : null}
           <div className={styles.emptyActions}>
             {hasActiveFilters ? (
-              <AppButton onClick={clearFilters}>{t("executionFactoryLab.clearFiltersAction")}</AppButton>
+              <AppButton onClick={clearFilters}>
+                {t("executionFactoryLab.clearFiltersAction")}
+              </AppButton>
             ) : (
               <>
                 <LabPermissionHint permissions={executionFactoryLabPermissions.capabilityCreate}>
@@ -539,11 +549,7 @@ export function CapabilityLabListScene() {
     <PermissionGate
       fallback={
         <section className={styles.page}>
-          <Alert
-            message={t("executionFactoryLab.permissionDeniedHint")}
-            showIcon
-            type="warning"
-          />
+          <Alert message={t("executionFactoryLab.permissionDeniedHint")} showIcon type="warning" />
         </section>
       }
       permissions={executionFactoryLabPermissions.capabilityView}

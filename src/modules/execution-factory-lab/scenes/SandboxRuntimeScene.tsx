@@ -253,9 +253,7 @@ export function SandboxRuntimeScene() {
       const detail = await getSandboxSessionDetail(sessionId);
       setSelected(detail);
     } catch (detailError) {
-      message.error(
-        loadErrorText(detailError, t("executionFactoryLab.sandboxRuntimeLoadFailed")),
-      );
+      message.error(loadErrorText(detailError, t("executionFactoryLab.sandboxRuntimeLoadFailed")));
     } finally {
       setDetailLoading(false);
     }
@@ -298,7 +296,9 @@ export function SandboxRuntimeScene() {
         }
         return (
           <Space direction="vertical" size={2}>
-            <Typography.Text className={styles.strongText}>{displayText(capability)}</Typography.Text>
+            <Typography.Text className={styles.strongText}>
+              {displayText(capability)}
+            </Typography.Text>
             {item.taskId ? <Typography.Text type="secondary">{item.taskId}</Typography.Text> : null}
             {user ? <Typography.Text type="secondary">{user}</Typography.Text> : null}
           </Space>
@@ -346,7 +346,9 @@ export function SandboxRuntimeScene() {
             {value ?? item.status}
           </Typography.Text>
         ) : (
-          <Typography.Text type="secondary">{t("executionFactoryLab.sandboxRuntimeNoError")}</Typography.Text>
+          <Typography.Text type="secondary">
+            {t("executionFactoryLab.sandboxRuntimeNoError")}
+          </Typography.Text>
         ),
     },
   ];
@@ -355,11 +357,7 @@ export function SandboxRuntimeScene() {
     <PermissionGate
       fallback={
         <section className={styles.page}>
-          <Alert
-            message={t("executionFactoryLab.permissionDeniedHint")}
-            showIcon
-            type="warning"
-          />
+          <Alert message={t("executionFactoryLab.permissionDeniedHint")} showIcon type="warning" />
         </section>
       }
       permissions={executionFactoryLabPermissions.sandboxRuntimeView}
@@ -368,7 +366,9 @@ export function SandboxRuntimeScene() {
         <div className={styles.intro}>
           <div>
             <h2 className={styles.introTitle}>{t("executionFactoryLab.sandboxRuntimeTitle")}</h2>
-            <p className={styles.introDescription}>{t("executionFactoryLab.sandboxRuntimeDescription")}</p>
+            <p className={styles.introDescription}>
+              {t("executionFactoryLab.sandboxRuntimeDescription")}
+            </p>
           </div>
           <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
             {t("executionFactoryLab.sandboxRuntimeRefresh")}
@@ -477,10 +477,13 @@ export function SandboxRuntimeScene() {
             placeholder={t("executionFactoryLab.sandboxRuntimeSearchPlaceholder")}
             value={keyword}
           />
-          <Checkbox checked={abnormalOnly} onChange={(event) => {
-            setAbnormalOnly(event.target.checked);
-            resetPage();
-          }}>
+          <Checkbox
+            checked={abnormalOnly}
+            onChange={(event) => {
+              setAbnormalOnly(event.target.checked);
+              resetPage();
+            }}
+          >
             {t("executionFactoryLab.sandboxRuntimeAbnormalOnly")}
           </Checkbox>
         </div>
@@ -489,7 +492,9 @@ export function SandboxRuntimeScene() {
           columns={columns}
           dataSource={filteredSessions}
           loading={loading}
-          locale={{ emptyText: <Empty description={t("executionFactoryLab.sandboxRuntimeNoSessions")} /> }}
+          locale={{
+            emptyText: <Empty description={t("executionFactoryLab.sandboxRuntimeNoSessions")} />,
+          }}
           onRow={(record) => ({
             onClick: () => void openDetail(record.id),
           })}
@@ -523,14 +528,21 @@ export function SandboxRuntimeScene() {
             </div>
           ) : (
             <Space direction="vertical" size={18} className={styles.drawerBody}>
-              <Descriptions bordered column={1} size="small" title={t("executionFactoryLab.sandboxRuntimeBasicSection")}>
+              <Descriptions
+                bordered
+                column={1}
+                size="small"
+                title={t("executionFactoryLab.sandboxRuntimeBasicSection")}
+              >
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeSessionId")}>
                   <Typography.Text copyable>{selected.id}</Typography.Text>
                 </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeStatus")}>
                   <Tag className={tagClass(statusTone[selected.status])}>{selected.status}</Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeSource")}>{selected.source}</Descriptions.Item>
+                <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeSource")}>
+                  {selected.source}
+                </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeTaskId")}>
                   {displayText(selected.taskId)}
                 </Descriptions.Item>
@@ -542,7 +554,12 @@ export function SandboxRuntimeScene() {
                 </Descriptions.Item>
               </Descriptions>
 
-              <Descriptions bordered column={1} size="small" title={t("executionFactoryLab.sandboxRuntimeResourceSection")}>
+              <Descriptions
+                bordered
+                column={1}
+                size="small"
+                title={t("executionFactoryLab.sandboxRuntimeResourceSection")}
+              >
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeRuntime")}>
                   {displayText(selected.languageRuntime ?? selected.runtimeType)}
                 </Descriptions.Item>
@@ -566,27 +583,44 @@ export function SandboxRuntimeScene() {
                 </Descriptions.Item>
               </Descriptions>
 
-              <Descriptions bordered column={1} size="small" title={t("executionFactoryLab.sandboxRuntimeDependencySection")}>
+              <Descriptions
+                bordered
+                column={1}
+                size="small"
+                title={t("executionFactoryLab.sandboxRuntimeDependencySection")}
+              >
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeInstallStatus")}>
-                  <Tag className={tagClass(installStatusTone[selected.dependencyInstallStatus ?? ""])}>
+                  <Tag
+                    className={tagClass(installStatusTone[selected.dependencyInstallStatus ?? ""])}
+                  >
                     {displayText(selected.dependencyInstallStatus)}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeRequestedDependencies")}>
+                <Descriptions.Item
+                  label={t("executionFactoryLab.sandboxRuntimeRequestedDependencies")}
+                >
                   {dependencyText(selected.requestedDependencies)}
                 </Descriptions.Item>
-                <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeInstalledDependencies")}>
+                <Descriptions.Item
+                  label={t("executionFactoryLab.sandboxRuntimeInstalledDependencies")}
+                >
                   {dependencyText(selected.installedDependencies)}
                 </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimePackageIndex")}>
                   {displayText(selected.pythonPackageIndexUrl)}
                 </Descriptions.Item>
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeInstallTime")}>
-                  {formatTime(selected.dependencyInstallStartedAt)} - {formatTime(selected.dependencyInstallCompletedAt)}
+                  {formatTime(selected.dependencyInstallStartedAt)} -{" "}
+                  {formatTime(selected.dependencyInstallCompletedAt)}
                 </Descriptions.Item>
               </Descriptions>
 
-              <Descriptions bordered column={1} size="small" title={t("executionFactoryLab.sandboxRuntimeErrorSection")}>
+              <Descriptions
+                bordered
+                column={1}
+                size="small"
+                title={t("executionFactoryLab.sandboxRuntimeErrorSection")}
+              >
                 <Descriptions.Item label={t("executionFactoryLab.sandboxRuntimeColumnError")}>
                   {displayText(selected.recentErrorSummary)}
                 </Descriptions.Item>

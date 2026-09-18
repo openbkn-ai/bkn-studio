@@ -7,15 +7,7 @@
 
 import styles from "./HttpMethodTag.module.css";
 
-const KNOWN_METHODS = new Set([
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "HEAD",
-  "OPTIONS",
-]);
+const KNOWN_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 
 type HttpMethodTagProps = {
   method?: string;

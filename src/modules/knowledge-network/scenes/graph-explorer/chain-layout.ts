@@ -61,7 +61,8 @@ export function hopLevels(part: string[], edges: ChainEdge[]): Map<string, numbe
   const out = new Map<string, string[]>(part.map((id) => [id, []]));
   const incoming = new Map<string, number>(part.map((id) => [id, 0]));
   for (const edge of edges) {
-    if (!inPart.has(edge.source) || !inPart.has(edge.target) || edge.source === edge.target) continue;
+    if (!inPart.has(edge.source) || !inPart.has(edge.target) || edge.source === edge.target)
+      continue;
     out.get(edge.source)?.push(edge.target);
     incoming.set(edge.target, (incoming.get(edge.target) ?? 0) + 1);
   }

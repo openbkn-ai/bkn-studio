@@ -24,7 +24,10 @@ await page.goto("http://host.docker.internal:5173/execution-factory/catalog", {
 });
 await page.waitForTimeout(3000);
 
-const tab = await page.locator(".ant-tabs-tab-active").innerText().catch(() => "none");
+const tab = await page
+  .locator(".ant-tabs-tab-active")
+  .innerText()
+  .catch(() => "none");
 const hasTable = await page.locator(".ant-table").count();
 const cardGrid = await page.locator('[class*="cardGrid"]').count();
 const cardBody = await page.locator('[class*="cardBody"]').count();

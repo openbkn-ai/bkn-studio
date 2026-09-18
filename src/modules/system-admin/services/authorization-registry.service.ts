@@ -48,7 +48,8 @@ export function getAuthorizationRegistry(): Promise<AuthorizationRegistry> {
     return Promise.resolve(mockAuthorizationRegistry());
   }
   if (!catalogPromise) {
-    const request = http.get<BackendAuthorizationRegistry>(AUTHZ_CATALOG)
+    const request = http
+      .get<BackendAuthorizationRegistry>(AUTHZ_CATALOG)
       .then((response) => normalizeAuthorizationRegistry(response.data));
     catalogPromise = request;
     // Do not retain a rejected promise for the lifetime of the SPA. A transient
@@ -82,7 +83,9 @@ export type BackendAuthorizationRegistry = {
   }>;
 };
 
-export function normalizeAuthorizationRegistry(input: BackendAuthorizationRegistry): AuthorizationRegistry {
+export function normalizeAuthorizationRegistry(
+  input: BackendAuthorizationRegistry,
+): AuthorizationRegistry {
   if (!Array.isArray(input.resource_types) || input.resource_types.length === 0) {
     throw new Error("Authorization registry does not contain any resource types");
   }
@@ -108,9 +111,11 @@ export function normalizeAuthorizationRegistry(input: BackendAuthorizationRegist
         requires: [...new Set(operation.requires ?? [])],
       };
     });
-    if (operations.some((operation) =>
-      operation.requires.some((requirement) => !operationIds.has(requirement)),
-    )) {
+    if (
+      operations.some((operation) =>
+        operation.requires.some((requirement) => !operationIds.has(requirement)),
+      )
+    ) {
       throw new Error(`Authorization registry contains an unknown requirement for ${id}`);
     }
     return {
@@ -145,6 +150,9 @@ export function grantableOperationsForType(
   catalog: AuthorizationRegistry | undefined,
   type: string,
 ): AuthorizationRegistryOperation[] {
-  return catalog?.resourceTypes.find((item) => item.id === type)
-    ?.operations.filter((operation) => operation.grantable) ?? [];
+  return (
+    catalog?.resourceTypes
+      .find((item) => item.id === type)
+      ?.operations.filter((operation) => operation.grantable) ?? []
+  );
 }

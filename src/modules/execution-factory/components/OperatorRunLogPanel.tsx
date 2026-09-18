@@ -30,10 +30,7 @@ function renderJson(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
-export function OperatorRunLogPanel({
-  operatorId,
-  sessionLogs = [],
-}: OperatorRunLogPanelProps) {
+export function OperatorRunLogPanel({ operatorId, sessionLogs = [] }: OperatorRunLogPanelProps) {
   const { t } = useTranslation();
   const [history, setHistory] = useState<OperatorHistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,8 +75,7 @@ export function OperatorRunLogPanel({
             {
               dataIndex: "status",
               key: "status",
-              render: (value?: string) =>
-                value ? t(`executionFactory.statuses.${value}`) : "-",
+              render: (value?: string) => (value ? t(`executionFactory.statuses.${value}`) : "-"),
               title: t("executionFactory.statusLabel"),
             },
             {

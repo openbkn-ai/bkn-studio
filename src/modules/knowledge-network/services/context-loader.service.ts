@@ -71,13 +71,20 @@ export function requestDataAssistantKindOf(opId: string): RequestDataAssistantKi
 export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   {
     id: "search_schema",
-    summary: "Unified schema exploration entry. It searches object, relation, action, and metric types from natural language without returning instance data.",
+    summary:
+      "Unified schema exploration entry. It searches object, relation, action, and metric types from natural language without returning instance data.",
     path: `${REST_PREFIX}/kn/search_schema`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: {
       query: "Find core business objects and relations",
       kn_id: "your_kn_id",
-      search_scope: { concept_groups: [], include_object_types: true, include_relation_types: true, include_action_types: true, include_metric_types: true },
+      search_scope: {
+        concept_groups: [],
+        include_object_types: true,
+        include_relation_types: true,
+        include_action_types: true,
+        include_metric_types: true,
+      },
       max_concepts: 10,
       schema_brief: true,
       enable_rerank: true,
@@ -115,7 +122,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "query_instance_subgraph",
-    summary: "Queries object subgraphs through predefined relation-type paths. Multiple paths are supported, and object_types must align with relation_types order.",
+    summary:
+      "Queries object subgraphs through predefined relation-type paths. Multiple paths are supported, and object_types must align with relation_types order.",
     path: `${REST_PREFIX}/kn/query_instance_subgraph`,
     query: [
       { name: "kn_id", value: "your_kn_id", required: true },
@@ -126,7 +134,13 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       relation_type_paths: [
         {
           object_types: [{ id: "object_type_a" }, { id: "object_type_b" }],
-          relation_types: [{ relation_type_id: "relation_a_b", source_object_type_id: "object_type_a", target_object_type_id: "object_type_b" }],
+          relation_types: [
+            {
+              relation_type_id: "relation_a_b",
+              source_object_type_id: "object_type_a",
+              target_object_type_id: "object_type_b",
+            },
+          ],
           limit: 10,
         },
       ],
@@ -136,7 +150,13 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
       relation_type_paths: [
         {
           object_types: [{ id: "object_type_a" }, { id: "object_type_b" }],
-          relation_types: [{ relation_type_id: "relation_a_b", source_object_type_id: "object_type_a", target_object_type_id: "object_type_b" }],
+          relation_types: [
+            {
+              relation_type_id: "relation_a_b",
+              source_object_type_id: "object_type_a",
+              target_object_type_id: "object_type_b",
+            },
+          ],
           limit: 10,
         },
       ],
@@ -153,22 +173,28 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "describe_resource",
-    summary: "Describes one data resource schema and returns connector_type plus columns. resource_id comes from list_resources entries[].resource_id.",
+    summary:
+      "Describes one data resource schema and returns connector_type plus columns. resource_id comes from list_resources entries[].resource_id.",
     path: `${REST_PREFIX}/kn/describe_resource`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { resource_id: "your_resource_id" },
   },
   {
     id: "run_sql",
-    summary: "Runs SQL against knowledge-network resources and returns result rows. Table names use {{.<resource_id>}} placeholders; cross-catalog joins are not supported.",
+    summary:
+      "Runs SQL against knowledge-network resources and returns result rows. Table names use {{.<resource_id>}} placeholders; cross-catalog joins are not supported.",
     path: `${REST_PREFIX}/kn/run_sql`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     // Data tables must be referenced through resource placeholders, not raw table names.
-    body: { kn_id: "your_kn_id", sql: "SELECT * FROM {{.resource_id}} WHERE status = 'active' LIMIT 10" },
+    body: {
+      kn_id: "your_kn_id",
+      sql: "SELECT * FROM {{.resource_id}} WHERE status = 'active' LIMIT 10",
+    },
   },
   {
     id: "get_logic_properties_values",
-    summary: "Queries logical property values for objects in batch and derives dynamic_params from query when possible.",
+    summary:
+      "Queries logical property values for objects in batch and derives dynamic_params from query when possible.",
     // MCP tool name is get_logic_properties_values; REST route is logic-property-resolver.
     path: `${REST_PREFIX}/kn/logic-property-resolver`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
@@ -195,21 +221,33 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_action_info",
-    summary: "Recalls related actions from object instance identities and returns Function Call-compatible _dynamic_tools definitions.",
+    summary:
+      "Recalls related actions from object instance identities and returns Function Call-compatible _dynamic_tools definitions.",
     path: `${REST_PREFIX}/kn/get_action_info`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "your_kn_id", at_id: "your_action_type", _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }] },
+    body: {
+      kn_id: "your_kn_id",
+      at_id: "your_action_type",
+      _instance_identities: [{ id: "instance_000001" }, { id: "instance_000002" }],
+    },
   },
   {
     id: "search_capabilities",
-    summary: "Ranks every kind the knowledge network mounted in one space: Skills, Function tools, API tools and MCP tools. Narrow with types, and split Function tools further with metadata_types.",
+    summary:
+      "Ranks every kind the knowledge network mounted in one space: Skills, Function tools, API tools and MCP tools. Narrow with types, and split Function tools further with metadata_types.",
     path: `${REST_PREFIX}/kn/search_capabilities`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
-    body: { kn_id: "your_kn_id", query: "Example capability search", types: ["skill", "function", "mcp_tool"], limit: 20 },
+    body: {
+      kn_id: "your_kn_id",
+      query: "Example capability search",
+      types: ["skill", "function", "mcp_tool"],
+      limit: 20,
+    },
   },
   {
     id: "list_knowledge_networks",
-    summary: "Lists business knowledge networks accessible to the current account, with filtering, pagination, and sorting.",
+    summary:
+      "Lists business knowledge networks accessible to the current account, with filtering, pagination, and sorting.",
     path: `${REST_PREFIX}/kn/list_knowledge_networks`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { limit: 20, offset: 0 },
@@ -232,7 +270,8 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_relation_types",
-    summary: "Fetches full relation-type definitions by id, including mapping rules and source/target object names.",
+    summary:
+      "Fetches full relation-type definitions by id, including mapping rules and source/target object names.",
     path: `${REST_PREFIX}/kn/get_relation_types`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id", ids: ["your_relation_type"] },
@@ -252,14 +291,16 @@ export const CONTEXT_LOADER_OPS: ContextLoaderOp[] = [
   },
   {
     id: "get_action_execution",
-    summary: "Returns one action execution status and results. execution_id is returned by execute_action.",
+    summary:
+      "Returns one action execution status and results. execution_id is returned by execute_action.",
     path: `${REST_PREFIX}/kn/get_action_execution`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id", execution_id: "your_execution_id" },
   },
   {
     id: "list_action_executions",
-    summary: "Lists action execution history with optional action type, status, trigger, and pagination filters.",
+    summary:
+      "Lists action execution history with optional action type, status, trigger, and pagination filters.",
     path: `${REST_PREFIX}/kn/list_action_executions`,
     query: [{ name: "response_format", value: "json", options: ["json", "toon"] }],
     body: { kn_id: "your_kn_id", status: "completed", offset: 0, limit: 20 },
@@ -288,7 +329,11 @@ export function authHeaders(env: ContextLoaderEnv): Record<string, string> {
 }
 
 /** Injects the current network slug into body or mcpArgs, then formats JSON text. */
-export function exampleBodyText(op: ContextLoaderOp, mode: ContextLoaderMode, knId: string): string {
+export function exampleBodyText(
+  op: ContextLoaderOp,
+  mode: ContextLoaderMode,
+  knId: string,
+): string {
   const source = mode === "mcp" ? (op.mcpArgs ?? op.body) : op.body;
   if (source === null) {
     return "";
@@ -334,7 +379,8 @@ function pickFilterFieldValue(
 ): { field: string; value: string | number | boolean } | null {
   if (!row) return null;
   const declared = (ot.data_properties ?? []).map((p) => p.name);
-  const candidates = declared.length > 0 ? declared : Object.keys(row).filter((k) => !k.startsWith("_"));
+  const candidates =
+    declared.length > 0 ? declared : Object.keys(row).filter((k) => !k.startsWith("_"));
   for (const name of candidates) {
     const v = row[name];
     if (typeof v === "number" || typeof v === "boolean") return { field: name, value: v };
@@ -348,7 +394,11 @@ export function subgraphPathFor(rel: KnRelationType) {
   return {
     object_types: [{ id: rel.sourceId }, { id: rel.targetId }],
     relation_types: [
-      { relation_type_id: rel.id, source_object_type_id: rel.sourceId, target_object_type_id: rel.targetId },
+      {
+        relation_type_id: rel.id,
+        source_object_type_id: rel.sourceId,
+        target_object_type_id: rel.targetId,
+      },
     ],
     limit: 10,
   };
@@ -389,7 +439,10 @@ export function buildTestData(
         schema_brief: false,
         enable_rerank: true,
       };
-      return { body: JSON.stringify(body, null, 2), note: groupId ? `kn_id + real concept group ${groupId}` : "Filled kn_id" };
+      return {
+        body: JSON.stringify(body, null, 2),
+        note: groupId ? `kn_id + real concept group ${groupId}` : "Filled kn_id",
+      };
     }
 
     case "run_sql": {
@@ -401,25 +454,42 @@ export function buildTestData(
     case "query_instance_subgraph": {
       const otIds = new Set(detail.object_types.map((o) => o.id));
       const rels = detail.relation_types ?? [];
-      const rel = rels.find((r) => otIds.has(r.sourceId) && otIds.has(r.targetId)) ?? rels[0] ?? null;
+      const rel =
+        rels.find((r) => otIds.has(r.sourceId) && otIds.has(r.targetId)) ?? rels[0] ?? null;
       if (!rel) {
-        return { body: exampleBodyText(op, mode, knId), note: "No relation types found in get_kn_detail; fill manually" };
+        return {
+          body: exampleBodyText(op, mode, knId),
+          note: "No relation types found in get_kn_detail; fill manually",
+        };
       }
       const path = subgraphPathFor(rel);
       const note = `Relation type ${rel.name || rel.id} (${rel.sourceId} -> ${rel.targetId})`;
       if (mode === "mcp") {
-        return { body: JSON.stringify({ kn_id: knId, relation_type_paths: [path] }, null, 2), note };
+        return {
+          body: JSON.stringify({ kn_id: knId, relation_type_paths: [path] }, null, 2),
+          note,
+        };
       }
-      return { body: JSON.stringify({ relation_type_paths: [path] }, null, 2), query: { kn_id: knId }, note };
+      return {
+        body: JSON.stringify({ relation_type_paths: [path] }, null, 2),
+        query: { kn_id: knId },
+        note,
+      };
     }
 
     case "query_object_instance": {
       const ff = ot ? pickFilterFieldValue(ot, sampleRow) : null;
       const filters = ff ? [{ field: ff.field, op: "==", value: ff.value }] : [];
       const otId = ot?.id ?? "";
-      const note = ff ? `Object type ${otId}, filter ${ff.field} == ${ff.value}` : `Object type ${otId} (no sample row; no filter added)`;
+      const note = ff
+        ? `Object type ${otId}, filter ${ff.field} == ${ff.value}`
+        : `Object type ${otId} (no sample row; no filter added)`;
       if (mode === "mcp") {
-        const body: Record<string, unknown> = { kn_id: knId, ot_id: otId, include_logic_params: false };
+        const body: Record<string, unknown> = {
+          kn_id: knId,
+          ot_id: otId,
+          include_logic_params: false,
+        };
         if (filters.length) body.filters = filters;
         body.limit = 10;
         body.need_total = true;
@@ -440,7 +510,9 @@ export function buildTestData(
         .filter(Boolean);
       return {
         body: JSON.stringify({ kn_id: knId, ids }, null, 2),
-        note: ids.length ? `First ${ids.length} object types` : "This network has no object types; fill ids manually",
+        note: ids.length
+          ? `First ${ids.length} object types`
+          : "This network has no object types; fill ids manually",
       };
     }
 
@@ -451,7 +523,9 @@ export function buildTestData(
         .filter(Boolean);
       return {
         body: JSON.stringify({ kn_id: knId, ids }, null, 2),
-        note: ids.length ? `First ${ids.length} relation types` : "This network has no relation types; fill ids manually",
+        note: ids.length
+          ? `First ${ids.length} relation types`
+          : "This network has no relation types; fill ids manually",
       };
     }
 
@@ -459,7 +533,10 @@ export function buildTestData(
       const usableMetrics = (ot?.related_metrics ?? []).filter((item) => Boolean(item.id));
       const metric = usableMetrics.find((item) => !item.time_dimension) ?? usableMetrics[0];
       if (!metric) {
-        return { body: exampleBodyText(op, mode, knId), note: "No metrics found in object-type details; call get_object_types first" };
+        return {
+          body: exampleBodyText(op, mode, knId),
+          note: "No metrics found in object-type details; call get_object_types first",
+        };
       }
       const body: Record<string, unknown> = { kn_id: knId, metric_id: metric.id };
       if (metric.time_dimension) body.time = { instant: true };
@@ -473,23 +550,32 @@ export function buildTestData(
       const resId = detail.object_types.find((o) => o.data_source?.id)?.data_source?.id ?? "";
       return {
         body: JSON.stringify({ resource_id: resId }, null, 2),
-        note: resId ? `Resource ${resId} (from object-type binding)` : "This network has no object-type resource binding; fill resource_id manually",
+        note: resId
+          ? `Resource ${resId} (from object-type binding)`
+          : "This network has no object-type resource binding; fill resource_id manually",
       };
     }
 
     case "list_resources":
-      return { body: JSON.stringify({ type: "table", offset: 0, limit: 20 }, null, 2), note: "First 20 table resources" };
+      return {
+        body: JSON.stringify({ type: "table", offset: 0, limit: 20 }, null, 2),
+        note: "First 20 table resources",
+      };
 
     default:
       return { body: exampleBodyText(op, mode, knId), note: "" };
   }
 }
 
-export function buildRestUrl(env: ContextLoaderEnv, op: ContextLoaderOp, queryValues: Record<string, string>): string {
+export function buildRestUrl(
+  env: ContextLoaderEnv,
+  op: ContextLoaderOp,
+  queryValues: Record<string, string>,
+): string {
   const base = env.base.replace(/\/+$/, "");
   const parts: string[] = [];
   op.query.forEach((param) => {
-    const value = param.name === "kn_id" ? env.knId : queryValues[param.name] ?? param.value;
+    const value = param.name === "kn_id" ? env.knId : (queryValues[param.name] ?? param.value);
     if (value !== "" && value != null) {
       parts.push(`${encodeURIComponent(param.name)}=${encodeURIComponent(value)}`);
     }
@@ -552,7 +638,11 @@ export function toolSummaryPreview(summary: string): string {
     return summary.slice(0, paragraph).trim();
   }
   const window = summary.slice(0, TOOL_SUMMARY_COLLAPSE_CHARS);
-  const sentence = Math.max(window.lastIndexOf("。"), window.lastIndexOf(". "), window.lastIndexOf("\n"));
+  const sentence = Math.max(
+    window.lastIndexOf("。"),
+    window.lastIndexOf(". "),
+    window.lastIndexOf("\n"),
+  );
   if (sentence > TOOL_SUMMARY_COLLAPSE_CHARS / 3) {
     return window.slice(0, sentence + 1).trim();
   }
@@ -593,7 +683,10 @@ function sampleForSchemaProp(def: unknown): unknown {
 export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> {
   if (!schema || typeof schema !== "object") return {};
   const s = schema as Record<string, unknown>;
-  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<string, unknown>;
+  const props = (s.properties && typeof s.properties === "object" ? s.properties : {}) as Record<
+    string,
+    unknown
+  >;
   const required = Array.isArray(s.required) ? (s.required as string[]) : [];
   const out: Record<string, unknown> = {};
   for (const [key, def] of Object.entries(props)) {
@@ -619,7 +712,9 @@ export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> 
  */
 export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
   if (!toolDefs) return [];
-  return toolDefs.map((tool) => CONTEXT_LOADER_OPS.find((op) => op.id === tool.name) ?? synthesizeOp(tool));
+  return toolDefs.map(
+    (tool) => CONTEXT_LOADER_OPS.find((op) => op.id === tool.name) ?? synthesizeOp(tool),
+  );
 }
 
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
@@ -725,9 +820,19 @@ export function buildCurl(
 ): string {
   if (mode === "mcp") {
     const url = mcpBase(env);
-    const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...languageHeaders(), ...displayAuthHeaders(env) };
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...languageHeaders(),
+      ...displayAuthHeaders(env),
+    };
     const args = mcpCallArgs(op, bodyText, queryValues, bknContext);
-    const payload = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: op.id, arguments: args } };
+    const payload = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: op.id, arguments: args },
+    };
     let curl = `curl -X POST '${url}'`;
     Object.entries(headers).forEach(([key, value]) => {
       curl += ` \\\n  -H '${key}: ${value}'`;
@@ -736,7 +841,11 @@ export function buildCurl(
     return curl;
   }
   const url = buildRestUrl(env, op, queryValues);
-  const headers = { "Content-Type": "application/json", ...languageHeaders(), ...displayAuthHeaders(env) };
+  const headers = {
+    "Content-Type": "application/json",
+    ...languageHeaders(),
+    ...displayAuthHeaders(env),
+  };
   let curl = `curl -X POST '${url}'`;
   Object.entries(headers).forEach(([key, value]) => {
     curl += ` \\\n  -H '${key}: ${value}'`;
@@ -795,10 +904,15 @@ export async function sendRequest(
           jsonrpc: "2.0",
           id: 1,
           method: "initialize",
-          params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "bkn-studio", version: "1.0.0" },
+          },
         }),
       });
-      const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+      const sessionId =
+        initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
       const initText = await initResp.text();
       if (!initResp.ok && !sessionId) {
         return {
@@ -810,7 +924,9 @@ export async function sendRequest(
           text: initText || "MCP initialize failed; missing session id (Mcp-Session-Id).",
         };
       }
-      const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+      const sessionHeaders = sessionId
+        ? { ...baseHeaders, "Mcp-Session-Id": sessionId }
+        : baseHeaders;
       if (sessionId) {
         await fetch(url, {
           method: "POST",
@@ -909,7 +1025,11 @@ function parseMcpEnvelope(text: string): unknown {
  * Dynamically discovers MCP tools with inputSchema through the full handshake.
  * Used for tool discovery, drift checks, and schema-driven forms.
  */
-export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal?: AbortSignal): Promise<McpToolDef[]> {
+export async function listMcpTools(
+  env: ContextLoaderEnv,
+  auth?: McpAuth,
+  signal?: AbortSignal,
+): Promise<McpToolDef[]> {
   // One full handshake per attempt; 401 is surfaced to the outer refresh path.
   const UNAUTHORIZED = Symbol("unauthorized");
   const attempt = async (token: string): Promise<McpToolDef[] | typeof UNAUTHORIZED> => {
@@ -928,15 +1048,22 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
         jsonrpc: "2.0",
         id: 1,
         method: "initialize",
-        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio", version: "1.0.0" } },
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "bkn-studio", version: "1.0.0" },
+        },
       }),
     });
-    const sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
+    const sessionId =
+      initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
     if (initResp.status === 401 && !sessionId) return UNAUTHORIZED;
     if (!initResp.ok && !sessionId) {
       throw new Error((await initResp.text()) || `MCP initialize failed (${initResp.status})`);
     }
-    const sessionHeaders = sessionId ? { ...baseHeaders, "Mcp-Session-Id": sessionId } : baseHeaders;
+    const sessionHeaders = sessionId
+      ? { ...baseHeaders, "Mcp-Session-Id": sessionId }
+      : baseHeaders;
     if (sessionId) {
       await fetch(url, {
         method: "POST",
@@ -957,8 +1084,10 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
       throw new Error(text || `tools/list failed (${resp.status})`);
     }
     const parsed = parseMcpEnvelope(text);
-    const result = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
-    const tools = result && typeof result === "object" ? (result as Record<string, unknown>).tools : null;
+    const result =
+      parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).result : null;
+    const tools =
+      result && typeof result === "object" ? (result as Record<string, unknown>).tools : null;
     if (!Array.isArray(tools)) {
       throw new Error("tools/list did not return a tools array");
     }
@@ -971,7 +1100,9 @@ export async function listMcpTools(env: ContextLoaderEnv, auth?: McpAuth, signal
     out = await attempt(fresh ?? auth?.getToken?.() ?? env.token);
   }
   if (out === UNAUTHORIZED) {
-    throw new Error('{"code":"Public.Unauthorized","description":"Authentication failed","details":"token is invalid"}');
+    throw new Error(
+      '{"code":"Public.Unauthorized","description":"Authentication failed","details":"token is invalid"}',
+    );
   }
   return out;
 }
@@ -986,7 +1117,10 @@ function parseToolDefs(tools: unknown[]): McpToolDef[] {
   return tools
     .map((item) => {
       const tool = (item ?? {}) as Record<string, unknown>;
-      const meta = (tool._meta && typeof tool._meta === "object" ? tool._meta : {}) as Record<string, unknown>;
+      const meta = (tool._meta && typeof tool._meta === "object" ? tool._meta : {}) as Record<
+        string,
+        unknown
+      >;
       const order = meta[TOOL_META_ORDER];
       return {
         name: typeof tool.name === "string" ? tool.name : "",
@@ -1019,7 +1153,9 @@ export function mcpResultText(parsed: unknown): string {
   const content = (result as Record<string, unknown>).content;
   if (Array.isArray(content)) {
     const texts = content
-      .map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>).text : undefined))
+      .map((item) =>
+        item && typeof item === "object" ? (item as Record<string, unknown>).text : undefined,
+      )
       .filter((value): value is string => typeof value === "string");
     if (texts.length > 0) return texts.join("\n");
   }
@@ -1108,7 +1244,11 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
         jsonrpc: "2.0",
         id: rpcId++,
         method: "initialize",
-        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bkn-studio-agent", version: "1.0.0" } },
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "bkn-studio-agent", version: "1.0.0" },
+        },
       }),
     });
     sessionId = initResp.headers.get("mcp-session-id") ?? initResp.headers.get("Mcp-Session-Id");
@@ -1141,7 +1281,12 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
       method: "POST",
       headers,
       signal,
-      body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method: "tools/call", params: { name, arguments: args } }),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: rpcId++,
+        method: "tools/call",
+        params: { name, arguments: args },
+      }),
     });
   }
 
@@ -1181,7 +1326,12 @@ export function createMcpSession(env: ContextLoaderEnv, auth?: McpAuth): McpSess
 /* ============================ Data Browser: KN Schema and Resources ============================ */
 export type KnDataSource = { type?: string; id: string; name?: string };
 
-export type KnDataProperty = { name: string; display_name?: string; type?: string; comment?: string };
+export type KnDataProperty = {
+  name: string;
+  display_name?: string;
+  type?: string;
+  comment?: string;
+};
 
 export type KnRelatedMetric = {
   id: string;
@@ -1240,7 +1390,13 @@ function parseRelationTypes(raw: unknown): KnRelationType[] {
       return {
         id: pickId(r.id, r.relation_type_id),
         name: typeof r.name === "string" ? r.name : undefined,
-        sourceId: pickId(r.source_object_type_id, r.source_id, r.source, r.from_object_type_id, r.from),
+        sourceId: pickId(
+          r.source_object_type_id,
+          r.source_id,
+          r.source,
+          r.from_object_type_id,
+          r.from,
+        ),
         targetId: pickId(r.target_object_type_id, r.target_id, r.target, r.to_object_type_id, r.to),
       };
     })
@@ -1294,7 +1450,10 @@ export async function restPost(
   signal?: AbortSignal,
 ): Promise<Response> {
   const doFetch = (token: string) => {
-    const headers: Record<string, string> = { "Content-Type": "application/json", ...languageHeaders() };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...languageHeaders(),
+    };
     if (token) headers.Authorization = `Bearer ${token}`;
     return fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal });
   };
@@ -1319,10 +1478,7 @@ export async function fetchKnDetail(
 
   const result = await createMcpSession(env, auth).callTool(
     "get_kn_detail",
-    withBknContext(
-      { kn_id: env.knId, response_format: "json" },
-      scope?.nextContext(),
-    ),
+    withBknContext({ kn_id: env.knId, response_format: "json" }, scope?.nextContext()),
     signal,
   );
 
@@ -1364,7 +1520,13 @@ export async function fetchKnDetailRest(
 ): Promise<KnDetail> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ response_format: "json" });
-  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`, { kn_id: env.knId }, signal);
+  const response = await restPost(
+    env,
+    auth,
+    `${base}${REST_PREFIX}/kn/get_kn_detail?${params.toString()}`,
+    { kn_id: env.knId },
+    signal,
+  );
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `get_kn_detail failed (${response.status})`);
@@ -1394,7 +1556,13 @@ export async function fetchObjectTypes(
 ): Promise<KnObjectType[]> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ response_format: "json" });
-  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/get_object_types?${params.toString()}`, { kn_id: env.knId, ids }, signal);
+  const response = await restPost(
+    env,
+    auth,
+    `${base}${REST_PREFIX}/kn/get_object_types?${params.toString()}`,
+    { kn_id: env.knId, ids },
+    signal,
+  );
   const text = await response.text();
   if (!response.ok) {
     throw new Error(text || `get_object_types failed (${response.status})`);
@@ -1415,7 +1583,11 @@ function objectTypesFromPayload(payload: unknown): KnObjectType[] | null {
   const record = payload as Record<string, unknown>;
   if (Array.isArray(record.object_types)) return record.object_types as KnObjectType[];
   const data = record.data;
-  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).object_types)) {
+  if (
+    data &&
+    typeof data === "object" &&
+    Array.isArray((data as Record<string, unknown>).object_types)
+  ) {
     return (data as Record<string, unknown>).object_types as KnObjectType[];
   }
   return null;

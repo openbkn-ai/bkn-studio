@@ -73,7 +73,8 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     listUsersMock.mockResolvedValue([]);
     listUsersPageMock.mockResolvedValue({ total: 0, users: [] });
     listAuthorizableObjectsPageMock.mockResolvedValue({
-      items: [{ id: "catalog-1", name: "Customer data", type: "catalog" }], total: 1,
+      items: [{ id: "catalog-1", name: "Customer data", type: "catalog" }],
+      total: 1,
     });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -92,9 +93,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     await act(async () => {});
 
     expect(screen.getByText("systemAdmin.objectGrants.modeFineTitle")).not.toBeNull();
-    expect(
-      screen.getByLabelText("systemAdmin.objectGrants.authorizationModeHelp"),
-    ).not.toBeNull();
+    expect(screen.getByLabelText("systemAdmin.objectGrants.authorizationModeHelp")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.modeFineDescription")).toBeNull();
     expect(screen.getByRole("button", { name: /common\.back/ })).not.toBeNull();
     expect(screen.queryByRole("button", { name: "common.cancel" })).toBeNull();
@@ -105,15 +104,16 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     fireEvent.click(await screen.findByText("数据目录"));
     await act(async () => {});
 
-    expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith("catalog", { keyword: "", page: 0 });
+    expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith("catalog", {
+      keyword: "",
+      page: 0,
+    });
   });
 
   it("rejects wildcard-bearing objects in deep links", async () => {
     capability.current = "not-installed";
     searchParams.set("object", "catalog::*");
-    listUsersMock.mockResolvedValue([
-      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
-    ]);
+    listUsersMock.mockResolvedValue([{ account: "li.mubai", id: "user-1", name: "Mubai Li" }]);
     listUsersPageMock.mockResolvedValue({
       total: 1,
       users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
@@ -122,9 +122,13 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
 
-    expect(screen.getByRole("button", {
-      name: "systemAdmin.objectGrants.confirmGrant",
-    }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("button", {
+          name: "systemAdmin.objectGrants.confirmGrant",
+        })
+        .hasAttribute("disabled"),
+    ).toBe(true);
     expect(screen.getByText("systemAdmin.objectGrants.summaryNextPickObject")).not.toBeNull();
     expect(upsertObjectGrantMock).not.toHaveBeenCalled();
   });
@@ -142,12 +146,15 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     expect(screen.queryByText("systemAdmin.objectGrants.objectTypeGroups.model")).toBeNull();
     expect(screen.queryByText("小模型")).toBeNull();
     expect(screen.queryByText("大模型")).toBeNull();
-    expect(executionGroup.compareDocumentPosition(operator) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      executionGroup.compareDocumentPosition(operator) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("keeps the operation code visible and explains a locked prerequisite separately", async () => {
     listAuthorizableObjectsPageMock.mockResolvedValue({
-      items: [{ id: "operator-1", name: "Order settlement", type: "function" }], total: 1,
+      items: [{ id: "operator-1", name: "Order settlement", type: "function" }],
+      total: 1,
     });
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
@@ -169,21 +176,13 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     const viewButton = viewCode.closest("button");
     expect(viewButton?.textContent).toContain("查看");
     expect(viewButton?.textContent).toContain("view");
-    expect(viewButton?.textContent).not.toContain(
-      "systemAdmin.objectGrants.requiredBySelection",
-    );
-    expect(
-      screen.getByLabelText("systemAdmin.objectGrants.requiredBySelection"),
-    ).not.toBeNull();
-    expect(
-      screen.getByText("systemAdmin.objectGrants.requiredSelectionNotice"),
-    ).not.toBeNull();
+    expect(viewButton?.textContent).not.toContain("systemAdmin.objectGrants.requiredBySelection");
+    expect(screen.getByLabelText("systemAdmin.objectGrants.requiredBySelection")).not.toBeNull();
+    expect(screen.getByText("systemAdmin.objectGrants.requiredSelectionNotice")).not.toBeNull();
   });
 
   it("keeps submission disabled until the live configuration summary is complete", async () => {
-    listUsersMock.mockResolvedValue([
-      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
-    ]);
+    listUsersMock.mockResolvedValue([{ account: "li.mubai", id: "user-1", name: "Mubai Li" }]);
     listUsersPageMock.mockResolvedValue({
       total: 1,
       users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
@@ -215,19 +214,18 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
   });
 
   it("keeps the selected object's name when a server search excludes it", async () => {
-    listUsersMock.mockResolvedValue([
-      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
-    ]);
+    listUsersMock.mockResolvedValue([{ account: "li.mubai", id: "user-1", name: "Mubai Li" }]);
     listUsersPageMock.mockResolvedValue({
       total: 1,
       users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
     });
     listAuthorizableObjectsPageMock.mockImplementation(
-      (_type: string, { keyword }: { keyword: string }) => Promise.resolve(
-        keyword === "missing"
-          ? { items: [], total: 0 }
-          : { items: [{ id: "catalog-1", name: "Customer data", type: "catalog" }], total: 1 },
-      ),
+      (_type: string, { keyword }: { keyword: string }) =>
+        Promise.resolve(
+          keyword === "missing"
+            ? { items: [], total: 0 }
+            : { items: [{ id: "catalog-1", name: "Customer data", type: "catalog" }], total: 1 },
+        ),
     );
     render(<ObjectAuthorizationCreateScene />);
     await act(async () => {});
@@ -243,9 +241,10 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
     fireEvent.change(objectPicker, { target: { value: "missing" } });
     await waitFor(() => {
-      expect(listAuthorizableObjectsPageMock).toHaveBeenLastCalledWith(
-        "catalog", { keyword: "missing", page: 0 },
-      );
+      expect(listAuthorizableObjectsPageMock).toHaveBeenLastCalledWith("catalog", {
+        keyword: "missing",
+        page: 0,
+      });
     });
 
     // The summary is derived from selectedObject and would show the raw ID if
@@ -255,9 +254,7 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
 
   it("falls back to the Community full-package mode and hides child resource types", async () => {
     capability.current = "not-installed";
-    listUsersMock.mockResolvedValue([
-      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
-    ]);
+    listUsersMock.mockResolvedValue([{ account: "li.mubai", id: "user-1", name: "Mubai Li" }]);
     listUsersPageMock.mockResolvedValue({
       total: 1,
       users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
@@ -296,53 +293,55 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     fireEvent.click(confirmButton);
     await act(async () => {});
 
-    expect(upsertObjectGrantMock).toHaveBeenCalledWith({
-      accessorId: "user-1",
-      bundle: "full_business_access",
-      objId: "catalog-1",
-      objName: "Customer data",
-      objSub: undefined,
-      objType: "catalog",
-    }, { skipErrorToast: true });
+    expect(upsertObjectGrantMock).toHaveBeenCalledWith(
+      {
+        accessorId: "user-1",
+        bundle: "full_business_access",
+        objId: "catalog-1",
+        objName: "Customer data",
+        objSub: undefined,
+        objType: "catalog",
+      },
+      { skipErrorToast: true },
+    );
   });
 
   it("shows one error when a grant request is rejected", async () => {
     capability.current = "not-installed";
     searchParams.set("object", "catalog::catalog-1");
-    listUsersMock.mockResolvedValue([
-      { account: "li.mubai", id: "user-1", name: "Mubai Li" },
-    ]);
+    listUsersMock.mockResolvedValue([{ account: "li.mubai", id: "user-1", name: "Mubai Li" }]);
     listUsersPageMock.mockResolvedValue({
       total: 1,
       users: [{ account: "li.mubai", id: "user-1", name: "Mubai Li" }],
     });
-    upsertObjectGrantMock.mockRejectedValueOnce(new axios.AxiosError(
-      "Request failed",
-      undefined,
-      undefined,
-      undefined,
-      {
+    upsertObjectGrantMock.mockRejectedValueOnce(
+      new axios.AxiosError("Request failed", undefined, undefined, undefined, {
         config: { headers: new axios.AxiosHeaders() },
         data: { description: "请求参数无效" },
         headers: {},
         status: 400,
         statusText: "Bad Request",
-      },
-    ));
+      }),
+    );
 
     render(<ObjectAuthorizationCreateScene />);
-    await waitFor(() => expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith(
-      "catalog", { keyword: "", page: 0 },
-    ));
+    await waitFor(() =>
+      expect(listAuthorizableObjectsPageMock).toHaveBeenCalledWith("catalog", {
+        keyword: "",
+        page: 0,
+      }),
+    );
 
     const [, , granteePicker] = screen.getAllByRole("combobox");
     fireEvent.mouseDown(granteePicker);
     fireEvent.click(await screen.findByRole("option", { name: /Mubai Li/ }));
 
     fireEvent.click(screen.getByRole("button", { name: /full_business_access/ }));
-    fireEvent.click(screen.getByRole("button", {
-      name: "systemAdmin.objectGrants.confirmGrant",
-    }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "systemAdmin.objectGrants.confirmGrant",
+      }),
+    );
 
     await waitFor(() => expect(messageErrorMock).toHaveBeenCalledTimes(1));
     expect(messageErrorMock).toHaveBeenCalledWith("请求参数无效");
@@ -361,9 +360,11 @@ describe("ObjectAuthorizationCreateScene object picker", () => {
     expect(screen.getByText("entitlement-state-unknown")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.modeCommunityTitle")).toBeNull();
     expect(screen.queryByRole("button", { name: /full_business_access/ })).toBeNull();
-    expect(screen.queryByRole("button", {
-      name: "systemAdmin.objectGrants.confirmGrant",
-    })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "systemAdmin.objectGrants.confirmGrant",
+      }),
+    ).toBeNull();
     expect(upsertObjectGrantMock).not.toHaveBeenCalled();
   });
 });

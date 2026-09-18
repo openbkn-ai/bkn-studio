@@ -16,7 +16,11 @@ vi.mock("react-i18next", async (importOriginal) => ({
 }));
 
 vi.mock("antd", () => ({
-  Tabs: ({ activeKey, items, onChange }: {
+  Tabs: ({
+    activeKey,
+    items,
+    onChange,
+  }: {
     activeKey: string;
     items: Array<{ children: ReactNode; key: string; label: ReactNode }>;
     onChange: (key: string) => void;
@@ -61,11 +65,15 @@ describe("TaskManagementScene", () => {
     expect(screen.getByTestId("active-tab").textContent).toBe("semantic-understanding");
     expect(screen.getByText("semantic panel")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.indexBuild" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.indexBuild" }),
+    );
     expect(screen.getByTestId("location").textContent).toBe("/task-management?tab=index-build");
     expect(screen.getByTestId("active-tab").textContent).toBe("index-build");
 
-    fireEvent.click(screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.discover" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "dataCatalog.taskManagement.tabs.discover" }),
+    );
     expect(screen.getByTestId("location").textContent).toBe("/task-management?tab=discover");
     expect(screen.getByTestId("active-tab").textContent).toBe("discover");
   });

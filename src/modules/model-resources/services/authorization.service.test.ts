@@ -43,8 +43,7 @@ function foldedResponse(is_admin: boolean, permissions: Row[]) {
 /** Query parameters passed by the latest http.get call. */
 function lastParams(): Record<string, string> {
   const call = getMock.mock.calls.at(-1) as
-    | [string, { params?: Record<string, string> }]
-    | undefined;
+    [string, { params?: Record<string, string> }] | undefined;
   return call?.[1]?.params ?? {};
 }
 

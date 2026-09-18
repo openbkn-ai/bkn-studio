@@ -176,12 +176,24 @@ export const agentChatPart = {
       },
       configFields: {
         maxSteps: { label: "工具步数上限", hint: "一轮最多调多少步工具（防跑飞兜底）" },
-        keepToolResults: { label: "步间保留结果数", hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）" },
-        dataToolCap: { label: "数据类结果上限(字)", hint: "run_sql / query_* 结果字符上限（0=不截断）" },
-        schemaToolCap: { label: "Schema类结果上限(字)", hint: "get_kn_detail / search_schema 等（0=不截断）" },
+        keepToolResults: {
+          label: "步间保留结果数",
+          hint: "每步只保留最近 N 个工具结果全文（0=不驱逐）",
+        },
+        dataToolCap: {
+          label: "数据类结果上限(字)",
+          hint: "run_sql / query_* 结果字符上限（0=不截断）",
+        },
+        schemaToolCap: {
+          label: "Schema类结果上限(字)",
+          hint: "get_kn_detail / search_schema 等（0=不截断）",
+        },
         maxHistoryMessages: { label: "多轮保留条数", hint: "跨轮历史只保留最近 N 条消息" },
         maxTurnChars: { label: "单轮文本上限(字)", hint: "每条历史消息文本封顶" },
-        maxOutputTokens: { label: "最大输出token", hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认" },
+        maxOutputTokens: {
+          label: "最大输出token",
+          hint: "单步最大输出(含思考)；推理模型(deepseek)调大，0=模型默认",
+        },
       },
       reasoning: {
         live: "思考中",
@@ -216,7 +228,8 @@ export const agentChatPart = {
         noModel: "当前没有可用的大模型，请先在「模型工厂」配置默认模型",
       },
       system: {
-        contextSection: "## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n{{context}}",
+        contextSection:
+          "## 当前知识网络摘要（已自动载入；完整结构与实例请按需调用工具获取）\n{{context}}",
         historyTruncated: "{{content}}\n…[历史过长已截断]",
       },
       model: {
@@ -249,13 +262,17 @@ export const agentChatPart = {
       },
       empty: {
         noLlmTitle: "还没有可用的大模型",
-        noLlmDescription: "Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。",
+        noLlmDescription:
+          "Agent 对话需要大模型来驱动。请先到「模型工厂」接入一个大模型并设为默认，再回来对话。",
         goModelFactory: "去模型工厂接入大模型",
         start: "开始验证",
-        baseIntro: "用自然语言提问，Agent 只能用基础数据工具（list_resources / describe_resource / run_sql）直接查表作答，不借助知识网络语义。",
-        knIntro: "用自然语言向 Agent 提问，它会基于知识网络 {{knId}}{{networkName}} 调用检索工具并作答。{{summary}}",
+        baseIntro:
+          "用自然语言提问，Agent 只能用基础数据工具（list_resources / describe_resource / run_sql）直接查表作答，不借助知识网络语义。",
+        knIntro:
+          "用自然语言向 Agent 提问，它会基于知识网络 {{knId}}{{networkName}} 调用检索工具并作答。{{summary}}",
         networkName: "（{{networkName}}）",
-        summary: "已自动载入网络摘要（{{objectTypes}} 对象类 / {{relations}} 关系类），无需先浏览。",
+        summary:
+          "已自动载入网络摘要（{{objectTypes}} 对象类 / {{relations}} 关系类），无需先浏览。",
       },
       message: {
         user: "我",

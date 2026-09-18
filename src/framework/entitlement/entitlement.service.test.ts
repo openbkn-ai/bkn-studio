@@ -37,7 +37,9 @@ describe("fetchEntitlement", () => {
   it("读的是 /safe/v1/capabilities,且不弹错误 toast", async () => {
     mockGet.mockReturnValue(ok({ edition: "enterprise", licensed: true }));
 
-    await (await importFetchEntitlement())();
+    await (
+      await importFetchEntitlement()
+    )();
 
     expect(mockGet).toHaveBeenCalledWith("/safe/v1/capabilities", {
       skipErrorToast: true,

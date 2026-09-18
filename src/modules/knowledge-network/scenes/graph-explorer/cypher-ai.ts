@@ -7,8 +7,14 @@
 
 import { generateText } from "ai";
 
-import { createChatModel, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
-import type { ContextLoaderEnv, KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  createChatModel,
+  type AgentTokenProvider,
+} from "@/modules/knowledge-network/services/agent-chat.service";
+import type {
+  ContextLoaderEnv,
+  KnDetail,
+} from "@/modules/knowledge-network/services/context-loader.service";
 
 /** Localised wording of the generation prompt; the structure is fixed, the text comes from the locale files. */
 export type CypherPromptTexts = {
@@ -39,7 +45,8 @@ export function buildCypherPrompt(
     return `- ${item.id} (${item.name?.trim() || item.id})${comment}${props ? `\n  ${texts.propertiesLabel}: ${props}` : ""}`;
   });
   const relationLines = detail.relation_types.map(
-    (item) => `- ${item.id} (${item.name?.trim() || item.id}): (${item.sourceId})-[:${item.id}]->(${item.targetId})`,
+    (item) =>
+      `- ${item.id} (${item.name?.trim() || item.id}): (${item.sourceId})-[:${item.id}]->(${item.targetId})`,
   );
   const system = [
     texts.intro,
@@ -74,16 +81,22 @@ export function extractCypherFragment(text: string): string {
  */
 export function inlineMapsToWhere(fragment: string): string {
   const conditions: string[] = [];
-  const stripped = fragment.replace(/\(\s*([A-Za-z_]\w*)\s*:\s*([^\s{)]+)\s*\{([^}]*)\}\s*\)/g, (_match, variable: string, label: string, body: string) => {
-    for (const pair of splitTopLevel(body)) {
-      const colon = pair.indexOf(":");
-      if (colon < 0) continue;
-      const key = pair.slice(0, colon).trim().replace(/^[`'"]|[`'"]$/g, "");
-      const value = pair.slice(colon + 1).trim();
-      if (key && value) conditions.push(`${variable}.${key} = ${value}`);
-    }
-    return `(${variable}:${label})`;
-  });
+  const stripped = fragment.replace(
+    /\(\s*([A-Za-z_]\w*)\s*:\s*([^\s{)]+)\s*\{([^}]*)\}\s*\)/g,
+    (_match, variable: string, label: string, body: string) => {
+      for (const pair of splitTopLevel(body)) {
+        const colon = pair.indexOf(":");
+        if (colon < 0) continue;
+        const key = pair
+          .slice(0, colon)
+          .trim()
+          .replace(/^[`'"]|[`'"]$/g, "");
+        const value = pair.slice(colon + 1).trim();
+        if (key && value) conditions.push(`${variable}.${key} = ${value}`);
+      }
+      return `(${variable}:${label})`;
+    },
+  );
   if (conditions.length === 0) return stripped;
   const where = /\bWHERE\b/i.exec(stripped);
   if (where) {

@@ -167,7 +167,9 @@
 .cardActive {
   border-color: var(--color-primary-600);
   background: linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
-  box-shadow: 0 0 0 1px rgba(46, 104, 255, 0.18), 0 8px 18px rgba(37, 99, 235, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(46, 104, 255, 0.18),
+    0 8px 18px rgba(37, 99, 235, 0.1);
 }
 
 .checkMark {

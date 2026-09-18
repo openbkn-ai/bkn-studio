@@ -25,10 +25,7 @@ import type { OperatorCategory } from "@/modules/execution-factory/types/operato
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
 
 import type { ExecutionUnitCardItem, ExecutionUnitTab } from "./types";
-import {
-  ExecutionUnitCardMenu,
-  type ExecutionUnitCardAction,
-} from "./ExecutionUnitCardMenu";
+import { ExecutionUnitCardMenu, type ExecutionUnitCardAction } from "./ExecutionUnitCardMenu";
 
 import styles from "./ExecutionUnitCard.module.css";
 
@@ -114,7 +111,7 @@ function resolveCardCategoryLabel(
   if (activeTab === "mcp" && item.category) {
     const key = `executionFactory.operatorCategories.${item.category}`;
     const translated = t(key);
-    return translated !== key ? translated : item.categoryName ?? item.category;
+    return translated !== key ? translated : (item.categoryName ?? item.category);
   }
 
   return item.categoryName ?? item.category ?? "";

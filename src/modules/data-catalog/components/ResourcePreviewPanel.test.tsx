@@ -77,12 +77,7 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it("does not request preview data for a non-table resource with empty schema and no discover status", () => {
-    render(
-      <ResourcePreviewPanel
-        active
-        resource={{ ...resource, category: "dataset" }}
-      />,
-    );
+    render(<ResourcePreviewPanel active resource={{ ...resource, category: "dataset" }} />);
 
     expect(screen.getByText("dataCatalog.preview.metadataUnavailable")).toBeTruthy();
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
@@ -242,7 +237,11 @@ describe("ResourcePreviewPanel", () => {
     render(
       <ResourcePreviewPanel
         active
-        resource={{ ...resource, columnCount: 1, schema: [{ name: "legacy_profile", type: "other" }] }}
+        resource={{
+          ...resource,
+          columnCount: 1,
+          schema: [{ name: "legacy_profile", type: "other" }],
+        }}
       />,
     );
 
@@ -351,7 +350,9 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it("opens and copies serialized Other content when it is too long for the cell", async () => {
-    const content = { geometry: "POLYGON((116.4 39.9,116.5 39.9,116.5 40.0,116.4 40.0,116.4 39.9))" };
+    const content = {
+      geometry: "POLYGON((116.4 39.9,116.5 39.9,116.5 40.0,116.4 40.0,116.4 39.9))",
+    };
     const serialized = JSON.stringify(content);
     writeTextToClipboardMock.mockResolvedValue(undefined);
     previewCatalogResourceMock.mockResolvedValue({
@@ -362,7 +363,11 @@ describe("ResourcePreviewPanel", () => {
     render(
       <ResourcePreviewPanel
         active
-        resource={{ ...resource, columnCount: 1, schema: [{ name: "service_area", type: "other" }] }}
+        resource={{
+          ...resource,
+          columnCount: 1,
+          schema: [{ name: "service_area", type: "other" }],
+        }}
       />,
     );
 
@@ -396,7 +401,9 @@ describe("ResourcePreviewPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.preview.dataSourceIndex")).toBeTruthy();
-    expect(screen.getByLabelText("dataCatalog.preview.loadBinaryContent").getAttribute("disabled")).not.toBeNull();
+    expect(
+      screen.getByLabelText("dataCatalog.preview.loadBinaryContent").getAttribute("disabled"),
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByLabelText("dataCatalog.preview.queryOriginalSource"));
     await waitFor(() => {
@@ -420,19 +427,33 @@ describe("ResourcePreviewPanel", () => {
   });
 
   it("ignores a late source Binary-content response after returning to the local index", async () => {
-    let resolveContent: ((value: { querySource: "source"; rows: Array<Record<string, unknown>>; total: number }) => void) | undefined;
-    previewCatalogResourceMock.mockImplementation((_, query: { binaryMode?: string; ignoreLocalIndex?: boolean }) => {
-      if (query.ignoreLocalIndex && query.binaryMode === "content") {
-        return new Promise((resolve) => {
-          resolveContent = resolve;
+    let resolveContent:
+      | ((value: {
+          querySource: "source";
+          rows: Array<Record<string, unknown>>;
+          total: number;
+        }) => void)
+      | undefined;
+    previewCatalogResourceMock.mockImplementation(
+      (_, query: { binaryMode?: string; ignoreLocalIndex?: boolean }) => {
+        if (query.ignoreLocalIndex && query.binaryMode === "content") {
+          return new Promise((resolve) => {
+            resolveContent = resolve;
+          });
+        }
+        return Promise.resolve({
+          querySource: query.ignoreLocalIndex ? "source" : "local_index",
+          rows: [
+            {
+              blob: query.ignoreLocalIndex
+                ? { byte_length: 3, mode: "metadata" }
+                : { mode: "unavailable" },
+            },
+          ],
+          total: 1,
         });
-      }
-      return Promise.resolve({
-        querySource: query.ignoreLocalIndex ? "source" : "local_index",
-        rows: [{ blob: query.ignoreLocalIndex ? { byte_length: 3, mode: "metadata" } : { mode: "unavailable" } }],
-        total: 1,
-      });
-    });
+      },
+    );
 
     render(
       <ResourcePreviewPanel
@@ -497,7 +518,9 @@ describe("ResourcePreviewPanel", () => {
       });
     });
     expect(screen.queryByLabelText("dataCatalog.preview.queryOriginalSource")).toBeNull();
-    expect(screen.getByLabelText("dataCatalog.preview.loadBinaryContent").getAttribute("disabled")).toBeNull();
+    expect(
+      screen.getByLabelText("dataCatalog.preview.loadBinaryContent").getAttribute("disabled"),
+    ).toBeNull();
 
     fireEvent.click(screen.getByLabelText("dataCatalog.preview.loadBinaryContent"));
     await waitFor(() => {
@@ -526,9 +549,9 @@ describe("ResourcePreviewPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert")).toHaveClass(
-        "ant-alert-warning",
-      );
+      expect(
+        screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert"),
+      ).toHaveClass("ant-alert-warning");
     });
   });
 
@@ -545,9 +568,9 @@ describe("ResourcePreviewPanel", () => {
       />,
     );
 
-    expect(screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert")).toHaveClass(
-      "ant-alert-warning",
-    );
+    expect(
+      screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert"),
+    ).toHaveClass("ant-alert-warning");
     expect(previewCatalogResourceMock).not.toHaveBeenCalled();
   });
 

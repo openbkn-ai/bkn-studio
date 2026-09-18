@@ -9,7 +9,15 @@ import { describe, expect, it } from "vitest";
 
 import type { GEdge, GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
 
-import { CACHE_VERSION, DEFAULT_SETTINGS, cacheKey, clearCache, readCache, writeCache, type CacheStorage } from "./graph-explorer-cache";
+import {
+  CACHE_VERSION,
+  DEFAULT_SETTINGS,
+  cacheKey,
+  clearCache,
+  readCache,
+  writeCache,
+  type CacheStorage,
+} from "./graph-explorer-cache";
 
 function memoryStorage(failOnLength?: number): CacheStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -17,7 +25,8 @@ function memoryStorage(failOnLength?: number): CacheStorage & { data: Map<string
     data,
     getItem: (key) => data.get(key) ?? null,
     setItem: (key, value) => {
-      if (failOnLength !== undefined && value.length > failOnLength) throw new DOMException("quota", "QuotaExceededError");
+      if (failOnLength !== undefined && value.length > failOnLength)
+        throw new DOMException("quota", "QuotaExceededError");
       data.set(key, value);
     },
     removeItem: (key) => {
@@ -26,8 +35,21 @@ function memoryStorage(failOnLength?: number): CacheStorage & { data: Map<string
   };
 }
 
-const node = (id: string): GNode => ({ id, otId: "ot", otName: "OT", identity: { k: id }, display: id, props: { k: id } });
-const edge = (s: string, t: string): GEdge => ({ id: `${s}|r|${t}`, source: s, target: t, relTypeId: "r", relTypeName: "R" });
+const node = (id: string): GNode => ({
+  id,
+  otId: "ot",
+  otName: "OT",
+  identity: { k: id },
+  display: id,
+  props: { k: id },
+});
+const edge = (s: string, t: string): GEdge => ({
+  id: `${s}|r|${t}`,
+  source: s,
+  target: t,
+  relTypeId: "r",
+  relTypeName: "R",
+});
 
 describe("graph explorer cache", () => {
   it("round-trips nodes, edges, positions and settings", () => {
@@ -36,7 +58,17 @@ describe("graph explorer cache", () => {
       nodes: [node("a"), node("b")],
       edges: [edge("a", "b")],
       positions: { a: { x: 1, y: 2 }, b: { x: 3, y: 4, fixed: true } },
-      settings: { layout: "dagre" as const, shape: "rect" as const, labelByOt: { ot: "k" }, colorByOt: { ot: 2 }, showNodeLabels: true, showEdgeLabels: false, sidebarCollapsed: true, groupByConceptGroup: true, dragMode: "linked" as const },
+      settings: {
+        layout: "dagre" as const,
+        shape: "rect" as const,
+        labelByOt: { ot: "k" },
+        colorByOt: { ot: 2 },
+        showNodeLabels: true,
+        showEdgeLabels: false,
+        sidebarCollapsed: true,
+        groupByConceptGroup: true,
+        dragMode: "linked" as const,
+      },
     };
     expect(writeCache("kn1", snapshot, storage)).toBe("saved");
     expect(readCache("kn1", storage)).toEqual({ version: CACHE_VERSION, ...snapshot });
@@ -53,7 +85,11 @@ describe("graph explorer cache", () => {
     const storage = memoryStorage();
     storage.data.set(
       cacheKey("kn1"),
-      JSON.stringify({ version: 99, nodes: [node("a")], settings: { layout: "grid", shape: "bogus", labelByOt: { ot: "k", bad: 1 } } }),
+      JSON.stringify({
+        version: 99,
+        nodes: [node("a")],
+        settings: { layout: "grid", shape: "bogus", labelByOt: { ot: "k", bad: 1 } },
+      }),
     );
     expect(readCache("kn1", storage)).toEqual({
       version: CACHE_VERSION,
@@ -84,7 +120,11 @@ describe("graph explorer cache", () => {
   it("falls back to settings only when the full payload exceeds the quota", () => {
     const storage = memoryStorage(400);
     const nodes = Array.from({ length: 20 }, (_, index) => node(`n${index}`));
-    const outcome = writeCache("kn1", { nodes, edges: [], positions: {}, settings: { ...DEFAULT_SETTINGS, layout: "radial" } }, storage);
+    const outcome = writeCache(
+      "kn1",
+      { nodes, edges: [], positions: {}, settings: { ...DEFAULT_SETTINGS, layout: "radial" } },
+      storage,
+    );
     expect(outcome).toBe("settings-only");
     const snapshot = readCache("kn1", storage);
     expect(snapshot?.nodes).toEqual([]);
@@ -99,7 +139,9 @@ describe("graph explorer cache", () => {
   });
 
   it("reports unavailable storage without throwing", () => {
-    expect(writeCache("kn1", { nodes: [], edges: [], positions: {}, settings: DEFAULT_SETTINGS }, null)).toBe("unavailable");
+    expect(
+      writeCache("kn1", { nodes: [], edges: [], positions: {}, settings: DEFAULT_SETTINGS }, null),
+    ).toBe("unavailable");
     expect(readCache("kn1", null)).toBeNull();
     expect(() => clearCache("kn1", null)).not.toThrow();
   });

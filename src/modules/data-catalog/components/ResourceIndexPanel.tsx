@@ -31,7 +31,10 @@ import { BuildTaskDetailDrawer } from "@/modules/data-catalog/components/BuildTa
 import { BuildTaskLaunchPanel } from "@/modules/data-catalog/components/BuildTaskLaunchPanel";
 import { IndexConfigFormPanel } from "@/modules/data-catalog/components/IndexConfigFormPanel";
 import { useBuildTaskActions } from "@/modules/data-catalog/hooks/use-build-task-actions";
-import { deleteBuildTask, listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
+import {
+  deleteBuildTask,
+  listBuildTaskPage,
+} from "@/modules/data-catalog/services/build-task.service";
 import { summarizeBuildTaskError } from "@/modules/data-catalog/lib/build-task-error";
 import type { ResourceIndexView } from "@/modules/data-catalog/lib/index-build-filters";
 import { timeAgo } from "@/modules/data-catalog/lib/format";
@@ -72,11 +75,7 @@ type ResourceIndexPanelProps = {
   tasks: BuildTask[];
 };
 
-const CONTROLLABLE_TASK_STATUSES = new Set<BuildTask["status"]>([
-  "pending",
-  "running",
-  "stopped",
-]);
+const CONTROLLABLE_TASK_STATUSES = new Set<BuildTask["status"]>(["pending", "running", "stopped"]);
 
 const STATUS_OPTIONS: BuildTaskStatus[] = [
   "pending",
@@ -105,17 +104,14 @@ function buildStatusSummary(
   language: string,
 ) {
   if (
-    localIndexStatus !== "available"
-    || !latest
-    || (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")
+    localIndexStatus !== "available" ||
+    !latest ||
+    (latest.status !== "completed" && latest.status !== "running" && latest.status !== "stopped")
   ) {
     return null;
   }
 
-  const parts = [
-    formatEffectiveState(latest, t),
-    t(`dataCatalog.modes.${latest.mode}`),
-  ];
+  const parts = [formatEffectiveState(latest, t), t(`dataCatalog.modes.${latest.mode}`)];
 
   if (latest.mode === "streaming") {
     parts.push(
@@ -145,11 +141,7 @@ function progressTask(latest: BuildTask | null) {
   return null;
 }
 
-function renderBuildFailureAlert(
-  task: BuildTask,
-  language: string,
-  rawErrorLabel: string,
-) {
+function renderBuildFailureAlert(task: BuildTask, language: string, rawErrorLabel: string) {
   const summary = summarizeBuildTaskError(task.error, language);
   if (!summary) {
     return null;
@@ -205,46 +197,61 @@ export function ResourceIndexPanel({
   const canViewTasks = canViewResourceIndexTasks(resource, catalog);
   const resourceChanged = filtersResourceId !== resource.id;
 
-  const loadHistory = useCallback(async (targetPage: number, targetPageSize: number) => {
-    if (!canViewTasks) return;
-    const requestId = ++historyRequestIdRef.current;
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const result = await listBuildTaskPage({
-        direction,
-        executeType: executeTypeFilter,
-        mode: modeFilter,
-        page: targetPage,
-        pageSize: targetPageSize,
-        resourceId: resource.id,
-        sort,
-        statuses: statusFilter.length ? statusFilter : undefined,
-      }, { skipErrorToast: true });
-      if (requestId === historyRequestIdRef.current) {
-        setHistoryTasks(result.items);
-        setHistoryTotal(result.total);
-        if (
-          targetPage === 1
-          && direction === "desc"
-          && sort === "create_time"
-          && !modeFilter
-          && !executeTypeFilter
-          && statusFilter.length === 0
-        ) {
-          onLatestTaskLoaded?.(resource.id, result.items[0] ?? null);
+  const loadHistory = useCallback(
+    async (targetPage: number, targetPageSize: number) => {
+      if (!canViewTasks) return;
+      const requestId = ++historyRequestIdRef.current;
+      setHistoryLoading(true);
+      setHistoryError(null);
+      try {
+        const result = await listBuildTaskPage(
+          {
+            direction,
+            executeType: executeTypeFilter,
+            mode: modeFilter,
+            page: targetPage,
+            pageSize: targetPageSize,
+            resourceId: resource.id,
+            sort,
+            statuses: statusFilter.length ? statusFilter : undefined,
+          },
+          { skipErrorToast: true },
+        );
+        if (requestId === historyRequestIdRef.current) {
+          setHistoryTasks(result.items);
+          setHistoryTotal(result.total);
+          if (
+            targetPage === 1 &&
+            direction === "desc" &&
+            sort === "create_time" &&
+            !modeFilter &&
+            !executeTypeFilter &&
+            statusFilter.length === 0
+          ) {
+            onLatestTaskLoaded?.(resource.id, result.items[0] ?? null);
+          }
+        }
+      } catch (error) {
+        if (requestId === historyRequestIdRef.current) {
+          setHistoryError(extractRequestErrorMessage(error));
+        }
+      } finally {
+        if (requestId === historyRequestIdRef.current) {
+          setHistoryLoading(false);
         }
       }
-    } catch (error) {
-      if (requestId === historyRequestIdRef.current) {
-        setHistoryError(extractRequestErrorMessage(error));
-      }
-    } finally {
-      if (requestId === historyRequestIdRef.current) {
-        setHistoryLoading(false);
-      }
-    }
-  }, [canViewTasks, direction, executeTypeFilter, modeFilter, onLatestTaskLoaded, resource.id, sort, statusFilter]);
+    },
+    [
+      canViewTasks,
+      direction,
+      executeTypeFilter,
+      modeFilter,
+      onLatestTaskLoaded,
+      resource.id,
+      sort,
+      statusFilter,
+    ],
+  );
 
   const refreshTasks = useCallback(async () => {
     await onRefresh();
@@ -257,9 +264,12 @@ export function ResourceIndexPanel({
     historyRequestIdRef.current += 1;
   }, [resource.id]);
 
-  useEffect(() => () => {
-    historyRequestIdRef.current += 1;
-  }, []);
+  useEffect(
+    () => () => {
+      historyRequestIdRef.current += 1;
+    },
+    [],
+  );
 
   const sortedTasks = useMemo(() => sortTasks(tasks), [tasks]);
   const state = useMemo(
@@ -318,12 +328,7 @@ export function ResourceIndexPanel({
     if (indexView !== "config") {
       onIndexViewChange("config");
     }
-  }, [
-    active,
-    indexView,
-    indexViewExplicit,
-    onIndexViewChange,
-  ]);
+  }, [active, indexView, indexViewExplicit, onIndexViewChange]);
 
   useEffect(() => {
     if (!supportsTaskView && indexView === "tasks") {
@@ -392,41 +397,52 @@ export function ResourceIndexPanel({
   const pauseResumeLabel =
     activeTask?.status === "stopped"
       ? t(
-        activeTask.mode === "streaming"
-          ? "dataCatalog.task.resumeListening"
-          : "dataCatalog.task.resumeBuild",
-      )
+          activeTask.mode === "streaming"
+            ? "dataCatalog.task.resumeListening"
+            : "dataCatalog.task.resumeBuild",
+        )
       : t(
-        activeTask?.mode === "streaming" && activeTask.status === "running"
-          ? "dataCatalog.task.pauseListening"
-          : "dataCatalog.task.stopBuild",
-      );
+          activeTask?.mode === "streaming" && activeTask.status === "running"
+            ? "dataCatalog.task.pauseListening"
+            : "dataCatalog.task.stopBuild",
+        );
 
   const pauseResumeLabelOf = (task: BuildTask) =>
     task.status === "stopped"
       ? t(
-        task.mode === "streaming"
-          ? "dataCatalog.task.resumeListening"
-          : "dataCatalog.task.resumeBuild",
-      )
+          task.mode === "streaming"
+            ? "dataCatalog.task.resumeListening"
+            : "dataCatalog.task.resumeBuild",
+        )
       : t(
-        task.mode === "streaming"
-          ? "dataCatalog.task.pauseListening"
-          : "dataCatalog.task.stopBuild",
-      );
+          task.mode === "streaming"
+            ? "dataCatalog.task.pauseListening"
+            : "dataCatalog.task.stopBuild",
+        );
 
   const taskColumns: ColumnsType<BuildTask> = [
     {
       dataIndex: "id",
       title: t("dataCatalog.taskManagement.columns.task"),
       width: 160,
-      render: (value: string) => <button className={panelStyles.textLink} onClick={() => setDetailTaskId(value)} type="button">{value}</button>,
+      render: (value: string) => (
+        <button
+          className={panelStyles.textLink}
+          onClick={() => setDetailTaskId(value)}
+          type="button"
+        >
+          {value}
+        </button>
+      ),
     },
     {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
       width: 100,
-      filters: ["batch", "streaming"].map((value) => ({ text: t(`dataCatalog.modes.${value}`), value })),
+      filters: ["batch", "streaming"].map((value) => ({
+        text: t(`dataCatalog.modes.${value}`),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: modeFilter ? [modeFilter] : null,
       render: (value: BuildTask["mode"]) => t(`dataCatalog.modes.${value}`),
@@ -435,7 +451,14 @@ export function ResourceIndexPanel({
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
       width: 100,
-      filters: ["full", "incremental"].map((value) => ({ text: t(value === "incremental" ? "dataCatalog.build.executeIncremental" : "dataCatalog.build.executeFull"), value })),
+      filters: ["full", "incremental"].map((value) => ({
+        text: t(
+          value === "incremental"
+            ? "dataCatalog.build.executeIncremental"
+            : "dataCatalog.build.executeFull",
+        ),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: executeTypeFilter ? [executeTypeFilter] : null,
       render: (_value, record) =>
@@ -451,7 +474,10 @@ export function ResourceIndexPanel({
       dataIndex: "status",
       title: t("dataCatalog.task.detailSections.status"),
       width: 120,
-      filters: STATUS_OPTIONS.map((value) => ({ text: t(`dataCatalog.task.statuses.${value}`), value })),
+      filters: STATUS_OPTIONS.map((value) => ({
+        text: t(`dataCatalog.task.statuses.${value}`),
+        value,
+      })),
       filteredValue: statusFilter.length ? statusFilter : null,
       render: (_value, record) => <BuildStatusTag task={record} />,
     },
@@ -521,7 +547,11 @@ export function ResourceIndexPanel({
             }}
             trigger={["click"]}
           >
-            <AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" />
+            <AppButton
+              aria-label={t("dataConnect.moreActions")}
+              icon={<EllipsisOutlined />}
+              type="link"
+            />
           </Dropdown>
         );
       },
@@ -549,32 +579,29 @@ export function ResourceIndexPanel({
       </div>
     ) : null;
 
-  const renderConfigTab = () => canViewResourceDetail ? (
-    <>
-      {gateBanner}
-      {!canModifyResource ? (
-        <Alert
-          message={t("dataCatalog.build.configReadOnly")}
-          showIcon
-          type="warning"
-        />
-      ) : null}
-      <div className={panelStyles.configureCard}>
-        <IndexConfigFormPanel
-          active={active && indexView === "config"}
-          canViewTasks={canViewTasks}
-          hideBuildControls={readOnly}
-          onSaved={() => {
-            void onRefresh();
-          }}
-          readOnly={readOnly}
-          resource={resource}
-        />
-      </div>
-    </>
-  ) : (
-    <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
-  );
+  const renderConfigTab = () =>
+    canViewResourceDetail ? (
+      <>
+        {gateBanner}
+        {!canModifyResource ? (
+          <Alert message={t("dataCatalog.build.configReadOnly")} showIcon type="warning" />
+        ) : null}
+        <div className={panelStyles.configureCard}>
+          <IndexConfigFormPanel
+            active={active && indexView === "config"}
+            canViewTasks={canViewTasks}
+            hideBuildControls={readOnly}
+            onSaved={() => {
+              void onRefresh();
+            }}
+            readOnly={readOnly}
+            resource={resource}
+          />
+        </div>
+      </>
+    ) : (
+      <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />
+    );
 
   const renderTasksTab = () => (
     <>
@@ -589,16 +616,16 @@ export function ResourceIndexPanel({
             <span className={panelStyles.statusStripValue}>
               {taskStatusUnavailable
                 ? t("dataCatalog.resourceWorkspace.indexStatusUnavailable")
-                : statusSummary ??
+                : (statusSummary ??
                   (resource.localIndexStatus === "available"
                     ? t("dataCatalog.resource.effectiveActive")
-                    : t("dataCatalog.resource.noEffectiveIndex"))}
+                    : t("dataCatalog.resource.noEffectiveIndex")))}
             </span>
           </div>
           <div className={panelStyles.sectionActions}>
-            {canManageBuildTasks && activeTask &&
-              (activeTask.status === "running" ||
-                activeTask.status === "pending") ? (
+            {canManageBuildTasks &&
+            activeTask &&
+            (activeTask.status === "running" || activeTask.status === "pending") ? (
               <AppButton onClick={() => void pauseOrResume(activeTask)} size="small">
                 {pauseResumeLabel}
               </AppButton>
@@ -637,11 +664,7 @@ export function ResourceIndexPanel({
         {latest?.status === "failed" && latest.error ? (
           <Alert
             className={panelStyles.statusAlert}
-            message={renderBuildFailureAlert(
-              latest,
-              i18n.language,
-              t("dataCatalog.task.rawError"),
-            )}
+            message={renderBuildFailureAlert(latest, i18n.language, t("dataCatalog.task.rawError"))}
             showIcon
             type="error"
           />
@@ -716,7 +739,7 @@ export function ResourceIndexPanel({
             onChange={(pagination, filters, sorter, extra) => {
               if (extra.action === "filter") {
                 updateTaskFilters({
-                  executeType: (filters.executeType?.[0] as BuildTaskExecuteType | undefined),
+                  executeType: filters.executeType?.[0] as BuildTaskExecuteType | undefined,
                   mode: filters.mode?.[0] as BuildMode | undefined,
                   statuses: (filters.status ?? []).map(String) as BuildTaskStatus[],
                 });
@@ -726,11 +749,15 @@ export function ResourceIndexPanel({
             }}
             pagination={false}
             rowKey="id"
-            rowSelection={canManageTaskActions ? {
-              selectedRowKeys: selectedKeys,
-              onChange: (keys) => setSelectedKeys(keys.map(String)),
-              getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
-            } : undefined}
+            rowSelection={
+              canManageTaskActions
+                ? {
+                    selectedRowKeys: selectedKeys,
+                    onChange: (keys) => setSelectedKeys(keys.map(String)),
+                    getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
+                  }
+                : undefined
+            }
           />
         </TableSurface>
         {historyTotal > 0 ? (
@@ -757,9 +784,7 @@ export function ResourceIndexPanel({
         <div className={panelStyles.viewBar}>
           <div className={panelStyles.viewTabs} role="tablist">
             <button
-              className={
-                indexView === "config" ? panelStyles.viewTabActive : panelStyles.viewTab
-              }
+              className={indexView === "config" ? panelStyles.viewTabActive : panelStyles.viewTab}
               onClick={() => onIndexViewChange("config")}
               role="tab"
               type="button"
@@ -768,9 +793,7 @@ export function ResourceIndexPanel({
             </button>
             {supportsTaskView ? (
               <button
-                className={
-                  indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab
-                }
+                className={indexView === "tasks" ? panelStyles.viewTabActive : panelStyles.viewTab}
                 onClick={() => onIndexViewChange("tasks")}
                 role="tab"
                 type="button"
@@ -795,7 +818,9 @@ export function ResourceIndexPanel({
           </div>
         </div>
 
-        {!supportsTaskView || indexView === "config" ? renderConfigTab() : canViewTasks ? (
+        {!supportsTaskView || indexView === "config" ? (
+          renderConfigTab()
+        ) : canViewTasks ? (
           renderTasksTab()
         ) : (
           <Alert message={t("dataCatalog.permissionRequired")} showIcon type="warning" />

@@ -250,7 +250,9 @@ function mapReceipt(data: BackendReceipt | undefined): OperationReceipt {
   };
 }
 
-function mapOperation(data: NonNullable<BackendTraceDetail["operations"]>[number]): TechnicalTraceOperation {
+function mapOperation(
+  data: NonNullable<BackendTraceDetail["operations"]>[number],
+): TechnicalTraceOperation {
   return {
     fact: mapOperationFact(data.fact ?? {}),
     partialReasons: data.partial_reasons ?? [],
@@ -267,7 +269,9 @@ function mapTraceGraph(data: NonNullable<BackendTraceDetail["graph"]>): Technica
   };
 }
 
-function mapSpanNode(data: NonNullable<NonNullable<NonNullable<BackendTraceDetail["graph"]>["data"]>["nodes"]>[number]): TechnicalSpanNode {
+function mapSpanNode(
+  data: NonNullable<NonNullable<NonNullable<BackendTraceDetail["graph"]>["data"]>["nodes"]>[number],
+): TechnicalSpanNode {
   return {
     durationNano: data.duration_nano ?? 0,
     endNano: data.end_nano ?? 0,

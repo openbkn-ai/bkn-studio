@@ -23,13 +23,14 @@ export function ExecutionUnitCreatePage({ activeTab }: ExecutionUnitCreatePagePr
   const navigate = useNavigate();
 
   const handleCreated = ({ id, tab, toolId }: CreatedCapabilityPayload) => {
-    const destination = tab === "mcp"
-      ? `/execution-factory/mcp/${id}`
-      : tab === "skill"
-        ? `/execution-factory/skills/${id}`
-        : tab === "toolbox"
-          ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
-          : `/execution-factory/units?activeTab=operator&detailId=${id}`;
+    const destination =
+      tab === "mcp"
+        ? `/execution-factory/mcp/${id}`
+        : tab === "skill"
+          ? `/execution-factory/skills/${id}`
+          : tab === "toolbox"
+            ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
+            : `/execution-factory/units?activeTab=operator&detailId=${id}`;
 
     void (async () => {
       try {
@@ -41,5 +42,12 @@ export function ExecutionUnitCreatePage({ activeTab }: ExecutionUnitCreatePagePr
     })();
   };
 
-  return <CreateMenu activeTab={activeTab} autoOpen dedicatedMode={activeTab} onResourceCreated={handleCreated} />;
+  return (
+    <CreateMenu
+      activeTab={activeTab}
+      autoOpen
+      dedicatedMode={activeTab}
+      onResourceCreated={handleCreated}
+    />
+  );
 }

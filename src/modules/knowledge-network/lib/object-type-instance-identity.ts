@@ -56,16 +56,15 @@ export function formatSampleRowLabel(
   return firstValue == null ? "--" : String(firstValue);
 }
 
-export function matchesSampleRowKeyword(
-  row: Record<string, string | number>,
-  keyword: string,
-) {
+export function matchesSampleRowKeyword(row: Record<string, string | number>, keyword: string) {
   const normalizedKeyword = keyword.trim().toLowerCase();
 
   return (
     !normalizedKeyword ||
     Object.values(row).some((value) =>
-      String(value ?? "").toLowerCase().includes(normalizedKeyword),
+      String(value ?? "")
+        .toLowerCase()
+        .includes(normalizedKeyword),
     )
   );
 }

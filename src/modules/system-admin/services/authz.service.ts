@@ -39,7 +39,7 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 const ADMIN = "/safe/v1/admin";
 
-const wait = async <T,>(value: T) =>
+const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 160);
   });
@@ -48,8 +48,18 @@ const wait = async <T,>(value: T) =>
 
 // Demo authorizable objects. Real mode loads them from domain services.
 const authzObjects: AuthorizableObject[] = [
-  { type: "knowledge_network", id: "kn-customer-360", name: "Customer 360 Knowledge Network", sub: "customer" },
-  { type: "knowledge_network", id: "kn-finance-risk", name: "Financial Risk Knowledge Network", sub: "finance" },
+  {
+    type: "knowledge_network",
+    id: "kn-customer-360",
+    name: "Customer 360 Knowledge Network",
+    sub: "customer",
+  },
+  {
+    type: "knowledge_network",
+    id: "kn-finance-risk",
+    name: "Financial Risk Knowledge Network",
+    sub: "finance",
+  },
   { type: "catalog", id: "cat-customer-mysql", name: "Customer Master Data - MySQL", sub: "mysql" },
   { type: "catalog", id: "cat-events-kafka", name: "Behavior Events - Kafka", sub: "kafka" },
   { type: "small_model", id: "bge-m3", name: "BGE-M3", sub: "bge · embedding" },
@@ -117,7 +127,10 @@ let grants: ObjectGrant[] = [
 const sameTarget = (
   grant: ObjectGrant,
   input: Pick<ObjectGrantInput, "accessorId" | "objType" | "objId">,
-) => grant.accessorId === input.accessorId && grant.objType === input.objType && grant.objId === input.objId;
+) =>
+  grant.accessorId === input.accessorId &&
+  grant.objType === input.objType &&
+  grant.objId === input.objId;
 
 const clone = (grant: ObjectGrant): ObjectGrant => ({
   ...grant,
@@ -253,7 +266,13 @@ export async function listObjectGroups(
       const row =
         map.get(key) ??
         (groupBy === "object"
-          ? { objType: grant.objType, objId: grant.objId, objName: grant.objName, count: 0, operations: [] }
+          ? {
+              objType: grant.objType,
+              objId: grant.objId,
+              objName: grant.objName,
+              count: 0,
+              operations: [],
+            }
           : { accessorId: grant.accessorId, count: 0, operations: [] });
       row.count += 1;
       row.operations = [...new Set([...row.operations, ...grant.operations])];
@@ -312,7 +331,9 @@ export async function listObjectGroups(
 
 export async function listAuthorizableObjects(objType?: string): Promise<AuthorizableObject[]> {
   if (useMock) {
-    return wait(authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })));
+    return wait(
+      authzObjects.filter((item) => !objType || item.type === objType).map((item) => ({ ...item })),
+    );
   }
   return listDomainObjects(objType);
 }
@@ -323,11 +344,16 @@ export async function listAuthorizableObjectsPage(
 ) {
   if (useMock) {
     const normalizedKeyword = keyword.trim().toLowerCase();
-    const matching = authzObjects.filter((item) =>
-      item.type === objType && (!normalizedKeyword || item.name.toLowerCase().includes(normalizedKeyword)),
+    const matching = authzObjects.filter(
+      (item) =>
+        item.type === objType &&
+        (!normalizedKeyword || item.name.toLowerCase().includes(normalizedKeyword)),
     );
     const start = page * 100;
-    return wait({ items: matching.slice(start, start + 100).map((item) => ({ ...item })), total: matching.length });
+    return wait({
+      items: matching.slice(start, start + 100).map((item) => ({ ...item })),
+      total: matching.length,
+    });
   }
   return listDomainObjectsPage(objType, { keyword, page });
 }
@@ -350,7 +376,9 @@ export async function upsertObjectGrant(
     if ("bundle" in input) {
       const bundleGrant = existing ?? seed(input.objType, input.objId, input.accessorId, []);
       bundleGrant.bundle = input.bundle;
-      if (!(bundleGrant.grants ?? []).some((record) => record.policySource === "community_bundle")) {
+      if (
+        !(bundleGrant.grants ?? []).some((record) => record.policySource === "community_bundle")
+      ) {
         bundleGrant.grants = [
           ...(bundleGrant.grants ?? []),
           {
@@ -400,16 +428,28 @@ export async function upsertObjectGrant(
       policySource: "professional_rule",
     }));
     target.grants = [...preservedSources, ...replacementSources];
-    target.operations = [...new Set(target.grants.filter((record) => record.active && record.effect === "allow").map((record) => record.operation))];
-    target.deniedOperations = [...new Set(target.grants.filter((record) => record.active && record.effect === "deny").map((record) => record.operation))];
-    target.effectiveDecisions = [...new Set([...target.operations, ...target.deniedOperations])].map(
-      (operation): EffectiveDecision => ({
-        basis: "direct",
-        decision: (target.deniedOperations ?? []).includes(operation) ? "deny" : "allow",
-        operation,
-        requires: [],
-      }),
-    );
+    target.operations = [
+      ...new Set(
+        target.grants
+          .filter((record) => record.active && record.effect === "allow")
+          .map((record) => record.operation),
+      ),
+    ];
+    target.deniedOperations = [
+      ...new Set(
+        target.grants
+          .filter((record) => record.active && record.effect === "deny")
+          .map((record) => record.operation),
+      ),
+    ];
+    target.effectiveDecisions = [
+      ...new Set([...target.operations, ...target.deniedOperations]),
+    ].map((operation): EffectiveDecision => ({
+      basis: "direct",
+      decision: (target.deniedOperations ?? []).includes(operation) ? "deny" : "allow",
+      operation,
+      requires: [],
+    }));
     target.objName = input.objName;
     target.objSub = input.objSub;
     if (!existing) {
@@ -418,18 +458,19 @@ export async function upsertObjectGrant(
     await wait(undefined);
     return;
   }
-  const payload = "bundle" in input
-    ? {
-        accessor_id: input.accessorId,
-        bundle: input.bundle,
-        resource: { type: input.objType, id: input.objId },
-      }
-    : {
-        accessor_id: input.accessorId,
-        effect: input.effect ?? "allow",
-        operations: input.operations,
-        resource: { type: input.objType, id: input.objId },
-      };
+  const payload =
+    "bundle" in input
+      ? {
+          accessor_id: input.accessorId,
+          bundle: input.bundle,
+          resource: { type: input.objType, id: input.objId },
+        }
+      : {
+          accessor_id: input.accessorId,
+          effect: input.effect ?? "allow",
+          operations: input.operations,
+          resource: { type: input.objType, id: input.objId },
+        };
   await http.post(`${ADMIN}/object-grants`, payload, {
     skipErrorToast: options.skipErrorToast,
   });
@@ -452,8 +493,20 @@ export async function revokeObjectGrants(grantIds: string[]): Promise<void> {
         if (!sourceRecords.length && !grant.bundle) {
           return null;
         }
-        const operations = [...new Set(sourceRecords.filter((record) => record.active && record.effect === "allow").map((record) => record.operation))];
-        const deniedOperations = [...new Set(sourceRecords.filter((record) => record.active && record.effect === "deny").map((record) => record.operation))];
+        const operations = [
+          ...new Set(
+            sourceRecords
+              .filter((record) => record.active && record.effect === "allow")
+              .map((record) => record.operation),
+          ),
+        ];
+        const deniedOperations = [
+          ...new Set(
+            sourceRecords
+              .filter((record) => record.active && record.effect === "deny")
+              .map((record) => record.operation),
+          ),
+        ];
         return {
           ...grant,
           deniedOperations,
@@ -606,11 +659,17 @@ export async function listObjectGrantsForObject(
   objId: string,
 ): Promise<{ accounts: AdminUser[]; grants: ObjectGrant[] }> {
   if (useMock) {
-    return { accounts: [], grants: await listObjectGrants({ resourceType: objType, resourceId: objId }) };
+    return {
+      accounts: [],
+      grants: await listObjectGrants({ resourceType: objType, resourceId: objId }),
+    };
   }
-  const response = await http.get<{ entries?: BackendMeGrantEntry[] }>("/safe/v1/me/object-grants", {
-    params: { resource_id: objId, resource_type: objType },
-  });
+  const response = await http.get<{ entries?: BackendMeGrantEntry[] }>(
+    "/safe/v1/me/object-grants",
+    {
+      params: { resource_id: objId, resource_type: objType },
+    },
+  );
   const entries = (response.data.entries ?? []).filter((entry) => entry.accessor_id);
   return {
     // Shaped as AdminUser only so the shared display cache can be primed from it. The fields this
@@ -627,10 +686,12 @@ export async function listObjectGrantsForObject(
         roleIds: [],
         telephone: "",
       })),
-    grants: entries.map((entry) => mapObjectGrantEntry({
-      ...entry,
-      resource: entry.resource ?? { id: objId, type: objType },
-    })),
+    grants: entries.map((entry) =>
+      mapObjectGrantEntry({
+        ...entry,
+        resource: entry.resource ?? { id: objId, type: objType },
+      }),
+    ),
   };
 }
 
@@ -640,25 +701,24 @@ export async function upsertObjectGrantForObject(input: ObjectGrantInput): Promi
     await upsertObjectGrant(input);
     return;
   }
-  const payload = "bundle" in input
-    ? {
-        accessor_id: input.accessorId,
-        bundle: input.bundle,
-        resource: { id: input.objId, type: input.objType },
-      }
-    : {
-        accessor_id: input.accessorId,
-        effect: input.effect ?? "allow",
-        operations: input.operations,
-        resource: { id: input.objId, type: input.objType },
-      };
+  const payload =
+    "bundle" in input
+      ? {
+          accessor_id: input.accessorId,
+          bundle: input.bundle,
+          resource: { id: input.objId, type: input.objType },
+        }
+      : {
+          accessor_id: input.accessorId,
+          effect: input.effect ?? "allow",
+          operations: input.operations,
+          resource: { id: input.objId, type: input.objType },
+        };
   await http.post("/safe/v1/me/object-grants", payload);
 }
 
 /** Removes one grantee's access to this object entirely. Idempotent server-side. */
-export async function revokeObjectGrantForObject(
-  grantId: string,
-): Promise<void> {
+export async function revokeObjectGrantForObject(grantId: string): Promise<void> {
   if (useMock) {
     await revokeObjectGrant(grantId);
     return;
@@ -714,29 +774,33 @@ export async function listGrantableUsersForObject(
 }
 
 /** Read-only Enterprise compatibility inventory. Runtime eligibility is supplied by the server. */
-export async function listEnterpriseObjectGrants(query: {
-  accessorId?: string;
-  resourceId?: string;
-  resourceType?: string;
-} = {}): Promise<EnterpriseObjectGrant[]> {
+export async function listEnterpriseObjectGrants(
+  query: {
+    accessorId?: string;
+    resourceId?: string;
+    resourceType?: string;
+  } = {},
+): Promise<EnterpriseObjectGrant[]> {
   if (useMock) {
     return wait([]);
   }
-  const response = await http.get<{ entries?: Array<{
-    activation_state?: EnterpriseObjectGrant["activationState"];
-    accessor_id?: string;
-    classification?: string;
-    effect?: EnterpriseObjectGrant["effect"];
-    expires_at?: string;
-    grant_id?: string;
-    inactive_reason?: string;
-    operation?: string;
-    resource_id?: string;
-    resource_type?: string;
-    rule_id?: string;
-    runtime_eligible?: boolean;
-    subject_type?: EnterpriseObjectGrant["subjectType"];
-  }> }>(`${ADMIN}/enterprise-object-grants`, {
+  const response = await http.get<{
+    entries?: Array<{
+      activation_state?: EnterpriseObjectGrant["activationState"];
+      accessor_id?: string;
+      classification?: string;
+      effect?: EnterpriseObjectGrant["effect"];
+      expires_at?: string;
+      grant_id?: string;
+      inactive_reason?: string;
+      operation?: string;
+      resource_id?: string;
+      resource_type?: string;
+      rule_id?: string;
+      runtime_eligible?: boolean;
+      subject_type?: EnterpriseObjectGrant["subjectType"];
+    }>;
+  }>(`${ADMIN}/enterprise-object-grants`, {
     params: {
       accessor_id: query.accessorId,
       resource_id: query.resourceId,

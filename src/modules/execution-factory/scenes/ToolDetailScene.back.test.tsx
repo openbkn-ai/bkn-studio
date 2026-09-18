@@ -21,7 +21,13 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { destroy: vi.fn(), error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    message: {
+      destroy: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      warning: vi.fn(),
+    },
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: {
@@ -210,9 +216,7 @@ describe("tool config back navigation (#386)", () => {
     await waitFor(() => expect(currentLocation()).toBe(TOOLS_URL));
 
     await clickBack();
-    await waitFor(() =>
-      expect(currentLocation()).toBe(`${LIST_URL}&toolboxView=openapi`),
-    );
+    await waitFor(() => expect(currentLocation()).toBe(`${LIST_URL}&toolboxView=openapi`));
     expect(screen.getByText("toolbox list")).toBeTruthy();
   });
 
@@ -248,9 +252,7 @@ describe("tool config back navigation (#386)", () => {
     renderAt(["/somewhere/else", TOOLS_URL]);
 
     await clickBack();
-    await waitFor(() =>
-      expect(currentLocation()).toBe(`${LIST_URL}&toolboxView=openapi`),
-    );
+    await waitFor(() => expect(currentLocation()).toBe(`${LIST_URL}&toolboxView=openapi`));
   });
 
   it("sends a marketplace preview of the tool list back to the catalog", async () => {
@@ -258,7 +260,9 @@ describe("tool config back navigation (#386)", () => {
 
     await clickBack();
     await waitFor(() =>
-      expect(currentLocation()).toBe("/execution-factory/catalog?activeTab=toolbox&toolboxView=openapi"),
+      expect(currentLocation()).toBe(
+        "/execution-factory/catalog?activeTab=toolbox&toolboxView=openapi",
+      ),
     );
   });
 });

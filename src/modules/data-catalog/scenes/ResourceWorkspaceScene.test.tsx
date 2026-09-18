@@ -23,7 +23,12 @@ const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> |
 const indexPanelProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
 
 vi.mock("antd", () => ({
-  Alert: ({ action, description, message, type }: {
+  Alert: ({
+    action,
+    description,
+    message,
+    type,
+  }: {
     action?: React.ReactNode;
     description?: React.ReactNode;
     message: React.ReactNode;
@@ -36,15 +41,23 @@ vi.mock("antd", () => ({
     </div>
   ),
   Space: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  Spin: ({ children }: { children?: React.ReactNode }) => <div data-testid="workspace-spin">{children}</div>,
-  Tabs: ({ activeKey, items, onChange }: {
+  Spin: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="workspace-spin">{children}</div>
+  ),
+  Tabs: ({
+    activeKey,
+    items,
+    onChange,
+  }: {
     activeKey: string;
     items: Array<{ children: React.ReactNode; key: string; label: React.ReactNode }>;
     onChange?: (key: string) => void;
   }) => (
     <div data-testid="workspace-tabs" data-tab-keys={items.map((item) => item.key).join(",")}>
       {items.map((item) => (
-        <button key={item.key} onClick={() => onChange?.(item.key)} type="button">{item.label}</button>
+        <button key={item.key} onClick={() => onChange?.(item.key)} type="button">
+          {item.label}
+        </button>
       ))}
       {items.find((item) => item.key === activeKey)?.children}
     </div>
@@ -75,7 +88,9 @@ vi.mock("@/framework/permission/PermissionGate", () => ({
 
 vi.mock("@/framework/ui/common/AppButton", () => ({
   AppButton: ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick} type="button">{children}</button>
+    <button onClick={onClick} type="button">
+      {children}
+    </button>
   ),
 }));
 
@@ -100,10 +115,16 @@ vi.mock("@/modules/data-catalog/components/ResourceDetailPanel", () => ({
 vi.mock("@/modules/data-catalog/components/ResourceIndexPanel", () => ({
   ResourceIndexPanel: (props: Record<string, unknown>) => {
     indexPanelProps.value = props;
-    return <output data-testid="index-task-status-unavailable">{String(props.taskStatusUnavailable)}</output>;
+    return (
+      <output data-testid="index-task-status-unavailable">
+        {String(props.taskStatusUnavailable)}
+      </output>
+    );
   },
 }));
-vi.mock("@/modules/data-catalog/components/ResourcePreviewPanel", () => ({ ResourcePreviewPanel: () => <div /> }));
+vi.mock("@/modules/data-catalog/components/ResourcePreviewPanel", () => ({
+  ResourcePreviewPanel: () => <div />,
+}));
 vi.mock("@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel", () => ({
   ResourceSemanticUnderstandingPanel: () => <div data-testid="semantic-panel" />,
 }));
@@ -201,12 +222,17 @@ describe("ResourceWorkspaceScene", () => {
       />,
     );
 
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
-      direction: "desc",
-      limit: 1,
-      resourceId: staleResource.id,
-      sort: "create_time",
-    }, { skipErrorToast: true }));
+    await waitFor(() =>
+      expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+        {
+          direction: "desc",
+          limit: 1,
+          resourceId: staleResource.id,
+          sort: "create_time",
+        },
+        { skipErrorToast: true },
+      ),
+    );
   });
 
   it("refreshes index context without remounting the workspace or rechecking catalog permissions", async () => {
@@ -222,10 +248,14 @@ describe("ResourceWorkspaceScene", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByTestId("index-task-status-unavailable")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("index-task-status-unavailable")).toBeInTheDocument(),
+    );
     const refresh = indexPanelProps.value?.onRefresh as (() => Promise<void>) | undefined;
     expect(refresh).toBeTypeOf("function");
-    await act(async () => { await refresh?.(); });
+    await act(async () => {
+      await refresh?.();
+    });
 
     expect(getCatalogResourceMock).toHaveBeenCalledTimes(2);
     expect(getCatalogMock).toHaveBeenCalledTimes(1);
@@ -233,42 +263,42 @@ describe("ResourceWorkspaceScene", () => {
     expect(screen.getByTestId("index-task-status-unavailable")).toBeInTheDocument();
   });
 
-  it.each([403, 500])("keeps resource details when task status loading fails with %s", async (status) => {
-    getCatalogResourceMock.mockResolvedValue(staleResource);
-    listBuildTaskPageMock.mockRejectedValue(new AxiosError(
-      "Task status unavailable",
-      undefined,
-      undefined,
-      undefined,
-      {
-        status,
-        statusText: status === 403 ? "Forbidden" : "Internal Server Error",
-        headers: new AxiosHeaders(),
-        config: { headers: new AxiosHeaders() },
-        data: {},
-      },
-    ));
+  it.each([403, 500])(
+    "keeps resource details when task status loading fails with %s",
+    async (status) => {
+      getCatalogResourceMock.mockResolvedValue(staleResource);
+      listBuildTaskPageMock.mockRejectedValue(
+        new AxiosError("Task status unavailable", undefined, undefined, undefined, {
+          status,
+          statusText: status === 403 ? "Forbidden" : "Internal Server Error",
+          headers: new AxiosHeaders(),
+          config: { headers: new AxiosHeaders() },
+          data: {},
+        }),
+      );
 
-    render(
-      <ResourceWorkspaceScene
-        indexView="config"
-        onIndexViewChange={vi.fn()}
-        onTabChange={vi.fn()}
-        resourceId={staleResource.id}
-        tab="detail"
-      />,
-    );
+      render(
+        <ResourceWorkspaceScene
+          indexView="config"
+          onIndexViewChange={vi.fn()}
+          onTabChange={vi.fn()}
+          resourceId={staleResource.id}
+          tab="detail"
+        />,
+      );
 
-    expect(await screen.findByTestId("detail-schema-name")).toBeTruthy();
-    expect(screen.getByTestId("workspace-tabs")).toBeTruthy();
-    expect(screen.getByText("dataCatalog.resourceWorkspace.taskStatusUnavailable")).toHaveAttribute(
-      "data-alert-type",
-      "warning",
-    );
-    expect(screen.getByText(/dataCatalog\.resourceWorkspace\.indexStatusUnavailable/)).toBeTruthy();
-    expect(screen.queryByText("common.retry")).toBeNull();
-    expect(screen.queryByText("dataCatalog.permissionRequired")).toBeNull();
-  });
+      expect(await screen.findByTestId("detail-schema-name")).toBeTruthy();
+      expect(screen.getByTestId("workspace-tabs")).toBeTruthy();
+      expect(
+        screen.getByText("dataCatalog.resourceWorkspace.taskStatusUnavailable"),
+      ).toHaveAttribute("data-alert-type", "warning");
+      expect(
+        screen.getByText(/dataCatalog\.resourceWorkspace\.indexStatusUnavailable/),
+      ).toBeTruthy();
+      expect(screen.queryByText("common.retry")).toBeNull();
+      expect(screen.queryByText("dataCatalog.permissionRequired")).toBeNull();
+    },
+  );
 
   it("passes the unknown task status into the index panel", async () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
@@ -302,12 +332,15 @@ describe("ResourceWorkspaceScene", () => {
     );
 
     expect(await screen.findByTestId("index-task-status-unavailable")).toHaveTextContent("true");
-    expect(screen.getByText(/dataCatalog\.resourceWorkspace\.indexStatusUnavailable/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/dataCatalog\.resourceWorkspace\.indexStatusUnavailable/),
+    ).toBeInTheDocument();
 
     act(() => {
-      (indexPanelProps.value?.onLatestTaskLoaded as
-        | ((resourceId: string, task: BuildTask | null) => void)
-        | undefined)?.(staleResource.id, runningTask);
+      (
+        indexPanelProps.value?.onLatestTaskLoaded as
+          ((resourceId: string, task: BuildTask | null) => void) | undefined
+      )?.(staleResource.id, runningTask);
     });
 
     expect(screen.getByTestId("index-task-status-unavailable")).toHaveTextContent("false");
@@ -317,19 +350,15 @@ describe("ResourceWorkspaceScene", () => {
 
   it("keeps a directly granted resource available when the parent catalog is forbidden", async () => {
     getCatalogResourceMock.mockResolvedValue(staleResource);
-    getCatalogMock.mockRejectedValue(new AxiosError(
-      "Forbidden",
-      undefined,
-      undefined,
-      undefined,
-      {
+    getCatalogMock.mockRejectedValue(
+      new AxiosError("Forbidden", undefined, undefined, undefined, {
         status: 403,
         statusText: "Forbidden",
         headers: new AxiosHeaders(),
         config: { headers: new AxiosHeaders() },
         data: {},
-      },
-    ));
+      }),
+    );
 
     render(
       <ResourceWorkspaceScene
@@ -368,19 +397,15 @@ describe("ResourceWorkspaceScene", () => {
   });
 
   it("keeps tab navigation and a warning visible when the resource read is forbidden", async () => {
-    getCatalogResourceMock.mockRejectedValue(new AxiosError(
-      "Forbidden",
-      undefined,
-      undefined,
-      undefined,
-      {
+    getCatalogResourceMock.mockRejectedValue(
+      new AxiosError("Forbidden", undefined, undefined, undefined, {
         status: 403,
         statusText: "Forbidden",
         headers: new AxiosHeaders(),
         config: { headers: new AxiosHeaders() },
         data: {},
-      },
-    ));
+      }),
+    );
 
     const onTabChange = vi.fn();
     render(
@@ -412,19 +437,15 @@ describe("ResourceWorkspaceScene", () => {
   });
 
   it("keeps server failures as errors rather than permission warnings", async () => {
-    getCatalogResourceMock.mockRejectedValue(new AxiosError(
-      "Unavailable",
-      undefined,
-      undefined,
-      undefined,
-      {
+    getCatalogResourceMock.mockRejectedValue(
+      new AxiosError("Unavailable", undefined, undefined, undefined, {
         status: 500,
         statusText: "Internal Server Error",
         headers: new AxiosHeaders(),
         config: { headers: new AxiosHeaders() },
         data: {},
-      },
-    ));
+      }),
+    );
 
     render(
       <ResourceWorkspaceScene
@@ -583,13 +604,19 @@ describe("ResourceWorkspaceScene", () => {
 
     expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
     expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
-    expect(modalConfirmMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      title: "dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle",
-    }));
-    expect(modalConfirmMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      okButtonProps: { danger: true },
-      title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
-    }));
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        title: "dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle",
+      }),
+    );
+    expect(modalConfirmMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        okButtonProps: { danger: true },
+        title: "dataCatalog.resourceWorkspace.disableConfirmTitle",
+      }),
+    );
   });
 
   it("confirms enabling a disabled resource before issuing the request", async () => {
@@ -609,9 +636,11 @@ describe("ResourceWorkspaceScene", () => {
     fireEvent.click(screen.getByText("common.enable"));
 
     expect(setCatalogResourceEnabledMock).not.toHaveBeenCalled();
-    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: "dataCatalog.resourceWorkspace.enableConfirmTitle",
-    }));
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.resourceWorkspace.enableConfirmTitle",
+      }),
+    );
   });
 
   it("finishes an in-flight workspace load after a tab refresh", async () => {
@@ -628,9 +657,12 @@ describe("ResourceWorkspaceScene", () => {
     });
     getCatalogResourceMock
       .mockResolvedValueOnce(staleResource)
-      .mockImplementationOnce(() => new Promise<CatalogResource>((resolve) => {
-        resolveLoad = resolve;
-      }))
+      .mockImplementationOnce(
+        () =>
+          new Promise<CatalogResource>((resolve) => {
+            resolveLoad = resolve;
+          }),
+      )
       .mockResolvedValueOnce(semanticResource);
 
     const props = {
@@ -654,21 +686,15 @@ describe("ResourceWorkspaceScene", () => {
   });
 
   it("removes cached resource details when a tab refresh loses read permission", async () => {
-    getCatalogResourceMock
-      .mockResolvedValueOnce(staleResource)
-      .mockRejectedValueOnce(new AxiosError(
-        "Forbidden",
-        undefined,
-        undefined,
-        undefined,
-        {
-          status: 403,
-          statusText: "Forbidden",
-          headers: new AxiosHeaders(),
-          config: { headers: new AxiosHeaders() },
-          data: {},
-        },
-      ));
+    getCatalogResourceMock.mockResolvedValueOnce(staleResource).mockRejectedValueOnce(
+      new AxiosError("Forbidden", undefined, undefined, undefined, {
+        status: 403,
+        statusText: "Forbidden",
+        headers: new AxiosHeaders(),
+        config: { headers: new AxiosHeaders() },
+        data: {},
+      }),
+    );
 
     const props = {
       indexView: "config" as const,
@@ -694,7 +720,9 @@ describe("ResourceWorkspaceScene", () => {
     const semanticResource: CatalogResource = {
       ...staleResource,
       expectedUpdateTime: 2,
-      schema: [{ ...staleResource.schema[0], description: "Order identifier", displayName: "订单编号" }],
+      schema: [
+        { ...staleResource.schema[0], description: "Order identifier", displayName: "订单编号" },
+      ],
     };
     getCatalogResourceMock
       .mockResolvedValueOnce(staleResource)

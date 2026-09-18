@@ -229,9 +229,7 @@ describe("ImportResourceModal", () => {
   it("preserves absolute OpenAPI servers when importing an operator", async () => {
     nextOpenApiSpec = absoluteServerSpec;
 
-    render(
-      <ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />,
-    );
+    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
     await screen.findByDisplayValue("https://api.example.com");
@@ -250,9 +248,7 @@ describe("ImportResourceModal", () => {
   it("does not inject localhost when operator OpenAPI has no servers", async () => {
     nextOpenApiSpec = missingServerSpec;
 
-    render(
-      <ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />,
-    );
+    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
 
@@ -270,9 +266,7 @@ describe("ImportResourceModal", () => {
   it("does not inject localhost when operator OpenAPI has a relative server", async () => {
     nextOpenApiSpec = relativeServerSpec;
 
-    render(
-      <ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />,
-    );
+    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
 
@@ -290,9 +284,7 @@ describe("ImportResourceModal", () => {
   it("imports an operator with a manually provided Service URL when servers are missing", async () => {
     nextOpenApiSpec = missingServerSpec;
 
-    render(
-      <ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />,
-    );
+    render(<ImportResourceModal activeTab="operator" onClose={vi.fn()} onSuccess={vi.fn()} open />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Load OpenAPI" }));
 

@@ -34,10 +34,7 @@ function buildDegreeMap(graph: KnowledgeNetworkPreviewGraph) {
   return degree;
 }
 
-function resolveCollisions(
-  positions: Map<string, { x: number; y: number }>,
-  nodeIds: string[],
-) {
+function resolveCollisions(positions: Map<string, { x: number; y: number }>, nodeIds: string[]) {
   for (let iteration = 0; iteration < 80; iteration += 1) {
     let moved = false;
 
@@ -70,10 +67,7 @@ function resolveCollisions(
   }
 }
 
-function clampPositions(
-  positions: Map<string, { x: number; y: number }>,
-  nodeIds: string[],
-) {
+function clampPositions(positions: Map<string, { x: number; y: number }>, nodeIds: string[]) {
   const paddingX = PREVIEW_NODE_RADIUS + 24;
   const paddingY = PREVIEW_NODE_RADIUS + LABEL_CLEARANCE + 24;
 

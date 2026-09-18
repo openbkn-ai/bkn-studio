@@ -134,9 +134,8 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
 
   const selectedRowsWithoutIdentityCount = useMemo(
     () =>
-      sampleRows.filter(
-        (item) => selectedRowKeys.includes(item.key) && item.identity === null,
-      ).length,
+      sampleRows.filter((item) => selectedRowKeys.includes(item.key) && item.identity === null)
+        .length,
     [sampleRows, selectedRowKeys],
   );
 
@@ -231,7 +230,16 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
         });
       }
     },
-    [canQueryData, message, networkId, objectTypeId, propertyNames, sampleRows, t, trialLogicProperties],
+    [
+      canQueryData,
+      message,
+      networkId,
+      objectTypeId,
+      propertyNames,
+      sampleRows,
+      t,
+      trialLogicProperties,
+    ],
   );
 
   const requestTrialForRows = useCallback(
@@ -265,8 +273,8 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
   );
 
   const columns: TableProps<TrialTableRow>["columns"] = useMemo(() => {
-    const logicColumns: NonNullable<TableProps<TrialTableRow>["columns"]> = trialLogicProperties.map(
-      (property) => ({
+    const logicColumns: NonNullable<TableProps<TrialTableRow>["columns"]> =
+      trialLogicProperties.map((property) => ({
         className:
           highlightedLogicPropertyName === property.name ? styles.highlightColumn : undefined,
         dataIndex: property.name,
@@ -281,8 +289,7 @@ export function ObjectTypeDetailLogicPropertyTrialPanel({
         },
         title: property.displayName || property.name,
         width: 160,
-      }),
-    );
+      }));
 
     return [
       {

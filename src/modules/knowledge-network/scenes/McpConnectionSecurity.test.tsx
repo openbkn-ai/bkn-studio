@@ -31,7 +31,9 @@ describe("McpConnectionSecurity", () => {
     );
 
     expect(screen.getByText("HTTP")).toBeTruthy();
-    expect(screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpSecurity.httpTitle")).toBeTruthy();
+    expect(
+      screen.getByText("knowledgeNetwork.contextLoaderPanel.mcpSecurity.httpTitle"),
+    ).toBeTruthy();
     expect(screen.queryByRole("checkbox")).toBeNull();
   });
 

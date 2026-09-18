@@ -71,11 +71,7 @@ const catalog: CatalogRecord = {
   updaterName: "test",
 };
 
-function renderPanel(
-  record: CatalogRecord,
-  onOpenResource = vi.fn(),
-  initialEntry = "/",
-) {
+function renderPanel(record: CatalogRecord, onOpenResource = vi.fn(), initialEntry = "/") {
   const view = render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <ResourceListPanel
@@ -118,10 +114,14 @@ describe("ResourceListPanel", () => {
   it("filters resources by the selected schema", async () => {
     renderPanel(catalog, vi.fn(), "/data-catalog/catalog/catalog-1?schema=analytics");
 
-    await waitFor(() => expect(listCatalogResourcePageMock).toHaveBeenCalledWith(expect.objectContaining({
-      catalogId: "catalog-1",
-      schema: "analytics",
-    })));
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          catalogId: "catalog-1",
+          schema: "analytics",
+        }),
+      ),
+    );
   });
 
   // The bug: the button asked for admin-authz:grant, which no network_builder holds, so the person
@@ -204,12 +204,16 @@ describe("ResourceListPanel", () => {
     expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.tags" })).toBeTruthy();
     expect(screen.getByText("crm")).toBeTruthy();
     expect(screen.getByText("pii")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.resourceStatus" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "dataCatalog.resource.resourceStatus" }),
+    ).toBeTruthy();
     const resourceStatus = screen.getByText("dataCatalog.resourceStatuses.stale");
     expect(resourceStatus).toBeTruthy();
     fireEvent.mouseEnter(resourceStatus);
     expect(await screen.findByText("source table no longer exists")).toBeTruthy();
-    expect(screen.getByRole("columnheader", { name: "dataCatalog.resource.indexState" })).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "dataCatalog.resource.indexState" }),
+    ).toBeTruthy();
     expect(screen.getByText("dataCatalog.resource.localIndexStatuses.unavailable")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.resource.fieldCount")).toBeNull();
     expect(screen.queryByText("dataCatalog.resource.rowCount")).toBeNull();
@@ -218,21 +222,23 @@ describe("ResourceListPanel", () => {
   it("opens preview when list summaries omit schema and scale fields", async () => {
     const onOpenResource = vi.fn();
     listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "table",
-        columnCount: null,
-        description: "",
-        expectedUpdateTime: 0,
-        id: "resource-1",
-        localIndexStatus: "unavailable",
-        name: "customers",
-        operations: ["query_data", "view_detail"],
-        rowCount: null,
-        schema: [],
-        sourceIdentifier: "db.customers",
-        updateTime: "",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: null,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "customers",
+          operations: ["query_data", "view_detail"],
+          rowCount: null,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
       total: 1,
     });
     renderPanel(catalog, onOpenResource);
@@ -246,29 +252,33 @@ describe("ResourceListPanel", () => {
   it("keeps the data-index entry for datasets that support index configuration", async () => {
     const onOpenResource = vi.fn();
     listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "dataset",
-        columnCount: 1,
-        description: "",
-        expectedUpdateTime: 0,
-        id: "dataset-1",
-        localIndexStatus: "unavailable",
-        name: "orders_dataset",
-        operations: ["view_detail"],
-        rowCount: 0,
-        schema: [{ name: "order_id", type: "integer" }],
-        sourceIdentifier: "orders_dataset",
-        updateTime: "",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "dataset",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "dataset-1",
+          localIndexStatus: "unavailable",
+          name: "orders_dataset",
+          operations: ["view_detail"],
+          rowCount: 0,
+          schema: [{ name: "order_id", type: "integer" }],
+          sourceIdentifier: "orders_dataset",
+          updateTime: "",
+        },
+      ],
       total: 1,
     });
     renderPanel(catalog, onOpenResource);
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
-    fireEvent.click(await screen.findByRole("menuitem", {
-      name: "dataCatalog.actions.dataIndex",
-    }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: "dataCatalog.actions.dataIndex",
+      }),
+    );
 
     expect(onOpenResource).toHaveBeenCalledWith("dataset-1", "index");
   });
@@ -277,30 +287,37 @@ describe("ResourceListPanel", () => {
     ["view-only", ["view_detail"]],
     ["resource manager", ["resource_manage", "view_detail"]],
     ["task manager", ["task_manage", "view_detail"]],
-  ])("shows the data-index entry for a %s with resource view_detail", async (_, catalogOperations) => {
-    listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "table",
-        columnCount: 1,
-        description: "",
-        expectedUpdateTime: 0,
-        id: "resource-1",
-        localIndexStatus: "unavailable",
-        name: "customers",
-        operations: ["view_detail"],
-        rowCount: 0,
-        schema: [],
-        sourceIdentifier: "db.customers",
-        updateTime: "",
-      }],
-      total: 1,
-    });
-    renderPanel({ ...catalog, operations: catalogOperations });
+  ])(
+    "shows the data-index entry for a %s with resource view_detail",
+    async (_, catalogOperations) => {
+      listCatalogResourcePageMock.mockResolvedValue({
+        items: [
+          {
+            catalogId: "catalog-1",
+            category: "table",
+            columnCount: 1,
+            description: "",
+            expectedUpdateTime: 0,
+            id: "resource-1",
+            localIndexStatus: "unavailable",
+            name: "customers",
+            operations: ["view_detail"],
+            rowCount: 0,
+            schema: [],
+            sourceIdentifier: "db.customers",
+            updateTime: "",
+          },
+        ],
+        total: 1,
+      });
+      renderPanel({ ...catalog, operations: catalogOperations });
 
-    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
-    expect(screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" })).toBeInTheDocument();
-  });
+      fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+      expect(
+        screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it.each([
     ["view-only", ["view_detail"], false],
@@ -308,21 +325,23 @@ describe("ResourceListPanel", () => {
     ["task manager", ["task_manage", "view_detail"], true],
   ])("shows semantic understanding only for a %s", async (_, catalogOperations, visible) => {
     listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "table",
-        columnCount: 1,
-        description: "",
-        expectedUpdateTime: 0,
-        id: "resource-1",
-        localIndexStatus: "unavailable",
-        name: "customers",
-        operations: ["view_detail"],
-        rowCount: 0,
-        schema: [],
-        sourceIdentifier: "db.customers",
-        updateTime: "",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "customers",
+          operations: ["view_detail"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
       total: 1,
     });
     renderPanel({ ...catalog, operations: catalogOperations });
@@ -342,24 +361,29 @@ describe("ResourceListPanel", () => {
   it("keeps the data-index entry when the resource omits view_detail", async () => {
     const onOpenResource = vi.fn();
     listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "table",
-        columnCount: 1,
-        description: "",
-        expectedUpdateTime: 0,
-        id: "resource-1",
-        localIndexStatus: "unavailable",
-        name: "customers",
-        operations: ["query_data"],
-        rowCount: 0,
-        schema: [],
-        sourceIdentifier: "db.customers",
-        updateTime: "",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "customers",
+          operations: ["query_data"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
       total: 1,
     });
-    renderPanel({ ...catalog, operations: ["resource_manage", "task_manage", "view_detail"] }, onOpenResource);
+    renderPanel(
+      { ...catalog, operations: ["resource_manage", "task_manage", "view_detail"] },
+      onOpenResource,
+    );
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "dataCatalog.actions.dataIndex" }));
@@ -369,22 +393,24 @@ describe("ResourceListPanel", () => {
   it("keeps index configuration reachable when the resource is disabled", async () => {
     const onOpenResource = vi.fn();
     listCatalogResourcePageMock.mockResolvedValue({
-      items: [{
-        catalogId: "catalog-1",
-        category: "table",
-        columnCount: 1,
-        description: "",
-        enabled: false,
-        expectedUpdateTime: 0,
-        id: "resource-1",
-        localIndexStatus: "unavailable",
-        name: "customers",
-        operations: ["view_detail"],
-        rowCount: 0,
-        schema: [],
-        sourceIdentifier: "db.customers",
-        updateTime: "",
-      }],
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          enabled: false,
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "customers",
+          operations: ["view_detail"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
       total: 1,
     });
     renderPanel(catalog, onOpenResource);
@@ -420,9 +446,11 @@ describe("ResourceListPanel", () => {
     renderPanel(catalog);
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
-    expect(screen.queryByRole("menuitem", {
-      name: "dataCatalog.actions.preview",
-    })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "dataCatalog.actions.preview",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("disables resource preview with a reason when the resource is unavailable", async () => {
@@ -519,9 +547,11 @@ describe("ResourceListPanel", () => {
     renderPanel(catalog);
 
     fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
-    fireEvent.click(await screen.findByRole("menuitem", {
-      name: /dataCatalog\.catalog\.authorize/,
-    }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /dataCatalog\.catalog\.authorize/,
+      }),
+    );
 
     expect(screen.getByTestId("authorize-drawer")).toBeTruthy();
     expect(drawerProps.value?.objType).toBe("resource");

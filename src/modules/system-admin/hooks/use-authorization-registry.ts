@@ -60,42 +60,48 @@ export function useAuthorizationRegistry() {
     setRequestRevision((revision) => revision + 1);
   }, []);
 
-  const operationsForType = useCallback((type: string): CatalogOperationOption[] => {
-    return grantableOperationsForType(catalog, type).map((operation) => {
-      const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${operation.id}`;
-      const labelKey = `systemAdmin.resourceCatalog.operations.${operation.id}`;
-      const localizedName = i18n.exists(typeLabelKey)
-        ? t(typeLabelKey)
-        : i18n.exists(labelKey)
-          ? t(labelKey)
-          : undefined;
-      const label = (localizedName ?? operation.name) || operation.id;
+  const operationsForType = useCallback(
+    (type: string): CatalogOperationOption[] => {
+      return grantableOperationsForType(catalog, type).map((operation) => {
+        const typeLabelKey = `systemAdmin.resourceCatalog.operations.${type}.${operation.id}`;
+        const labelKey = `systemAdmin.resourceCatalog.operations.${operation.id}`;
+        const localizedName = i18n.exists(typeLabelKey)
+          ? t(typeLabelKey)
+          : i18n.exists(labelKey)
+            ? t(labelKey)
+            : undefined;
+        const label = (localizedName ?? operation.name) || operation.id;
 
-      const typeDescriptionKey = `systemAdmin.resourceCatalog.operationDescriptions.${type}.${operation.id}`;
-      const description = i18n.exists(typeDescriptionKey)
-        ? t(typeDescriptionKey)
-        : (operation.description ?? localizedName ?? operation.name) || operation.id;
+        const typeDescriptionKey = `systemAdmin.resourceCatalog.operationDescriptions.${type}.${operation.id}`;
+        const description = i18n.exists(typeDescriptionKey)
+          ? t(typeDescriptionKey)
+          : (operation.description ?? localizedName ?? operation.name) || operation.id;
 
-      return {
-        description,
-        key: operation.id,
-        label,
-        requires: operation.requires,
-      };
-    });
-  }, [catalog, i18n, t]);
+        return {
+          description,
+          key: operation.id,
+          label,
+          requires: operation.requires,
+        };
+      });
+    },
+    [catalog, i18n, t],
+  );
 
-  const resourceTypeOptions = useCallback((types?: readonly string[]) => {
-    const allowed = types ? new Set(types) : undefined;
-    return (catalog?.resourceTypes ?? [])
-      .filter((resourceType) => !allowed || allowed.has(resourceType.id))
-      .map((resourceType) => ({
-        label: i18n.exists(`systemAdmin.resourceCatalog.resources.${resourceType.id}`)
-          ? t(`systemAdmin.resourceCatalog.resources.${resourceType.id}`)
-          : resourceType.name,
-        value: resourceType.id,
-      }));
-  }, [catalog, i18n, t]);
+  const resourceTypeOptions = useCallback(
+    (types?: readonly string[]) => {
+      const allowed = types ? new Set(types) : undefined;
+      return (catalog?.resourceTypes ?? [])
+        .filter((resourceType) => !allowed || allowed.has(resourceType.id))
+        .map((resourceType) => ({
+          label: i18n.exists(`systemAdmin.resourceCatalog.resources.${resourceType.id}`)
+            ? t(`systemAdmin.resourceCatalog.resources.${resourceType.id}`)
+            : resourceType.name,
+          value: resourceType.id,
+        }));
+    },
+    [catalog, i18n, t],
+  );
 
   return {
     catalog,

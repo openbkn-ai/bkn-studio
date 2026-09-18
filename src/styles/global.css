@@ -79,8 +79,7 @@
   --shadow-dropdown: 0 12px 32px rgba(15, 23, 42, 0.14);
 
   color-scheme: light;
-  font-family:
-    "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--color-text-primary);
   background: var(--color-bg-page);
   font-synthesis: none;

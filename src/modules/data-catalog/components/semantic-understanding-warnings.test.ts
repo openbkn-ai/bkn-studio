@@ -19,13 +19,13 @@ describe("semantic-understanding warnings", () => {
   it("localizes policy omissions and keeps backend warnings", async () => {
     await i18n.changeLanguage("zh-CN");
     const payload = JSON.stringify({
-      warning_details: [{
-        code: "sample_omitted_by_policy",
-        params: { field_name: "attachment_blob", field_type: "binary" },
-      }],
-      warnings: [
-        "字段 note 确实没有可用样本",
+      warning_details: [
+        {
+          code: "sample_omitted_by_policy",
+          params: { field_name: "attachment_blob", field_type: "binary" },
+        },
       ],
+      warnings: ["字段 note 确实没有可用样本"],
     });
 
     expect(getSemanticUnderstandingWarnings(i18n.t, payload)).toEqual([
@@ -37,10 +37,12 @@ describe("semantic-understanding warnings", () => {
   it("renders the structured warning in English", async () => {
     await i18n.changeLanguage("en-US");
     const payload = JSON.stringify({
-      warning_details: [{
-        code: "sample_omitted_by_policy",
-        params: { field_name: "attachment_blob", field_type: "binary" },
-      }],
+      warning_details: [
+        {
+          code: "sample_omitted_by_policy",
+          params: { field_name: "attachment_blob", field_type: "binary" },
+        },
+      ],
     });
 
     expect(getSemanticUnderstandingWarnings(i18n.t, payload)).toEqual([
@@ -82,10 +84,12 @@ describe("semantic-understanding warnings", () => {
   it("keeps metadata evidence warnings for policy-omitted fields", () => {
     const warning = "字段 attachment_blob 的样本已按策略省略，但现有元数据证据不足，未生成语义建议";
     const payload = JSON.stringify({
-      warning_details: [{
-        code: "sample_omitted_by_policy",
-        params: { field_name: "attachment_blob", field_type: "binary" },
-      }],
+      warning_details: [
+        {
+          code: "sample_omitted_by_policy",
+          params: { field_name: "attachment_blob", field_type: "binary" },
+        },
+      ],
       warnings: [warning],
     });
 

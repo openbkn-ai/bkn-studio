@@ -25,10 +25,7 @@ type AntdProvidersProps = PropsWithChildren<{
   runtimeConfig: RuntimeConfig;
 }>;
 
-export function AntdProviders({
-  children,
-  runtimeConfig,
-}: AntdProvidersProps) {
+export function AntdProviders({ children, runtimeConfig }: AntdProvidersProps) {
   const resolvedTheme = useResolvedTheme();
 
   return (

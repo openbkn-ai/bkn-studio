@@ -26,9 +26,9 @@ describe("formatAuditUserDisplay", () => {
   });
 
   it("shows current user name instead of the raw user id", () => {
-    expect(
-      formatAuditUserDisplay({ id: "266c6a42-6131-4d62-8f39-853e7093701c" }),
-    ).toBe("Local Admin");
+    expect(formatAuditUserDisplay({ id: "266c6a42-6131-4d62-8f39-853e7093701c" })).toBe(
+      "Local Admin",
+    );
   });
 
   it("prefers an explicitly provided user name", () => {
@@ -45,9 +45,7 @@ describe("formatAuditUserDisplay", () => {
   });
 
   it("does not expose unresolved uuid values", () => {
-    expect(formatAuditUserDisplay({ id: "1f4e4df0-6851-4ec5-b6c8-d7586f1f32e8" })).toBe(
-      "-",
-    );
+    expect(formatAuditUserDisplay({ id: "1f4e4df0-6851-4ec5-b6c8-d7586f1f32e8" })).toBe("-");
   });
 
   it("resolves user ids from the user directory", () => {

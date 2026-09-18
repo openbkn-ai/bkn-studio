@@ -99,8 +99,7 @@ export function formatSemanticConditionLabel(
 
   const fieldLabel = resolvePropertyDisplayName(condition.field, propertyOptions);
   const operationLabel = t(getConditionOperationLabelKey(condition.operation));
-  const value =
-    Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
+  const value = Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
 
   const current =
     condition.operation === "exist" || condition.operation === "not_exist"

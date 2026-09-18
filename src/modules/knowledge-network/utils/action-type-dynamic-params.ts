@@ -82,11 +82,7 @@ export function buildActionTypeDynamicParams(
 
   for (const parameter of parameters) {
     const name = parameter.name.trim();
-    setNestedDynamicParamValue(
-      result,
-      name,
-      parseDynamicParamValue(parameter.type, values[name]),
-    );
+    setNestedDynamicParamValue(result, name, parseDynamicParamValue(parameter.type, values[name]));
   }
 
   return result;

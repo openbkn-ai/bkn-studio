@@ -41,7 +41,9 @@ test.describe("Execution Factory — Capability UX v2", () => {
 
   test("CAP-V2-01: management page defaults to toolsets tab", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/units");
-    await expect(page.getByText(/能力管理|Capability Management|执行能力管理|Execution Capabilities/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/能力管理|Capability Management|执行能力管理|Execution Capabilities/i).first(),
+    ).toBeVisible();
     await expect(page.getByRole("tab", { name: /工具集|Toolsets/i })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -72,8 +74,12 @@ test.describe("Execution Factory — Capability UX v2", () => {
 
   test("CAP-V2-06: toolbox wizard exposes operator sync checkbox", async ({ page }) => {
     const drawer = await openAddCapabilityWizard(page, "toolbox");
-    await expect(drawer.getByText(/同步发布为算子|Sync publish as operator/i).first()).toBeVisible();
-    await drawer.getByRole("checkbox", { name: /同步发布为算子|Sync publish as operator/i }).check();
+    await expect(
+      drawer.getByText(/同步发布为算子|Sync publish as operator/i).first(),
+    ).toBeVisible();
+    await drawer
+      .getByRole("checkbox", { name: /同步发布为算子|Sync publish as operator/i })
+      .check();
     await expect(drawer.getByText(/算子名称|Operator name/i).first()).toBeVisible();
     await page.keyboard.press("Escape");
   });
@@ -88,7 +94,9 @@ test.describe("Execution Factory — Capability UX v2", () => {
 
   test("CAP-V2-05: catalog still lists toolsets", async ({ page }) => {
     await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
-    await expect(page.getByText(/能力市场|Capability Market|全部执行单元|All Execution Units/i).first()).toBeVisible();
+    await expect(
+      page.getByText(/能力市场|Capability Market|全部执行单元|All Execution Units/i).first(),
+    ).toBeVisible();
     await expect(page.getByRole("tablist")).toBeVisible();
   });
 
@@ -102,7 +110,9 @@ test.describe("Execution Factory — Capability UX v2", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("CAP-V2-09: operator import OpenAPI modal shows per-endpoint IO preview", async ({ page }) => {
+  test("CAP-V2-09: operator import OpenAPI modal shows per-endpoint IO preview", async ({
+    page,
+  }) => {
     await openAdvancedOperatorTab(page);
     const dialog = await openImportModal(page);
     const panel = await openImportOpenApiPanel(dialog);

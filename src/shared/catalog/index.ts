@@ -25,10 +25,7 @@ export type {
 
 export { catalogListAllQuery, catalogListPhysicalQuery } from "@/shared/catalog/catalog-queries";
 
-export {
-  hasCatalogOperation,
-  isCatalogSummaryOnly,
-} from "@/shared/catalog/catalog-operations";
+export { hasCatalogOperation, isCatalogSummaryOnly } from "@/shared/catalog/catalog-operations";
 
 export {
   appendMockPhysicalCatalog,

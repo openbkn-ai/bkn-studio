@@ -8,7 +8,8 @@
 export const propertyAuthorizationPart = {
   objectTypeMaskRuleTitle: "列掩码规则",
   objectTypeMaskRuleDrawerTitle: "{{name}} / 列掩码规则",
-  objectTypeMaskRuleDescription: "这里只定义列掩码规则，不会自动启用列掩码。仅当用户或角色对该属性的有效权限为“列掩码”时，查询结果才会应用此规则。源数据不会被修改。",
+  objectTypeMaskRuleDescription:
+    "这里只定义列掩码规则，不会自动启用列掩码。仅当用户或角色对该属性的有效权限为“列掩码”时，查询结果才会应用此规则。源数据不会被修改。",
   objectTypeMaskRuleType: "规则类型",
   objectTypeMaskRuleNone: "不配置",
   objectTypeMaskRuleKind: {
@@ -48,7 +49,8 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationDescription: "配置对象类基础权限、属性可见范围和列掩码策略。",
   propertyAuthorizationTabBase: "基础权限",
   propertyAuthorizationTabProperty: "属性权限",
-  propertyAuthorizationBaseDescription: "基础权限决定用户能否查看或操作此对象类；属性权限只能进一步限制可访问的数据，不能绕过基础权限。",
+  propertyAuthorizationBaseDescription:
+    "基础权限决定用户能否查看或操作此对象类；属性权限只能进一步限制可访问的数据，不能绕过基础权限。",
   propertyAuthorizationAddUser: "新增授权用户",
   propertyAuthorizationGrantUserLabel: "授权用户",
   propertyAuthorizationGrantOperationLabel: "允许操作",
@@ -57,14 +59,19 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationGrantUserCount: "共 {{count}} 位授权用户",
   propertyAuthorizationDeleteGrant: "删除授权",
   propertyAuthorizationDeleteGrantTitle: "删除用户授权",
-  propertyAuthorizationDeleteGrantConfirm: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
-  propertyAuthorizationDeleteGrantConfirm_one: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
-  propertyAuthorizationDeleteGrantConfirm_other: "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+  propertyAuthorizationDeleteGrantConfirm:
+    "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+  propertyAuthorizationDeleteGrantConfirm_one:
+    "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+  propertyAuthorizationDeleteGrantConfirm_other:
+    "将撤销「{{name}}」的 {{count}} 条可直接撤销来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
   propertyAuthorizationDeleteGrantSuccess: "授权已删除",
   propertyAuthorizationDeleteGrantUnavailable: "当前没有可直接删除的授权来源",
   propertyAuthorizationDeleteSourceTitle: "删除授权来源",
-  propertyAuthorizationDeleteSourceConfirm: "将删除 {{name}} 的 {{effect}} / {{operation}} 授权，来源为 {{source}}，授权记录 ID 为 {{grantId}}。同一对象上的其他授权来源不受影响。",
-  propertyAuthorizationDeleteRequiredSourceBlocked: "“{{requirement}}”仍是“{{dependents}}”的前置权限，请先删除依赖它的授权。",
+  propertyAuthorizationDeleteSourceConfirm:
+    "将删除 {{name}} 的 {{effect}} / {{operation}} 授权，来源为 {{source}}，授权记录 ID 为 {{grantId}}。同一对象上的其他授权来源不受影响。",
+  propertyAuthorizationDeleteRequiredSourceBlocked:
+    "“{{requirement}}”仍是“{{dependents}}”的前置权限，请先删除依赖它的授权。",
   propertyAuthorizationManageBase: "管理基础权限",
   propertyAuthorizationUser: "用户",
   propertyAuthorizationRole: "角色",
@@ -78,7 +85,8 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationSourceCount_one: "{{count}} 条来源",
   propertyAuthorizationSourceCount_other: "{{count}} 条来源",
   propertyAuthorizationSourceDrawerTitle: "{{name}} / 授权来源",
-  propertyAuthorizationSourceDrawerDescription: "这里展示参与权限计算的原始授权记录。撤销操作只影响对应来源，不会删除其他直接授权或继承权限。",
+  propertyAuthorizationSourceDrawerDescription:
+    "这里展示参与权限计算的原始授权记录。撤销操作只影响对应来源，不会删除其他直接授权或继承权限。",
   propertyAuthorizationGrantId: "授权记录 ID",
   propertyAuthorizationSourceEmpty: "没有可展示的授权来源。",
   propertyAuthorizationGranteeEmpty: "当前对象类尚未授权给其他用户。",
@@ -97,8 +105,10 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationBoundaryHint: "属性权限只能收窄基础权限，不能单独授予对象访问能力。",
   propertyAuthorizationRoleImpactCompact_one: "影响 {{count}} 名成员",
   propertyAuthorizationRoleImpactCompact_other: "影响 {{count}} 名成员",
-  propertyAuthorizationRoleImpact_one: "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
-  propertyAuthorizationRoleImpact_other: "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
+  propertyAuthorizationRoleImpact_one:
+    "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
+  propertyAuthorizationRoleImpact_other:
+    "修改该角色可能影响 {{count}} 名成员；用户直配、其他角色及基础权限仍会参与最终计算。",
   propertyAuthorizationSearchProperty: "搜索属性名称",
   propertyAuthorizationFilterAll: "全部状态",
   propertyAuthorizationFilterExplicit: "已配置",
@@ -143,13 +153,16 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationUnsaved: "{{count}} 项未保存变更",
   propertyAuthorizationSave: "保存变更（{{count}}）",
   propertyAuthorizationConfirmTitle: "确认属性权限变更",
-  propertyAuthorizationConfirmSummary: "本次将修改 {{total}} 个属性：升档 {{raised}} 项、降档 {{lowered}} 项、恢复继承 {{inherited}} 项。",
+  propertyAuthorizationConfirmSummary:
+    "本次将修改 {{total}} 个属性：升档 {{raised}} 项、降档 {{lowered}} 项、恢复继承 {{inherited}} 项。",
   propertyAuthorizationFullRisk_one: "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
-  propertyAuthorizationFullRisk_other: "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
+  propertyAuthorizationFullRisk_other:
+    "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
   propertyAuthorizationSaveSuccess: "已更新 {{count}} 个属性权限。",
   propertyAuthorizationDiscardTitle: "放弃未保存的修改？",
   propertyAuthorizationDiscardDescription: "当前有 {{count}} 项属性权限尚未保存，放弃后无法恢复。",
   propertyAuthorizationDiscard: "放弃修改",
   propertyAuthorizationLoadFailed: "无法加载权限配置，请稍后重试。",
-  propertyAuthorizationServicePending: "属性授权管理入口尚未开放。当前页面已完成交互与数据合同接入，将在服务端路由开放后提供真实写入。",
+  propertyAuthorizationServicePending:
+    "属性授权管理入口尚未开放。当前页面已完成交互与数据合同接入，将在服务端路由开放后提供真实写入。",
 } as const;

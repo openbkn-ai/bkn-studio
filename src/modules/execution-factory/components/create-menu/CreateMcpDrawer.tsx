@@ -6,18 +6,7 @@
  */
 
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
-import {
-  Button,
-  Drawer,
-  Empty,
-  Form,
-  Input,
-  Radio,
-  Select,
-  Space,
-  Spin,
-  Table,
-} from "antd";
+import { Button, Drawer, Empty, Form, Input, Radio, Select, Space, Spin, Table } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -82,9 +71,7 @@ export function CreateMcpDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
-  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>(
-    [],
-  );
+  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
   const [tools, setTools] = useState<McpParseSseTool[]>([]);
   const [importedTools, setImportedTools] = useState<McpToolConfigInput[]>([]);
   const creationType = Form.useWatch("creationType", form);
@@ -166,15 +153,12 @@ export function CreateMcpDrawer({
     setParsing(true);
 
     try {
-      const headers = (values.headers ?? []).reduce<Record<string, string>>(
-        (acc, item) => {
-          if (item.key) {
-            acc[item.key] = item.value ?? "";
-          }
-          return acc;
-        },
-        {},
-      );
+      const headers = (values.headers ?? []).reduce<Record<string, string>>((acc, item) => {
+        if (item.key) {
+          acc[item.key] = item.value ?? "";
+        }
+        return acc;
+      }, {});
       const url = values.url ?? "";
       const mode: McpMode = values.mode ?? "stream";
       let result: McpParseSseResult;
@@ -250,15 +234,12 @@ export function CreateMcpDrawer({
         return;
       }
 
-      const headers = (values.headers ?? []).reduce<Record<string, string>>(
-        (acc, item) => {
-          if (item.key) {
-            acc[item.key] = item.value ?? "";
-          }
-          return acc;
-        },
-        {},
-      );
+      const headers = (values.headers ?? []).reduce<Record<string, string>>((acc, item) => {
+        if (item.key) {
+          acc[item.key] = item.value ?? "";
+        }
+        return acc;
+      }, {});
 
       const payload = {
         name: values.name,
@@ -308,124 +289,124 @@ export function CreateMcpDrawer({
         }
       }}
     >
-          <CapabilityBusinessIntro
-            messageKey={
-              isEditMode
-                ? "executionFactory.businessIntro.mcpEditTop"
-                : "executionFactory.businessIntro.mcpCreateTop"
-            }
-          />
+      <CapabilityBusinessIntro
+        messageKey={
+          isEditMode
+            ? "executionFactory.businessIntro.mcpEditTop"
+            : "executionFactory.businessIntro.mcpCreateTop"
+        }
+      />
+      <Form.Item
+        label={t("executionFactory.mcpName")}
+        name="name"
+        rules={[
+          { required: true, message: t("common.required") },
+          {
+            pattern: CAPABILITY_NAME_PATTERN,
+            message: t("executionFactory.mcpNameInvalid"),
+          },
+        ]}
+      >
+        <Input />
+      </Form.Item>
+      <Form.Item label={t("common.description")} name="description">
+        <Input.TextArea rows={3} />
+      </Form.Item>
+      <Form.Item
+        label={t("executionFactory.mcpCreationType")}
+        name="creationType"
+        rules={[{ required: true, message: t("common.required") }]}
+      >
+        <Radio.Group disabled={isEditMode}>
+          <Radio value="custom">{t("executionFactory.mcpCreationTypes.custom")}</Radio>
+          <Radio value="tool_imported">
+            {t("executionFactory.mcpCreationTypes.tool_imported")}
+          </Radio>
+        </Radio.Group>
+      </Form.Item>
+      <Form.Item
+        label={t("executionFactory.category")}
+        name="category"
+        rules={[{ required: true, message: t("common.required") }]}
+      >
+        <Select options={categories} />
+      </Form.Item>
+
+      {creationType === "custom" ? (
+        <>
           <Form.Item
-            label={t("executionFactory.mcpName")}
-            name="name"
-            rules={[
-              { required: true, message: t("common.required") },
+            extra={t("executionFactory.mcpModeHint")}
+            label={t("executionFactory.mcpMode")}
+            name="mode"
+          >
+            <Select
+              options={(["stream", "sse"] as const).map((value) => ({
+                label: t(`executionFactory.mcpModes.${value}`),
+                value,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            label={t("executionFactory.serviceUrl")}
+            name="url"
+            rules={[{ required: true, message: t("common.required") }]}
+          >
+            <Input placeholder="https://example.com/mcp" />
+          </Form.Item>
+          <Form.List name="headers">
+            {(fields, { add, remove }) => (
+              <>
+                <div className={styles.modalHint}>{t("executionFactory.mcpHeadersLabel")}</div>
+                {fields.map((field) => (
+                  <div className={styles.headerRow} key={field.key}>
+                    <Form.Item {...field} name={[field.name, "key"]} style={{ flex: 1 }}>
+                      <Input placeholder={t("executionFactory.mcpHeaderNamePlaceholder")} />
+                    </Form.Item>
+                    <Form.Item {...field} name={[field.name, "value"]} style={{ flex: 1 }}>
+                      <Input placeholder={t("executionFactory.mcpHeaderValuePlaceholder")} />
+                    </Form.Item>
+                    <Button icon={<MinusCircleOutlined />} onClick={() => remove(field.name)} />
+                  </div>
+                ))}
+                <Button icon={<PlusOutlined />} onClick={() => add()} type="dashed">
+                  {t("executionFactory.addHeader")}
+                </Button>
+              </>
+            )}
+          </Form.List>
+          <div style={{ margin: "16px 0" }}>
+            <AppButton loading={parsing} onClick={() => void handleParse()}>
+              {t("executionFactory.parseSse")}
+            </AppButton>
+          </div>
+          <Table
+            columns={[
+              { dataIndex: "name", key: "name", title: t("executionFactory.toolName") },
               {
-                pattern: CAPABILITY_NAME_PATTERN,
-                message: t("executionFactory.mcpNameInvalid"),
+                dataIndex: "description",
+                key: "description",
+                title: t("common.description"),
               },
             ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item label={t("common.description")} name="description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          <Form.Item
-            label={t("executionFactory.mcpCreationType")}
-            name="creationType"
-            rules={[{ required: true, message: t("common.required") }]}
-          >
-            <Radio.Group disabled={isEditMode}>
-              <Radio value="custom">{t("executionFactory.mcpCreationTypes.custom")}</Radio>
-              <Radio value="tool_imported">
-                {t("executionFactory.mcpCreationTypes.tool_imported")}
-              </Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item
-            label={t("executionFactory.category")}
-            name="category"
-            rules={[{ required: true, message: t("common.required") }]}
-          >
-            <Select options={categories} />
-          </Form.Item>
-
-          {creationType === "custom" ? (
-            <>
-              <Form.Item
-                extra={t("executionFactory.mcpModeHint")}
-                label={t("executionFactory.mcpMode")}
-                name="mode"
-              >
-                <Select
-                  options={(["stream", "sse"] as const).map((value) => ({
-                    label: t(`executionFactory.mcpModes.${value}`),
-                    value,
-                  }))}
+            dataSource={tools.map((tool, index) => ({
+              ...tool,
+              key: `${tool.name}-${index}`,
+            }))}
+            locale={{
+              emptyText: (
+                <Empty
+                  description={t("executionFactory.mcpToolsEmptyHint")}
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
-              </Form.Item>
-              <Form.Item
-                label={t("executionFactory.serviceUrl")}
-                name="url"
-                rules={[{ required: true, message: t("common.required") }]}
-              >
-                <Input placeholder="https://example.com/mcp" />
-              </Form.Item>
-              <Form.List name="headers">
-                {(fields, { add, remove }) => (
-                  <>
-                    <div className={styles.modalHint}>{t("executionFactory.mcpHeadersLabel")}</div>
-                    {fields.map((field) => (
-                      <div className={styles.headerRow} key={field.key}>
-                        <Form.Item {...field} name={[field.name, "key"]} style={{ flex: 1 }}>
-                          <Input placeholder={t("executionFactory.mcpHeaderNamePlaceholder")} />
-                        </Form.Item>
-                        <Form.Item {...field} name={[field.name, "value"]} style={{ flex: 1 }}>
-                          <Input placeholder={t("executionFactory.mcpHeaderValuePlaceholder")} />
-                        </Form.Item>
-                        <Button icon={<MinusCircleOutlined />} onClick={() => remove(field.name)} />
-                      </div>
-                    ))}
-                    <Button icon={<PlusOutlined />} onClick={() => add()} type="dashed">
-                      {t("executionFactory.addHeader")}
-                    </Button>
-                  </>
-                )}
-              </Form.List>
-              <div style={{ margin: "16px 0" }}>
-                <AppButton loading={parsing} onClick={() => void handleParse()}>
-                  {t("executionFactory.parseSse")}
-                </AppButton>
-              </div>
-              <Table
-                columns={[
-                  { dataIndex: "name", key: "name", title: t("executionFactory.toolName") },
-                  {
-                    dataIndex: "description",
-                    key: "description",
-                    title: t("common.description"),
-                  },
-                ]}
-                dataSource={tools.map((tool, index) => ({
-                  ...tool,
-                  key: `${tool.name}-${index}`,
-                }))}
-                locale={{
-                  emptyText: (
-                    <Empty
-                      description={t("executionFactory.mcpToolsEmptyHint")}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  ),
-                }}
-                pagination={false}
-                size="small"
-              />
-            </>
-          ) : (
-            <McpToolImportedSection onChange={setImportedTools} value={importedTools} />
-          )}
+              ),
+            }}
+            pagination={false}
+            size="small"
+          />
+        </>
+      ) : (
+        <McpToolImportedSection onChange={setImportedTools} value={importedTools} />
+      )}
     </Form>
   );
 

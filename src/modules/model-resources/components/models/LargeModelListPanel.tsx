@@ -41,7 +41,10 @@ import {
   formatNumberWithCommas,
   getModelSeriesLabel,
 } from "@/modules/model-resources/utils/model-display";
-import { buildLlmSavePayload, llmModelToFormValues } from "@/modules/model-resources/utils/model-form";
+import {
+  buildLlmSavePayload,
+  llmModelToFormValues,
+} from "@/modules/model-resources/utils/model-form";
 import {
   getModelTableColumnSortOrder,
   toggleModelSort,
@@ -92,11 +95,7 @@ export function LargeModelListPanel() {
   const canManageQuota = hasPermissions({
     currentPermissions: userPermissions,
     mode: "any",
-    requiredPermissions: [
-      "model-resources:quota:edit",
-      "large_model:create",
-      "large_model:modify",
-    ],
+    requiredPermissions: ["model-resources:quota:edit", "large_model:create", "large_model:modify"],
   });
   const showQuotaField = false;
   const showQuotaColumns = !(canManageLargeModel || canManageQuota);
@@ -142,7 +141,6 @@ export function LargeModelListPanel() {
       setCanSetDefaultOnCreate(operations.includes("modify"));
     });
   }, []);
-
 
   const sortMenuItems = useMemo(
     () => [
@@ -298,7 +296,6 @@ export function LargeModelListPanel() {
       setGuideOpen(true);
       return;
     }
-
   };
 
   const columns: ColumnsType<LlmModel> = [
@@ -321,9 +318,7 @@ export function LargeModelListPanel() {
           <span className={styles.modelNameText} title={record.modelName}>
             {record.modelName}
           </span>
-          {record.default ? (
-            <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
-          ) : null}
+          {record.default ? <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag> : null}
         </div>
       ),
     },
@@ -338,8 +333,12 @@ export function LargeModelListPanel() {
           menu={{
             items: [
               { key: "view", label: t("modelResources.models.menus.view") },
-              canModify(record) ? { key: "edit", label: t("modelResources.models.menus.edit") } : null,
-              canDelete(record) ? { key: "delete", label: t("modelResources.models.menus.delete") } : null,
+              canModify(record)
+                ? { key: "edit", label: t("modelResources.models.menus.edit") }
+                : null,
+              canDelete(record)
+                ? { key: "delete", label: t("modelResources.models.menus.delete") }
+                : null,
               canExecute(record)
                 ? { key: "test", label: t("modelResources.models.menus.testConnection") }
                 : null,
@@ -561,9 +560,7 @@ export function LargeModelListPanel() {
         canCreate={canCreate}
         deleteDisabled={
           selectedRowKeys.length === 0 ||
-          !items
-            .filter((item) => selectedRowKeys.includes(item.modelId))
-            .every(canDelete)
+          !items.filter((item) => selectedRowKeys.includes(item.modelId)).every(canDelete)
         }
         showDelete
         modelType={modelType}
@@ -576,9 +573,7 @@ export function LargeModelListPanel() {
         onCreate={() => openForm("create")}
         onDelete={() =>
           handleDelete(
-            items.filter(
-              (item) => selectedRowKeys.includes(item.modelId) && canDelete(item),
-            ),
+            items.filter((item) => selectedRowKeys.includes(item.modelId) && canDelete(item)),
           )
         }
         onModelTypeChange={(value) => {

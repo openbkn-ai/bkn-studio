@@ -29,27 +29,42 @@ vi.mock("@/modules/execution-factory/utils/capability-ux", async (importOriginal
   isCapabilityUxV2: () => true,
 }));
 vi.mock("./QuickAddApiForm", () => ({ QuickAddApiForm: () => <div>API form</div> }));
-vi.mock("./ImportOpenApiCapabilityForm", () => ({ ImportOpenApiCapabilityForm: () => <div>Import form</div> }));
+vi.mock("./ImportOpenApiCapabilityForm", () => ({
+  ImportOpenApiCapabilityForm: () => <div>Import form</div>,
+}));
 vi.mock("./CreateToolboxForm", () => ({ CreateToolboxForm: () => <div>Function form</div> }));
 vi.mock("./CreateMcpDrawer", () => ({ CreateMcpDrawer: () => <div>MCP form</div> }));
 vi.mock("./CreateSkillForm", () => ({ CreateSkillForm: () => <div>Skill form</div> }));
 vi.mock("./ImportResourceModal", () => ({ ImportResourceModal: () => null }));
 // Exercise both filtering and the parent callback: even an unexpected mode event must be rejected.
 vi.mock("./AddCapabilityModeStep", () => ({
-  AddCapabilityModeStep: ({ allowedModes, onModeChange }: {
-    allowedModes: CapabilityUxMode[]; onModeChange: (mode: CapabilityUxMode) => void;
-  }) => <div>
-    {allowedModes.map((mode) => <button key={mode} onClick={() => onModeChange(mode)}>{mode}</button>)}
-    <button onClick={() => onModeChange("mcp")}>unexpected MCP event</button>
-  </div>,
+  AddCapabilityModeStep: ({
+    allowedModes,
+    onModeChange,
+  }: {
+    allowedModes: CapabilityUxMode[];
+    onModeChange: (mode: CapabilityUxMode) => void;
+  }) => (
+    <div>
+      {allowedModes.map((mode) => (
+        <button key={mode} onClick={() => onModeChange(mode)}>
+          {mode}
+        </button>
+      ))}
+      <button onClick={() => onModeChange("mcp")}>unexpected MCP event</button>
+    </div>
+  ),
 }));
 
-const knownPermissions = ["operator", "toolbox", "function", "mcp", "skill", "tool"].flatMap((type) =>
-  ["create", "edit", "execute", "view"].map((op) => `execution-factory:${type}:${op}`),
+const knownPermissions = ["operator", "toolbox", "function", "mcp", "skill", "tool"].flatMap(
+  (type) => ["create", "edit", "execute", "view"].map((op) => `execution-factory:${type}:${op}`),
 );
 function grant(type: string, operations: string[]) {
-  state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(knownPermissions,
-    flattenSafeGrants([{ resource: { type, id: "*" }, operations }]), false);
+  state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(
+    knownPermissions,
+    flattenSafeGrants([{ resource: { type, id: "*" }, operations }]),
+    false,
+  );
 }
 const labels = {
   api: "executionFactory.capabilityCreateMenu.addHttpApi",
@@ -65,17 +80,27 @@ async function openMenu(tab: ExecutionUnitTab, toolboxView: "openapi" | "functio
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
-    matches: false, media: query, onchange: null,
-    addListener: vi.fn(), removeListener: vi.fn(),
-    addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   }),
 });
 const getComputedStyle = window.getComputedStyle;
 beforeEach(() => {
   vi.spyOn(window, "getComputedStyle").mockImplementation((element) => getComputedStyle(element));
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
-beforeEach(() => { state.runtimeConfig.currentUser.permissions = []; });
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+beforeEach(() => {
+  state.runtimeConfig.currentUser.permissions = [];
+});
 
 describe("creation permissions (#670 / #672)", () => {
   it.each([
@@ -87,7 +112,9 @@ describe("creation permissions (#670 / #672)", () => {
     grant(type, ["create"]);
     await openMenu(tab, type === "function" ? "function" : "openapi");
     for (const [key, label] of Object.entries(labels)) {
-      expect(Boolean(screen.queryByText(label))).toBe((expected as readonly string[]).includes(key));
+      expect(Boolean(screen.queryByText(label))).toBe(
+        (expected as readonly string[]).includes(key),
+      );
     }
   });
 
@@ -107,13 +134,18 @@ describe("creation permissions (#670 / #672)", () => {
     expect(await screen.findByText("MCP form")).toBeTruthy();
   });
 
-  it.each(["tool_box", "function", "*"])("honors %s wildcard grants through the standard permission mapping", async (type) => {
-    grant(type, ["*"]);
-    await openMenu("toolbox", type === "function" ? "function" : "openapi");
-    expect(Boolean(screen.queryByText(labels.api))).toBe(type === "tool_box" || type === "*");
-    expect(Boolean(screen.queryByText(labels.function))).toBe(type === "function" || type === "*");
-    expect(Boolean(screen.queryByText(labels.skill))).toBe(type === "*");
-  });
+  it.each(["tool_box", "function", "*"])(
+    "honors %s wildcard grants through the standard permission mapping",
+    async (type) => {
+      grant(type, ["*"]);
+      await openMenu("toolbox", type === "function" ? "function" : "openapi");
+      expect(Boolean(screen.queryByText(labels.api))).toBe(type === "tool_box" || type === "*");
+      expect(Boolean(screen.queryByText(labels.function))).toBe(
+        type === "function" || type === "*",
+      );
+      expect(Boolean(screen.queryByText(labels.skill))).toBe(type === "*");
+    },
+  );
 
   it("filters mixed grants", async () => {
     grant("skill", ["create"]);
@@ -124,19 +156,22 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.queryByText(labels.api)).toBeNull();
   });
 
-  it.each(["mcp", "skill"] as const)("keeps the %s create route on its own resource", async (tab) => {
-    grant(tab, ["create"]);
-    state.runtimeConfig.currentUser.permissions.push(
-      "execution-factory:toolbox:create",
-      "execution-factory:impex:import",
-    );
-    render(<CreateMenu activeTab={tab} dedicatedMode={tab} />);
-    fireEvent.click(screen.getByRole("button", { name: /executionFactory.addCapabilityButton/ }));
-    await screen.findByRole("menu");
-    expect(screen.getByText(labels[tab])).toBeTruthy();
-    expect(screen.queryByText(labels.api)).toBeNull();
-    expect(screen.queryByRole("button", { name: "executionFactory.importButton" })).toBeNull();
-  });
+  it.each(["mcp", "skill"] as const)(
+    "keeps the %s create route on its own resource",
+    async (tab) => {
+      grant(tab, ["create"]);
+      state.runtimeConfig.currentUser.permissions.push(
+        "execution-factory:toolbox:create",
+        "execution-factory:impex:import",
+      );
+      render(<CreateMenu activeTab={tab} dedicatedMode={tab} />);
+      fireEvent.click(screen.getByRole("button", { name: /executionFactory.addCapabilityButton/ }));
+      await screen.findByRole("menu");
+      expect(screen.getByText(labels[tab])).toBeTruthy();
+      expect(screen.queryByText(labels.api)).toBeNull();
+      expect(screen.queryByRole("button", { name: "executionFactory.importButton" })).toBeNull();
+    },
+  );
 
   it("shows cross-tab create when the current tab has no create grant", async () => {
     grant("skill", ["view"]);
@@ -146,14 +181,19 @@ describe("creation permissions (#670 / #672)", () => {
     expect(screen.queryByText(labels.skill)).toBeNull();
   });
 
-  it.each([{ operations: [] }, { operations: ["view"] }])("hides creation and rejects auto-open without create ($operations)", ({ operations }) => {
-    grant("tool_box", operations);
-    const handled = vi.fn();
-    render(<CreateMenu activeTab="toolbox" autoOpen onAutoOpenHandled={handled} />);
-    expect(screen.queryByRole("button", { name: /executionFactory.addCapabilityButton/ })).toBeNull();
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(handled).toHaveBeenCalled();
-  });
+  it.each([{ operations: [] }, { operations: ["view"] }])(
+    "hides creation and rejects auto-open without create ($operations)",
+    ({ operations }) => {
+      grant("tool_box", operations);
+      const handled = vi.fn();
+      render(<CreateMenu activeTab="toolbox" autoOpen onAutoOpenHandled={handled} />);
+      expect(
+        screen.queryByRole("button", { name: /executionFactory.addCapabilityButton/ }),
+      ).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(handled).toHaveBeenCalled();
+    },
+  );
 
   it("ignores retired operator grants for creation", () => {
     grant("operator", ["create", "execute"]);
@@ -165,7 +205,9 @@ describe("creation permissions (#670 / #672)", () => {
   it("filters the retained legacy wizard and rejects unauthorized direct opening", () => {
     // The retired operator tab is backed by Function set grants.
     grant("function", ["create"]);
-    const { rerender } = render(<CreateExecutionUnitWizard open initialTab="skill" onClose={vi.fn()} />);
+    const { rerender } = render(
+      <CreateExecutionUnitWizard open initialTab="skill" onClose={vi.fn()} />,
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
     rerender(<CreateExecutionUnitWizard open initialTab="operator" onClose={vi.fn()} />);
     expect(screen.getByText("executionFactory.executionUnitTabs.operator")).toBeTruthy();
@@ -175,14 +217,23 @@ describe("creation permissions (#670 / #672)", () => {
   it("keeps the retained legacy wizard on the requested create resource", () => {
     grant("mcp", ["create"]);
     state.runtimeConfig.currentUser.permissions.push("execution-factory:toolbox:create");
-    render(<CreateExecutionUnitWizard allowedTabsOverride={["mcp"]} initialTab="mcp" onClose={vi.fn()} open />);
+    render(
+      <CreateExecutionUnitWizard
+        allowedTabsOverride={["mcp"]}
+        initialTab="mcp"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     expect(screen.getByText("executionFactory.executionUnitTabs.mcp")).toBeTruthy();
     expect(screen.queryByText("executionFactory.executionUnitTabs.toolbox")).toBeNull();
   });
 
   it("rejects a locked unauthorized initial mode and an empty override", () => {
     grant("skill", ["create"]);
-    const { rerender } = render(<AddCapabilityWizard open initialMode="mcp" lockInitialMode onClose={vi.fn()} />);
+    const { rerender } = render(
+      <AddCapabilityWizard open initialMode="mcp" lockInitialMode onClose={vi.fn()} />,
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
     rerender(<AddCapabilityWizard open allowedModesOverride={[]} onClose={vi.fn()} />);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -190,7 +241,13 @@ describe("creation permissions (#670 / #672)", () => {
 
   it("filters wizard modes and rejects unexpected mode-switch events", () => {
     grant("tool_box", ["create"]);
-    render(<AddCapabilityWizard open allowedModesOverride={["quick-api", "import-openapi", "mcp"]} onClose={vi.fn()} />);
+    render(
+      <AddCapabilityWizard
+        open
+        allowedModesOverride={["quick-api", "import-openapi", "mcp"]}
+        onClose={vi.fn()}
+      />,
+    );
     expect(screen.queryByRole("button", { name: "mcp" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "unexpected MCP event" }));
     fireEvent.click(screen.getByRole("button", { name: "common.next" }));
@@ -199,30 +256,62 @@ describe("creation permissions (#670 / #672)", () => {
   });
 
   it("allows existing-toolset additions with modify and no create", () => {
-    state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(knownPermissions,
-      flattenSafeGrants([{ resource: { type: "tool_box", id: "box-1" }, operations: ["modify"] }]), false);
-    const { rerender } = render(<AddCapabilityWizard open initialBoxId="box-1" contextTab="toolbox"
-      initialMode="quick-api" lockInitialMode onClose={vi.fn()} />);
+    state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(
+      knownPermissions,
+      flattenSafeGrants([{ resource: { type: "tool_box", id: "box-1" }, operations: ["modify"] }]),
+      false,
+    );
+    const { rerender } = render(
+      <AddCapabilityWizard
+        open
+        initialBoxId="box-1"
+        contextTab="toolbox"
+        initialMode="quick-api"
+        lockInitialMode
+        onClose={vi.fn()}
+      />,
+    );
     expect(screen.getByText("API form")).toBeTruthy();
-    rerender(<AddCapabilityWizard open contextTab="toolbox" initialMode="function" lockInitialMode onClose={vi.fn()} />);
+    rerender(
+      <AddCapabilityWizard
+        open
+        contextTab="toolbox"
+        initialMode="function"
+        lockInitialMode
+        onClose={vi.fn()}
+      />,
+    );
     expect(screen.queryByText("Function form")).toBeNull();
   });
 
   it("does not treat function modify as permission to add an API tool", () => {
-    state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(knownPermissions,
+    state.runtimeConfig.currentUser.permissions = deriveStudioPermissions(
+      knownPermissions,
       flattenSafeGrants([
         { resource: { type: "tool_box", id: "box-api" }, operations: ["view"] },
         { resource: { type: "function", id: "box-function" }, operations: ["modify"] },
-      ]), false);
-    render(<AddCapabilityWizard open initialBoxId="box-api" contextTab="toolbox"
-      initialMode="quick-api" lockInitialMode onClose={vi.fn()} />);
+      ]),
+      false,
+    );
+    render(
+      <AddCapabilityWizard
+        open
+        initialBoxId="box-api"
+        contextTab="toolbox"
+        initialMode="quick-api"
+        lockInitialMode
+        onClose={vi.fn()}
+      />,
+    );
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByText("API form")).toBeNull();
   });
 
   it("removes an open form when its permission is revoked", () => {
     grant("skill", ["create"]);
-    const { rerender } = render(<AddCapabilityWizard open initialMode="skill" lockInitialMode onClose={vi.fn()} />);
+    const { rerender } = render(
+      <AddCapabilityWizard open initialMode="skill" lockInitialMode onClose={vi.fn()} />,
+    );
     expect(screen.getByText("Skill form")).toBeTruthy();
     grant("skill", []);
     rerender(<AddCapabilityWizard open initialMode="skill" lockInitialMode onClose={vi.fn()} />);

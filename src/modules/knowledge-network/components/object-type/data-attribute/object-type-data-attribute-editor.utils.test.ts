@@ -459,10 +459,7 @@ describe("areDataSourcesEqual", () => {
       ),
     ).toBe(true);
     expect(
-      areDataSourcesEqual(
-        { id: "view-1", name: "Orders" },
-        { id: "view-2", name: "Orders" },
-      ),
+      areDataSourcesEqual({ id: "view-1", name: "Orders" }, { id: "view-2", name: "Orders" }),
     ).toBe(false);
   });
 });

@@ -27,9 +27,8 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
   });
 
   it("submits dynamic_params without the obsolete unique_identities field", async () => {
-    const { executeKnowledgeNetworkActionTypeNow } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { executeKnowledgeNetworkActionTypeNow } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
     await executeKnowledgeNetworkActionTypeNow("kn-1", "action-1", {
       city: "Shanghai",
@@ -48,9 +47,8 @@ describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
   });
 
   it("keeps one-click execution for action types without dynamic parameters", async () => {
-    const { executeKnowledgeNetworkActionTypeNow } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { executeKnowledgeNetworkActionTypeNow } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
     await executeKnowledgeNetworkActionTypeNow("kn-1", "action-1");
 
@@ -75,13 +73,14 @@ describe("action-type.service - listKnowledgeNetworkActionTypeExecutionResults",
   it("requests one page of results filtered by status and maps it", async () => {
     getMock.mockResolvedValue({
       data: {
-        entries: [{ _display: "Order 21", duration_ms: 12, error_message: "timeout", status: "failed" }],
+        entries: [
+          { _display: "Order 21", duration_ms: 12, error_message: "timeout", status: "failed" },
+        ],
         total_count: 3,
       },
     });
-    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { listKnowledgeNetworkActionTypeExecutionResults } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
     const page = await listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", {
       limit: 20,
@@ -94,26 +93,30 @@ describe("action-type.service - listKnowledgeNetworkActionTypeExecutionResults",
       { params: { limit: 20, offset: 20, status: "failed" } },
     );
     expect(page).toEqual({
-      entries: [{ displayName: "Order 21", durationMs: 12, errorMessage: "timeout", status: "failed" }],
+      entries: [
+        { displayName: "Order 21", durationMs: 12, errorMessage: "timeout", status: "failed" },
+      ],
       totalCount: 3,
     });
   });
 
   it("does not send an empty status filter", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { listKnowledgeNetworkActionTypeExecutionResults } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
-    await listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", { limit: 20, offset: 0, status: "" });
+    await listKnowledgeNetworkActionTypeExecutionResults("kn-1", "exec-1", {
+      limit: 20,
+      offset: 0,
+      status: "",
+    });
 
     expect(getMock).toHaveBeenCalledWith(expect.any(String), { params: { limit: 20, offset: 0 } });
   });
 
   it("resolves to null when the backend has no results endpoint, and rethrows other errors", async () => {
-    const { listKnowledgeNetworkActionTypeExecutionResults } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { listKnowledgeNetworkActionTypeExecutionResults } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
     getMock.mockRejectedValueOnce({ isAxiosError: true, response: { status: 404 } });
     await expect(
@@ -148,9 +151,8 @@ describe("action-type.service - getKnowledgeNetworkActionTypeExecutionLogDetail"
         status: "completed",
       },
     });
-    const { getKnowledgeNetworkActionTypeExecutionLogDetail } = await import(
-      "@/modules/knowledge-network/services/action-type.service"
-    );
+    const { getKnowledgeNetworkActionTypeExecutionLogDetail } =
+      await import("@/modules/knowledge-network/services/action-type.service");
 
     const detail = await getKnowledgeNetworkActionTypeExecutionLogDetail("kn-1", "exec-1");
 
@@ -158,4 +160,3 @@ describe("action-type.service - getKnowledgeNetworkActionTypeExecutionLogDetail"
     expect(detail?.resultsTotal).toBe(8808);
   });
 });
-

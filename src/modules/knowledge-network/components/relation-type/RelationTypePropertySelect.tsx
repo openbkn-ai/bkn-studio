@@ -28,10 +28,7 @@ type RelationTypePropertySelectProps = Omit<
   fields: RelationTypePropertyOption[];
 };
 
-export function RelationTypePropertySelect({
-  fields,
-  ...props
-}: RelationTypePropertySelectProps) {
+export function RelationTypePropertySelect({ fields, ...props }: RelationTypePropertySelectProps) {
   return (
     <Select<string, RelationTypePropertyOption>
       allowClear

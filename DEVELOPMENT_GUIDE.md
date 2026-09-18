@@ -3,6 +3,7 @@
 ## 目的
 
 本文档约束 `bkn-studio` 的日常功能开发方式，包括：
+
 - 新功能放哪里
 - 新模块怎么建
 - 哪些能力必须复用
@@ -38,6 +39,7 @@
   具体业务模块
 
 禁止：
+
 - 把业务逻辑写进 `framework`
 - 把页面直接堆进 `app`
 - 在模块里重写 request、runtime、permission 机制
@@ -60,6 +62,7 @@ src/modules/<module-name>/
 ```
 
 最低要求：
+
 - `pages/`
 - `services/`
 - `types/`
@@ -67,6 +70,7 @@ src/modules/<module-name>/
 - `routes.tsx`
 
 如果该模块未来需要被其他智能体整合：
+
 - 必须补 `scenes/`
 - 必须补 `contracts/`
 - 必须补 `index.ts`
@@ -108,6 +112,7 @@ src/app/locales/resources/
 ```
 
 约束：
+
 - `common` 只放全局公共文案
 - `app` 只放平台级品牌或应用信息
 - `shell` 只放壳层文案
@@ -123,6 +128,7 @@ src/modules/<module>/locales/
 ```
 
 约束：
+
 - 用户可见文案必须走 i18n
 - 模块文案必须跟模块走
 - 不再把所有模块文案长期集中到 `app/locales/resources/en-US.ts` 和 `zh-CN.ts`
@@ -139,6 +145,7 @@ src/app/shell/navigation/
 ```
 
 这里只定义：
+
 - 平台级一级分组
 - 导航类型
 
@@ -151,6 +158,7 @@ src/modules/<module>/navigation.tsx
 ```
 
 约束：
+
 - 模块通过 `navigation.tsx` 提供菜单片段
 - 普通模块不直接改壳层总菜单树
 - 只有新增平台级一级分组时，才调整 `app/shell/navigation/base-navigation.tsx`
@@ -166,6 +174,7 @@ src/modules/<module>/routes.tsx
 ```
 
 模块应提供：
+
 - `RouteObject[]`
 - 路由贡献对象
 
@@ -178,6 +187,7 @@ src/app/router/module-routes.ts
 ```
 
 约束：
+
 - 模块自己声明路由
 - `app` 层统一聚合
 - 不再在总路由文件中长期手工堆模块 import
@@ -194,6 +204,7 @@ src/modules/<module>/module.manifest.ts
 ```
 
 约束：
+
 - 模块权限由模块自己声明
 - 模块对外能力清单由 manifest 描述
 
@@ -209,6 +220,7 @@ src/framework/runtime/
 ```
 
 约束：
+
 - `module-manifests.ts` 统一收集模块 manifest
 - `dev-profile.ts` 维护开发态默认用户和权限种子
 - `config.ts` 只保留 runtime 合并逻辑
@@ -217,6 +229,7 @@ src/framework/runtime/
 ## 新模块开发步骤
 
 推荐顺序：
+
 1. 定义 `types`
 2. 定义 `contracts`
 3. 编写 `services`
@@ -231,11 +244,13 @@ src/framework/runtime/
 ## service 开发约束
 
 service 只负责：
+
 - 请求调用
 - 参数装配
 - DTO 到页面模型的映射
 
 service 不负责：
+
 - 组件状态
 - 页面交互
 - 直接调 `message` / `modal`
@@ -286,6 +301,7 @@ service 不负责：
 
 提交前至少完成：
 
+- `pnpm format:check`
 - `pnpm lint`
 - `pnpm test -- --run`
 - `pnpm build`

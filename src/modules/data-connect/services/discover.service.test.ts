@@ -44,9 +44,8 @@ describe("discover.service · task status contract", () => {
         total_count: 1,
       },
     });
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const result = await listDataConnectDiscoverTasks({
       page: 1,
@@ -73,9 +72,8 @@ describe("discover.service · task status contract", () => {
 
   it("maps a resource task filter without exposing priority as a sort", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     await listDataConnectDiscoverTasks({ page: 1, pageSize: 20, resourceId: "resource-1" });
 
@@ -86,9 +84,8 @@ describe("discover.service · task status contract", () => {
 
   it("passes an opted-in error-toast suppression to task list requests", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     await listDataConnectDiscoverTasks(
       { catalogId: "catalog-1", page: 1, pageSize: 10 },
@@ -103,9 +100,8 @@ describe("discover.service · task status contract", () => {
 
   it("passes an opted-in error-toast suppression to schedule list requests", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { listDataConnectDiscoverSchedules } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverSchedules } =
+      await import("@/modules/data-connect/services/discover.service");
 
     await listDataConnectDiscoverSchedules(
       { catalogId: "catalog-1", keyword: "", page: 1, pageSize: 10 },
@@ -132,9 +128,8 @@ describe("discover.service · update schedule", () => {
   });
 
   it("sends the version read by the editor", async () => {
-    const { updateDataConnectDiscoverSchedule } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { updateDataConnectDiscoverSchedule } =
+      await import("@/modules/data-connect/services/discover.service");
 
     await updateDataConnectDiscoverSchedule("schedule-1", {
       catalogId: "catalog-1",
@@ -168,9 +163,8 @@ describe("discover.service · update schedule", () => {
         update_time: 123,
       },
     });
-    const { getDataConnectDiscoverSchedule } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { getDataConnectDiscoverSchedule } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const schedule = await getDataConnectDiscoverSchedule("schedule-1");
 
@@ -190,9 +184,8 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("sorts by the selected lifecycle timestamp", async () => {
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const result = await listDataConnectDiscoverTasks({
       direction: "asc",
@@ -211,25 +204,19 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("covers every Vega discover-task status", async () => {
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
 
-    expect(new Set(result.items.map((task) => task.status))).toEqual(new Set([
-      "pending",
-      "running",
-      "completed",
-      "failed",
-      "cancelled",
-    ]));
+    expect(new Set(result.items.map((task) => task.status))).toEqual(
+      new Set(["pending", "running", "completed", "failed", "cancelled"]),
+    );
   });
 
   it("includes a partially progressed cancelled mock task", async () => {
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const result = await listDataConnectDiscoverTasks({
       page: 1,
@@ -247,9 +234,8 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("does not associate manually triggered mock tasks with a discover schedule", async () => {
-    const { listDataConnectDiscoverTasks } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { listDataConnectDiscoverTasks } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const result = await listDataConnectDiscoverTasks({ page: 1, pageSize: 20 });
 
@@ -259,10 +245,8 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("settles an interactively triggered mock task without polling", async () => {
-    const {
-      getDataConnectDiscoverTask,
-      triggerDataConnectDiscover,
-    } = await import("@/modules/data-connect/services/discover.service");
+    const { getDataConnectDiscoverTask, triggerDataConnectDiscover } =
+      await import("@/modules/data-connect/services/discover.service");
 
     const created = await triggerDataConnectDiscover("cat-001", "create_only");
     const task = await getDataConnectDiscoverTask(created.id);
@@ -282,10 +266,8 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("rejects a stale discover schedule version", async () => {
-    const {
-      getDataConnectDiscoverSchedule,
-      updateDataConnectDiscoverSchedule,
-    } = await import("@/modules/data-connect/services/discover.service");
+    const { getDataConnectDiscoverSchedule, updateDataConnectDiscoverSchedule } =
+      await import("@/modules/data-connect/services/discover.service");
     const schedule = await getDataConnectDiscoverSchedule("discover-schedule-001");
     expect(schedule).not.toBeNull();
     if (!schedule) {
@@ -302,9 +284,7 @@ describe("discover.service · mock task sorting", () => {
         strategy: schedule.strategy,
       }),
     ).rejects.toMatchObject({ response: { status: 409 } });
-    await expect(getDataConnectDiscoverSchedule(schedule.id)).resolves.toEqual(
-      schedule,
-    );
+    await expect(getDataConnectDiscoverSchedule(schedule.id)).resolves.toEqual(schedule);
   });
 
   it("matches discover schedule update validation and not-found precedence", async () => {
@@ -488,9 +468,8 @@ describe("discover.service · mock task sorting", () => {
   });
 
   it("rejects an invalid time range in mock mode", async () => {
-    const { createDataConnectDiscoverSchedule } = await import(
-      "@/modules/data-connect/services/discover.service"
-    );
+    const { createDataConnectDiscoverSchedule } =
+      await import("@/modules/data-connect/services/discover.service");
 
     await expect(
       createDataConnectDiscoverSchedule({

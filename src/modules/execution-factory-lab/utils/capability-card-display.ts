@@ -25,10 +25,7 @@ export function resolveCapabilityKindLabel(kind: string, t: TFunction): string {
   return kind.toUpperCase();
 }
 
-export function resolveCapabilityCardSubtitle(
-  capability: CapabilityRecord,
-  t: TFunction,
-): string {
+export function resolveCapabilityCardSubtitle(capability: CapabilityRecord, t: TFunction): string {
   if (capability.kind === "http") {
     if (capability.endpoint?.method && capability.endpoint.path) {
       return `${capability.endpoint.method} ${capability.endpoint.path}`;

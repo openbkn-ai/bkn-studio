@@ -49,7 +49,7 @@ export type LicenseRequestErrorCode =
   | "serverUnavailable"
   | "unknown";
 
-const wait = async <T,>(value: T) =>
+const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 160);
   });
@@ -126,7 +126,11 @@ export function resolveLicenseRequestErrorCode(error: unknown): LicenseRequestEr
 
 export async function getLicenseDetail(): Promise<LicenseDetail> {
   if (useMock) {
-    return wait({ ...mockLicense, customer: { ...mockLicense.customer }, limits: { ...mockLicense.limits } });
+    return wait({
+      ...mockLicense,
+      customer: { ...mockLicense.customer },
+      limits: { ...mockLicense.limits },
+    });
   }
 
   const response = await http.get<BackendLicenseDetail>(ADMIN_LICENSE, {
@@ -140,10 +144,9 @@ export async function getLicenseFingerprint(): Promise<string> {
     return wait(mockLicense.instanceFp ?? mockInstanceFingerprint);
   }
 
-  const response = await http.get<{ instance_fp?: string }>(
-    `${ADMIN_LICENSE}/fingerprint`,
-    { skipErrorToast: true },
-  );
+  const response = await http.get<{ instance_fp?: string }>(`${ADMIN_LICENSE}/fingerprint`, {
+    skipErrorToast: true,
+  });
   return response.data.instance_fp ?? "";
 }
 
@@ -181,11 +184,9 @@ export async function activateLicense(): Promise<LicenseDetail> {
     return wait({ ...mockLicense });
   }
 
-  const response = await http.post<BackendLicenseDetail>(
-    `${ADMIN_LICENSE}/activate`,
-    undefined,
-    { skipErrorToast: true },
-  );
+  const response = await http.post<BackendLicenseDetail>(`${ADMIN_LICENSE}/activate`, undefined, {
+    skipErrorToast: true,
+  });
   return mapLicenseDetail(response.data);
 }
 

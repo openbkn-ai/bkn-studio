@@ -91,8 +91,7 @@ export const executionFactoryLabZhCN = {
     importImpexFileRequired: "请选择要导入的文件",
     exportImpexAction: "导出配置包",
     catalogTitle: "能力市场（实验版）",
-    catalogDescription:
-      "浏览市场中已发布的 HTTP 工具箱、MCP 服务与 SKILL，并引入到自己的能力库。",
+    catalogDescription: "浏览市场中已发布的 HTTP 工具箱、MCP 服务与 SKILL，并引入到自己的能力库。",
     catalogSearchPlaceholder: "按名称或描述搜索市场",
     catalogEmpty: "市场中暂无已发布的条目。",
     catalogInstalled: "已引入",
@@ -106,16 +105,14 @@ export const executionFactoryLabZhCN = {
     pythonDebugTitle: "Python 沙箱调试",
     addFunctionWizardTitle: "新建函数",
     functionWizardIntroTitle: "描述需求、生成草稿、运行验证，再保存。",
-    functionWizardIntroBody:
-      "从函数目标和示例数据开始。生成的 Python 代码可以先改再创建能力。",
+    functionWizardIntroBody: "从函数目标和示例数据开始。生成的 Python 代码可以先改再创建能力。",
     functionWizardStepDescribe: "1. 描述",
     functionWizardStepExamples: "2. 示例",
     functionWizardStepCode: "3. 代码",
     functionWizardStepRun: "4. 运行",
     functionNamePlaceholder: "例如：归一化天气响应",
     functionIntentLabel: "这个函数要做什么？",
-    functionIntentPlaceholder:
-      "例如：从入参读取城市与温度，返回归一化后的天气摘要。",
+    functionIntentPlaceholder: "例如：从入参读取城市与温度，返回归一化后的天气摘要。",
     functionDescriptionPlaceholder: "选填，会展示在能力库列表里。",
     functionInputExampleLabel: "入参示例",
     functionOutputExampleLabel: "期望出参示例",
@@ -155,8 +152,7 @@ export const executionFactoryLabZhCN = {
     emptyFiltered: "没有能力符合当前筛选条件。",
     clearFiltersAction: "清空筛选",
     emptyCatalogCta: "去能力市场看看",
-    experimentBadgeTooltip:
-      "实验版与正式能力库并行运行。迁移完成前，数据与接口可能存在差异。",
+    experimentBadgeTooltip: "实验版与正式能力库并行运行。迁移完成前，数据与接口可能存在差异。",
     permissionDeniedHint: "你没有执行该操作的权限。",
     editAction: "编辑",
     cancelEditAction: "取消",
@@ -180,8 +176,7 @@ export const executionFactoryLabZhCN = {
     orchestrationDisabledDescription:
       "启用编排后，该 HTTP 能力会注册为流程算子，编排画布中即可作为节点使用。",
     orchestrationEnabledTitle: "已可作为流程算子使用",
-    orchestrationEnabledDescription:
-      "该能力已注册为流程算子。请在流程调用前配置运行时行为。",
+    orchestrationEnabledDescription: "该能力已注册为流程算子。请在流程调用前配置运行时行为。",
     orchestrationOperatorId: "算子 ID",
     orchestrationTimeoutMs: "超时（毫秒）",
     orchestrationRetryPolicy: "重试策略",
@@ -242,20 +237,15 @@ export const executionFactoryLabZhCN = {
     destructiveTargetLabel: "能力",
     destructiveTargetMeta: "{{kind}} · {{status}} · v{{version}}",
     destructiveDeleteImpactIrreversible: "删除后的能力无法恢复。",
-    destructiveDeleteImpactPublished:
-      "正在调用该能力的流程、智能体与集成将立即失败。",
+    destructiveDeleteImpactPublished: "正在调用该能力的流程、智能体与集成将立即失败。",
     destructiveDeleteImpactDraft: "相关草稿与版本历史会一并删除。",
-    destructiveOfflineImpactPublished:
-      "在重新发布之前，流程、智能体与集成的新调用都会被拒绝。",
+    destructiveOfflineImpactPublished: "在重新发布之前，流程、智能体与集成的新调用都会被拒绝。",
     destructiveOfflineImpactRecoverable: "重新发布即可让该能力恢复可用。",
     destructiveRepublishImpact: "版本 {{version}} 将成为当前生效的发布版本。",
-    destructiveRepublishImpactPublished:
-      "回滚后，正在使用当前版本的调用方可能看到不同的行为。",
+    destructiveRepublishImpactPublished: "回滚后，正在使用当前版本的调用方可能看到不同的行为。",
     destructiveSkillReplaceImpact: "SKILL 压缩包将被原地替换，包内文件内容会变化。",
-    destructiveSkillReplaceImpactPublished:
-      "升级后，使用该 SKILL 的智能体与流程行为可能改变。",
-    destructiveImpactOrchestration:
-      "关联的流程算子可能停止工作，直到编排配置更新或重新启用。",
+    destructiveSkillReplaceImpactPublished: "升级后，使用该 SKILL 的智能体与流程行为可能改变。",
+    destructiveImpactOrchestration: "关联的流程算子可能停止工作，直到编排配置更新或重新启用。",
     destructiveDisableOrchestrationImpact:
       "该能力将不再出现在可选的流程算子中。已引用它的流程可能在下次运行时失败。",
     destructiveDisableOrchestrationRecoverable:
@@ -269,16 +259,11 @@ export const executionFactoryLabZhCN = {
     releaseUser: "发布人",
     releaseTime: "发布时间",
     operationDescTitle: "操作说明",
-    operationDescPublish:
-      "发布后，该能力对流程、智能体与集成可用。",
-    operationDescOffline:
-      "取消发布后，新的调用会被拒绝，直到再次发布。",
-    operationDescEdit:
-      "编辑会改动能力的元数据或实现草稿；希望调用方用上新行为，需要再次发布。",
-    operationDescVersion:
-      "回滚并发布会把当前生效版本切换为所选的历史版本。",
-    operationDescDelete:
-      "删除会永久移除该能力，并可能打断已有引用。",
+    operationDescPublish: "发布后，该能力对流程、智能体与集成可用。",
+    operationDescOffline: "取消发布后，新的调用会被拒绝，直到再次发布。",
+    operationDescEdit: "编辑会改动能力的元数据或实现草稿；希望调用方用上新行为，需要再次发布。",
+    operationDescVersion: "回滚并发布会把当前生效版本切换为所选的历史版本。",
+    operationDescDelete: "删除会永久移除该能力，并可能打断已有引用。",
     operationDescEnableOrchestration:
       "启用编排会把该 HTTP 能力注册为流程算子，算子生命周期单独记录。",
     operationDescSaveOrchestration:

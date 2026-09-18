@@ -19,21 +19,63 @@ const scannedExtensions = new Set([".html", ".ts", ".tsx"]);
 const ignoredPathParts = new Set([".git", "dist", "node_modules", "locales"]);
 const ignoredFilePatterns = [/\.test\.tsx?$/, /\.spec\.tsx?$/, /mock/i];
 const userFacingAttributes = new Set([
-  "alt", "aria-label", "placeholder", "title", "label", "description", "content",
-  "help", "okText", "cancelText", "emptyText", "confirmText",
+  "alt",
+  "aria-label",
+  "placeholder",
+  "title",
+  "label",
+  "description",
+  "content",
+  "help",
+  "okText",
+  "cancelText",
+  "emptyText",
+  "confirmText",
 ]);
 const messageMethods = new Set(["error", "info", "success", "warning"]);
 const feedbackObjectProperties = new Set(["content", "description", "message", "title"]);
 const browserPromptMethods = new Set(["alert", "confirm", "prompt"]);
 const singleWordUiText = new Set([
-  "attempt", "back", "cancel", "close", "copy", "delete", "description", "header", "name",
-  "next", "previous", "refresh", "reset", "save", "search", "value",
+  "attempt",
+  "back",
+  "cancel",
+  "close",
+  "copy",
+  "delete",
+  "description",
+  "header",
+  "name",
+  "next",
+  "previous",
+  "refresh",
+  "reset",
+  "save",
+  "search",
+  "value",
 ]);
 const stableTechnicalText = new Set([
-  "Access Token", "Authorization: Bearer", "DB", "ID", "JSON", "MCP",
-  "My", "OAuth Token", "PG", "PK", "POST", "REST APIs", "SQL", "TOON",
-  "api", "application/json", "body.json", "fx",
-  "inputSchema", "mcp", "outputSchema", "token",
+  "Access Token",
+  "Authorization: Bearer",
+  "DB",
+  "ID",
+  "JSON",
+  "MCP",
+  "My",
+  "OAuth Token",
+  "PG",
+  "PK",
+  "POST",
+  "REST APIs",
+  "SQL",
+  "TOON",
+  "api",
+  "application/json",
+  "body.json",
+  "fx",
+  "inputSchema",
+  "mcp",
+  "outputSchema",
+  "token",
 ]);
 
 const rawFindings = [];
@@ -54,7 +96,9 @@ if (jsonOutput) {
 } else {
   if (summaryOutput) printSummary(summary);
   for (const finding of findings) {
-    console.log(`${finding.relativePath}:${finding.lineNumber}: [${finding.language}] ${finding.text}`);
+    console.log(
+      `${finding.relativePath}:${finding.lineNumber}: [${finding.language}] ${finding.text}`,
+    );
   }
   console.log(`hardcoded i18n scan: ${findings.length} potential finding(s)`);
 }
@@ -87,9 +131,8 @@ function scanFile(filePath) {
 }
 
 function scanChineseText(filePath, source) {
-  const sanitized = path.extname(filePath) === ".html"
-    ? stripHtmlComments(source)
-    : stripComments(source);
+  const sanitized =
+    path.extname(filePath) === ".html" ? stripHtmlComments(source) : stripComments(source);
   const sourceLines = source.split(/\r?\n/);
   sanitized.split(/\r?\n/).forEach((line, index) => {
     if (!chinesePattern.test(line)) return;
@@ -100,7 +143,13 @@ function scanChineseText(filePath, source) {
 
 function scanTypeScriptEnglishText(filePath, source) {
   const scriptKind = path.extname(filePath) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true, scriptKind);
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
   const visit = (node) => {
     if (ts.isJsxText(node)) {
       addEnglishNodeFinding(filePath, sourceFile, node, node.getText(sourceFile));
@@ -121,7 +170,8 @@ function scanTypeScriptEnglishText(filePath, source) {
 function scanHtmlEnglishText(filePath, source) {
   const withoutComments = source.replace(/<!--[\s\S]*?-->/g, "");
   withoutComments.split(/\r?\n/).forEach((line, index) => {
-    for (const match of line.matchAll(/>([^<>]+)</g)) addEnglishTextFinding(filePath, index + 1, match[1]);
+    for (const match of line.matchAll(/>([^<>]+)</g))
+      addEnglishTextFinding(filePath, index + 1, match[1]);
     for (const match of line.matchAll(/\b(?:alt|aria-label|placeholder|title)=["']([^"']+)["']/g)) {
       addEnglishTextFinding(filePath, index + 1, match[1]);
     }
@@ -136,8 +186,9 @@ function expressionOfJsxAttribute(attribute) {
 }
 
 function isDirectJsxExpression(node) {
-  return ts.isJsxExpression(node)
-    && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent));
+  return (
+    ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))
+  );
 }
 
 function stringValuesOfExpression(expression) {
@@ -146,16 +197,28 @@ function stringValuesOfExpression(expression) {
     return [expression.text];
   }
   if (ts.isTemplateExpression(expression)) {
-    return [expression.head.text + expression.templateSpans.map((span) => span.literal.text).join("")];
+    return [
+      expression.head.text + expression.templateSpans.map((span) => span.literal.text).join(""),
+    ];
   }
   if (ts.isParenthesizedExpression(expression)) {
     return stringValuesOfExpression(expression.expression);
   }
   if (ts.isConditionalExpression(expression)) {
-    return [...stringValuesOfExpression(expression.whenTrue), ...stringValuesOfExpression(expression.whenFalse)];
+    return [
+      ...stringValuesOfExpression(expression.whenTrue),
+      ...stringValuesOfExpression(expression.whenFalse),
+    ];
   }
-  if (ts.isBinaryExpression(expression) && (expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken || expression.operatorToken.kind === ts.SyntaxKind.BarBarToken)) {
-    return [...stringValuesOfExpression(expression.left), ...stringValuesOfExpression(expression.right)];
+  if (
+    ts.isBinaryExpression(expression) &&
+    (expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+      expression.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+  ) {
+    return [
+      ...stringValuesOfExpression(expression.left),
+      ...stringValuesOfExpression(expression.right),
+    ];
   }
   return [];
 }
@@ -163,33 +226,43 @@ function stringValuesOfExpression(expression) {
 function isUserMessageCall(node) {
   if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
   const expression = node.expression;
-  return ts.isPropertyAccessExpression(expression)
-    && ts.isIdentifier(expression.expression)
-    && expression.expression.text === "message"
-    && messageMethods.has(expression.name.text);
+  return (
+    ts.isPropertyAccessExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "message" &&
+    messageMethods.has(expression.name.text)
+  );
 }
 
 function isFeedbackObjectCall(node) {
   if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
   const expression = node.expression;
-  return ts.isPropertyAccessExpression(expression)
-    && ts.isIdentifier(expression.expression)
-    && (expression.expression.text === "notification" || expression.expression.text === "Modal");
+  return (
+    ts.isPropertyAccessExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    (expression.expression.text === "notification" || expression.expression.text === "Modal")
+  );
 }
 
 function isBrowserPromptCall(node) {
   if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
   if (ts.isIdentifier(node.expression)) return browserPromptMethods.has(node.expression.text);
-  return ts.isPropertyAccessExpression(node.expression)
-    && ts.isIdentifier(node.expression.expression)
-    && node.expression.expression.text === "window"
-    && browserPromptMethods.has(node.expression.name.text);
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "window" &&
+    browserPromptMethods.has(node.expression.name.text)
+  );
 }
 
 function scanFeedbackObject(filePath, sourceFile, object) {
   if (!ts.isObjectLiteralExpression(object)) return;
   for (const property of object.properties) {
-    if (!ts.isPropertyAssignment(property) || !feedbackObjectProperties.has(propertyNameOf(property.name))) continue;
+    if (
+      !ts.isPropertyAssignment(property) ||
+      !feedbackObjectProperties.has(propertyNameOf(property.name))
+    )
+      continue;
     addEnglishExpressionFindings(filePath, sourceFile, property, property.initializer);
   }
 }
@@ -223,17 +296,19 @@ function looksLikeNaturalEnglish(text) {
 }
 
 function looksLikeTechnicalValue(text) {
-  return /^(?:https?:\/\/|\/|~\/|\.\/|\.\.\/)/.test(text)
-    || /^\.[\w-]+(?:\.[\w-]+)+$/.test(text)
-    || /^\.[\w-]+\/[\w./-]+$/.test(text)
-    || /^(?:GET|POST|PUT|PATCH|DELETE)\s+\/[\w./{}:-]*/.test(text)
-    || /^(?:curl|pip|npm|pnpm|yarn|npx)\s+\S+/i.test(text)
-    || looksLikeJson(text)
-    || looksLikeSqlSnippet(text)
-    || /^<[^>]+>$/.test(text)
-    || /^[A-Z][A-Z0-9_-]+$/.test(text)
-    || /^[a-zA-Z_$][\w$]*(?:[./:_-][\w$-]+)+$/.test(text)
-    || /^\{\{[^}]+\}\}$/.test(text);
+  return (
+    /^(?:https?:\/\/|\/|~\/|\.\/|\.\.\/)/.test(text) ||
+    /^\.[\w-]+(?:\.[\w-]+)+$/.test(text) ||
+    /^\.[\w-]+\/[\w./-]+$/.test(text) ||
+    /^(?:GET|POST|PUT|PATCH|DELETE)\s+\/[\w./{}:-]*/.test(text) ||
+    /^(?:curl|pip|npm|pnpm|yarn|npx)\s+\S+/i.test(text) ||
+    looksLikeJson(text) ||
+    looksLikeSqlSnippet(text) ||
+    /^<[^>]+>$/.test(text) ||
+    /^[A-Z][A-Z0-9_-]+$/.test(text) ||
+    /^[a-zA-Z_$][\w$]*(?:[./:_-][\w$-]+)+$/.test(text) ||
+    /^\{\{[^}]+\}\}$/.test(text)
+  );
 }
 
 function looksLikeJson(text) {
@@ -247,8 +322,14 @@ function looksLikeJson(text) {
 }
 
 function looksLikeSqlSnippet(text) {
-  return /\b(?:bigint|boolean|datetime|decimal|integer|jsonb?|numeric|smallint|text|timestamp|varchar)\b/i.test(text)
-    && /\b[a-z_][\w$]*\s+(?:bigint|boolean|datetime|decimal|integer|jsonb?|numeric|smallint|text|timestamp|varchar)\b/i.test(text);
+  return (
+    /\b(?:bigint|boolean|datetime|decimal|integer|jsonb?|numeric|smallint|text|timestamp|varchar)\b/i.test(
+      text,
+    ) &&
+    /\b[a-z_][\w$]*\s+(?:bigint|boolean|datetime|decimal|integer|jsonb?|numeric|smallint|text|timestamp|varchar)\b/i.test(
+      text,
+    )
+  );
 }
 
 function addFinding(filePath, lineNumber, text, language, classification) {
@@ -261,21 +342,28 @@ function addFinding(filePath, lineNumber, text, language, classification) {
 
 function classifyChineseFinding(filePath, text) {
   if (isChineseValidationPattern(text)) {
-    return { allowed: true, category: "allowed-pattern", reason: "Chinese character validation pattern" };
+    return {
+      allowed: true,
+      category: "allowed-pattern",
+      reason: "Chinese character validation pattern",
+    };
   }
   return { allowed: false, category: path.extname(filePath) === ".html" ? "html" : "ui" };
 }
 
 function isChineseValidationPattern(text) {
-  return /\\u4e00|\\u9fff|一-龥|\[\\p\{Script=Han\}/u.test(text)
-    && /pattern|regex|regexp|RegExp|\/.*\//i.test(text);
+  return (
+    /\\u4e00|\\u9fff|一-龥|\[\\p\{Script=Han\}/u.test(text) &&
+    /pattern|regex|regexp|RegExp|\/.*\//i.test(text)
+  );
 }
 
 function summarizeFindings(allFindings, activeFindings) {
   const byCategory = {};
   const activeByCategory = {};
   const activeByLanguage = {};
-  for (const finding of allFindings) byCategory[finding.category] = (byCategory[finding.category] ?? 0) + 1;
+  for (const finding of allFindings)
+    byCategory[finding.category] = (byCategory[finding.category] ?? 0) + 1;
   for (const finding of activeFindings) {
     activeByCategory[finding.category] = (activeByCategory[finding.category] ?? 0) + 1;
     activeByLanguage[finding.language] = (activeByLanguage[finding.language] ?? 0) + 1;
@@ -294,8 +382,10 @@ function printSummary(summary) {
   console.log("hardcoded i18n scan summary:");
   console.log(`active: ${summary.active}`);
   console.log(`allowed: ${summary.allowed}`);
-  for (const [language, count] of Object.entries(summary.activeByLanguage).sort()) console.log(`${language}: ${count}`);
-  for (const [category, count] of Object.entries(summary.activeByCategory).sort()) console.log(`${category}: ${count}`);
+  for (const [language, count] of Object.entries(summary.activeByLanguage).sort())
+    console.log(`${language}: ${count}`);
+  for (const [category, count] of Object.entries(summary.activeByCategory).sort())
+    console.log(`${category}: ${count}`);
 }
 
 function stripComments(source) {
@@ -364,10 +454,7 @@ function stripComments(source) {
 }
 
 function stripHtmlComments(source) {
-  return source.replace(
-    /<!--[\s\S]*?-->/g,
-    (comment) => comment.replace(/[^\n]/g, " "),
-  );
+  return source.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
 }
 
 function isEscaped(source, index) {

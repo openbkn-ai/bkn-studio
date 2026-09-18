@@ -33,7 +33,10 @@ import type {
   OperatorRunLogEntry,
 } from "@/modules/execution-factory/types/operator";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
-import { normalizeGeneratedCapabilityName, validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
+import {
+  normalizeGeneratedCapabilityName,
+  validateOpenApiDocumentText,
+} from "@/modules/execution-factory/utils/metadata-content";
 import type { RequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 
@@ -57,20 +60,14 @@ type FormValues = OperatorMutationInput & {
   functionOutputs?: FunctionParameterDef[];
 };
 
-export function UnitFormScene({
-  mode,
-  onBack,
-  onSubmitSuccess,
-  operatorId,
-}: UnitFormSceneProps) {
+export function UnitFormScene({ mode, onBack, onSubmitSuccess, operatorId }: UnitFormSceneProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const metadataTypeParam = searchParams.get("metadataType");
   const lockedMetadataType =
-    mode === "create" &&
-    (metadataTypeParam === "function" || metadataTypeParam === "openapi")
+    mode === "create" && (metadataTypeParam === "function" || metadataTypeParam === "openapi")
       ? metadataTypeParam
       : null;
   const [form] = Form.useForm<FormValues>();
@@ -135,13 +132,9 @@ export function UnitFormScene({
   }, [form, loadedValues, operatorId]);
 
   const permission =
-    mode === "create"
-      ? "execution-factory:operator:create"
-      : "execution-factory:operator:edit";
+    mode === "create" ? "execution-factory:operator:create" : "execution-factory:operator:edit";
   const pageTitle =
-    mode === "create"
-      ? t("executionFactory.createTitle")
-      : t("executionFactory.editTitle");
+    mode === "create" ? t("executionFactory.createTitle") : t("executionFactory.editTitle");
   const pageDescription =
     mode === "create"
       ? t("executionFactory.createDescription")
@@ -251,9 +244,7 @@ export function UnitFormScene({
           functionInput,
         });
         void message.success(t("common.success"));
-        void navigate(
-          `/execution-factory/units?activeTab=operator&detailId=${record.operatorId}`,
-        );
+        void navigate(`/execution-factory/units?activeTab=operator&detailId=${record.operatorId}`);
         return;
       }
 
@@ -277,9 +268,8 @@ export function UnitFormScene({
       void navigate("/execution-factory/units?activeTab=operator");
     } catch (error) {
       if (error && typeof error === "object" && "errorFields" in error) {
-        const firstField = (
-          error as { errorFields?: Array<{ name?: Array<string | number> }> }
-        ).errorFields?.[0]?.name?.[0];
+        const firstField = (error as { errorFields?: Array<{ name?: Array<string | number> }> })
+          .errorFields?.[0]?.name?.[0];
 
         if (typeof firstField === "string") {
           document
@@ -312,16 +302,12 @@ export function UnitFormScene({
 
   return (
     <PermissionGate
-      fallback={
-        <Result status="403" subTitle={t("common.noPermission")} title="403" />
-      }
+      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
       permissions={permission}
     >
       <CrudFormPage description={pageDescription} title={pageTitle}>
         {loading ? <Spin /> : null}
-        {!loading && loadError ? (
-          <Alert message={loadError} showIcon type="error" />
-        ) : null}
+        {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
         {!loading && !loadError && (mode === "create" || loadedValues) ? (
           <div className={styles.formLayout}>
             <Anchor

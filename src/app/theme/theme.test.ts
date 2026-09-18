@@ -53,15 +53,8 @@ describe("createThemeConfig", () => {
 
     const rowHoverBg = requiredColor(tableTokens.rowHoverBg, "rowHoverBg");
     const rowSelectedBg = requiredColor(tableTokens.rowSelectedBg, "rowSelectedBg");
-    const rowSelectedHoverBg = requiredColor(
-      tableTokens.rowSelectedHoverBg,
-      "rowSelectedHoverBg",
-    );
-    const rowColors = [
-      rowHoverBg,
-      rowSelectedBg,
-      rowSelectedHoverBg,
-    ];
+    const rowSelectedHoverBg = requiredColor(tableTokens.rowSelectedHoverBg, "rowSelectedHoverBg");
+    const rowColors = [rowHoverBg, rowSelectedBg, rowSelectedHoverBg];
 
     expect(new Set(rowColors).size).toBe(3);
     expect(rowColors.every((color) => /^#[\da-f]{6}$/i.test(color))).toBe(true);
@@ -77,20 +70,14 @@ describe("createThemeConfig", () => {
       }
 
       return channels.reduce((sum, channel, index) => {
-        const linear = channel <= 0.03928
-          ? channel / 12.92
-          : ((channel + 0.055) / 1.055) ** 2.4;
+        const linear = channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
         const weights = [0.2126, 0.7152, 0.0722];
         return sum + linear * weights[index];
       }, 0);
     };
 
-    expect(luminance(rowHoverBg)).toBeGreaterThan(
-      luminance(rowSelectedBg),
-    );
-    expect(luminance(rowSelectedBg)).toBeGreaterThan(
-      luminance(rowSelectedHoverBg),
-    );
+    expect(luminance(rowHoverBg)).toBeGreaterThan(luminance(rowSelectedBg));
+    expect(luminance(rowSelectedBg)).toBeGreaterThan(luminance(rowSelectedHoverBg));
   });
 
   it("uses the Ant Design dark algorithm and dark table states", () => {

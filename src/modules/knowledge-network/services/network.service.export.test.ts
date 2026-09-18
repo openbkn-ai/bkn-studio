@@ -86,9 +86,8 @@ describe("exportKnowledgeNetwork", () => {
   it("downloads the export view as JSON by default", async () => {
     const downloads = captureDownloads();
     getMock.mockResolvedValue({ data: { name: "orders-network" }, headers: {} });
-    const { exportKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await exportKnowledgeNetwork("kn-1");
 
@@ -106,9 +105,8 @@ describe("exportKnowledgeNetwork", () => {
       data: new Blob(["tar-bytes"], { type: "application/octet-stream" }),
       headers: { "content-disposition": "attachment; filename=kn-1-main.tar" },
     });
-    const { exportKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await exportKnowledgeNetwork("kn-1", "bkn");
 
@@ -124,9 +122,8 @@ describe("exportKnowledgeNetwork", () => {
   it("names the BKN package after the network when the response carries no filename", async () => {
     const downloads = captureDownloads();
     getMock.mockResolvedValue({ data: new Blob(["tar-bytes"]), headers: {} });
-    const { exportKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await exportKnowledgeNetwork("kn-1", "bkn");
 

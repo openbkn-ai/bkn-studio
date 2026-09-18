@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  deriveStudioPermissions,
-  flattenSafeGrants,
-} from "@/framework/auth/permission-map";
+import { deriveStudioPermissions, flattenSafeGrants } from "@/framework/auth/permission-map";
 import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { http } from "@/framework/request/http";
 import { defaultDevPermissions } from "@/framework/runtime/module-manifests";

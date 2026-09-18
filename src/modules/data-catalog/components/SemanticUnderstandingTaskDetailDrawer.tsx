@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 
 import { formatDateTimeYmdHms } from "@/framework/i18n/format";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
-import { getSemanticUnderstandingTask, type SemanticUnderstandingTask } from "@/modules/data-catalog/services/semantic-understanding-task.service";
+import {
+  getSemanticUnderstandingTask,
+  type SemanticUnderstandingTask,
+} from "@/modules/data-catalog/services/semantic-understanding-task.service";
 
 import styles from "./BuildTaskDetailDrawer.module.css";
 import { getSemanticUnderstandingWarnings } from "./semantic-understanding-warnings";
@@ -66,10 +69,12 @@ function jsonDetail(value?: string) {
   } catch {
     // The server supports returning legacy data that is not JSON.
   }
-  return <details className={styles.rawDetail}>
-    <summary>JSON</summary>
-    <pre>{content}</pre>
-  </details>;
+  return (
+    <details className={styles.rawDetail}>
+      <summary>JSON</summary>
+      <pre>{content}</pre>
+    </details>
+  );
 }
 
 function jsonObject(value?: string): Record<string, unknown> | undefined {
@@ -77,7 +82,7 @@ function jsonObject(value?: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(value);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : undefined;
   } catch {
     return undefined;
@@ -97,7 +102,10 @@ function getQuality(...payloads: Array<string | undefined>): ResourceQuality | u
 function getFieldDetails(value?: string): FieldApplyDetail[] {
   const fieldDetails = jsonObject(value)?.field_details;
   return Array.isArray(fieldDetails)
-    ? fieldDetails.filter((detail): detail is FieldApplyDetail => Boolean(detail) && typeof detail === "object" && "name" in detail && "status" in detail)
+    ? fieldDetails.filter(
+        (detail): detail is FieldApplyDetail =>
+          Boolean(detail) && typeof detail === "object" && "name" in detail && "status" in detail,
+      )
     : [];
 }
 
@@ -123,27 +131,39 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [open, taskId]);
 
   if (!task) {
-    return <Drawer
-      className={styles.drawer}
-      destroyOnClose
-      loading={loading}
-      onClose={onClose}
-      open={open}
-      styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
-      title={`${t("dataCatalog.task.semanticDetail")} · ${taskId}`}
-      width={640}
-    >
-      {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-      {!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}
-    </Drawer>;
+    return (
+      <Drawer
+        className={styles.drawer}
+        destroyOnClose
+        loading={loading}
+        onClose={onClose}
+        open={open}
+        styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
+        title={`${t("dataCatalog.task.semanticDetail")} · ${taskId}`}
+        width={640}
+      >
+        {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
+        {!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}
+      </Drawer>
+    );
   }
 
-  const applyModeKey = task.applyMode === "dry_run" ? "dryRun" : task.applyMode === "force" ? "force" : "fillEmpty";
-  const statusClass = task.status === "failed" ? sharedStyles.taskFailed : task.status === "completed" ? sharedStyles.taskSucceeded : task.status === "cancelled" || task.status === "pending" ? sharedStyles.taskPending : sharedStyles.taskRunning;
+  const applyModeKey =
+    task.applyMode === "dry_run" ? "dryRun" : task.applyMode === "force" ? "force" : "fillEmpty";
+  const statusClass =
+    task.status === "failed"
+      ? sharedStyles.taskFailed
+      : task.status === "completed"
+        ? sharedStyles.taskSucceeded
+        : task.status === "cancelled" || task.status === "pending"
+          ? sharedStyles.taskPending
+          : sharedStyles.taskRunning;
   const creator = task.creator.name || task.creator.id || EMPTY_VALUE;
   const quality = getQuality(task.confidenceDetailJson, task.resultJson);
   const warnings = getSemanticUnderstandingWarnings(t, task.confidenceDetailJson, task.resultJson);
@@ -154,9 +174,11 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
     {
       dataIndex: "status",
       title: t("common.status"),
-      render: (status: FieldApplyDetail["status"]) => <span className={[sharedStyles.tag, fieldStatusClass(status)].join(" ")}>
-        {t(`dataCatalog.taskManagement.semantic.fieldStatus.${status}`)}
-      </span>,
+      render: (status: FieldApplyDetail["status"]) => (
+        <span className={[sharedStyles.tag, fieldStatusClass(status)].join(" ")}>
+          {t(`dataCatalog.taskManagement.semantic.fieldStatus.${status}`)}
+        </span>
+      ),
     },
     {
       dataIndex: "updated",
@@ -170,116 +192,216 @@ export function SemanticUnderstandingTaskDetailDrawer({ onClose, open, taskId }:
     },
   ];
 
-  return <Drawer
-    className={styles.drawer}
-    destroyOnClose
-    onClose={onClose}
-    open={open}
-    styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
-    title={`${t("dataCatalog.task.semanticDetail")} · ${task.id}`}
-    width={640}
-  >
-    <div className={styles.drawerContent}>
-      <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
-        <div className={styles.statusRow}>
-          <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
-            {t(`dataCatalog.taskManagement.scope.${task.scope}`)}
-          </span>
-          <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
-            {t(`dataCatalog.taskManagement.applyMode.${applyModeKey}`)}
-          </span>
-          <span className={[sharedStyles.tag, task.applied ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
-            {t(task.applied ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}
-          </span>
-          <span className={[sharedStyles.tag, statusClass].join(" ")}>
-            {t(`dataCatalog.taskManagement.semanticStatus.${task.status}`)}
-          </span>
-        </div>
-        {task.failureDetail ? <div className={sharedStyles.calloutWarn}>
-          <ExclamationCircleOutlined />
-          <span className={styles.failureContent}>
-            <b>{t("dataCatalog.taskManagement.details.failureReason")}</b>
-            <span>{task.failureDetail}</span>
-          </span>
-        </div> : null}
-      </section>
-
-      <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
-        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label="ID">{task.id || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>{task.catalogName || task.catalogId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.catalogId")}>{task.catalogId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.resource")}>{task.resourceName || task.resourceId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceId")}>{task.resourceId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.details.taskScope")}>{t(`dataCatalog.taskManagement.scope.${task.scope}`)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applyMode")}>{t(`dataCatalog.taskManagement.applyMode.${applyModeKey}`)}</Descriptions.Item>
-        </Descriptions>
-      </section>
-
-      <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.execution")}</h3>
-        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label={t("dataCatalog.taskManagement.details.agentId")}>{task.agentId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.agentTaskId")}>{task.agentTaskId || EMPTY_VALUE}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.confidenceThreshold")}>{`${Math.round(task.confidenceThreshold * 100)}%`}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.confidence")}>{`${Math.round(task.confidence * 100)}%`}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.confidenceDetail")}>{jsonDetail(task.confidenceDetailJson)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applied")}>
-            <span className={[sharedStyles.tag, task.applied ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
-              {t(task.applied ? "dataCatalog.taskManagement.applied.applied" : "dataCatalog.taskManagement.applied.notApplied")}
+  return (
+    <Drawer
+      className={styles.drawer}
+      destroyOnClose
+      onClose={onClose}
+      open={open}
+      styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
+      title={`${t("dataCatalog.task.semanticDetail")} · ${task.id}`}
+      width={640}
+    >
+      <div className={styles.drawerContent}>
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
+          <div className={styles.statusRow}>
+            <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
+              {t(`dataCatalog.taskManagement.scope.${task.scope}`)}
             </span>
-          </Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.applyDetail")}>{jsonDetail(task.applyDetailJson)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>{formatTime(task.startTime)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>{formatTime(task.finishTime)}</Descriptions.Item>
-        </Descriptions>
+            <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
+              {t(`dataCatalog.taskManagement.applyMode.${applyModeKey}`)}
+            </span>
+            <span
+              className={[
+                sharedStyles.tag,
+                task.applied ? sharedStyles.taskSucceeded : sharedStyles.taskPending,
+              ].join(" ")}
+            >
+              {t(
+                task.applied
+                  ? "dataCatalog.taskManagement.applied.applied"
+                  : "dataCatalog.taskManagement.applied.notApplied",
+              )}
+            </span>
+            <span className={[sharedStyles.tag, statusClass].join(" ")}>
+              {t(`dataCatalog.taskManagement.semanticStatus.${task.status}`)}
+            </span>
+          </div>
+          {task.failureDetail ? (
+            <div className={sharedStyles.calloutWarn}>
+              <ExclamationCircleOutlined />
+              <span className={styles.failureContent}>
+                <b>{t("dataCatalog.taskManagement.details.failureReason")}</b>
+                <span>{task.failureDetail}</span>
+              </span>
+            </div>
+          ) : null}
+        </section>
 
-        <>
-          <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.quality")}</h4>
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.task")}</h3>
           <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceEffective")}>
-              {quality ? <span className={[sharedStyles.tag, quality.resource_effective ? sharedStyles.taskSucceeded : sharedStyles.taskPending].join(" ")}>
-                {t(quality.resource_effective ? "dataCatalog.taskManagement.semantic.values.effective" : "dataCatalog.taskManagement.semantic.values.notEffective")}
-              </span> : EMPTY_VALUE}
+            <Descriptions.Item label="ID">{task.id || EMPTY_VALUE}</Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.catalog")}>
+              {task.catalogName || task.catalogId || EMPTY_VALUE}
             </Descriptions.Item>
-            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.fieldEffective")}>
-              {quality ? t("dataCatalog.taskManagement.semantic.values.fieldEffective", { effective: quality.field_effective ?? 0, total: quality.field_total ?? 0 }) : EMPTY_VALUE}
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.catalogId")}>
+              {task.catalogId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.resource")}>
+              {task.resourceName || task.resourceId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.resourceId")}>
+              {task.resourceId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.details.taskScope")}>
+              {t(`dataCatalog.taskManagement.scope.${task.scope}`)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applyMode")}>
+              {t(`dataCatalog.taskManagement.applyMode.${applyModeKey}`)}
             </Descriptions.Item>
           </Descriptions>
-          {warnings.length > 0 ? <Alert
-            className={styles.semanticWarning}
-            description={<ul>{warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
-            message={t("dataCatalog.taskManagement.semantic.fields.warnings")}
-            showIcon
-            type="warning"
-          /> : null}
-          {fieldDetails.length > 0 ? <Table<FieldApplyDetail>
-            className={styles.fieldDetailTable}
-            columns={fieldDetailColumns}
-            dataSource={fieldDetails}
-            pagination={false}
-            rowKey="name"
-            size="small"
-          /> : null}
-        </>
+        </section>
 
-        <h4 className={styles.detailSubsectionTitle}>{t("dataCatalog.taskManagement.semantic.detailSections.payload")}</h4>
-        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.inputHash")}>{task.inputHash || "-"}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.input")}>{jsonDetail(task.input)}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.result")}>{jsonDetail(task.resultJson)}</Descriptions.Item>
-        </Descriptions>
-      </section>
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.execution")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.taskManagement.details.agentId")}>
+              {task.agentId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.agentTaskId")}>
+              {task.agentTaskId || EMPTY_VALUE}
+            </Descriptions.Item>
+            <Descriptions.Item
+              label={t("dataCatalog.taskManagement.semantic.fields.confidenceThreshold")}
+            >{`${Math.round(task.confidenceThreshold * 100)}%`}</Descriptions.Item>
+            <Descriptions.Item
+              label={t("dataCatalog.taskManagement.columns.confidence")}
+            >{`${Math.round(task.confidence * 100)}%`}</Descriptions.Item>
+            <Descriptions.Item
+              label={t("dataCatalog.taskManagement.semantic.fields.confidenceDetail")}
+            >
+              {jsonDetail(task.confidenceDetailJson)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.columns.applied")}>
+              <span
+                className={[
+                  sharedStyles.tag,
+                  task.applied ? sharedStyles.taskSucceeded : sharedStyles.taskPending,
+                ].join(" ")}
+              >
+                {t(
+                  task.applied
+                    ? "dataCatalog.taskManagement.applied.applied"
+                    : "dataCatalog.taskManagement.applied.notApplied",
+                )}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.applyDetail")}>
+              {jsonDetail(task.applyDetailJson)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.fields.startTime")}>
+              {formatTime(task.startTime)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.finishedAt")}>
+              {formatTime(task.finishTime)}
+            </Descriptions.Item>
+          </Descriptions>
 
-      <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.audit")}</h3>
-        <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
-          <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>{creator}</Descriptions.Item>
-          <Descriptions.Item label={t("dataCatalog.task.createTime")}>{formatTime(task.createTime)}</Descriptions.Item>
-        </Descriptions>
-      </section>
-    </div>
-  </Drawer>;
+          <>
+            <h4 className={styles.detailSubsectionTitle}>
+              {t("dataCatalog.taskManagement.semantic.detailSections.quality")}
+            </h4>
+            <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+              <Descriptions.Item
+                label={t("dataCatalog.taskManagement.semantic.fields.resourceEffective")}
+              >
+                {quality ? (
+                  <span
+                    className={[
+                      sharedStyles.tag,
+                      quality.resource_effective
+                        ? sharedStyles.taskSucceeded
+                        : sharedStyles.taskPending,
+                    ].join(" ")}
+                  >
+                    {t(
+                      quality.resource_effective
+                        ? "dataCatalog.taskManagement.semantic.values.effective"
+                        : "dataCatalog.taskManagement.semantic.values.notEffective",
+                    )}
+                  </span>
+                ) : (
+                  EMPTY_VALUE
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item
+                label={t("dataCatalog.taskManagement.semantic.fields.fieldEffective")}
+              >
+                {quality
+                  ? t("dataCatalog.taskManagement.semantic.values.fieldEffective", {
+                      effective: quality.field_effective ?? 0,
+                      total: quality.field_total ?? 0,
+                    })
+                  : EMPTY_VALUE}
+              </Descriptions.Item>
+            </Descriptions>
+            {warnings.length > 0 ? (
+              <Alert
+                className={styles.semanticWarning}
+                description={
+                  <ul>
+                    {warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                }
+                message={t("dataCatalog.taskManagement.semantic.fields.warnings")}
+                showIcon
+                type="warning"
+              />
+            ) : null}
+            {fieldDetails.length > 0 ? (
+              <Table<FieldApplyDetail>
+                className={styles.fieldDetailTable}
+                columns={fieldDetailColumns}
+                dataSource={fieldDetails}
+                pagination={false}
+                rowKey="name"
+                size="small"
+              />
+            ) : null}
+          </>
+
+          <h4 className={styles.detailSubsectionTitle}>
+            {t("dataCatalog.taskManagement.semantic.detailSections.payload")}
+          </h4>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.inputHash")}>
+              {task.inputHash || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.input")}>
+              {jsonDetail(task.input)}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.taskManagement.semantic.fields.result")}>
+              {jsonDetail(task.resultJson)}
+            </Descriptions.Item>
+          </Descriptions>
+        </section>
+
+        <section className={styles.sectionCard}>
+          <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.audit")}</h3>
+          <Descriptions bordered className={styles.descriptionBlock} column={1} size="small">
+            <Descriptions.Item label={t("dataCatalog.task.fields.creator")}>
+              {creator}
+            </Descriptions.Item>
+            <Descriptions.Item label={t("dataCatalog.task.createTime")}>
+              {formatTime(task.createTime)}
+            </Descriptions.Item>
+          </Descriptions>
+        </section>
+      </div>
+    </Drawer>
+  );
 }

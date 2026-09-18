@@ -95,7 +95,11 @@
 
 .maskPreview {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 7%, transparent), transparent 58%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 7%, transparent),
+      transparent 58%
+    ),
     var(--color-bg-layout);
   border: 1px solid var(--color-border-secondary);
   border-radius: 10px;

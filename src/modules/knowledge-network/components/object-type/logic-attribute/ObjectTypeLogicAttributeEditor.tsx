@@ -7,24 +7,13 @@
 
 import { EllipsisOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Table, Tooltip, type TableProps } from "antd";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-} from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  DEFAULT_RESOURCE_COLOR,
-} from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
-import {
-  renderResourceIcon,
-} from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
+import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import { listObjectTypeLogicMetricModels } from "@/modules/knowledge-network/services/object-type-logic.service";
 import { deduplicateByName } from "./constants";
@@ -403,9 +392,7 @@ export const ObjectTypeLogicAttributeEditor = forwardRef<
               })}
               pagination={false}
               rowKey="name"
-              rowClassName={(record) =>
-                propertyErrors[record.name] ? styles.errorRow : ""
-              }
+              rowClassName={(record) => (propertyErrors[record.name] ? styles.errorRow : "")}
               rowSelection={{
                 onChange: (keys) => setSelectedRowKeys(keys as string[]),
                 selectedRowKeys,

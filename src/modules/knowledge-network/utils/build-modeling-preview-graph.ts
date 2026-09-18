@@ -26,8 +26,7 @@ export function buildModelingPreviewGraph(
     })),
     edges: relationTypes
       .filter(
-        (item) =>
-          nodeIdSet.has(item.sourceObjectTypeId) && nodeIdSet.has(item.targetObjectTypeId),
+        (item) => nodeIdSet.has(item.sourceObjectTypeId) && nodeIdSet.has(item.targetObjectTypeId),
       )
       .map((item) => ({
         id: item.id,

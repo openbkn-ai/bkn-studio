@@ -62,7 +62,11 @@ describe("ObjectTypeResourceDescriptionFillModal", () => {
     render(
       <ObjectTypeResourceDescriptionFillModal
         candidates={[
-          createCandidate({ propertyDisplayName: "Empty property", propertyName: "empty", status: "fillable" }),
+          createCandidate({
+            propertyDisplayName: "Empty property",
+            propertyName: "empty",
+            status: "fillable",
+          }),
           createCandidate({
             currentComment: "Manual description",
             propertyDisplayName: "Updatable property",
@@ -103,8 +107,6 @@ describe("ObjectTypeResourceDescriptionFillModal", () => {
       />,
     );
 
-    expect(
-      screen.getByText("knowledgeNetwork.objectTypeDescriptionFillEmpty"),
-    ).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.objectTypeDescriptionFillEmpty")).toBeTruthy();
   });
 });

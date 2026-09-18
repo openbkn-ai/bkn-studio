@@ -17,9 +17,7 @@ import {
 function renderGate(loader: KnowledgeNetworkChildRecordLoader) {
   return render(
     <MemoryRouter
-      initialEntries={[
-        "/knowledge-network/workspace/network-1/concept-groups/group-1/edit",
-      ]}
+      initialEntries={["/knowledge-network/workspace/network-1/concept-groups/group-1/edit"]}
     >
       <Routes>
         <Route

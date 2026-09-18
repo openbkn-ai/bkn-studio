@@ -18,7 +18,9 @@ describe("Community Trace analysis boundary", () => {
       .map((name) => readFileSync(join(directory, name), "utf8"))
       .join("\n");
 
-    expect(sources).not.toMatch(/business-provenance|business-graph|evidence-chain|snapshot-preview/);
+    expect(sources).not.toMatch(
+      /business-provenance|business-graph|evidence-chain|snapshot-preview/,
+    );
     expect(sources).not.toContain("@/modules/bkn-trace/services/trace.service");
   });
 });

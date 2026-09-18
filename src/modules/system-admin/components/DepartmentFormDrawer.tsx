@@ -12,10 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  createDepartment,
-  updateDepartment,
-} from "@/modules/system-admin/services/admin.service";
+import { createDepartment, updateDepartment } from "@/modules/system-admin/services/admin.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
 import { buildDeptTree } from "@/modules/system-admin/utils/admin-helpers";
 
@@ -176,7 +173,10 @@ export function DepartmentFormDrawer({
           <Input placeholder={t("systemAdmin.users.deptDrawer.emailPlaceholder")} />
         </Form.Item>
         <Form.Item label={t("systemAdmin.users.deptDrawer.remark")} name="remark">
-          <Input.TextArea placeholder={t("systemAdmin.users.deptDrawer.remarkPlaceholder")} rows={3} />
+          <Input.TextArea
+            placeholder={t("systemAdmin.users.deptDrawer.remarkPlaceholder")}
+            rows={3}
+          />
         </Form.Item>
       </Form>
     </Drawer>

@@ -62,8 +62,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
     identifier: "domain_risk_network",
     operations: mockKnowledgeNetworkOperations,
     name: "领域风控知识网络",
-    description:
-      "围绕风控对象、风险关系与行动策略组织的领域业务知识网络。",
+    description: "围绕风控对象、风险关系与行动策略组织的领域业务知识网络。",
     color: "#1677ff",
     icon: "deployment-unit",
     tags: ["风控", "核心"],
@@ -88,8 +87,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
     identifier: "domain_supply_network",
     operations: mockKnowledgeNetworkOperations,
     name: "领域供应链知识网络",
-    description:
-      "用于供应商、仓配、履约行动和经营指标建模的领域知识网络。",
+    description: "用于供应商、仓配、履约行动和经营指标建模的领域知识网络。",
     color: "#13c2c2",
     icon: "share-alt",
     tags: ["供应链"],
@@ -114,8 +112,7 @@ export let mockKnowledgeNetworks: KnowledgeNetworkRecord[] = [
     identifier: "domain_customer_network",
     operations: mockKnowledgeNetworkOperations,
     name: "领域客户知识网络",
-    description:
-      "聚焦客户主体、标签体系和营销动作的业务知识网络。",
+    description: "聚焦客户主体、标签体系和营销动作的业务知识网络。",
     color: "#52c41a",
     icon: "team",
     tags: ["客户", "营销"],
@@ -907,10 +904,7 @@ export const mockActionTypeExecutionConfigs: Record<
   },
 };
 
-export const mockActionTypeDetailExtras: Record<
-  string,
-  Record<string, ActionTypeDetailExtras>
-> = {
+export const mockActionTypeDetailExtras: Record<string, Record<string, ActionTypeDetailExtras>> = {
   "kn-domain-risk": {
     "at-risk-block": {
       affect: {
@@ -1003,7 +997,9 @@ export const mockActionTypeExecutionLogs: Record<string, ActionTypeExecutionLogD
   ],
 };
 
-function cloneActionTypeExecutionLog(log: ActionTypeExecutionLogDetail): ActionTypeExecutionLogDetail {
+function cloneActionTypeExecutionLog(
+  log: ActionTypeExecutionLogDetail,
+): ActionTypeExecutionLogDetail {
   return {
     ...log,
     results: log.results?.map((item) => ({ ...item })),
@@ -1039,7 +1035,9 @@ export function listMockActionTypeExecutionLogs(
   const filtered = filterMockActionTypeExecutionLogs(networkId, query);
   const offset = query.offset ?? 0;
   const limit = query.limit ?? 10;
-  const entries = filtered.slice(offset, offset + limit).map((item) => cloneActionTypeExecutionLog(item));
+  const entries = filtered
+    .slice(offset, offset + limit)
+    .map((item) => cloneActionTypeExecutionLog(item));
 
   return {
     entries,
@@ -1058,7 +1056,9 @@ export function listMockActionTypeExecutionResults(
   query: ActionTypeExecutionResultQuery,
 ): ActionTypeExecutionResultPage {
   const log = (mockActionTypeExecutionLogs[networkId] ?? []).find((item) => item.id === logId);
-  const matched = (log?.results ?? []).filter((item) => !query.status || item.status === query.status);
+  const matched = (log?.results ?? []).filter(
+    (item) => !query.status || item.status === query.status,
+  );
   return {
     entries: matched.slice(query.offset, query.offset + query.limit).map((item) => ({ ...item })),
     totalCount: matched.length,
@@ -1408,9 +1408,7 @@ export function buildMockObjectTypeDetail(
   networkId: string,
   objectTypeId: string,
 ): ObjectTypeDetail | null {
-  const record = (mockObjectTypes[networkId] ?? []).find(
-    (item) => item.id === objectTypeId,
-  );
+  const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
 
   if (!record) {
     return null;
@@ -1419,9 +1417,9 @@ export function buildMockObjectTypeDetail(
   const properties = cloneDataProperties(
     mockObjectTypeDataProperties[networkId]?.[objectTypeId] ?? [],
   );
-  const logicProperties = (
-    mockObjectTypeLogicProperties[networkId]?.[objectTypeId] ?? []
-  ).map((item) => ({ ...item }));
+  const logicProperties = (mockObjectTypeLogicProperties[networkId]?.[objectTypeId] ?? []).map(
+    (item) => ({ ...item }),
+  );
   const primaryKeys = properties.filter((item) => item.primaryKey).map((item) => item.name);
   const displayKey = properties.find((item) => item.displayKey)?.name ?? "";
 

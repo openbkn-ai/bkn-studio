@@ -135,9 +135,9 @@ describe("ResourceDetailPanel", () => {
       expect(label.parentElement?.textContent).toContain("0");
     });
     expect(screen.queryByText(resource.updateTime)).toBeNull();
-    expect(
-      screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" }),
-    ).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" })).toHaveLength(
+      3,
+    );
   });
 
   it("shows the original source metadata for each field", () => {
@@ -156,12 +156,7 @@ describe("ResourceDetailPanel", () => {
     const describedResource = { ...resource, description: "A long resource description" };
     render(
       <MemoryRouter>
-        <ResourceDetailPanel
-          active
-          canEdit={false}
-          catalog={null}
-          resource={describedResource}
-        />
+        <ResourceDetailPanel active canEdit={false} catalog={null} resource={describedResource} />
       </MemoryRouter>,
     );
 

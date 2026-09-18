@@ -21,10 +21,7 @@ export function KnowledgeNetworkAuthorizationActionLabel({
   return (
     <span className="console-tab-with-tier">
       {children}
-      <EditionBadge
-        capability={CAPABILITIES.PERM_FINE_GRAINED}
-        edition="professional"
-      />
+      <EditionBadge capability={CAPABILITIES.PERM_FINE_GRAINED} edition="professional" />
     </span>
   );
 }

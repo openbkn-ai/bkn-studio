@@ -94,21 +94,14 @@ export function ActionTypeExecutionScene() {
     access: operationAccess,
     error: permissionError,
     isLoading: isPermissionLoading,
-  } =
-    useKnowledgeNetworkOperationAccessState(
-      networkId,
-      ACTION_TYPE_EXECUTION_OPERATIONS,
-    );
+  } = useKnowledgeNetworkOperationAccessState(networkId, ACTION_TYPE_EXECUTION_OPERATIONS);
   const canModify = operationAccess.modify;
   const canExecute = detail ? hasKnowledgeNetworkRecordOperation(detail, "execute") : false;
   const actionSource = detail?.executionConfig.actionSource;
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: [
-      "execution-factory:toolbox:view",
-      "execution-factory:function:view",
-    ],
+    requiredPermissions: ["execution-factory:toolbox:view", "execution-factory:function:view"],
   });
   const canViewMcp = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -118,7 +111,6 @@ export function ActionTypeExecutionScene() {
     !actionSource ||
     actionSource.type === "manual" ||
     (actionSource.type === "tool" ? canViewToolbox : canViewMcp);
-
 
   const listPath = `/knowledge-network/workspace/${networkId}/action-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/action-types/${actionTypeId}/detail`;
@@ -139,10 +131,7 @@ export function ActionTypeExecutionScene() {
       setError(null);
 
       try {
-        const actionTypeDetail = await getKnowledgeNetworkActionTypeDetail(
-          networkId,
-          actionTypeId,
-        );
+        const actionTypeDetail = await getKnowledgeNetworkActionTypeDetail(networkId, actionTypeId);
 
         if (!actionTypeDetail) {
           throw new Error(t("common.notFound"));
@@ -183,9 +172,7 @@ export function ActionTypeExecutionScene() {
       .then((resolved) => {
         if (!cancelled) {
           setResolvedRunActionSource(resolved);
-          setRunSourceResolutionFailed(
-            needsActionTypeActionSourceDisplayResolution(resolved),
-          );
+          setRunSourceResolutionFailed(needsActionTypeActionSourceDisplayResolution(resolved));
         }
       })
       .catch(() => {
@@ -225,9 +212,7 @@ export function ActionTypeExecutionScene() {
     if (validationErrorKey) {
       const validationError = t(validationErrorKey);
       setExecutionSourceError(
-        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY
-          ? validationError
-          : null,
+        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );
       void message.error(validationError);
       return;
@@ -283,9 +268,7 @@ export function ActionTypeExecutionScene() {
       return;
     }
 
-    const dynamicParameters = getActionTypeDynamicParameters(
-      detail.executionConfig.parameters,
-    );
+    const dynamicParameters = getActionTypeDynamicParameters(detail.executionConfig.parameters);
     if (dynamicParameters.length > 0) {
       setExecuteModalOpen(true);
       return;
@@ -307,12 +290,13 @@ export function ActionTypeExecutionScene() {
       runSourceResolving || sourceUnavailable
         ? ""
         : getReadableActionSourceDisplayName(resolvedRunActionSource) ||
-          (!detail.executionConfig.actionSource
-            ? detail.executionConfig.sourceName.trim()
-            : "");
+          (!detail.executionConfig.actionSource ? detail.executionConfig.sourceName.trim() : "");
 
     return (
-      <Card className={styles.executionCard} title={t("knowledgeNetwork.actionTypeExecutionRunTitle")}>
+      <Card
+        className={styles.executionCard}
+        title={t("knowledgeNetwork.actionTypeExecutionRunTitle")}
+      >
         <Descriptions column={2} size="middle">
           <Descriptions.Item label={t("knowledgeNetwork.actionTypeObject")}>
             {detail.objectTypeName || detail.objectTypeId}
@@ -320,8 +304,7 @@ export function ActionTypeExecutionScene() {
           <Descriptions.Item label={t("knowledgeNetwork.actionTypeOperatorLabel")}>
             {runSourceResolving ? (
               <span>
-                <Spin size="small" />{" "}
-                {t("knowledgeNetwork.actionTypeExecutionSourceResolving")}
+                <Spin size="small" /> {t("knowledgeNetwork.actionTypeExecutionSourceResolving")}
               </span>
             ) : (
               sourceName || t("knowledgeNetwork.actionTypeEmptyValue")
@@ -385,10 +368,7 @@ export function ActionTypeExecutionScene() {
           onParameterSchemaStateChange={setExecutionSchemaState}
           onChange={(nextValue) => {
             setExecutionValue(nextValue);
-            if (
-              getActionSourceDisplayName(nextValue.actionSource) ||
-              nextValue.sourceName.trim()
-            ) {
+            if (getActionSourceDisplayName(nextValue.actionSource) || nextValue.sourceName.trim()) {
               setExecutionSourceError(null);
             }
           }}

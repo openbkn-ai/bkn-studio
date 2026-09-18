@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApiOutlined,
-  CodeOutlined,
-  ThunderboltOutlined,
-} from "@ant-design/icons";
+import { ApiOutlined, CodeOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { Card, Tag, Typography } from "antd";
 
 import type { ReactNode } from "react";

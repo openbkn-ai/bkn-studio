@@ -58,7 +58,11 @@ import {
   updateToolStatus,
 } from "@/modules/execution-factory/services/tool.service";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
-import type { ToolRecord, ToolRunLogEntry, ToolStatus } from "@/modules/execution-factory/types/tool";
+import type {
+  ToolRecord,
+  ToolRunLogEntry,
+  ToolStatus,
+} from "@/modules/execution-factory/types/tool";
 import {
   buildToolCapabilityManifest,
   hasCapabilityIoFacts,
@@ -106,9 +110,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
 
   const loadToolbox = useCallback(async () => {
     try {
-      const record = catalogContext
-        ? await getToolboxMarket(boxId)
-        : await getToolbox(boxId);
+      const record = catalogContext ? await getToolboxMarket(boxId) : await getToolbox(boxId);
       setToolbox(record);
     } catch {
       setToolbox(null);
@@ -165,12 +167,18 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   }, [loading, searchParams, setSearchParams, viewMode]);
 
   const isFunctionToolbox = toolbox?.metadataType === "function";
-  const boxToolModifyPermission = toolbox?.metadataType === "function"
-    ? "execution-factory:function:edit"
-    : toolbox?.metadataType === "openapi" ? "execution-factory:toolbox:edit" : "";
-  const boxToolDebugPermission = toolbox?.metadataType === "function"
-    ? "execution-factory:function:debug"
-    : toolbox?.metadataType === "openapi" ? "execution-factory:toolbox:debug" : "";
+  const boxToolModifyPermission =
+    toolbox?.metadataType === "function"
+      ? "execution-factory:function:edit"
+      : toolbox?.metadataType === "openapi"
+        ? "execution-factory:toolbox:edit"
+        : "";
+  const boxToolDebugPermission =
+    toolbox?.metadataType === "function"
+      ? "execution-factory:function:debug"
+      : toolbox?.metadataType === "openapi"
+        ? "execution-factory:toolbox:debug"
+        : "";
 
   const handleBack = () => {
     if (onBack) {
@@ -237,10 +245,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
         return;
       }
 
-      if (
-        nextName === selectedTool.name &&
-        nextDescription === (selectedTool.description ?? "")
-      ) {
+      if (nextName === selectedTool.name && nextDescription === (selectedTool.description ?? "")) {
         return;
       }
 
@@ -299,29 +304,32 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
       </PermissionGate>
     );
 
-  const handleToggleStatus = useCallback((tool: ToolRecord) => {
-    // Marketplace preview is read-only. A render-layer guard can be bypassed with ?action=edit,
-    // so enforce the write gate in the handler to avoid changing another domain's toolbox.
-    if (catalogContext) {
-      return;
-    }
-    const nextStatus: ToolStatus = tool.status === "enabled" ? "disabled" : "enabled";
+  const handleToggleStatus = useCallback(
+    (tool: ToolRecord) => {
+      // Marketplace preview is read-only. A render-layer guard can be bypassed with ?action=edit,
+      // so enforce the write gate in the handler to avoid changing another domain's toolbox.
+      if (catalogContext) {
+        return;
+      }
+      const nextStatus: ToolStatus = tool.status === "enabled" ? "disabled" : "enabled";
 
-    void modal.confirm({
-      title: t("executionFactory.toolStatusChangeConfirmTitle"),
-      content: t("executionFactory.toolStatusChangeConfirmDescription", {
-        name: tool.name,
-        status: t(`executionFactory.toolStatuses.${nextStatus}`),
-      }),
-      okText: t(resolveToolStatusOkTextKey(nextStatus)),
-      cancelText: t("common.cancel"),
-      onOk: async () => {
-        await updateToolStatus(boxId, [tool.toolId], nextStatus);
-        void message.success(t("common.success"));
-        await loadTools();
-      },
-    });
-  }, [boxId, catalogContext, loadTools, message, modal, t]);
+      void modal.confirm({
+        title: t("executionFactory.toolStatusChangeConfirmTitle"),
+        content: t("executionFactory.toolStatusChangeConfirmDescription", {
+          name: tool.name,
+          status: t(`executionFactory.toolStatuses.${nextStatus}`),
+        }),
+        okText: t(resolveToolStatusOkTextKey(nextStatus)),
+        cancelText: t("common.cancel"),
+        onOk: async () => {
+          await updateToolStatus(boxId, [tool.toolId], nextStatus);
+          void message.success(t("common.success"));
+          await loadTools();
+        },
+      });
+    },
+    [boxId, catalogContext, loadTools, message, modal, t],
+  );
 
   const handleBatchStatus = (nextStatus: ToolStatus) => {
     // Marketplace preview is read-only. viewMode hides bulk UI, but keep the write-side handler
@@ -407,9 +415,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
   // Load up to 100 tools once with loadTools and filter locally; no backend filtering is needed.
   const visibleItems = useMemo(() => {
     const keyword = railKeyword.trim().toLowerCase();
-    return keyword
-      ? items.filter((item) => item.name.toLowerCase().includes(keyword))
-      : items;
+    return keyword ? items.filter((item) => item.name.toLowerCase().includes(keyword)) : items;
   }, [items, railKeyword]);
 
   const statusTag = useMemo(() => {
@@ -436,11 +442,7 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               color: "var(--color-info-text)",
             };
 
-    return (
-      <Tag style={style}>
-        {t(`executionFactory.toolboxStatuses.${toolbox.status}`)}
-      </Tag>
-    );
+    return <Tag style={style}>{t(`executionFactory.toolboxStatuses.${toolbox.status}`)}</Tag>;
   }, [t, toolbox?.status]);
 
   const renderToolboxExportButton = () => {
@@ -584,7 +586,11 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
               {!viewMode ? (
                 <Space direction="vertical" size={16} style={{ marginTop: 16, width: "100%" }}>
                   {isFunctionToolbox ? (
-                    <Alert message={t("executionFactory.functionToolCreateHint")} showIcon type="info" />
+                    <Alert
+                      message={t("executionFactory.functionToolCreateHint")}
+                      showIcon
+                      type="info"
+                    />
                   ) : null}
                   <Space>
                     <PermissionGate permissions={boxToolModifyPermission}>
@@ -641,209 +647,207 @@ export function ToolboxToolsScene({ boxId, onBack }: ToolboxToolsSceneProps) {
                 </Space>
               </div>
             ) : null}
-            <Layout
-              className={`${styles.layout} ${styles.layoutHeadAligned}`}
-            >
-            <Sider className={styles.sider} width={320}>
-              <EntityListRail
-                activeId={selectedTool?.toolId ?? null}
-                emptyText={t("executionFactory.toolboxToolListEmptyFiltered")}
-                icon={<BarsOutlined />}
-                items={visibleItems.map((item) => ({
-                  badge: <HttpMethodTag compact method={item.method} />,
-                  id: item.toolId,
-                  muted: item.status === "disabled",
-                  name: item.name,
-                  status: {
-                    checked: item.status === "enabled",
-                    // Marketplace preview (from=catalog) views another domain's toolbox, so show status without a toggle.
-                    disabled: catalogContext,
-                    label: t(`executionFactory.toolStatuses.${item.status}`),
-                    onChange: viewMode ? undefined : () => handleToggleStatus(item),
-                  },
-                  /*
+            <Layout className={`${styles.layout} ${styles.layoutHeadAligned}`}>
+              <Sider className={styles.sider} width={320}>
+                <EntityListRail
+                  activeId={selectedTool?.toolId ?? null}
+                  emptyText={t("executionFactory.toolboxToolListEmptyFiltered")}
+                  icon={<BarsOutlined />}
+                  items={visibleItems.map((item) => ({
+                    badge: <HttpMethodTag compact method={item.method} />,
+                    id: item.toolId,
+                    muted: item.status === "disabled",
+                    name: item.name,
+                    status: {
+                      checked: item.status === "enabled",
+                      // Marketplace preview (from=catalog) views another domain's toolbox, so show status without a toggle.
+                      disabled: catalogContext,
+                      label: t(`executionFactory.toolStatuses.${item.status}`),
+                      onChange: viewMode ? undefined : () => handleToggleStatus(item),
+                    },
+                    /*
                     与右侧「输入输出」那行同源：都取 buildToolCapabilityManifest 的口径
                     （入参 = api_spec.parameters，出参 = 响应状态码），免得同一个工具在
                     一屏里给出两个数。查不到出入参事实时 renderToolIoTags 返回 null。
                   */
-                  tags: renderToolIoTags(item),
-                }))}
-                onSelect={(toolId) => {
-                  const target = items.find((item) => item.toolId === toolId);
-                  if (target) {
-                    void handleSelectTool(target);
-                  }
-                }}
-                onToggleSelect={toggleToolSelection}
-                search={{
-                  onChange: setRailKeyword,
-                  placeholder: t("executionFactory.toolboxFilterTools"),
-                  value: railKeyword,
-                }}
-                selectable={!viewMode}
-                selectedIds={selectedToolIds}
-                /* 与详情区状态开关同口径：需要 tool:edit。手工构造 ?from=catalog&action=edit
+                    tags: renderToolIoTags(item),
+                  }))}
+                  onSelect={(toolId) => {
+                    const target = items.find((item) => item.toolId === toolId);
+                    if (target) {
+                      void handleSelectTool(target);
+                    }
+                  }}
+                  onToggleSelect={toggleToolSelection}
+                  search={{
+                    onChange: setRailKeyword,
+                    placeholder: t("executionFactory.toolboxFilterTools"),
+                    value: railKeyword,
+                  }}
+                  selectable={!viewMode}
+                  selectedIds={selectedToolIds}
+                  /* 与详情区状态开关同口径：需要 tool:edit。手工构造 ?from=catalog&action=edit
                    会让 viewMode 为假，靠这道门禁 + 上面的 disabled 兜住，避免改到别人域里
                    工具的启用状态。 */
-                statusPermission={boxToolModifyPermission}
-                title={t("executionFactory.toolboxToolListTitle", {
-                  count: items.length,
-                })}
-              />
-            </Sider>
-            <Content className={styles.content}>
-              {selectedTool ? (
-                <>
-                  <DetailMetaPanel
-                    className={styles.section}
-                    footer={
-                      selectedToolManifest ? (
-                        <CapabilityReadinessHint manifest={selectedToolManifest} />
-                      ) : undefined
-                    }
-                    headerAside={
-                      <div className={styles.toolHeaderAside}>
-                        <span className={styles.toolStatus}>
-                          {/*
+                  statusPermission={boxToolModifyPermission}
+                  title={t("executionFactory.toolboxToolListTitle", {
+                    count: items.length,
+                  })}
+                />
+              </Sider>
+              <Content className={styles.content}>
+                {selectedTool ? (
+                  <>
+                    <DetailMetaPanel
+                      className={styles.section}
+                      footer={
+                        selectedToolManifest ? (
+                          <CapabilityReadinessHint manifest={selectedToolManifest} />
+                        ) : undefined
+                      }
+                      headerAside={
+                        <div className={styles.toolHeaderAside}>
+                          <span className={styles.toolStatus}>
+                            {/*
                             开关按设计是「不进编辑态也能直接扳」，所以这里不跟着 viewMode 禁用；
                             但仍要门禁：没有 tool:edit 的人不该拿到这个入口，市场预览态（from=catalog）
                             更不该改到别人工具箱里的工具状态。状态文案不进门禁，只读用户也要看得到。
                           */}
-                          <PermissionGate permissions={boxToolModifyPermission}>
-                            <Switch
-                              checked={selectedTool.status === "enabled"}
-                              disabled={catalogContext}
-                              onChange={() => handleToggleStatus(selectedTool)}
-                              size="small"
-                            />
-                          </PermissionGate>
-                          {selectedTool.status === "enabled"
-                            ? t("executionFactory.toolboxToolEnabled")
-                            : t("executionFactory.toolboxToolDisabled")}
-                        </span>
-                        {selectedToolManifest ? (
-                          <CapabilityReadinessScore manifest={selectedToolManifest} />
-                        ) : null}
-                      </div>
-                    }
-                    items={[]}
-                    subheader={
-                      <div className={styles.toolIdentity}>
-                        <div className={styles.toolIdentityDesc}>
+                            <PermissionGate permissions={boxToolModifyPermission}>
+                              <Switch
+                                checked={selectedTool.status === "enabled"}
+                                disabled={catalogContext}
+                                onChange={() => handleToggleStatus(selectedTool)}
+                                size="small"
+                              />
+                            </PermissionGate>
+                            {selectedTool.status === "enabled"
+                              ? t("executionFactory.toolboxToolEnabled")
+                              : t("executionFactory.toolboxToolDisabled")}
+                          </span>
+                          {selectedToolManifest ? (
+                            <CapabilityReadinessScore manifest={selectedToolManifest} />
+                          ) : null}
+                        </div>
+                      }
+                      items={[]}
+                      subheader={
+                        <div className={styles.toolIdentity}>
+                          <div className={styles.toolIdentityDesc}>
+                            {renderToolEditable(
+                              <InlineEditableText
+                                block
+                                emptyLabel={t("executionFactory.agentReadiness.emptyIntent")}
+                                key={`${selectedTool.toolId}-description`}
+                                multiline
+                                onChange={(description) => void handleInlinePatch({ description })}
+                                rows={2}
+                                value={selectedTool.description ?? ""}
+                              />,
+                              <span
+                                className={styles.toolIdentityDescClamp}
+                                title={selectedTool.description}
+                              >
+                                {selectedTool.description ||
+                                  t("executionFactory.agentReadiness.emptyIntent")}
+                              </span>,
+                            )}
+                          </div>
+                        </div>
+                      }
+                      title={
+                        // Align with the function-workbench header: badge plus clickable name instead of a Tool information heading.
+                        <span className={styles.toolIdentityTitle}>
+                          <span className={styles.apiBadge}>api</span>
                           {renderToolEditable(
                             <InlineEditableText
-                              block
-                              emptyLabel={t("executionFactory.agentReadiness.emptyIntent")}
-                              key={`${selectedTool.toolId}-description`}
-                              multiline
-                              onChange={(description) => void handleInlinePatch({ description })}
-                              rows={2}
-                              value={selectedTool.description ?? ""}
+                              className={styles.toolIdentityNameInput}
+                              emptyLabel={t("executionFactory.workbenchClickToName")}
+                              key={`${selectedTool.toolId}-name`}
+                              onChange={(name) => void handleInlinePatch({ name })}
+                              value={selectedTool.name}
                             />,
-                            <span
-                              className={styles.toolIdentityDescClamp}
-                              title={selectedTool.description}
-                            >
-                              {selectedTool.description ||
-                                t("executionFactory.agentReadiness.emptyIntent")}
-                            </span>,
+                            <span className={styles.toolIdentityName}>{selectedTool.name}</span>,
                           )}
-                        </div>
-                      </div>
-                    }
-                    title={
-                      // Align with the function-workbench header: badge plus clickable name instead of a Tool information heading.
-                      <span className={styles.toolIdentityTitle}>
-                        <span className={styles.apiBadge}>api</span>
-                        {renderToolEditable(
-                          <InlineEditableText
-                            className={styles.toolIdentityNameInput}
-                            emptyLabel={t("executionFactory.workbenchClickToName")}
-                            key={`${selectedTool.toolId}-name`}
-                            onChange={(name) => void handleInlinePatch({ name })}
-                            value={selectedTool.name}
-                          />,
-                          <span className={styles.toolIdentityName}>{selectedTool.name}</span>,
-                        )}
-                      </span>
-                    }
-                    variant="plain"
-                  />
-                  {selectedTool.method || selectedTool.path ? (
-                    /*
+                        </span>
+                      }
+                      variant="plain"
+                    />
+                    {selectedTool.method || selectedTool.path ? (
+                      /*
                       端点信息另起一档：头部只放「徽标 + 名字 + 描述」两行，与函数工作台
                       和 MCP 详情同高；端点挤进头里会把左右两栏的分隔线撑得高低不一。
                     */
-                    <div className={`${styles.section} ${styles.endpoint}`}>
-                      <div className={styles.endpointRow}>
-                        <span className={styles.endpointLabel}>
-                          <NodeIndexOutlined />
-                          {t("executionFactory.toolEndpointLabel")}
-                        </span>
-                        <span className={styles.endpointValue}>
-                          <HttpMethodTag compact method={selectedTool.method} />
-                          <span className={styles.endpointPath}>{selectedTool.path || "-"}</span>
-                        </span>
+                      <div className={`${styles.section} ${styles.endpoint}`}>
+                        <div className={styles.endpointRow}>
+                          <span className={styles.endpointLabel}>
+                            <NodeIndexOutlined />
+                            {t("executionFactory.toolEndpointLabel")}
+                          </span>
+                          <span className={styles.endpointValue}>
+                            <HttpMethodTag compact method={selectedTool.method} />
+                            <span className={styles.endpointPath}>{selectedTool.path || "-"}</span>
+                          </span>
+                        </div>
+                        <div className={styles.endpointRow}>
+                          <span className={styles.endpointLabel}>
+                            <LinkOutlined />
+                            {t("executionFactory.toolServerRootLabel")}
+                          </span>
+                          <span className={styles.endpointServer}>
+                            {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}
+                          </span>
+                        </div>
                       </div>
-                      <div className={styles.endpointRow}>
-                        <span className={styles.endpointLabel}>
-                          <LinkOutlined />
-                          {t("executionFactory.toolServerRootLabel")}
+                    ) : null}
+                    <div className={styles.ioPanel}>
+                      <div className={styles.ioHeader}>
+                        <span>
+                          {t("executionFactory.toolboxInputOutputTitle")}
+                          {selectedToolManifest ? (
+                            <CapabilityIoCounts manifest={selectedToolManifest} />
+                          ) : null}
                         </span>
-                        <span className={styles.endpointServer}>
-                          {selectedTool.serverUrl || toolbox?.serviceUrl || "-"}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-                  <div className={styles.ioPanel}>
-                    <div className={styles.ioHeader}>
-                      <span>
-                        {t("executionFactory.toolboxInputOutputTitle")}
-                        {selectedToolManifest ? (
-                          <CapabilityIoCounts manifest={selectedToolManifest} />
-                        ) : null}
-                      </span>
-                      <span className={styles.toolHeaderActions}>
-                        {/*
+                        <span className={styles.toolHeaderActions}>
+                          {/*
                           市场预览态（from=catalog）看的是别的域的工具箱，不给编辑入口，
                           与「编辑工具箱」按钮的 !catalogContext 守卫对齐。
                         */}
-                        {!catalogContext ? (
-                          <PermissionGate permissions={boxToolModifyPermission}>
-                            <AppButton
-                              onClick={() => setEditToolId(selectedTool.toolId)}
-                              type="link"
-                            >
-                              {t("common.edit")}
+                          {!catalogContext ? (
+                            <PermissionGate permissions={boxToolModifyPermission}>
+                              <AppButton
+                                onClick={() => setEditToolId(selectedTool.toolId)}
+                                type="link"
+                              >
+                                {t("common.edit")}
+                              </AppButton>
+                            </PermissionGate>
+                          ) : null}
+                          <PermissionGate permissions={boxToolDebugPermission}>
+                            <AppButton onClick={() => setDebugRecord(selectedTool)} type="primary">
+                              {t("executionFactory.debug")}
                             </AppButton>
                           </PermissionGate>
-                        ) : null}
-                        <PermissionGate permissions={boxToolDebugPermission}>
-                          <AppButton onClick={() => setDebugRecord(selectedTool)} type="primary">
-                            {t("executionFactory.debug")}
-                          </AppButton>
-                        </PermissionGate>
-                      </span>
+                        </span>
+                      </div>
+                      <ToolIoPanel
+                        functionInput={
+                          selectedToolDetail?.metadataType === "function"
+                            ? selectedToolDetail.functionInput
+                            : undefined
+                        }
+                        ioSpec={selectedToolDetail?.ioSpec}
+                        runLogs={toolRunLogs}
+                      />
                     </div>
-                    <ToolIoPanel
-                      functionInput={
-                        selectedToolDetail?.metadataType === "function"
-                          ? selectedToolDetail.functionInput
-                          : undefined
-                      }
-                      ioSpec={selectedToolDetail?.ioSpec}
-                      runLogs={toolRunLogs}
-                    />
+                  </>
+                ) : (
+                  <div className={styles.emptyWrap}>
+                    <Empty />
                   </div>
-                </>
-              ) : (
-                <div className={styles.emptyWrap}>
-                  <Empty />
-                </div>
-              )}
-            </Content>
-          </Layout>
+                )}
+              </Content>
+            </Layout>
           </>
         )}
       </section>

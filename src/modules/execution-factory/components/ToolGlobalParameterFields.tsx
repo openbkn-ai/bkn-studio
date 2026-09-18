@@ -22,10 +22,7 @@ export function ToolGlobalParameterFields({
 
   return (
     <>
-      <Form.Item
-        label={t("executionFactory.globalParameterName")}
-        name={[...namePrefix, "name"]}
-      >
+      <Form.Item label={t("executionFactory.globalParameterName")} name={[...namePrefix, "name"]}>
         <Input />
       </Form.Item>
       <Form.Item
@@ -35,16 +32,10 @@ export function ToolGlobalParameterFields({
         <Input.TextArea rows={2} />
       </Form.Item>
       <Form.Item label={t("executionFactory.globalParameterIn")} name={[...namePrefix, "in"]}>
-        <Select
-          allowClear
-          options={inOptions.map((value) => ({ label: value, value }))}
-        />
+        <Select allowClear options={inOptions.map((value) => ({ label: value, value }))} />
       </Form.Item>
       <Form.Item label={t("executionFactory.globalParameterType")} name={[...namePrefix, "type"]}>
-        <Select
-          allowClear
-          options={typeOptions.map((value) => ({ label: value, value }))}
-        />
+        <Select allowClear options={typeOptions.map((value) => ({ label: value, value }))} />
       </Form.Item>
       <Form.Item
         label={t("executionFactory.globalParameterRequired")}

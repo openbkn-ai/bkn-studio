@@ -125,7 +125,9 @@ export function ToolDebugModal({
       }
       width="min(1040px, 92vw)"
     >
-      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t("executionFactory.debugSampleHint")}
+      </Typography.Paragraph>
       <Form form={form} layout="vertical">
         <HttpDebugRequestFields
           ioSpec={ioSpec}

@@ -7,8 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-export const API_BASE_URL =
-  process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:9000/api";
+export const API_BASE_URL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:9000/api";
 export const API_PREFIX = `${API_BASE_URL}/agent-operator-integration/v1`;
 
 export function buildUniqueName(prefix: string) {
@@ -22,10 +21,9 @@ export function defaultApiHeaders() {
 }
 
 export async function assertBackendReady(request: APIRequestContext) {
-  const response = await request.get(
-    `${API_PREFIX}/operator/info/list?page=1&page_size=1`,
-    { headers: defaultApiHeaders() },
-  );
+  const response = await request.get(`${API_PREFIX}/operator/info/list?page=1&page_size=1`, {
+    headers: defaultApiHeaders(),
+  });
 
   if (!response.ok()) {
     throw new Error(

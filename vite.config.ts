@@ -46,9 +46,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_AGENT_OBSERVABILITY_TARGET?.trim() ||
     "";
   const safeProxyTarget =
-    env.VITE_SAFE_PROXY_TARGET?.trim() ||
-    process.env.VITE_SAFE_PROXY_TARGET?.trim() ||
-    "";
+    env.VITE_SAFE_PROXY_TARGET?.trim() || process.env.VITE_SAFE_PROXY_TARGET?.trim() || "";
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
@@ -216,8 +214,14 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(projectRoot, "./src"),
-        diagnostics_channel: path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
-        "node:diagnostics_channel": path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
+        diagnostics_channel: path.resolve(
+          projectRoot,
+          "./src/framework/compat/diagnostics-channel.browser.ts",
+        ),
+        "node:diagnostics_channel": path.resolve(
+          projectRoot,
+          "./src/framework/compat/diagnostics-channel.browser.ts",
+        ),
       },
     },
     build: {

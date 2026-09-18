@@ -11,10 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  extractRequestErrorMessage,
-  isRequestConflict,
-} from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
 import { humanizeConnectorFieldLabel } from "@/modules/data-connect/lib/connector-template";
@@ -57,8 +54,7 @@ export function DataConnectDetailDrawer({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [record, setRecord] = useState<DataConnectRecord | null>(null);
-  const [schedule, setSchedule] =
-    useState<DataConnectHealthCheckSchedule | null>(null);
+  const [schedule, setSchedule] = useState<DataConnectHealthCheckSchedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
@@ -128,9 +124,7 @@ export function DataConnectDetailDrawer({
     () => connectorTypes.find((item) => item.type === record?.connectorType),
     [connectorTypes, record?.connectorType],
   );
-  const configEntries = record
-    ? buildConfigEntries(record, t, selectedConnectorType)
-    : [];
+  const configEntries = record ? buildConfigEntries(record, t, selectedConnectorType) : [];
 
   return (
     <Drawer
@@ -179,7 +173,9 @@ export function DataConnectDetailDrawer({
                     record.tags.length > 0 ? (
                       <Space size={[4, 4]} wrap>
                         {record.tags.map((tag) => (
-                          <Tag className={styles.catalogTag} key={tag}>{tag}</Tag>
+                          <Tag className={styles.catalogTag} key={tag}>
+                            {tag}
+                          </Tag>
                         ))}
                       </Space>
                     ) : (
@@ -290,9 +286,7 @@ export function DataConnectDetailDrawer({
           </section>
           <section className={styles.sectionCard}>
             <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>
-                {t("dataConnect.healthCheckSchedule.title")}
-              </h3>
+              <h3 className={styles.sectionTitle}>{t("dataConnect.healthCheckSchedule.title")}</h3>
               {schedule && hasCatalogOperation(record, "modify") ? (
                 <AppButton
                   onClick={() => {
@@ -316,9 +310,7 @@ export function DataConnectDetailDrawer({
                   {
                     key: "mode",
                     label: t("dataConnect.healthCheckSchedule.mode"),
-                    children: t(
-                      `dataConnect.healthCheckSchedule.modes.${schedule.mode}`,
-                    ),
+                    children: t(`dataConnect.healthCheckSchedule.modes.${schedule.mode}`),
                   },
                   {
                     key: "cronExpr",
@@ -363,12 +355,11 @@ export function DataConnectDetailDrawer({
 
             try {
               setScheduleUpdating(true);
-              const nextSchedule =
-                await updateDataConnectHealthCheckSchedule(
-                  submittedRecordId,
-                  input,
-                  schedule.expectedUpdateTime,
-                );
+              const nextSchedule = await updateDataConnectHealthCheckSchedule(
+                submittedRecordId,
+                input,
+                schedule.expectedUpdateTime,
+              );
               if (recordIdentityRef.current !== submittedRecordIdentity) {
                 return;
               }
@@ -382,8 +373,7 @@ export function DataConnectDetailDrawer({
               void message.error(extractRequestErrorMessage(error));
               if (isRequestConflict(error)) {
                 try {
-                  const latestSchedule =
-                    await getDataConnectHealthCheckSchedule(submittedRecordId);
+                  const latestSchedule = await getDataConnectHealthCheckSchedule(submittedRecordId);
                   if (recordIdentityRef.current !== submittedRecordIdentity) {
                     return;
                   }
@@ -475,18 +465,20 @@ function buildConfigEntries(
   const config = record.connectorConfig ?? {};
   const fieldConfig = connectorType?.fieldConfig ?? {};
   const templateKeys = Object.keys(fieldConfig);
-  const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort((left, right) => {
-    const leftRank = configFieldOrderRank(left);
-    const rightRank = configFieldOrderRank(right);
+  const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort(
+    (left, right) => {
+      const leftRank = configFieldOrderRank(left);
+      const rightRank = configFieldOrderRank(right);
 
-    if (leftRank !== rightRank) {
-      return leftRank - rightRank;
-    }
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
 
-    return humanizeConnectorFieldLabel(left, connectorType?.type).localeCompare(
-      humanizeConnectorFieldLabel(right, connectorType?.type),
-    );
-  });
+      return humanizeConnectorFieldLabel(left, connectorType?.type).localeCompare(
+        humanizeConnectorFieldLabel(right, connectorType?.type),
+      );
+    },
+  );
 
   return keys.map((key) => {
     const configItem = fieldConfig[key];
@@ -495,13 +487,17 @@ function buildConfigEntries(
       description: "",
       key,
       label: humanizeConnectorFieldLabel(key, connectorType?.type),
-      value: configItem?.encrypted
-        ? t("dataConnect.sensitiveValueHidden")
-        : hasValue
-          ? isDatabaseListField(key) && Array.isArray(config[key])
-            ? <DatabaseListValue values={config[key]} />
-            : formatConfigValue(config[key], t)
-          : "-",
+      value: configItem?.encrypted ? (
+        t("dataConnect.sensitiveValueHidden")
+      ) : hasValue ? (
+        isDatabaseListField(key) && Array.isArray(config[key]) ? (
+          <DatabaseListValue values={config[key]} />
+        ) : (
+          formatConfigValue(config[key], t)
+        )
+      ) : (
+        "-"
+      ),
     };
   });
 }

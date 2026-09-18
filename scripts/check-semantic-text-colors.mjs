@@ -59,9 +59,11 @@ function scanTsx(filePath, source) {
 }
 
 function isSemanticColor(value) {
-  return value.startsWith("var(")
-    || value.startsWith("color-mix(")
-    || ["currentColor", "inherit", "initial", "unset", "transparent"].includes(value);
+  return (
+    value.startsWith("var(") ||
+    value.startsWith("color-mix(") ||
+    ["currentColor", "inherit", "initial", "unset", "transparent"].includes(value)
+  );
 }
 
 function addFinding(filePath, source, index, value) {

@@ -17,9 +17,12 @@ describe("isValidSemanticUnderstandingSampleRows", () => {
     expect(isValidSemanticUnderstandingSampleRows(value)).toBe(true);
   });
 
-  it.each([0, 21, 30, -1, 1.5, Number.NaN, undefined])("rejects invalid sample row limits: %s", (value) => {
-    expect(isValidSemanticUnderstandingSampleRows(value)).toBe(false);
-  });
+  it.each([0, 21, 30, -1, 1.5, Number.NaN, undefined])(
+    "rejects invalid sample row limits: %s",
+    (value) => {
+      expect(isValidSemanticUnderstandingSampleRows(value)).toBe(false);
+    },
+  );
 });
 
 describe("parseSemanticUnderstandingSampleRowsInput", () => {

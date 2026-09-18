@@ -55,12 +55,15 @@ type BackendSkillListResponse = {
 type BackendSkillManagementContent = {
   content?: string;
   file_type?: string;
-  files?: Array<{
-    rel_path?: string;
-    file_type?: string;
-    size?: number;
-    mime_type?: string;
-  } | string>;
+  files?: Array<
+    | {
+        rel_path?: string;
+        file_type?: string;
+        size?: number;
+        mime_type?: string;
+      }
+    | string
+  >;
   url?: string;
 };
 
@@ -196,16 +199,12 @@ function filterMockSkills(query: SkillListQuery) {
     }
 
     return (
-      item.name.toLowerCase().includes(keyword) ||
-      item.skillId.toLowerCase().includes(keyword)
+      item.name.toLowerCase().includes(keyword) || item.skillId.toLowerCase().includes(keyword)
     );
   });
 }
 
-async function fetchSkillList(
-  path: string,
-  query: SkillListQuery,
-): Promise<SkillListResult> {
+async function fetchSkillList(path: string, query: SkillListQuery): Promise<SkillListResult> {
   const response = await http.get<BackendSkillListResponse>(path, {
     params: {
       page: query.page,
@@ -268,11 +267,7 @@ export async function getSkill(skillId: string): Promise<SkillRecord> {
     return record;
   }
 
-  const response = await http.get<BackendSkillSummary>(
-    `${API_PREFIX}/skills/${skillId}`,
-    {
-    },
-  );
+  const response = await http.get<BackendSkillSummary>(`${API_PREFIX}/skills/${skillId}`, {});
 
   if (!response.data.skill_id) {
     throw new Error("Skill not found");
@@ -288,8 +283,7 @@ export async function getSkillMarket(skillId: string): Promise<SkillRecord> {
 
   const response = await http.get<BackendSkillSummary>(
     `${API_PREFIX}/skills/market/${skillId}`,
-    {
-    },
+    {},
   );
 
   if (!response.data.skill_id) {
@@ -333,15 +327,11 @@ export async function registerSkill(input: SkillRegisterInput): Promise<SkillRec
     formData.append("source", input.source);
   }
 
-  const response = await http.post<BackendSkillSummary>(
-    `${API_PREFIX}/skills`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+  const response = await http.post<BackendSkillSummary>(`${API_PREFIX}/skills`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
     },
-  );
+  });
 
   if (!response.data.skill_id) {
     throw new Error("Skill registration failed");
@@ -386,10 +376,7 @@ export async function syncSkillFromMarket(skillId: string): Promise<SkillRecord>
   });
 }
 
-export async function downloadSkillPackage(
-  skillId: string,
-  displayName?: string,
-): Promise<void> {
+export async function downloadSkillPackage(skillId: string, displayName?: string): Promise<void> {
   if (useMock) {
     const blob = new Blob(["mock skill package"], { type: "application/zip" });
     triggerBrowserDownload(
@@ -399,12 +386,9 @@ export async function downloadSkillPackage(
     return;
   }
 
-  const response = await http.get<Blob>(
-    `${API_PREFIX}/skills/${skillId}/management/download`,
-    {
-      responseType: "blob",
-    },
-  );
+  const response = await http.get<Blob>(`${API_PREFIX}/skills/${skillId}/management/download`, {
+    responseType: "blob",
+  });
 
   const contentDisposition = response.headers["content-disposition"] as string | undefined;
   const filename =
@@ -414,9 +398,7 @@ export async function downloadSkillPackage(
   triggerBrowserDownload(response.data, filename);
 }
 
-export async function getSkillManagementContent(
-  skillId: string,
-): Promise<SkillContentResult> {
+export async function getSkillManagementContent(skillId: string): Promise<SkillContentResult> {
   if (useMock) {
     return {
       content: "# Mock SKILL.md\n\nThis is a mock skill content preview.",
@@ -508,9 +490,7 @@ async function fetchSkillFileTextFromUrl(url: string): Promise<string> {
     return mockContents[relPath] ?? "";
   }
 
-  const response = await fetch(
-    resolveSkillFileFetchUrl(url, getRuntimeConfig().apiBaseUrl),
-  );
+  const response = await fetch(resolveSkillFileFetchUrl(url, getRuntimeConfig().apiBaseUrl));
   if (!response.ok) {
     throw new Error(`Failed to fetch skill file content (${response.status})`);
   }
@@ -568,10 +548,7 @@ export async function previewSkillManagementFile(
   };
 }
 
-export async function updateSkillStatus(
-  skillId: string,
-  status: SkillStatus,
-): Promise<void> {
+export async function updateSkillStatus(skillId: string, status: SkillStatus): Promise<void> {
   if (useMock) {
     mockSkills = mockSkills.map((item) =>
       item.skillId === skillId ? { ...item, status, updateTime: Date.now() } : item,
@@ -579,11 +556,7 @@ export async function updateSkillStatus(
     return;
   }
 
-  await http.put(
-    `${API_PREFIX}/skills/${skillId}/status`,
-    { status },
-    {},
-  );
+  await http.put(`${API_PREFIX}/skills/${skillId}/status`, { status }, {});
 }
 
 export async function deleteSkill(skillId: string): Promise<void> {
@@ -593,8 +566,7 @@ export async function deleteSkill(skillId: string): Promise<void> {
     return;
   }
 
-  await http.delete(`${API_PREFIX}/skills/${skillId}`, {
-  });
+  await http.delete(`${API_PREFIX}/skills/${skillId}`, {});
 }
 
 function mapSkillHistory(item: BackendSkillHistoryInfo): SkillHistoryRecord {
@@ -701,17 +673,14 @@ export async function updateSkillPackage(
   return mapSkill(response.data);
 }
 
-export async function getSkillReleaseHistory(
-  skillId: string,
-): Promise<SkillHistoryRecord[]> {
+export async function getSkillReleaseHistory(skillId: string): Promise<SkillHistoryRecord[]> {
   if (useMock) {
     return mockSkillHistory.filter((item) => item.skillId === skillId);
   }
 
   const response = await http.get<BackendSkillHistoryInfo[]>(
     `${API_PREFIX}/skills/${skillId}/history`,
-    {
-    },
+    {},
   );
 
   const history = Array.isArray(response.data) ? response.data : [];
@@ -767,10 +736,7 @@ export async function republishSkillHistory(
   return mapSkill(response.data);
 }
 
-export async function publishSkillHistory(
-  skillId: string,
-  version: string,
-): Promise<SkillRecord> {
+export async function publishSkillHistory(skillId: string, version: string): Promise<SkillRecord> {
   if (useMock) {
     const history = mockSkillHistory.find(
       (item) => item.skillId === skillId && item.version === version,

@@ -43,9 +43,7 @@ export function normalizeExecuteDependencies(
     .filter((item) => item.name.length > 0);
 }
 
-export async function executeFunction(
-  input: FunctionExecuteInput,
-): Promise<FunctionExecuteResult> {
+export async function executeFunction(input: FunctionExecuteInput): Promise<FunctionExecuteResult> {
   if (useMock) {
     return {
       output: { echo: input.event ?? {}, status: "ok" },
@@ -153,11 +151,7 @@ export async function inferFunctionSchema(code: string): Promise<InferredFunctio
     description?: string;
     inputs?: FunctionParameterDef[];
     outputs?: FunctionParameterDef[];
-  }>(
-    `${API_PREFIX}/function/infer-schema`,
-    { code },
-    {},
-  );
+  }>(`${API_PREFIX}/function/infer-schema`, { code }, {});
 
   return {
     supported: response.data.supported !== false,
@@ -435,8 +429,7 @@ export async function getFunctionPrompt(
   const response = await http.get<{
     description?: string;
     system_prompt?: string;
-  }>(`${API_PREFIX}/ai_generate/prompt/${type}`, {
-  });
+  }>(`${API_PREFIX}/ai_generate/prompt/${type}`, {});
 
   return {
     prompt: response.data.system_prompt ?? response.data.description,

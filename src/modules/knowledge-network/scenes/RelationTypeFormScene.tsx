@@ -40,9 +40,8 @@ import type {
 import styles from "./ObjectTypeFormScene.module.css";
 
 const RelationTypeMappingEditor = lazy(async () => {
-  const module = await import(
-    "@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor"
-  );
+  const module =
+    await import("@/modules/knowledge-network/components/relation-type/RelationTypeMappingEditor");
   return { default: module.RelationTypeMappingEditor };
 });
 

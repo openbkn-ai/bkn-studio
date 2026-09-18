@@ -41,7 +41,8 @@ function stubStream(parts: unknown[], responseRejection?: Error) {
   const fullStream = (function* () {
     for (const part of parts) yield part;
   })();
-  if (responseRejection === undefined) return { fullStream, response: Promise.resolve({ messages: [] }) };
+  if (responseRejection === undefined)
+    return { fullStream, response: Promise.resolve({ messages: [] }) };
   const response = Promise.reject(responseRejection);
   // When the guard works, nobody awaits it. That is what this case asserts, but Vitest otherwise treats it as an unhandled rejection.
   response.catch(() => undefined);
@@ -63,7 +64,8 @@ async function run(onChunk: (chunk: AgentChunk) => void, system = "sys"): Promis
 
 describe("buildAgentTools", () => {
   const session: McpSession = {
-    callTool: () => Promise.resolve({ ok: true, latencyMs: 0, isError: false, text: "", structured: undefined }),
+    callTool: () =>
+      Promise.resolve({ ok: true, latencyMs: 0, isError: false, text: "", structured: undefined }),
   };
 
   const build = (names: string[]) =>
@@ -142,11 +144,15 @@ describe("formatToolResultLimits", () => {
   });
 
   it("跟着调参走：用户改了上限，提示词里的数字也变", () => {
-    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 1234 })).toContain("1234");
+    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 1234 })).toContain(
+      "1234",
+    );
   });
 
   it("两个上限都关掉时不拼这一段", () => {
-    expect(formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 0, schemaToolCap: 0 })).toBe("");
+    expect(
+      formatToolResultLimits({ ...DEFAULT_AGENT_CONFIG, dataToolCap: 0, schemaToolCap: 0 }),
+    ).toBe("");
   });
 });
 
@@ -170,7 +176,9 @@ describe("runAgentChat 错误路径", () => {
 
   it("没出错但也没出正文时，收尾兜底照常补一刀", async () => {
     streamText.mockReset();
-    streamText.mockReturnValueOnce(stubStream([{ type: "tool-call", toolCallId: "c1", toolName: "run_sql", input: {} }]));
+    streamText.mockReturnValueOnce(
+      stubStream([{ type: "tool-call", toolCallId: "c1", toolName: "run_sql", input: {} }]),
+    );
     streamText.mockReturnValueOnce(stubStream([{ type: "text-delta", text: "共 3 个。" }]));
 
     const chunks: AgentChunk[] = [];
@@ -178,7 +186,12 @@ describe("runAgentChat 错误路径", () => {
 
     expect(streamText).toHaveBeenCalledTimes(2);
     expect(chunks.filter((c) => c.type === "error")).toHaveLength(0);
-    expect(chunks.filter((c) => c.type === "text").map((c) => c.delta).join("")).toBe("共 3 个。");
+    expect(
+      chunks
+        .filter((c) => c.type === "text")
+        .map((c) => c.delta)
+        .join(""),
+    ).toBe("共 3 个。");
   });
 
   it("提示词给了 answer 契约时，标签外的推敲不进正文；没给则原样透传", async () => {
@@ -198,9 +211,15 @@ describe("runAgentChat 错误路径", () => {
     await run((chunk) => without.push(chunk), "sys");
 
     const textOf = (chunks: AgentChunk[]) =>
-      chunks.filter((c) => c.type === "text").map((c) => c.delta).join("");
+      chunks
+        .filter((c) => c.type === "text")
+        .map((c) => c.delta)
+        .join("");
     const reasoningOf = (chunks: AgentChunk[]) =>
-      chunks.filter((c) => c.type === "reasoning").map((c) => c.delta).join("");
+      chunks
+        .filter((c) => c.type === "reasoning")
+        .map((c) => c.delta)
+        .join("");
 
     expect(textOf(withContract)).toBe("共 3 个。");
     expect(reasoningOf(withContract)).toBe("我现在写最终答案。");
@@ -214,7 +233,8 @@ describe("runAgentChat 错误路径", () => {
   it("模型工厂忙态的原始报文不会糊到用户脸上", async () => {
     const busy = {
       code: "ModelFactory.ModelController.Model.Error",
-      description: '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
+      description:
+        '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
       solution: "请检查配置信息",
     };
     const { TypeValidationError } = await vi.importActual<AiModule>("ai");

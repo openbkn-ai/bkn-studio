@@ -511,10 +511,7 @@ export function ObjectTypeFormScene({ mode }: ObjectTypeFormSceneProps) {
             >
               <ResourceTagsSelect />
             </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.objectTypeConceptGroups")}
-              name="conceptGroupIds"
-            >
+            <Form.Item label={t("knowledgeNetwork.objectTypeConceptGroups")} name="conceptGroupIds">
               <Select
                 allowClear
                 mode="multiple"

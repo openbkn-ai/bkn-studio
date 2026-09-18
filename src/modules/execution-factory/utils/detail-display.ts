@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { OperatorExecuteControl, OperatorRecord } from "@/modules/execution-factory/types/operator";
+import type {
+  OperatorExecuteControl,
+  OperatorRecord,
+} from "@/modules/execution-factory/types/operator";
 
 import { formatExecutionUnitTime } from "./format-timestamp";
 
@@ -56,10 +59,7 @@ export function resolveSkillCategoryLabel(
   return record.categoryName ?? record.category ?? "-";
 }
 
-export function resolveMcpCategoryLabel(
-  category: string | undefined,
-  t: (key: string) => string,
-) {
+export function resolveMcpCategoryLabel(category: string | undefined, t: (key: string) => string) {
   if (!category) {
     return "-";
   }

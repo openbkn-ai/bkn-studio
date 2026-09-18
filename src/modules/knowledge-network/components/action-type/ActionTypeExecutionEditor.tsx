@@ -62,9 +62,7 @@ function buildActionSourceKey(actionSource?: ActionTypeExecutionConfig["actionSo
 
   if (actionSource.type === "mcp") {
     const toolKey = actionSource.toolId || actionSource.toolName;
-    return actionSource.mcpId && toolKey
-      ? `mcp:${actionSource.mcpId}:${toolKey}`
-      : "";
+    return actionSource.mcpId && toolKey ? `mcp:${actionSource.mcpId}:${toolKey}` : "";
   }
 
   return actionSource.boxId && actionSource.toolId
@@ -99,15 +97,13 @@ export function ActionTypeExecutionEditor({
   const displayActionSourceRef = useRef<ActionTypeExecutionConfig["actionSource"]>(
     value.actionSource,
   );
-  const [displayActionSource, setDisplayActionSource] =
-    useState<ActionTypeExecutionConfig["actionSource"]>(value.actionSource);
+  const [displayActionSource, setDisplayActionSource] = useState<
+    ActionTypeExecutionConfig["actionSource"]
+  >(value.actionSource);
   const [inputSchema, setInputSchema] = useState<ActionTypeToolInputParam[]>([]);
-  const [displayResolutionStatus, setDisplayResolutionStatus] =
-    useState<DisplayResolutionStatus>(() =>
-      needsActionTypeActionSourceDisplayResolution(value.actionSource)
-        ? "loading"
-        : "idle",
-    );
+  const [displayResolutionStatus, setDisplayResolutionStatus] = useState<DisplayResolutionStatus>(
+    () => (needsActionTypeActionSourceDisplayResolution(value.actionSource) ? "loading" : "idle"),
+  );
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [propertyOptions, setPropertyOptions] = useState<
     Array<{
@@ -125,10 +121,7 @@ export function ActionTypeExecutionEditor({
   onParameterSchemaStateChangeRef.current = onParameterSchemaStateChange;
   displayActionSourceRef.current = displayActionSource;
 
-  const sourceKey = useMemo(
-    () => buildActionSourceKey(value.actionSource),
-    [value.actionSource],
-  );
+  const sourceKey = useMemo(() => buildActionSourceKey(value.actionSource), [value.actionSource]);
   const sourceNeedsDisplayResolution = needsActionTypeActionSourceDisplayResolution(
     value.actionSource,
   );
@@ -190,10 +183,7 @@ export function ActionTypeExecutionEditor({
         });
         onChangeRef.current({
           ...valueRef.current,
-          parameters: mergeExecutionParametersWithSchema(
-            schema,
-            valueRef.current.parameters,
-          ),
+          parameters: mergeExecutionParametersWithSchema(schema, valueRef.current.parameters),
         });
       } catch {
         if (cancelled) {
@@ -245,8 +235,7 @@ export function ActionTypeExecutionEditor({
 
     const resolveDisplay = async () => {
       try {
-        const resolvedSource =
-          await resolveActionTypeActionSourceDisplayWithTimeout(actionSource);
+        const resolvedSource = await resolveActionTypeActionSourceDisplayWithTimeout(actionSource);
         if (cancelled) {
           return;
         }
@@ -257,9 +246,7 @@ export function ActionTypeExecutionEditor({
         resolvedDisplaySourceKeyRef.current = sourceKey;
         if (!nextSourceName || nextSourceName === currentSourceName) {
           setDisplayResolutionStatus(
-            needsActionTypeActionSourceDisplayResolution(resolvedSource)
-              ? "failed"
-              : "idle",
+            needsActionTypeActionSourceDisplayResolution(resolvedSource) ? "failed" : "idle",
           );
           return;
         }
@@ -286,7 +273,9 @@ export function ActionTypeExecutionEditor({
     };
   }, [sourceKey, sourceNeedsDisplayResolution]);
 
-  const hasSource = Boolean(getActionSourceDisplayName(value.actionSource) || value.sourceName.trim());
+  const hasSource = Boolean(
+    getActionSourceDisplayName(value.actionSource) || value.sourceName.trim(),
+  );
 
   const handleSourceChange = (nextSource: ActionTypeExecutionConfig["actionSource"]) => {
     loadedSourceKeyRef.current = "";
@@ -315,7 +304,9 @@ export function ActionTypeExecutionEditor({
     });
   };
 
-  const handleSourceSelected = (nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>) => {
+  const handleSourceSelected = (
+    nextSource: NonNullable<ActionTypeExecutionConfig["actionSource"]>,
+  ) => {
     loadedSourceKeyRef.current = "";
     resolvedDisplaySourceKeyRef.current = "";
     setDisplayActionSource(nextSource);

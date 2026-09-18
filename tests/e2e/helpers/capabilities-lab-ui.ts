@@ -33,10 +33,10 @@ export const LAB_UI_PERMISSIONS = [
   "execution-factory-lab:function:debug",
 ];
 
-const STUDIO_API_BASE_URL =
-  process.env.E2E_STUDIO_API_BASE_URL ?? "http://127.0.0.1:9010/api";
-const STUDIO_BASE_PATH = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173")
-  .pathname.replace(/\/$/, "");
+const STUDIO_API_BASE_URL = process.env.E2E_STUDIO_API_BASE_URL ?? "http://127.0.0.1:9010/api";
+const STUDIO_BASE_PATH = new URL(
+  process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
+).pathname.replace(/\/$/, "");
 
 function studioPath(path: string) {
   return `${STUDIO_BASE_PATH}${path}`;
@@ -114,20 +114,23 @@ export async function ensureOverviewTab(page: Page) {
 }
 
 export async function ensureLabE2eRuntime(page: Page) {
-  await page.addInitScript(({ apiBaseUrl, permissions }) => {
-    window.__BKN_STUDIO_RUNTIME__ = {
-      ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
-      apiBaseUrl,
-      mode: "hosted",
-      currentUser: {
-        ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
-        permissions,
-      },
-    };
-  }, {
-    apiBaseUrl: STUDIO_API_BASE_URL,
-    permissions: LAB_UI_PERMISSIONS,
-  });
+  await page.addInitScript(
+    ({ apiBaseUrl, permissions }) => {
+      window.__BKN_STUDIO_RUNTIME__ = {
+        ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
+        apiBaseUrl,
+        mode: "hosted",
+        currentUser: {
+          ...(window.__BKN_STUDIO_RUNTIME__?.currentUser ?? {}),
+          permissions,
+        },
+      };
+    },
+    {
+      apiBaseUrl: STUDIO_API_BASE_URL,
+      permissions: LAB_UI_PERMISSIONS,
+    },
+  );
 }
 
 export async function gotoCapabilitiesLab(page: Page) {
@@ -260,7 +263,10 @@ export async function openCapabilityDetail(page: Page, name: string) {
       .catch(() => false);
     const showsName =
       onOverview &&
-      (await drawer.getByText(name, { exact: false }).isVisible().catch(() => false));
+      (await drawer
+        .getByText(name, { exact: false })
+        .isVisible()
+        .catch(() => false));
     if (!showsName) {
       await closeCapabilityDetail(page);
     }
@@ -343,9 +349,7 @@ export async function importOpenApiViaUi(
     await drawer.getByPlaceholder(/服务地址|Service URL/i).fill(input.serviceUrl);
   }
 
-  await drawer
-    .getByPlaceholder(/粘贴 OpenAPI|Paste OpenAPI/i)
-    .fill(input.openapiSpec);
+  await drawer.getByPlaceholder(/粘贴 OpenAPI|Paste OpenAPI/i).fill(input.openapiSpec);
 
   const importResponse = await Promise.all([
     page.waitForResponse(
@@ -460,9 +464,7 @@ export async function importSkillContentViaUi(page: Page, content: string) {
   const drawer = page.getByRole("dialog", { name: /导入 Skill|Import Skill/i });
   await expect(drawer).toBeVisible();
   await drawer.getByText(/Markdown 内容|Markdown content/i).click();
-  await drawer
-    .getByPlaceholder(/粘贴 Skill|Paste Skill/i)
-    .fill(content);
+  await drawer.getByPlaceholder(/粘贴 Skill|Paste Skill/i).fill(content);
 
   const importResponse = await Promise.all([
     page.waitForResponse(
@@ -544,7 +546,12 @@ export async function runPythonSandboxInCreateDrawer(page: Page, eventPayload: s
     const resultText = drawer.locator("pre, .ant-alert, .ant-result").filter({
       hasText: /output|result|42|error/i,
     });
-    if (await resultText.first().isVisible({ timeout: 30_000 }).catch(() => false)) {
+    if (
+      await resultText
+        .first()
+        .isVisible({ timeout: 30_000 })
+        .catch(() => false)
+    ) {
       return resultText.first().innerText();
     }
     return drawer.innerText();
@@ -569,7 +576,10 @@ export async function runPythonSandboxInCreateDrawer(page: Page, eventPayload: s
   await expect(resultPre).toBeVisible({ timeout: 30_000 });
   const text = await resultPre.innerText();
 
-  await modal.getByRole("button", { name: /取\s*消|Cancel|关\s*闭|Close/i }).first().click();
+  await modal
+    .getByRole("button", { name: /取\s*消|Cancel|关\s*闭|Close/i })
+    .first()
+    .click();
   await expect(modal).toBeHidden({ timeout: 10_000 });
 
   return text;
@@ -614,14 +624,19 @@ export async function setDebugPayload(page: Page, payload: string) {
   const drawer = capabilityDetailDrawer(page);
   const advancedPanel = drawer.getByText(/高级请求 JSON|Advanced request JSON/i);
   if (await advancedPanel.isVisible().catch(() => false)) {
-    const expanded = await drawer.locator(".ant-collapse-item-active").isVisible().catch(() => false);
+    const expanded = await drawer
+      .locator(".ant-collapse-item-active")
+      .isVisible()
+      .catch(() => false);
     if (!expanded) {
       await advancedPanel.click();
     }
   }
   const payloadTextarea = drawer.locator("textarea").first();
   if (!(await payloadTextarea.isVisible({ timeout: 2_000 }).catch(() => false))) {
-    const generateParams = drawer.getByRole("button", { name: /按定义生成参数|Generate parameters/i });
+    const generateParams = drawer.getByRole("button", {
+      name: /按定义生成参数|Generate parameters/i,
+    });
     if (await generateParams.isVisible().catch(() => false)) {
       await generateParams.click();
     }
@@ -648,8 +663,7 @@ export async function runDebugInDetail(
 
   const debugResponse = await Promise.all([
     page.waitForResponse(
-      (response) =>
-        response.url().includes("/debug") && response.request().method() === "POST",
+      (response) => response.url().includes("/debug") && response.request().method() === "POST",
       { timeout: 60_000 },
     ),
     drawer.getByRole("button", { name: BTN_DEBUG }).click(),
@@ -662,7 +676,12 @@ export async function runDebugInDetail(
   const resultPre = drawer.locator("pre").filter({
     hasText: /status_code|body|output|result|error|502|failed/i,
   });
-  if (await resultPre.first().isVisible().catch(() => false)) {
+  if (
+    await resultPre
+      .first()
+      .isVisible()
+      .catch(() => false)
+  ) {
     return {
       response: debugResponse,
       text: await resultPre.first().innerText(),
@@ -775,8 +794,7 @@ export async function runOrchestrationLifecycleInDetail(page: Page) {
   const enableResponse = await Promise.all([
     page.waitForResponse(
       (response) =>
-        response.url().includes("/orchestration/enable") &&
-        response.request().method() === "POST",
+        response.url().includes("/orchestration/enable") && response.request().method() === "POST",
       { timeout: 60_000 },
     ),
     enableButton.click(),
@@ -786,17 +804,19 @@ export async function runOrchestrationLifecycleInDetail(page: Page) {
   await expect(enableButton).toBeDisabled();
   await expect(saveButton).toBeEnabled();
   await expect(disableButton).toBeEnabled();
-  const operatorAlert = drawer.locator(".ant-alert").filter({
-    hasText: /流程算子|workflow operator/i,
-  }).first();
+  const operatorAlert = drawer
+    .locator(".ant-alert")
+    .filter({
+      hasText: /流程算子|workflow operator/i,
+    })
+    .first();
   await expect(operatorAlert).toBeVisible();
   await expect(operatorAlert).toHaveClass(/ant-alert-success/);
 
   const saveResponse = await Promise.all([
     page.waitForResponse(
       (response) =>
-        response.url().includes("/orchestration/config") &&
-        response.request().method() === "POST",
+        response.url().includes("/orchestration/config") && response.request().method() === "POST",
       { timeout: 60_000 },
     ),
     saveButton.click(),
@@ -804,7 +824,10 @@ export async function runOrchestrationLifecycleInDetail(page: Page) {
   expect(saveResponse.ok()).toBeTruthy();
 
   await disableButton.click();
-  const abortModal = destructiveConfirmDialog(page, /确定取消流程编排|Disable workflow orchestration/i);
+  const abortModal = destructiveConfirmDialog(
+    page,
+    /确定取消流程编排|Disable workflow orchestration/i,
+  );
   await expect(abortModal).toBeVisible({ timeout: 15_000 });
   await expectDestructiveImpactWarning(abortModal);
   await abortModal.locator(".ant-modal-footer .ant-btn:not(.ant-btn-dangerous)").click();
@@ -814,14 +837,16 @@ export async function runOrchestrationLifecycleInDetail(page: Page) {
   await expect(disableButton).toBeEnabled();
 
   await disableButton.click();
-  const confirmModal = destructiveConfirmDialog(page, /确定取消流程编排|Disable workflow orchestration/i);
+  const confirmModal = destructiveConfirmDialog(
+    page,
+    /确定取消流程编排|Disable workflow orchestration/i,
+  );
   await expect(confirmModal).toBeVisible({ timeout: 15_000 });
   await expectDestructiveImpactWarning(confirmModal);
   const disableResponse = await Promise.all([
     page.waitForResponse(
       (response) =>
-        response.url().includes("/orchestration/disable") &&
-        response.request().method() === "POST",
+        response.url().includes("/orchestration/disable") && response.request().method() === "POST",
       { timeout: 60_000 },
     ),
     confirmModal.getByRole("button", { name: BTN_DISABLE_ORCHESTRATION }).click(),
@@ -889,7 +914,9 @@ export async function replaceSkillPackageInDetail(page: Page, zipPath: string) {
   await expect(modal).toBeVisible({ timeout: 15_000 });
 
   await modal.locator('input[type="file"]').setInputFiles(zipPath);
-  await expect(modal.locator(".ant-upload-list-item-name, .ant-upload-list-text").first()).toBeVisible({
+  await expect(
+    modal.locator(".ant-upload-list-item-name, .ant-upload-list-text").first(),
+  ).toBeVisible({
     timeout: 10_000,
   });
 
@@ -966,9 +993,13 @@ export function buildHttpCurl(serviceUrl: string, pathSuffix: string) {
 }
 
 export function buildSkillContentMarkdown(name: string) {
-  return ["---", `name: ${name}`, "description: Skill content import test", "---", "Skill content import body."].join(
-    "\n",
-  );
+  return [
+    "---",
+    `name: ${name}`,
+    "description: Skill content import test",
+    "---",
+    "Skill content import body.",
+  ].join("\n");
 }
 
 export { buildLabWeatherOpenApi };

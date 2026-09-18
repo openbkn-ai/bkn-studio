@@ -9,7 +9,9 @@ import { ObservabilityCapabilityBoundary } from "@/modules/bkn-trace/components/
 import { TraceAnalysisScene } from "@/modules/bkn-trace/trace-analysis/TraceAnalysisScene";
 
 export function TraceAnalysisPage() {
-  return <ObservabilityCapabilityBoundary allow={(profile) => profile.technicalTrace}>
-    <TraceAnalysisScene />
-  </ObservabilityCapabilityBoundary>;
+  return (
+    <ObservabilityCapabilityBoundary allow={(profile) => profile.technicalTrace}>
+      <TraceAnalysisScene />
+    </ObservabilityCapabilityBoundary>
+  );
 }

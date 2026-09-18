@@ -62,7 +62,10 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
     [assignableRoles],
   );
   const businessRoles = useMemo(
-    () => assignableRoles.filter((role) => !systemRoles.some((systemRole) => systemRole.id === role.id)),
+    () =>
+      assignableRoles.filter(
+        (role) => !systemRoles.some((systemRole) => systemRole.id === role.id),
+      ),
     [assignableRoles, systemRoles],
   );
   const roleSearch = roleKeyword.trim().toLowerCase();
@@ -165,7 +168,12 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
           <div className={drawerStyles.footerActions}>
             <AppButton onClick={onClose}>{t("common.cancel")}</AppButton>
             {canConfigureAssignableRoles ? (
-              <AppButton disabled={hasDutyConflict} loading={submitting} onClick={handleSubmit} type="primary">
+              <AppButton
+                disabled={hasDutyConflict}
+                loading={submitting}
+                onClick={handleSubmit}
+                type="primary"
+              >
                 {t("common.save")}
               </AppButton>
             ) : null}
@@ -224,7 +232,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                     value={roleKeyword}
                   />
                   <span className={drawerStyles.roleSelectedCount}>
-                    {t("systemAdmin.users.drawer.rolesSelected", { count: selectedAssignableRoleCount })}
+                    {t("systemAdmin.users.drawer.rolesSelected", {
+                      count: selectedAssignableRoleCount,
+                    })}
                     {controlledRoles.length
                       ? ` · ${t("systemAdmin.users.drawer.controlledRolesSelected", { count: controlledRoles.length })}`
                       : ""}
@@ -234,7 +244,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                 <div className={drawerStyles.roleToolbar}>
                   <span />
                   <span className={drawerStyles.roleSelectedCount}>
-                    {t("systemAdmin.users.drawer.rolesSelected", { count: selectedAssignableRoleCount })}
+                    {t("systemAdmin.users.drawer.rolesSelected", {
+                      count: selectedAssignableRoleCount,
+                    })}
                     {controlledRoles.length
                       ? ` · ${t("systemAdmin.users.drawer.controlledRolesSelected", { count: controlledRoles.length })}`
                       : ""}
@@ -256,7 +268,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                       <span className={drawerStyles.controlledRoleItem} key={role.id}>
                         <span className={drawerStyles.roleOptionName}>{role.name}</span>
                         {roleDescription(role) ? (
-                          <span className={drawerStyles.roleOptionDesc}>{roleDescription(role)}</span>
+                          <span className={drawerStyles.roleOptionDesc}>
+                            {roleDescription(role)}
+                          </span>
                         ) : null}
                       </span>
                     ))}
@@ -276,7 +290,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                         </span>
                       </div>
                       {filteredBusinessRoles.length ? (
-                        <div className={drawerStyles.roleGrid}>{filteredBusinessRoles.map(roleChip)}</div>
+                        <div className={drawerStyles.roleGrid}>
+                          {filteredBusinessRoles.map(roleChip)}
+                        </div>
                       ) : (
                         <p className={drawerStyles.roleEmpty}>
                           {t("systemAdmin.users.drawer.rolesSearchEmpty")}
@@ -295,7 +311,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                         </span>
                       </div>
                       {filteredSystemRoles.length ? (
-                        <div className={drawerStyles.roleGrid}>{filteredSystemRoles.map(roleChip)}</div>
+                        <div className={drawerStyles.roleGrid}>
+                          {filteredSystemRoles.map(roleChip)}
+                        </div>
                       ) : (
                         <p className={drawerStyles.roleEmpty}>
                           {t("systemAdmin.users.drawer.rolesSearchEmpty")}
@@ -304,7 +322,9 @@ export function UserRolesDrawer({ onClose, onSaved, open, roles, user }: UserRol
                     </div>
                   ) : null}
                   {!businessRoles.length && !systemRoles.length ? (
-                    <p className={drawerStyles.roleEmpty}>{t("systemAdmin.users.drawer.rolesEmpty")}</p>
+                    <p className={drawerStyles.roleEmpty}>
+                      {t("systemAdmin.users.drawer.rolesEmpty")}
+                    </p>
                   ) : null}
                   <p className={[styles.subText, styles.sectionNote].join(" ")}>
                     {t("systemAdmin.users.drawer.rolesHint")}

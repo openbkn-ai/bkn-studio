@@ -12,7 +12,5 @@ import type { TFunction } from "i18next";
  * They must not query data-catalog resource details from the browser merely to refine this label.
  */
 export function formatKnowledgeNetworkObjectTypeIndexStateLabel(hasIndex: boolean, t: TFunction) {
-  return hasIndex
-    ? t("knowledgeNetwork.previewIndexed")
-    : t("knowledgeNetwork.previewNotIndexed");
+  return hasIndex ? t("knowledgeNetwork.previewIndexed") : t("knowledgeNetwork.previewNotIndexed");
 }

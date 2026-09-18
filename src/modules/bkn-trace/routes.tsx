@@ -57,18 +57,38 @@ export const bknTraceRoutes: RouteObject[] = [
   },
   {
     path: "observability/traces",
-    handle: { console: { descriptionKey: "bknTrace.traceAnalysis.description", menuKey: "trace-analysis", titleKey: "bknTrace.traceAnalysis.title" } },
+    handle: {
+      console: {
+        descriptionKey: "bknTrace.traceAnalysis.description",
+        menuKey: "trace-analysis",
+        titleKey: "bknTrace.traceAnalysis.title",
+      },
+    },
     element: withRouteLoading(<TraceAnalysisPage />),
   },
   {
     path: "observability/logs",
-    handle: { console: { descriptionKey: "bknTrace.logs.description", menuKey: "observability-logs", titleKey: "bknTrace.logs.title" } },
+    handle: {
+      console: {
+        descriptionKey: "bknTrace.logs.description",
+        menuKey: "observability-logs",
+        titleKey: "bknTrace.logs.title",
+      },
+    },
     element: withRouteLoading(<ObservabilityLogsPage />),
   },
   {
     path: "observability/settings",
-    handle: { console: { descriptionKey: "bknTrace.settings.description", menuKey: "observability-settings", titleKey: "bknTrace.settings.title" } },
-    element: <RequireSuperAdmin>{withRouteLoading(<ObservabilitySettingsPage />)}</RequireSuperAdmin>,
+    handle: {
+      console: {
+        descriptionKey: "bknTrace.settings.description",
+        menuKey: "observability-settings",
+        titleKey: "bknTrace.settings.title",
+      },
+    },
+    element: (
+      <RequireSuperAdmin>{withRouteLoading(<ObservabilitySettingsPage />)}</RequireSuperAdmin>
+    ),
   },
   {
     path: "system/bkn-trace",

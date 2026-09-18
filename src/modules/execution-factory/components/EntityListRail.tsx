@@ -115,9 +115,7 @@ export function EntityListRail({
   return (
     <div className={styles.rail}>
       <div
-        className={
-          headLayout === "inline" ? `${styles.head} ${styles.headInline}` : styles.head
-        }
+        className={headLayout === "inline" ? `${styles.head} ${styles.headInline}` : styles.head}
       >
         <div className={styles.title}>
           {icon}

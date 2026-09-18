@@ -64,7 +64,9 @@ export function KnowledgeNetworkResourceDetailActions({
             <KnowledgeNetworkAuthorizationActionLabel>
               {action.label}
             </KnowledgeNetworkAuthorizationActionLabel>
-          ) : action.label}
+          ) : (
+            action.label
+          )}
         </AppButton>
       ))}
     </>

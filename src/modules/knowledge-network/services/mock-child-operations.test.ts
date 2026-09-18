@@ -8,14 +8,14 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/knowledge-network/services/shared/runtime", async () => {
-  const actual = await vi.importActual<typeof import("@/modules/knowledge-network/services/shared/runtime")>(
-    "@/modules/knowledge-network/services/shared/runtime",
-  );
+  const actual = await vi.importActual<
+    typeof import("@/modules/knowledge-network/services/shared/runtime")
+  >("@/modules/knowledge-network/services/shared/runtime");
 
   return {
     ...actual,
     useMock: true,
-    wait: <T,>(value: T) => Promise.resolve(value),
+    wait: <T>(value: T) => Promise.resolve(value),
   };
 });
 
@@ -34,18 +34,8 @@ describe("knowledge-network mock child operations", () => {
       listKnowledgeNetworkMetrics(networkId),
     ]);
 
-    for (const record of [
-      conceptGroups[0],
-      objectTypes[0],
-      actionTypes[0],
-      metrics.entries[0],
-    ]) {
-      expect(record?.operations).toEqual([
-        "view_detail",
-        "query_data",
-        "modify",
-        "delete",
-      ]);
+    for (const record of [conceptGroups[0], objectTypes[0], actionTypes[0], metrics.entries[0]]) {
+      expect(record?.operations).toEqual(["view_detail", "query_data", "modify", "delete"]);
     }
   });
 });

@@ -482,9 +482,7 @@ export function getConnectorTypeTags(
   ).sort();
 }
 
-export function mergeKnownConnectorTypes(
-  availableTypes: DataConnectConnectorType[],
-) {
+export function mergeKnownConnectorTypes(availableTypes: DataConnectConnectorType[]) {
   const availableByType = new Map(
     availableTypes.map((item) => [item.type.trim().toLowerCase(), item]),
   );
@@ -494,9 +492,7 @@ export function mergeKnownConnectorTypes(
     ...KNOWN_CONNECTOR_TYPES.map(
       (item) => availableByType.get(item.type) ?? { ...item, fieldConfig: {} },
     ),
-    ...availableTypes.filter(
-      (item) => !knownTypeNames.has(item.type.trim().toLowerCase()),
-    ),
+    ...availableTypes.filter((item) => !knownTypeNames.has(item.type.trim().toLowerCase())),
   ];
 }
 
@@ -567,7 +563,8 @@ export function getConnectorFieldPlaceholder(
     api_key: "Enter API Key",
     database: "For example: supply_chain",
     database_list: "Leave empty to discover all databases, or enter each name and press Enter",
-    databases: "Leave empty to discover all databases; enter each name exactly as it appears in the database, including case",
+    databases:
+      "Leave empty to discover all databases; enter each name exactly as it appears in the database, including case",
     db: "For example: supply_chain",
     endpoint: "For example: https://search.internal:9200",
     host: "For example: db.example.internal",
@@ -576,7 +573,8 @@ export function getConnectorFieldPlaceholder(
     project: "For example: demo_project",
     schema: "For example: public",
     schema_list: "For example: public, ods",
-    schemas: "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
+    schemas:
+      "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
     secret: "Enter secret",
     secret_key: "Enter secret",
     server: "For example: db.example.internal",
@@ -601,11 +599,17 @@ export function getConnectorFieldPlaceholder(
   }
 
   if (placeholderMap[normalized]) {
-    return dataConnectText(`connectorTemplates.placeholders.${normalized}`, placeholderMap[normalized]);
+    return dataConnectText(
+      `connectorTemplates.placeholders.${normalized}`,
+      placeholderMap[normalized],
+    );
   }
 
   if (fieldType === "array") {
-    return dataConnectText("connectorTemplates.placeholders.array", "Press Enter to add more values");
+    return dataConnectText(
+      "connectorTemplates.placeholders.array",
+      "Press Enter to add more values",
+    );
   }
 
   if (fieldType === "object") {
@@ -668,7 +672,10 @@ export function resolveConnectorFieldControl(
   }
 
   if (normalized === "mode" || normalized === "connection_mode") {
-    return { kind: "select", options: localizedOptions("connectionModes", CONNECTION_MODE_OPTIONS) };
+    return {
+      kind: "select",
+      options: localizedOptions("connectionModes", CONNECTION_MODE_OPTIONS),
+    };
   }
 
   if (fieldType === "integer" || fieldType === "number") {
@@ -771,11 +778,13 @@ export function groupConnectorFields(
     grouped.set(groupKey, current);
   });
 
-  return ([
-    ["connection", "Connection parameters"],
-    ["auth", "Authentication"],
-    ["advanced", "Advanced settings"],
-  ] as const)
+  return (
+    [
+      ["connection", "Connection parameters"],
+      ["auth", "Authentication"],
+      ["advanced", "Advanced settings"],
+    ] as const
+  )
     .map(([key, title]) => ({
       key,
       title: dataConnectText(`connectorTemplates.fieldGroups.${key}`, title),
@@ -862,11 +871,7 @@ function templateCategoryText(
   return dataConnectText(`connectorTemplates.categories.${category}.${field}`, defaultValue);
 }
 
-function templateTypeText(
-  type: string,
-  field: "description" | "label",
-  defaultValue?: string,
-) {
+function templateTypeText(type: string, field: "description" | "label", defaultValue?: string) {
   if (!defaultValue) {
     return undefined;
   }
@@ -875,7 +880,10 @@ function templateTypeText(
 
 function templatePortPlaceholder(typeKey: string) {
   const defaultValue = TYPE_PORT_PLACEHOLDER[typeKey] ?? "For example: 3306";
-  return dataConnectText(`connectorTemplates.portPlaceholders.${typeKey || "default"}`, defaultValue);
+  return dataConnectText(
+    `connectorTemplates.portPlaceholders.${typeKey || "default"}`,
+    defaultValue,
+  );
 }
 
 function localizedOptions(
@@ -920,7 +928,11 @@ function resolveFieldGroupKey(
     return "connection";
   }
 
-  if (fieldConfig.type === "object" || fieldConfig.type === "array" || fieldConfig.type === "boolean") {
+  if (
+    fieldConfig.type === "object" ||
+    fieldConfig.type === "array" ||
+    fieldConfig.type === "boolean"
+  ) {
     return "advanced";
   }
 

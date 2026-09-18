@@ -44,7 +44,9 @@ export function KnowledgeNetworkObjectAuthorizeDrawer({
 
   return (
     <ObjectAuthorizeDrawer
-      objectAuthorized={networkAuthorized && hasKnowledgeNetworkRecordOperation(record, "view_detail")}
+      objectAuthorized={
+        networkAuthorized && hasKnowledgeNetworkRecordOperation(record, "view_detail")
+      }
       objId={knowledgeNetworkChildAuthorizationId(networkId, record.id)}
       objName={record.name}
       objSub={networkName ?? networkId}

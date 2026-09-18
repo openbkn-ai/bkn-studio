@@ -39,9 +39,7 @@ describe("embedding-model-options", () => {
 
     const result = await loadEmbeddingModelOptions();
     expect(result.state).toBe("ready");
-    expect(result.options).toEqual([
-      { id: "uuid-1", name: "bge-m3-prod", dimensions: 1024 },
-    ]);
+    expect(result.options).toEqual([{ id: "uuid-1", name: "bge-m3-prod", dimensions: 1024 }]);
   });
 
   it("returns empty state when no embedding models are registered", async () => {
@@ -72,9 +70,7 @@ describe("embedding-model-options", () => {
 
   it("detects orphan saved models", () => {
     const options = [{ id: "model-a", name: "model-a", dimensions: 768 }];
-    expect(
-      findUnregisteredEmbeddingModel(options, ["bge-m3", "model-a", ""]),
-    ).toBe("bge-m3");
+    expect(findUnregisteredEmbeddingModel(options, ["bge-m3", "model-a", ""])).toBe("bge-m3");
     expect(isRegisteredEmbeddingModel("model-a", options)).toBe(true);
     expect(isRegisteredEmbeddingModel("bge-m3", options)).toBe(false);
   });

@@ -180,19 +180,13 @@ export function SkillListScene() {
           </PermissionGate>
           {record.status !== "published" ? (
             <PermissionGate permissions="execution-factory:skill:publish">
-              <AppButton
-                onClick={() => handleStatusChange(record, "published")}
-                type="link"
-              >
+              <AppButton onClick={() => handleStatusChange(record, "published")} type="link">
                 {t("executionFactory.publish")}
               </AppButton>
             </PermissionGate>
           ) : (
             <PermissionGate permissions="execution-factory:skill:publish">
-              <AppButton
-                onClick={() => handleStatusChange(record, "offline")}
-                type="link"
-              >
+              <AppButton onClick={() => handleStatusChange(record, "offline")} type="link">
                 {t("executionFactory.offline")}
               </AppButton>
             </PermissionGate>
@@ -214,117 +208,115 @@ export function SkillListScene() {
 
   return (
     <>
-    <section className={styles.contentSurface}>
-      <div className={styles.pageIntro}>
-        <h2 className={styles.pageIntroTitle}>{t("executionFactory.skillListTitle")}</h2>
-        <p className={styles.pageIntroDescription}>
-          {t("executionFactory.skillListDescription")}
-        </p>
-      </div>
-      <div className={styles.operationBar}>
-        <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
-            <PermissionGate permissions="execution-factory:skill:create">
-              <AppButton
-                onClick={() => {
-                  void navigate("/execution-factory/skills/new");
-                }}
-                type="primary"
-              >
-                {t("common.create")}
-              </AppButton>
-            </PermissionGate>
-            <AppButton icon={<ReloadOutlined />} onClick={reset}>
-              {t("common.refresh")}
-            </AppButton>
-          </div>
-          <span className={styles.toolbarMeta}>{t("executionFactory.skillToolbarHint")}</span>
+      <section className={styles.contentSurface}>
+        <div className={styles.pageIntro}>
+          <h2 className={styles.pageIntroTitle}>{t("executionFactory.skillListTitle")}</h2>
+          <p className={styles.pageIntroDescription}>
+            {t("executionFactory.skillListDescription")}
+          </p>
         </div>
-        <div className={styles.toolbarFilters}>
-          <Input.Search
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => setKeyword(event.target.value)}
-            onSearch={setKeyword}
-            placeholder={t("executionFactory.skillSearchPlaceholder")}
-            value={pageState.keyword}
-          />
-          <Select
-            allowClear
-            className={styles.filterSelect}
-            onChange={(value) => setSelectedStatus(value)}
-            options={(["unpublish", "published", "offline"] as SkillStatus[]).map(
-              (status) => ({
+        <div className={styles.operationBar}>
+          <div className={styles.operationPrimary}>
+            <div className={styles.toolbarActions}>
+              <PermissionGate permissions="execution-factory:skill:create">
+                <AppButton
+                  onClick={() => {
+                    void navigate("/execution-factory/skills/new");
+                  }}
+                  type="primary"
+                >
+                  {t("common.create")}
+                </AppButton>
+              </PermissionGate>
+              <AppButton icon={<ReloadOutlined />} onClick={reset}>
+                {t("common.refresh")}
+              </AppButton>
+            </div>
+            <span className={styles.toolbarMeta}>{t("executionFactory.skillToolbarHint")}</span>
+          </div>
+          <div className={styles.toolbarFilters}>
+            <Input.Search
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => setKeyword(event.target.value)}
+              onSearch={setKeyword}
+              placeholder={t("executionFactory.skillSearchPlaceholder")}
+              value={pageState.keyword}
+            />
+            <Select
+              allowClear
+              className={styles.filterSelect}
+              onChange={(value) => setSelectedStatus(value)}
+              options={(["unpublish", "published", "offline"] as SkillStatus[]).map((status) => ({
                 label: t(`executionFactory.skillStatuses.${status}`),
                 value: status,
-              }),
-            )}
-            placeholder={t("executionFactory.statusFilterPlaceholder")}
-            value={selectedStatus}
+              }))}
+              placeholder={t("executionFactory.statusFilterPlaceholder")}
+              value={selectedStatus}
+            />
+          </div>
+        </div>
+        <div className={styles.tableSurface}>
+          {loadError ? (
+            <Alert
+              action={
+                <AppButton onClick={() => void loadData()} type="link">
+                  {t("common.retry")}
+                </AppButton>
+              }
+              message={loadError}
+              showIcon
+              type="error"
+            />
+          ) : null}
+          <AppTable
+            columns={columns}
+            dataSource={items}
+            loading={loading}
+            locale={{
+              emptyText: (
+                <EmptyStatePanel
+                  description={t("executionFactory.skillEmptyDescription")}
+                  title={t("executionFactory.skillEmpty")}
+                />
+              ),
+            }}
+            onChange={(pagination) => {
+              setPagination(pagination.current ?? 1, pagination.pageSize ?? 10);
+            }}
+            pagination={{
+              current: pageState.page,
+              pageSize: pageState.pageSize,
+              showSizeChanger: true,
+              total,
+            }}
+            rowKey="skillId"
           />
         </div>
-      </div>
-      <div className={styles.tableSurface}>
-        {loadError ? (
-          <Alert
-            action={
-              <AppButton onClick={() => void loadData()} type="link">
-                {t("common.retry")}
-              </AppButton>
-            }
-            message={loadError}
-            showIcon
-            type="error"
-          />
-        ) : null}
-        <AppTable
-          columns={columns}
-          dataSource={items}
-          loading={loading}
-          locale={{
-            emptyText: (
-              <EmptyStatePanel
-                description={t("executionFactory.skillEmptyDescription")}
-                title={t("executionFactory.skillEmpty")}
-              />
-            ),
-          }}
-          onChange={(pagination) => {
-            setPagination(pagination.current ?? 1, pagination.pageSize ?? 10);
-          }}
-          pagination={{
-            current: pageState.page,
-            pageSize: pageState.pageSize,
-            showSizeChanger: true,
-            total,
-          }}
-          rowKey="skillId"
-        />
-      </div>
-    </section>
-    <SkillDetailDrawer
-      onClose={() => setDetailSkillId(null)}
-      onEdit={(skillId) => {
-        setDetailSkillId(null);
-        void navigate(`/execution-factory/skills/${skillId}/edit`);
-      }}
-      onOpenHistory={(skillId) => {
-        setDetailSkillId(null);
-        setHistorySkillId(skillId);
-      }}
-      onViewDetail={(id) => {
-        setDetailSkillId(null);
-        void navigate(`/execution-factory/skills/${id}`);
-      }}
-      open={Boolean(detailSkillId)}
-      skillId={detailSkillId}
-    />
-    <SkillHistoryDrawer
-      onClose={() => setHistorySkillId(null)}
-      onUpdated={() => void loadData()}
-      open={Boolean(historySkillId)}
-      skillId={historySkillId}
-    />
+      </section>
+      <SkillDetailDrawer
+        onClose={() => setDetailSkillId(null)}
+        onEdit={(skillId) => {
+          setDetailSkillId(null);
+          void navigate(`/execution-factory/skills/${skillId}/edit`);
+        }}
+        onOpenHistory={(skillId) => {
+          setDetailSkillId(null);
+          setHistorySkillId(skillId);
+        }}
+        onViewDetail={(id) => {
+          setDetailSkillId(null);
+          void navigate(`/execution-factory/skills/${id}`);
+        }}
+        open={Boolean(detailSkillId)}
+        skillId={detailSkillId}
+      />
+      <SkillHistoryDrawer
+        onClose={() => setHistorySkillId(null)}
+        onUpdated={() => void loadData()}
+        open={Boolean(historySkillId)}
+        skillId={historySkillId}
+      />
     </>
   );
 }

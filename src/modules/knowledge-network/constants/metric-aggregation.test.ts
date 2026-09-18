@@ -44,9 +44,7 @@ describe("metric-aggregation", () => {
 
   it("limits boolean and text types to count aggregations", () => {
     for (const type of ["boolean", "text", "json", "vector", "ip"]) {
-      expect(getAvailableAggrOptionsForPropertyType(type)).toEqual(
-        METRIC_COUNT_ONLY_AGGR_OPTIONS,
-      );
+      expect(getAvailableAggrOptionsForPropertyType(type)).toEqual(METRIC_COUNT_ONLY_AGGR_OPTIONS);
     }
   });
 });

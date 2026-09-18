@@ -9,9 +9,23 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
 
-import { buildExplorePrompt, conditionFrom, createExploreTools, summarizeNodes, type ExploreDeps, type ExploreStep } from "./explore-agent";
+import {
+  buildExplorePrompt,
+  conditionFrom,
+  createExploreTools,
+  summarizeNodes,
+  type ExploreDeps,
+  type ExploreStep,
+} from "./explore-agent";
 
-const node = (id: string, otId: string, props: Record<string, unknown> = {}): GNode => ({ id, otId, otName: otId, identity: {}, display: typeof props.name === "string" ? props.name : id, props });
+const node = (id: string, otId: string, props: Record<string, unknown> = {}): GNode => ({
+  id,
+  otId,
+  otName: otId,
+  identity: {},
+  display: typeof props.name === "string" ? props.name : id,
+  props,
+});
 
 const texts = {
   found: (count: number) => `found ${count}`,
@@ -21,16 +35,37 @@ const texts = {
 };
 
 type Callable = { execute: (input: unknown, options: unknown) => Promise<unknown> };
-const call = (tools: ReturnType<typeof createExploreTools>, name: string, input: unknown) => (tools[name] as unknown as Callable).execute(input, { toolCallId: "t", messages: [] });
+const call = (tools: ReturnType<typeof createExploreTools>, name: string, input: unknown) =>
+  (tools[name] as unknown as Callable).execute(input, { toolCallId: "t", messages: [] });
 
 describe("buildExplorePrompt", () => {
   it("lists object types with properties and relation types with their direction", () => {
     const system = buildExplorePrompt(
       {
-        object_types: [{ id: "squads", name: "阵容", data_properties: [{ name: "key_id", type: "integer" }, { name: "team_name" }] }],
-        relation_types: [{ id: "rel_squads_tournament", name: "届次", sourceId: "squads", targetId: "tournaments" }],
+        object_types: [
+          {
+            id: "squads",
+            name: "阵容",
+            data_properties: [{ name: "key_id", type: "integer" }, { name: "team_name" }],
+          },
+        ],
+        relation_types: [
+          {
+            id: "rel_squads_tournament",
+            name: "届次",
+            sourceId: "squads",
+            targetId: "tournaments",
+          },
+        ],
       },
-      { intro: "INTRO", rulesHeader: "RULES", rules: ["one", "two"], propertiesLabel: "props", objectTypesHeader: "OBJECTS", relationTypesHeader: "RELATIONS" },
+      {
+        intro: "INTRO",
+        rulesHeader: "RULES",
+        rules: ["one", "two"],
+        propertiesLabel: "props",
+        objectTypesHeader: "OBJECTS",
+        relationTypesHeader: "RELATIONS",
+      },
     );
     expect(system).toContain("INTRO\n\nRULES\n1. one\n2. two");
     expect(system).toContain("- squads (阵容)\n  props: key_id:integer, team_name");
@@ -40,22 +75,39 @@ describe("buildExplorePrompt", () => {
 
 describe("summarizeNodes", () => {
   it("caps the list, keeps the total count and drops system properties", () => {
-    const nodes = [node("a-1", "a", { name: "one", _display: "x", extra: null, size: 3 }), node("a-2", "a"), node("a-3", "a")];
+    const nodes = [
+      node("a-1", "a", { name: "one", _display: "x", extra: null, size: 3 }),
+      node("a-2", "a"),
+      node("a-3", "a"),
+    ];
     const summary = summarizeNodes(nodes, 2);
     expect(summary.count).toBe(3);
     expect(summary.items).toEqual([
       { id: "a-1", type: "a", label: "one", props: { name: "one", size: "3" } },
       { id: "a-2", type: "a", label: "a-2", props: {} },
     ]);
-    expect(summarizeNodes(nodes, 1, false).items[0]).toEqual({ id: "a-1", type: "a", label: "one" });
+    expect(summarizeNodes(nodes, 1, false).items[0]).toEqual({
+      id: "a-1",
+      type: "a",
+      label: "one",
+    });
   });
 });
 
 describe("conditionFrom", () => {
   it("returns null, a leaf, or an AND of leaves", () => {
     expect(conditionFrom([])).toBeNull();
-    expect(conditionFrom([{ field: "name", operation: "==", value: "x" }])).toEqual({ field: "name", operation: "==", value: "x" });
-    expect(conditionFrom([{ field: "a", operation: ">", value: 1 }, { field: "b", operation: "like", value: "%q%" }])).toMatchObject({ operation: "and", sub_conditions: [{ field: "a" }, { field: "b" }] });
+    expect(conditionFrom([{ field: "name", operation: "==", value: "x" }])).toEqual({
+      field: "name",
+      operation: "==",
+      value: "x",
+    });
+    expect(
+      conditionFrom([
+        { field: "a", operation: ">", value: 1 },
+        { field: "b", operation: "like", value: "%q%" },
+      ]),
+    ).toMatchObject({ operation: "and", sub_conditions: [{ field: "a" }, { field: "b" }] });
   });
 });
 
@@ -63,9 +115,17 @@ describe("createExploreTools", () => {
   const deps = (): ExploreDeps => ({
     search: vi.fn(() => Promise.resolve([node("a-1", "a", { name: "one" })])),
     query: vi.fn(() => Promise.resolve([])),
-    show: vi.fn((ids: string[]) => Promise.resolve({ nodes: ids.map((id) => node(id, "a")), edges: [], added: { nodes: ids.length, edges: 0 } })),
+    show: vi.fn((ids: string[]) =>
+      Promise.resolve({
+        nodes: ids.map((id) => node(id, "a")),
+        edges: [],
+        added: { nodes: ids.length, edges: 0 },
+      }),
+    ),
     expand: vi.fn(() => Promise.reject(new Error("boom"))),
-    cypher: vi.fn(() => Promise.resolve({ nodes: [], edges: [], rows: 0, added: { nodes: 0, edges: 0 } })),
+    cypher: vi.fn(() =>
+      Promise.resolve({ nodes: [], edges: [], rows: 0, added: { nodes: 0, edges: 0 } }),
+    ),
     canvas: () => ({ nodes: [], edges: [] }),
   });
 
@@ -95,6 +155,10 @@ describe("createExploreTools", () => {
     const tools = createExploreTools(deps(), (step) => steps.push(step), texts);
     const out = await call(tools, "expand_neighbours", { ids: ["a-1"] });
     expect(out).toEqual({ error: "boom" });
-    expect(steps[0]).toMatchObject({ tool: "expand_neighbours", ok: false, summary: "failed: boom" });
+    expect(steps[0]).toMatchObject({
+      tool: "expand_neighbours",
+      ok: false,
+      summary: "failed: boom",
+    });
   });
 });

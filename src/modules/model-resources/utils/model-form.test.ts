@@ -31,9 +31,15 @@ describe("buildLlmSavePayload", () => {
   });
 
   it("drops invalid model parameters before sending to the backend", () => {
-    expect(buildLlmSavePayload({ ...baseValues, modelParameters: null }).modelParameters).toBeUndefined();
-    expect(buildLlmSavePayload({ ...baseValues, modelParameters: 0 }).modelParameters).toBeUndefined();
-    expect(buildLlmSavePayload({ ...baseValues, modelParameters: 1.5 }).modelParameters).toBeUndefined();
+    expect(
+      buildLlmSavePayload({ ...baseValues, modelParameters: null }).modelParameters,
+    ).toBeUndefined();
+    expect(
+      buildLlmSavePayload({ ...baseValues, modelParameters: 0 }).modelParameters,
+    ).toBeUndefined();
+    expect(
+      buildLlmSavePayload({ ...baseValues, modelParameters: 1.5 }).modelParameters,
+    ).toBeUndefined();
   });
 
   it("keeps the requested default selection for model creation", () => {

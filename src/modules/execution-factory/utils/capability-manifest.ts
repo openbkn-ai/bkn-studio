@@ -59,7 +59,8 @@ function buildInputsFromJsonSchema(schema: unknown): CapabilityInputSemantic[] {
     dataType: property.type,
     required: required.has(name),
     businessMeaning: property.description,
-    examples: property.examples ?? (property.example === undefined ? undefined : [property.example]),
+    examples:
+      property.examples ?? (property.example === undefined ? undefined : [property.example]),
     sourceHint: property.description ? "schema description" : undefined,
   }));
 }
@@ -74,7 +75,8 @@ function buildOutputsFromJsonSchema(schema: unknown): CapabilityOutputSemantic[]
     name,
     dataType: property.type,
     businessMeaning: property.description,
-    examples: property.examples ?? (property.example === undefined ? undefined : [property.example]),
+    examples:
+      property.examples ?? (property.example === undefined ? undefined : [property.example]),
   }));
 }
 

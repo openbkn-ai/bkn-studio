@@ -146,7 +146,8 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
   }, [conditionObjectTypeId, networkId]);
 
   useEffect(() => {
-    const condition = basicForm.getFieldValue("condition") as ActionTypeCondition | null | undefined;
+    const condition = basicForm.getFieldValue("condition") as
+      ActionTypeCondition | null | undefined;
     if (
       condition?.objectTypeId &&
       watchedObjectTypeId &&
@@ -200,10 +201,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     void loadData();
   }, [actionTypeId, basicForm, mode, networkId, t]);
 
-  const steps = useMemo(
-    () => [{ title: t("knowledgeNetwork.actionTypeConfigStep") }],
-    [t],
-  );
+  const steps = useMemo(() => [{ title: t("knowledgeNetwork.actionTypeConfigStep") }], [t]);
 
   const goBack = () => {
     void modal.confirm({
@@ -242,9 +240,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
     if (validationErrorKey) {
       const validationError = t(validationErrorKey);
       setExecutionSourceError(
-        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY
-          ? validationError
-          : null,
+        validationErrorKey === ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY ? validationError : null,
       );
       void message.error(validationError);
       return;
@@ -341,7 +337,10 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                     },
                   ]}
                 >
-                  <Input disabled={mode === "edit"} placeholder={t("knowledgeNetwork.pleaseInput")} />
+                  <Input
+                    disabled={mode === "edit"}
+                    placeholder={t("knowledgeNetwork.pleaseInput")}
+                  />
                 </Form.Item>
               </Col>
             </Row>

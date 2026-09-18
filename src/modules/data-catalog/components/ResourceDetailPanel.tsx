@@ -15,18 +15,21 @@ import { useNavigate } from "react-router-dom";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { formatDateTime } from "@/framework/i18n/format";
-import {
-  extractRequestErrorMessage,
-  isRequestConflict,
-} from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { resourceGateOf } from "@/modules/data-catalog/lib/index-state";
 import { isResourceIndexReadOnly } from "@/modules/data-catalog/lib/resource-index-access";
-import { getCatalogResource, updateCatalogResource } from "@/modules/data-catalog/services/resource.service";
-import type { CatalogResource, ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
+import {
+  getCatalogResource,
+  updateCatalogResource,
+} from "@/modules/data-catalog/services/resource.service";
+import type {
+  CatalogResource,
+  ResourceSchemaField,
+} from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceDetailPanel.module.css";
@@ -207,10 +210,7 @@ export function ResourceDetailPanel({
       if (isRequestConflict(error)) {
         try {
           const latestResource = await getCatalogResource(submittedResourceId);
-          if (
-            latestResource &&
-            resourceIdentityRef.current === submittedResourceIdentity
-          ) {
+          if (latestResource && resourceIdentityRef.current === submittedResourceIdentity) {
             setResource(latestResource);
             onResourceRefreshed?.(latestResource);
           }
@@ -396,7 +396,9 @@ export function ResourceDetailPanel({
                     </Tag>
                   ))}
                 </Space>
-              ) : "-"}
+              ) : (
+                "-"
+              )}
             </span>
           </div>
 
@@ -441,7 +443,9 @@ export function ResourceDetailPanel({
             </span>
           </div>
           <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.discoverStatus")}</span>
+            <span className={styles.basicInfoLabel}>
+              {t("dataCatalog.resource.discoverStatus")}
+            </span>
             <span className={styles.basicInfoValue}>
               {resource.lastDiscoverStatus ? (
                 <Tag
@@ -457,12 +461,16 @@ export function ResourceDetailPanel({
                 >
                   {t(`dataCatalog.discoverStatuses.${resource.lastDiscoverStatus}`)}
                 </Tag>
-              ) : "-"}
+              ) : (
+                "-"
+              )}
             </span>
           </div>
 
           <div className={styles.basicInfoItem}>
-            <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.resourceStatus")}</span>
+            <span className={styles.basicInfoLabel}>
+              {t("dataCatalog.resource.resourceStatus")}
+            </span>
             <span className={styles.basicInfoValue}>
               {resource.status ? (
                 <Tag
@@ -476,7 +484,9 @@ export function ResourceDetailPanel({
                 >
                   {t(`dataCatalog.resourceStatuses.${resource.status}`)}
                 </Tag>
-              ) : "-"}
+              ) : (
+                "-"
+              )}
             </span>
           </div>
           <div className={`${styles.basicInfoItem} ${styles.basicInfoSpanTwo}`}>
@@ -585,9 +595,7 @@ export function ResourceDetailPanel({
               </span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.schemaName")}
-              </span>
+              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.schemaName")}</span>
               <span className={styles.basicInfoValue}>{resource.schemaName || "-"}</span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoHalf}`}>
@@ -603,19 +611,17 @@ export function ResourceDetailPanel({
                       </Tag>
                     ))}
                   </Space>
-                ) : "-"}
+                ) : (
+                  "-"
+                )}
               </span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.fieldCount")}
-              </span>
+              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.fieldCount")}</span>
               <span className={styles.basicInfoValue}>{resource.columnCount ?? "-"}</span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
-              <span className={styles.basicInfoLabel}>
-                {t("dataCatalog.resource.rowCount")}
-              </span>
+              <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
               <span className={styles.basicInfoValue}>{resource.rowCount ?? "-"}</span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>

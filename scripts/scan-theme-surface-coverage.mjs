@@ -39,20 +39,29 @@ function walk(directory) {
 function scanCss(filePath, source) {
   // Preserve line offsets while ignoring comments so a finding always points to the rendered rule,
   // not to a later line after a long Chinese or English comment block.
-  const sanitized = source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "));
+  const sanitized = source.replace(/\/\*[\s\S]*?\*\//g, (comment) =>
+    comment.replace(/[^\n]/g, " "),
+  );
   const surfaces = [
     ...sanitized.matchAll(/\b(?:background|background-color)\s*:\s*([^;}\n]+)/gi),
     ...sanitized.matchAll(/\b--(?:code|chip|field-bd)\s*:\s*([^;}\n]+)/gi),
   ].filter((match) => isLightSurface(match[1]));
   if (surfaces.length === 0) return;
 
-  const themeAware = /data-theme\s*=\s*["']dark["']/.test(sanitized)
-    || /color\s*:\s*var\(--(?:color|admin-color|business-color)-(?:text|heading|secondary|muted|tertiary)/.test(sanitized);
+  const themeAware =
+    /data-theme\s*=\s*["']dark["']/.test(sanitized) ||
+    /color\s*:\s*var\(--(?:color|admin-color|business-color)-(?:text|heading|secondary|muted|tertiary)/.test(
+      sanitized,
+    );
   addFinding(filePath, source, surfaces, themeAware ? "blocker" : "review");
 }
 
 function scanTsx(filePath, source) {
-  const surfaces = [...source.matchAll(/style=\{\{[^}]*\b(?:background|backgroundColor)\s*:\s*["']?(#[fF][0-9a-fA-F]{2,5}|rgb\(255|rgba\(255)/g)];
+  const surfaces = [
+    ...source.matchAll(
+      /style=\{\{[^}]*\b(?:background|backgroundColor)\s*:\s*["']?(#[fF][0-9a-fA-F]{2,5}|rgb\(255|rgba\(255)/g,
+    ),
+  ];
   if (surfaces.length > 0) addFinding(filePath, source, surfaces, "review");
 }
 
@@ -63,9 +72,13 @@ function isLightSurface(value) {
 
 function isLightHex(value) {
   const compact = value.slice(1);
-  const hex = compact.length === 3
-    ? compact.split("").map((channel) => channel + channel).join("")
-    : compact;
+  const hex =
+    compact.length === 3
+      ? compact
+          .split("")
+          .map((channel) => channel + channel)
+          .join("")
+      : compact;
   const red = Number.parseInt(hex.slice(0, 2), 16);
   const green = Number.parseInt(hex.slice(2, 4), 16);
   const blue = Number.parseInt(hex.slice(4, 6), 16);
@@ -74,7 +87,9 @@ function isLightHex(value) {
 }
 
 function addFinding(filePath, source, matches, severity) {
-  const lines = matches.slice(0, 4).map((match) => source.slice(0, match.index ?? 0).split(/\r?\n/).length);
+  const lines = matches
+    .slice(0, 4)
+    .map((match) => source.slice(0, match.index ?? 0).split(/\r?\n/).length);
   findings.push({
     file: path.relative(rootDir, filePath),
     lines,

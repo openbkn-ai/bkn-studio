@@ -55,7 +55,7 @@ describe("catalog-mapper · health status", () => {
     expect(catalog.builtin).toBe(true);
   });
 
-	it("preserves schemas from catalog details while list summaries are refreshed", () => {
+  it("preserves schemas from catalog details while list summaries are refreshed", () => {
     const catalog = mapBackendCatalog({
       connector_type: "postgresql",
       enabled: true,
@@ -64,21 +64,21 @@ describe("catalog-mapper · health status", () => {
       name: "orders",
     });
 
-		expect(catalog.schemas).toEqual(["public"]);
-	});
+    expect(catalog.schemas).toEqual(["public"]);
+  });
 
-	it("falls back to detail metadata when a top-level schema list is empty", () => {
-		const catalog = mapBackendCatalog({
-			connector_type: "postgresql",
-			enabled: true,
-			id: "catalog-1",
-			metadata: { schemas: ["public"] },
-			name: "orders",
-			schemas: [],
-		});
+  it("falls back to detail metadata when a top-level schema list is empty", () => {
+    const catalog = mapBackendCatalog({
+      connector_type: "postgresql",
+      enabled: true,
+      id: "catalog-1",
+      metadata: { schemas: ["public"] },
+      name: "orders",
+      schemas: [],
+    });
 
-		expect(catalog.schemas).toEqual(["public"]);
-	});
+    expect(catalog.schemas).toEqual(["public"]);
+  });
 
   it("uses the empty display value before the first health check", () => {
     const catalog = mapBackendCatalog({

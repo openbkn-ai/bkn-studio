@@ -75,7 +75,11 @@ export function BusinessTreePanel({
     return (
       <aside className={[styles.panel, styles.panelCollapsed, className].filter(Boolean).join(" ")}>
         <div className={styles.collapsedHead}>
-          {collapsedIcon ? <Tooltip title={title}><span className={styles.collapsedIcon}>{collapsedIcon}</span></Tooltip> : null}
+          {collapsedIcon ? (
+            <Tooltip title={title}>
+              <span className={styles.collapsedIcon}>{collapsedIcon}</span>
+            </Tooltip>
+          ) : null}
           <AppButton
             aria-label={expandAriaLabel}
             className={styles.collapseBtn}
@@ -90,9 +94,13 @@ export function BusinessTreePanel({
   return (
     <aside className={[styles.panel, className].filter(Boolean).join(" ")}>
       <div className={[styles.head, headerClassName].filter(Boolean).join(" ")}>
-        <span className={[styles.headTitle, titleClassName].filter(Boolean).join(" ")}>{title}</span>
+        <span className={[styles.headTitle, titleClassName].filter(Boolean).join(" ")}>
+          {title}
+        </span>
         {headerActions ? (
-          <div className={[styles.headActions, actionsClassName].filter(Boolean).join(" ")}>{headerActions}</div>
+          <div className={[styles.headActions, actionsClassName].filter(Boolean).join(" ")}>
+            {headerActions}
+          </div>
         ) : null}
       </div>
 

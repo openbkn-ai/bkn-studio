@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { KnCondition, PropertyMeta } from "@/modules/knowledge-network/services/graph-explorer.service";
+import type {
+  KnCondition,
+  PropertyMeta,
+} from "@/modules/knowledge-network/services/graph-explorer.service";
 
 export type ConditionRow = { field: string; operator: string; value: string };
 
@@ -22,7 +25,8 @@ export const OPERATORS_BY_KIND: Record<PropertyKind, string[]> = {
 export function propertyKind(type?: string): PropertyKind {
   const lower = (type ?? "").toLowerCase();
   if (!lower) return "any";
-  if (/(int|long|float|double|decimal|number|numeric|real|bigint|short)/.test(lower)) return "number";
+  if (/(int|long|float|double|decimal|number|numeric|real|bigint|short)/.test(lower))
+    return "number";
   if (/bool/.test(lower)) return "bool";
   if (/(date|time)/.test(lower)) return "date";
   if (/(string|text|char|varchar|keyword)/.test(lower)) return "string";
@@ -54,12 +58,18 @@ function coerceValue(raw: string, kind: PropertyKind, operator: string): unknown
 }
 
 /** Builds the query_object_instance condition from the editor rows; empty rows are ignored. */
-export function buildCondition(rows: ConditionRow[], properties: PropertyMeta[]): KnCondition | null {
+export function buildCondition(
+  rows: ConditionRow[],
+  properties: PropertyMeta[],
+): KnCondition | null {
   const kinds = new Map(properties.map((property) => [property.name, propertyKind(property.type)]));
   const leaves: KnCondition[] = rows
     .filter((row) => row.field && row.operator && row.value.trim() !== "")
-    .map((row) => ({ field: row.field, operation: row.operator, value: coerceValue(row.value, kinds.get(row.field) ?? "any", row.operator) }));
+    .map((row) => ({
+      field: row.field,
+      operation: row.operator,
+      value: coerceValue(row.value, kinds.get(row.field) ?? "any", row.operator),
+    }));
   if (leaves.length === 0) return null;
   return leaves.length === 1 ? leaves[0] : { operation: "and", sub_conditions: leaves };
 }
-

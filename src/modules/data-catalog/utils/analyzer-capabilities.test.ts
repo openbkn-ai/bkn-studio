@@ -17,7 +17,10 @@ import { findUnavailableAnalyzers, loadAnalyzerCapabilities } from "./analyzer-c
 
 describe("loadAnalyzerCapabilities", () => {
   it("keeps english when the server advertises it", async () => {
-    getIndexCapabilitiesMock.mockResolvedValue({ checkedAt: 1, fulltextAnalyzers: ["standard", "english"] });
+    getIndexCapabilitiesMock.mockResolvedValue({
+      checkedAt: 1,
+      fulltextAnalyzers: ["standard", "english"],
+    });
 
     await expect(loadAnalyzerCapabilities()).resolves.toEqual({
       state: "ready",
@@ -29,7 +32,11 @@ describe("loadAnalyzerCapabilities", () => {
   it("does not create a fallback when the server returns no analyzers", async () => {
     getIndexCapabilitiesMock.mockResolvedValue({ checkedAt: 1, fulltextAnalyzers: [] });
 
-    await expect(loadAnalyzerCapabilities()).resolves.toEqual({ state: "empty", options: [], errorMessage: null });
+    await expect(loadAnalyzerCapabilities()).resolves.toEqual({
+      state: "empty",
+      options: [],
+      errorMessage: null,
+    });
   });
 
   it("reports an error without creating a fallback when the request fails", async () => {
@@ -42,6 +49,8 @@ describe("loadAnalyzerCapabilities", () => {
   });
 
   it("identifies saved analyzers not in the snapshot", () => {
-    expect(findUnavailableAnalyzers(["standard"], ["standard", "ik_max_word", "ik_max_word", " "])).toEqual(["ik_max_word"]);
+    expect(
+      findUnavailableAnalyzers(["standard"], ["standard", "ik_max_word", "ik_max_word", " "]),
+    ).toEqual(["ik_max_word"]);
   });
 });

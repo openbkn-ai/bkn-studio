@@ -15,27 +15,16 @@ import { importOpenApiTools } from "@/modules/execution-factory/services/tool.se
 import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types/operator-sync";
 
 import {
-
   analyzeOpenApiDocumentText,
-
   normalizeGeneratedCapabilityName,
-
   normalizeGeneratedToolboxDescription,
-
   normalizeOpenApiDocumentText,
-
   rewriteOpenApiOperationSummaries,
-
   rewriteOpenApiServerUrl,
-
   validateOpenApiDocumentText,
-
 } from "@/modules/execution-factory/utils/metadata-content";
 
-
-
 export type RegisterOpenApiImportInput = {
-
   openapiSpec: string;
 
   boxId?: string;
@@ -52,7 +41,6 @@ export type RegisterOpenApiImportInput = {
   category?: string;
 
   operatorSync?: OperatorSyncPublishInput;
-
 };
 
 function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
@@ -73,10 +61,7 @@ function resolveToolboxTarget(input: RegisterOpenApiImportInput) {
   return { mode, boxId: undefined, toolboxName };
 }
 
-
-
 export type RegisterOpenApiImportResult = {
-
   boxId: string;
 
   toolIds: string[];
@@ -88,59 +73,35 @@ export type RegisterOpenApiImportResult = {
   operatorId?: string;
 
   operatorIds?: string[];
-
 };
 
-
-
 function resolveServiceUrl(openapiSpec: string, override?: string): string {
-
   if (override?.trim()) {
-
     return override.trim();
-
   }
-
-
 
   const analysis = analyzeOpenApiDocumentText(openapiSpec);
 
   if (analysis.ok && analysis.serverUrl) {
-
     return analysis.serverUrl;
-
   }
 
-
-
   return "http://127.0.0.1:9000";
-
 }
 
-
-
 export async function registerOpenApiImport(
-
   input: RegisterOpenApiImportInput,
-
 ): Promise<RegisterOpenApiImportResult> {
-
   const openapiSpec = input.openapiSpec.trim();
 
   if (!openapiSpec) {
-
     throw new Error(executionFactoryServiceError("openApiSpecRequired"));
-
   }
-
-
 
   const validation = validateOpenApiDocumentText(openapiSpec);
   if (!validation.ok) {
     throw new Error(validation.reason);
   }
-
-
 
   const serviceUrl = resolveServiceUrl(openapiSpec, input.serviceUrl);
   const normalizedOpenapiSpec = rewriteOpenApiOperationSummaries(
@@ -149,11 +110,8 @@ export async function registerOpenApiImport(
   const toolboxDescription = normalizeGeneratedToolboxDescription(input.toolboxDescription);
   const target = resolveToolboxTarget(input);
 
-
-
   if (input.operatorSync?.enabled) {
     const bundle = await registerOpenApiBundle({
-
       openapiSpec: normalizedOpenapiSpec,
 
       serviceUrl,
@@ -169,13 +127,9 @@ export async function registerOpenApiImport(
       useRule: input.useRule,
 
       operatorSync: input.operatorSync,
-
     });
 
-
-
     return {
-
       boxId: bundle.boxId,
 
       toolIds: bundle.toolIds,
@@ -187,20 +141,13 @@ export async function registerOpenApiImport(
       operatorId: bundle.operatorIds[0],
 
       operatorIds: bundle.operatorIds,
-
     };
-
   }
-
-
 
   let boxId = target.boxId;
 
-
-
   if (target.mode === "new") {
     const toolbox = await createToolbox({
-
       name: target.toolboxName,
 
       description: toolboxDescription,
@@ -210,35 +157,25 @@ export async function registerOpenApiImport(
       metadataType: "openapi",
 
       serviceUrl,
-
     });
 
     boxId = toolbox.boxId;
-
   }
 
   if (!boxId) {
     throw new Error(executionFactoryServiceError("targetToolboxMissing"));
   }
 
-
-
   const result = await importOpenApiTools(boxId, normalizedOpenapiSpec, input.useRule);
 
-
-
   if (result.successCount === 0) {
-
-    const detail = result.failures[0]?.error ?? executionFactoryServiceError("openApiImportAllFailed");
+    const detail =
+      result.failures[0]?.error ?? executionFactoryServiceError("openApiImportAllFailed");
 
     throw new Error(detail);
-
   }
 
-
-
   return {
-
     boxId,
 
     toolIds: result.successIds,
@@ -246,9 +183,7 @@ export async function registerOpenApiImport(
     successCount: result.successCount,
 
     failureCount: result.failureCount,
-
   };
-
 }
 
 function executionFactoryServiceError(key: string) {

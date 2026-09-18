@@ -12,9 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { atLeast, type Edition } from "@/framework/entitlement/edition";
-import {
-  useEntitlement,
-} from "@/framework/entitlement/use-entitlement";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -40,8 +38,7 @@ const TIER_COLUMNS: Edition[] = ["community", "professional", "enterprise"];
  * 版本与服务方案的对外说明。企业版与行业版没有自助购买路径,报价与交付形态由商务侧
  * 维护,产品页只负责把人送过去——在这里复制一份价格表,改价那天两边必然对不上。
  */
-const SUBSCRIPTION_DETAIL_URL =
-  "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5Ikc2Sfc1J6JnCb";
+const SUBSCRIPTION_DETAIL_URL = "https://openbkn-ai.feishu.cn/wiki/BqXZw5UXtisE5Ikc2Sfc1J6JnCb";
 
 /**
  * 授权门户。社区版注册即发,商业档走审批(license-server `license-service.md` §1.5:
@@ -171,9 +168,7 @@ export function SubscriptionScene() {
             <article className={className} key={plan.edition}>
               <div className={styles.planHead}>
                 <span className={styles.planName}>{editionName(plan.edition)}</span>
-                {isCurrent ? (
-                  <Tag color="blue">{t("subscription.current.badge")}</Tag>
-                ) : null}
+                {isCurrent ? <Tag color="blue">{t("subscription.current.badge")}</Tag> : null}
               </div>
 
               {/*
@@ -337,7 +332,6 @@ export function SubscriptionScene() {
         </div>
         <p className={styles.note}>{t("subscription.contact")}</p>
       </div>
-
     </section>
   );
 }

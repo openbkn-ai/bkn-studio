@@ -7,10 +7,11 @@
 
 @font-face {
   font-family: iconfont; /* Project id 4878725 */
-  src: url('iconfont.woff2?t=1762321428180') format('woff2'),
-       url('iconfont.woff?t=1762321428180') format('woff'),
-       url('iconfont.ttf?t=1762321428180') format('truetype'),
-       url('iconfont.svg?t=1762321428180#iconfont') format('svg');
+  src:
+    url("iconfont.woff2?t=1762321428180") format("woff2"),
+    url("iconfont.woff?t=1762321428180") format("woff"),
+    url("iconfont.ttf?t=1762321428180") format("truetype"),
+    url("iconfont.svg?t=1762321428180#iconfont") format("svg");
 }
 
 .iconfont {
@@ -520,4 +521,3 @@
 .icon-dip-attachment::before {
   content: "\e672";
 }
-

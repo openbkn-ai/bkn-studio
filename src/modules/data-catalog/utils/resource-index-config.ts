@@ -43,14 +43,13 @@ export type ResourceFeatureDraft = {
 export type ResourceFeatureDraftInput = ResourceFeatureDraft | string;
 
 /** Reports whether persisted features satisfy the backend build contract. */
-export function hasPersistedBuildFeatures(resource: {
-  schema: ResourceSchemaField[];
-}): boolean {
+export function hasPersistedBuildFeatures(resource: { schema: ResourceSchemaField[] }): boolean {
   let hasIndexFeature = false;
   for (const field of resource.schema) {
     const features = field.features ?? [];
-    if (features.some((feature) =>
-      ["keyword", "fulltext", "vector"].includes(feature.featureType))) {
+    if (
+      features.some((feature) => ["keyword", "fulltext", "vector"].includes(feature.featureType))
+    ) {
       hasIndexFeature = true;
     }
 
@@ -63,10 +62,7 @@ export function hasPersistedBuildFeatures(resource: {
     if (!keyword || !Number.isSafeInteger(ignoreAbove) || ignoreAbove < 1 || ignoreAbove > 8191) {
       return false;
     }
-    if (
-      fieldType === "text" &&
-      !features.some((feature) => feature.featureType === "fulltext")
-    ) {
+    if (fieldType === "text" && !features.some((feature) => feature.featureType === "fulltext")) {
       return false;
     }
   }
@@ -217,9 +213,7 @@ export function applyIndexFormToSchema(
   return {
     schema: nextSchema,
     indexConfig: {
-      ...(values.defaultKeywordIgnoreAbove !== undefined
-        ? { defaultKeywordIgnoreAbove }
-        : {}),
+      ...(values.defaultKeywordIgnoreAbove !== undefined ? { defaultKeywordIgnoreAbove } : {}),
       incrementalFields: values.incrementalFields ?? [],
       primaryKeyFields: values.primaryKeyFields ?? [],
       defaultFulltextAnalyzer: defaultAnalyzer || undefined,
@@ -255,9 +249,10 @@ export function indexFormValuesFromResource(resource: {
             description: feature.description,
             isDefault: feature.isDefault,
             name: feature.name,
-            value: typeof ignoreAbove === "number" || typeof ignoreAbove === "string"
-              ? String(ignoreAbove)
-              : "",
+            value:
+              typeof ignoreAbove === "number" || typeof ignoreAbove === "string"
+                ? String(ignoreAbove)
+                : "",
           },
         ];
       }
@@ -312,18 +307,22 @@ export function indexFormValuesFromResource(resource: {
       (fieldType === "string" || fieldType === "text") &&
       !fieldKeywordGroups[field.name]?.length
     ) {
-      fieldKeywordGroups[field.name] = [{
-        isDefault: true,
-        name: "keyword",
-        value: "",
-      }];
+      fieldKeywordGroups[field.name] = [
+        {
+          isDefault: true,
+          name: "keyword",
+          value: "",
+        },
+      ];
     }
     if (fieldType === "text" && !fieldFulltextAnalyzerGroups[field.name]?.length) {
-      fieldFulltextAnalyzerGroups[field.name] = [{
-        isDefault: true,
-        name: "fulltext",
-        value: "",
-      }];
+      fieldFulltextAnalyzerGroups[field.name] = [
+        {
+          isDefault: true,
+          name: "fulltext",
+          value: "",
+        },
+      ];
       fulltextFields.push(field.name);
     }
   }

@@ -53,37 +53,25 @@ describe("license.service", () => {
   it("classifies import and activation errors", () => {
     expect(
       resolveLicenseRequestErrorCode(
-        new axios.AxiosError(
-          "bad request",
-          undefined,
-          undefined,
-          undefined,
-          {
-            config: { headers: new axios.AxiosHeaders() },
-            data: { error: "bad signature" },
-            headers: {},
-            status: 400,
-            statusText: "Bad Request",
-          },
-        ),
+        new axios.AxiosError("bad request", undefined, undefined, undefined, {
+          config: { headers: new axios.AxiosHeaders() },
+          data: { error: "bad signature" },
+          headers: {},
+          status: 400,
+          statusText: "Bad Request",
+        }),
       ),
     ).toBe("invalidLicense");
 
     expect(
       resolveLicenseRequestErrorCode(
-        new axios.AxiosError(
-          "conflict",
-          undefined,
-          undefined,
-          undefined,
-          {
-            config: { headers: new axios.AxiosHeaders() },
-            data: { error: "activation rejected", stored: true },
-            headers: {},
-            status: 409,
-            statusText: "Conflict",
-          },
-        ),
+        new axios.AxiosError("conflict", undefined, undefined, undefined, {
+          config: { headers: new axios.AxiosHeaders() },
+          data: { error: "activation rejected", stored: true },
+          headers: {},
+          status: 409,
+          statusText: "Conflict",
+        }),
       ),
     ).toBe("activationConflict");
   });

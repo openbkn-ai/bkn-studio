@@ -79,9 +79,7 @@ const CAPABILITY_SOURCE_KINDS: CapabilitySourceKind[] = [
 ];
 
 /** An unknown kind is dropped rather than guessed: a wrong source would misstate who owns a row. */
-function mapCapabilitySources(
-  items: BackendCapabilitySource[] | undefined,
-): CapabilitySource[] {
+function mapCapabilitySources(items: BackendCapabilitySource[] | undefined): CapabilitySource[] {
   return (items ?? []).reduce<CapabilitySource[]>((sources, item) => {
     const kind = CAPABILITY_SOURCE_KINDS.find((known) => known === item.kind);
     if (!kind) {
@@ -112,9 +110,7 @@ function mapCapabilityType(value: string | undefined): CapabilityType {
   }
 }
 
-export function mapCapabilityBinding(
-  item: BackendCapabilityBinding,
-): CapabilityBindingRecord {
+export function mapCapabilityBinding(item: BackendCapabilityBinding): CapabilityBindingRecord {
   return {
     boundAsBox: item.bound_as_box ?? false,
     boxId: item.box_id ?? "",
@@ -139,9 +135,7 @@ export function mapCapabilityBinding(
   };
 }
 
-export function mapCapabilityBoxSummary(
-  item: BackendCapabilityBoxSummary,
-): CapabilityBoxSummary {
+export function mapCapabilityBoxSummary(item: BackendCapabilityBoxSummary): CapabilityBoxSummary {
   return {
     boxId: item.box_id ?? "",
     boxMissing: item.box_missing ?? false,
@@ -167,9 +161,7 @@ export function mapCapabilityBindingsList(
   };
 }
 
-export function toBackendAttachEntry(
-  input: AttachCapabilityInput,
-): BackendAttachCapabilityEntry {
+export function toBackendAttachEntry(input: AttachCapabilityInput): BackendAttachCapabilityEntry {
   return {
     all_tools: input.allTools ?? undefined,
     box_id: input.boxId || undefined,

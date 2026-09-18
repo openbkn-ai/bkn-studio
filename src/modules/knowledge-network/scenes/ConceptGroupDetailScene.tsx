@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  AppstoreOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+import { AppstoreOutlined, PlusOutlined } from "@ant-design/icons";
 import { Alert, Empty, Input, Select, Table, Tabs, Tag } from "antd";
 import type { TableProps } from "antd";
 import type { ReactNode } from "react";
@@ -60,10 +57,7 @@ function renderMemberNameCell(
 ) {
   const content = (
     <>
-      <span
-        className={styles.memberIcon}
-        style={{ backgroundColor: record.color ?? "#1677ff" }}
-      >
+      <span className={styles.memberIcon} style={{ backgroundColor: record.color ?? "#1677ff" }}>
         {record.icon ? renderResourceIcon(record.icon) : fallbackIcon}
       </span>
       <span className={styles.memberName}>{record.name}</span>
@@ -91,10 +85,7 @@ function renderObjectRefCell(
 
   const content = (
     <>
-      <span
-        className={styles.memberIcon}
-        style={{ backgroundColor: value.color ?? "#1677ff" }}
-      >
+      <span className={styles.memberIcon} style={{ backgroundColor: value.color ?? "#1677ff" }}>
         {renderResourceIcon(value.icon)}
       </span>
       <span className={styles.memberName}>{value.name}</span>
@@ -227,10 +218,12 @@ export function ConceptGroupDetailScene() {
 
     return [
       { label: t("common.all"), value: "all" },
-      ...[...tags].sort((left, right) => left.localeCompare(right)).map((entry) => ({
-        label: entry,
-        value: entry,
-      })),
+      ...[...tags]
+        .sort((left, right) => left.localeCompare(right))
+        .map((entry) => ({
+          label: entry,
+          value: entry,
+        })),
     ];
   }, [currentItems, t]);
 
@@ -254,22 +247,16 @@ export function ConceptGroupDetailScene() {
 
   const openResourceDetail = (item: ConceptGroupRelatedItem) => {
     if (activeTab === "object") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/object-types/${item.id}/detail`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/object-types/${item.id}/detail`);
       return;
     }
 
     if (activeTab === "relation") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/relation-types/${item.id}/detail`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/relation-types/${item.id}/detail`);
       return;
     }
 
-    void navigate(
-      `/knowledge-network/workspace/${networkId}/action-types/${item.id}/detail`,
-    );
+    void navigate(`/knowledge-network/workspace/${networkId}/action-types/${item.id}/detail`);
   };
 
   const openObjectTypeDetail = (objectTypeId?: string) => {
@@ -277,9 +264,7 @@ export function ConceptGroupDetailScene() {
       return;
     }
 
-    void navigate(
-      `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
-    );
+    void navigate(`/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`);
   };
 
   const handleRemoveObjectTypes = async () => {
@@ -518,7 +503,9 @@ export function ConceptGroupDetailScene() {
           </section>
 
           <section className={styles.sectionCard}>
-            <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.conceptGroupSectionTitle")}</h3>
+            <h3 className={styles.sectionTitle}>
+              {t("knowledgeNetwork.conceptGroupSectionTitle")}
+            </h3>
             <Tabs
               activeKey={activeTab}
               items={[
@@ -582,9 +569,7 @@ export function ConceptGroupDetailScene() {
               columns={tableColumns}
               dataSource={pagedItems}
               locale={{
-                emptyText: (
-                  <Empty description={t("knowledgeNetwork.conceptGroupMembersEmpty")} />
-                ),
+                emptyText: <Empty description={t("knowledgeNetwork.conceptGroupMembersEmpty")} />,
               }}
               pagination={{
                 current: page,

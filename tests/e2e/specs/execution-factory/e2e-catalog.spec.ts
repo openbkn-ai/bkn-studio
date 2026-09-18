@@ -57,15 +57,14 @@ test.describe("Execution Factory — Catalog E2E flows", () => {
     const exported = await exportToolboxViaApi(request, toolbox.boxId);
     const importResponse = await request.post(apiUrl("/impex/import/toolbox"), {
       multipart: {
-          mode: "upsert",
-          data: {
-            name: "catalog-install.adp.json",
-            mimeType: "application/json",
-            buffer: Buffer.from(JSON.stringify(exported)),
-          },
+        mode: "upsert",
+        data: {
+          name: "catalog-install.adp.json",
+          mimeType: "application/json",
+          buffer: Buffer.from(JSON.stringify(exported)),
         },
       },
-    );
+    });
     expect(importResponse.ok()).toBeTruthy();
   });
 

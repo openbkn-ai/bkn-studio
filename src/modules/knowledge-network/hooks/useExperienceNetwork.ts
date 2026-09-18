@@ -26,14 +26,13 @@ export function useExperienceNetwork(
   networkId: string,
   providedNetwork?: ExperienceNetworkIdentity | null,
 ) {
-  const [resolvedNetwork, setResolvedNetwork] =
-    useState<ExperienceNetworkIdentity | null>(providedNetwork ?? null);
+  const [resolvedNetwork, setResolvedNetwork] = useState<ExperienceNetworkIdentity | null>(
+    providedNetwork ?? null,
+  );
 
   useEffect(() => {
     if (providedNetwork !== undefined) {
-      setResolvedNetwork(
-        providedNetwork?.id === networkId ? providedNetwork : null,
-      );
+      setResolvedNetwork(providedNetwork?.id === networkId ? providedNetwork : null);
       return undefined;
     }
 
@@ -48,9 +47,7 @@ export function useExperienceNetwork(
       .then((record) => {
         if (!cancelled) {
           setResolvedNetwork(
-            record
-              ? { id: record.id, name: record.name, slug: record.identifier }
-              : null,
+            record ? { id: record.id, name: record.name, slug: record.identifier } : null,
           );
         }
       })

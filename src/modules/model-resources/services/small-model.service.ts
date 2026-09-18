@@ -179,28 +179,21 @@ function filterMockSmallModels(query: SmallModelListQuery): SmallModelListResult
   };
 }
 
-export async function listSmallModels(
-  query: SmallModelListQuery,
-): Promise<SmallModelListResult> {
+export async function listSmallModels(query: SmallModelListQuery): Promise<SmallModelListResult> {
   if (useMock) {
     return filterMockSmallModels(query);
   }
 
-  const response = await http.get<BackendSmallModelListResponse>(
-    `${API_PREFIX}/small-model/list`,
-    {
-      params: {
-        page: query.page,
-        size: query.size,
-        order: query.order ?? "desc",
-        rule: query.rule ?? "create_time",
-        model_name: query.name ?? "",
-        ...(query.modelType && query.modelType !== "all"
-          ? { model_type: query.modelType }
-          : {}),
-      },
+  const response = await http.get<BackendSmallModelListResponse>(`${API_PREFIX}/small-model/list`, {
+    params: {
+      page: query.page,
+      size: query.size,
+      order: query.order ?? "desc",
+      rule: query.rule ?? "create_time",
+      model_name: query.name ?? "",
+      ...(query.modelType && query.modelType !== "all" ? { model_type: query.modelType } : {}),
     },
-  );
+  });
 
   const payload = response.data;
 
@@ -213,7 +206,8 @@ export async function listSmallModels(
 export async function createSmallModel(payload: SmallModelSavePayload) {
   if (useMock) {
     const shouldSetDefault =
-      payload.default || !mockSmallModels.some((item) => item.modelType === payload.modelType && item.default);
+      payload.default ||
+      !mockSmallModels.some((item) => item.modelType === payload.modelType && item.default);
     if (shouldSetDefault) {
       mockSmallModels.forEach((item) => {
         if (item.modelType === payload.modelType) {
@@ -320,15 +314,12 @@ export async function getDefaultSmallModel(
   modelType: "embedding" | "reranker",
 ): Promise<SmallModel | null> {
   if (useMock) {
-    return (
-      mockSmallModels.find((item) => item.modelType === modelType && item.default) ?? null
-    );
+    return mockSmallModels.find((item) => item.modelType === modelType && item.default) ?? null;
   }
 
-  const response = await http.get<BackendSmallModel>(
-    `${API_PREFIX}/small-model/get_default`,
-    { params: { model_type: modelType } },
-  );
+  const response = await http.get<BackendSmallModel>(`${API_PREFIX}/small-model/get_default`, {
+    params: { model_type: modelType },
+  });
 
   // Empty object `{}` => no default configured.
   if (!response.data?.model_id) {

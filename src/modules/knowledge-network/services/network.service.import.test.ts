@@ -26,9 +26,8 @@ describe("importKnowledgeNetwork", () => {
   });
 
   it("preserves bindings by default", async () => {
-    const { importKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await importKnowledgeNetwork({ id: "orders" });
 
@@ -46,9 +45,8 @@ describe("importKnowledgeNetwork", () => {
   });
 
   it("requests detached bindings for cross-environment import", async () => {
-    const { importKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await importKnowledgeNetwork({ id: "orders" }, "overwrite", "detach");
 
@@ -79,9 +77,8 @@ describe("importKnowledgeNetwork", () => {
         },
       },
     });
-    const { importKnowledgeNetwork } = await import(
-      "@/modules/knowledge-network/services/network.service"
-    );
+    const { importKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
 
     await expect(importKnowledgeNetwork({ id: "orders" })).rejects.toMatchObject({
       isConflict: true,

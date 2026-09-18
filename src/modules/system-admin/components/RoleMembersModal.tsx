@@ -53,7 +53,9 @@ export function RoleMembersModal({
   const { message } = useAppServices();
   const [accessorIds, setAccessorIds] = useState<string[]>(role.accessorIds);
   const [userLabels, setUserLabels] = useState<Record<string, string>>({});
-  const [unresolvedUserLabelIds, setUnresolvedUserLabelIds] = useState<Set<string>>(() => new Set());
+  const [unresolvedUserLabelIds, setUnresolvedUserLabelIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [userLookupRevision, setUserLookupRevision] = useState(0);
   const [candidates, setCandidates] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
@@ -321,11 +323,15 @@ export function RoleMembersModal({
       <div className={modalStyles.content}>
         <div className={modalStyles.summaryGrid}>
           <div className={modalStyles.summaryCard}>
-            <span className={modalStyles.summaryLabel}>{t("common.total", { total: accessorIds.length })}</span>
+            <span className={modalStyles.summaryLabel}>
+              {t("common.total", { total: accessorIds.length })}
+            </span>
             <strong className={modalStyles.summaryValue}>{accessorIds.length}</strong>
           </div>
           <div className={modalStyles.summaryCard}>
-            <span className={modalStyles.summaryLabel}>{t("systemAdmin.roles.membersModal.memberUser")}</span>
+            <span className={modalStyles.summaryLabel}>
+              {t("systemAdmin.roles.membersModal.memberUser")}
+            </span>
             <strong className={modalStyles.summaryValue}>{memberCounts.userCount}</strong>
           </div>
           {memberCounts.deptCount > 0 ? (

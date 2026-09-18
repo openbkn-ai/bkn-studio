@@ -333,11 +333,7 @@ export function AddFunctionCapabilityDrawer({
             </AppButton>
           </LabPermissionHint>
           {hasSuccessfulRun ? (
-            <Alert
-              message={t("executionFactoryLab.functionRunSuccess")}
-              showIcon
-              type="success"
-            />
+            <Alert message={t("executionFactoryLab.functionRunSuccess")} showIcon type="success" />
           ) : null}
           {runError ? <Alert message={runError} showIcon type="error" /> : null}
           {runResult ? (
@@ -361,12 +357,7 @@ export function AddFunctionCapabilityDrawer({
           <AppButton disabled={submitting || testing} onClick={onClose}>
             {t("executionFactoryLab.cancelEditAction")}
           </AppButton>
-          <AppButton
-            disabled={!canCreate}
-            htmlType="submit"
-            loading={submitting}
-            type="primary"
-          >
+          <AppButton disabled={!canCreate} htmlType="submit" loading={submitting} type="primary">
             {hasSuccessfulRun
               ? t("executionFactoryLab.submitAddFunction")
               : t("executionFactoryLab.functionCreateDisabledAction")}

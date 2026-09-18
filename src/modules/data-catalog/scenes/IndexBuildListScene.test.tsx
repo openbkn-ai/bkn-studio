@@ -32,7 +32,7 @@ vi.mock("@/modules/data-catalog/services/build-task.service", () => ({
   listBuildTaskPage: listBuildTaskPageMock,
 }));
 vi.mock("@/modules/data-catalog/services/mock-db", () => ({
-  subscribeMockDb: () => () => { },
+  subscribeMockDb: () => () => {},
 }));
 vi.mock("@/modules/data-catalog/hooks/use-build-task-actions", () => ({
   useBuildTaskActions: () => ({ pauseOrResume: vi.fn(), remove: vi.fn(), retry: vi.fn() }),
@@ -43,7 +43,10 @@ import { IndexBuildListScene } from "./IndexBuildListScene";
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (reason: Error) => void;
-  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
   return { promise, resolve, reject };
 }
 
@@ -88,20 +91,24 @@ describe("IndexBuildListScene", () => {
 
   it("ignores an older failed request after a successful refresh", async () => {
     const older = deferred<{ items: []; total: number }>();
-    listBuildTaskPageMock.mockReturnValueOnce(older.promise)
+    listBuildTaskPageMock
+      .mockReturnValueOnce(older.promise)
       .mockResolvedValueOnce({ items: [], total: 0 });
-    render(<MemoryRouter><IndexBuildListScene /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <IndexBuildListScene />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("button", { name: /common\.refresh/ }));
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledTimes(2));
-    expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(
-      expect.any(Object),
-      { skipErrorToast: true },
-    );
+    expect(listBuildTaskPageMock).toHaveBeenLastCalledWith(expect.any(Object), {
+      skipErrorToast: true,
+    });
     await act(async () => {
       older.reject(new Error("outdated failure"));
-      await older.promise.catch(() => { });
+      await older.promise.catch(() => {});
     });
 
     await waitFor(() => expect(screen.queryByText("outdated failure")).toBeNull());
@@ -114,7 +121,11 @@ describe("IndexBuildListScene", () => {
     const setIntervalSpy = vi.spyOn(window, "setInterval");
     const { IndexBuildListScene: LiveScene } = await import("./IndexBuildListScene");
     listBuildTaskPageMock.mockResolvedValue({ items: [runningTask], total: 1 });
-    render(<MemoryRouter><LiveScene /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <LiveScene />
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText("running-task")).toBeInTheDocument();
     expect(setIntervalSpy).not.toHaveBeenCalledWith(expect.any(Function), 10_000);

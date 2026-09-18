@@ -43,19 +43,37 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   listKnowledgeNetworkObjectTypes: serviceMocks.listObjectTypes,
 }));
 
-vi.mock("@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell", () => ({
-  KnowledgeNetworkResourceConfigShell: ({ children, title }: { children?: ReactNode; title: string }) => (
-    <main><h1>{title}</h1>{children}</main>
-  ),
-}));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell",
+  () => ({
+    KnowledgeNetworkResourceConfigShell: ({
+      children,
+      title,
+    }: {
+      children?: ReactNode;
+      title: string;
+    }) => (
+      <main>
+        <h1>{title}</h1>
+        {children}
+      </main>
+    ),
+  }),
+);
 
-vi.mock("@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions", () => ({
-  KnowledgeNetworkResourceDetailActions: () => null,
-}));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions",
+  () => ({
+    KnowledgeNetworkResourceDetailActions: () => null,
+  }),
+);
 
-vi.mock("@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer", () => ({
-  KnowledgeNetworkObjectAuthorizeDrawer: () => null,
-}));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer",
+  () => ({
+    KnowledgeNetworkObjectAuthorizeDrawer: () => null,
+  }),
+);
 
 vi.mock("@/modules/knowledge-network/components/metric/MetricDataQueryPanel", () => ({
   MetricDataQueryPanel: ({

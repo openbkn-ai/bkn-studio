@@ -8,7 +8,9 @@
 import type { OperatorRecord } from "@/modules/execution-factory/types/operator";
 import type { ToolboxRecord } from "@/modules/execution-factory/types/toolbox";
 
-export function operatorConversionPermission(metadataType?: OperatorRecord["metadataType"]): string {
+export function operatorConversionPermission(
+  metadataType?: OperatorRecord["metadataType"],
+): string {
   if (metadataType === "openapi") return "execution-factory:toolbox:edit";
   if (metadataType === "function") return "execution-factory:function:edit";
   return "";
@@ -23,8 +25,7 @@ export function eligibleOperatorConversionTargets(
   if (!permission || !currentPermissions.includes(permission)) return [];
   // Toolbox-list operations expose object-grant authorization only. The conversion API remains the
   // authority for the selected toolbox's object-level modification permission.
-  return toolboxes.filter((toolbox) =>
-    toolbox.metadataType === record?.metadataType &&
-    !toolbox.isInternal,
+  return toolboxes.filter(
+    (toolbox) => toolbox.metadataType === record?.metadataType && !toolbox.isInternal,
   );
 }

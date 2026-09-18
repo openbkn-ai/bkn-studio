@@ -16,11 +16,20 @@ import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import type { BknLifecycle, BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import type {
+  BknLifecycle,
+  BknTurn,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 
-import { ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import {
+  ChatPane,
+  DEFAULT_PROMPT,
+  KN_EVIDENCE_HINT,
+  type ChatPaneHandle,
+  type PaneProfile,
+} from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -188,12 +197,20 @@ describe("ChatPane 工具调用折叠", () => {
 
     fireEvent.click(group);
     expect(screen.getAllByText("思考过程")).toHaveLength(1);
-    expect(headerLabels()).toEqual(["思考过程", "已调用工具 3 次", "search_schema", "run_sql", "run_sql"]);
+    expect(headerLabels()).toEqual([
+      "思考过程",
+      "已调用工具 3 次",
+      "search_schema",
+      "run_sql",
+      "run_sql",
+    ]);
   });
 
   it("第二次调用到达时，已展开的卡片不被收回去", async () => {
     stubLifecycle();
-    let emit!: (chunk: Parameters<Parameters<AgentChatModule["runAgentChat"]>[0]["onChunk"]>[0]) => void;
+    let emit!: (
+      chunk: Parameters<Parameters<AgentChatModule["runAgentChat"]>[0]["onChunk"]>[0],
+    ) => void;
     let finishRun!: () => void;
     runAgentChat.mockImplementation(
       ({ onChunk }) =>
@@ -222,7 +239,11 @@ describe("ChatPane 工具调用折叠", () => {
       emit({ type: "tool-call", id: "c2", name: "search_schema", args: {} });
     });
     expect(screen.getByText("已调用工具 2 次")).toBeTruthy();
-    expect([...document.querySelectorAll("pre")].some((node) => (node.textContent ?? "").includes("SELECT 1"))).toBe(true);
+    expect(
+      [...document.querySelectorAll("pre")].some((node) =>
+        (node.textContent ?? "").includes("SELECT 1"),
+      ),
+    ).toBe(true);
 
     await act(async () => {
       finishRun();

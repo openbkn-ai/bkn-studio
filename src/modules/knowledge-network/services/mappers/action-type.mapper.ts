@@ -180,9 +180,7 @@ function toBackendActionParameters(
     .map((item) => {
       const valueFrom = item.valueFrom ?? "input";
       const value =
-        valueFrom === "property"
-          ? item.value ?? item.sourcePropertyName ?? ""
-          : item.value;
+        valueFrom === "property" ? (item.value ?? item.sourcePropertyName ?? "") : item.value;
 
       return {
         name: item.name.trim(),
@@ -192,8 +190,7 @@ function toBackendActionParameters(
     })
     .filter(
       (item) =>
-        item.name.length > 0 &&
-        (item.value_from === "input" || Boolean(item.value?.trim())),
+        item.name.length > 0 && (item.value_from === "input" || Boolean(item.value?.trim())),
     );
 
   return nextParameters.length > 0 ? nextParameters : undefined;
@@ -273,7 +270,7 @@ export function mapActionTypeExecutionConfigFromBackend(
     .filter((entry) => entry.name)
     .map((entry) => ({
       name: entry.name,
-      sourcePropertyName: entry.value_from === "property" ? entry.value ?? "" : "",
+      sourcePropertyName: entry.value_from === "property" ? (entry.value ?? "") : "",
       value: entry.value,
       valueFrom: entry.value_from ?? "input",
     }));

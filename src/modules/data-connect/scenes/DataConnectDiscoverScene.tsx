@@ -71,9 +71,7 @@ import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 import styles from "./DataConnectDiscoverScene.module.css";
 
 type ScheduleModalState =
-  | { mode: "create"; scheduleId?: undefined }
-  | { mode: "edit"; scheduleId: string }
-  | null;
+  { mode: "create"; scheduleId?: undefined } | { mode: "edit"; scheduleId: string } | null;
 
 type EnabledFilterValue = "all" | "disabled" | "enabled";
 type TaskStatusFilterValue = DataConnectDiscoverTaskStatus[];
@@ -85,8 +83,27 @@ function renderTableTime(value?: number) {
 
 function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }) {
   const percent = Math.max(0, Math.min(100, task.progress));
-  const fillClass = task.status === "completed" ? taskStyles.progressFillDone : task.status === "failed" ? taskStyles.progressFillFailed : task.status === "cancelled" || task.status === "pending" ? taskStyles.progressFillMuted : taskStyles.progressFillVector;
-  return <div className={taskStyles.progressWrapCompact}><div className={taskStyles.progressTrack}><span className={[taskStyles.progressFill, fillClass].join(" ")} style={{ width: `${percent}%` }} /></div><div className={taskStyles.progressMetaCompact}><span>{`${percent}%`}</span></div></div>;
+  const fillClass =
+    task.status === "completed"
+      ? taskStyles.progressFillDone
+      : task.status === "failed"
+        ? taskStyles.progressFillFailed
+        : task.status === "cancelled" || task.status === "pending"
+          ? taskStyles.progressFillMuted
+          : taskStyles.progressFillVector;
+  return (
+    <div className={taskStyles.progressWrapCompact}>
+      <div className={taskStyles.progressTrack}>
+        <span
+          className={[taskStyles.progressFill, fillClass].join(" ")}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <div className={taskStyles.progressMetaCompact}>
+        <span>{`${percent}%`}</span>
+      </div>
+    </div>
+  );
 }
 
 function DiscoverTaskPriority({ priority }: { priority: number }) {
@@ -107,21 +124,21 @@ export function DataConnectDiscoverScene({
   const navigate = useNavigate();
   const [internalActiveTab, setInternalActiveTab] = useState<DataConnectDiscoverTab>("tasks");
   const activeTab = controlledActiveTab ?? internalActiveTab;
-  const changeActiveTab = useCallback((nextTab: DataConnectDiscoverTab) => {
-    setInternalActiveTab(nextTab);
-    onTabChange?.(nextTab);
-  }, [onTabChange]);
+  const changeActiveTab = useCallback(
+    (nextTab: DataConnectDiscoverTab) => {
+      setInternalActiveTab(nextTab);
+      onTabChange?.(nextTab);
+    },
+    [onTabChange],
+  );
   const [keyword, setKeyword] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword.trim());
   const selectedCatalogId = catalogId;
-  const [enabledFilter, setEnabledFilter] =
-    useState<EnabledFilterValue>("all");
-  const [taskStatusFilter, setTaskStatusFilter] =
-    useState<TaskStatusFilterValue>([]);
+  const [enabledFilter, setEnabledFilter] = useState<EnabledFilterValue>("all");
+  const [taskStatusFilter, setTaskStatusFilter] = useState<TaskStatusFilterValue>([]);
   const [taskTriggerTypeFilter, setTaskTriggerTypeFilter] =
     useState<TaskTriggerTypeFilterValue>("all");
-  const [taskStrategyFilter, setTaskStrategyFilter] =
-    useState<DataConnectDiscoverStrategy>();
+  const [taskStrategyFilter, setTaskStrategyFilter] = useState<DataConnectDiscoverStrategy>();
   const [taskSort, setTaskSort] = useState<DataConnectDiscoverTaskSort>("create_time");
   const [taskDirection, setTaskDirection] = useState<"asc" | "desc">("desc");
   const [catalogs, setCatalogs] = useState<DataConnectRecord[]>([]);
@@ -144,11 +161,9 @@ export function DataConnectDiscoverScene({
   const catalogRequestIdRef = useRef(0);
   const scheduleRequestIdRef = useRef(0);
   const taskRequestIdRef = useRef(0);
-  const [scheduleModalState, setScheduleModalState] =
-    useState<ScheduleModalState>(null);
+  const [scheduleModalState, setScheduleModalState] = useState<ScheduleModalState>(null);
   const [scheduleModalSubmitting, setScheduleModalSubmitting] = useState(false);
-  const [editingSchedule, setEditingSchedule] =
-    useState<DataConnectDiscoverSchedule | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<DataConnectDiscoverSchedule | null>(null);
   const [triggeringScheduleId, setTriggeringScheduleId] = useState<string | null>(null);
   const [runNowOpen, setRunNowOpen] = useState(false);
   const [runNowSubmitting, setRunNowSubmitting] = useState(false);
@@ -164,16 +179,16 @@ export function DataConnectDiscoverScene({
   });
   const batchDeleteTaskTargets = tasks.filter(
     (task) =>
-      selectedTaskKeys.includes(task.id) &&
-      task.status !== "pending" &&
-      task.status !== "running",
+      selectedTaskKeys.includes(task.id) && task.status !== "pending" && task.status !== "running",
   );
 
   const handleBatchDeleteTasks = () => {
     if (!batchDeleteTaskTargets.length) return;
     const catalogIdentity = catalogInteractionIdentityRef.current;
     void modal.confirm({
-      title: t("dataCatalog.task.batchDeleteConfirmTitle", { count: batchDeleteTaskTargets.length }),
+      title: t("dataCatalog.task.batchDeleteConfirmTitle", {
+        count: batchDeleteTaskTargets.length,
+      }),
       content: t("dataCatalog.task.batchDeleteConfirmContent"),
       okText: t("common.delete"),
       cancelText: t("common.cancel"),
@@ -221,9 +236,7 @@ export function DataConnectDiscoverScene({
     [catalogs],
   );
 
-  const selectedCatalogName = selectedCatalogId
-    ? catalogNameMap.get(selectedCatalogId)
-    : undefined;
+  const selectedCatalogName = selectedCatalogId ? catalogNameMap.get(selectedCatalogId) : undefined;
   const catalogAccessConfirmed = Boolean(
     catalogsLoaded &&
     authorizedCatalogId === selectedCatalogId &&
@@ -232,9 +245,7 @@ export function DataConnectDiscoverScene({
   );
 
   const activeTaskCount = useMemo(
-    () =>
-      tasks.filter((item) => item.status === "pending" || item.status === "running")
-        .length,
+    () => tasks.filter((item) => item.status === "pending" || item.status === "running").length,
     [tasks],
   );
   const loadCatalogs = useCallback(async () => {
@@ -278,14 +289,16 @@ export function DataConnectDiscoverScene({
     setScheduleError(null);
 
     try {
-      const result = await listDataConnectDiscoverSchedules({
-        catalogId: selectedCatalogId,
-        enabled:
-          enabledFilter === "all" ? undefined : enabledFilter === "enabled",
-        keyword: debouncedKeyword,
-        page: schedulePage,
-        pageSize: schedulePageSize,
-      }, { skipErrorToast: true });
+      const result = await listDataConnectDiscoverSchedules(
+        {
+          catalogId: selectedCatalogId,
+          enabled: enabledFilter === "all" ? undefined : enabledFilter === "enabled",
+          keyword: debouncedKeyword,
+          page: schedulePage,
+          pageSize: schedulePageSize,
+        },
+        { skipErrorToast: true },
+      );
       if (!isCurrentRequest()) return;
       setSchedules(result.items);
       setScheduleTotal(result.total);
@@ -312,17 +325,19 @@ export function DataConnectDiscoverScene({
     setTaskError(null);
 
     try {
-      const result = await listDataConnectDiscoverTasks({
-        catalogId: selectedCatalogId,
-        page: taskPage,
-        pageSize: taskPageSize,
-        direction: taskDirection,
-        sort: taskSort,
-        statuses: taskStatusFilter.length === 0 ? undefined : taskStatusFilter,
-        strategy: taskStrategyFilter,
-        triggerType:
-          taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
-      }, { skipErrorToast: true });
+      const result = await listDataConnectDiscoverTasks(
+        {
+          catalogId: selectedCatalogId,
+          page: taskPage,
+          pageSize: taskPageSize,
+          direction: taskDirection,
+          sort: taskSort,
+          statuses: taskStatusFilter.length === 0 ? undefined : taskStatusFilter,
+          strategy: taskStrategyFilter,
+          triggerType: taskTriggerTypeFilter === "all" ? undefined : taskTriggerTypeFilter,
+        },
+        { skipErrorToast: true },
+      );
       if (!isCurrentRequest()) return;
       setTasks(result.items);
       setTaskTotal(result.total);
@@ -357,7 +372,9 @@ export function DataConnectDiscoverScene({
   ) => {
     if (extra.action === "filter") {
       setTaskStrategyFilter(filters.strategy?.[0] as DataConnectDiscoverStrategy | undefined);
-      setTaskTriggerTypeFilter((filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined) ?? "all");
+      setTaskTriggerTypeFilter(
+        (filters.triggerType?.[0] as DataConnectDiscoverTaskTriggerType | undefined) ?? "all",
+      );
       setTaskStatusFilter((filters.status ?? []).map(String) as TaskStatusFilterValue);
       setSelectedTaskKeys([]);
       setTaskPage(1);
@@ -477,11 +494,11 @@ export function DataConnectDiscoverScene({
                   : t("dataConnect.discoverScheduleDisableConfirmTitle"),
                 content: checked
                   ? t("dataConnect.discoverScheduleEnableConfirmDescription", {
-                    name: record.name,
-                  })
+                      name: record.name,
+                    })
                   : t("dataConnect.discoverScheduleDisableConfirmDescription", {
-                    name: record.name,
-                  }),
+                      name: record.name,
+                    }),
                 okText: checked ? t("common.enabled") : t("common.disabled"),
                 cancelText: t("common.cancel"),
                 okButtonProps: checked ? undefined : { danger: true },
@@ -639,19 +656,27 @@ export function DataConnectDiscoverScene({
       dataIndex: "strategy",
       title: t("dataConnect.discoverStrategy"),
       width: 110,
-      filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({ text: t(`dataConnect.discoverStrategies.${value}`), value })),
+      filters: ["full_sync", "create_only", "cleanup_only"].map((value) => ({
+        text: t(`dataConnect.discoverStrategies.${value}`),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: taskStrategyFilter ? [taskStrategyFilter] : null,
-      render: (value: DataConnectDiscoverTaskSummary["strategy"]) => t(`dataConnect.discoverStrategies.${value}`),
+      render: (value: DataConnectDiscoverTaskSummary["strategy"]) =>
+        t(`dataConnect.discoverStrategies.${value}`),
     },
     {
       dataIndex: "triggerType",
       title: t("dataConnect.discoverTriggerType"),
       width: 100,
-      filters: ["manual", "scheduled"].map((value) => ({ text: t(`dataConnect.discoverTriggerTypes.${value}`), value })),
+      filters: ["manual", "scheduled"].map((value) => ({
+        text: t(`dataConnect.discoverTriggerTypes.${value}`),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: taskTriggerTypeFilter === "all" ? null : [taskTriggerTypeFilter],
-      render: (value: DataConnectDiscoverTaskSummary["triggerType"]) => t(`dataConnect.discoverTriggerTypes.${value}`),
+      render: (value: DataConnectDiscoverTaskSummary["triggerType"]) =>
+        t(`dataConnect.discoverTriggerTypes.${value}`),
     },
     {
       dataIndex: "queuePriority",
@@ -663,9 +688,26 @@ export function DataConnectDiscoverScene({
       dataIndex: "status",
       title: t("dataConnect.discoverTaskStatus"),
       width: 120,
-      filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({ text: t(`dataConnect.discoverTaskStatuses.${value}`), value })),
+      filters: ["pending", "running", "completed", "failed", "cancelled"].map((value) => ({
+        text: t(`dataConnect.discoverTaskStatuses.${value}`),
+        value,
+      })),
       filteredValue: taskStatusFilter.length ? taskStatusFilter : null,
-      render: (value: DataConnectDiscoverTaskStatus) => <Tag color={value === "failed" ? "error" : value === "completed" ? "success" : value === "cancelled" || value === "pending" ? "default" : "processing"}>{t(`dataConnect.discoverTaskStatuses.${value}`)}</Tag>,
+      render: (value: DataConnectDiscoverTaskStatus) => (
+        <Tag
+          color={
+            value === "failed"
+              ? "error"
+              : value === "completed"
+                ? "success"
+                : value === "cancelled" || value === "pending"
+                  ? "default"
+                  : "processing"
+          }
+        >
+          {t(`dataConnect.discoverTaskStatuses.${value}`)}
+        </Tag>
+      ),
     },
     {
       dataIndex: "progress",
@@ -708,38 +750,54 @@ export function DataConnectDiscoverScene({
       width: 84,
       fixed: "right",
       render: (_, record) => {
-        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        const menuItems: NonNullable<MenuProps["items"]> = [
+          { key: "detail", label: t("common.detail") },
+        ];
         if (canManageCatalogTasks && record.status !== "pending" && record.status !== "running") {
           menuItems.push({ danger: true, key: "delete", label: t("common.delete") });
         }
-        return <Dropdown menu={{
-          items: menuItems, onClick: ({ key, domEvent }) => {
-            domEvent.stopPropagation();
-            if (key === "detail") setDetailTaskId(record.id);
-            if (key === "delete") {
-              const catalogIdentity = catalogInteractionIdentityRef.current;
-              void modal.confirm({
-                title: t("dataConnect.discoverTaskDeleteConfirmTitle"),
-                content: t("dataConnect.discoverTaskDeleteConfirmDescription", { id: record.id }),
-                okText: t("common.delete"),
-                cancelText: t("common.cancel"),
-                okButtonProps: { danger: true },
-                onOk: async () => {
-                  if (catalogInteractionIdentityRef.current !== catalogIdentity) return;
-                  try {
-                    await deleteDataConnectDiscoverTask(record.id);
-                    if (catalogInteractionIdentityRef.current !== catalogIdentity) return;
-                    void message.success(t("common.success"));
-                    if (detailTaskId === record.id) setDetailTaskId(null);
-                    await loadTasks();
-                  } catch (error) {
-                    if (catalogInteractionIdentityRef.current === catalogIdentity) throw error;
-                  }
-                },
-              });
-            }
-          }
-        }} trigger={["click"]}><AppButton aria-label={t("dataConnect.moreActions")} icon={<EllipsisOutlined />} type="link" /></Dropdown>;
+        return (
+          <Dropdown
+            menu={{
+              items: menuItems,
+              onClick: ({ key, domEvent }) => {
+                domEvent.stopPropagation();
+                if (key === "detail") setDetailTaskId(record.id);
+                if (key === "delete") {
+                  const catalogIdentity = catalogInteractionIdentityRef.current;
+                  void modal.confirm({
+                    title: t("dataConnect.discoverTaskDeleteConfirmTitle"),
+                    content: t("dataConnect.discoverTaskDeleteConfirmDescription", {
+                      id: record.id,
+                    }),
+                    okText: t("common.delete"),
+                    cancelText: t("common.cancel"),
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      if (catalogInteractionIdentityRef.current !== catalogIdentity) return;
+                      try {
+                        await deleteDataConnectDiscoverTask(record.id);
+                        if (catalogInteractionIdentityRef.current !== catalogIdentity) return;
+                        void message.success(t("common.success"));
+                        if (detailTaskId === record.id) setDetailTaskId(null);
+                        await loadTasks();
+                      } catch (error) {
+                        if (catalogInteractionIdentityRef.current === catalogIdentity) throw error;
+                      }
+                    },
+                  });
+                }
+              },
+            }}
+            trigger={["click"]}
+          >
+            <AppButton
+              aria-label={t("dataConnect.moreActions")}
+              icon={<EllipsisOutlined />}
+              type="link"
+            />
+          </Dropdown>
+        );
       },
     },
   ];
@@ -771,9 +829,7 @@ export function DataConnectDiscoverScene({
     };
   }, [message, scheduleModalState]);
 
-  const handleScheduleSubmit = async (
-    payload: DiscoverScheduleFormModalSubmitPayload,
-  ) => {
+  const handleScheduleSubmit = async (payload: DiscoverScheduleFormModalSubmitPayload) => {
     const submittedScheduleIdentity = editingScheduleIdentityRef.current;
     setScheduleModalSubmitting(true);
 
@@ -790,13 +846,10 @@ export function DataConnectDiscoverScene({
         if (!editingSchedule) {
           throw new Error(t("common.requestFailed"));
         }
-        await updateDataConnectDiscoverSchedule(
-          scheduleModalState.scheduleId,
-          {
-            ...requestPayload,
-            expectedUpdateTime: editingSchedule.expectedUpdateTime,
-          },
-        );
+        await updateDataConnectDiscoverSchedule(scheduleModalState.scheduleId, {
+          ...requestPayload,
+          expectedUpdateTime: editingSchedule.expectedUpdateTime,
+        });
       } else {
         await createDataConnectDiscoverSchedule(requestPayload);
       }
@@ -815,14 +868,10 @@ export function DataConnectDiscoverScene({
       }
       void message.error(extractRequestErrorMessage(error));
 
-      if (
-        isRequestConflict(error) &&
-        scheduleModalState?.mode === "edit"
-      ) {
+      if (isRequestConflict(error) && scheduleModalState?.mode === "edit") {
         const submittedScheduleId = scheduleModalState.scheduleId;
         try {
-          const latestSchedule =
-            await getDataConnectDiscoverSchedule(submittedScheduleId);
+          const latestSchedule = await getDataConnectDiscoverSchedule(submittedScheduleId);
           if (editingScheduleIdentityRef.current === submittedScheduleIdentity) {
             setEditingSchedule(latestSchedule);
           }
@@ -1021,13 +1070,17 @@ export function DataConnectDiscoverScene({
             onChange={handleTaskTableChange}
             pagination={false}
             rowKey="id"
-            rowSelection={canManageCatalogTasks ? {
-              selectedRowKeys: selectedTaskKeys,
-              onChange: (keys) => setSelectedTaskKeys(keys.map(String)),
-              getCheckboxProps: (task) => ({
-                disabled: task.status === "pending" || task.status === "running",
-              }),
-            } : undefined}
+            rowSelection={
+              canManageCatalogTasks
+                ? {
+                    selectedRowKeys: selectedTaskKeys,
+                    onChange: (keys) => setSelectedTaskKeys(keys.map(String)),
+                    getCheckboxProps: (task) => ({
+                      disabled: task.status === "pending" || task.status === "running",
+                    }),
+                  }
+                : undefined
+            }
           />
         )}
       </TableSurface>
@@ -1125,9 +1178,7 @@ export function DataConnectDiscoverScene({
       ) : null}
       {catalogAccessConfirmed ? (
         <DiscoverRunNowModal
-          connectionName={
-            catalogNameMap.get(selectedCatalogId) ?? selectedCatalogId
-          }
+          connectionName={catalogNameMap.get(selectedCatalogId) ?? selectedCatalogId}
           onCancel={() => {
             setRunNowOpen(false);
           }}
@@ -1136,10 +1187,7 @@ export function DataConnectDiscoverScene({
             try {
               setRunNowSubmitting(true);
               const result = await runDiscover(selectedCatalogId, strategy);
-              if (
-                !result ||
-                catalogInteractionIdentityRef.current !== catalogIdentity
-              ) {
+              if (!result || catalogInteractionIdentityRef.current !== catalogIdentity) {
                 return;
               }
               setRunNowOpen(false);

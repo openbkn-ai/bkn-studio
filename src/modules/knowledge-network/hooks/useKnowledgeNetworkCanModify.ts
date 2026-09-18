@@ -41,8 +41,7 @@ export function useKnowledgeNetworkOperationAccessState(
 
   useEffect(() => {
     let cancelled = false;
-    const requestedOperations =
-      operationsKey.length > 0 ? operationsKey.split("\u0000") : [];
+    const requestedOperations = operationsKey.length > 0 ? operationsKey.split("\u0000") : [];
 
     setAccess(createOperationAccess(requestedOperations, false));
     setError(null);
@@ -105,8 +104,10 @@ export function useKnowledgeNetworkCanModify(networkId: string) {
 }
 
 export function useKnowledgeNetworkModifyAccess(networkId: string) {
-  const { access, error, isForbidden, isLoading } =
-    useKnowledgeNetworkOperationAccessState(networkId, ["modify"]);
+  const { access, error, isForbidden, isLoading } = useKnowledgeNetworkOperationAccessState(
+    networkId,
+    ["modify"],
+  );
   return {
     canModify: access.modify ?? false,
     error,

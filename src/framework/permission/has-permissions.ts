@@ -18,20 +18,15 @@ export function hasPermissions({
   mode = "all",
   requiredPermissions,
 }: HasPermissionsInput) {
-  const required = Array.isArray(requiredPermissions)
-    ? requiredPermissions
-    : [requiredPermissions];
+  const required = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
 
   if (required.length === 0) {
     return true;
   }
 
   if (mode === "any") {
-    return required.some((permission) =>
-      currentPermissions.includes(permission),
-    );
+    return required.some((permission) => currentPermissions.includes(permission));
   }
 
   return required.every((permission) => currentPermissions.includes(permission));
 }
-

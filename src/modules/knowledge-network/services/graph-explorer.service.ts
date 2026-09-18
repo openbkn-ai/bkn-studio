@@ -7,7 +7,12 @@
 
 import { parsePrecisionSafeJSON } from "@/framework/request/precision-safe-json";
 
-import { REST_PREFIX, restPost, type ContextLoaderEnv, type McpAuth } from "./context-loader.service";
+import {
+  REST_PREFIX,
+  restPost,
+  type ContextLoaderEnv,
+  type McpAuth,
+} from "./context-loader.service";
 
 /* ============================ Graph model ============================ */
 
@@ -87,7 +92,8 @@ function isRecord(value: unknown): value is Rec {
 export function stringifyValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") return String(value);
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint")
+    return String(value);
   if (typeof value === "symbol") return value.description ?? "";
   if (typeof value === "function") return "";
   try {
@@ -110,7 +116,9 @@ function nonEmpty(value: unknown): boolean {
  */
 export function buildInstanceId(otId: string, primaryKeys: string[], identity: Rec): string | null {
   if (!otId || primaryKeys.length === 0) return null;
-  const parts = primaryKeys.map((pk) => (pk in identity && identity[pk] !== undefined ? asString(identity[pk]) : "__NULL__"));
+  const parts = primaryKeys.map((pk) =>
+    pk in identity && identity[pk] !== undefined ? asString(identity[pk]) : "__NULL__",
+  );
   return `${otId}-${parts.join("_")}`;
 }
 
@@ -126,7 +134,17 @@ export function buildInstanceId(otId: string, primaryKeys: string[], identity: R
  * in the former and the raw extraction, markup and all, in the latter. Names are matched without
  * regard to case, since one network writes `Title` where another writes `title`.
  */
-const LABEL_CHAIN = [DISPLAY, "display_name", "name", "title", "topic", "description", "text_clean", "text", "id"];
+const LABEL_CHAIN = [
+  DISPLAY,
+  "display_name",
+  "name",
+  "title",
+  "topic",
+  "description",
+  "text_clean",
+  "text",
+  "id",
+];
 
 export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): string {
   if (labelKey && nonEmpty(props[labelKey])) return asString(props[labelKey]);
@@ -136,7 +154,8 @@ export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): stri
     const lower = key.toLowerCase();
     if (!byLowerName.has(lower) || !nonEmpty(byLowerName.get(lower))) byLowerName.set(lower, value);
   }
-  if (labelKey && nonEmpty(byLowerName.get(labelKey.toLowerCase()))) return asString(byLowerName.get(labelKey.toLowerCase()));
+  if (labelKey && nonEmpty(byLowerName.get(labelKey.toLowerCase())))
+    return asString(byLowerName.get(labelKey.toLowerCase()));
   for (const key of LABEL_CHAIN) {
     const value = byLowerName.get(key);
     if (nonEmpty(value)) return asString(value);
@@ -151,7 +170,11 @@ export function pickDisplay(props: Rec, nodeId: string, labelKey?: string): stri
 export function identityCondition(identity: Rec): KnCondition | null {
   const entries = Object.entries(identity).filter(([, value]) => value !== undefined);
   if (entries.length === 0) return null;
-  const leaves: KnCondition[] = entries.map(([field, value]) => ({ field, operation: "==", value }));
+  const leaves: KnCondition[] = entries.map(([field, value]) => ({
+    field,
+    operation: "==",
+    value,
+  }));
   return leaves.length === 1 ? leaves[0] : { operation: "and", sub_conditions: leaves };
 }
 
@@ -170,7 +193,12 @@ export function objectTypeMetaFrom(raw: unknown): ObjectTypeMeta | null {
           type: typeof item.type === "string" ? item.type : undefined,
         }))
     : [];
-  return { id: raw.id, name: typeof raw.name === "string" && raw.name ? raw.name : raw.id, primaryKeys, properties };
+  return {
+    id: raw.id,
+    name: typeof raw.name === "string" && raw.name ? raw.name : raw.id,
+    primaryKeys,
+    properties,
+  };
 }
 
 function identityFromRow(row: Rec, primaryKeys: string[]): Rec {
@@ -185,12 +213,20 @@ function identityFromRow(row: Rec, primaryKeys: string[]): Rec {
 
 function nodeFromRow(meta: ObjectTypeMeta, row: Rec, labelKey?: string): GNode | null {
   const identity = identityFromRow(row, meta.primaryKeys);
-  const embeddedId = typeof row[INSTANCE_ID] === "string" && row[INSTANCE_ID] ? row[INSTANCE_ID] : null;
+  const embeddedId =
+    typeof row[INSTANCE_ID] === "string" && row[INSTANCE_ID] ? row[INSTANCE_ID] : null;
   const id = embeddedId ?? buildInstanceId(meta.id, meta.primaryKeys, identity);
   if (!id) return null;
   const props: Rec = { ...row };
   delete props._score;
-  return { id, otId: meta.id, otName: meta.name, identity, display: pickDisplay(props, id, labelKey), props };
+  return {
+    id,
+    otId: meta.id,
+    otName: meta.name,
+    identity,
+    display: pickDisplay(props, id, labelKey),
+    props,
+  };
 }
 
 /**
@@ -208,27 +244,43 @@ export function fromSearchInstance(
   for (const item of list) {
     if (!isRecord(item) || typeof item.object_type_id !== "string") continue;
     const otId = item.object_type_id;
-    const otName = typeof item.object_type_name === "string" && item.object_type_name ? item.object_type_name : otId;
+    const otName =
+      typeof item.object_type_name === "string" && item.object_type_name
+        ? item.object_type_name
+        : otId;
     const props: Rec = isRecord(item.properties) ? { ...item.properties } : {};
-    if (!nonEmpty(props[DISPLAY]) && nonEmpty(item.instance_name)) props[DISPLAY] = item.instance_name;
+    if (!nonEmpty(props[DISPLAY]) && nonEmpty(item.instance_name))
+      props[DISPLAY] = item.instance_name;
     const identity: Rec = isRecord(item.unique_identities) ? { ...item.unique_identities } : {};
     if (isRecord(props[INSTANCE_IDENTITY]) && Object.keys(identity).length === 0) {
       Object.assign(identity, props[INSTANCE_IDENTITY]);
     }
     const meta = metaByOt[otId];
-    const embeddedId = typeof props[INSTANCE_ID] === "string" && props[INSTANCE_ID] ? props[INSTANCE_ID] : null;
+    const embeddedId =
+      typeof props[INSTANCE_ID] === "string" && props[INSTANCE_ID] ? props[INSTANCE_ID] : null;
     const id = embeddedId ?? (meta ? buildInstanceId(otId, meta.primaryKeys, identity) : null);
     if (!id) {
       skipped.set(otId, otName);
       continue;
     }
-    nodes.push({ id, otId, otName, identity, display: pickDisplay(props, id, labelByOt[otId]), props });
+    nodes.push({
+      id,
+      otId,
+      otName,
+      identity,
+      display: pickDisplay(props, id, labelByOt[otId]),
+      props,
+    });
   }
   return { nodes, skipped: [...skipped].map(([otId, otName]) => ({ otId, otName })) };
 }
 
 /** Maps query_object_instance rows of one object type. */
-export function fromQueryObjectInstance(meta: ObjectTypeMeta, payload: unknown, labelKey?: string): GNode[] {
+export function fromQueryObjectInstance(
+  meta: ObjectTypeMeta,
+  payload: unknown,
+  labelKey?: string,
+): GNode[] {
   const rows = isRecord(payload) && Array.isArray(payload.datas) ? payload.datas : [];
   const nodes: GNode[] = [];
   for (const row of rows) {
@@ -239,11 +291,16 @@ export function fromQueryObjectInstance(meta: ObjectTypeMeta, payload: unknown, 
   return nodes;
 }
 
-function nodeFromSubgraphObject(key: string, raw: unknown, labelByOt: Record<string, string>): GNode | null {
+function nodeFromSubgraphObject(
+  key: string,
+  raw: unknown,
+  labelByOt: Record<string, string>,
+): GNode | null {
   if (!isRecord(raw)) return null;
   const otId = typeof raw.object_type_id === "string" ? raw.object_type_id : "";
   if (!otId) return null;
-  const otName = typeof raw.object_type_name === "string" && raw.object_type_name ? raw.object_type_name : otId;
+  const otName =
+    typeof raw.object_type_name === "string" && raw.object_type_name ? raw.object_type_name : otId;
   const props: Rec = isRecord(raw.properties) ? { ...raw.properties } : {};
   for (const field of [INSTANCE_ID, INSTANCE_IDENTITY, DISPLAY]) {
     if (field in raw && raw[field] !== undefined && raw[field] !== null) props[field] = raw[field];
@@ -254,7 +311,10 @@ function nodeFromSubgraphObject(key: string, raw: unknown, labelByOt: Record<str
 }
 
 /** Maps an explore_subgraph / query_instance_subgraph entry into nodes and edges. */
-export function fromExploreSubgraph(payload: unknown, labelByOt: Record<string, string> = {}): SubgraphResult {
+export function fromExploreSubgraph(
+  payload: unknown,
+  labelByOt: Record<string, string> = {},
+): SubgraphResult {
   const result: SubgraphResult = { nodes: [], edges: [], isolated: [] };
   if (!isRecord(payload)) return result;
   const objects = isRecord(payload.objects) ? payload.objects : {};
@@ -295,7 +355,12 @@ export function orientEdges(
     const meta = relations.get(edge.relTypeId);
     if (!meta || meta.sourceOtId === meta.targetOtId) return edge;
     if (otOf(edge.source) !== meta.targetOtId || otOf(edge.target) !== meta.sourceOtId) return edge;
-    return { ...edge, id: `${edge.target}|${edge.relTypeId}|${edge.source}`, source: edge.target, target: edge.source };
+    return {
+      ...edge,
+      id: `${edge.target}|${edge.relTypeId}|${edge.source}`,
+      source: edge.target,
+      target: edge.source,
+    };
   });
 }
 
@@ -340,7 +405,11 @@ function* flattenRelations(raw: unknown): Generator<RelationRef> {
  * `targetId`. A relation "reaches" the target when either end is the target; the prefix
  * is cut there so trailing hops past the target are not returned. Null when no path reaches it.
  */
-export function shortestChainTo(paths: RelationPath[], startId: string, targetId: string): RelationRef[] | null {
+export function shortestChainTo(
+  paths: RelationPath[],
+  startId: string,
+  targetId: string,
+): RelationRef[] | null {
   if (!targetId || targetId === startId) return null;
   let best: RelationRef[] | null = null;
   for (const path of paths) {
@@ -378,7 +447,12 @@ function chainsFrom(paths: RelationPath[], start: string): Map<string, RelationR
  * single walk at three hops; meeting in the middle finds paths up to twice that. The chain is
  * ordered start → meeting node → end; every relation keeps its own direction.
  */
-export function meetInTheMiddle(pathsA: RelationPath[], a: string, pathsB: RelationPath[], b: string): RelationRef[] | null {
+export function meetInTheMiddle(
+  pathsA: RelationPath[],
+  a: string,
+  pathsB: RelationPath[],
+  b: string,
+): RelationRef[] | null {
   if (!a || !b || a === b) return null;
   const fromA = chainsFrom(pathsA, a);
   const fromB = chainsFrom(pathsB, b);
@@ -394,7 +468,10 @@ export function meetInTheMiddle(pathsA: RelationPath[], a: string, pathsB: Relat
 }
 
 /** Display keys from object type definitions, overridden by the user's per-type label choice. */
-export function effectiveLabelsFrom(metas: Record<string, ObjectTypeMeta>, overrides: Record<string, string>): Record<string, string> {
+export function effectiveLabelsFrom(
+  metas: Record<string, ObjectTypeMeta>,
+  overrides: Record<string, string>,
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [id, meta] of Object.entries(metas)) {
     if (meta.displayKey) out[id] = meta.displayKey;
@@ -431,7 +508,11 @@ export function mergeGraph(
  * Keeps nodes already on the canvas plus as many new ones as still fit under the limit.
  * Returns how many new nodes were dropped so the caller can say so.
  */
-export function capIncomingNodes(incoming: GNode[], existing: ReadonlySet<string>, limit: number): { nodes: GNode[]; dropped: number } {
+export function capIncomingNodes(
+  incoming: GNode[],
+  existing: ReadonlySet<string>,
+  limit: number,
+): { nodes: GNode[]; dropped: number } {
   const room = Math.max(0, limit - existing.size);
   const kept: GNode[] = [];
   let fresh = 0;
@@ -470,7 +551,8 @@ export function friendlyError(error: unknown): string {
   if (!outer) return text;
   let deepest = outer;
   for (let depth = 0; depth < 6; depth += 1) {
-    const next = parseErrorEnvelope(deepest.details) ?? parseErrorEnvelope(lastJsonObject(deepest.details));
+    const next =
+      parseErrorEnvelope(deepest.details) ?? parseErrorEnvelope(lastJsonObject(deepest.details));
     if (!next || (!next.description && !next.details)) break;
     deepest = next;
   }
@@ -493,7 +575,8 @@ function parseErrorEnvelope(text: string): ErrorEnvelope | null {
   let parsed: unknown = tryParseJson(trimmed);
   // A downstream envelope embedded as a string arrives with escaped quotes ({\"error_code\":…});
   // unescape one level and try again before giving up.
-  if (parsed === undefined && trimmed.includes('\\"')) parsed = tryParseJson(trimmed.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+  if (parsed === undefined && trimmed.includes('\\"'))
+    parsed = tryParseJson(trimmed.replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
   if (!isRecord(parsed)) return null;
   const body = isRecord(parsed.error) ? parsed.error : parsed;
   const pick = (...keys: string[]): string => {
@@ -503,7 +586,11 @@ function parseErrorEnvelope(text: string): ErrorEnvelope | null {
     }
     return "";
   };
-  return { description: pick("description", "message"), details: pick("details", "error_details"), solution: pick("solution") };
+  return {
+    description: pick("description", "message"),
+    details: pick("details", "error_details"),
+    solution: pick("solution"),
+  };
 }
 
 function tryParseJson(text: string): unknown {
@@ -540,7 +627,11 @@ export type IdListParse = { items: IdListItem[]; unknown: string[] };
  * matching prefix; anything else is a raw primary-key value for `fallbackOt`, or unknown
  * when no object type is selected.
  */
-export function parseIdList(text: string, objectTypeIds: string[], fallbackOt?: string): IdListParse {
+export function parseIdList(
+  text: string,
+  objectTypeIds: string[],
+  fallbackOt?: string,
+): IdListParse {
   const items: IdListItem[] = [];
   const unknown: string[] = [];
   const seen = new Set<string>();
@@ -548,7 +639,9 @@ export function parseIdList(text: string, objectTypeIds: string[], fallbackOt?: 
   for (const raw of text.split(/[\n,;，；]+/)) {
     const token = raw.trim();
     if (!token) continue;
-    const prefix = prefixes.find((id) => token.startsWith(`${id}-`) && token.length > id.length + 1);
+    const prefix = prefixes.find(
+      (id) => token.startsWith(`${id}-`) && token.length > id.length + 1,
+    );
     let item: IdListItem | null = null;
     if (prefix) item = { otId: prefix, key: token.slice(prefix.length + 1) };
     else if (fallbackOt) item = { otId: fallbackOt, key: token };
@@ -579,7 +672,12 @@ export function keyValueFor(meta: ObjectTypeMeta, key: string): unknown {
 /* ============================ Loaders shared by the explorer page and the viewer ============================ */
 
 export type RelationEnds = { id: string; sourceId: string; targetId: string };
-export type CollectedSubgraph = { nodes: GNode[]; edges: GEdge[]; raw: Record<string, unknown>; failed?: { objectType: string; error: string }[] };
+export type CollectedSubgraph = {
+  nodes: GNode[];
+  edges: GEdge[];
+  raw: Record<string, unknown>;
+  failed?: { objectType: string; error: string }[];
+};
 
 const ID_BATCH = 50;
 const PATH_BATCH = 5;
@@ -604,17 +702,23 @@ export async function collectSubgraphByIds(
   for (const item of items) byOt.set(item.otId, [...(byOt.get(item.otId) ?? []), item.key]);
   const pkOf = (otId: string): string => {
     const meta = metas[otId];
-    if (!meta || meta.primaryKeys.length !== 1) throw new Error(`object type ${otId} needs exactly one primary key`);
+    if (!meta || meta.primaryKeys.length !== 1)
+      throw new Error(`object type ${otId} needs exactly one primary key`);
     return meta.primaryKeys[0];
   };
-  const keysOf = (otId: string) => (byOt.get(otId) ?? []).map((key) => keyValueFor(metas[otId], key));
+  const keysOf = (otId: string) =>
+    (byOt.get(otId) ?? []).map((key) => keyValueFor(metas[otId], key));
   const nodes: GNode[] = [];
   const instances: Record<string, unknown[]> = {};
   for (const [otId, keys] of byOt) {
     const pk = pkOf(otId);
     for (let start = 0; start < keys.length; start += ID_BATCH) {
       const chunk = keys.slice(start, start + ID_BATCH).map((key) => keyValueFor(metas[otId], key));
-      const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length);
+      const payload = await client.queryInstances(
+        otId,
+        { field: pk, operation: "in", value: chunk },
+        chunk.length,
+      );
       (instances[otId] ??= []).push(payload);
       nodes.push(...fromQueryObjectInstance(metas[otId], payload, labelByOt[otId]));
     }
@@ -624,10 +728,30 @@ export async function collectSubgraphByIds(
     .filter((relation) => byOt.has(relation.sourceId) && byOt.has(relation.targetId))
     .map((relation) => ({
       object_types: [
-        { id: relation.sourceId, condition: { field: pkOf(relation.sourceId), operation: "in", value: keysOf(relation.sourceId) } },
-        { id: relation.targetId, condition: { field: pkOf(relation.targetId), operation: "in", value: keysOf(relation.targetId) } },
+        {
+          id: relation.sourceId,
+          condition: {
+            field: pkOf(relation.sourceId),
+            operation: "in",
+            value: keysOf(relation.sourceId),
+          },
+        },
+        {
+          id: relation.targetId,
+          condition: {
+            field: pkOf(relation.targetId),
+            operation: "in",
+            value: keysOf(relation.targetId),
+          },
+        },
       ],
-      relation_types: [{ relation_type_id: relation.id, source_object_type_id: relation.sourceId, target_object_type_id: relation.targetId }],
+      relation_types: [
+        {
+          relation_type_id: relation.id,
+          source_object_type_id: relation.sourceId,
+          target_object_type_id: relation.targetId,
+        },
+      ],
       limit: Math.min(1000, Math.max(10, keysOf(relation.sourceId).length)),
     }));
   const edges: GEdge[] = [];
@@ -637,7 +761,8 @@ export async function collectSubgraphByIds(
       const payload = await client.queryInstanceSubgraph(group);
       pathPayloads.push(payload);
       const entries = Array.isArray(payload.entries) ? payload.entries : [];
-      for (const entry of entries) edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
+      for (const entry of entries)
+        edges.push(...edgesAmong(fromExploreSubgraph(entry, labelByOt).edges, nodeIds));
       return true;
     } catch (error) {
       if (group.length === 1) pathPayloads.push({ error: friendlyError(error), paths: group });
@@ -683,13 +808,26 @@ export async function expandSeeds(
     try {
       if (meta && meta.primaryKeys.length === 1) {
         const pk = meta.primaryKeys[0];
-        const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
-        collect(await client.exploreSubgraph({ sourceOtId: otId, condition: { field: pk, operation: "in", value: keys }, direction, pathLength: 1, limit: keys.length }));
+        const keys = list.map(
+          (node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)),
+        );
+        collect(
+          await client.exploreSubgraph({
+            sourceOtId: otId,
+            condition: { field: pk, operation: "in", value: keys },
+            direction,
+            pathLength: 1,
+            limit: keys.length,
+          }),
+        );
         continue;
       }
       for (const node of list) {
         const condition = identityCondition(node.identity);
-        if (condition) collect(await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }));
+        if (condition)
+          collect(
+            await client.exploreSubgraph({ sourceOtId: otId, condition, direction, pathLength: 1 }),
+          );
       }
     } catch (error) {
       failed.push({ objectType: meta?.name ?? otId, error: friendlyError(error) });
@@ -704,8 +842,10 @@ export function edgesAmong(edges: GEdge[], nodeIds: ReadonlySet<string>): GEdge[
 
 /* ============================ Cypher (bkn-backend) ============================ */
 
-export type CypherResult = { columns: { name: string; type?: string }[]; entries: Record<string, unknown>[] };
-
+export type CypherResult = {
+  columns: { name: string; type?: string }[];
+  entries: Record<string, unknown>[];
+};
 
 /* ============================ REST calls ============================ */
 
@@ -724,7 +864,12 @@ async function postCapability(
 ): Promise<Rec> {
   const base = env.base.replace(/\/+$/, "");
   const params = new URLSearchParams({ ...query, response_format: "json" });
-  const response = await restPost(env, auth, `${base}${REST_PREFIX}/kn/${tool}?${params.toString()}`, body);
+  const response = await restPost(
+    env,
+    auth,
+    `${base}${REST_PREFIX}/kn/${tool}?${params.toString()}`,
+    body,
+  );
   const text = await response.text();
   if (!response.ok) throw new Error(text || `${tool} failed (${response.status})`);
   let payload: unknown;
@@ -735,7 +880,12 @@ async function postCapability(
   }
   if (!isRecord(payload)) throw new Error(`${tool} did not return an object`);
   // Some routes wrap the business payload under `data`.
-  if (isRecord(payload.data) && !("nodes" in payload) && !("datas" in payload) && !("objects" in payload)) {
+  if (
+    isRecord(payload.data) &&
+    !("nodes" in payload) &&
+    !("datas" in payload) &&
+    !("objects" in payload)
+  ) {
     return payload.data;
   }
   return payload;
@@ -797,7 +947,9 @@ export const DEFAULT_RRF_OPTIONS: RrfOptions = {
 /** True when the fusion knobs differ from the backend defaults and kn_search must be used. */
 export function needsKnSearch(rrf: RrfOptions | undefined): boolean {
   if (!rrf) return false;
-  return (Object.keys(DEFAULT_RRF_OPTIONS) as (keyof RrfOptions)[]).some((key) => rrf[key] !== DEFAULT_RRF_OPTIONS[key]);
+  return (Object.keys(DEFAULT_RRF_OPTIONS) as (keyof RrfOptions)[]).some(
+    (key) => rrf[key] !== DEFAULT_RRF_OPTIONS[key],
+  );
 }
 
 /** Defaults under the caller's options; a key given as undefined keeps its default instead of erasing it. */
@@ -810,11 +962,19 @@ export function mergeSearchOptions(options: SearchOptions = {}): Required<Search
 }
 
 /** Body of REST /kn/kn_search carrying the same scope as search_instance plus the fusion knobs. */
-export function buildKnSearchBody(knId: string, query: string, options: SearchOptions, rrf: RrfOptions): Rec {
+export function buildKnSearchBody(
+  knId: string,
+  query: string,
+  options: SearchOptions,
+  rrf: RrfOptions,
+): Rec {
   const merged = mergeSearchOptions(options);
-  const conceptRetrieval: Rec = { top_k: Math.max(merged.maxObjectTypes, merged.objectTypes.length) };
+  const conceptRetrieval: Rec = {
+    top_k: Math.max(merged.maxObjectTypes, merged.objectTypes.length),
+  };
   if (merged.objectTypes.length > 0) conceptRetrieval.object_types = merged.objectTypes;
-  if (merged.excludeObjectTypes.length > 0) conceptRetrieval.exclude_object_types = merged.excludeObjectTypes;
+  if (merged.excludeObjectTypes.length > 0)
+    conceptRetrieval.exclude_object_types = merged.excludeObjectTypes;
   if (merged.conceptGroups.length > 0) conceptRetrieval.concept_groups = merged.conceptGroups;
   const semantic: Rec = {
     per_type_instance_limit: merged.maxInstancesPerType,
@@ -831,7 +991,10 @@ export function buildKnSearchBody(knId: string, query: string, options: SearchOp
     kn_id: knId,
     // REST kn_search returns schema only unless told otherwise; search_instance implies this.
     only_schema: false,
-    retrieval_config: { concept_retrieval: conceptRetrieval, semantic_instance_retrieval: semantic },
+    retrieval_config: {
+      concept_retrieval: conceptRetrieval,
+      semantic_instance_retrieval: semantic,
+    },
   };
 }
 
@@ -843,13 +1006,23 @@ export async function knSearchInstances(
   options: SearchOptions,
   rrf: RrfOptions,
 ): Promise<Rec> {
-  return postCapability(env, auth, "kn_search", {}, buildKnSearchBody(env.knId, query, options, rrf));
+  return postCapability(
+    env,
+    auth,
+    "kn_search",
+    {},
+    buildKnSearchBody(env.knId, query, options, rrf),
+  );
 }
 
 export type SubgraphPathNode = { id: string; condition?: KnCondition; limit?: number };
 export type SubgraphPath = {
   object_types: SubgraphPathNode[];
-  relation_types: { relation_type_id: string; source_object_type_id: string; target_object_type_id: string }[];
+  relation_types: {
+    relation_type_id: string;
+    source_object_type_id: string;
+    target_object_type_id: string;
+  }[];
   limit?: number;
 };
 
@@ -858,16 +1031,25 @@ export type GraphExplorerClient = {
   /** query_instance_subgraph over explicit relation-type paths; returns the raw payload with `entries`. */
   queryInstanceSubgraph(paths: SubgraphPath[]): Promise<Rec>;
   searchInstances(query: string, options?: SearchOptions): Promise<Rec>;
-  queryInstances(otId: string, condition: KnCondition | null, limit: number, offset?: number): Promise<Rec>;
+  queryInstances(
+    otId: string,
+    condition: KnCondition | null,
+    limit: number,
+    offset?: number,
+  ): Promise<Rec>;
   exploreSubgraph(request: ExploreRequest): Promise<Rec>;
   /** run_cypher: the network's own Cypher surface, compiled server-side into one read-only query. */
   runCypher(query: string): Promise<CypherResult>;
 };
 
 /** Graph explorer calls over Context Loader's REST capability routes for the network in `env.knId`. */
-export function createGraphExplorerClient(env: ContextLoaderEnv, auth: McpAuth | undefined): GraphExplorerClient {
+export function createGraphExplorerClient(
+  env: ContextLoaderEnv,
+  auth: McpAuth | undefined,
+): GraphExplorerClient {
   const knId = env.knId;
-  const post = (tool: string, query: Record<string, string>, body: Rec) => postCapability(env, auth, tool, query, body);
+  const post = (tool: string, query: Record<string, string>, body: Rec) =>
+    postCapability(env, auth, tool, query, body);
   return {
     async loadObjectTypes(ids) {
       if (ids.length === 0) return [];
@@ -882,11 +1064,13 @@ export function createGraphExplorerClient(env: ContextLoaderEnv, auth: McpAuth |
       const merged = mergeSearchOptions(options);
       const body: Rec = { kn_id: knId, query, max_instances_per_type: merged.maxInstancesPerType };
       if (merged.objectTypes.length > 0) body.object_types = merged.objectTypes;
-      if (merged.excludeObjectTypes.length > 0) body.exclude_object_types = merged.excludeObjectTypes;
+      if (merged.excludeObjectTypes.length > 0)
+        body.exclude_object_types = merged.excludeObjectTypes;
       if (merged.conceptGroups.length > 0) body.concept_groups = merged.conceptGroups;
       // The cap is strict: pinned object types must never be cut off by it.
       const maxObjectTypes = Math.max(merged.maxObjectTypes, merged.objectTypes.length);
-      if (maxObjectTypes !== DEFAULT_SEARCH_OPTIONS.maxObjectTypes) body.max_object_types = maxObjectTypes;
+      if (maxObjectTypes !== DEFAULT_SEARCH_OPTIONS.maxObjectTypes)
+        body.max_object_types = maxObjectTypes;
       if (merged.rerank) body.rerank = true;
       return post("search_instance", {}, body);
     },
@@ -899,9 +1083,15 @@ export function createGraphExplorerClient(env: ContextLoaderEnv, auth: McpAuth |
     async runCypher(query) {
       const payload = await post("run_cypher", {}, { kn_id: knId, query });
       const columns = Array.isArray(payload.columns)
-        ? payload.columns.filter(isRecord).map((column) => ({ name: stringifyValue(column.name), type: typeof column.type === "string" ? column.type : undefined }))
+        ? payload.columns.filter(isRecord).map((column) => ({
+            name: stringifyValue(column.name),
+            type: typeof column.type === "string" ? column.type : undefined,
+          }))
         : [];
-      return { columns, entries: Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [] };
+      return {
+        columns,
+        entries: Array.isArray(payload.entries) ? payload.entries.filter(isRecord) : [],
+      };
     },
     exploreSubgraph(request) {
       return post(

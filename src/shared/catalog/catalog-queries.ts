@@ -8,9 +8,7 @@
 import type { CatalogListQuery } from "@/shared/catalog/types";
 
 /** Views such as data catalogs and index tasks that need physical and logical catalogs. */
-export function catalogListAllQuery(
-  overrides: Partial<CatalogListQuery> = {},
-): CatalogListQuery {
+export function catalogListAllQuery(overrides: Partial<CatalogListQuery> = {}): CatalogListQuery {
   return { keyword: "", page: 1, pageSize: 200, type: "all", ...overrides };
 }
 

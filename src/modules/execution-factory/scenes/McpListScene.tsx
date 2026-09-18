@@ -165,20 +165,14 @@ export function McpListScene() {
           </PermissionGate>
           {!record.isInternal && record.status !== "published" ? (
             <PermissionGate permissions="execution-factory:mcp:publish">
-              <AppButton
-                onClick={() => handleStatusChange(record, "published")}
-                type="link"
-              >
+              <AppButton onClick={() => handleStatusChange(record, "published")} type="link">
                 {t("executionFactory.publish")}
               </AppButton>
             </PermissionGate>
           ) : null}
           {!record.isInternal && record.status === "published" ? (
             <PermissionGate permissions="execution-factory:mcp:publish">
-              <AppButton
-                onClick={() => handleStatusChange(record, "offline")}
-                type="link"
-              >
+              <AppButton onClick={() => handleStatusChange(record, "offline")} type="link">
                 {t("executionFactory.offline")}
               </AppButton>
             </PermissionGate>
@@ -202,103 +196,101 @@ export function McpListScene() {
 
   return (
     <>
-    <section className={styles.contentSurface}>
-      <div className={styles.pageIntro}>
-        <h2 className={styles.pageIntroTitle}>{t("executionFactory.mcpListTitle")}</h2>
-        <p className={styles.pageIntroDescription}>
-          {t("executionFactory.mcpListDescription")}
-        </p>
-      </div>
-      <div className={styles.operationBar}>
-        <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
-            <PermissionGate permissions="execution-factory:mcp:create">
-              <AppButton
-                onClick={() => {
-                  void navigate("/execution-factory/mcp/new");
-                }}
-                type="primary"
-              >
-                {t("common.create")}
+      <section className={styles.contentSurface}>
+        <div className={styles.pageIntro}>
+          <h2 className={styles.pageIntroTitle}>{t("executionFactory.mcpListTitle")}</h2>
+          <p className={styles.pageIntroDescription}>{t("executionFactory.mcpListDescription")}</p>
+        </div>
+        <div className={styles.operationBar}>
+          <div className={styles.operationPrimary}>
+            <div className={styles.toolbarActions}>
+              <PermissionGate permissions="execution-factory:mcp:create">
+                <AppButton
+                  onClick={() => {
+                    void navigate("/execution-factory/mcp/new");
+                  }}
+                  type="primary"
+                >
+                  {t("common.create")}
+                </AppButton>
+              </PermissionGate>
+              <AppButton icon={<ReloadOutlined />} onClick={reset}>
+                {t("common.refresh")}
               </AppButton>
-            </PermissionGate>
-            <AppButton icon={<ReloadOutlined />} onClick={reset}>
-              {t("common.refresh")}
-            </AppButton>
+            </div>
+            <span className={styles.toolbarMeta}>{t("executionFactory.mcpToolbarHint")}</span>
           </div>
-          <span className={styles.toolbarMeta}>{t("executionFactory.mcpToolbarHint")}</span>
+          <div className={styles.toolbarFilters}>
+            <Input.Search
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => setKeyword(event.target.value)}
+              onSearch={setKeyword}
+              placeholder={t("executionFactory.mcpSearchPlaceholder")}
+              value={pageState.keyword}
+            />
+            <Select
+              allowClear
+              className={styles.filterSelect}
+              onChange={(value) => setSelectedStatus(value)}
+              options={(["unpublish", "published", "offline", "editing"] as McpStatus[]).map(
+                (status) => ({
+                  label: t(`executionFactory.mcpStatuses.${status}`),
+                  value: status,
+                }),
+              )}
+              placeholder={t("executionFactory.statusFilterPlaceholder")}
+              value={selectedStatus}
+            />
+          </div>
         </div>
-        <div className={styles.toolbarFilters}>
-          <Input.Search
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => setKeyword(event.target.value)}
-            onSearch={setKeyword}
-            placeholder={t("executionFactory.mcpSearchPlaceholder")}
-            value={pageState.keyword}
-          />
-          <Select
-            allowClear
-            className={styles.filterSelect}
-            onChange={(value) => setSelectedStatus(value)}
-            options={(
-              ["unpublish", "published", "offline", "editing"] as McpStatus[]
-            ).map((status) => ({
-              label: t(`executionFactory.mcpStatuses.${status}`),
-              value: status,
-            }))}
-            placeholder={t("executionFactory.statusFilterPlaceholder")}
-            value={selectedStatus}
+        <div className={styles.tableSurface}>
+          {loadError ? (
+            <Alert
+              action={
+                <AppButton onClick={() => void loadData()} type="link">
+                  {t("common.retry")}
+                </AppButton>
+              }
+              message={loadError}
+              showIcon
+              type="error"
+            />
+          ) : null}
+          <AppTable
+            columns={columns}
+            dataSource={items}
+            loading={loading}
+            locale={{
+              emptyText: (
+                <EmptyStatePanel
+                  description={t("executionFactory.mcpEmptyDescription")}
+                  title={t("executionFactory.mcpEmpty")}
+                />
+              ),
+            }}
+            onChange={(pagination) => {
+              setPagination(pagination.current ?? 1, pagination.pageSize ?? 10);
+            }}
+            pagination={{
+              current: pageState.page,
+              pageSize: pageState.pageSize,
+              showSizeChanger: true,
+              total,
+            }}
+            rowKey="mcpId"
           />
         </div>
-      </div>
-      <div className={styles.tableSurface}>
-        {loadError ? (
-          <Alert
-            action={
-              <AppButton onClick={() => void loadData()} type="link">
-                {t("common.retry")}
-              </AppButton>
-            }
-            message={loadError}
-            showIcon
-            type="error"
-          />
-        ) : null}
-        <AppTable
-          columns={columns}
-          dataSource={items}
-          loading={loading}
-          locale={{
-            emptyText: (
-              <EmptyStatePanel
-                description={t("executionFactory.mcpEmptyDescription")}
-                title={t("executionFactory.mcpEmpty")}
-              />
-            ),
-          }}
-          onChange={(pagination) => {
-            setPagination(pagination.current ?? 1, pagination.pageSize ?? 10);
-          }}
-          pagination={{
-            current: pageState.page,
-            pageSize: pageState.pageSize,
-            showSizeChanger: true,
-            total,
-          }}
-          rowKey="mcpId"
-        />
-      </div>
-    </section>
-    <McpDetailDrawer
-      mcpId={detailMcpId}
-      onClose={() => setDetailMcpId(null)}
-      onViewDetail={(id) => {
-        setDetailMcpId(null);
-        void navigate(`/execution-factory/mcp/${id}`);
-      }}
-      open={Boolean(detailMcpId)}
-    />
+      </section>
+      <McpDetailDrawer
+        mcpId={detailMcpId}
+        onClose={() => setDetailMcpId(null)}
+        onViewDetail={(id) => {
+          setDetailMcpId(null);
+          void navigate(`/execution-factory/mcp/${id}`);
+        }}
+        open={Boolean(detailMcpId)}
+      />
     </>
   );
 }

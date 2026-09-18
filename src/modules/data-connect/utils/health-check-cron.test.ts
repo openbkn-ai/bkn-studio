@@ -27,13 +27,12 @@ describe("isHourlyCron", () => {
     },
   );
 
-  it.each([
-    "CRON_TZ=UTC 0 0 * * *",
-    "TZ=Asia/Tokyo @daily",
-    "TZ=Local @every 2h",
-  ])("accepts a Vega timezone prefix: %s", (cronExpr) => {
-    expect(isHourlyCron(cronExpr)).toBe(true);
-  });
+  it.each(["CRON_TZ=UTC 0 0 * * *", "TZ=Asia/Tokyo @daily", "TZ=Local @every 2h"])(
+    "accepts a Vega timezone prefix: %s",
+    (cronExpr) => {
+      expect(isHourlyCron(cronExpr)).toBe(true);
+    },
+  );
 
   it.each([
     "*/5 * * * *",
@@ -88,16 +87,16 @@ describe("isHourlyCron", () => {
 
   it("skips a local time that does not exist during a DST transition", () => {
     const now = Date.parse("2026-03-07T08:00:00Z");
-    expect(
-      calculateNextHourlyCronRun("TZ=America/New_York 0 2 * * *", now),
-    ).toBe(Date.parse("2026-03-09T06:00:00Z"));
+    expect(calculateNextHourlyCronRun("TZ=America/New_York 0 2 * * *", now)).toBe(
+      Date.parse("2026-03-09T06:00:00Z"),
+    );
   });
 
   it("selects the first repeated local time during a DST transition", () => {
     const now = Date.parse("2026-11-01T04:30:00Z");
-    expect(
-      calculateNextHourlyCronRun("TZ=America/New_York 0 1 * * *", now),
-    ).toBe(Date.parse("2026-11-01T05:00:00Z"));
+    expect(calculateNextHourlyCronRun("TZ=America/New_York 0 1 * * *", now)).toBe(
+      Date.parse("2026-11-01T05:00:00Z"),
+    );
   });
 
   it("uses OR semantics when Vega clears a stepped wildcard flag", () => {

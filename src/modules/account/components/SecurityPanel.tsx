@@ -56,13 +56,22 @@ export function SecurityPanel({ account }: { account: string }) {
     <div className={styles.panel}>
       <h3 className={styles.title}>{t("account.security.title")}</h3>
       <p className={styles.hint}>{t("account.security.hint")}</p>
-      <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => void onFinish(values)} className={styles.form}>
+      <Form
+        form={form}
+        layout="vertical"
+        requiredMark={false}
+        onFinish={(values) => void onFinish(values)}
+        className={styles.form}
+      >
         <Form.Item
           name="oldPassword"
           label={t("account.security.current")}
           rules={[{ required: true, message: t("account.security.currentRequired") }]}
         >
-          <Input.Password autoComplete="current-password" placeholder={t("account.security.currentPlaceholder")} />
+          <Input.Password
+            autoComplete="current-password"
+            placeholder={t("account.security.currentPlaceholder")}
+          />
         </Form.Item>
         <Form.Item
           name="newPassword"
@@ -80,7 +89,10 @@ export function SecurityPanel({ account }: { account: string }) {
             }),
           ]}
         >
-          <Input.Password autoComplete="new-password" placeholder={t("account.security.nextPlaceholder")} />
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={t("account.security.nextPlaceholder")}
+          />
         </Form.Item>
         <Form.Item
           name="confirmPassword"
@@ -98,7 +110,10 @@ export function SecurityPanel({ account }: { account: string }) {
             }),
           ]}
         >
-          <Input.Password autoComplete="new-password" placeholder={t("account.security.confirmPlaceholder")} />
+          <Input.Password
+            autoComplete="new-password"
+            placeholder={t("account.security.confirmPlaceholder")}
+          />
         </Form.Item>
         <Form.Item className={styles.actions}>
           <Button type="primary" htmlType="submit" loading={submitting} disabled={!account}>

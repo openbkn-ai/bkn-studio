@@ -103,13 +103,7 @@ afterEach(() => {
 
 describe("ActionTypeToolSelectModal catalog loading", () => {
   it("loads the catalog once when opened with default allowedKinds", async () => {
-    render(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    render(<ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open />);
 
     await waitFor(() => {
       expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
@@ -154,13 +148,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
   });
 
   it("separates API toolsets, function sets, and MCP services without showing skills", async () => {
-    render(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    render(<ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open />);
 
     expect(await screen.findByText("executionFactory.openapiToolboxTab")).toBeTruthy();
     expect(screen.getByText("executionFactory.functionToolboxTab")).toBeTruthy();
@@ -188,13 +176,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
   });
 
   it("keeps an unconfirmed selection when switching execution-unit tabs", async () => {
-    render(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    render(<ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open />);
 
     fireEvent.click(await screen.findByText("Demo Box"));
     fireEvent.click(await screen.findByText("Demo Tool"));
@@ -360,13 +342,7 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
   it("debounces keyword search before reloading the catalog", async () => {
     vi.useFakeTimers();
 
-    render(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
-    );
+    render(<ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open />);
 
     await act(async () => {
       await Promise.resolve();
@@ -396,24 +372,14 @@ describe("ActionTypeToolSelectModal catalog loading", () => {
 
   it("does not keep requesting after the modal is closed", async () => {
     const { rerender } = render(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open
-      />,
+      <ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open />,
     );
 
     await waitFor(() => {
       expect(listActionTypeExecutionFactoryCatalog).toHaveBeenCalledTimes(1);
     });
 
-    rerender(
-      <ActionTypeToolSelectModal
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-        open={false}
-      />,
-    );
+    rerender(<ActionTypeToolSelectModal onCancel={vi.fn()} onConfirm={vi.fn()} open={false} />);
 
     await act(async () => {
       await Promise.resolve();

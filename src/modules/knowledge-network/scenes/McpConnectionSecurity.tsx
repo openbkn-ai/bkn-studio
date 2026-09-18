@@ -25,11 +25,7 @@ export function McpConnectionSecurity({
   const { t } = useTranslation();
   const isWarning = protocol === "http" || allowInsecureTls;
   const titleKey =
-    protocol === "http"
-      ? "httpTitle"
-      : allowInsecureTls
-        ? "insecureTitle"
-        : "httpsTitle";
+    protocol === "http" ? "httpTitle" : allowInsecureTls ? "insecureTitle" : "httpsTitle";
   const descriptionKey =
     protocol === "http"
       ? "httpDescription"

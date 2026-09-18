@@ -8,7 +8,8 @@
 export const propertyAuthorizationPart = {
   objectTypeMaskRuleTitle: "Column Masking Rule",
   objectTypeMaskRuleDrawerTitle: "{{name}} / Column Masking Rule",
-  objectTypeMaskRuleDescription: "This defines a Column Masking rule only; it does not enable Column Masking by itself. The rule applies only when a user's or role's effective access to this property is Column Masking. Source data is not modified.",
+  objectTypeMaskRuleDescription:
+    "This defines a Column Masking rule only; it does not enable Column Masking by itself. The rule applies only when a user's or role's effective access to this property is Column Masking. Source data is not modified.",
   objectTypeMaskRuleType: "Rule type",
   objectTypeMaskRuleNone: "Not configured",
   objectTypeMaskRuleKind: {
@@ -30,20 +31,24 @@ export const propertyAuthorizationPart = {
   objectTypeMaskRuleGranularity: "Granularity",
   objectTypeMaskRuleGranularityValue: { year: "Year", month: "Month", day: "Day", hour: "Hour" },
   objectTypeMaskRuleUnsupported: "This property type does not support Column Masking.",
-  objectTypeMaskRuleTypeChanged: "The current Column Masking rule is incompatible with the new property type. Change it or select Not configured.",
+  objectTypeMaskRuleTypeChanged:
+    "The current Column Masking rule is incompatible with the new property type. Change it or select Not configured.",
   objectTypeMaskRulePreview: "Preview",
   objectTypeMaskRuleValid: "Valid rule",
   objectTypeMaskRuleIncomplete: "Incomplete",
   objectTypeMaskRuleExampleInput: "Example value",
   objectTypeMaskRuleExampleOutput: "Column Masking result",
-  objectTypeMaskRulePreviewSafety: "Do not enter real sensitive data. Previewing happens only on this page.",
+  objectTypeMaskRulePreviewSafety:
+    "Do not enter real sensitive data. Previewing happens only on this page.",
 
   propertyAuthorizationAction: "Permission settings",
   propertyAuthorizationTitle: "{{name}} / Permission settings",
-  propertyAuthorizationDescription: "Configure object access, property visibility, and Column Masking policies.",
+  propertyAuthorizationDescription:
+    "Configure object access, property visibility, and Column Masking policies.",
   propertyAuthorizationTabBase: "Base permissions",
   propertyAuthorizationTabProperty: "Property permissions",
-  propertyAuthorizationBaseDescription: "Base permissions determine whether a user can view or operate this object type. Property permissions can only further restrict accessible data; they cannot bypass base permissions.",
+  propertyAuthorizationBaseDescription:
+    "Base permissions determine whether a user can view or operate this object type. Property permissions can only further restrict accessible data; they cannot bypass base permissions.",
   propertyAuthorizationAddUser: "Add user",
   propertyAuthorizationGrantUserLabel: "User",
   propertyAuthorizationGrantOperationLabel: "Allowed operations",
@@ -52,14 +57,19 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationGrantUserCount: "{{count}} authorized users",
   propertyAuthorizationDeleteGrant: "Delete grant",
   propertyAuthorizationDeleteGrantTitle: "Delete user grant",
-  propertyAuthorizationDeleteGrantConfirm: "This revokes {{count}} directly revocable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
-  propertyAuthorizationDeleteGrantConfirm_one: "This revokes {{count}} directly revocable source for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
-  propertyAuthorizationDeleteGrantConfirm_other: "This revokes {{count}} directly revocable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+  propertyAuthorizationDeleteGrantConfirm:
+    "This revokes {{count}} directly revocable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+  propertyAuthorizationDeleteGrantConfirm_one:
+    "This revokes {{count}} directly revocable source for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+  propertyAuthorizationDeleteGrantConfirm_other:
+    "This revokes {{count}} directly revocable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
   propertyAuthorizationDeleteGrantSuccess: "Grant deleted",
   propertyAuthorizationDeleteGrantUnavailable: "No directly revocable grant source is available",
   propertyAuthorizationDeleteSourceTitle: "Delete grant source",
-  propertyAuthorizationDeleteSourceConfirm: "This deletes {{name}}'s {{effect}} / {{operation}} grant from {{source}} (grant ID: {{grantId}}). Other grant sources on this object remain unchanged.",
-  propertyAuthorizationDeleteRequiredSourceBlocked: "{{requirement}} is still required by {{dependents}}. Delete the dependent grants first.",
+  propertyAuthorizationDeleteSourceConfirm:
+    "This deletes {{name}}'s {{effect}} / {{operation}} grant from {{source}} (grant ID: {{grantId}}). Other grant sources on this object remain unchanged.",
+  propertyAuthorizationDeleteRequiredSourceBlocked:
+    "{{requirement}} is still required by {{dependents}}. Delete the dependent grants first.",
   propertyAuthorizationManageBase: "Manage base permissions",
   propertyAuthorizationUser: "User",
   propertyAuthorizationRole: "Role",
@@ -73,27 +83,33 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationSourceCount_one: "{{count}} source",
   propertyAuthorizationSourceCount_other: "{{count}} sources",
   propertyAuthorizationSourceDrawerTitle: "{{name}} / Grant sources",
-  propertyAuthorizationSourceDrawerDescription: "These source records participate in the effective permission decision. Revoking one source does not remove other direct grants or inherited permissions.",
+  propertyAuthorizationSourceDrawerDescription:
+    "These source records participate in the effective permission decision. Revoking one source does not remove other direct grants or inherited permissions.",
   propertyAuthorizationGrantId: "Grant ID",
   propertyAuthorizationSourceEmpty: "No grant sources to display.",
   propertyAuthorizationGranteeEmpty: "No other users are authorized for this object type.",
   propertyAuthorizationSubjectTitle: "Subject",
-  propertyAuthorizationSubjectDescription: "Property grants support users and roles only, never departments or everyone.",
+  propertyAuthorizationSubjectDescription:
+    "Property grants support users and roles only, never departments or everyone.",
   propertyAuthorizationSelectUser: "Select a user for property permissions",
   propertyAuthorizationSearchRole: "Search roles",
   propertyAuthorizationRoleEmpty: "No matching roles",
   propertyAuthorizationSelectSubject: "Select a user or role",
-  propertyAuthorizationSelectSubjectDescription: "Select a subject to inspect and batch-edit its property permissions.",
+  propertyAuthorizationSelectSubjectDescription:
+    "Select a subject to inspect and batch-edit its property permissions.",
   propertyAuthorizationMemberCount_one: "{{count}} member",
   propertyAuthorizationMemberCount_other: "{{count}} members",
   propertyAuthorizationExplicitCount: "{{count}} explicit settings",
   propertyAuthorizationPropertyCount_one: "{{count}} property",
   propertyAuthorizationPropertyCount_other: "{{count}} properties",
-  propertyAuthorizationBoundaryHint: "Property permissions can only narrow base permissions; they cannot grant object access by themselves.",
+  propertyAuthorizationBoundaryHint:
+    "Property permissions can only narrow base permissions; they cannot grant object access by themselves.",
   propertyAuthorizationRoleImpactCompact_one: "Affects {{count}} member",
   propertyAuthorizationRoleImpactCompact_other: "Affects {{count}} members",
-  propertyAuthorizationRoleImpact_one: "Changing this role may affect {{count}} member. Direct user grants, other roles, and base permissions still participate in the final decision.",
-  propertyAuthorizationRoleImpact_other: "Changing this role may affect {{count}} members. Direct user grants, other roles, and base permissions still participate in the final decision.",
+  propertyAuthorizationRoleImpact_one:
+    "Changing this role may affect {{count}} member. Direct user grants, other roles, and base permissions still participate in the final decision.",
+  propertyAuthorizationRoleImpact_other:
+    "Changing this role may affect {{count}} members. Direct user grants, other roles, and base permissions still participate in the final decision.",
   propertyAuthorizationSearchProperty: "Search properties",
   propertyAuthorizationFilterAll: "All states",
   propertyAuthorizationFilterExplicit: "Configured",
@@ -108,7 +124,13 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationColumnEffective: "Effective access",
   propertyAuthorizationColumnSource: "Effective source",
   propertyAuthorizationColumnMaskRule: "Column Masking Rule",
-  propertyAuthorizationLevel: { inherit: "Inherit", none: "Hidden", schema: "Schema only", masked: "Column Masking", full: "Original" },
+  propertyAuthorizationLevel: {
+    inherit: "Inherit",
+    none: "Hidden",
+    schema: "Schema only",
+    masked: "Column Masking",
+    full: "Original",
+  },
   propertyAuthorizationSource: {
     manual: "Subject setting",
     object_type: "Base permission",
@@ -117,23 +139,35 @@ export const propertyAuthorizationPart = {
     user: "Direct user grant",
     unresolved: "Estimated",
   },
-  propertyAuthorizationMaskState: { configured: "Configured", missing: "Missing", invalid: "Invalid rule", unsupported: "Not applicable" },
+  propertyAuthorizationMaskState: {
+    configured: "Configured",
+    missing: "Missing",
+    invalid: "Invalid rule",
+    unsupported: "Not applicable",
+  },
   propertyAuthorizationConfigureMask: "Configure rule",
-  propertyAuthorizationMaskedMissing: "Configure a valid Column Masking rule before selecting Column Masking.",
-  propertyAuthorizationMaskedInvalid: "The Column Masking rule is invalid. Runtime safely downgrades this property to Schema only.",
+  propertyAuthorizationMaskedMissing:
+    "Configure a valid Column Masking rule before selecting Column Masking.",
+  propertyAuthorizationMaskedInvalid:
+    "The Column Masking rule is invalid. Runtime safely downgrades this property to Schema only.",
   propertyAuthorizationBatchLimit_one: "Save no more than {{count}} property at a time.",
   propertyAuthorizationBatchLimit_other: "Save no more than {{count}} properties at a time.",
   propertyAuthorizationNoProperty: "No properties match these filters.",
   propertyAuthorizationUnsaved: "{{count}} unsaved changes",
   propertyAuthorizationSave: "Save changes ({{count}})",
   propertyAuthorizationConfirmTitle: "Confirm property permission changes",
-  propertyAuthorizationConfirmSummary: "This changes {{total}} properties: {{raised}} raised, {{lowered}} lowered, and {{inherited}} restored to inheritance.",
-  propertyAuthorizationFullRisk_one: "{{count}} property will expose its original value, which may broaden sensitive-data access.",
-  propertyAuthorizationFullRisk_other: "{{count}} properties will expose original values, which may broaden sensitive-data access.",
+  propertyAuthorizationConfirmSummary:
+    "This changes {{total}} properties: {{raised}} raised, {{lowered}} lowered, and {{inherited}} restored to inheritance.",
+  propertyAuthorizationFullRisk_one:
+    "{{count}} property will expose its original value, which may broaden sensitive-data access.",
+  propertyAuthorizationFullRisk_other:
+    "{{count}} properties will expose original values, which may broaden sensitive-data access.",
   propertyAuthorizationSaveSuccess: "Updated {{count}} property permissions.",
   propertyAuthorizationDiscardTitle: "Discard unsaved changes?",
-  propertyAuthorizationDiscardDescription: "{{count}} property permission changes have not been saved and cannot be recovered after discarding.",
+  propertyAuthorizationDiscardDescription:
+    "{{count}} property permission changes have not been saved and cannot be recovered after discarding.",
   propertyAuthorizationDiscard: "Discard changes",
   propertyAuthorizationLoadFailed: "Could not load permission settings. Try again later.",
-  propertyAuthorizationServicePending: "The property-grant management route is not open yet. The page and data contract are ready and will use real writes once the server route is enabled.",
+  propertyAuthorizationServicePending:
+    "The property-grant management route is not open yet. The page and data contract are ready and will use real writes once the server route is enabled.",
 } as const;

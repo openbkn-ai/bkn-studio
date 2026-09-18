@@ -26,10 +26,7 @@ export function getLogicPropertyTrialInputParameters(
 ): LogicPropertyTrialInputParameter[] {
   return logicProperties.flatMap((logicProperty) =>
     (logicProperty.parameters ?? [])
-      .filter(
-        (parameter) =>
-          parameter.valueFrom === "input" && parameter.name.trim().length > 0,
-      )
+      .filter((parameter) => parameter.valueFrom === "input" && parameter.name.trim().length > 0)
       .map((parameter) => ({
         fieldName: `${logicProperty.name}:${parameter.name}`,
         logicPropertyDisplayName: logicProperty.displayName || logicProperty.name,

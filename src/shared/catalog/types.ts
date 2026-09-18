@@ -7,12 +7,7 @@
 
 export type CatalogRecordStatus = "disabled" | "enabled";
 
-export type CatalogHealthStatus =
-  | "degraded"
-  | "healthy"
-  | "offline"
-  | "unchecked"
-  | "unhealthy";
+export type CatalogHealthStatus = "degraded" | "healthy" | "offline" | "unchecked" | "unhealthy";
 
 export type CatalogConnectionTestInput = {
   connectorConfig: Record<string, unknown>;
@@ -24,10 +19,7 @@ export type CatalogConnectionTestResult = {
   success: boolean;
 };
 
-export type CatalogHealthCheckScheduleMode =
-  | "disabled"
-  | "enabled"
-  | "inherit";
+export type CatalogHealthCheckScheduleMode = "disabled" | "enabled" | "inherit";
 
 export type CatalogHealthCheckScheduleInput = {
   cronExpr?: string;

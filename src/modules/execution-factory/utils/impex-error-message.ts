@@ -9,10 +9,7 @@ import axios from "axios";
 import type { TFunction } from "i18next";
 
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
-import type {
-  ImpexComponentType,
-  ImpexImportMode,
-} from "@/modules/execution-factory/types/impex";
+import type { ImpexComponentType, ImpexImportMode } from "@/modules/execution-factory/types/impex";
 
 export type ImpexUserErrorMessage = {
   title: string;
@@ -36,9 +33,9 @@ function isResourceConflict(error: unknown): boolean {
   const detail = extractRequestErrorDetail(error);
   return Boolean(
     detail.code?.includes("Conflict") ||
-      detail.code?.includes("ResourceIDConflict") ||
-      detail.code?.includes("ToolExists") ||
-      detail.code?.includes("OperatorExists"),
+    detail.code?.includes("ResourceIDConflict") ||
+    detail.code?.includes("ToolExists") ||
+    detail.code?.includes("OperatorExists"),
   );
 }
 

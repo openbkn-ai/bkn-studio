@@ -47,9 +47,7 @@ import styles from "./KnowledgeNetworkListScene.module.css";
 const CARD_GRID_PAGE_SIZE = 12;
 const CARD_GRID_PAGE_SIZE_OPTIONS = ["12", "24", "36"];
 
-export function KnowledgeNetworkListScene({
-  onOpenWorkspace,
-}: KnowledgeNetworkListSceneProps) {
+export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkListSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message } = useAppServices();
@@ -63,17 +61,12 @@ export function KnowledgeNetworkListScene({
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>("all");
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-  const [editingRecord, setEditingRecord] = useState<KnowledgeNetworkRecord | null>(
-    null,
-  );
+  const [editingRecord, setEditingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [authorizingRecord, setAuthorizingRecord] =
-    useState<KnowledgeNetworkRecord | null>(null);
-  const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(
-    null,
-  );
+  const [authorizingRecord, setAuthorizingRecord] = useState<KnowledgeNetworkRecord | null>(null);
+  const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const hasActiveFilter = useMemo(

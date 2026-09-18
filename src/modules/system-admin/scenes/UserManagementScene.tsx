@@ -9,7 +9,16 @@ import { EllipsisOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icon
 import { Alert, Dropdown, Input, Select, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -84,7 +93,9 @@ function renderSummaryNameList(
   }
   const fullText = names.join("、");
   const preview =
-    names.length <= maxVisible ? fullText : moreLabel(names.slice(0, maxVisible).join("、"), names.length);
+    names.length <= maxVisible
+      ? fullText
+      : moreLabel(names.slice(0, maxVisible).join("、"), names.length);
   return (
     <Tooltip title={fullText}>
       <span className={layoutStyles.ellipsisCell}>{preview}</span>
@@ -144,7 +155,9 @@ export function UserManagementScene() {
   const debouncedKeyword = useDebouncedValue(keywordDraft.trim());
   const explorerRef = useRef<HTMLDivElement>(null);
   const [deptPanelWidth, setDeptPanelWidth] = useState(DEPT_PANEL_DEFAULT_WIDTH);
-  const resizeState = useRef<{ pointerId: number; startWidth: number; startX: number } | null>(null);
+  const resizeState = useRef<{ pointerId: number; startWidth: number; startX: number } | null>(
+    null,
+  );
   const usersRequestSeq = useRef(0);
 
   const [userDrawer, setUserDrawer] = useState<{ open: boolean; user: AdminUser | null }>({
@@ -161,7 +174,8 @@ export function UserManagementScene() {
   const [membersDept, setMembersDept] = useState<AdminDepartment | null>(null);
 
   const selectedDepartment = useMemo(
-    () => (selectedDeptId ? departments.find((dept) => dept.id === selectedDeptId) ?? null : null),
+    () =>
+      selectedDeptId ? (departments.find((dept) => dept.id === selectedDeptId) ?? null) : null,
     [departments, selectedDeptId],
   );
 
@@ -182,8 +196,7 @@ export function UserManagementScene() {
   const listQuery = useMemo(
     () => ({
       search: urlFilters.keyword || undefined,
-      enabled:
-        statusFilter === "enabled" ? true : statusFilter === "disabled" ? false : undefined,
+      enabled: statusFilter === "enabled" ? true : statusFilter === "disabled" ? false : undefined,
       departmentId: selectedDeptId ?? undefined,
       includeSubtree: Boolean(selectedDeptId),
       roleId: roleFilter || undefined,
@@ -322,7 +335,10 @@ export function UserManagementScene() {
       if (user.enabled) {
         void modal.confirm({
           title: t("systemAdmin.users.disableUserTitle"),
-          content: t("systemAdmin.users.disableUserConfirm", { name: user.name, account: user.account }),
+          content: t("systemAdmin.users.disableUserConfirm", {
+            name: user.name,
+            account: user.account,
+          }),
           okText: t("systemAdmin.users.disableUser"),
           cancelText: t("common.cancel"),
           onOk: async () => {
@@ -499,7 +515,9 @@ export function UserManagementScene() {
             user.enabled ? styles.statusEnabled : styles.statusDisabled,
           ].join(" ")}
         >
-          {user.enabled ? t("systemAdmin.users.statusEnabled") : t("systemAdmin.users.statusDisabled")}
+          {user.enabled
+            ? t("systemAdmin.users.statusEnabled")
+            : t("systemAdmin.users.statusDisabled")}
         </Tag>
       ),
     },
@@ -664,7 +682,9 @@ export function UserManagementScene() {
                       <PermissionGate permissions="admin-dept:edit">
                         <AppButton
                           className={styles.actionLink}
-                          onClick={() => setDeptDrawer({ department: selectedDepartment, open: true })}
+                          onClick={() =>
+                            setDeptDrawer({ department: selectedDepartment, open: true })
+                          }
                           size="small"
                           type="link"
                         >
@@ -740,9 +760,7 @@ export function UserManagementScene() {
                 <div className={layoutStyles.userPanelLeading}>
                   <div className={styles.toolbarActions}>
                     <PermissionGate permissions="admin-user:create">
-                      <Tooltip
-                        title={t("systemAdmin.users.userToolbarHint")}
-                      >
+                      <Tooltip title={t("systemAdmin.users.userToolbarHint")}>
                         <AppButton
                           icon={<PlusOutlined />}
                           onClick={() => setUserDrawer({ open: true, user: null })}
@@ -858,7 +876,11 @@ export function UserManagementScene() {
         presetParentId={deptDrawer.presetParentId}
       />
       {resetUser ? (
-        <ResetPasswordModal onClose={() => setResetUser(null)} open={Boolean(resetUser)} user={resetUser} />
+        <ResetPasswordModal
+          onClose={() => setResetUser(null)}
+          open={Boolean(resetUser)}
+          user={resetUser}
+        />
       ) : null}
       {membersDept ? (
         <DeptMembersModal

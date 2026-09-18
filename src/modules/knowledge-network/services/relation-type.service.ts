@@ -6,10 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkImportMode,
@@ -48,10 +45,7 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-function resolveRelationTypeMutationResultId(
-  value: unknown,
-  fallbackId?: string,
-): string | null {
+function resolveRelationTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
     return fallbackId.trim();
   }
@@ -74,12 +68,7 @@ function resolveRelationTypeMutationResultId(
 }
 
 function isBackendRelationTypeRecord(value: unknown): value is BackendRelationType {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "name" in value
-  );
+  return typeof value === "object" && value !== null && "id" in value && "name" in value;
 }
 
 function persistMockRelationTypeMappingBundle(
@@ -138,14 +127,13 @@ export async function listKnowledgeNetworkRelationTypes(networkId: string) {
   return response.data.entries.map(mapRelationType);
 }
 
-export async function getKnowledgeNetworkRelationType(
-  networkId: string,
-  relationTypeId: string,
-) {
+export async function getKnowledgeNetworkRelationType(networkId: string, relationTypeId: string) {
   if (useMock) {
     return wait(
       (() => {
-        const record = (mockRelationTypes[networkId] ?? []).find((item) => item.id === relationTypeId);
+        const record = (mockRelationTypes[networkId] ?? []).find(
+          (item) => item.id === relationTypeId,
+        );
         return record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null;
       })(),
     );
@@ -176,9 +164,7 @@ export async function getKnowledgeNetworkRelationTypeDetail(
         ...record,
         backingDataSourceId: resourceStore?.backingDataSourceId ?? "",
         backingDataSourceName: resourceStore?.backingDataSourceName,
-        resourceMappings: cloneRelationTypeResourceMappings(
-          resourceStore?.resourceMappings ?? [],
-        ),
+        resourceMappings: cloneRelationTypeResourceMappings(resourceStore?.resourceMappings ?? []),
         propertyMappings: [],
       };
     }
@@ -241,12 +227,11 @@ export async function createKnowledgeNetworkRelationType(
     return nextItem;
   }
 
-  const response = await http.post<SingleEntryResponse<BackendRelationType> | Array<{ id?: string }>>(
-    `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`,
-    {
-      entries: [toBackendRelationTypeCreateEntry(input)],
-    },
-  );
+  const response = await http.post<
+    SingleEntryResponse<BackendRelationType> | Array<{ id?: string }>
+  >(`/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`, {
+    entries: [toBackendRelationTypeCreateEntry(input)],
+  });
 
   const record = unwrapSingleEntryResponse(response.data);
   if (isBackendRelationTypeRecord(record)) {
@@ -301,7 +286,9 @@ export async function updateKnowledgeNetworkRelationType(
   );
 
   const record = unwrapSingleEntryResponse(response.data);
-  return record ? mapRelationType(record) : getKnowledgeNetworkRelationType(networkId, relationTypeId);
+  return record
+    ? mapRelationType(record)
+    : getKnowledgeNetworkRelationType(networkId, relationTypeId);
 }
 
 export async function deleteKnowledgeNetworkRelationType(

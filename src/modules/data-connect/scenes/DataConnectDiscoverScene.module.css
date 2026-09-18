@@ -289,7 +289,6 @@
 }
 
 @media (max-width: 768px) {
-
   .toolbarFilters,
   .taskToolbarFilters {
     flex-direction: column;

@@ -14,9 +14,7 @@ import {
 
 import { ExecutionUnitListScene } from "./ExecutionUnitListScene";
 
-export function UnitManagementListScene({
-  defaultKeyword,
-}: UnitManagementListSceneProps) {
+export function UnitManagementListScene({ defaultKeyword }: UnitManagementListSceneProps) {
   const capabilityUxV2 = isCapabilityUxV2();
 
   return (
@@ -35,9 +33,7 @@ export function UnitManagementListScene({
           : "executionFactory.unitManagementTitle"
       }
       toolbarHintKey={
-        capabilityUxV2
-          ? "executionFactory.capabilityToolbarHint"
-          : "executionFactory.toolbarHint"
+        capabilityUxV2 ? "executionFactory.capabilityToolbarHint" : "executionFactory.toolbarHint"
       }
     />
   );

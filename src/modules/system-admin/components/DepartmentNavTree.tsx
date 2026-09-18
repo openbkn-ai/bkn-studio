@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ApartmentOutlined,
-  BankOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { ApartmentOutlined, BankOutlined, TeamOutlined } from "@ant-design/icons";
 import { Dropdown, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import type { DataNode } from "antd/es/tree";
@@ -110,27 +106,32 @@ export function DepartmentNavTree({
   const [initialExpandDone, setInitialExpandDone] = useState(() => readExpandedKeys() !== null);
 
   const permissions = runtimeConfig.currentUser.permissions;
-  const canEditDept = !readOnly && hasPermissions({
-    currentPermissions: permissions,
-    requiredPermissions: "admin-dept:edit",
-  });
-  const canCreateDept = !readOnly && hasPermissions({
-    currentPermissions: permissions,
-    requiredPermissions: "admin-dept:create",
-  });
-  const canDeleteDept = !readOnly && hasPermissions({
-    currentPermissions: permissions,
-    requiredPermissions: "admin-dept:delete",
-  });
-  const canManageMembers = !readOnly && hasPermissions({
-    currentPermissions: permissions,
-    requiredPermissions: "admin-dept:members",
-  });
+  const canEditDept =
+    !readOnly &&
+    hasPermissions({
+      currentPermissions: permissions,
+      requiredPermissions: "admin-dept:edit",
+    });
+  const canCreateDept =
+    !readOnly &&
+    hasPermissions({
+      currentPermissions: permissions,
+      requiredPermissions: "admin-dept:create",
+    });
+  const canDeleteDept =
+    !readOnly &&
+    hasPermissions({
+      currentPermissions: permissions,
+      requiredPermissions: "admin-dept:delete",
+    });
+  const canManageMembers =
+    !readOnly &&
+    hasPermissions({
+      currentPermissions: permissions,
+      requiredPermissions: "admin-dept:members",
+    });
 
-  const byId = useMemo(
-    () => new Map(departments.map((dept) => [dept.id, dept])),
-    [departments],
-  );
+  const byId = useMemo(() => new Map(departments.map((dept) => [dept.id, dept])), [departments]);
 
   const visibleDeptIds = useMemo(() => {
     if (!debouncedDeptSearch) {
@@ -182,19 +183,16 @@ export function DepartmentNavTree({
     });
   }, [debouncedDeptSearch, visibleDeptIds]);
 
-  const countBadge = useCallback(
-    (count: number | undefined, hint: string) => {
-      if (count === undefined) {
-        return null;
-      }
-      return (
-        <Tooltip title={hint}>
-          <span className={navStyles.countBadge}>{count}</span>
-        </Tooltip>
-      );
-    },
-    [],
-  );
+  const countBadge = useCallback((count: number | undefined, hint: string) => {
+    if (count === undefined) {
+      return null;
+    }
+    return (
+      <Tooltip title={hint}>
+        <span className={navStyles.countBadge}>{count}</span>
+      </Tooltip>
+    );
+  }, []);
 
   const buildContextMenu = useCallback(
     (dept: AdminDepartment): MenuProps["items"] => {
@@ -230,7 +228,17 @@ export function DepartmentNavTree({
       }
       return items.length ? items : undefined;
     },
-    [canCreateDept, canDeleteDept, canEditDept, canManageMembers, onAddChild, onDelete, onEdit, onMembers, t],
+    [
+      canCreateDept,
+      canDeleteDept,
+      canEditDept,
+      canManageMembers,
+      onAddChild,
+      onDelete,
+      onEdit,
+      onMembers,
+      t,
+    ],
   );
 
   const renderDeptTitle = useCallback(
@@ -257,7 +265,9 @@ export function DepartmentNavTree({
               </span>
             </Tooltip>
             {dept.type === "org" ? (
-              <span className={navStyles.orgBadge}>{t("systemAdmin.users.deptDrawer.typeOrg")}</span>
+              <span className={navStyles.orgBadge}>
+                {t("systemAdmin.users.deptDrawer.typeOrg")}
+              </span>
             ) : null}
           </span>
           {countBadge(count, t("systemAdmin.users.deptNode.memberCountSubtreeHint"))}
@@ -356,7 +366,9 @@ export function DepartmentNavTree({
     >
       <div className={navStyles.treeContent}>
         <button
-          className={[navStyles.scopeItem, allUsersActive ? navStyles.scopeItemActive : ""].join(" ")}
+          className={[navStyles.scopeItem, allUsersActive ? navStyles.scopeItemActive : ""].join(
+            " ",
+          )}
           onClick={() => onSelect(null)}
           type="button"
         >

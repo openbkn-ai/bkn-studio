@@ -60,7 +60,10 @@ for (const scenario of scenarios) {
   await page.goto(scenario.url, { waitUntil: "networkidle", timeout: 60_000 });
   await page.waitForTimeout(1500);
 
-  const activeTab = await page.locator(".ant-tabs-tab-active").innerText().catch(() => "");
+  const activeTab = await page
+    .locator(".ant-tabs-tab-active")
+    .innerText()
+    .catch(() => "");
   const primaryButtons = await page.locator("button.ant-btn-primary").allInnerTexts();
   const createButton = page
     .locator("button.ant-btn-primary")

@@ -5,17 +5,19 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DownOutlined, LeftOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import {
+  DownOutlined,
+  LeftOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+} from "@ant-design/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 
-import {
-  consoleNavigation,
-  findConsoleNavItemByPath,
-} from "@/app/shell/console-navigation";
+import { consoleNavigation, findConsoleNavItemByPath } from "@/app/shell/console-navigation";
 import { shouldAlwaysShowEditionBadge } from "@/app/shell/navigation/edition-badge";
 import { useConsoleNavigation } from "@/app/shell/navigation/use-console-navigation";
 import type { AppRouteHandle } from "@/app/shell/route-meta";
@@ -64,17 +66,13 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
     }
 
     setExpandedKeys((current) =>
-      current.includes(selectedItem.parentKey!)
-        ? current
-        : [...current, selectedItem.parentKey!],
+      current.includes(selectedItem.parentKey!) ? current : [...current, selectedItem.parentKey!],
     );
   }, [selectedItem?.parentKey]);
 
   const toggleExpanded = (itemKey: string) => {
     setExpandedKeys((current) =>
-      current.includes(itemKey)
-        ? current.filter((key) => key !== itemKey)
-        : [...current, itemKey],
+      current.includes(itemKey) ? current.filter((key) => key !== itemKey) : [...current, itemKey],
     );
   };
 
@@ -93,7 +91,9 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                 <LeftOutlined />
               </span>
               {!collapsed ? (
-                <span className="console-sidenav-label">{t("account.navigation.backToWorkspace")}</span>
+                <span className="console-sidenav-label">
+                  {t("account.navigation.backToWorkspace")}
+                </span>
               ) : null}
             </button>
           </>
@@ -131,7 +131,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                     {!collapsed ? (
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
-                        {item.lockedEdition ?? item.paidEdition ? (
+                        {(item.lockedEdition ?? item.paidEdition) ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
                               // A paid capability can report its live entitlement state. Do not keep
@@ -181,7 +181,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                     <>
                       <>
                         <span className="console-sidenav-label">{t(item.labelKey)}</span>
-                        {item.lockedEdition ?? item.paidEdition ? (
+                        {(item.lockedEdition ?? item.paidEdition) ? (
                           <span className="console-sidenav-tier">
                             <EditionBadge
                               alwaysShow={shouldAlwaysShowEditionBadge(item)}
@@ -192,10 +192,7 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                         ) : null}
                       </>
                       <span
-                        className={[
-                          "console-sidenav-caret",
-                          isExpanded ? "is-open" : "",
-                        ]
+                        className={["console-sidenav-caret", isExpanded ? "is-open" : ""]
                           .filter(Boolean)
                           .join(" ")}
                         aria-hidden
@@ -232,18 +229,16 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
                           </span>
                           {!collapsed ? (
                             <>
-                              <span className="console-sidenav-label">
-                                {t(child.labelKey)}
-                              </span>
-                              {child.lockedEdition ?? child.paidEdition ? (
-                          <span className="console-sidenav-tier">
-                            <EditionBadge
-                              alwaysShow={shouldAlwaysShowEditionBadge(child)}
-                              capability={child.paidCapability}
-                              edition={(child.lockedEdition ?? child.paidEdition)!}
-                            />
-                          </span>
-                        ) : null}
+                              <span className="console-sidenav-label">{t(child.labelKey)}</span>
+                              {(child.lockedEdition ?? child.paidEdition) ? (
+                                <span className="console-sidenav-tier">
+                                  <EditionBadge
+                                    alwaysShow={shouldAlwaysShowEditionBadge(child)}
+                                    capability={child.paidCapability}
+                                    edition={(child.lockedEdition ?? child.paidEdition)!}
+                                  />
+                                </span>
+                              ) : null}
                             </>
                           ) : null}
                         </button>

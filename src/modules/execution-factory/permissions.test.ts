@@ -40,12 +40,14 @@ describe("filterAccessibleExecutionUnitTabs", () => {
   });
 });
 
-
 describe("filterAccessibleToolboxViews", () => {
   it.each([
     [["execution-factory:function:view"], ["function"]],
     [["execution-factory:toolbox:view"], ["openapi"]],
-    [["execution-factory:toolbox:view", "execution-factory:function:view"], ["openapi", "function"]],
+    [
+      ["execution-factory:toolbox:view", "execution-factory:function:view"],
+      ["openapi", "function"],
+    ],
   ])("keeps only resource views the user can read", (permissions, expected) => {
     expect(filterAccessibleToolboxViews(permissions)).toEqual(expected);
   });

@@ -49,7 +49,12 @@ async function loginIfNeeded(page: Page) {
 }
 
 type CachedNode = { id: string; otId: string; identity: Record<string, unknown>; display: string };
-type Cache = { nodes: CachedNode[]; edges: { id: string }[]; positions: Record<string, { x: number; y: number }>; settings: { layout: string; shape: string } };
+type Cache = {
+  nodes: CachedNode[];
+  edges: { id: string }[];
+  positions: Record<string, { x: number; y: number }>;
+  settings: { layout: string; shape: string };
+};
 
 async function shot(page: Page, name: string) {
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -75,8 +80,11 @@ async function readCache(page: Page): Promise<Cache | null> {
 /** Viewport coordinates of a canvas node through the dev-only graph hook. */
 async function nodeViewportPoint(page: Page, id: string): Promise<{ x: number; y: number }> {
   return page.evaluate((nodeId) => {
-    const el = document.querySelector('[data-testid="graph-explorer-canvas"]') as (HTMLElement & { __g6Graph?: unknown }) | null;
-    const graph = el?.__g6Graph as { getElementPosition(id: string): number[]; getViewportByCanvas(p: number[]): number[] } | undefined;
+    const el = document.querySelector('[data-testid="graph-explorer-canvas"]') as
+      (HTMLElement & { __g6Graph?: unknown }) | null;
+    const graph = el?.__g6Graph as
+      | { getElementPosition(id: string): number[]; getViewportByCanvas(p: number[]): number[] }
+      | undefined;
     if (!el || !graph) throw new Error("graph hook missing");
     const [cx, cy] = graph.getElementPosition(nodeId);
     const [vx, vy] = graph.getViewportByCanvas([cx, cy]);
@@ -112,7 +120,11 @@ async function pickOption(page: Page, testId: string, needle: string) {
     await page.waitForTimeout(300);
     await box.press("Enter");
     await page.waitForTimeout(300);
-    const chosen = await root.locator(".ant-select-selection-item").first().getAttribute("title").catch(() => null);
+    const chosen = await root
+      .locator(".ant-select-selection-item")
+      .first()
+      .getAttribute("title")
+      .catch(() => null);
     if (chosen && chosen.trim() !== "") return;
     await page.keyboard.press("Escape");
     await page.waitForTimeout(1_000);
@@ -141,7 +153,9 @@ test("graph explorer end to end", async ({ page }) => {
   if (!explorer.url().includes("/graph-explorer")) await explorer.goto(explorerPath);
   await explorer.evaluate((kn) => localStorage.removeItem(`bkn-studio.graph-explorer.${kn}`), KN);
   await explorer.reload();
-  await expect(explorer.getByTestId("graph-explorer-search-input")).toBeVisible({ timeout: 60_000 });
+  await expect(explorer.getByTestId("graph-explorer-search-input")).toBeVisible({
+    timeout: 60_000,
+  });
   await shot(explorer, "01-open");
 
   // 2. Semantic search → add first hit.
@@ -150,7 +164,9 @@ test("graph explorer end to end", async ({ page }) => {
   await searchBox.press("Enter");
   const results = explorer.locator(".ant-tabs-tabpane-active").getByTestId("graph-explorer-result");
   await expect(results.first()).toBeVisible({ timeout: 90_000 });
-  const firstResult = SEED_OT_NAME ? results.filter({ hasText: SEED_OT_NAME }).first() : results.first();
+  const firstResult = SEED_OT_NAME
+    ? results.filter({ hasText: SEED_OT_NAME }).first()
+    : results.first();
   await expect(firstResult).toBeVisible({ timeout: 10_000 });
   await firstResult.getByTestId("graph-explorer-add").click();
   await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 20_000 }).toBe(1);
@@ -168,7 +184,9 @@ test("graph explorer end to end", async ({ page }) => {
   await (await editable(explorer, "graph-explorer-cond-value")).fill(seedValue);
   await explorer.getByTestId("graph-explorer-query").click();
   // Inactive tab panes stay mounted but hidden, so scope to the active pane.
-  await expect(explorer.locator(".ant-tabs-tabpane-active").getByTestId("graph-explorer-on-canvas").first()).toBeVisible({ timeout: 60_000 });
+  await expect(
+    explorer.locator(".ant-tabs-tabpane-active").getByTestId("graph-explorer-on-canvas").first(),
+  ).toBeVisible({ timeout: 60_000 });
   expect((await stats(explorer)).nodes).toBe(1);
   await shot(explorer, "03-filter-converged");
 
@@ -183,10 +201,14 @@ test("graph explorer end to end", async ({ page }) => {
   const afterIn = await stats(explorer);
   await shot(explorer, "05-expand-in");
   await contextMenu(explorer, seed.id, "双向展开");
-  await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 60_000 }).toBeGreaterThan(1);
+  await expect
+    .poll(async () => (await stats(explorer)).nodes, { timeout: 60_000 })
+    .toBeGreaterThan(1);
   const afterBoth = await stats(explorer);
   await shot(explorer, "06-expand-both");
-  console.log(`expand: out=${afterOut.nodes}/${afterOut.edges} in=${afterIn.nodes}/${afterIn.edges} both=${afterBoth.nodes}/${afterBoth.edges}`);
+  console.log(
+    `expand: out=${afterOut.nodes}/${afterOut.edges} in=${afterIn.nodes}/${afterIn.edges} both=${afterBoth.nodes}/${afterBoth.edges}`,
+  );
   expect(afterBoth.nodes).toBeGreaterThanOrEqual(Math.max(afterOut.nodes, afterIn.nodes));
 
   // 5. Path between the seed and a neighbour; then between the seed and itself is impossible, so pick a far node.
@@ -207,7 +229,9 @@ test("graph explorer end to end", async ({ page }) => {
   }, 250);
   await explorer.getByTestId("graph-explorer-find-path").click();
   try {
-    await expect.poll(() => toasts.join(" | "), { timeout: 120_000 }).toMatch(/跳路径|不连通|hop|Not connected/);
+    await expect
+      .poll(() => toasts.join(" | "), { timeout: 120_000 })
+      .toMatch(/跳路径|不连通|hop|Not connected/);
   } finally {
     clearInterval(toastWatcher);
     console.log(`path toasts: ${toasts.join(" | ")}`);
@@ -216,16 +240,22 @@ test("graph explorer end to end", async ({ page }) => {
 
   // 6. Layout and shape switches, then reload restores.
   await explorer.getByTestId("graph-explorer-layout").click();
-  await explorer.locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /层次|Hierarchical/ }).click();
+  await explorer
+    .locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /层次|Hierarchical/ })
+    .click();
   await explorer.waitForTimeout(1_500);
   await explorer.getByTestId("graph-explorer-shape").click();
-  await explorer.locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /矩形|Rectangle/ }).click();
+  await explorer
+    .locator(`${OPEN_DROPDOWN} .ant-select-item-option`, { hasText: /矩形|Rectangle/ })
+    .click();
   await explorer.waitForTimeout(1_500);
   await shot(explorer, "08-layout-shape");
   const before = await stats(explorer);
   await explorer.reload();
   await expect(explorer.getByTestId("graph-explorer-stats")).toBeVisible({ timeout: 60_000 });
-  await expect.poll(async () => (await stats(explorer)).nodes, { timeout: 20_000 }).toBe(before.nodes);
+  await expect
+    .poll(async () => (await stats(explorer)).nodes, { timeout: 20_000 })
+    .toBe(before.nodes);
   const cache3 = (await readCache(explorer))!;
   expect(cache3.settings.layout).toBe("dagre");
   expect(cache3.settings.shape).toBe("rect");

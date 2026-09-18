@@ -67,7 +67,11 @@ const detail: ActionTypeExecutionLogDetail = {
 };
 
 function rows(total: number, status: ActionTypeExecutionLogResultItem["status"] = "success") {
-  return Array.from({ length: total }, (_, index) => ({ displayName: `result-${index}`, durationMs: 5, status }));
+  return Array.from({ length: total }, (_, index) => ({
+    displayName: `result-${index}`,
+    durationMs: 5,
+    status,
+  }));
 }
 
 // Serves pages of `all` the way the backend does: filtered by status, then sliced.
@@ -132,7 +136,11 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     await openDetail();
 
     await within(resultTable()).findByText("result-0");
-    expect(mocks.results).toHaveBeenCalledWith("network-1", "exec-1", { limit: 20, offset: 0, status: "" });
+    expect(mocks.results).toHaveBeenCalledWith("network-1", "exec-1", {
+      limit: 20,
+      offset: 0,
+      status: "",
+    });
 
     fireEvent.click(within(resultTable()).getByTitle("2"));
 
@@ -142,14 +150,19 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
   }, 15_000);
 
   it("filters results by status and returns to the first page", async () => {
-    serveResults([...rows(30), ...rows(3, "failed").map((item, index) => ({ ...item, displayName: `failed-${index}` }))]);
+    serveResults([
+      ...rows(30),
+      ...rows(3, "failed").map((item, index) => ({ ...item, displayName: `failed-${index}` })),
+    ]);
 
     await openDetail();
     await within(resultTable()).findByText("result-0");
     fireEvent.click(within(resultTable()).getByTitle("2"));
     await waitFor(() => expect(lastResultsQuery()?.offset).toBe(20));
 
-    const filter = screen.getByRole("combobox", { name: "knowledgeNetwork.actionTypeExecutionResultStatusFilter" });
+    const filter = screen.getByRole("combobox", {
+      name: "knowledgeNetwork.actionTypeExecutionResultStatusFilter",
+    });
     fireEvent.mouseDown(filter.closest(".ant-select")!.querySelector(".ant-select-selector")!);
     fireEvent.click(await screen.findByTitle("knowledgeNetwork.actionTypeExecutionResultFailed"));
 
@@ -191,9 +204,15 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
 
     const table = resultTable();
     await within(table).findByText("was-cancelled");
-    expect(within(table).getByText("knowledgeNetwork.actionTypeExecutionStatusCancelled")).toBeTruthy();
-    expect(within(table).getByText("knowledgeNetwork.actionTypeExecutionStatusPending")).toBeTruthy();
-    expect(within(table).queryByText("knowledgeNetwork.actionTypeExecutionResultFailed")).toBeNull();
+    expect(
+      within(table).getByText("knowledgeNetwork.actionTypeExecutionStatusCancelled"),
+    ).toBeTruthy();
+    expect(
+      within(table).getByText("knowledgeNetwork.actionTypeExecutionStatusPending"),
+    ).toBeTruthy();
+    expect(
+      within(table).queryByText("knowledgeNetwork.actionTypeExecutionResultFailed"),
+    ).toBeNull();
   }, 15_000);
 
   it("keeps paging within the endpoint's 10,000-result window", async () => {
@@ -215,7 +234,9 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     fireEvent.click(within(resultTable()).getByTitle("2"));
     await waitFor(() => expect(lastResultsQuery()?.offset).toBe(20));
 
-    fireEvent.mouseDown(resultTable().querySelector(".ant-pagination-options .ant-select-selector")!);
+    fireEvent.mouseDown(
+      resultTable().querySelector(".ant-pagination-options .ant-select-selector")!,
+    );
     fireEvent.click(await screen.findByTitle("50 / page"));
 
     await waitFor(() => expect(lastResultsQuery()).toEqual({ limit: 50, offset: 0, status: "" }));
@@ -230,7 +251,10 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     mocks.detail.mockImplementation((_networkId: string, logId: string) =>
       Promise.resolve({ ...detail, id: logId }),
     );
-    serveResults([...rows(30), ...rows(25, "failed").map((item, index) => ({ ...item, displayName: `failed-${index}` }))]);
+    serveResults([
+      ...rows(30),
+      ...rows(25, "failed").map((item, index) => ({ ...item, displayName: `failed-${index}` })),
+    ]);
 
     render(<ActionTypeTaskManagementPanel actionTypeId="action-1" networkId="network-1" />);
     const actionButtons = await screen.findAllByRole("button", { name: "common.actions" });
@@ -238,12 +262,16 @@ describe("ActionTypeTaskManagementPanel execution results", () => {
     fireEvent.click(await screen.findByText("common.detail"));
     await within(await waitFor(() => resultTable())).findByText("result-0");
 
-    const filter = screen.getByRole("combobox", { name: "knowledgeNetwork.actionTypeExecutionResultStatusFilter" });
+    const filter = screen.getByRole("combobox", {
+      name: "knowledgeNetwork.actionTypeExecutionResultStatusFilter",
+    });
     fireEvent.mouseDown(filter.closest(".ant-select")!.querySelector(".ant-select-selector")!);
     fireEvent.click(await screen.findByTitle("knowledgeNetwork.actionTypeExecutionResultFailed"));
     await within(resultTable()).findByText("failed-0");
     fireEvent.click(within(resultTable()).getByTitle("2"));
-    await waitFor(() => expect(lastResultsQuery()).toEqual({ limit: 20, offset: 20, status: "failed" }));
+    await waitFor(() =>
+      expect(lastResultsQuery()).toEqual({ limit: 20, offset: 20, status: "failed" }),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     fireEvent.click(actionButtons[1]);

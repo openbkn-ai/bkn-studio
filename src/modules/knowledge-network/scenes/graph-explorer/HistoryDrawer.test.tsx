@@ -34,8 +34,20 @@ const noop = () => undefined;
 describe("HistoryDrawer send-to-canvas", () => {
   it("offers to send an entry that recorded a subgraph, and hands back that entry", () => {
     const onSendToCanvas = vi.fn();
-    const withGraph = entry({ graph: { nodes: [{ id: "n1", otId: "ot", label: "n1", props: {} } as never], edges: [] } });
-    render(<HistoryDrawer open entries={[withGraph]} onClose={noop} onCopy={noop} onRerun={noop} onSendToCanvas={onSendToCanvas} onClear={noop} />);
+    const withGraph = entry({
+      graph: { nodes: [{ id: "n1", otId: "ot", label: "n1", props: {} } as never], edges: [] },
+    });
+    render(
+      <HistoryDrawer
+        open
+        entries={[withGraph]}
+        onClose={noop}
+        onCopy={noop}
+        onRerun={noop}
+        onSendToCanvas={onSendToCanvas}
+        onClear={noop}
+      />,
+    );
 
     // The actions sit inside the collapsed body; open it first.
     fireEvent.click(screen.getByText(withGraph.title));
@@ -46,7 +58,17 @@ describe("HistoryDrawer send-to-canvas", () => {
   it("does not offer it for an entry with nothing to put on the canvas", () => {
     const empty = entry({ id: "h2", title: "empty result", graph: { nodes: [], edges: [] } });
     const none = entry({ id: "h3", title: "a path search", kind: "path", graph: undefined });
-    render(<HistoryDrawer open entries={[empty, none]} onClose={noop} onCopy={noop} onRerun={noop} onSendToCanvas={noop} onClear={noop} />);
+    render(
+      <HistoryDrawer
+        open
+        entries={[empty, none]}
+        onClose={noop}
+        onCopy={noop}
+        onRerun={noop}
+        onSendToCanvas={noop}
+        onClear={noop}
+      />,
+    );
     fireEvent.click(screen.getByText(empty.title));
     expect(screen.queryByTestId("graph-explorer-history-send")).toBeNull();
   });

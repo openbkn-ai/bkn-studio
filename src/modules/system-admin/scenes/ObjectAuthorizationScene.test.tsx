@@ -16,7 +16,9 @@ vi.mock("react-i18next", async (importOriginal) => ({
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    runtimeConfig: { currentUser: { id: "u-admin", permissions: ["admin-authz:grant", "admin-authz:revoke"] } },
+    runtimeConfig: {
+      currentUser: { id: "u-admin", permissions: ["admin-authz:grant", "admin-authz:revoke"] },
+    },
   }),
 }));
 vi.mock("@/framework/entitlement/use-entitlement", () => ({
@@ -41,8 +43,14 @@ describe("ObjectAuthorizationScene", () => {
     vi.clearAllMocks();
     capability.current = "available";
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(), matches: false,
-      media: query, onchange: null, removeEventListener: vi.fn(), removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: false,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     }));
   });
 

@@ -7,12 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-import {
-  API_PREFIX,
-  buildUniqueName,
-  defaultApiHeaders,
-  expectOk,
-} from "./common";
+import { API_PREFIX, buildUniqueName, defaultApiHeaders, expectOk } from "./common";
 
 export {
   assertBackendReady,
@@ -78,11 +73,9 @@ export function buildMinimalOpenApiSpec(operatorName: string) {
 }
 
 export function buildFunctionHandlerCode() {
-  return [
-    "def handler(event):",
-    "    x = event.get('x', 0)",
-    "    return {'result': x + 1}",
-  ].join("\n");
+  return ["def handler(event):", "    x = event.get('x', 0)", "    return {'result': x + 1}"].join(
+    "\n",
+  );
 }
 
 export async function registerOperatorViaApi(
@@ -136,10 +129,9 @@ export async function registerOperatorViaApi(
     throw new Error(`Register failed: ${JSON.stringify(body)}`);
   }
 
-  const detailResponse = await request.get(
-    `${API_PREFIX}/operator/info/${result.operator_id}`,
-    { headers: defaultApiHeaders() },
-  );
+  const detailResponse = await request.get(`${API_PREFIX}/operator/info/${result.operator_id}`, {
+    headers: defaultApiHeaders(),
+  });
   await expectOk(detailResponse, "Get operator detail");
 
   const detail = (await detailResponse.json()) as {
@@ -154,10 +146,7 @@ export async function registerOperatorViaApi(
   };
 }
 
-export async function exportOperatorViaApi(
-  request: APIRequestContext,
-  operatorId: string,
-) {
+export async function exportOperatorViaApi(request: APIRequestContext, operatorId: string) {
   const response = await request.get(`${API_PREFIX}/impex/export/operator/${operatorId}`, {
     headers: defaultApiHeaders(),
   });
@@ -264,10 +253,7 @@ export async function cleanupOperatorViaApi(
   await deleteOperatorViaApi(request, operator);
 }
 
-export async function getOperatorDetailViaApi(
-  request: APIRequestContext,
-  operatorId: string,
-) {
+export async function getOperatorDetailViaApi(request: APIRequestContext, operatorId: string) {
   const response = await request.get(`${API_PREFIX}/operator/info/${operatorId}`, {
     headers: defaultApiHeaders(),
   });
@@ -318,10 +304,7 @@ export async function updateOperatorViaApi(
   await expectOk(response, "Update operator");
 }
 
-export async function listOperatorHistoryViaApi(
-  request: APIRequestContext,
-  operatorId: string,
-) {
+export async function listOperatorHistoryViaApi(request: APIRequestContext, operatorId: string) {
   const response = await request.get(`${API_PREFIX}/operator/history/${operatorId}`, {
     headers: defaultApiHeaders(),
   });

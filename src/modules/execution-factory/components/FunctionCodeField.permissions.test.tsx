@@ -58,7 +58,9 @@ describe("FunctionCodeField permissions", () => {
   afterEach(cleanup);
 
   it("hides Function generation and runs in the legacy operator form for operator-only users", async () => {
-    mocks.permissions.splice(0, mocks.permissions.length,
+    mocks.permissions.splice(
+      0,
+      mocks.permissions.length,
       "execution-factory:operator:create",
       "execution-factory:operator:edit",
       "execution-factory:operator:debug",
@@ -73,7 +75,9 @@ describe("FunctionCodeField permissions", () => {
   });
 
   it("offers generation with Function create and runs with the ad-hoc execute grant", async () => {
-    mocks.permissions.splice(0, mocks.permissions.length,
+    mocks.permissions.splice(
+      0,
+      mocks.permissions.length,
       "execution-factory:function:create",
       "execution-factory:function:debug",
     );

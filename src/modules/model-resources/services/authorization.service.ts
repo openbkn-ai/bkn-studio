@@ -114,10 +114,7 @@ function operationsFor(me: MyPermissions, type: string, id: string): string[] {
  *
  * `"*"` is not an instance ID; its permissions are covered by the type-level row and need no resource_id.
  */
-async function fetchScopedPermissions(
-  type: string,
-  ids: string[],
-): Promise<MyPermissions> {
+async function fetchScopedPermissions(type: string, ids: string[]): Promise<MyPermissions> {
   const instanceIds = [...new Set(ids.filter((id) => id && id !== "*"))];
   // Always make one request with only resource_type to retrieve the type-level row. When there
   // are many instances, add resource_id chunks per SCOPED_ID_BATCH to avoid gateway URL limits.

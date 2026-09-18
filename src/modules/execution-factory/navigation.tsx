@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  AppstoreOutlined,
-  CloudServerOutlined,
-  ToolOutlined,
-} from "@ant-design/icons";
+import { AppstoreOutlined, CloudServerOutlined, ToolOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 

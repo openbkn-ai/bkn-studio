@@ -32,12 +32,8 @@ export function BuildStatusTag({ plain = false, task }: BuildStatusTagProps) {
       : task.status === "completed"
         ? styles.taskSucceeded
         : task.status === "running" || task.status === "stopping"
-            ? styles.taskRunning
-            : styles.taskPending;
+          ? styles.taskRunning
+          : styles.taskPending;
 
-  return (
-    <span className={[styles.tag, statusClass].join(" ")}>
-      {label}
-    </span>
-  );
+  return <span className={[styles.tag, statusClass].join(" ")}>{label}</span>;
 }

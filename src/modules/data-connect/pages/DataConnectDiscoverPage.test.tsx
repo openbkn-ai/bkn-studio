@@ -10,7 +10,11 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/data-connect/scenes/DataConnectDiscoverScene", () => ({
-  DataConnectDiscoverScene: ({ activeTab, catalogId, onTabChange }: {
+  DataConnectDiscoverScene: ({
+    activeTab,
+    catalogId,
+    onTabChange,
+  }: {
     activeTab: "schedules" | "tasks";
     catalogId?: string;
     onTabChange: (tab: "schedules" | "tasks") => void;
@@ -18,8 +22,12 @@ vi.mock("@/modules/data-connect/scenes/DataConnectDiscoverScene", () => ({
     <div>
       <output data-testid="active-tab">{activeTab}</output>
       <output data-testid="catalog-id">{catalogId}</output>
-      <button onClick={() => onTabChange("tasks")} type="button">tasks</button>
-      <button onClick={() => onTabChange("schedules")} type="button">schedules</button>
+      <button onClick={() => onTabChange("tasks")} type="button">
+        tasks
+      </button>
+      <button onClick={() => onTabChange("schedules")} type="button">
+        schedules
+      </button>
     </div>
   ),
 }));
@@ -36,12 +44,12 @@ function renderPage(initialEntry: string) {
     <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route
-          element={(
+          element={
             <>
               <DataConnectDiscoverPage />
               <LocationState />
             </>
-          )}
+          }
           path="/data-connect/:catalogId/discover"
         />
       </Routes>
@@ -64,9 +72,7 @@ describe("DataConnectDiscoverPage", () => {
   it("normalizes a missing tab parameter to tasks", async () => {
     renderPage("/data-connect/catalog-1/discover");
 
-    expect(await screen.findByText(
-      "/data-connect/catalog-1/discover?tab=tasks",
-    )).toBeTruthy();
+    expect(await screen.findByText("/data-connect/catalog-1/discover?tab=tasks")).toBeTruthy();
     expect(screen.getByTestId("active-tab").textContent).toBe("tasks");
   });
 });

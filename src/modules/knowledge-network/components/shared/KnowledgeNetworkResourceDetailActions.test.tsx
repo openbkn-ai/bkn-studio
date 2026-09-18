@@ -56,7 +56,10 @@ describe("KnowledgeNetworkResourceDetailActions", () => {
 
   it("renders no buttons without matching operations", () => {
     const { container } = render(
-      <KnowledgeNetworkResourceDetailActions actions={createActions()} record={{ operations: [] }} />,
+      <KnowledgeNetworkResourceDetailActions
+        actions={createActions()}
+        record={{ operations: [] }}
+      />,
     );
 
     expect(container.innerHTML).toBe("");
@@ -104,12 +107,14 @@ describe("KnowledgeNetworkResourceDetailActions", () => {
   it("uses an explicit network id when a host mounts the scene outside the route", () => {
     render(
       <KnowledgeNetworkResourceDetailActions
-        actions={[{
-          key: "authorize",
-          label: "Authorize",
-          onClick: vi.fn(),
-          operation: "authorize",
-        }]}
+        actions={[
+          {
+            key: "authorize",
+            label: "Authorize",
+            onClick: vi.fn(),
+            operation: "authorize",
+          },
+        ]}
         networkId="host-network"
         record={{ operations: ["view_detail"] }}
       />,

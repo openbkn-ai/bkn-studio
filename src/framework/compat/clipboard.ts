@@ -17,7 +17,8 @@ function writeTextWithSelectionFallback(text: string): void {
   textarea.style.inset = "0 auto auto -9999px";
   textarea.style.opacity = "0";
 
-  const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const activeElement =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
   const selection = document.getSelection();
   const selectedRanges =
     selection === null

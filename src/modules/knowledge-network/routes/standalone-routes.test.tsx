@@ -33,9 +33,8 @@ function routeChild(path: string): ReactElement {
 describe("knowledge network standalone routes", () => {
   it("keeps object-type base authorization available without the property capability", () => {
     expect(
-      routeChild(
-        "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization",
-      ).type,
+      routeChild("/knowledge-network/workspace/:networkId/object-types/:objectTypeId/authorization")
+        .type,
     ).toBe(ObjectTypeAuthorizationPage);
   });
 
@@ -70,16 +69,19 @@ describe("knowledge network standalone routes", () => {
       path: "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/edit",
       resourceIdParam: "actionTypeId",
     },
-  ])("uses the child resource operation gate for $path", ({ loadResource, path, resourceIdParam }) => {
-    const gate = routeChild(path) as ReactElement<{
-      loadResource: unknown;
-      resourceIdParam: string;
-    }>;
+  ])(
+    "uses the child resource operation gate for $path",
+    ({ loadResource, path, resourceIdParam }) => {
+      const gate = routeChild(path) as ReactElement<{
+        loadResource: unknown;
+        resourceIdParam: string;
+      }>;
 
-    expect(gate.type).toBe(KnowledgeNetworkChildModifyRouteGate);
-    expect(gate.props.loadResource).toBe(loadResource);
-    expect(gate.props.resourceIdParam).toBe(resourceIdParam);
-  });
+      expect(gate.type).toBe(KnowledgeNetworkChildModifyRouteGate);
+      expect(gate.props.loadResource).toBe(loadResource);
+      expect(gate.props.resourceIdParam).toBe(resourceIdParam);
+    },
+  );
 
   it.each([
     "/knowledge-network/workspace/:networkId/concept-groups/create",

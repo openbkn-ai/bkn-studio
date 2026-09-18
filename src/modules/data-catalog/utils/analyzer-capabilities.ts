@@ -33,7 +33,16 @@ export async function loadAnalyzerCapabilities(): Promise<AnalyzerCapabilitiesLo
   }
 }
 
-export function findUnavailableAnalyzers(options: string[], candidates: Array<string | undefined | null>): string[] {
+export function findUnavailableAnalyzers(
+  options: string[],
+  candidates: Array<string | undefined | null>,
+): string[] {
   const available = new Set(options);
-  return [...new Set(candidates.map((item) => item?.trim()).filter((item): item is string => Boolean(item && !available.has(item))))];
+  return [
+    ...new Set(
+      candidates
+        .map((item) => item?.trim())
+        .filter((item): item is string => Boolean(item && !available.has(item))),
+    ),
+  ];
 }

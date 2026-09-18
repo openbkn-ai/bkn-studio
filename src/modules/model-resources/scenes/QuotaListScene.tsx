@@ -206,8 +206,12 @@ export function QuotaListScene() {
         if (record.billingType === 1) {
           return (
             <div className={styles.multiLineCell}>
-              <div>{formatReferPrice(record, "in", inLabel, outLabel, thousandLabel, millionLabel)}</div>
-              <div>{formatReferPrice(record, "out", inLabel, outLabel, thousandLabel, millionLabel)}</div>
+              <div>
+                {formatReferPrice(record, "in", inLabel, outLabel, thousandLabel, millionLabel)}
+              </div>
+              <div>
+                {formatReferPrice(record, "out", inLabel, outLabel, thousandLabel, millionLabel)}
+              </div>
             </div>
           );
         }
@@ -328,7 +332,10 @@ export function QuotaListScene() {
             emptyText: (
               <EmptyStatePanel
                 action={
-                  <AppButton type="primary" onClick={() => void navigate("/model-resources/models")}>
+                  <AppButton
+                    type="primary"
+                    onClick={() => void navigate("/model-resources/models")}
+                  >
                     {t("modelResources.quotas.goToModelConfig")}
                   </AppButton>
                 }

@@ -169,7 +169,7 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
       const nextTotal =
         nextBillingType === "1" && inputForecast && outputForecast
           ? `${nextCurrencySymbol}${(extractAmount(inputForecast) + extractAmount(outputForecast)).toFixed(2)}`
-          : inputForecast ?? "";
+          : (inputForecast ?? "");
 
       setRows(updatedRows);
       setTotalForecast(nextTotal);
@@ -333,8 +333,12 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
       <section className={styles.sectionPanel}>
         <div className={styles.sectionHeader}>
           <div>
-            <div className={styles.sectionTitle}>{t("modelResources.quotas.modal.billingType")}</div>
-            <div className={styles.sectionHint}>{t("modelResources.quotas.modal.quotaSetting")}</div>
+            <div className={styles.sectionTitle}>
+              {t("modelResources.quotas.modal.billingType")}
+            </div>
+            <div className={styles.sectionHint}>
+              {t("modelResources.quotas.modal.quotaSetting")}
+            </div>
           </div>
         </div>
         <Radio.Group
@@ -391,10 +395,14 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
                       value={row.numType}
                       onChange={(value) => updateRow(row.id, { numType: value })}
                     />
-                    <span className={styles.inlineUnit}>{t("modelResources.quotas.modal.perMonth")}</span>
+                    <span className={styles.inlineUnit}>
+                      {t("modelResources.quotas.modal.perMonth")}
+                    </span>
                   </div>
                   {showErrors && row.errors.tokens ? (
-                    <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
+                    <span className={styles.errorText}>
+                      {t("modelResources.quotas.modal.required")}
+                    </span>
                   ) : null}
                 </div>
               ),
@@ -442,7 +450,9 @@ export function QuotaLimitModal({ mode, onClose, open, record }: QuotaLimitModal
                     />
                   </div>
                   {showErrors && row.errors.referPrice ? (
-                    <span className={styles.errorText}>{t("modelResources.quotas.modal.required")}</span>
+                    <span className={styles.errorText}>
+                      {t("modelResources.quotas.modal.required")}
+                    </span>
                   ) : null}
                 </div>
               ),

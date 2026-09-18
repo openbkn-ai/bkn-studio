@@ -18,13 +18,25 @@ export const dataConnectModuleManifest = {
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["vega-backend/catalogs", "vega-backend/connector-types", "vega-backend/discover-schedules", "vega-backend/discover-tasks"],
+  services: [
+    "vega-backend/catalogs",
+    "vega-backend/connector-types",
+    "vega-backend/discover-schedules",
+    "vega-backend/discover-tasks",
+  ],
   scenes: [
     {
       id: "data-connect.list",
       exportName: "DataConnectListScene",
       description: "Manage data connection records, search, filter, inspect and operate entries.",
-      inputs: ["defaultKeyword?", "defaultConnectorType?", "onCreate?", "onEdit?", "onOpenDetail?", "onOpenDiscovers?"],
+      inputs: [
+        "defaultKeyword?",
+        "defaultConnectorType?",
+        "onCreate?",
+        "onEdit?",
+        "onOpenDetail?",
+        "onOpenDiscovers?",
+      ],
     },
     {
       id: "data-connect.form",

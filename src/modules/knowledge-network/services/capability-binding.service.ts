@@ -13,9 +13,7 @@ import {
   mapCapabilityBindingsList,
 } from "@/modules/knowledge-network/services/mappers";
 import { toBackendAttachEntry } from "@/modules/knowledge-network/services/mappers/capability.mapper";
-import type {
-  BackendCapabilityBindingsList,
-} from "@/modules/knowledge-network/services/mappers/capability.mapper";
+import type { BackendCapabilityBindingsList } from "@/modules/knowledge-network/services/mappers/capability.mapper";
 import { DEFAULT_KNOWLEDGE_NETWORK_BRANCH } from "@/modules/knowledge-network/services/mappers/network.mapper";
 import {
   attachMockCapabilities,
@@ -44,22 +42,19 @@ export async function listKnowledgeNetworkCapabilities(
     return wait(listMockCapabilities(networkId, query));
   }
 
-  const response = await http.get<BackendCapabilityBindingsList>(
-    capabilitiesPath(networkId),
-    {
-      params: {
-        box_id: query.boxId || undefined,
-        branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
-        direction: query.direction ?? "desc",
-        limit: query.limit ?? CAPABILITY_LIST_DEFAULT_LIMIT,
-        metadata_type: query.metadataType,
-        offset: query.offset ?? 0,
-        sort: query.sort ?? "create_time",
-        type: query.type,
-        with_detail: query.withDetail ? "true" : undefined,
-      },
+  const response = await http.get<BackendCapabilityBindingsList>(capabilitiesPath(networkId), {
+    params: {
+      box_id: query.boxId || undefined,
+      branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
+      direction: query.direction ?? "desc",
+      limit: query.limit ?? CAPABILITY_LIST_DEFAULT_LIMIT,
+      metadata_type: query.metadataType,
+      offset: query.offset ?? 0,
+      sort: query.sort ?? "create_time",
+      type: query.type,
+      with_detail: query.withDetail ? "true" : undefined,
     },
-  );
+  });
 
   return mapCapabilityBindingsList(response.data);
 }

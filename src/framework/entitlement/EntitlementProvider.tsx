@@ -61,12 +61,7 @@ export function EntitlementProvider({ children }: PropsWithChildren) {
     };
   }, [load]);
 
-  const value = useMemo(
-    () => ({ loading, refresh: load, snapshot }),
-    [loading, load, snapshot],
-  );
+  const value = useMemo(() => ({ loading, refresh: load, snapshot }), [loading, load, snapshot]);
 
-  return (
-    <EntitlementContext.Provider value={value}>{children}</EntitlementContext.Provider>
-  );
+  return <EntitlementContext.Provider value={value}>{children}</EntitlementContext.Provider>;
 }

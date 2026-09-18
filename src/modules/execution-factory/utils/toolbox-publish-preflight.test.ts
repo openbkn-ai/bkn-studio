@@ -61,9 +61,7 @@ describe("collectToolboxPublishIssues", () => {
 
   it("does not run the handler check on openapi tools", () => {
     expect(
-      collectToolboxPublishIssues([
-        { ...healthy, code: "x = 1\n", metadataType: "openapi" },
-      ]),
+      collectToolboxPublishIssues([{ ...healthy, code: "x = 1\n", metadataType: "openapi" }]),
     ).toEqual([]);
   });
 

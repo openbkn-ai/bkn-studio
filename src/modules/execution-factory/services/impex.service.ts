@@ -65,14 +65,11 @@ export async function exportComponent(
     };
   }
 
-  const response = await http.get<ImpexExportResult>(
-    `${API_PREFIX}/impex/export/${type}/${id}`,
-    {
-      headers: getExecutionFactoryApiHeaders(),
-      timeout: IMPEX_EXPORT_TIMEOUT_MS,
-      skipErrorToast: true,
-    },
-  );
+  const response = await http.get<ImpexExportResult>(`${API_PREFIX}/impex/export/${type}/${id}`, {
+    headers: getExecutionFactoryApiHeaders(),
+    timeout: IMPEX_EXPORT_TIMEOUT_MS,
+    skipErrorToast: true,
+  });
 
   return response.data;
 }
@@ -87,37 +84,23 @@ export async function downloadComponentExport(
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
-    triggerBrowserDownload(
-      blob,
-      resolveExportFilename(undefined, displayName, id),
-    );
+    triggerBrowserDownload(blob, resolveExportFilename(undefined, displayName, id));
     return;
   }
 
-  const response = await http.get<Blob>(
-    `${API_PREFIX}/impex/export/${type}/${id}`,
-    {
-      headers: getExecutionFactoryApiHeaders(),
-      responseType: "blob",
-      timeout: IMPEX_EXPORT_TIMEOUT_MS,
-      skipErrorToast: true,
-    },
-  );
+  const response = await http.get<Blob>(`${API_PREFIX}/impex/export/${type}/${id}`, {
+    headers: getExecutionFactoryApiHeaders(),
+    responseType: "blob",
+    timeout: IMPEX_EXPORT_TIMEOUT_MS,
+    skipErrorToast: true,
+  });
 
-  const contentDisposition = response.headers["content-disposition"] as
-    | string
-    | undefined;
+  const contentDisposition = response.headers["content-disposition"] as string | undefined;
 
-  triggerBrowserDownload(
-    response.data,
-    resolveExportFilename(contentDisposition, displayName, id),
-  );
+  triggerBrowserDownload(response.data, resolveExportFilename(contentDisposition, displayName, id));
 }
 
-async function postImportFormData(
-  type: ImpexComponentType,
-  formData: FormData,
-): Promise<void> {
+async function postImportFormData(type: ImpexComponentType, formData: FormData): Promise<void> {
   await http.post(`${API_PREFIX}/impex/import/${type}`, formData, {
     headers: {
       ...getExecutionFactoryApiHeaders(),

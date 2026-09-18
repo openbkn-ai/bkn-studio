@@ -49,20 +49,21 @@ export function CreateToolboxForm({
   const canCreateFunction = allowedMetadataTypes?.includes("function") ?? true;
 
   const metadataOptions = useMemo(
-    () => [
-      {
-        key: "openapi" as const,
-        icon: ApiOutlined,
-        title: t("executionFactory.metadataTypes.openapi"),
-        desc: t("executionFactory.createToolboxOpenApiDesc"),
-      },
-      {
-        key: "function" as const,
-        icon: ThunderboltOutlined,
-        title: t("executionFactory.metadataTypes.function"),
-        desc: t("executionFactory.createToolboxFunctionDesc"),
-      },
-    ].filter((item) => item.key === "openapi" ? canCreateOpenApi : canCreateFunction),
+    () =>
+      [
+        {
+          key: "openapi" as const,
+          icon: ApiOutlined,
+          title: t("executionFactory.metadataTypes.openapi"),
+          desc: t("executionFactory.createToolboxOpenApiDesc"),
+        },
+        {
+          key: "function" as const,
+          icon: ThunderboltOutlined,
+          title: t("executionFactory.metadataTypes.function"),
+          desc: t("executionFactory.createToolboxFunctionDesc"),
+        },
+      ].filter((item) => (item.key === "openapi" ? canCreateOpenApi : canCreateFunction)),
     [canCreateOpenApi, canCreateFunction, t],
   );
 

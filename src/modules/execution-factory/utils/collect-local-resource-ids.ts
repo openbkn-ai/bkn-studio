@@ -61,10 +61,7 @@ function readCachedIds(activeTab: ExecutionUnitTab): Set<string> | null {
 
 function writeCachedIds(activeTab: ExecutionUnitTab, ids: Set<string>) {
   try {
-    sessionStorage.setItem(
-      cacheKey(activeTab),
-      JSON.stringify({ at: Date.now(), ids: [...ids] }),
-    );
+    sessionStorage.setItem(cacheKey(activeTab), JSON.stringify({ at: Date.now(), ids: [...ids] }));
   } catch {
     // Ignore quota / private mode errors.
   }

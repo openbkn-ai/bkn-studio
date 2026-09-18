@@ -94,8 +94,7 @@ export function TopBar() {
   ];
 
   const installStatusUrl = getInstallStatusUrl();
-  const canViewInstallStatus =
-    runtimeConfig.currentUser.isAdmin && installStatusUrl !== null;
+  const canViewInstallStatus = runtimeConfig.currentUser.isAdmin && installStatusUrl !== null;
   const userMenuItems = useMemo<MenuProps["items"]>(() => {
     const items: MenuProps["items"] = [
       {
@@ -283,11 +282,7 @@ export function TopBar() {
         >
           {resolvedTheme === "dark" ? <SunOutlined /> : <MoonOutlined />}
         </button>
-        <Dropdown
-          menu={{ items: userMenuItems }}
-          placement="bottomRight"
-          trigger={["click"]}
-        >
+        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={["click"]}>
           <button className="console-user-pill" type="button">
             <span className="console-user-avatar" aria-hidden>
               <UserOutlined />

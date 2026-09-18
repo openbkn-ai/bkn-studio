@@ -16,7 +16,9 @@ export function availableOperationsForGrant<Operation extends { key: string }>(
   definitions: Operation[],
 ): Operation[] {
   return definitions
-    .filter((operation) => grant.resource.id === WILDCARD || !HIDDEN_INSTANCE_OPS.has(operation.key))
+    .filter(
+      (operation) => grant.resource.id === WILDCARD || !HIDDEN_INSTANCE_OPS.has(operation.key),
+    )
     .filter((operation) => !grant.operations.includes(operation.key));
 }
 
@@ -48,7 +50,10 @@ export function addOperationToGrant(
     sameResource(grant.resource, target.resource)
       ? {
           ...grant,
-          operations: normalizeRoleOperations(grant.resource.type, [...grant.operations, operation]),
+          operations: normalizeRoleOperations(grant.resource.type, [
+            ...grant.operations,
+            operation,
+          ]),
         }
       : grant,
   );

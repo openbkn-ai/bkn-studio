@@ -10,4 +10,3 @@ import { ObjectAuthorizationCreateScene } from "@/modules/system-admin/scenes/Ob
 export function ObjectAuthorizationCreatePage() {
   return <ObjectAuthorizationCreateScene />;
 }
-

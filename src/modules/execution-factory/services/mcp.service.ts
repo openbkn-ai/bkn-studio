@@ -137,17 +137,11 @@ function filterMockMcps(query: McpListQuery) {
       return true;
     }
 
-    return (
-      item.name.toLowerCase().includes(keyword) ||
-      item.mcpId.toLowerCase().includes(keyword)
-    );
+    return item.name.toLowerCase().includes(keyword) || item.mcpId.toLowerCase().includes(keyword);
   });
 }
 
-async function fetchMcpList(
-  path: string,
-  query: McpListQuery,
-): Promise<McpListResult> {
+async function fetchMcpList(path: string, query: McpListQuery): Promise<McpListResult> {
   const response = await http.get<BackendMcpListResponse>(path, {
     params: {
       all: query.all || undefined,
@@ -213,8 +207,7 @@ export async function getMcp(mcpId: string): Promise<McpRecord> {
 
   const response = await http.get<{
     base_info?: BackendMcpInfo;
-  }>(`${API_PREFIX}/mcp/${mcpId}`, {
-  });
+  }>(`${API_PREFIX}/mcp/${mcpId}`, {});
 
   if (!response.data.base_info) {
     throw new Error("MCP not found");
@@ -240,8 +233,7 @@ export async function getMcpDetail(mcpId: string): Promise<McpDetail> {
 
   const response = await http.get<{
     base_info?: BackendMcpInfo;
-  }>(`${API_PREFIX}/mcp/${mcpId}`, {
-  });
+  }>(`${API_PREFIX}/mcp/${mcpId}`, {});
 
   if (!response.data.base_info) {
     throw new Error("MCP not found");
@@ -257,8 +249,7 @@ export async function getMcpMarket(mcpId: string): Promise<McpRecord> {
 
   const response = await http.get<{
     base_info?: BackendMcpInfo;
-  }>(`${API_PREFIX}/mcp/market/${mcpId}`, {
-  });
+  }>(`${API_PREFIX}/mcp/market/${mcpId}`, {});
 
   if (!response.data.base_info) {
     throw new Error("Market MCP not found");
@@ -371,14 +362,10 @@ export async function updateMcp(mcpId: string, input: McpUpdateInput): Promise<v
     return;
   }
 
-  await http.put(`${API_PREFIX}/mcp/${mcpId}`, buildMcpMutationBody(input), {
-  });
+  await http.put(`${API_PREFIX}/mcp/${mcpId}`, buildMcpMutationBody(input), {});
 }
 
-export async function updateMcpStatus(
-  mcpId: string,
-  status: McpStatus,
-): Promise<void> {
+export async function updateMcpStatus(mcpId: string, status: McpStatus): Promise<void> {
   if (useMock) {
     mockMcps = mockMcps.map((item) =>
       item.mcpId === mcpId ? { ...item, status, updateTime: Date.now() } : item,
@@ -386,11 +373,7 @@ export async function updateMcpStatus(
     return;
   }
 
-  await http.post(
-    `${API_PREFIX}/mcp/${mcpId}/status`,
-    { status },
-    {},
-  );
+  await http.post(`${API_PREFIX}/mcp/${mcpId}/status`, { status }, {});
 }
 
 export async function deleteMcp(mcpId: string): Promise<void> {
@@ -399,8 +382,7 @@ export async function deleteMcp(mcpId: string): Promise<void> {
     return;
   }
 
-  await http.delete(`${API_PREFIX}/mcp/${mcpId}`, {
-  });
+  await http.delete(`${API_PREFIX}/mcp/${mcpId}`, {});
 }
 
 type McpToolsQuery = {

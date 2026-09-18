@@ -32,10 +32,7 @@ vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeConditionE
   ActionTypeConditionEditor: () => null,
 }));
 
-function objectType(
-  id: string,
-  operations: string[],
-): KnowledgeNetworkObjectTypeRecord {
+function objectType(id: string, operations: string[]): KnowledgeNetworkObjectTypeRecord {
   return {
     color: "#2f54eb",
     conceptGroupIds: [],

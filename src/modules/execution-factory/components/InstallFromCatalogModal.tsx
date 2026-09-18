@@ -97,9 +97,7 @@ export function InstallFromCatalogModal({
         void handleInstall();
       }}
       open={open}
-      title={t(
-        alreadyInstalled ? "executionFactory.syncTitle" : "executionFactory.introduceTitle",
-      )}
+      title={t(alreadyInstalled ? "executionFactory.syncTitle" : "executionFactory.introduceTitle")}
     >
       <p>
         {t(
@@ -137,12 +135,7 @@ export function InstallFromCatalogModal({
         </Form>
       )}
       {error ? (
-        <Alert
-          description={error.hint}
-          message={error.title}
-          showIcon
-          type="error"
-        />
+        <Alert description={error.hint} message={error.title} showIcon type="error" />
       ) : null}
     </Modal>
   );

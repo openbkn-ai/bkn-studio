@@ -11,10 +11,7 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { apiUrl, assertBackendReady } from "../../helpers/common";
-import {
-  buildImpexImportName,
-  cloneToolboxImpexForCreate,
-} from "../../helpers/impex";
+import { buildImpexImportName, cloneToolboxImpexForCreate } from "../../helpers/impex";
 import {
   assertLogBridgeHealthy,
   buildLogBridgeOpenApiSpec,
@@ -42,13 +39,8 @@ import {
   updateSkillPackageViaApi,
 } from "../../helpers/skill";
 import { registerOpenApiBundleViaApi } from "../../helpers/capability-bundle";
-import {
-  OSS_MOCK_DOCKER_URL,
-} from "../../helpers/oss-mock";
-import {
-  cleanupOperatorViaApi,
-  type RegisteredOperator,
-} from "../../helpers/operator";
+import { OSS_MOCK_DOCKER_URL } from "../../helpers/oss-mock";
+import { cleanupOperatorViaApi, type RegisteredOperator } from "../../helpers/operator";
 import {
   buildToolboxName,
   cleanupToolboxViaApi,
@@ -64,10 +56,7 @@ import {
 const ALLOW_NETWORK = process.env.E2E_ALLOW_NETWORK === "1";
 
 function loadUapisWeatherMiniFixture() {
-  const raw = readFileSync(
-    resolve(__dirname, "../../fixtures/uapis-weather-mini.json"),
-    "utf8",
-  );
+  const raw = readFileSync(resolve(__dirname, "../../fixtures/uapis-weather-mini.json"), "utf8");
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
@@ -224,7 +213,9 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     const payload = cloneToolboxImpexForCreate(exported, importName);
     await importToolboxViaApi(request, payload, "create");
 
-    const list = await request.get(apiUrl(`/tool-box/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`));
+    const list = await request.get(
+      apiUrl(`/tool-box/list?page=1&page_size=50&name=${encodeURIComponent(importName)}`),
+    );
     expect(list.ok()).toBeTruthy();
     const body = (await list.json()) as {
       data?: Array<{ box_id: string; box_name?: string; name?: string }>;
@@ -325,11 +316,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
       return;
     }
 
-    const mcp = await createSseMcpViaApi(
-      request,
-      buildMcpRealworldName("amap"),
-      AMAP_MCP_SSE_URL,
-    );
+    const mcp = await createSseMcpViaApi(request, buildMcpRealworldName("amap"), AMAP_MCP_SSE_URL);
     createdMcpIds.push(mcp.mcpId);
     expect(mcp.mcpId).toBeTruthy();
 
@@ -355,9 +342,7 @@ test.describe("Execution Factory — Realworld API scenarios", () => {
     const debug = await debugMcpToolViaApi(request, mcp.mcpId, "echo", {
       message: "hello-rw06",
     });
-    const text = (debug.content ?? [])
-      .map((item) => item.text ?? "")
-      .join("");
+    const text = (debug.content ?? []).map((item) => item.text ?? "").join("");
     expect(text).toContain("hello-rw06");
   });
 

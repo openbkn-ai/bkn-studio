@@ -9,9 +9,23 @@ import { describe, expect, it } from "vitest";
 
 import type { GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
 
-import { pushHistory, pushSnapshot, takeSnapshot, truncateForDisplay, type CanvasSnapshot, type HistoryEntry } from "./graph-explorer-history";
+import {
+  pushHistory,
+  pushSnapshot,
+  takeSnapshot,
+  truncateForDisplay,
+  type CanvasSnapshot,
+  type HistoryEntry,
+} from "./graph-explorer-history";
 
-const node = (id: string): GNode => ({ id, otId: "ot", otName: "OT", identity: { k: id }, display: id, props: {} });
+const node = (id: string): GNode => ({
+  id,
+  otId: "ot",
+  otName: "OT",
+  identity: { k: id },
+  display: id,
+  props: {},
+});
 
 describe("undo stack", () => {
   it("copies the maps so later mutations do not leak into the snapshot", () => {
@@ -26,13 +40,24 @@ describe("undo stack", () => {
 
   it("drops the oldest snapshot past the limit", () => {
     const stack: CanvasSnapshot[] = [];
-    for (let index = 0; index < 5; index += 1) pushSnapshot(stack, { nodes: [node(String(index))], edges: [], positions: {} }, 3);
+    for (let index = 0; index < 5; index += 1)
+      pushSnapshot(stack, { nodes: [node(String(index))], edges: [], positions: {} }, 3);
     expect(stack.map((s) => s.nodes[0].id)).toEqual(["2", "3", "4"]);
   });
 });
 
 describe("call history", () => {
-  const entry = (id: string): HistoryEntry => ({ id, at: 0, kind: "search", title: id, input: {}, output: {}, ok: true, ms: 1, summary: "" });
+  const entry = (id: string): HistoryEntry => ({
+    id,
+    at: 0,
+    kind: "search",
+    title: id,
+    input: {},
+    output: {},
+    ok: true,
+    ms: 1,
+    summary: "",
+  });
 
   it("prepends and bounds the list", () => {
     let list: HistoryEntry[] = [];

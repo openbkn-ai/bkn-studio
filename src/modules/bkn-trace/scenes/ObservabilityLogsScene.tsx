@@ -6,7 +6,19 @@
  */
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, DatePicker, Input, Select, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -14,7 +26,11 @@ import { useTranslation } from "react-i18next";
 
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { LogDetailDrawer } from "@/modules/bkn-trace/components/LogDetailDrawer";
-import { presentLogAction, presentLogActor, presentLogTarget } from "@/modules/bkn-trace/components/log-presentation";
+import {
+  presentLogAction,
+  presentLogActor,
+  presentLogTarget,
+} from "@/modules/bkn-trace/components/log-presentation";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   listLogs,
@@ -25,13 +41,20 @@ import {
   type LogListResult,
   type LogRecord,
 } from "@/modules/bkn-trace/services/observability.service";
-import { getAccessProfile, type TraceAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import {
+  getAccessProfile,
+  type TraceAccessProfile,
+} from "@/modules/bkn-trace/services/trace.service";
 import { readAuditLogDrilldown } from "@/modules/bkn-trace/utils/audit-log-drilldown";
 import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 const BUSINESS_MODULES: BusinessModule[] = [
-  "domain_knowledge_network", "observability", "execution_factory",
-  "data_resource_knowledge_network", "model_management", "system_management",
+  "domain_knowledge_network",
+  "observability",
+  "execution_factory",
+  "data_resource_knowledge_network",
+  "model_management",
+  "system_management",
 ];
 
 const AUDIT_OUTCOMES: AuditOutcome[] = ["success", "failure", "denied", "canceled", "unknown"];
@@ -61,39 +84,39 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
-  const load = useCallback(async (
-    access: TraceAccessProfile,
-    nextFilters: Filters,
-    nextPage = 1,
-    nextPageSize = 20,
-  ) => {
-    if (!canSearchLogs(access, associatedScope)) return;
-    setLoading(true);
-    setError(undefined);
-    try {
-      const query: LogListQuery = {
-        page: nextPage,
-        pageSize: nextPageSize,
-        timeFrom: nextFilters.timeRange[0].toISOString(),
-        timeTo: nextFilters.timeRange[1].toISOString(),
-        ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-        ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
-        ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
-        ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
-        ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
-        ...(associatedScope.conversationId ? { conversationId: associatedScope.conversationId } : {}),
-        ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
-        ...(associatedScope.targetId ? { targetId: associatedScope.targetId } : {}),
-        ...(associatedScope.targetType ? { targetType: associatedScope.targetType } : {}),
-        ...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
-      };
-      setResult(await listLogs(query));
-    } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [associatedScope, mode, t]);
+  const load = useCallback(
+    async (access: TraceAccessProfile, nextFilters: Filters, nextPage = 1, nextPageSize = 20) => {
+      if (!canSearchLogs(access, associatedScope)) return;
+      setLoading(true);
+      setError(undefined);
+      try {
+        const query: LogListQuery = {
+          page: nextPage,
+          pageSize: nextPageSize,
+          timeFrom: nextFilters.timeRange[0].toISOString(),
+          timeTo: nextFilters.timeRange[1].toISOString(),
+          ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
+          ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
+          ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
+          ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
+          ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
+          ...(associatedScope.conversationId
+            ? { conversationId: associatedScope.conversationId }
+            : {}),
+          ...(associatedScope.requestId ? { requestId: associatedScope.requestId } : {}),
+          ...(associatedScope.targetId ? { targetId: associatedScope.targetId } : {}),
+          ...(associatedScope.targetType ? { targetType: associatedScope.targetType } : {}),
+          ...(associatedScope.traceId ? { traceId: associatedScope.traceId } : {}),
+        };
+        setResult(await listLogs(query));
+      } catch (caught: unknown) {
+        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.queryFailed"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [associatedScope, mode, t],
+  );
 
   useEffect(() => {
     let active = true;
@@ -106,47 +129,82 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
       })
       .catch((caught: unknown) => {
         if (!active) return;
-        setError(caught instanceof Error ? caught.message : t("bknTrace.errors.accessProfileFailed"));
+        setError(
+          caught instanceof Error ? caught.message : t("bknTrace.errors.accessProfileFailed"),
+        );
         setLoading(false);
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
     // The initial request intentionally uses the URL-derived filter snapshot once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [associatedScope, load, t]);
 
-  const columns = useMemo<ColumnsType<LogRecord>>(() => [
-    { dataIndex: "eventTime", key: "time", title: t("bknTrace.logs.columns.time"), width: "12%", render: formatTime },
-    {
-      dataIndex: "businessModule", key: "businessModule", title: t("bknTrace.logs.columns.module"), width: "12%",
-      render: (value: string) => <Tag>{moduleLabel(value, t)}</Tag>,
-    },
-    {
-      dataIndex: "action", key: "action", title: t("bknTrace.logs.columns.action"), width: "14%",
-      render: (_value: string, record) => <ClampedText value={presentLogAction(record, t)} />,
-    },
-    {
-      dataIndex: "target", key: "target", title: t("bknTrace.logs.columns.target"), width: "20%",
-      render: (_target: LogRecord["target"], record) => {
-        const value = presentLogTarget(record, t);
-        return <ClampedText secondary={value.secondary} value={value.primary} />;
+  const columns = useMemo<ColumnsType<LogRecord>>(
+    () => [
+      {
+        dataIndex: "eventTime",
+        key: "time",
+        title: t("bknTrace.logs.columns.time"),
+        width: "12%",
+        render: formatTime,
       },
-    },
-    {
-      dataIndex: "actor", key: "actor", title: t("bknTrace.logs.columns.actor"), width: "18%",
-      render: (_actor: LogRecord["actor"], record) => {
-        const value = presentLogActor(record, t, userDirectory);
-        return <ClampedText secondary={value.secondary} value={value.primary} />;
+      {
+        dataIndex: "businessModule",
+        key: "businessModule",
+        title: t("bknTrace.logs.columns.module"),
+        width: "12%",
+        render: (value: string) => <Tag>{moduleLabel(value, t)}</Tag>,
       },
-    },
-    {
-      dataIndex: "outcome", key: "outcome", title: t("bknTrace.logs.columns.outcome"), width: "9%",
-      render: (value: AuditOutcome) => <Tag color={outcomeColor(value)}>{t(`bknTrace.logs.outcomes.${value}`)}</Tag>,
-    },
-    {
-      dataIndex: "sourceId", key: "source", title: t("bknTrace.logs.columns.source"), width: "15%",
-      render: (value: string, record) => <ClampedText secondary={record.sourceChannel} value={value} />,
-    },
-  ], [t, userDirectory]);
+      {
+        dataIndex: "action",
+        key: "action",
+        title: t("bknTrace.logs.columns.action"),
+        width: "14%",
+        render: (_value: string, record) => <ClampedText value={presentLogAction(record, t)} />,
+      },
+      {
+        dataIndex: "target",
+        key: "target",
+        title: t("bknTrace.logs.columns.target"),
+        width: "20%",
+        render: (_target: LogRecord["target"], record) => {
+          const value = presentLogTarget(record, t);
+          return <ClampedText secondary={value.secondary} value={value.primary} />;
+        },
+      },
+      {
+        dataIndex: "actor",
+        key: "actor",
+        title: t("bknTrace.logs.columns.actor"),
+        width: "18%",
+        render: (_actor: LogRecord["actor"], record) => {
+          const value = presentLogActor(record, t, userDirectory);
+          return <ClampedText secondary={value.secondary} value={value.primary} />;
+        },
+      },
+      {
+        dataIndex: "outcome",
+        key: "outcome",
+        title: t("bknTrace.logs.columns.outcome"),
+        width: "9%",
+        render: (value: AuditOutcome) => (
+          <Tag color={outcomeColor(value)}>{t(`bknTrace.logs.outcomes.${value}`)}</Tag>
+        ),
+      },
+      {
+        dataIndex: "sourceId",
+        key: "source",
+        title: t("bknTrace.logs.columns.source"),
+        width: "15%",
+        render: (value: string, record) => (
+          <ClampedText secondary={record.sourceChannel} value={value} />
+        ),
+      },
+    ],
+    [t, userDirectory],
+  );
 
   const submit = useCallback(() => {
     if (!profile) return;
@@ -164,61 +222,161 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
     void load(profile, next, 1, pagination.pageSize);
   }, [associatedScope, load, mode, pagination.pageSize, profile]);
 
-  const changePage = useCallback((page: number, pageSize: number) => {
-    if (!profile) return;
-    setPagination({ page, pageSize });
-    void load(profile, filters, page, pageSize);
-  }, [filters, load, profile]);
+  const changePage = useCallback(
+    (page: number, pageSize: number) => {
+      if (!profile) return;
+      setPagination({ page, pageSize });
+      void load(profile, filters, page, pageSize);
+    },
+    [filters, load, profile],
+  );
 
   if (loading && !profile) return <Spin />;
   if (profile && !canSearchLogs(profile, associatedScope)) {
     return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   }
 
-  const associated = associatedScope.actorId || associatedScope.conversationId || associatedScope.traceId || associatedScope.requestId || associatedScope.targetId;
+  const associated =
+    associatedScope.actorId ||
+    associatedScope.conversationId ||
+    associatedScope.traceId ||
+    associatedScope.requestId ||
+    associatedScope.targetId;
   return (
     <div className={styles.workspace}>
       <header className={styles.header}>
         <div>
-          <Typography.Title level={3}>{t(mode === "audit" ? "bknTrace.logs.auditTitle" : "bknTrace.logs.title")}</Typography.Title>
-          <Typography.Text type="secondary">{t(mode === "audit" ? "bknTrace.logs.auditDescription" : "bknTrace.logs.description")}</Typography.Text>
+          <Typography.Title level={3}>
+            {t(mode === "audit" ? "bknTrace.logs.auditTitle" : "bknTrace.logs.title")}
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            {t(mode === "audit" ? "bknTrace.logs.auditDescription" : "bknTrace.logs.description")}
+          </Typography.Text>
         </div>
-        <Button aria-label={t("bknTrace.actions.refresh")} icon={<ReloadOutlined />} onClick={() => {
-          if (profile) void load(profile, filters, pagination.page, pagination.pageSize);
-        }}>{t("bknTrace.actions.refresh")}</Button>
+        <Button
+          aria-label={t("bknTrace.actions.refresh")}
+          icon={<ReloadOutlined />}
+          onClick={() => {
+            if (profile) void load(profile, filters, pagination.page, pagination.pageSize);
+          }}
+        >
+          {t("bknTrace.actions.refresh")}
+        </Button>
       </header>
 
       {error ? <Alert message={error} showIcon type="error" /> : null}
-      {result?.partial ? <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" /> : null}
+      {result?.partial ? (
+        <Alert message={t("bknTrace.logs.partialWarning")} showIcon type="warning" />
+      ) : null}
       {result?.partial ? <SourceFailures sources={result.sourceStatus} t={t} /> : null}
-      {associated ? <div className={styles.sourceStrip}><AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} /></div> : null}
+      {associated ? (
+        <div className={styles.sourceStrip}>
+          <AssociatedScopeTag scope={associatedScope} t={t} userDirectory={userDirectory} />
+        </div>
+      ) : null}
 
       {profile?.globalLogSearch ? (
         <div className={styles.filterPanel}>
           <div className={styles.filterRow}>
-            <DatePicker.RangePicker allowClear={false} onChange={(value) => { const [start, end] = value ?? []; if (start && end) setFilters((current) => ({ ...current, timeRange: [start, end] })); }} placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]} showTime value={filters.timeRange} />
-            <Select allowClear onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))} options={BUSINESS_MODULES.map((module) => ({ label: moduleLabel(module, t), value: module }))} placeholder={t("bknTrace.logs.modulePlaceholder")} value={filters.businessModule} />
-            <Select allowClear onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))} options={AUDIT_OUTCOMES.map((outcome) => ({ label: t(`bknTrace.logs.outcomes.${outcome}`), value: outcome }))} placeholder={t("bknTrace.logs.outcomePlaceholder")} value={filters.outcome} />
-            <Input allowClear onChange={(event) => setFilters((value) => ({ ...value, actorId: event.target.value }))} onPressEnter={submit} placeholder={t("bknTrace.logs.actorPlaceholder")} value={filters.actorId} />
-            <Space><Button icon={<SearchOutlined />} onClick={submit} type="primary">{t("bknTrace.actions.query")}</Button><Button onClick={reset}>{t("bknTrace.actions.reset")}</Button></Space>
+            <DatePicker.RangePicker
+              allowClear={false}
+              onChange={(value) => {
+                const [start, end] = value ?? [];
+                if (start && end)
+                  setFilters((current) => ({ ...current, timeRange: [start, end] }));
+              }}
+              placeholder={[t("bknTrace.logs.startTime"), t("bknTrace.logs.endTime")]}
+              showTime
+              value={filters.timeRange}
+            />
+            <Select
+              allowClear
+              onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))}
+              options={BUSINESS_MODULES.map((module) => ({
+                label: moduleLabel(module, t),
+                value: module,
+              }))}
+              placeholder={t("bknTrace.logs.modulePlaceholder")}
+              value={filters.businessModule}
+            />
+            <Select
+              allowClear
+              onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))}
+              options={AUDIT_OUTCOMES.map((outcome) => ({
+                label: t(`bknTrace.logs.outcomes.${outcome}`),
+                value: outcome,
+              }))}
+              placeholder={t("bknTrace.logs.outcomePlaceholder")}
+              value={filters.outcome}
+            />
+            <Input
+              allowClear
+              onChange={(event) =>
+                setFilters((value) => ({ ...value, actorId: event.target.value }))
+              }
+              onPressEnter={submit}
+              placeholder={t("bknTrace.logs.actorPlaceholder")}
+              value={filters.actorId}
+            />
+            <Space>
+              <Button icon={<SearchOutlined />} onClick={submit} type="primary">
+                {t("bknTrace.actions.query")}
+              </Button>
+              <Button onClick={reset}>{t("bknTrace.actions.reset")}</Button>
+            </Space>
           </div>
         </div>
       ) : null}
 
       {loading && !result && !error ? <Spin /> : null}
-      {!error && result ? <>
-        <div className={styles.resultSummary}>
-          <Typography.Text>{result.count.value === null
-            ? t("bknTrace.logs.resultCountUnknown")
-            : t("bknTrace.logs.resultCount", { count: result.count.value })}</Typography.Text>
-          {result.sourceStatus.length ? <Space size={4} wrap>{result.sourceStatus.map((source) => <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)}</Tag>)}</Space> : null}
-        </div>
+      {!error && result ? (
+        <>
+          <div className={styles.resultSummary}>
+            <Typography.Text>
+              {result.count.value === null
+                ? t("bknTrace.logs.resultCountUnknown")
+                : t("bknTrace.logs.resultCount", { count: result.count.value })}
+            </Typography.Text>
+            {result.sourceStatus.length ? (
+              <Space size={4} wrap>
+                {result.sourceStatus.map((source) => (
+                  <Tag color={sourceStatusColor(source.status)} key={source.sourceId}>
+                    {source.sourceId} · {sourceStatusLabel(source.status, t)}
+                  </Tag>
+                ))}
+              </Space>
+            ) : null}
+          </div>
 
-        <Spin spinning={loading}>
-          <Table className={styles.auditTable} columns={columns} dataSource={result.data} locale={{ emptyText: t(associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange") }} onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })} pagination={false} rowClassName={styles.clickableRow} rowKey="eventId" tableLayout="fixed" />
-        </Spin>
-        {result.count.value ? <TablePaginationBar current={result.page ?? pagination.page} onChange={changePage} pageSize={result.pageSize ?? pagination.pageSize} showSizeChanger showTotal={(total) => t("common.total", { total })} total={result.count.value} /> : null}
-      </> : null}
+          <Spin spinning={loading}>
+            <Table
+              className={styles.auditTable}
+              columns={columns}
+              dataSource={result.data}
+              locale={{
+                emptyText: t(
+                  associated ? "bknTrace.logs.emptyAssociated" : "bknTrace.logs.emptyRange",
+                ),
+              }}
+              onRow={(record) => ({ onClick: () => setSelectedEventId(record.eventId) })}
+              pagination={false}
+              rowClassName={styles.clickableRow}
+              rowKey="eventId"
+              tableLayout="fixed"
+            />
+          </Spin>
+          {result.count.value ? (
+            <TablePaginationBar
+              current={result.page ?? pagination.page}
+              onChange={changePage}
+              pageSize={result.pageSize ?? pagination.pageSize}
+              showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
+              total={result.count.value}
+            />
+          ) : null}
+        </>
+      ) : null}
       <LogDetailDrawer logId={selectedEventId} onClose={() => setSelectedEventId(undefined)} />
     </div>
   );
@@ -226,12 +384,16 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
 
 function ClampedText({ secondary, value }: { secondary?: string; value: string }) {
   const fullText = secondary && secondary !== value ? `${value}\n${secondary}` : value;
-  return <Tooltip title={fullText}>
-    <span aria-label={fullText} className={styles.clampedCell}>
-      <span>{value}</span>
-      {secondary && secondary !== value ? <span className={styles.technicalId}> · {secondary}</span> : null}
-    </span>
-  </Tooltip>;
+  return (
+    <Tooltip title={fullText}>
+      <span aria-label={fullText} className={styles.clampedCell}>
+        <span>{value}</span>
+        {secondary && secondary !== value ? (
+          <span className={styles.technicalId}> · {secondary}</span>
+        ) : null}
+      </span>
+    </Tooltip>
+  );
 }
 
 function defaultFilters(mode: "audit" | "logs"): Filters {
@@ -250,21 +412,33 @@ function readInitialFilters(mode: "audit" | "logs"): Filters {
   const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
     ...defaults,
-    actorId: parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
-    ...(BUSINESS_MODULES.includes(businessModule as BusinessModule) ? { businessModule: businessModule as BusinessModule } : {}),
-    ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome) ? { outcome: outcome as AuditOutcome } : {}),
+    actorId:
+      parameters.get("actor") ?? (!exactActorMatch ? parameters.get("actor_id") : null) ?? "",
+    ...(BUSINESS_MODULES.includes(businessModule as BusinessModule)
+      ? { businessModule: businessModule as BusinessModule }
+      : {}),
+    ...(AUDIT_OUTCOMES.includes(outcome as AuditOutcome)
+      ? { outcome: outcome as AuditOutcome }
+      : {}),
     ...(hasValidTimeRange ? { timeRange: [timeFrom, timeTo] } : {}),
   };
 }
 
-type AssociatedLogScope = { actorId: string; conversationId: string; requestId: string; targetId: string; targetType: string; traceId: string };
+type AssociatedLogScope = {
+  actorId: string;
+  conversationId: string;
+  requestId: string;
+  targetId: string;
+  targetType: string;
+  traceId: string;
+};
 
 function readAssociatedLogScope(): AssociatedLogScope {
   const parameters = new URLSearchParams(window.location.search);
   const target = readAuditLogDrilldown(parameters);
   const exactActorMatch = parameters.get("actor_match") === EXACT_ACTOR_MATCH;
   return {
-    actorId: exactActorMatch ? parameters.get("actor_id")?.trim() ?? "" : "",
+    actorId: exactActorMatch ? (parameters.get("actor_id")?.trim() ?? "") : "",
     conversationId: parameters.get("conversation_id") ?? "",
     requestId: parameters.get("request_id") ?? "",
     targetId: target.targetId,
@@ -295,21 +469,51 @@ function syncFiltersToUrl(filters: Filters, scope: AssociatedLogScope) {
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-function AssociatedScopeTag({ scope, t, userDirectory }: { scope: AssociatedLogScope; t: Translate; userDirectory: Map<string, string> }) {
+function AssociatedScopeTag({
+  scope,
+  t,
+  userDirectory,
+}: {
+  scope: AssociatedLogScope;
+  t: Translate;
+  userDirectory: Map<string, string>;
+}) {
   if (scope.targetId) {
     const displayType = scope.targetType === "user" ? "user" : "resource";
-    return <Tag color="blue"><span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span> <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span></Tag>;
+    return (
+      <Tag color="blue">
+        <span>{t(`bknTrace.logs.associatedTarget.${displayType}`)}</span>{" "}
+        <span>{userDirectory.get(scope.targetId) ?? scope.targetId}</span>
+      </Tag>
+    );
   }
   if (scope.actorId) {
-    return <Tag color="blue"><span>{t("bknTrace.logs.associatedTarget.user")}</span> <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span></Tag>;
+    return (
+      <Tag color="blue">
+        <span>{t("bknTrace.logs.associatedTarget.user")}</span>{" "}
+        <span>{userDirectory.get(scope.actorId) ?? scope.actorId}</span>
+      </Tag>
+    );
   }
   return <Tag color="blue">{scope.conversationId || scope.traceId || scope.requestId}</Tag>;
 }
 
 function SourceFailures({ sources, t }: { sources: LogListResult["sourceStatus"]; t: Translate }) {
-  const failed = sources.filter((source) => source.reason && !isHealthySource(source.status) && source.status !== "not_integrated");
+  const failed = sources.filter(
+    (source) =>
+      source.reason && !isHealthySource(source.status) && source.status !== "not_integrated",
+  );
   if (!failed.length) return null;
-  return <div className={styles.sourceStrip}>{failed.map((source) => <Tag color="orange" key={source.sourceId}>{source.sourceId} · {sourceStatusLabel(source.status, t)} · {sourceFailureLabel(source.reason!, t)}</Tag>)}</div>;
+  return (
+    <div className={styles.sourceStrip}>
+      {failed.map((source) => (
+        <Tag color="orange" key={source.sourceId}>
+          {source.sourceId} · {sourceStatusLabel(source.status, t)} ·{" "}
+          {sourceFailureLabel(source.reason!, t)}
+        </Tag>
+      ))}
+    </div>
+  );
 }
 
 function isHealthySource(status: string) {
@@ -335,7 +539,11 @@ function sourceFailureLabel(reason: string, t: Translate) {
 }
 
 function canSearchLogs(profile: TraceAccessProfile, scope: AssociatedLogScope) {
-  return profile.globalLogSearch || (profile.businessProvenanceOwn && Boolean(scope.conversationId || scope.requestId || scope.traceId));
+  return (
+    profile.globalLogSearch ||
+    (profile.businessProvenanceOwn &&
+      Boolean(scope.conversationId || scope.requestId || scope.traceId))
+  );
 }
 
 function formatTime(value?: string) {
@@ -344,7 +552,10 @@ function formatTime(value?: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-function moduleLabel(module: string, t: (key: string, options?: Record<string, unknown>) => string) {
+function moduleLabel(
+  module: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) {
   return BUSINESS_MODULES.includes(module as BusinessModule)
     ? t(`bknTrace.logs.modules.${module}`)
     : module;

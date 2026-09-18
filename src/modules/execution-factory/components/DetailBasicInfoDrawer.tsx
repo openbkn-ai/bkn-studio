@@ -23,21 +23,11 @@ type DetailBasicInfoDrawerProps = {
  * shared stacked label/value list (not a bordered table) so long ids/urls stay
  * readable inside the narrow drawer. Opened by a header button on every page.
  */
-export function DetailBasicInfoDrawer({
-  items,
-  onClose,
-  open,
-  title,
-}: DetailBasicInfoDrawerProps) {
+export function DetailBasicInfoDrawer({ items, onClose, open, title }: DetailBasicInfoDrawerProps) {
   const { t } = useTranslation();
 
   return (
-    <Drawer
-      onClose={onClose}
-      open={open}
-      title={title ?? t("common.basicInfo")}
-      width={480}
-    >
+    <Drawer onClose={onClose} open={open} title={title ?? t("common.basicInfo")} width={480}>
       <DetailMetaPanel columns={1} dividers items={items} variant="plain" />
     </Drawer>
   );

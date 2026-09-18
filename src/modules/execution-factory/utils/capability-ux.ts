@@ -20,12 +20,7 @@ export const CAPABILITY_UX_LEGACY_TABS: ExecutionUnitTab[] = [
 ];
 
 export type CapabilityUxMode =
-  | "quick-api"
-  | "import-openapi"
-  | "function"
-  | "mcp"
-  | "skill"
-  | "advanced-operator";
+  "quick-api" | "import-openapi" | "function" | "mcp" | "skill" | "advanced-operator";
 
 /** Modes relevant when creating from the toolsets tab. */
 export const TOOLBOX_CAPABILITY_MODES: CapabilityUxMode[] = [
@@ -35,10 +30,7 @@ export const TOOLBOX_CAPABILITY_MODES: CapabilityUxMode[] = [
 ];
 
 /** Two HTTP API paths: add one API or import an OpenAPI document, using two cards in the same wizard. */
-export const HTTP_API_CAPABILITY_MODES: CapabilityUxMode[] = [
-  "quick-api",
-  "import-openapi",
-];
+export const HTTP_API_CAPABILITY_MODES: CapabilityUxMode[] = ["quick-api", "import-openapi"];
 
 const ALL_CAPABILITY_MODES: CapabilityUxMode[] = [
   "quick-api",
@@ -84,9 +76,7 @@ export function getDefaultManagementTab(): ExecutionUnitTab {
   return isCapabilityUxV2() ? "toolbox" : "operator";
 }
 
-export function resolveVisibleManagementTabs(
-  activeTab: ExecutionUnitTab,
-): ExecutionUnitTab[] {
+export function resolveVisibleManagementTabs(activeTab: ExecutionUnitTab): ExecutionUnitTab[] {
   const primary = getManagementTabs();
   if (primary.includes(activeTab)) {
     return primary;

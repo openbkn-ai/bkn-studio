@@ -208,9 +208,7 @@ export function ActionTypeToolSelectModal({
       return;
     }
 
-    setActiveTab(
-      resolveExecutionUnitTab(executionUnitTabs, valueRef.current, toolboxMetadataType),
-    );
+    setActiveTab(resolveExecutionUnitTab(executionUnitTabs, valueRef.current, toolboxMetadataType));
   }, [executionUnitTabs, executionUnitTabsKey, open, toolboxMetadataType, valueKey]);
 
   const ensureGroupToolsLoaded = useCallback(async (groupKey: string) => {
@@ -218,17 +216,16 @@ export function ActionTypeToolSelectModal({
       const isToolGroup = groupKey.startsWith("group:tool:");
       const resourceId = groupKey.replace(/^group:(tool|mcp):/, "");
       return isToolGroup
-        ? catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? []
-        : catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ?? [];
+        ? (catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? [])
+        : (catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ??
+            []);
     }
 
     const isToolGroup = groupKey.startsWith("group:tool:");
     const resourceId = groupKey.replace(/^group:(tool|mcp):/, "");
 
     const hasCachedTools = isToolGroup
-      ? catalogRef.current.toolBoxes.some(
-          (box) => box.boxId === resourceId && box.tools.length > 0,
-        )
+      ? catalogRef.current.toolBoxes.some((box) => box.boxId === resourceId && box.tools.length > 0)
       : catalogRef.current.mcpServers.some(
           (server) => server.mcpId === resourceId && server.tools.length > 0,
         );
@@ -236,8 +233,9 @@ export function ActionTypeToolSelectModal({
     if (hasCachedTools) {
       loadedGroupKeysRef.current.add(groupKey);
       return isToolGroup
-        ? catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? []
-        : catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ?? [];
+        ? (catalogRef.current.toolBoxes.find((box) => box.boxId === resourceId)?.tools ?? [])
+        : (catalogRef.current.mcpServers.find((server) => server.mcpId === resourceId)?.tools ??
+            []);
     }
 
     loadingGroupKeysRef.current.add(groupKey);
@@ -270,9 +268,7 @@ export function ActionTypeToolSelectModal({
               server.mcpId === resourceId ? { ...server, tools } : server,
             ),
         toolBoxes: isToolGroup
-          ? prev.toolBoxes.map((box) =>
-              box.boxId === resourceId ? { ...box, tools } : box,
-            )
+          ? prev.toolBoxes.map((box) => (box.boxId === resourceId ? { ...box, tools } : box))
           : prev.toolBoxes,
       }));
       if (tools.length > 0) {
@@ -376,7 +372,9 @@ export function ActionTypeToolSelectModal({
             setActiveTab("function");
             return;
           } else if (currentValue?.type === "tool" && currentValue.boxId) {
-            const box = catalogRef.current.toolBoxes.find((item) => item.boxId === currentValue.boxId);
+            const box = catalogRef.current.toolBoxes.find(
+              (item) => item.boxId === currentValue.boxId,
+            );
             const fallbackTool = buildToolFromValue(currentValue);
             setSelectedSelection(
               box && fallbackTool
@@ -441,7 +439,9 @@ export function ActionTypeToolSelectModal({
 
   const renderToolBoxes = () => {
     if (catalog.toolBoxes.length === 0) {
-      return <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeToolCatalogEmpty")}</div>;
+      return (
+        <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeToolCatalogEmpty")}</div>
+      );
     }
 
     return catalog.toolBoxes.map((box) => {
@@ -481,7 +481,9 @@ export function ActionTypeToolSelectModal({
                 <Spin size="small" />
               </div>
             ) : box.tools.length === 0 ? (
-              <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeToolCatalogEmpty")}</div>
+              <div className={styles.emptyState}>
+                {t("knowledgeNetwork.actionTypeToolCatalogEmpty")}
+              </div>
             ) : (
               box.tools.map((tool) => {
                 const toolKey = `tool:${box.boxId}:${tool.toolId}`;
@@ -535,7 +537,9 @@ export function ActionTypeToolSelectModal({
 
   const renderMcpServers = () => {
     if (catalog.mcpServers.length === 0) {
-      return <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeMcpCatalogEmpty")}</div>;
+      return (
+        <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeMcpCatalogEmpty")}</div>
+      );
     }
 
     return catalog.mcpServers.map((server) => {
@@ -575,7 +579,9 @@ export function ActionTypeToolSelectModal({
                 <Spin size="small" />
               </div>
             ) : server.tools.length === 0 ? (
-              <div className={styles.emptyState}>{t("knowledgeNetwork.actionTypeMcpCatalogEmpty")}</div>
+              <div className={styles.emptyState}>
+                {t("knowledgeNetwork.actionTypeMcpCatalogEmpty")}
+              </div>
             ) : (
               server.tools.map((tool) => {
                 const toolKey = `mcp:${server.mcpId}:${tool.toolId}`;
@@ -640,7 +646,10 @@ export function ActionTypeToolSelectModal({
                 return;
               }
 
-              onConfirm(buildActionSourceFromCatalogSelection(selectedSelection), selectedSelection);
+              onConfirm(
+                buildActionSourceFromCatalogSelection(selectedSelection),
+                selectedSelection,
+              );
             }}
             type="primary"
           >
@@ -662,7 +671,7 @@ export function ActionTypeToolSelectModal({
               tab === "openapi"
                 ? t("executionFactory.openapiToolboxTab")
                 : tab === "function"
-                  ? toolboxTabLabel ?? t("executionFactory.functionToolboxTab")
+                  ? (toolboxTabLabel ?? t("executionFactory.functionToolboxTab"))
                   : t("executionFactory.executionUnitTabsV2.mcp"),
           }))}
           onChange={(nextTab) => setActiveTab(nextTab as ActionTypeExecutionUnitTab)}

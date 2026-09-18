@@ -9,7 +9,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FunctionWorkbenchScene } from "@/modules/execution-factory/scenes/FunctionWorkbenchScene";
-import { executeFunction, inferFunctionSchema } from "@/modules/execution-factory/services/function.service";
+import {
+  executeFunction,
+  inferFunctionSchema,
+} from "@/modules/execution-factory/services/function.service";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -23,7 +26,13 @@ vi.mock("react-router-dom", () => ({
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({
-    message: { destroy: vi.fn(), error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
+    message: {
+      destroy: vi.fn(),
+      error: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      warning: vi.fn(),
+    },
     modal: { confirm: vi.fn() },
     runtimeConfig: {
       currentUser: {
@@ -125,9 +134,9 @@ describe("FunctionWorkbenchScene status wiring", () => {
 
     render(<FunctionWorkbenchScene boxId="box-1" />);
 
-    await waitFor(() => expect(getResourceOperations).toHaveBeenCalledWith([
-      { type: "function", id: "adhoc" },
-    ]));
+    await waitFor(() =>
+      expect(getResourceOperations).toHaveBeenCalledWith([{ type: "function", id: "adhoc" }]),
+    );
     expect(screen.queryByText("executionFactory.workbenchRun")).toBeNull();
   });
 
@@ -226,7 +235,11 @@ describe("FunctionWorkbenchScene status wiring", () => {
     // Supported zero-argument inference omits inputs, producing undefined. Before the fix, the
     // `inferred.inputs ?` guard in patchActive skipped undefined and left active.inputs on old numbers.
     vi.mocked(inferFunctionSchema).mockResolvedValue({ supported: true });
-    vi.mocked(executeFunction).mockResolvedValue({ output: { success: false }, stdout: "", stderr: "" });
+    vi.mocked(executeFunction).mockResolvedValue({
+      output: { success: false },
+      stdout: "",
+      stderr: "",
+    });
 
     render(<FunctionWorkbenchScene boxId="box-1" />);
 

@@ -33,4 +33,12 @@ export type MenuAction =
   | "pin"
   | "unpin";
 
-export const MENU_ORDER: MenuAction[] = ["expandOut", "expandIn", "expandBoth", "setPathStart", "setPathEnd", "pin", "remove"];
+export const MENU_ORDER: MenuAction[] = [
+  "expandOut",
+  "expandIn",
+  "expandBoth",
+  "setPathStart",
+  "setPathEnd",
+  "pin",
+  "remove",
+];

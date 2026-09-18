@@ -30,7 +30,7 @@ function jsonObject(value?: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(value);
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : undefined;
   } catch {
     return undefined;
@@ -44,15 +44,16 @@ function parsePolicyOmissions(value: unknown): PolicyOmission[] {
     const detail = item as WarningDetail;
     const fieldName = detail.params?.field_name;
     const fieldType = detail.params?.field_type;
-    return detail.code === "sample_omitted_by_policy"
-      && typeof fieldName === "string"
-      && fieldName.trim().length > 0
-      ? [{
-          fieldName,
-          fieldType: typeof fieldType === "string" && fieldType.trim().length > 0
-            ? fieldType
-            : undefined,
-        }]
+    return detail.code === "sample_omitted_by_policy" &&
+      typeof fieldName === "string" &&
+      fieldName.trim().length > 0
+      ? [
+          {
+            fieldName,
+            fieldType:
+              typeof fieldType === "string" && fieldType.trim().length > 0 ? fieldType : undefined,
+          },
+        ]
       : [];
   });
 }
@@ -66,14 +67,17 @@ export function getSemanticUnderstandingWarnings(
   const messages = omissions.map(({ fieldName, fieldType }) => {
     const typeKey = fieldType ? WARNING_FIELD_TYPE_KEYS[fieldType] : undefined;
     return typeKey
-      ? String(t(
-          "dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicy",
-          { field: fieldName, type: String(t(typeKey)) },
-        ))
-      : String(t(
-          "dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicyWithoutType",
-          { field: fieldName },
-        ));
+      ? String(
+          t("dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicy", {
+            field: fieldName,
+            type: String(t(typeKey)),
+          }),
+        )
+      : String(
+          t("dataCatalog.taskManagement.semantic.warnings.sampleOmittedByPolicyWithoutType", {
+            field: fieldName,
+          }),
+        );
   });
 
   const warnings = objects.find((object) => Array.isArray(object.warnings))?.warnings;

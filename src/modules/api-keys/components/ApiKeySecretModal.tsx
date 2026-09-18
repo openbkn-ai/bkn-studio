@@ -51,7 +51,12 @@ export function ApiKeySecretModal({
         </span>
       }
     >
-      <Alert type="warning" showIcon message={t("apiKeys.secretModal.warning")} style={{ marginBottom: 14 }} />
+      <Alert
+        type="warning"
+        showIcon
+        message={t("apiKeys.secretModal.warning")}
+        style={{ marginBottom: 14 }}
+      />
       <div className={styles.keyRow}>
         <code className={styles.key}>{secret?.key}</code>
         <button type="button" className={styles.copyBtn} onClick={copy}>

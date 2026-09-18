@@ -137,11 +137,7 @@ export function resolveMetricUnitOptions(
 ): MetricUnit[] {
   const options = getMetricUnitsForType(unitType);
 
-  if (
-    currentUnit &&
-    !options.includes(currentUnit) &&
-    ALL_METRIC_UNITS.includes(currentUnit)
-  ) {
+  if (currentUnit && !options.includes(currentUnit) && ALL_METRIC_UNITS.includes(currentUnit)) {
     return [...options, currentUnit];
   }
 

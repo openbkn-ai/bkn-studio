@@ -37,8 +37,7 @@ export const knowledgeNetworkModuleManifest = {
     {
       id: "knowledge-network.list",
       exportName: "KnowledgeNetworkListScene",
-      description:
-        "Manage knowledge networks, search cards, and launch the main workspace.",
+      description: "Manage knowledge networks, search cards, and launch the main workspace.",
       inputs: ["onOpenWorkspace?"],
     },
     {

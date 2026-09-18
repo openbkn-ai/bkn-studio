@@ -16,12 +16,7 @@ type EmptyStatePanelProps = {
   title: ReactNode;
 };
 
-export function EmptyStatePanel({
-  action,
-  description,
-  icon,
-  title,
-}: EmptyStatePanelProps) {
+export function EmptyStatePanel({ action, description, icon, title }: EmptyStatePanelProps) {
   return (
     <section className="empty-state-panel">
       <div className="empty-state-illustration" aria-hidden>

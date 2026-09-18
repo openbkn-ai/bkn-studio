@@ -16,9 +16,7 @@
       "get": {
         "operationId": "get-misc-weather",
         "summary": "查询天气",
-        "tags": [
-          "Misc"
-        ],
+        "tags": ["Misc"],
         "description": "查询指定城市的实时天气，支持 city/adcode 参数或 IP 自动定位。",
         "parameters": [
           {
@@ -47,10 +45,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "enum": [
-                false,
-                true
-              ]
+              "enum": [false, true]
             }
           },
           {
@@ -60,10 +55,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "enum": [
-                false,
-                true
-              ]
+              "enum": [false, true]
             }
           },
           {
@@ -73,10 +65,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "enum": [
-                false,
-                true
-              ]
+              "enum": [false, true]
             }
           },
           {
@@ -86,10 +75,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "enum": [
-                false,
-                true
-              ]
+              "enum": [false, true]
             }
           },
           {
@@ -99,10 +85,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "enum": [
-                false,
-                true
-              ]
+              "enum": [false, true]
             }
           },
           {
@@ -112,10 +95,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "zh",
-                "en"
-              ],
+              "enum": ["zh", "en"],
               "default": "zh"
             }
           }
@@ -1396,10 +1376,7 @@
     "schemas": {
       "UApiError": {
         "type": "object",
-        "required": [
-          "code",
-          "success"
-        ],
+        "required": ["code", "success"],
         "properties": {
           "code": {
             "type": "integer",

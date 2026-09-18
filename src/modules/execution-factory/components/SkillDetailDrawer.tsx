@@ -88,9 +88,7 @@ export function SkillDetailDrawer({
       setRecord(null);
 
       try {
-        const skillRecord = marketMode
-          ? await getSkillMarket(skillId)
-          : await getSkill(skillId);
+        const skillRecord = marketMode ? await getSkillMarket(skillId) : await getSkill(skillId);
         setRecord(skillRecord);
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));

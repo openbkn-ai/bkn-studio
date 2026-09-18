@@ -31,9 +31,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "id"
-                ],
+                "required": ["id"],
                 "type": "object"
               },
               "type": "array"
@@ -43,9 +41,7 @@
               "type": "number"
             }
           },
-          "required": [
-            "customers"
-          ],
+          "required": ["customers"],
           "type": "object"
         }
       }
@@ -95,10 +91,7 @@
                           "type": "number"
                         }
                       },
-                      "required": [
-                        "id",
-                        "score"
-                      ],
+                      "required": ["id", "score"],
                       "type": "object"
                     },
                     "type": "array"
@@ -108,10 +101,7 @@
                     "type": "number"
                   }
                 },
-                "required": [
-                  "matched",
-                  "total"
-                ],
+                "required": ["matched", "total"],
                 "type": "object"
               },
               "stderr": {

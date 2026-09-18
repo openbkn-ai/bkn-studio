@@ -17,12 +17,7 @@ type CrudListPageProps = PropsWithChildren<{
   toolbar?: ReactNode;
 }>;
 
-export function CrudListPage({
-  children,
-  title,
-  description,
-  toolbar,
-}: CrudListPageProps) {
+export function CrudListPage({ children, title, description, toolbar }: CrudListPageProps) {
   return (
     <PageContainer>
       <Space className="page-section" direction="vertical" size={20}>

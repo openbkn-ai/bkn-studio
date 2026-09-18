@@ -203,20 +203,18 @@ describe("createBuildTask", () => {
     it("rejects when the created task cannot be retrieved", async () => {
       postMock.mockResolvedValue({ data: { id: "task-1" } });
       getMock.mockResolvedValue({ data: null });
-      const { createBuildTask: createWithAPI } = await import(
-        "@/modules/data-catalog/services/build-task.service"
-      );
+      const { createBuildTask: createWithAPI } =
+        await import("@/modules/data-catalog/services/build-task.service");
 
-      await expect(
-        createWithAPI({ mode: "batch", resourceId: "resource-1" }),
-      ).rejects.toThrow("Created build task task-1 could not be retrieved");
+      await expect(createWithAPI({ mode: "batch", resourceId: "resource-1" })).rejects.toThrow(
+        "Created build task task-1 could not be retrieved",
+      );
     });
 
     it("sends repeated backend status parameters without active", async () => {
       getMock.mockResolvedValue({ data: { entries: [], total_count: 37 } });
-      const { listBuildTaskPage } = await import(
-        "@/modules/data-catalog/services/build-task.service"
-      );
+      const { listBuildTaskPage } =
+        await import("@/modules/data-catalog/services/build-task.service");
 
       const result = await listBuildTaskPage({
         page: 1,
@@ -241,9 +239,8 @@ describe("createBuildTask", () => {
 
     it("uses the shared sort and direction query parameters", async () => {
       getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-      const { listBuildTaskPage } = await import(
-        "@/modules/data-catalog/services/build-task.service"
-      );
+      const { listBuildTaskPage } =
+        await import("@/modules/data-catalog/services/build-task.service");
 
       await listBuildTaskPage({
         direction: "asc",
@@ -263,9 +260,8 @@ describe("createBuildTask", () => {
 
     it("allows an active-task status lookup to suppress the global error toast", async () => {
       getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-      const { listBuildTaskPage } = await import(
-        "@/modules/data-catalog/services/build-task.service"
-      );
+      const { listBuildTaskPage } =
+        await import("@/modules/data-catalog/services/build-task.service");
 
       await listBuildTaskPage(
         { limit: 1, resourceId: "resource-1", statuses: ["running"] },

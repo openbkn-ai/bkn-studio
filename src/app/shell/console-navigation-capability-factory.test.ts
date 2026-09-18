@@ -45,4 +45,3 @@ describe("capability factory navigation", () => {
     ]);
   });
 });
-

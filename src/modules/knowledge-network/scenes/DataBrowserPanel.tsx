@@ -91,7 +91,11 @@ function ObjectTypeCard({
       fetchObjectInstances(env, ot.id, 5, auth)
         .then((rows) => setPreviewRows(rows))
         .catch((error) =>
-          setPreviewError(error instanceof Error ? error.message : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewFailed")),
+          setPreviewError(
+            error instanceof Error
+              ? error.message
+              : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.previewFailed"),
+          ),
         )
         .finally(() => setPreviewLoading(false));
     }
@@ -111,9 +115,13 @@ function ObjectTypeCard({
           {ot.name || ot.id}
         </span>
         {onFillTest && res?.id ? (
-          <Tooltip title={canQueryData
-            ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTestTooltip")
-            : t("knowledgeNetwork.objectTypeProxyReadForbidden")}>
+          <Tooltip
+            title={
+              canQueryData
+                ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillTestTooltip")
+                : t("knowledgeNetwork.objectTypeProxyReadForbidden")
+            }
+          >
             <button
               type="button"
               className={styles.dbTestBtn}
@@ -142,14 +150,26 @@ function ObjectTypeCard({
 
       {showObjectType ? (
         <div className={styles.dbRow}>
-          <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.objectType")}</span>
+          <span className={styles.dbRowLabel}>
+            {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.objectType")}
+          </span>
           <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillOtIdTooltip")}>
-            <button type="button" className={styles.dbChip} onClick={() => onFillField("ot_id", ot.id)}>
+            <button
+              type="button"
+              className={styles.dbChip}
+              onClick={() => onFillField("ot_id", ot.id)}
+            >
               {ot.id}
             </button>
           </Tooltip>
           <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyOtId")}>
-            <button type="button" className={styles.dbCopy} onClick={() => copy(ot.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedOtId"))}>
+            <button
+              type="button"
+              className={styles.dbCopy}
+              onClick={() =>
+                copy(ot.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedOtId"))
+              }
+            >
               <CopyOutlined />
             </button>
           </Tooltip>
@@ -158,35 +178,73 @@ function ObjectTypeCard({
 
       {showResource ? (
         <div className={styles.dbRow}>
-          <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.dataResource")}</span>
+          <span className={styles.dbRowLabel}>
+            {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.dataResource")}
+          </span>
           {res?.id ? (
             <>
-              <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillResourceTooltip", { resource: "resource" })}>
-                <button type="button" className={styles.dbRes} onClick={() => onFillResource(res.id)}>
-                  <DatabaseOutlined /> {res.name || t("knowledgeNetwork.contextLoaderPanel.dataBrowser.resourceFallback")} · {res.id}
+              <Tooltip
+                title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillResourceTooltip", {
+                  resource: "resource",
+                })}
+              >
+                <button
+                  type="button"
+                  className={styles.dbRes}
+                  onClick={() => onFillResource(res.id)}
+                >
+                  <DatabaseOutlined />{" "}
+                  {res.name ||
+                    t("knowledgeNetwork.contextLoaderPanel.dataBrowser.resourceFallback")}{" "}
+                  · {res.id}
                 </button>
               </Tooltip>
               <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyResourceId")}>
-                <button type="button" className={styles.dbCopy} onClick={() => copy(res.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedResourceId"))}>
+                <button
+                  type="button"
+                  className={styles.dbCopy}
+                  onClick={() =>
+                    copy(
+                      res.id,
+                      t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedResourceId"),
+                    )
+                  }
+                >
                   <CopyOutlined />
                 </button>
               </Tooltip>
             </>
           ) : (
-            <span className={styles.dbNoRes}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noBinding")}</span>
+            <span className={styles.dbNoRes}>
+              {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noBinding")}
+            </span>
           )}
         </div>
       ) : null}
 
       {open && props.length > 0 ? (
         <div className={styles.dbPropList}>
-          <div className={styles.dbPropHead}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fieldsHeader")}</div>
+          <div className={styles.dbPropHead}>
+            {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fieldsHeader")}
+          </div>
           {props.map((prop) => (
-            <Tooltip key={prop.name} title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyFieldName", { name: prop.name })}>
+            <Tooltip
+              key={prop.name}
+              title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyFieldName", {
+                name: prop.name,
+              })}
+            >
               <button
                 type="button"
                 className={styles.dbProp}
-                onClick={() => copy(prop.name, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedFieldName", { name: prop.name }))}
+                onClick={() =>
+                  copy(
+                    prop.name,
+                    t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedFieldName", {
+                      name: prop.name,
+                    }),
+                  )
+                }
               >
                 <span className={styles.dbPropName}>{prop.name}</span>
                 {prop.display_name && prop.display_name !== prop.name ? (
@@ -201,7 +259,9 @@ function ObjectTypeCard({
       ) : null}
 
       <div className={styles.dbRow}>
-        <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.sampleData")}</span>
+        <span className={styles.dbRowLabel}>
+          {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.sampleData")}
+        </span>
         <button
           type="button"
           className={`${styles.dbFields} ${previewOpen ? styles.dbFieldsOpen : ""}`}
@@ -257,7 +317,9 @@ function ObjectTypeCard({
               </table>
             </div>
           ) : (
-            <div className={styles.dbPreviewMsg}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noData")}</div>
+            <div className={styles.dbPreviewMsg}>
+              {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noData")}
+            </div>
           )}
         </div>
       ) : null}
@@ -376,15 +438,24 @@ export function DataBrowserPanel({
     const grouped = detail.concept_groups.map((group) => ({
       id: group.id,
       title: group.name || group.id,
-      ots: (group.object_type_ids ?? []).map((oid) => byId.get(oid)).filter((o): o is KnObjectType => Boolean(o)),
+      ots: (group.object_type_ids ?? [])
+        .map((oid) => byId.get(oid))
+        .filter((o): o is KnObjectType => Boolean(o)),
     }));
     const inGroup = new Set(detail.concept_groups.flatMap((g) => g.object_type_ids ?? []));
     const ungrouped = detail.object_types.filter((o) => !inGroup.has(o.id));
-    if (ungrouped.length) grouped.push({ id: "", title: t("knowledgeNetwork.contextLoaderPanel.dataBrowser.ungrouped"), ots: ungrouped });
+    if (ungrouped.length)
+      grouped.push({
+        id: "",
+        title: t("knowledgeNetwork.contextLoaderPanel.dataBrowser.ungrouped"),
+        ots: ungrouped,
+      });
     return grouped
       .map((section) => ({
         ...section,
-        ots: section.ots.filter((ot) => match(ot) && (assistantKind !== "resource" || Boolean(ot.data_source?.id))),
+        ots: section.ots.filter(
+          (ot) => match(ot) && (assistantKind !== "resource" || Boolean(ot.data_source?.id)),
+        ),
       }))
       .filter((section) => section.ots.length > 0);
   }, [assistantKind, detail, q, t]);
@@ -392,7 +463,9 @@ export function DataBrowserPanel({
   const conceptGroups = useMemo(() => {
     if (!detail) return [];
     const needle = q.trim().toLowerCase();
-    return detail.concept_groups.filter((group) => !needle || `${group.id} ${group.name ?? ""}`.toLowerCase().includes(needle));
+    return detail.concept_groups.filter(
+      (group) => !needle || `${group.id} ${group.name ?? ""}`.toLowerCase().includes(needle),
+    );
   }, [detail, q]);
 
   const relations = useMemo(() => {
@@ -401,149 +474,200 @@ export function DataBrowserPanel({
     return detail.relation_types.filter(
       (rel) =>
         !needle ||
-        `${rel.id} ${rel.name ?? ""} ${rel.sourceId} ${rel.targetId}`.toLowerCase().includes(needle),
+        `${rel.id} ${rel.name ?? ""} ${rel.sourceId} ${rel.targetId}`
+          .toLowerCase()
+          .includes(needle),
     );
   }, [detail, q]);
 
   return (
     <div className={styles.dbWrap}>
       <div className={styles.dbSearch}>
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={
-              assistantKind === "concept-group"
-                ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterConceptGroup")
-                : assistantKind === "relation"
-                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterRelation")
-                  : assistantKind === "resource"
-                    ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterResource")
-                    : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterObjectType")
-            }
-            allowClear
-          />
-        </div>
-        <div className={styles.dbList}>
-          {loading ? (
-            <div className={styles.dbCenter}>
-              <Spin />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={
+            assistantKind === "concept-group"
+              ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterConceptGroup")
+              : assistantKind === "relation"
+                ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterRelation")
+                : assistantKind === "resource"
+                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterResource")
+                  : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.filterObjectType")
+          }
+          allowClear
+        />
+      </div>
+      <div className={styles.dbList}>
+        {loading ? (
+          <div className={styles.dbCenter}>
+            <Spin />
+          </div>
+        ) : error ? (
+          <div className={styles.dbError}>
+            <ApiOutlined />
+            <div>
+              <strong>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadFailed")}</strong>
+              <p>{error}</p>
+              <button type="button" className={styles.dbRetry} onClick={reload}>
+                {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.retry")}
+              </button>
             </div>
-          ) : error ? (
-              <div className={styles.dbError}>
-                <ApiOutlined />
-                <div>
-                  <strong>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.loadFailed")}</strong>
-                  <p>{error}</p>
-                  <button type="button" className={styles.dbRetry} onClick={reload}>
-                    {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.retry")}
-                  </button>
+          </div>
+        ) : assistantKind === "concept-group" ? (
+          conceptGroups.length === 0 ? (
+            <div className={styles.dbCenter}>
+              <Empty
+                description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noConceptGroup")}
+              />
+            </div>
+          ) : (
+            <div className={styles.dbSection}>
+              {conceptGroups.map((group) => (
+                <div key={group.id} className={styles.dbCard}>
+                  <div className={styles.dbCardHead}>
+                    <span className={styles.dbOtName} title={group.name || group.id}>
+                      {group.name || group.id}
+                    </span>
+                    <Tooltip
+                      title={t(
+                        "knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroupTooltip",
+                        { id: group.id },
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className={styles.dbTestBtn}
+                        onClick={() => onFillConceptGroup(group.id)}
+                      >
+                        <ThunderboltFilled />{" "}
+                        {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroup")}
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <div className={styles.dbRow}>
+                    <span className={styles.dbRowLabel}>
+                      {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.conceptGroupId")}
+                    </span>
+                    <span className={styles.dbChip}>{group.id}</span>
+                    <Tooltip
+                      title={t(
+                        "knowledgeNetwork.contextLoaderPanel.dataBrowser.copyConceptGroupId",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className={styles.dbCopy}
+                        onClick={() =>
+                          copy(
+                            group.id,
+                            t(
+                              "knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedConceptGroupId",
+                            ),
+                          )
+                        }
+                      >
+                        <CopyOutlined />
+                      </button>
+                    </Tooltip>
+                  </div>
                 </div>
-              </div>
-          ) : assistantKind === "concept-group" ? (
-            conceptGroups.length === 0 ? (
-              <div className={styles.dbCenter}>
-                <Empty description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noConceptGroup")} />
-              </div>
-            ) : (
-              <div className={styles.dbSection}>
-                {conceptGroups.map((group) => (
-                  <div key={group.id} className={styles.dbCard}>
-                    <div className={styles.dbCardHead}>
-                      <span className={styles.dbOtName} title={group.name || group.id}>{group.name || group.id}</span>
-                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroupTooltip", { id: group.id })}>
-                        <button type="button" className={styles.dbTestBtn} onClick={() => onFillConceptGroup(group.id)}>
-                          <ThunderboltFilled /> {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillConceptGroup")}
-                        </button>
-                      </Tooltip>
-                    </div>
-                    <div className={styles.dbRow}>
-                      <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.conceptGroupId")}</span>
-                      <span className={styles.dbChip}>{group.id}</span>
-                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyConceptGroupId")}>
+              ))}
+            </div>
+          )
+        ) : assistantKind === "relation" ? (
+          relations.length === 0 ? (
+            <div className={styles.dbCenter}>
+              <Empty
+                description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noRelation")}
+              />
+            </div>
+          ) : (
+            <div className={styles.dbSection}>
+              {relations.map((rel) => (
+                <div key={rel.id} className={styles.dbCard}>
+                  <div className={styles.dbCardHead}>
+                    <span className={styles.dbOtName} title={rel.name || rel.id}>
+                      {rel.name || rel.id}
+                    </span>
+                    {onFillRelation ? (
+                      <Tooltip
+                        title={t(
+                          "knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraphTooltip",
+                        )}
+                      >
                         <button
                           type="button"
-                          className={styles.dbCopy}
-                          onClick={() => copy(group.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedConceptGroupId"))}
+                          className={styles.dbTestBtn}
+                          onClick={() => onFillRelation(rel)}
                         >
-                          <CopyOutlined />
+                          <ThunderboltFilled />{" "}
+                          {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraph")}
                         </button>
                       </Tooltip>
-                    </div>
+                    ) : null}
                   </div>
-                ))}
-              </div>
-            )
-          ) : assistantKind === "relation" ? (
-            relations.length === 0 ? (
-              <div className={styles.dbCenter}>
-                <Empty description={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noRelation")} />
-              </div>
-            ) : (
-              <div className={styles.dbSection}>
-                {relations.map((rel) => (
-                  <div key={rel.id} className={styles.dbCard}>
-                    <div className={styles.dbCardHead}>
-                      <span className={styles.dbOtName} title={rel.name || rel.id}>
-                        {rel.name || rel.id}
-                      </span>
-                      {onFillRelation ? (
-                        <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraphTooltip")}>
-                          <button type="button" className={styles.dbTestBtn} onClick={() => onFillRelation(rel)}>
-                            <ThunderboltFilled /> {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.fillSubgraph")}
-                          </button>
-                        </Tooltip>
-                      ) : null}
-                    </div>
-                    <div className={styles.dbRow}>
-                      <span className={styles.dbRowLabel}>{t("knowledgeNetwork.contextLoaderPanel.dataBrowser.path")}</span>
-                      <span className={styles.dbChip}>{rel.sourceId}</span>
-                      <span className={styles.dbRelArrow}>→</span>
-                      <span className={styles.dbChip}>{rel.targetId}</span>
-                      <Tooltip title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyRelationId")}>
-                        <button type="button" className={styles.dbCopy} onClick={() => copy(rel.id, t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedRelationId"))}>
-                          <CopyOutlined />
-                        </button>
-                      </Tooltip>
-                    </div>
+                  <div className={styles.dbRow}>
+                    <span className={styles.dbRowLabel}>
+                      {t("knowledgeNetwork.contextLoaderPanel.dataBrowser.path")}
+                    </span>
+                    <span className={styles.dbChip}>{rel.sourceId}</span>
+                    <span className={styles.dbRelArrow}>→</span>
+                    <span className={styles.dbChip}>{rel.targetId}</span>
+                    <Tooltip
+                      title={t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copyRelationId")}
+                    >
+                      <button
+                        type="button"
+                        className={styles.dbCopy}
+                        onClick={() =>
+                          copy(
+                            rel.id,
+                            t("knowledgeNetwork.contextLoaderPanel.dataBrowser.copiedRelationId"),
+                          )
+                        }
+                      >
+                        <CopyOutlined />
+                      </button>
+                    </Tooltip>
                   </div>
-                ))}
-              </div>
-            )
-          ) : (
-            sections.length === 0 ? (
-              <div className={styles.dbCenter}>
-                <Empty
-                  description={
-                    assistantKind === "resource"
-                      ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noResource")
-                      : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noObjectType")
-                  }
-                />
-              </div>
-            ) : (
-              sections.map((section) => (
-                <div key={section.title} className={styles.dbSection}>
-                  <div className={styles.dbGroup}>{section.title}</div>
-                  {section.ots.map((ot) => (
-                    <ObjectTypeCard
-                      key={ot.id}
-                      ot={ot}
-                      onFillField={onFillField}
-                      onFillResource={onFillResource}
-                      onFillTest={onFillTest}
-                      showObjectType={assistantKind === "object-type"}
-                      showResource={assistantKind === "resource"}
-                      copy={copy}
-                      env={env}
-                      auth={auth}
-                    />
-                  ))}
                 </div>
-              ))
-            )
-          )}
-        </div>
+              ))}
+            </div>
+          )
+        ) : sections.length === 0 ? (
+          <div className={styles.dbCenter}>
+            <Empty
+              description={
+                assistantKind === "resource"
+                  ? t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noResource")
+                  : t("knowledgeNetwork.contextLoaderPanel.dataBrowser.noObjectType")
+              }
+            />
+          </div>
+        ) : (
+          sections.map((section) => (
+            <div key={section.title} className={styles.dbSection}>
+              <div className={styles.dbGroup}>{section.title}</div>
+              {section.ots.map((ot) => (
+                <ObjectTypeCard
+                  key={ot.id}
+                  ot={ot}
+                  onFillField={onFillField}
+                  onFillResource={onFillResource}
+                  onFillTest={onFillTest}
+                  showObjectType={assistantKind === "object-type"}
+                  showResource={assistantKind === "resource"}
+                  copy={copy}
+                  env={env}
+                  auth={auth}
+                />
+              ))}
+            </div>
+          ))
+        )}
       </div>
+    </div>
   );
 }
 

@@ -81,9 +81,10 @@ export function DataConnectConfigForm({
   selectedConnectorType,
 }: DataConnectConfigFormProps) {
   const { t } = useTranslation();
-  const healthCheckScheduleMode = Form.useWatch<DataConnectHealthCheckScheduleMode>(
-    ["healthCheckSchedule", "mode"],
-  );
+  const healthCheckScheduleMode = Form.useWatch<DataConnectHealthCheckScheduleMode>([
+    "healthCheckSchedule",
+    "mode",
+  ]);
   const connectorConfig = Form.useWatch<Record<string, unknown>>("connectorConfig");
 
   const groupedFields = groupConnectorFields(selectedConnectorType);
@@ -155,10 +156,7 @@ export function DataConnectConfigForm({
             ]}
             span="half"
           >
-            <Input
-              maxLength={NAME_MAX_LENGTH}
-              placeholder={t("dataConnect.namePlaceholder")}
-            />
+            <Input maxLength={NAME_MAX_LENGTH} placeholder={t("dataConnect.namePlaceholder")} />
           </InlineField>
           <InlineField
             label={t("common.status")}
@@ -192,17 +190,8 @@ export function DataConnectConfigForm({
               rows={2}
             />
           </InlineField>
-          <InlineField
-            label={t("dataConnect.tags")}
-            name="tags"
-            rules={tagRules}
-            span="full"
-          >
-            <Select
-              mode="tags"
-              open={false}
-              placeholder={t("dataConnect.tagsPlaceholder")}
-            />
+          <InlineField label={t("dataConnect.tags")} name="tags" rules={tagRules} span="full">
+            <Select mode="tags" open={false} placeholder={t("dataConnect.tagsPlaceholder")} />
           </InlineField>
         </div>
       </section>
@@ -223,9 +212,7 @@ export function DataConnectConfigForm({
       </section>
       {!isEdit ? (
         <section className={styles.section}>
-          <div className={styles.sectionTitle}>
-            {t("dataConnect.healthCheckSchedule.title")}
-          </div>
+          <div className={styles.sectionTitle}>{t("dataConnect.healthCheckSchedule.title")}</div>
           <div className={styles.grid}>
             <InlineField
               extra={t("dataConnect.healthCheckSchedule.modeHint")}
@@ -236,12 +223,10 @@ export function DataConnectConfigForm({
               span="half"
             >
               <Select
-                options={(["inherit", "enabled", "disabled"] as const).map(
-                  (value) => ({
-                    label: t(`dataConnect.healthCheckSchedule.modes.${value}`),
-                    value,
-                  }),
-                )}
+                options={(["inherit", "enabled", "disabled"] as const).map((value) => ({
+                  label: t(`dataConnect.healthCheckSchedule.modes.${value}`),
+                  value,
+                }))}
               />
             </InlineField>
             {healthCheckScheduleMode === "enabled" ? (
@@ -266,11 +251,7 @@ export function DataConnectConfigForm({
                 ]}
                 span="half"
               >
-                <Input
-                  placeholder={t(
-                    "dataConnect.healthCheckSchedule.cronPlaceholder",
-                  )}
-                />
+                <Input placeholder={t("dataConnect.healthCheckSchedule.cronPlaceholder")} />
               </InlineField>
             ) : null}
           </div>
@@ -307,11 +288,7 @@ function ConnectorFieldGroup({
       <div className={styles.groupTitle}>{group.title}</div>
       <div className={styles.grid}>
         {visibleFields.map(([fieldName, fieldConfig]) => {
-          const control = resolveConnectorFieldControl(
-            fieldName,
-            fieldConfig.type,
-            connectorType,
-          );
+          const control = resolveConnectorFieldControl(fieldName, fieldConfig.type, connectorType);
           const label = humanizeConnectorFieldLabel(fieldName, connectorType);
           const required = isConnectorFieldRequired(
             connectorType,
@@ -456,22 +433,12 @@ function renderField(options: {
   switch (control.kind) {
     case "number":
       return (
-        <InputNumber
-          className={styles.numberInput}
-          controls={false}
-          placeholder={placeholder}
-        />
+        <InputNumber className={styles.numberInput} controls={false} placeholder={placeholder} />
       );
     case "switch":
       return <Switch checkedChildren={switchOn} unCheckedChildren={switchOff} />;
     case "select":
-      return (
-        <Select
-          allowClear
-          options={control.options}
-          placeholder={selectPlaceholder}
-        />
-      );
+      return <Select allowClear options={control.options} placeholder={selectPlaceholder} />;
     case "tags":
       return <Select mode="tags" open={false} placeholder={placeholder} />;
     case "json":

@@ -22,9 +22,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
-import {
-  formatKnowledgeNetworkObjectTypeIndexStateLabel,
-} from "@/modules/knowledge-network/utils/resource-index-state";
+import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
@@ -35,9 +33,7 @@ import {
   writeStoredPageSize,
 } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import type {
-  KnowledgeNetworkObjectTypeRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -104,9 +100,7 @@ export function ObjectTypeListPanel({
     setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
     setSelectedTag((current) => (current === nextTag ? current : nextTag));
     setSortBy((current) => (current === nextSortBy ? current : nextSortBy));
-    setSortDirection((current) =>
-      current === nextSortDirection ? current : nextSortDirection,
-    );
+    setSortDirection((current) => (current === nextSortDirection ? current : nextSortDirection));
     setPage((current) => (current === nextPage ? current : nextPage));
     setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
   }, [searchParams]);
@@ -155,16 +149,7 @@ export function ObjectTypeListPanel({
     if (nextParams.toString() !== searchParams.toString()) {
       setSearchParams(nextParams, { replace: true });
     }
-  }, [
-    keyword,
-    page,
-    pageSize,
-    searchParams,
-    selectedTag,
-    setSearchParams,
-    sortBy,
-    sortDirection,
-  ]);
+  }, [keyword, page, pageSize, searchParams, selectedTag, setSearchParams, sortBy, sortDirection]);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -188,8 +173,7 @@ export function ObjectTypeListPanel({
         item.name.toLowerCase().includes(normalizedKeyword) ||
         item.id.toLowerCase().includes(normalizedKeyword) ||
         item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesTag =
-        selectedTag === "all" || item.tags.includes(selectedTag);
+      const matchesTag = selectedTag === "all" || item.tags.includes(selectedTag);
 
       return matchesKeyword && matchesTag;
     });
@@ -221,8 +205,7 @@ export function ObjectTypeListPanel({
     () =>
       items.filter(
         (item) =>
-          selectedRowKeys.includes(item.id) &&
-          hasKnowledgeNetworkRecordOperation(item, "delete"),
+          selectedRowKeys.includes(item.id) && hasKnowledgeNetworkRecordOperation(item, "delete"),
       ),
     [items, selectedRowKeys],
   );
@@ -258,21 +241,14 @@ export function ObjectTypeListPanel({
     });
   };
 
-  const handleOperate = (
-    key: string,
-    record: KnowledgeNetworkObjectTypeRecord,
-  ) => {
+  const handleOperate = (key: string, record: KnowledgeNetworkObjectTypeRecord) => {
     if (key === "view") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/object-types/${record.id}/detail`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/object-types/${record.id}/detail`);
       return;
     }
 
     if (key === "edit") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/object-types/${record.id}/edit`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/object-types/${record.id}/edit`);
       return;
     }
 
@@ -327,14 +303,16 @@ export function ObjectTypeListPanel({
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
           ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
-            ? [{
-                key: "authorize",
-                label: (
-                  <KnowledgeNetworkAuthorizationActionLabel>
-                    {t("knowledgeNetwork.authorizeAction")}
-                  </KnowledgeNetworkAuthorizationActionLabel>
-                ),
-              }]
+            ? [
+                {
+                  key: "authorize",
+                  label: (
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]
@@ -417,11 +395,7 @@ export function ObjectTypeListPanel({
       title: t("common.tag"),
       width: 180,
       render: (value: string[]) =>
-        value.length > 0 ? (
-          <ResourceTagList tags={value} />
-        ) : (
-          t("knowledgeNetwork.noTags")
-        ),
+        value.length > 0 ? <ResourceTagList tags={value} /> : t("knowledgeNetwork.noTags"),
     },
     {
       dataIndex: "updaterName",
@@ -451,10 +425,7 @@ export function ObjectTypeListPanel({
 
     if (!canModify) {
       return (
-        <Empty
-          className={styles.emptyPanel}
-          description={t("knowledgeNetwork.emptyObjectTypes")}
-        />
+        <Empty className={styles.emptyPanel} description={t("knowledgeNetwork.emptyObjectTypes")} />
       );
     }
 
@@ -488,154 +459,152 @@ export function ObjectTypeListPanel({
   return (
     <>
       <section className={`${styles.page} ${styles.objectTypePage}`}>
-      <h2 className={styles.title}>{t("knowledgeNetwork.objectTypesTitle")}</h2>
+        <h2 className={styles.title}>{t("knowledgeNetwork.objectTypesTitle")}</h2>
 
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          {canModify || canDelete ? (
-            <>
-              {canModify ? (
-              <AppButton
-                className={styles.toolbarButton}
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  void navigate(`/knowledge-network/workspace/${networkId}/object-types/create`);
-                }}
-                type="primary"
-              >
-                {t("common.create")}
-              </AppButton>
-              ) : null}
-              {canDelete ? (
-              <AppButton
-                className={styles.toolbarButton}
-                danger
-                disabled={selectedRows.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={() => confirmDelete(selectedRows)}
-              >
-                {t("common.delete")}
-              </AppButton>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className={styles.toolbarRight}>
-          <Input
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => {
-              setKeyword(event.target.value);
-              setPage(1);
-            }}
-            placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            value={keyword}
-          />
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("common.tag")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSelectedTag(value);
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarLeft}>
+            {canModify || canDelete ? (
+              <>
+                {canModify ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/object-types/create`,
+                      );
+                    }}
+                    type="primary"
+                  >
+                    {t("common.create")}
+                  </AppButton>
+                ) : null}
+                {canDelete ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    danger
+                    disabled={selectedRows.length === 0}
+                    icon={<DeleteOutlined />}
+                    onClick={() => confirmDelete(selectedRows)}
+                  >
+                    {t("common.delete")}
+                  </AppButton>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <div className={styles.toolbarRight}>
+            <Input
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => {
+                setKeyword(event.target.value);
                 setPage(1);
               }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-              ]}
-              value={selectedTag}
+              placeholder={t("knowledgeNetwork.searchPlaceholder")}
+              prefix={<SearchOutlined className={styles.searchIcon} />}
+              value={keyword}
             />
-          </div>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: "updateTime",
-                  label: t("knowledgeNetwork.sortByUpdateTime"),
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("common.tag")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedTag(value);
+                  setPage(1);
+                }}
+                options={[
+                  { label: t("common.all"), value: "all" },
+                  ...tagOptions.map((tag) => ({ label: tag, value: tag })),
+                ]}
+                value={selectedTag}
+              />
+            </div>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "updateTime",
+                    label: t("knowledgeNetwork.sortByUpdateTime"),
+                  },
+                  {
+                    key: "name",
+                    label: t("knowledgeNetwork.sortByName"),
+                  },
+                ],
+                onClick: ({ key }) => {
+                  const nextSortBy = key as "name" | "updateTime";
+                  setSortDirection((current) =>
+                    nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
+                  );
+                  setSortBy(nextSortBy);
+                  setPage(1);
                 },
-                {
-                  key: "name",
-                  label: t("knowledgeNetwork.sortByName"),
-                },
-              ],
-              onClick: ({ key }) => {
-                const nextSortBy = key as "name" | "updateTime";
-                setSortDirection((current) =>
-                  nextSortBy === sortBy
-                    ? current === "desc"
-                      ? "asc"
-                      : "desc"
-                    : "desc",
-                );
-                setSortBy(nextSortBy);
-                setPage(1);
-              },
-            }}
-            trigger={["click"]}
-          >
+              }}
+              trigger={["click"]}
+            >
+              <button
+                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                className={styles.iconButton}
+                type="button"
+              >
+                <SortAscendingOutlined />
+              </button>
+            </Dropdown>
             <button
-              aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+              aria-label={t("common.refresh")}
               className={styles.iconButton}
+              onClick={() => {
+                void onRefresh();
+              }}
               type="button"
             >
-              <SortAscendingOutlined />
+              <ReloadOutlined />
             </button>
-          </Dropdown>
-          <button
-            aria-label={t("common.refresh")}
-            className={styles.iconButton}
-            onClick={() => {
-              void onRefresh();
-            }}
-            type="button"
-          >
-            <ReloadOutlined />
-          </button>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.tableCard}>
-        <Table<KnowledgeNetworkObjectTypeRecord>
-          columns={columns}
-          dataSource={paginatedItems}
-          loading={loading}
-          locale={{ emptyText: tableEmptyText }}
-          pagination={false}
-          rowKey="id"
-          rowSelection={
-            canDelete
-              ? {
-                  selectedRowKeys,
-                  onChange: (nextSelectedRowKeys) => {
-                    setSelectedRowKeys(nextSelectedRowKeys.map(String));
-                  },
-                  getCheckboxProps: (record) => ({
-                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
-                  }),
-                }
-              : undefined
-          }
-          scroll={{ x: 1180 }}
-          size="middle"
-        />
-      </div>
-
-      {sortedItems.length > 0 ? (
-        <div className={styles.paginationBar}>
-          <TablePaginationBar
-            current={page}
-            onChange={(nextPage, nextPageSize) => {
-              setPage(nextPage);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            showSizeChanger
-            showTotal={(total) => t("common.total", { total })}
-            total={sortedItems.length}
+        <div className={styles.tableCard}>
+          <Table<KnowledgeNetworkObjectTypeRecord>
+            columns={columns}
+            dataSource={paginatedItems}
+            loading={loading}
+            locale={{ emptyText: tableEmptyText }}
+            pagination={false}
+            rowKey="id"
+            rowSelection={
+              canDelete
+                ? {
+                    selectedRowKeys,
+                    onChange: (nextSelectedRowKeys) => {
+                      setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                    },
+                    getCheckboxProps: (record) => ({
+                      disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                    }),
+                  }
+                : undefined
+            }
+            scroll={{ x: 1180 }}
+            size="middle"
           />
         </div>
-      ) : null}
+
+        {sortedItems.length > 0 ? (
+          <div className={styles.paginationBar}>
+            <TablePaginationBar
+              current={page}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              pageSize={pageSize}
+              showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
+              total={sortedItems.length}
+            />
+          </div>
+        ) : null}
       </section>
     </>
   );

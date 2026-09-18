@@ -157,7 +157,9 @@ describe("ToolboxToolsScene tool status confirmation labels (#491)", () => {
     renderScene();
     await screen.findByText("Weather Toolbox");
     expect((await railItem("get_weather")).queryByRole("switch")).toBeNull();
-    expect(screen.queryByRole("button", { name: i18n.t("executionFactory.addApiButton") })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: i18n.t("executionFactory.addApiButton") }),
+    ).toBeNull();
   });
 
   describe.each(["en-US", "zh-CN"] as const)("in %s", (locale) => {

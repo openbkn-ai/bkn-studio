@@ -61,7 +61,9 @@ afterEach(() => {
 describe("sendRequest", () => {
   it("passes cancellation through to the REST request", async () => {
     const controller = new AbortController();
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     await sendRequest(
       { base: "https://platform.example.com", token: "", knId: "kn-demo" },
@@ -82,9 +84,13 @@ describe("sendRequest", () => {
   it("completes the MCP initialize, initialized notification, and tools/call handshake", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
-      .mockResolvedValueOnce(new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+      );
 
     await sendRequest(
       { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
@@ -95,11 +101,19 @@ describe("sendRequest", () => {
     );
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
-    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
-    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
+    expect(fetchSpy.mock.calls[0][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+    expect(fetchSpy.mock.calls[1][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+    expect(fetchSpy.mock.calls[2][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
     expect(jsonRpcBody(fetchSpy.mock.calls[0][1])).toMatchObject({ method: "initialize" });
-    expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({ method: "notifications/initialized" });
+    expect(jsonRpcBody(fetchSpy.mock.calls[1][1])).toMatchObject({
+      method: "notifications/initialized",
+    });
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "tools/call" });
     expect(fetchSpy.mock.calls[2][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-1" });
     fetchSpy.mock.calls.forEach(([, init]) => {
@@ -108,7 +122,9 @@ describe("sendRequest", () => {
   });
 
   it("carries the managed context into the REST body", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     await sendRequest(
       { base: "https://platform.example.com", token: "", knId: "kn-demo" },
@@ -128,9 +144,13 @@ describe("sendRequest", () => {
   it("carries the managed context into the MCP arguments", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
-      .mockResolvedValueOnce(new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+      );
 
     await sendRequest(
       { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
@@ -156,7 +176,9 @@ describe("sendRequest", () => {
    * why some operations failed in the console while hand-written ops worked.
    */
   it("overwrites a placeholder bkn_context in the request body", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     await sendRequest(
       { base: "https://platform.example.com", token: "", knId: "kn-demo" },
@@ -173,7 +195,9 @@ describe("sendRequest", () => {
   });
 
   it("keeps a caller-supplied bkn_context that carries both ids", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
     const explicit = { conversation_id: "conv_explicit", interaction_id: "int_explicit" };
 
     await sendRequest(
@@ -191,7 +215,9 @@ describe("sendRequest", () => {
   });
 
   it("replaces a half-filled bkn_context, since both ids are required", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }));
 
     await sendRequest(
       { base: "https://platform.example.com", token: "", knId: "kn-demo" },
@@ -206,7 +232,6 @@ describe("sendRequest", () => {
 
     expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ query: "订单", bkn_context: bknContext });
   });
-
 });
 
 describe("fetchKnDetail", () => {
@@ -214,7 +239,9 @@ describe("fetchKnDetail", () => {
     const controller = new AbortController();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(
         new Response(
@@ -233,9 +260,14 @@ describe("fetchKnDetail", () => {
         ),
       );
 
-    await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, undefined, controller.signal, {
-      nextContext: () => bknContext,
-    });
+    await fetchKnDetail(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      undefined,
+      controller.signal,
+      {
+        nextContext: () => bknContext,
+      },
+    );
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
@@ -260,66 +292,117 @@ describe("fetchKnDetailRest", () => {
     id: "kn-demo",
     name: "Demo",
     comment: "purpose",
-    object_types: [{ id: "orders", name: "Orders", data_properties: [{ name: "order_id", type: "string" }], related_metric_count: 2 }],
+    object_types: [
+      {
+        id: "orders",
+        name: "Orders",
+        data_properties: [{ name: "order_id", type: "string" }],
+        related_metric_count: 2,
+      },
+    ],
     concept_groups: [{ id: "cg", name: "Group", object_type_ids: ["orders"] }],
-    relation_types: [{ id: "rel", name: "Rel", source_object_type_id: "orders", target_object_type_id: "orders" }],
+    relation_types: [
+      { id: "rel", name: "Rel", source_object_type_id: "orders", target_object_type_id: "orders" },
+    ],
     action_types: [],
   };
 
   it("posts get_kn_detail over REST without bkn_context and in the current UI locale", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify(detailPayload), { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify(detailPayload), { status: 200 }));
 
     await fetchKnDetailRest({ base: "https://platform.example.com/", token: "", knId: "kn-demo" });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/kn/get_kn_detail?response_format=json");
+    expect(fetchSpy.mock.calls[0][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/kn/get_kn_detail?response_format=json",
+    );
     expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ kn_id: "kn-demo" });
     expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Accept-Language": "en-US" });
   });
 
   it("returns the same KnDetail the MCP tool yields for the same payload", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify(detailPayload), { status: 200 }));
-    const viaRest = await fetchKnDetailRest({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(detailPayload), { status: 200 }),
+    );
+    const viaRest = await fetchKnDetailRest({
+      base: "https://platform.example.com",
+      token: "",
+      knId: "kn-demo",
+    });
 
     vi.restoreAllMocks();
     vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ jsonrpc: "2.0", result: { structuredContent: detailPayload } }), { status: 200 }));
-    const viaMcp = await fetchKnDetail({ base: "https://platform.example.com", token: "", knId: "kn-demo" });
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ jsonrpc: "2.0", result: { structuredContent: detailPayload } }),
+          { status: 200 },
+        ),
+      );
+    const viaMcp = await fetchKnDetail({
+      base: "https://platform.example.com",
+      token: "",
+      knId: "kn-demo",
+    });
 
     expect(viaRest).toEqual(viaMcp);
-    expect(viaRest.relation_types).toEqual([{ id: "rel", name: "Rel", sourceId: "orders", targetId: "orders" }]);
+    expect(viaRest.relation_types).toEqual([
+      { id: "rel", name: "Rel", sourceId: "orders", targetId: "orders" },
+    ]);
   });
 
   it("surfaces the error body of a failed call", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"description":"not found"}', { status: 404 }));
-    await expect(fetchKnDetailRest({ base: "https://platform.example.com", token: "", knId: "kn-demo" })).rejects.toThrow('{"description":"not found"}');
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response('{"description":"not found"}', { status: 404 }),
+    );
+    await expect(
+      fetchKnDetailRest({ base: "https://platform.example.com", token: "", knId: "kn-demo" }),
+    ).rejects.toThrow('{"description":"not found"}');
   });
 });
 
 describe("fetchObjectInstances", () => {
   it("posts query_object_instance with kn_id and ot_id in the query string and no bkn_context", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response('{"datas":[]}', { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response('{"datas":[]}', { status: 200 }));
 
-    await fetchObjectInstances({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, "orders", 5);
+    await fetchObjectInstances(
+      { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+      "orders",
+      5,
+    );
 
     expect(fetchSpy.mock.calls[0][0]).toBe(
       "https://platform.example.com/api/agent-retrieval/v1/kn/query_object_instance?kn_id=kn-demo&ot_id=orders&response_format=json",
     );
-    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ limit: 5, need_total: false, properties: [] });
+    expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({
+      limit: 5,
+      need_total: false,
+      properties: [],
+    });
   });
 
   it("preserves unsafe integers in object-instance preview rows", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        '{"datas":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}]}',
-        { status: 200 },
-      ),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          '{"datas":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}]}',
+          { status: 200 },
+        ),
+      );
 
     await expect(
-      fetchObjectInstances({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, "orders"),
+      fetchObjectInstances(
+        { base: "https://platform.example.com", token: "", knId: "kn-demo" },
+        "orders",
+      ),
     ).resolves.toEqual([
       {
         order_id: "110101199001152345",
@@ -336,28 +419,47 @@ describe("fetchObjectInstances", () => {
 describe("fetchObjectTypes", () => {
   it("posts get_object_types over REST without bkn_context and returns related metrics", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ kn_id: "kn-demo", object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }] }), { status: 200 }),
+      new Response(
+        JSON.stringify({
+          kn_id: "kn-demo",
+          object_types: [{ id: "orders", related_metrics: [{ id: "m_order_count" }] }],
+        }),
+        { status: 200 },
+      ),
     );
 
-    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).resolves.toEqual([
-      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
-    ]);
-    expect(fetchSpy.mock.calls[0][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/kn/get_object_types?response_format=json");
+    await expect(
+      fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, [
+        "orders",
+      ]),
+    ).resolves.toEqual([{ id: "orders", related_metrics: [{ id: "m_order_count" }] }]);
+    expect(fetchSpy.mock.calls[0][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/kn/get_object_types?response_format=json",
+    );
     expect(restBody(fetchSpy.mock.calls[0][1])).toEqual({ kn_id: "kn-demo", ids: ["orders"] });
   });
 
   it("accepts a data envelope", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response('{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}', { status: 200 }),
+      new Response(
+        '{"data":{"object_types":[{"id":"orders","related_metrics":[{"id":"m_order_count"}]}]}}',
+        { status: 200 },
+      ),
     );
-    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).resolves.toEqual([
-      { id: "orders", related_metrics: [{ id: "m_order_count" }] },
-    ]);
+    await expect(
+      fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, [
+        "orders",
+      ]),
+    ).resolves.toEqual([{ id: "orders", related_metrics: [{ id: "m_order_count" }] }]);
   });
 
   it("names the tool and status when a failed call has no body", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("", { status: 500 }));
-    await expect(fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, ["orders"])).rejects.toThrow("get_object_types failed (500)");
+    await expect(
+      fetchObjectTypes({ base: "https://platform.example.com", token: "", knId: "kn-demo" }, [
+        "orders",
+      ]),
+    ).rejects.toThrow("get_object_types failed (500)");
   });
 });
 
@@ -411,10 +513,15 @@ describe("listMcpTools", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-2" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-2" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(
-        new Response('{"jsonrpc":"2.0","result":{"tools":[{"name":"search_schema","inputSchema":{"type":"object"}}]}}', { status: 200 }),
+        new Response(
+          '{"jsonrpc":"2.0","result":{"tools":[{"name":"search_schema","inputSchema":{"type":"object"}}]}}',
+          { status: 200 },
+        ),
       );
 
     const tools = await listMcpTools(
@@ -422,21 +529,37 @@ describe("listMcpTools", () => {
       { getToken: () => "expired-token", refresh },
     );
 
-    expect(tools).toEqual([{ name: "search_schema", inputSchema: { type: "object" }, outputSchema: undefined }]);
+    expect(tools).toEqual([
+      { name: "search_schema", inputSchema: { type: "object" }, outputSchema: undefined },
+    ]);
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledTimes(4);
-    expect(fetchSpy.mock.calls[1][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
-    expect(fetchSpy.mock.calls[2][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
-    expect(fetchSpy.mock.calls[3][0]).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp/");
-    expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({ Authorization: "Bearer expired-token" });
-    expect(fetchSpy.mock.calls[1][1]?.headers).toMatchObject({ Authorization: "Bearer fresh-token" });
-    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({ method: "notifications/initialized" });
+    expect(fetchSpy.mock.calls[1][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+    expect(fetchSpy.mock.calls[2][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+    expect(fetchSpy.mock.calls[3][0]).toBe(
+      "https://platform.example.com/api/agent-retrieval/v1/mcp/",
+    );
+    expect(fetchSpy.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer expired-token",
+    });
+    expect(fetchSpy.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer fresh-token",
+    });
+    expect(jsonRpcBody(fetchSpy.mock.calls[2][1])).toMatchObject({
+      method: "notifications/initialized",
+    });
     expect(jsonRpcBody(fetchSpy.mock.calls[3][1])).toMatchObject({ method: "tools/list" });
   });
 
   it("keeps the display metadata tools/list puts on title and _meta", async () => {
     vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-4" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-4" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(
         new Response(
@@ -447,7 +570,11 @@ describe("listMcpTools", () => {
                 {
                   name: "run_sql",
                   title: "SQL 查询",
-                  _meta: { "openbkn.ai/group": "query", "openbkn.ai/group_title": "实例查询", "openbkn.ai/order": 240 },
+                  _meta: {
+                    "openbkn.ai/group": "query",
+                    "openbkn.ai/group_title": "实例查询",
+                    "openbkn.ai/order": 240,
+                  },
                 },
                 // Legacy server shape has no display field, so parsing must yield undefined rather than an empty string.
                 { name: "legacy_tool" },
@@ -458,22 +585,46 @@ describe("listMcpTools", () => {
         ),
       );
 
-    const tools = await listMcpTools({ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" });
+    const tools = await listMcpTools({
+      base: "https://platform.example.com",
+      token: "token-1",
+      knId: "kn-demo",
+    });
 
-    expect(tools[0]).toMatchObject({ name: "run_sql", title: "SQL 查询", group: "query", groupTitle: "实例查询", order: 240 });
-    expect(tools[1]).toMatchObject({ name: "legacy_tool", title: undefined, group: undefined, groupTitle: undefined, order: undefined });
+    expect(tools[0]).toMatchObject({
+      name: "run_sql",
+      title: "SQL 查询",
+      group: "query",
+      groupTitle: "实例查询",
+      order: 240,
+    });
+    expect(tools[1]).toMatchObject({
+      name: "legacy_tool",
+      title: undefined,
+      group: undefined,
+      groupTitle: undefined,
+      order: undefined,
+    });
   });
 
   it("returns an empty list and forwards cancellation to every MCP request", async () => {
     const controller = new AbortController();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-3" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-3" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
-      .mockResolvedValueOnce(new Response('{"jsonrpc":"2.0","result":{"tools":[]}}', { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"tools":[]}}', { status: 200 }),
+      );
 
     await expect(
-      listMcpTools({ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" }, undefined, controller.signal),
+      listMcpTools(
+        { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+        undefined,
+        controller.signal,
+      ),
     ).resolves.toEqual([]);
 
     expect(fetchSpy).toHaveBeenCalledTimes(3);
@@ -491,17 +642,31 @@ describe("createMcpSession", () => {
   it("reconnects once when the MCP session expires", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-old" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-old" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(new Response("session expired", { status: 404 }))
-      .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-new" } }))
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-new" } }),
+      )
       .mockResolvedValueOnce(new Response(null, { status: 202 }))
       .mockResolvedValueOnce(
-        new Response('{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"reconnected"}]}}', { status: 200 }),
+        new Response(
+          '{"jsonrpc":"2.0","result":{"content":[{"type":"text","text":"reconnected"}]}}',
+          { status: 200 },
+        ),
       );
 
-    const session = createMcpSession({ base: "https://platform.example.com", token: "token-1", knId: "kn-demo" });
-    await expect(session.callTool("search_schema", { query: "order" })).resolves.toMatchObject({ ok: true, text: "reconnected" });
+    const session = createMcpSession({
+      base: "https://platform.example.com",
+      token: "token-1",
+      knId: "kn-demo",
+    });
+    await expect(session.callTool("search_schema", { query: "order" })).resolves.toMatchObject({
+      ok: true,
+      text: "reconnected",
+    });
 
     expect(fetchSpy).toHaveBeenCalledTimes(6);
     expect(fetchSpy.mock.calls[2][1]?.headers).toMatchObject({ "Mcp-Session-Id": "session-old" });

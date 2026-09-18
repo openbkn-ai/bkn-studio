@@ -59,17 +59,13 @@ export function createDefaultRelationTypeMappingValues(
   };
 }
 
-export function resetMappingRulesForMode(
-  mode: "direct" | "resource",
-): RelationTypeMappingConfig {
+export function resetMappingRulesForMode(mode: "direct" | "resource"): RelationTypeMappingConfig {
   return mode === "resource"
     ? createDefaultResourceMappingRules()
     : createDefaultDirectMappingRules();
 }
 
-export function countValidResourceMappings(
-  mappings: RelationTypeResourceRowMapping[],
-): number {
+export function countValidResourceMappings(mappings: RelationTypeResourceRowMapping[]): number {
   return mappings.filter(
     (item) =>
       item.sourceObjectPropertyName &&
@@ -193,17 +189,15 @@ export function validateRelationTypeMappingValues(
   return null;
 }
 
-export function buildRelationTypeMappingRulesFromDetail(
-  detail: {
-    backingDataSourceId?: string;
-    backingDataSourceName?: string;
-    resourceMappings: RelationTypeResourceRowMapping[];
-    mappingMode: "direct" | "resource";
-    propertyMappings: RelationTypePropertyMapping[];
-    sourceObjectTypeId: string;
-    targetObjectTypeId: string;
-  },
-): RelationTypeMappingConfig {
+export function buildRelationTypeMappingRulesFromDetail(detail: {
+  backingDataSourceId?: string;
+  backingDataSourceName?: string;
+  resourceMappings: RelationTypeResourceRowMapping[];
+  mappingMode: "direct" | "resource";
+  propertyMappings: RelationTypePropertyMapping[];
+  sourceObjectTypeId: string;
+  targetObjectTypeId: string;
+}): RelationTypeMappingConfig {
   return {
     backingDataSourceId: detail.backingDataSourceId ?? "",
     backingDataSourceName: detail.backingDataSourceName,

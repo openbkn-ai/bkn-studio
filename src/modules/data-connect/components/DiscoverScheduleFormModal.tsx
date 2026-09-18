@@ -116,9 +116,7 @@ export function DiscoverScheduleFormModal({
           .validateFields()
           .then(async (values) => {
             const enabled =
-              mode === "edit"
-                ? (initialValue?.enabled ?? true)
-                : (values.enabled ?? true);
+              mode === "edit" ? (initialValue?.enabled ?? true) : (values.enabled ?? true);
             await onSubmit({
               catalogId: values.catalogId,
               cronExpr: values.cronExpr.trim(),
@@ -239,9 +237,7 @@ export function DiscoverScheduleFormModal({
                   validator: (_, value: unknown) =>
                     isHourlyCron(value)
                       ? Promise.resolve()
-                      : Promise.reject(
-                          new Error(t("dataConnect.discoverCronInvalid")),
-                        ),
+                      : Promise.reject(new Error(t("dataConnect.discoverCronInvalid"))),
                 },
               ]}
               span="full"

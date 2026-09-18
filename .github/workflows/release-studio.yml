@@ -31,12 +31,12 @@ name: release-studio
 
 on:
   push:
-    branches: ['**']
-    tags: ['v*']
+    branches: ["**"]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       publish:
-        description: 'Push to registries (true) or build-only verify (false)'
+        description: "Push to registries (true) or build-only verify (false)"
         type: boolean
         default: false
 

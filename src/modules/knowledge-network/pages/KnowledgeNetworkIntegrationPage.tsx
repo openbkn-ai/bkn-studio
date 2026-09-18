@@ -5,7 +5,13 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ApiOutlined, CodeOutlined, CopyOutlined, ForkOutlined, KeyOutlined } from "@ant-design/icons";
+import {
+  ApiOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  ForkOutlined,
+  KeyOutlined,
+} from "@ant-design/icons";
 import { App } from "antd";
 import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -278,9 +284,7 @@ export function KnowledgeNetworkIntegrationPage() {
       <header className={styles.header}>
         <div className={styles.headerCopy}>
           <h1 className={styles.title}>{t("knowledgeNetwork.integration.title")}</h1>
-          <p className={styles.description}>
-            {t("knowledgeNetwork.integration.description")}
-          </p>
+          <p className={styles.description}>{t("knowledgeNetwork.integration.description")}</p>
         </div>
       </header>
 

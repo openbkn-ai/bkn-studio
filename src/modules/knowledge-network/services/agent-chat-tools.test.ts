@@ -7,7 +7,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { buildAgentTools, DEFAULT_AGENT_CONFIG } from "@/modules/knowledge-network/services/agent-chat.service";
+import {
+  buildAgentTools,
+  DEFAULT_AGENT_CONFIG,
+} from "@/modules/knowledge-network/services/agent-chat.service";
 import type {
   McpSession,
   McpToolCallResult,
@@ -65,7 +68,9 @@ const lifecycleTools: McpToolDef[] = [startInteraction, finishInteraction];
 function managedTurn() {
   return {
     nextContext: () => ({ conversation_id: "conv_1", interaction_id: "int_1" }),
-    finish: vi.fn<(outcome: "completed" | "failed" | "canceled", answer: string) => Promise<void>>().mockResolvedValue(undefined),
+    finish: vi
+      .fn<(outcome: "completed" | "failed" | "canceled", answer: string) => Promise<void>>()
+      .mockResolvedValue(undefined),
   };
 }
 
@@ -81,12 +86,14 @@ function stubSession(result?: Partial<McpToolCallResult>) {
 }
 
 function schemaOf(tool: unknown): Record<string, unknown> {
-  const inputSchema = (tool as { inputSchema: { jsonSchema: Record<string, unknown> } }).inputSchema;
+  const inputSchema = (tool as { inputSchema: { jsonSchema: Record<string, unknown> } })
+    .inputSchema;
   return inputSchema.jsonSchema;
 }
 
 function runTool(tool: unknown, input: unknown): Promise<string> {
-  const execute = (tool as { execute: (input: unknown, options: unknown) => Promise<string> }).execute;
+  const execute = (tool as { execute: (input: unknown, options: unknown) => Promise<string> })
+    .execute;
   return execute(input, { toolCallId: "call-1", messages: [] });
 }
 
@@ -104,12 +111,18 @@ describe("buildAgentTools", () => {
       { session, turn: managedTurn() },
     );
 
-    expect(Object.keys(tools).sort()).toEqual(["bkn_finish_interaction", "bkn_start_interaction", "run_sql"]);
+    expect(Object.keys(tools).sort()).toEqual([
+      "bkn_finish_interaction",
+      "bkn_start_interaction",
+      "run_sql",
+    ]);
   });
 
   it("hides bkn_context from the model", () => {
     const session = stubSession();
-    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+    });
 
     const schema = schemaOf(tools.run_sql);
     // If the model can see this field, it invents conversation/interaction IDs that do not exist in Core.
@@ -119,11 +132,22 @@ describe("buildAgentTools", () => {
 
   it("没有受管交互时生命周期工具直通后端，能力不打折", () => {
     const session = stubSession();
-    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session,
-    });
+    const tools = buildAgentTools(
+      [...lifecycleTools, runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session,
+      },
+    );
 
-    expect(Object.keys(tools)).toEqual(["bkn_start_interaction", "bkn_finish_interaction", "run_sql"]);
+    expect(Object.keys(tools)).toEqual([
+      "bkn_start_interaction",
+      "bkn_finish_interaction",
+      "run_sql",
+    ]);
   });
 
   /**
@@ -135,26 +159,47 @@ describe("buildAgentTools", () => {
    */
   it("接管 bkn_start_interaction：返回本轮交互，不向后端多开一条", async () => {
     const session = stubSession();
-    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session,
-      turn: managedTurn(),
-    });
+    const tools = buildAgentTools(
+      [...lifecycleTools, runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session,
+        turn: managedTurn(),
+      },
+    );
 
     const out = await runTool(tools.bkn_start_interaction, { question: "模型自己想开一轮" });
 
-    expect(JSON.parse(out)).toEqual({ conversation_id: "conv_1", interaction_id: "int_1", execution_status: "active" });
+    expect(JSON.parse(out)).toEqual({
+      conversation_id: "conv_1",
+      interaction_id: "int_1",
+      execution_status: "active",
+    });
     expect(session.callTool).not.toHaveBeenCalled();
   });
 
   it("接管 bkn_finish_interaction：等待完整流式答案后再由 ChatPane 终结", async () => {
     const session = stubSession();
     const turn = managedTurn();
-    const tools = buildAgentTools([...lifecycleTools, runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session,
-      turn,
-    });
+    const tools = buildAgentTools(
+      [...lifecycleTools, runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session,
+        turn,
+      },
+    );
 
-    const out = await runTool(tools.bkn_finish_interaction, { outcome: "completed", answer: "答完了" });
+    const out = await runTool(tools.bkn_finish_interaction, {
+      outcome: "completed",
+      answer: "答完了",
+    });
 
     expect(turn.finish).not.toHaveBeenCalled();
     expect(JSON.parse(out)).toMatchObject({
@@ -168,7 +213,14 @@ describe("buildAgentTools", () => {
   it("接管 bkn_finish_interaction：保留模型声明的失败结论供流式收尾落库", async () => {
     const declared = vi.fn();
     const turn = { ...managedTurn(), declareFinish: declared };
-    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session: stubSession(), turn });
+    const tools = buildAgentTools(
+      lifecycleTools,
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      { session: stubSession(), turn },
+    );
 
     await runTool(tools.bkn_finish_interaction, { outcome: "failed", reason: "查询失败" });
 
@@ -179,25 +231,41 @@ describe("buildAgentTools", () => {
   it("接管不改工具形状：后端 schema 原样透传给模型", () => {
     // Interception changes where a call lands, not what the tool looks like. Removing parameters
     // or enum values from the schema silently removes capabilities the model no longer knows exist.
-    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session: stubSession(),
-      turn: managedTurn(),
-    });
+    const tools = buildAgentTools(
+      lifecycleTools,
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session: stubSession(),
+        turn: managedTurn(),
+      },
+    );
 
     // This implementation does not need question because the turn already exists, but it remains part of the backend contract.
     expect(schemaOf(tools.bkn_start_interaction).properties).toHaveProperty("question");
     expect(schemaOf(tools.bkn_start_interaction).required).toEqual(["question"]);
     // handed_off is rejected at runtime, but the schema must not pretend it does not exist.
-    const outcome = (schemaOf(tools.bkn_finish_interaction).properties as Record<string, { enum?: string[] }>).outcome;
+    const outcome = (
+      schemaOf(tools.bkn_finish_interaction).properties as Record<string, { enum?: string[] }>
+    ).outcome;
     expect(outcome.enum).toContain("handed_off");
   });
 
   it("接管的 bkn_finish_interaction 拒绝客户端没有语义的 outcome", async () => {
     const turn = managedTurn();
-    const tools = buildAgentTools(lifecycleTools, env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session: stubSession(),
-      turn,
-    });
+    const tools = buildAgentTools(
+      lifecycleTools,
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session: stubSession(),
+        turn,
+      },
+    );
 
     const out = await runTool(tools.bkn_finish_interaction, { outcome: "handed_off" });
 
@@ -227,7 +295,9 @@ describe("buildAgentTools", () => {
 
   it("sends no managed context when the backend has no lifecycle", async () => {
     const session = stubSession();
-    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+    });
 
     await runTool(tools.run_sql, { sql: "SELECT 1" });
 
@@ -248,7 +318,9 @@ describe("buildAgentTools", () => {
         },
       }),
     });
-    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, { session });
+    const tools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
+      session,
+    });
 
     const result = await runTool(tools.run_sql, { sql: "SELECT 1" });
 
@@ -263,21 +335,39 @@ describe("buildAgentTools", () => {
     const terminal = stubSession({
       isError: true,
       ok: false,
-      text: JSON.stringify({ error: { code: "interaction_terminal", required_action: "start_interaction" } }),
+      text: JSON.stringify({
+        error: { code: "interaction_terminal", required_action: "start_interaction" },
+      }),
     });
-    const terminalTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session: terminal,
-    });
-    expect(await runTool(terminalTools.run_sql, { sql: "SELECT 1" })).not.toContain("required_action");
+    const terminalTools = buildAgentTools(
+      [runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session: terminal,
+      },
+    );
+    expect(await runTool(terminalTools.run_sql, { sql: "SELECT 1" })).not.toContain(
+      "required_action",
+    );
 
     const plain = stubSession({
       isError: true,
       ok: false,
       text: JSON.stringify({ error: { code: "sql_error", message: "no such table: foo" } }),
     });
-    const plainTools = buildAgentTools([runSql], env, "kn-demo", DEFAULT_AGENT_CONFIG, tokenProvider, {
-      session: plain,
-    });
+    const plainTools = buildAgentTools(
+      [runSql],
+      env,
+      "kn-demo",
+      DEFAULT_AGENT_CONFIG,
+      tokenProvider,
+      {
+        session: plain,
+      },
+    );
     // Pass business errors through unchanged so the model can correctly revise SQL and retry.
     expect(await runTool(plainTools.run_sql, { sql: "SELECT 1" })).toContain("no such table: foo");
   });

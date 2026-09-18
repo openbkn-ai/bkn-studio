@@ -41,22 +41,25 @@ export function resolveLabFeatureFlags(meta?: LabMeta | null): LabFeatureFlags {
   const base = meta?.features ?? cachedMeta?.features ?? defaultLabFeatureFlags;
   const keys = Object.keys(defaultLabFeatureFlags) as (keyof LabFeatureFlags)[];
 
-  return keys.reduce<LabFeatureFlags>((resolved, key) => {
-    const runtimeValue = readRuntimeLabFeatureFlag(key);
-    if (typeof runtimeValue === "boolean") {
-      resolved[key] = runtimeValue;
-      return resolved;
-    }
+  return keys.reduce<LabFeatureFlags>(
+    (resolved, key) => {
+      const runtimeValue = readRuntimeLabFeatureFlag(key);
+      if (typeof runtimeValue === "boolean") {
+        resolved[key] = runtimeValue;
+        return resolved;
+      }
 
-    const envValue = readEnvLabFeatureFlag(key);
-    if (typeof envValue === "boolean") {
-      resolved[key] = envValue;
-      return resolved;
-    }
+      const envValue = readEnvLabFeatureFlag(key);
+      if (typeof envValue === "boolean") {
+        resolved[key] = envValue;
+        return resolved;
+      }
 
-    resolved[key] = base[key];
-    return resolved;
-  }, { ...defaultLabFeatureFlags });
+      resolved[key] = base[key];
+      return resolved;
+    },
+    { ...defaultLabFeatureFlags },
+  );
 }
 
 export async function loadLabMeta(force = false): Promise<LabMeta> {
@@ -72,10 +75,7 @@ export function getCachedLabMeta(): LabMeta | null {
   return cachedMeta;
 }
 
-export function isLabFeatureEnabled(
-  key: keyof LabFeatureFlags,
-  meta?: LabMeta | null,
-): boolean {
+export function isLabFeatureEnabled(key: keyof LabFeatureFlags, meta?: LabMeta | null): boolean {
   return resolveLabFeatureFlags(meta)[key];
 }
 

@@ -64,9 +64,7 @@ const LICENSE_STATES: readonly LicenseState[] = [
 ];
 
 function parseLicenseState(value: unknown): LicenseState {
-  return LICENSE_STATES.includes(value as LicenseState)
-    ? (value as LicenseState)
-    : "unlicensed";
+  return LICENSE_STATES.includes(value as LicenseState) ? (value as LicenseState) : "unlicensed";
 }
 
 function toStringArray(value: unknown): string[] {

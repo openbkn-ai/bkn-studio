@@ -101,11 +101,9 @@ function normalizePreviewCellValue(value: unknown): string | number {
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
     const sourceProperty = record.source_property as
-      | { display_name?: string; name?: string }
-      | undefined;
+      { display_name?: string; name?: string } | undefined;
     const targetProperty = record.target_property as
-      | { display_name?: string; name?: string }
-      | undefined;
+      { display_name?: string; name?: string } | undefined;
 
     if (sourceProperty || targetProperty) {
       const source = sourceProperty?.name ?? sourceProperty?.display_name ?? "";
@@ -310,9 +308,10 @@ export async function getObjectTypeResourcePreview(
   }
 
   const fields = (detail.schema_definition ?? []).map(mapResourceField);
-  const canQueryData = detail.operations === undefined
-    || detail.operations.includes("*")
-    || detail.operations.includes("query_data");
+  const canQueryData =
+    detail.operations === undefined ||
+    detail.operations.includes("*") ||
+    detail.operations.includes("query_data");
 
   if (!canQueryData) {
     return {
@@ -327,23 +326,23 @@ export async function getObjectTypeResourcePreview(
   }
 
   const previewResponse = await http.post<BackendResourcePreviewResponse>(
-      `/vega-backend/v1/resources/${resourceId}/data`,
-      {
-        need_total: true,
-        paging: {
-          limit: 20,
-          mode: "single",
-          offset: 0,
-        },
+    `/vega-backend/v1/resources/${resourceId}/data`,
+    {
+      need_total: true,
+      paging: {
+        limit: 20,
+        mode: "single",
+        offset: 0,
       },
-      {
-        headers: {
-          "X-HTTP-Method-Override": "GET",
-        },
-        skipErrorToast: true,
-        transformResponse: transformPrecisionSafeJSONResponse,
+    },
+    {
+      headers: {
+        "X-HTTP-Method-Override": "GET",
       },
-    );
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    },
+  );
 
   const rows = normalizeResourcePreviewRows(previewResponse.data.entries);
   const columns =

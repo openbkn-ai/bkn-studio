@@ -6,7 +6,6 @@
  */
 
 .contentSurface {
-
   composes: surface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 
   display: grid;
@@ -14,13 +13,9 @@
   gap: 12px;
 
   min-height: auto;
-
 }
 
-
-
 .operationBar {
-
   composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 
   align-items: flex-start;
@@ -30,33 +25,21 @@
   padding-bottom: 0;
 
   border-bottom: 0;
-
 }
 
-
-
 .operationPrimary {
-
   composes: operationPrimary from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 
   align-items: flex-start;
 
   flex-wrap: wrap;
-
 }
-
-
 
 .toolbarActions {
-
   composes: toolbarActions from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-
 }
 
-
-
 .toolbarFilters {
-
   display: flex;
 
   align-items: center;
@@ -72,7 +55,6 @@
   min-width: 0;
 
   overflow-x: auto;
-
 }
 
 .taskFilters {
@@ -90,10 +72,7 @@
   }
 }
 
-
-
 .filterField {
-
   display: inline-flex;
 
   align-items: center;
@@ -101,13 +80,9 @@
   gap: 8px;
 
   min-width: 0;
-
 }
 
-
-
 .filterLabel {
-
   flex-shrink: 0;
 
   color: var(--color-text-primary);
@@ -119,47 +94,26 @@
   line-height: 32px;
 
   white-space: nowrap;
-
 }
-
-
 
 .searchInput {
-
   width: 220px;
-
 }
-
-
 
 .filterSelect {
-
   width: 140px;
-
 }
-
-
 
 .filterSelectWide {
-
   width: 160px;
-
 }
-
-
 
 .filterSelectMultiple {
-
   width: 168px;
-
 }
-
-
 
 .toolbarFilters :global(.ant-input-affix-wrapper),
-
 .toolbarFilters :global(.ant-input-search-button) {
-
   height: 32px !important;
 
   border-color: var(--color-border) !important;
@@ -167,13 +121,9 @@
   border-radius: 0 !important;
 
   box-shadow: none !important;
-
 }
-
-
 
 .toolbarFilters :global(.ant-select-single .ant-select-selector) {
-
   height: 32px !important;
 
   border-color: var(--color-border) !important;
@@ -181,13 +131,9 @@
   border-radius: 0 !important;
 
   box-shadow: none !important;
-
 }
 
-
-
 .filterSelectMultiple:global(.ant-select-multiple) :global(.ant-select-selector) {
-
   min-height: 32px;
 
   height: auto !important;
@@ -199,13 +145,9 @@
   border-radius: 0 !important;
 
   box-shadow: none !important;
-
 }
 
-
-
 .filterSelectMultiple:global(.ant-select-multiple) :global(.ant-select-selection-item) {
-
   height: 22px;
 
   margin-top: 2px;
@@ -217,35 +159,22 @@
   font-size: 12px;
 
   border-radius: 0;
-
 }
 
-
-
 .filterSelectMultiple:global(.ant-select-multiple) :global(.ant-select-selection-overflow) {
-
   flex-wrap: wrap;
 
   gap: 2px 4px;
-
 }
 
-
-
 .toolbarFilters :global(.ant-select-single .ant-select-selection-item),
-
 .toolbarFilters :global(.ant-select-single .ant-select-selection-placeholder) {
-
   line-height: 30px !important;
 
   font-size: 13px;
-
 }
 
-
-
 .tableSurface {
-
   composes: tableSurface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 
   padding-top: 0;
@@ -253,31 +182,19 @@
   overflow-x: auto;
 
   overflow-y: visible;
-
 }
 
-
-
 .tableSurface :global(.ant-table-wrapper) {
-
   border: 1px solid var(--color-border);
 
   border-radius: 0;
-
 }
-
-
 
 .tableSurface :global(.ant-table) {
-
   background: var(--color-bg-surface);
-
 }
 
-
-
 .tableSurface :global(.ant-table-thead > tr > th) {
-
   height: 48px;
 
   border-bottom: 1px solid var(--color-border);
@@ -295,23 +212,15 @@
   overflow: visible;
 
   text-overflow: clip;
-
 }
 
-
-
 .tableSurface :global(.ant-table-thead > tr > th.ant-table-cell-ellipsis) {
-
   overflow: visible;
 
   text-overflow: clip;
-
 }
 
-
-
 .tableSurface :global(.ant-table-tbody > tr > td) {
-
   padding-top: 14px;
 
   padding-bottom: 14px;
@@ -329,23 +238,15 @@
   white-space: nowrap;
 
   overflow: hidden;
-
 }
 
-
-
 .tableSurface :global(.ant-table-tbody > tr > td).progressCell {
-
   white-space: normal;
 
   overflow: visible;
-
 }
 
-
-
 .cellEllipsis {
-
   display: block;
 
   overflow: hidden;
@@ -353,13 +254,9 @@
   text-overflow: ellipsis;
 
   white-space: nowrap;
-
 }
 
-
-
 .textLink {
-
   display: inline-flex;
 
   align-items: center;
@@ -379,95 +276,52 @@
   line-height: 1.5;
 
   cursor: pointer;
-
 }
 
-
-
 .textLink:hover {
-
   color: var(--color-text-link);
 
   text-decoration: underline;
-
 }
-
-
 
 .textLink .cellEllipsis {
-
   min-width: 0;
-
 }
 
-
-
 .tableSurface :global(.ant-table-tbody > tr > td *),
-
 .tableSurface :global(.ant-table-tbody > tr > td .ant-btn),
-
 .tableSurface :global(.ant-table-tbody > tr > td .ant-tag) {
-
   font-size: 14px;
 
   font-weight: 400;
-
 }
-
-
 
 .tableSurface :global(.ant-table-tbody > tr:hover > td) {
-
   background: var(--color-hover);
-
 }
-
-
 
 .contentSurface :global(.ant-btn) {
-
   border-radius: 0 !important;
-
 }
-
-
 
 .contentSurface :global(.ant-tag) {
-
   border-radius: 0;
-
 }
 
-
-
 @media (max-width: 960px) {
-
   .toolbarFilters {
-
     flex-basis: 100%;
 
     justify-content: flex-start;
-
   }
-
-
-
 }
 
-
-
 @media (max-width: 768px) {
-
   .operationBar {
-
     flex-direction: column;
 
     align-items: stretch;
-
   }
-
-
-
 }
 
 .actionGroup {

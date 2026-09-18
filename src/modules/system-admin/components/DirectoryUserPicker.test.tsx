@@ -90,7 +90,8 @@ describe("DirectoryUserPicker", () => {
     mocks.listDepartments.mockResolvedValue(departments);
     mocks.listUsersPage.mockResolvedValue({ total: users.length, users });
     mocks.getUser.mockImplementation((id: string) =>
-      Promise.resolve(users.find((user) => user.id === id)));
+      Promise.resolve(users.find((user) => user.id === id)),
+    );
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
@@ -173,11 +174,7 @@ describe("DirectoryUserPicker", () => {
 
   it("does not show a truncation hint merely because unavailable users are filtered out", async () => {
     render(
-      <DirectoryUserPicker
-        ariaLabel="授权用户"
-        disabledUserIds={["user-2"]}
-        onChange={vi.fn()}
-      />,
+      <DirectoryUserPicker ariaLabel="授权用户" disabledUserIds={["user-2"]} onChange={vi.fn()} />,
     );
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
@@ -192,9 +189,11 @@ describe("DirectoryUserPicker", () => {
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
 
-    expect(await screen.findByRole("button", {
-      name: "systemAdmin.userPicker.loadMore",
-    })).not.toBeNull();
+    expect(
+      await screen.findByRole("button", {
+        name: "systemAdmin.userPicker.loadMore",
+      }),
+    ).not.toBeNull();
     expect(screen.getByText("systemAdmin.userPicker.resultRange:101")).not.toBeNull();
   });
 
@@ -220,28 +219,30 @@ describe("DirectoryUserPicker", () => {
       );
     });
     expect(await screen.findByRole("option", { name: /Zoe Lin/ })).not.toBeNull();
-    expect(screen.queryByRole("button", {
-      name: "systemAdmin.userPicker.loadMore",
-    })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "systemAdmin.userPicker.loadMore",
+      }),
+    ).toBeNull();
   });
 
   it("renders compact organization and search controls above the inline user list", async () => {
     render(
-      <DirectoryUserPicker
-        ariaLabel="属性权限用户"
-        onChange={vi.fn()}
-        presentation="inline"
-      />,
+      <DirectoryUserPicker ariaLabel="属性权限用户" onChange={vi.fn()} presentation="inline" />,
     );
 
     expect(screen.getByRole("group", { name: "属性权限用户" })).not.toBeNull();
     expect(screen.queryByRole("combobox", { name: "属性权限用户" })).toBeNull();
-    expect(screen.getByRole("combobox", {
-      name: "systemAdmin.userPicker.organizationScope",
-    })).not.toBeNull();
-    expect(screen.getByRole("textbox", {
-      name: "systemAdmin.userPicker.searchAllUsers",
-    })).not.toBeNull();
+    expect(
+      screen.getByRole("combobox", {
+        name: "systemAdmin.userPicker.organizationScope",
+      }),
+    ).not.toBeNull();
+    expect(
+      screen.getByRole("textbox", {
+        name: "systemAdmin.userPicker.searchAllUsers",
+      }),
+    ).not.toBeNull();
     expect(await screen.findByRole("option", { name: /Mubai Li/ })).not.toBeNull();
   });
 
@@ -251,7 +252,9 @@ describe("DirectoryUserPicker", () => {
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "授权用户" }));
 
-    expect(await screen.findByText("systemAdmin.userPicker.organizationUnavailable")).not.toBeNull();
+    expect(
+      await screen.findByText("systemAdmin.userPicker.organizationUnavailable"),
+    ).not.toBeNull();
     expect(await screen.findByRole("option", { name: /Mubai Li/ })).not.toBeNull();
     expect(screen.queryByText("systemAdmin.userPicker.organization")).toBeNull();
   });

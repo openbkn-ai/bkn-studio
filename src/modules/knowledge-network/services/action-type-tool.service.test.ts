@@ -51,9 +51,7 @@ async function resolveWithMockCatalog(
     typeof import("./action-type-tool.service").resolveActionTypeActionSourceDisplay
   >[0],
 ) {
-  const { resolveActionTypeActionSourceDisplay } = await import(
-    "./action-type-tool.service"
-  );
+  const { resolveActionTypeActionSourceDisplay } = await import("./action-type-tool.service");
   const promise = resolveActionTypeActionSourceDisplay(source);
   await vi.advanceTimersByTimeAsync(200);
   return promise;
@@ -90,9 +88,8 @@ describe("resolveActionTypeActionSourceDisplay", () => {
   });
 
   it("resolves MCP server name without changing the persisted tool name", async () => {
-    const { MOCK_EXECUTION_FACTORY_CATALOG } = await import(
-      "@/modules/knowledge-network/services/mock/action-type-tool-catalog"
-    );
+    const { MOCK_EXECUTION_FACTORY_CATALOG } =
+      await import("@/modules/knowledge-network/services/mock/action-type-tool-catalog");
     const result = await resolveWithMockCatalog({
       mcpId: "mcp-filesystem",
       toolName: "read_file",
@@ -151,9 +148,7 @@ describe("resolveActionTypeActionSourceDisplay", () => {
       toolId: "tool-direct",
     });
 
-    const { resolveActionTypeActionSourceDisplay } = await import(
-      "./action-type-tool.service"
-    );
+    const { resolveActionTypeActionSourceDisplay } = await import("./action-type-tool.service");
 
     await expect(
       resolveActionTypeActionSourceDisplay({
@@ -177,9 +172,8 @@ describe("resolveActionTypeActionSourceDisplay", () => {
     executionFactoryMocks.getToolbox.mockReturnValue(new Promise(() => {}));
     executionFactoryMocks.getToolDetail.mockReturnValue(new Promise(() => {}));
 
-    const { resolveActionTypeActionSourceDisplayWithTimeout } = await import(
-      "./action-type-tool.service"
-    );
+    const { resolveActionTypeActionSourceDisplayWithTimeout } =
+      await import("./action-type-tool.service");
 
     const promise = resolveActionTypeActionSourceDisplayWithTimeout(
       {
@@ -247,9 +241,7 @@ describe("resolveActionTypeActionSourceDisplay", () => {
       total: 1,
     });
 
-    const { listActionTypeExecutionFactoryCatalog } = await import(
-      "./action-type-tool.service"
-    );
+    const { listActionTypeExecutionFactoryCatalog } = await import("./action-type-tool.service");
     const result = await listActionTypeExecutionFactoryCatalog("score", "function");
 
     expect(executionFactoryMocks.listToolboxMarket).toHaveBeenCalledWith({
@@ -284,9 +276,7 @@ describe("resolveActionTypeActionSourceDisplay", () => {
       total: 1,
     });
 
-    const { listActionTypeExecutionFactoryCatalog } = await import(
-      "./action-type-tool.service"
-    );
+    const { listActionTypeExecutionFactoryCatalog } = await import("./action-type-tool.service");
     const result = await listActionTypeExecutionFactoryCatalog("score");
 
     expect(result.mcpServers).toMatchObject([

@@ -27,7 +27,10 @@ export function readApiKeyReturnTo(search: string): string | null {
 
 export function saveApiKeyHandoff(returnTo: string, key: string): void {
   if (typeof window === "undefined" || !isSafeReturnTo(returnTo) || !key) return;
-  window.sessionStorage.setItem(HANDOFF_STORAGE_KEY, JSON.stringify({ returnTo, key } satisfies ApiKeyHandoff));
+  window.sessionStorage.setItem(
+    HANDOFF_STORAGE_KEY,
+    JSON.stringify({ returnTo, key } satisfies ApiKeyHandoff),
+  );
 }
 
 export function consumeApiKeyHandoff(currentPath: string): string | null {
@@ -38,7 +41,9 @@ export function consumeApiKeyHandoff(currentPath: string): string | null {
 
   try {
     const handoff = JSON.parse(serialized) as Partial<ApiKeyHandoff>;
-    return handoff.returnTo === currentPath && typeof handoff.key === "string" && handoff.key.startsWith("bak_")
+    return handoff.returnTo === currentPath &&
+      typeof handoff.key === "string" &&
+      handoff.key.startsWith("bak_")
       ? handoff.key
       : null;
   } catch {

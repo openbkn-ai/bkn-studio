@@ -70,7 +70,8 @@ const translate = (key: string, options?: Record<string, unknown>) => {
     "executionFactory.importOpenApiCapabilityPreview": `OpenAPI ${options?.version} with ${options?.count} endpoint(s)`,
     "executionFactory.importOpenApiRelativeServerResolved": `Detected relative OpenAPI server ${options?.relativeUrl} and resolved it to ${options?.serviceUrl}.`,
     "executionFactory.importOpenApiRelativeServerManual": `Relative server ${options?.relativeUrl}`,
-    "executionFactory.importOpenApiMissingServerManual": "Document has no servers; use Service URL.",
+    "executionFactory.importOpenApiMissingServerManual":
+      "Document has no servers; use Service URL.",
     "executionFactory.importOpenApiServiceUrlRequired": "Service URL required",
     "executionFactory.quickApiToolboxExisting": "Existing toolset",
     "executionFactory.quickApiToolboxNew": "New toolset",
@@ -125,15 +126,9 @@ vi.mock("@/modules/execution-factory/components/OpenApiSpecInput", () => ({
   OpenApiSpecInput: ({
     onChange,
   }: {
-    onChange?: (
-      value: string,
-      source?: { kind: "url"; url: string } | { kind: "paste" },
-    ) => void;
+    onChange?: (value: string, source?: { kind: "url"; url: string } | { kind: "paste" }) => void;
   }) => (
-    <button
-      onClick={() => onChange?.(nextOpenApiLoad.spec, nextOpenApiLoad.source)}
-      type="button"
-    >
+    <button onClick={() => onChange?.(nextOpenApiLoad.spec, nextOpenApiLoad.source)} type="button">
       Load OpenAPI
     </button>
   ),
@@ -190,9 +185,7 @@ describe("ImportOpenApiCapabilityForm", () => {
     nextOpenApiLoad = { spec: noServersSpec, source: { kind: "paste" } };
     fireEvent.click(screen.getByRole("button", { name: "Load OpenAPI" }));
 
-    expect(
-      await screen.findByText("Document has no servers; use Service URL."),
-    ).toBeTruthy();
+    expect(await screen.findByText("Document has no servers; use Service URL.")).toBeTruthy();
     expect(screen.queryByDisplayValue("https://first.example.com")).toBeNull();
     expect(screen.getByLabelText("Service URL")).toHaveProperty("value", "");
   });

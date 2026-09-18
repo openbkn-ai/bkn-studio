@@ -21,7 +21,11 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
-  BusinessTree: ({ treeData }: { treeData: Array<{ children?: TreeNode[]; key: string; title: ReactNode }> }) => {
+  BusinessTree: ({
+    treeData,
+  }: {
+    treeData: Array<{ children?: TreeNode[]; key: string; title: ReactNode }>;
+  }) => {
     const renderNodes = (nodes: TreeNode[]) => (
       <ul>
         {nodes.map((node) => (

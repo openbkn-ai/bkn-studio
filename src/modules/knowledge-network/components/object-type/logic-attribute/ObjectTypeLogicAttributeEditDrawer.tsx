@@ -5,16 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  Col,
-  Drawer,
-  Form,
-  Input,
-  Row,
-  Select,
-  Table,
-  type TableColumnProps,
-} from "antd";
+import { Col, Drawer, Form, Input, Row, Select, Table, type TableColumnProps } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -123,19 +114,15 @@ export function ObjectTypeLogicAttributeEditDrawer({
     [allData],
   );
 
-  const propertyOptions = useMemo(
-    () => {
-      const propertyNames = logicFields.map((item) => item.name);
-      return objectTypePropertyOptions.map((item) => ({
-        disabled:
-          propertyNames.includes(item.name) || (!isAddMode && item.name === attrInfo.name),
-        label: item.label,
-        type: item.type,
-        value: item.value,
-      }));
-    },
-    [attrInfo.name, isAddMode, logicFields, objectTypePropertyOptions],
-  );
+  const propertyOptions = useMemo(() => {
+    const propertyNames = logicFields.map((item) => item.name);
+    return objectTypePropertyOptions.map((item) => ({
+      disabled: propertyNames.includes(item.name) || (!isAddMode && item.name === attrInfo.name),
+      label: item.label,
+      type: item.type,
+      value: item.value,
+    }));
+  }, [attrInfo.name, isAddMode, logicFields, objectTypePropertyOptions]);
 
   useEffect(() => {
     if (!open) {
@@ -229,9 +216,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
       type: "tool" as const,
     };
     const inputParams = await resolveActionTypeToolInputSchema(source);
-    setSettingList(
-      buildToolLogicParameterSettings(inputParams, [], createParameterId),
-    );
+    setSettingList(buildToolLogicParameterSettings(inputParams, [], createParameterId));
     form.setFieldsValue({
       boxId: selection.boxId,
       resourceName: selection.tool.toolName,
@@ -262,7 +247,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
                 : ""
             : nextNode.valueFrom !== "input" && isEmptyExceptZero(nextNode.value)
               ? t("knowledgeNetwork.objectTypeLogicValueRequired")
-              : ""
+              : "";
         if (nameError || valueError) {
           hasError = true;
         }
@@ -500,10 +485,7 @@ export function ObjectTypeLogicAttributeEditDrawer({
           </Col>
           <Col span={6}>
             {type === "tool" ? (
-              <Form.Item
-                label={t("knowledgeNetwork.objectTypeLogicAttributeResource")}
-                required
-              >
+              <Form.Item label={t("knowledgeNetwork.objectTypeLogicAttributeResource")} required>
                 <Input
                   onClick={() => setToolSelectorOpen(true)}
                   placeholder={t("knowledgeNetwork.objectTypeLogicToolSelect")}

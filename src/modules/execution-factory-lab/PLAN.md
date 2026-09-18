@@ -6,10 +6,10 @@
 
 ## 设计原则
 
-| 层级 | 用户可见概念 | 技术映射（降级复用） |
-|------|-------------|---------------------|
-| 能力层 | HTTP / MCP / Skill（主列表） | tool / mcp / skill |
-| 治理层 | 分组（侧栏筛选，默认自动） | toolbox |
+| 层级   | 用户可见概念                    | 技术映射（降级复用）      |
+| ------ | ------------------------------- | ------------------------- |
+| 能力层 | HTTP / MCP / Skill（主列表）    | tool / mcp / skill        |
+| 治理层 | 分组（侧栏筛选，默认自动）      | toolbox                   |
 | 编排层 | 「用于流程编排」开关 / 事后启用 | openapi-bundle → operator |
 
 ## 实现状态
@@ -61,36 +61,36 @@
 
 ## API 一览
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/health` | 健康检查 |
-| GET | `/capabilities` | 统一能力列表（kind/keyword/group_id/page） |
-| GET | `/capabilities/:id` | 能力详情 |
-| POST | `/capabilities/http` | 创建 HTTP 能力 |
-| POST | `/capabilities/http/import` | OpenAPI 批量导入 |
-| POST | `/capabilities/:id/debug` | 调试 |
-| GET | `/capabilities/:id/versions` | 版本历史 |
-| POST | `/capabilities/:id/versions/republish` | Skill 版本回滚 |
-| POST | `/capabilities/:id/publish` | 发布能力 |
-| GET | `/capabilities/:id/orchestration` | 编排详情 |
-| POST | `/capabilities/:id/orchestration/enable` | 事后启用编排 |
-| GET | `/groups` | 分组列表 |
-| POST | `/groups/:group_id/publish` | 发布分组 |
+| 方法 | 路径                                     | 说明                                       |
+| ---- | ---------------------------------------- | ------------------------------------------ |
+| GET  | `/health`                                | 健康检查                                   |
+| GET  | `/capabilities`                          | 统一能力列表（kind/keyword/group_id/page） |
+| GET  | `/capabilities/:id`                      | 能力详情                                   |
+| POST | `/capabilities/http`                     | 创建 HTTP 能力                             |
+| POST | `/capabilities/http/import`              | OpenAPI 批量导入                           |
+| POST | `/capabilities/:id/debug`                | 调试                                       |
+| GET  | `/capabilities/:id/versions`             | 版本历史                                   |
+| POST | `/capabilities/:id/versions/republish`   | Skill 版本回滚                             |
+| POST | `/capabilities/:id/publish`              | 发布能力                                   |
+| GET  | `/capabilities/:id/orchestration`        | 编排详情                                   |
+| POST | `/capabilities/:id/orchestration/enable` | 事后启用编排                               |
+| GET  | `/groups`                                | 分组列表                                   |
+| POST | `/groups/:group_id/publish`              | 发布分组                                   |
 
 ## E2E 测试矩阵
 
-| ID | 范围 | 说明 |
-|----|------|------|
-| LAB-API-01 | API | health |
-| LAB-API-02 | API | 自动分组创建 HTTP |
-| LAB-API-03 | API | 创建时同步编排 |
-| LAB-API-04 | API | kind=all 分页 |
-| LAB-API-05 | API | 详情 + HTTP 调试 |
-| LAB-API-06 | API | 能力与分组发布 |
-| LAB-API-07 | API | 事后启用编排 |
-| LAB-API-08 | API | 编排版本列表 |
-| LAB-API-09 | API | OpenAPI 批量导入 |
-| LAB-UI-01 | UI | 菜单导航 + 创建 HTTP |
+| ID         | 范围 | 说明                 |
+| ---------- | ---- | -------------------- |
+| LAB-API-01 | API  | health               |
+| LAB-API-02 | API  | 自动分组创建 HTTP    |
+| LAB-API-03 | API  | 创建时同步编排       |
+| LAB-API-04 | API  | kind=all 分页        |
+| LAB-API-05 | API  | 详情 + HTTP 调试     |
+| LAB-API-06 | API  | 能力与分组发布       |
+| LAB-API-07 | API  | 事后启用编排         |
+| LAB-API-08 | API  | 编排版本列表         |
+| LAB-API-09 | API  | OpenAPI 批量导入     |
+| LAB-UI-01  | UI   | 菜单导航 + 创建 HTTP |
 
 ## 目录
 

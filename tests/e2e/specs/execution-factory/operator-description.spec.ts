@@ -23,8 +23,7 @@ test("operator edit form shows saved description", async ({ page, request }) => 
   const expectedDescription = detail.metadata?.description ?? "";
   expect(expectedDescription.length).toBeGreaterThan(0);
 
-  let browserDetail: { metadata?: { description?: string }; name?: string } | null =
-    null;
+  let browserDetail: { metadata?: { description?: string }; name?: string } | null = null;
   page.on("response", (response) => {
     void (async () => {
       if (

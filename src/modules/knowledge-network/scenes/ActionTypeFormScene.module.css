@@ -22,7 +22,11 @@
   height: auto;
 }
 
-.basicForm :global(.ant-form-item-label > label.ant-form-item-required:not(.ant-form-item-required-mark-hidden)::before) {
+.basicForm
+  :global(
+    .ant-form-item-label
+      > label.ant-form-item-required:not(.ant-form-item-required-mark-hidden)::before
+  ) {
   margin-inline-end: 4px;
 }
 

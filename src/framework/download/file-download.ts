@@ -125,9 +125,7 @@ function decodeRfc5987(value: string): string | undefined {
  * Returns `undefined` when the header is missing or carries no usable name,
  * leaving the caller to name the file itself.
  */
-export function parseContentDispositionFilename(
-  contentDisposition?: string,
-): string | undefined {
+export function parseContentDispositionFilename(contentDisposition?: string): string | undefined {
   if (!contentDisposition?.trim()) {
     return undefined;
   }

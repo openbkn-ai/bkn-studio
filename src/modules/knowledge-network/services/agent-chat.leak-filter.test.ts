@@ -96,7 +96,13 @@ describe("createLeakFilter · answer 契约", () => {
 
   it("标签内才是正文，标签外的推敲改道到思考区", () => {
     const chunks = run(
-      ["我选择3。现在我写最终答案。", "<answer>", "**结论**：共 3 个在途项目。", "</answer>", "我输出完了。"],
+      [
+        "我选择3。现在我写最终答案。",
+        "<answer>",
+        "**结论**：共 3 个在途项目。",
+        "</answer>",
+        "我输出完了。",
+      ],
       opts,
     );
     expect(textOf(chunks)).toBe("**结论**：共 3 个在途项目。");

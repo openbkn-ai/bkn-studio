@@ -24,10 +24,7 @@ function axios409(data: unknown): AxiosError {
 
 describe("runningIdsFromError — 409 HasRunningExecution 识别", () => {
   it("409 带 running_ids → 返回该数组", () => {
-    expect(runningIdsFromError(axios409({ running_ids: ["t1", "t2"] }))).toEqual([
-      "t1",
-      "t2",
-    ]);
+    expect(runningIdsFromError(axios409({ running_ids: ["t1", "t2"] }))).toEqual(["t1", "t2"]);
   });
 
   it("409 无 running_ids → 返回空数组(仍判定为运行中冲突)", () => {

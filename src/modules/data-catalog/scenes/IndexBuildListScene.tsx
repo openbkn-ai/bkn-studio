@@ -76,10 +76,7 @@ export function IndexBuildListScene() {
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const listFilters = useMemo(
-    () => readIndexBuildListFilters(searchParams),
-    [searchParams],
-  );
+  const listFilters = useMemo(() => readIndexBuildListFilters(searchParams), [searchParams]);
 
   const [tasks, setTasks] = useState<BuildTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,13 +153,18 @@ export function IndexBuildListScene() {
 
   useEffect(() => {
     void loadTasks();
-    return () => { taskRequestIdRef.current += 1; };
+    return () => {
+      taskRequestIdRef.current += 1;
+    };
   }, [loadTasks]);
 
   useEffect(() => subscribeMockDb(() => void loadTasks()), [loadTasks]);
 
-  const { pauseOrResume: handlePauseResume, remove: handleDelete, retry: handleRetry } =
-    useBuildTaskActions(loadTasks);
+  const {
+    pauseOrResume: handlePauseResume,
+    remove: handleDelete,
+    retry: handleRetry,
+  } = useBuildTaskActions(loadTasks);
 
   const batchDeleteTargets = tasks.filter(
     (task) => selectedKeys.includes(task.id) && !isActiveBuildTask(task),
@@ -226,7 +228,15 @@ export function IndexBuildListScene() {
       dataIndex: "id",
       width: 160,
       title: t("dataCatalog.taskManagement.columns.task"),
-      render: (value: string) => <button className={sceneStyles.textLink} onClick={() => setDetailTaskId(value)} type="button"><span className={sceneStyles.cellEllipsis}>{value}</span></button>,
+      render: (value: string) => (
+        <button
+          className={sceneStyles.textLink}
+          onClick={() => setDetailTaskId(value)}
+          type="button"
+        >
+          <span className={sceneStyles.cellEllipsis}>{value}</span>
+        </button>
+      ),
     },
     {
       dataIndex: "catalogId",
@@ -278,19 +288,27 @@ export function IndexBuildListScene() {
       dataIndex: "mode",
       title: t("dataCatalog.build.mode"),
       width: 100,
-      filters: ["batch", "streaming"].map((value) => ({ text: t(`dataCatalog.modes.${value}`), value })),
+      filters: ["batch", "streaming"].map((value) => ({
+        text: t(`dataCatalog.modes.${value}`),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: listFilters.mode ? [listFilters.mode] : null,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
-      render: (value: BuildTask["mode"]) => (
-        <EllipsisText text={t(`dataCatalog.modes.${value}`)} />
-      ),
+      render: (value: BuildTask["mode"]) => <EllipsisText text={t(`dataCatalog.modes.${value}`)} />,
     },
     {
       dataIndex: "executeType",
       title: t("dataCatalog.build.executeType"),
       width: 100,
-      filters: ["full", "incremental"].map((value) => ({ text: t(value === "incremental" ? "dataCatalog.build.executeIncremental" : "dataCatalog.build.executeFull"), value })),
+      filters: ["full", "incremental"].map((value) => ({
+        text: t(
+          value === "incremental"
+            ? "dataCatalog.build.executeIncremental"
+            : "dataCatalog.build.executeFull",
+        ),
+        value,
+      })),
       filterMultiple: false,
       filteredValue: listFilters.executeType ? [listFilters.executeType] : null,
       onHeaderCell: () => ({ style: { whiteSpace: "nowrap" } }),
@@ -312,7 +330,10 @@ export function IndexBuildListScene() {
       dataIndex: "status",
       title: t("dataCatalog.task.detailSections.status"),
       width: 120,
-      filters: STATUS_OPTIONS.map((value) => ({ text: t(`dataCatalog.task.statuses.${value}`), value })),
+      filters: STATUS_OPTIONS.map((value) => ({
+        text: t(`dataCatalog.task.statuses.${value}`),
+        value,
+      })),
       filteredValue: listFilters.statuses.length ? listFilters.statuses : null,
       render: (_value: BuildTaskStatus, record) => <BuildStatusTag task={record} />,
     },
@@ -330,7 +351,9 @@ export function IndexBuildListScene() {
       width: 180,
       sorter: true,
       sortOrder: sortOrderOf("last_progress_time"),
-      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+      render: (value: number | null) => (
+        <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />
+      ),
     },
     {
       dataIndex: "finishTime",
@@ -339,7 +362,9 @@ export function IndexBuildListScene() {
       width: 180,
       sorter: true,
       sortOrder: sortOrderOf("finish_time"),
-      render: (value: number | null) => <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />,
+      render: (value: number | null) => (
+        <EllipsisText text={formatDateTimeYmdHms(value || undefined)} />
+      ),
     },
     {
       dataIndex: "createTime",
@@ -360,17 +385,19 @@ export function IndexBuildListScene() {
         const pauseResumeLabel =
           record.status === "stopped"
             ? t(
-              record.mode === "streaming"
-                ? "dataCatalog.task.resumeListening"
-                : "dataCatalog.task.resumeBuild",
-            )
+                record.mode === "streaming"
+                  ? "dataCatalog.task.resumeListening"
+                  : "dataCatalog.task.resumeBuild",
+              )
             : t(
-              record.mode === "streaming"
-                ? "dataCatalog.task.pauseListening"
-                : "dataCatalog.task.stopBuild",
-            );
+                record.mode === "streaming"
+                  ? "dataCatalog.task.pauseListening"
+                  : "dataCatalog.task.stopBuild",
+              );
 
-        const menuItems: NonNullable<MenuProps["items"]> = [{ key: "detail", label: t("common.detail") }];
+        const menuItems: NonNullable<MenuProps["items"]> = [
+          { key: "detail", label: t("common.detail") },
+        ];
         if (
           canManageResourceTasks &&
           (record.status === "running" ||
@@ -411,7 +438,12 @@ export function IndexBuildListScene() {
             }}
             trigger={["click"]}
           >
-            <AppButton aria-label={t("dataConnect.moreActions")} className={sceneStyles.actionMore} icon={<EllipsisOutlined />} type="link" />
+            <AppButton
+              aria-label={t("dataConnect.moreActions")}
+              className={sceneStyles.actionMore}
+              icon={<EllipsisOutlined />}
+              type="link"
+            />
           </Dropdown>
         );
       },
@@ -455,9 +487,7 @@ export function IndexBuildListScene() {
             locale={{
               emptyText: (
                 <EmptyStatePanel
-                  description={
-                    t("dataCatalog.task.emptyDescription")
-                  }
+                  description={t("dataCatalog.task.emptyDescription")}
                   icon={<UnorderedListOutlined />}
                   title={t("dataCatalog.task.empty")}
                 />
@@ -466,18 +496,26 @@ export function IndexBuildListScene() {
             loading={loading}
             onChange={(pagination, filters, sorter, extra) => {
               if (extra.action === "filter") {
-                updateListFilters({ executeType: filters.executeType?.[0] as BuildTaskExecuteType | undefined, mode: filters.mode?.[0] as BuildMode | undefined, statuses: (filters.status ?? []).map(String) as BuildTaskStatus[] });
+                updateListFilters({
+                  executeType: filters.executeType?.[0] as BuildTaskExecuteType | undefined,
+                  mode: filters.mode?.[0] as BuildMode | undefined,
+                  statuses: (filters.status ?? []).map(String) as BuildTaskStatus[],
+                });
                 return;
               }
               handleTableChange(pagination, filters, sorter, extra);
             }}
             pagination={false}
             rowKey="id"
-            rowSelection={canManageResourceTasks ? {
-              selectedRowKeys: selectedKeys,
-              onChange: (keys) => setSelectedKeys(keys.map(String)),
-              getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
-            } : undefined}
+            rowSelection={
+              canManageResourceTasks
+                ? {
+                    selectedRowKeys: selectedKeys,
+                    onChange: (keys) => setSelectedKeys(keys.map(String)),
+                    getCheckboxProps: (task) => ({ disabled: isActiveBuildTask(task) }),
+                  }
+                : undefined
+            }
             tableLayout="fixed"
           />
         )}

@@ -131,8 +131,7 @@ export function OpenApiSpecInput({
     validation.ok &&
     analysis.operationCount > 1;
 
-  const showOpenApi31Hint =
-    analysis.ok && analysis.openApiVersion.startsWith("3.1");
+  const showOpenApi31Hint = analysis.ok && analysis.openApiVersion.startsWith("3.1");
 
   return (
     <div className={styles.root}>
@@ -204,7 +203,9 @@ export function OpenApiSpecInput({
         onChange={(key) => setMode(key as InputMode)}
         size="small"
       />
-      {fetchError ? <Alert message={fetchError} showIcon style={{ marginTop: 8 }} type="error" /> : null}
+      {fetchError ? (
+        <Alert message={fetchError} showIcon style={{ marginTop: 8 }} type="error" />
+      ) : null}
       {value.trim() && !validation.ok ? (
         <Alert message={validation.reason} showIcon style={{ marginTop: 8 }} type="error" />
       ) : null}

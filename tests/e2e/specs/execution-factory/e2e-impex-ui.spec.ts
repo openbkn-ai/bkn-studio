@@ -40,11 +40,7 @@ import {
   exportToolboxViaApi,
   publishToolboxViaApi,
 } from "../../helpers/toolbox";
-import {
-  buildMcpName,
-  cleanupMcpViaApi,
-  createToolImportedMcpViaApi,
-} from "../../helpers/mcp";
+import { buildMcpName, cleanupMcpViaApi, createToolImportedMcpViaApi } from "../../helpers/mcp";
 
 test.describe("Execution Factory — Impex UI E2E flows", () => {
   test.describe.configure({ timeout: 180_000 });
@@ -207,9 +203,7 @@ test.describe("Execution Factory — Impex UI E2E flows", () => {
     const body = (await list.json()) as {
       data?: Array<{ box_id: string; box_name?: string; name?: string }>;
     };
-    const imported = body.data?.find(
-      (item) => (item.box_name ?? item.name) === importName,
-    );
+    const imported = body.data?.find((item) => (item.box_name ?? item.name) === importName);
     expect(imported?.box_id).toBeTruthy();
     if (imported?.box_id) {
       createdBoxIds.push(imported.box_id);

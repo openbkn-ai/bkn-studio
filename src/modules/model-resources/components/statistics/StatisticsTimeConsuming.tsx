@@ -58,7 +58,9 @@ export function StatisticsTimeConsuming({ overview }: StatisticsTimeConsumingPro
   return (
     <div className={styles.panel} style={{ marginTop: 24 }}>
       <div className={styles.panelHeader}>
-        <h3 className={styles.panelTitle}>{t("modelResources.statistics.charts.timeAndFirstToken")}</h3>
+        <h3 className={styles.panelTitle}>
+          {t("modelResources.statistics.charts.timeAndFirstToken")}
+        </h3>
         <p className={styles.panelSubtitle}>{t("modelResources.statistics.units.secondsHint")}</p>
       </div>
       <div className={styles.panelBody}>

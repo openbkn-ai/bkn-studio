@@ -7,10 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ConceptGroupDetail,
@@ -84,7 +81,10 @@ export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId
     const group = mockConceptGroups[networkId]?.find((item) => item.id === groupId) ?? null;
     return wait(
       group
-        ? { ...enrichConceptGroupDetail(networkId, group), operations: mockKnowledgeNetworkChildOperations }
+        ? {
+            ...enrichConceptGroupDetail(networkId, group),
+            operations: mockKnowledgeNetworkChildOperations,
+          }
         : null,
     );
   }
@@ -256,9 +256,7 @@ export async function removeObjectTypesFromKnowledgeNetworkConceptGroup(
       return {
         ...item,
         conceptGroupIds: item.conceptGroupIds.filter((entry) => entry !== groupId),
-        conceptGroupNames: (item.conceptGroupNames ?? []).filter(
-          (entry) => entry !== group?.name,
-        ),
+        conceptGroupNames: (item.conceptGroupNames ?? []).filter((entry) => entry !== group?.name),
       };
     });
 
@@ -308,8 +306,7 @@ export async function importKnowledgeNetworkConceptGroup(
 
       return value
         .filter(
-          (item): item is Record<string, unknown> =>
-            typeof item === "object" && item !== null,
+          (item): item is Record<string, unknown> => typeof item === "object" && item !== null,
         )
         .map((item) => ({
           id: stringFromUnknown(item.id),
@@ -317,9 +314,7 @@ export async function importKnowledgeNetworkConceptGroup(
           description: stringFromUnknown(item.comment ?? item.description),
           color: typeof item.color === "string" ? item.color : undefined,
           icon: typeof item.icon === "string" ? item.icon : undefined,
-          tags: Array.isArray(item.tags)
-            ? item.tags.map((tag) => stringFromUnknown(tag))
-            : [],
+          tags: Array.isArray(item.tags) ? item.tags.map((tag) => stringFromUnknown(tag)) : [],
         }))
         .filter((item) => item.id && item.name);
     };
@@ -340,9 +335,7 @@ export async function importKnowledgeNetworkConceptGroup(
       objectTypesTotal: objectTypes.length,
       relationTypes,
       relationTypesTotal: relationTypes.length,
-      tags: Array.isArray(payload.tags)
-        ? payload.tags.map((tag) => stringFromUnknown(tag))
-        : [],
+      tags: Array.isArray(payload.tags) ? payload.tags.map((tag) => stringFromUnknown(tag)) : [],
       updateTime: formatTimestamp(Date.now()),
       updaterName: "Import",
     });
@@ -376,16 +369,12 @@ export async function importKnowledgeNetworkConceptGroup(
   }
 
   try {
-    await http.post(
-      `/bkn-backend/v1/knowledge-networks/${networkId}/concept-groups`,
-      requestBody,
-      {
-        params: {
-          import_mode: importMode,
-          validate_dependency: false,
-        },
+    await http.post(`/bkn-backend/v1/knowledge-networks/${networkId}/concept-groups`, requestBody, {
+      params: {
+        import_mode: importMode,
+        validate_dependency: false,
       },
-    );
+    });
   } catch (error) {
     rethrowImportConflict(error);
   }

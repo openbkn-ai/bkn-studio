@@ -105,9 +105,7 @@ describe("parseFunctionParametersFromApiSpec", () => {
         type: "array",
         description: undefined,
         required: false,
-        sub_parameters: [
-          { name: "item", type: "string", description: undefined, required: true },
-        ],
+        sub_parameters: [{ name: "item", type: "string", description: undefined, required: true }],
       },
     ]);
   });

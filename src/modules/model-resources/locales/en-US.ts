@@ -27,13 +27,14 @@ export const modelResourcesEnUS = {
       saveSuccess: "Model saved",
       saveFailed: "Failed to save model",
       duplicateConfigExists: "Model configuration already exists: {{name}}. {{permission}}",
-      duplicateConfigNoDefaultPermission: "You are not allowed to switch this model to the default.",
+      duplicateConfigNoDefaultPermission:
+        "You are not allowed to switch this model to the default.",
       duplicateConfigNoDisplayPermission:
         "The model configuration already exists, but you are not allowed to view or switch the model.",
       duplicateConfigAlreadyDefault: "This model is already the default.",
       duplicateConfigSetDefaultTitle: "Model configuration already exists",
       duplicateConfigSetDefaultContent:
-        "This model configuration already exists. Switch the existing model \"{{name}}\" to the default?",
+        'This model configuration already exists. Switch the existing model "{{name}}" to the default?',
       duplicateConfigSetDefaultOk: "Confirm switch",
       deleteSuccess: "Model deleted",
       deleteFailed: "Failed to delete model",
@@ -42,22 +43,22 @@ export const modelResourcesEnUS = {
       defaultTag: "Default",
       setDefaultConfirmTitle: "Change system default small model (high-risk)",
       setDefaultConfirmContent:
-        "Change the system default {{type}} model to \"{{name}}\"? The current default is cleared; takes up to ~60s.",
+        'Change the system default {{type}} model to "{{name}}"? The current default is cleared; takes up to ~60s.',
       setDefaultConfirmOk: "Confirm change",
       setDefaultSuccess: "Set as system default.",
       setDefaultFailed: "Failed to set system default.",
       unsetDefaultConfirmTitle: "Clear system default (high-risk)",
       unsetDefaultConfirmContent:
-        "Clear \"{{name}}\" as the system default {{type}} model? The type returns to \"no default\"; takes up to ~60s.",
+        'Clear "{{name}}" as the system default {{type}} model? The type returns to "no default"; takes up to ~60s.',
       unsetDefaultConfirmOk: "Confirm clear",
       unsetDefaultSuccess: "System default cleared.",
       unsetDefaultFailed: "Failed to clear system default.",
       setDefaultLlmConfirmTitle: "Change system default LLM (high-risk)",
       setDefaultLlmConfirmContent:
-        "Set the system default LLM to \"{{name}}\"? The current default will be cleared, effective in ~60s. ContextLoader will then use this model automatically.",
+        'Set the system default LLM to "{{name}}"? The current default will be cleared, effective in ~60s. ContextLoader will then use this model automatically.',
       unsetDefaultLlmConfirmTitle: "Clear system default LLM (high-risk)",
       unsetDefaultLlmConfirmContent:
-        "Clear \"{{name}}\" as the system default LLM? It returns to \"no default\", effective in ~60s.",
+        'Clear "{{name}}" as the system default LLM? It returns to "no default", effective in ~60s.',
       authorizationPending: "Authorization management will be added in a later release.",
       tabs: {
         llm: "Large models",
@@ -131,8 +132,10 @@ export const modelResourcesEnUS = {
         quotaTitleDescribe2Edit:
           "- After disabling this feature, all users can use the model without limits. Existing usage records are kept, but previous quota rules are cleared.",
         defaultModel: "Set as default model",
-        llmDefaultModelHint: "The first LLM is selected automatically; enabling this replaces the current default LLM.",
-        smallDefaultModelHint: "The first model of this type is selected automatically; enabling this replaces the current default of the same type.",
+        llmDefaultModelHint:
+          "The first LLM is selected automatically; enabling this replaces the current default LLM.",
+        smallDefaultModelHint:
+          "The first model of this type is selected automatically; enabling this replaces the current default of the same type.",
         enterPlaceholder: "Enter value",
         secretKey: "Secret Key",
         selectPlaceholder: "Select",
@@ -181,7 +184,8 @@ export const modelResourcesEnUS = {
       month: "Month",
       quotaModalTip: "Please configure the model limit settings first",
       emptyTitle: "No quota records",
-      emptyDescription: "Enable model quotas in Model Configuration first, then return here to set limits and allocate user quotas.",
+      emptyDescription:
+        "Enable model quotas in Model Configuration first, then return here to set limits and allocate user quotas.",
       goToModelConfig: "Go to Model Configuration",
       sortByName: "Sort by name",
       sortByCount: "Sort by estimated total amount",

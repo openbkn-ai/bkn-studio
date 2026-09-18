@@ -40,7 +40,5 @@ export function AuthGate({ children, onCurrentUser }: AuthGateProps) {
     return <CurrentUserLoader onLoaded={onCurrentUser}>{children}</CurrentUserLoader>;
   }
 
-  return (
-    <SignInScreen onDevTokenSaved={() => forceRender((tick) => tick + 1)} />
-  );
+  return <SignInScreen onDevTokenSaved={() => forceRender((tick) => tick + 1)} />;
 }

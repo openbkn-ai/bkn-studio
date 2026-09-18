@@ -11,7 +11,7 @@ name: ci-quality
 on:
   pull_request:
   push:
-    branches: ['**']
+    branches: ["**"]
   workflow_dispatch:
 
 concurrency:
@@ -44,6 +44,9 @@ jobs:
 
       - name: License header check
         run: node scripts/check-license-headers.mjs
+
+      - name: Formatting check
+        run: pnpm run format:check
 
       - name: Type-aware lint
         run: pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0

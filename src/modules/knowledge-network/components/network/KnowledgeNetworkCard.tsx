@@ -5,7 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { ClockCircleOutlined, DeploymentUnitOutlined, EllipsisOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  ClockCircleOutlined,
+  DeploymentUnitOutlined,
+  EllipsisOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { Dropdown, Tooltip, type MenuProps } from "antd";
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,37 +50,33 @@ export function KnowledgeNetworkCard({
   const { t } = useTranslation();
   const description = record.description || t("knowledgeNetwork.noDescription");
   const updateTime = formatKnowledgeNetworkUpdateTime(record.updateTime);
-  const dropdownItems: MenuProps["items"] = getKnowledgeNetworkCardMenuKeys(record).map(
-    (key) => ({
-      key,
-      danger: key === "delete",
-      label:
-        key === "view"
-          ? t("common.detail")
-          : key === "edit"
-            ? t("common.edit")
-            : key === "export"
-              ? t("knowledgeNetwork.export")
-              : key === "authorize"
-                ? t("knowledgeNetwork.authorizeAction")
-                : t("common.delete"),
-      // Export is the one entry that fans out: the same network leaves either as
-      // the JSON view or as the BKN package, so the format is picked here rather
-      // than in a dialog after the click.
-      ...(key === "export"
-        ? {
-            children: KNOWLEDGE_NETWORK_EXPORT_FORMATS.map((format) => ({
-              key: getKnowledgeNetworkExportMenuKey(format),
-              label: t(
-                format === "json"
-                  ? "knowledgeNetwork.exportJson"
-                  : "knowledgeNetwork.exportBkn",
-              ),
-            })),
-          }
-        : {}),
-    }),
-  );
+  const dropdownItems: MenuProps["items"] = getKnowledgeNetworkCardMenuKeys(record).map((key) => ({
+    key,
+    danger: key === "delete",
+    label:
+      key === "view"
+        ? t("common.detail")
+        : key === "edit"
+          ? t("common.edit")
+          : key === "export"
+            ? t("knowledgeNetwork.export")
+            : key === "authorize"
+              ? t("knowledgeNetwork.authorizeAction")
+              : t("common.delete"),
+    // Export is the one entry that fans out: the same network leaves either as
+    // the JSON view or as the BKN package, so the format is picked here rather
+    // than in a dialog after the click.
+    ...(key === "export"
+      ? {
+          children: KNOWLEDGE_NETWORK_EXPORT_FORMATS.map((format) => ({
+            key: getKnowledgeNetworkExportMenuKey(format),
+            label: t(
+              format === "json" ? "knowledgeNetwork.exportJson" : "knowledgeNetwork.exportBkn",
+            ),
+          })),
+        }
+      : {}),
+  }));
 
   return (
     <article
@@ -93,23 +94,14 @@ export function KnowledgeNetworkCard({
     >
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <span
-            className={styles.iconBox}
-            style={{ color: record.color || "#1d4ed8" }}
-          >
+          <span className={styles.iconBox} style={{ color: record.color || "#1d4ed8" }}>
             <DeploymentUnitOutlined />
           </span>
           <div className={styles.titleContent}>
             <div className={styles.titleText}>{record.name}</div>
             <Tooltip
               classNames={{ root: styles.descriptionTooltip }}
-              title={
-                record.description ? (
-                  <MarkdownText text={record.description} />
-                ) : (
-                  description
-                )
-              }
+              title={record.description ? <MarkdownText text={record.description} /> : description}
             >
               <div className={styles.description}>{description}</div>
             </Tooltip>
@@ -151,9 +143,7 @@ export function KnowledgeNetworkCard({
           // bubble to the card's own handler. Leaf items stop that themselves in
           // onClick, but a submenu parent fires no onClick at all — without this
           // wrapper, opening the export formats would open the workspace instead.
-          popupRender={(menu) => (
-            <div onClick={(event) => event.stopPropagation()}>{menu}</div>
-          )}
+          popupRender={(menu) => <div onClick={(event) => event.stopPropagation()}>{menu}</div>}
           trigger={["click"]}
         >
           <button

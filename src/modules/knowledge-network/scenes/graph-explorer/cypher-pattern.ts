@@ -5,7 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { buildInstanceId, stringifyValue, type GEdge, type GNode } from "@/modules/knowledge-network/services/graph-explorer.service";
+import {
+  buildInstanceId,
+  stringifyValue,
+  type GEdge,
+  type GNode,
+} from "@/modules/knowledge-network/services/graph-explorer.service";
 
 /**
  * The Cypher subset the backend compiles is MATCH (a:Label)[-[:REL]->(b:Label)]... [WHERE ...]
@@ -42,7 +47,8 @@ export function parseCypherPattern(input: string): CypherPattern | CypherParseEr
     const variable = hit[1];
     const label = hit[2];
     if (label) {
-      if (nodes.has(variable) && nodes.get(variable) !== label) return { error: "unlabeled", detail: variable };
+      if (nodes.has(variable) && nodes.get(variable) !== label)
+        return { error: "unlabeled", detail: variable };
       nodes.set(variable, label);
     } else if (!nodes.has(variable)) {
       nodes.set(variable, "");
@@ -61,19 +67,40 @@ export function parseCypherPattern(input: string): CypherPattern | CypherParseEr
     // Undirected `-[:R]-` is written as it reads; the canvas puts it back into the relation
     // type's declared direction when the subgraph is merged.
     const undirected = /^\s*-\s*\[\s*(?:\w+\s*)?:\s*([^\s\]]+)\s*\]\s*-\s*$/.exec(between);
-    if (forward) edges.push({ from: positions[index].variable, to: positions[index + 1].variable, relation: forward[1] });
-    else if (backward) edges.push({ from: positions[index + 1].variable, to: positions[index].variable, relation: backward[1] });
-    else if (undirected) edges.push({ from: positions[index].variable, to: positions[index + 1].variable, relation: undirected[1] });
+    if (forward)
+      edges.push({
+        from: positions[index].variable,
+        to: positions[index + 1].variable,
+        relation: forward[1],
+      });
+    else if (backward)
+      edges.push({
+        from: positions[index + 1].variable,
+        to: positions[index].variable,
+        relation: backward[1],
+      });
+    else if (undirected)
+      edges.push({
+        from: positions[index].variable,
+        to: positions[index + 1].variable,
+        relation: undirected[1],
+      });
     // Anything else (a comma, a new path) starts a new chain without an edge.
   }
   return { nodes: [...nodes].map(([variable, label]) => ({ variable, label })), edges, body };
 }
 
-export function isCypherParseError(value: CypherPattern | CypherParseError): value is CypherParseError {
+export function isCypherParseError(
+  value: CypherPattern | CypherParseError,
+): value is CypherParseError {
   return "error" in value;
 }
 
-export type ResolvedNodeRef = CypherNodeRef & { otId: string; otName: string; primaryKeys: string[] };
+export type ResolvedNodeRef = CypherNodeRef & {
+  otId: string;
+  otName: string;
+  primaryKeys: string[];
+};
 export type ResolvedEdgeRef = CypherEdgeRef & { relTypeId: string; relTypeName: string };
 
 export function columnAlias(variable: string, primaryKey: string): string {
@@ -81,7 +108,11 @@ export function columnAlias(variable: string, primaryKey: string): string {
 }
 
 /** Appends the primary-key projection and a row cap to the user's MATCH / WHERE fragment. */
-export function buildCypherQuery(pattern: CypherPattern, resolved: ResolvedNodeRef[], limit: number): string {
+export function buildCypherQuery(
+  pattern: CypherPattern,
+  resolved: ResolvedNodeRef[],
+  limit: number,
+): string {
   const projections = resolved.flatMap((node) =>
     node.primaryKeys.map((pk) => `${node.variable}.${pk} AS ${columnAlias(node.variable, pk)}`),
   );
@@ -116,7 +147,14 @@ export function cypherRowsToGraph(
       idByVariable.set(node.variable, id);
       if (!nodes.has(id)) {
         const display = node.primaryKeys.map((pk) => stringifyValue(identity[pk])).join("_");
-        nodes.set(id, { id, otId: node.otId, otName: node.otName, identity, display, props: { ...identity } });
+        nodes.set(id, {
+          id,
+          otId: node.otId,
+          otName: node.otName,
+          identity,
+          display,
+          props: { ...identity },
+        });
       }
     }
     for (const edge of resolvedEdges) {
@@ -124,7 +162,14 @@ export function cypherRowsToGraph(
       const target = idByVariable.get(edge.to);
       if (!source || !target || !byVariable.has(edge.from) || !byVariable.has(edge.to)) continue;
       const id = `${source}|${edge.relTypeId}|${target}`;
-      if (!edges.has(id)) edges.set(id, { id, source, target, relTypeId: edge.relTypeId, relTypeName: edge.relTypeName });
+      if (!edges.has(id))
+        edges.set(id, {
+          id,
+          source,
+          target,
+          relTypeId: edge.relTypeId,
+          relTypeName: edge.relTypeName,
+        });
     }
   }
   return { nodes: [...nodes.values()], edges: [...edges.values()] };

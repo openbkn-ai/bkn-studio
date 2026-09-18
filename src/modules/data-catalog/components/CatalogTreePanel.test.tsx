@@ -21,14 +21,16 @@ vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
   useTranslation: () => ({
     i18n: { language: "zh-CN" },
-    t: (key: string, values?: { catalogCount?: number }) => (
-      key === "dataCatalog.tree.summary" ? `catalogs:${values?.catalogCount}` : key
-    ),
+    t: (key: string, values?: { catalogCount?: number }) =>
+      key === "dataCatalog.tree.summary" ? `catalogs:${values?.catalogCount}` : key,
   }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
-  useAppServices: () => ({ message: { error: vi.fn(), success: vi.fn() }, modal: { confirm: vi.fn() } }),
+  useAppServices: () => ({
+    message: { error: vi.fn(), success: vi.fn() },
+    modal: { confirm: vi.fn() },
+  }),
 }));
 
 vi.mock("@/framework/permission/PermissionGate", () => ({
@@ -47,36 +49,57 @@ vi.mock("@/framework/ui/common/BusinessTreePanel", () => ({
     onSelect?: (keys: Key[]) => void;
     treeData?: MockTreeNode[];
   }) => {
-    const renderTitles = (nodes: MockTreeNode[]): ReactNode => nodes.map((node) => (
-      <div key={node.key}>
-        {node.title}
-        {node.children ? renderTitles(node.children) : null}
-      </div>
-    ));
+    const renderTitles = (nodes: MockTreeNode[]): ReactNode =>
+      nodes.map((node) => (
+        <div key={node.key}>
+          {node.title}
+          {node.children ? renderTitles(node.children) : null}
+        </div>
+      ));
 
     return (
       <>
         <output data-testid="expanded-keys">{expandedKeys.join(",")}</output>
         <output data-testid="tree-keys">{treeData.map((node) => node.key).join(",")}</output>
         <output data-testid="catalog-tree-keys">
-          {treeData.flatMap((root) => [
-            root.key,
-            ...(root.children ?? []).flatMap((child) => [
-              child.key,
-              ...(child.children ?? []).map((grandchild) => grandchild.key),
-            ]),
-          ]).join(",")}
+          {treeData
+            .flatMap((root) => [
+              root.key,
+              ...(root.children ?? []).flatMap((child) => [
+                child.key,
+                ...(child.children ?? []).map((grandchild) => grandchild.key),
+              ]),
+            ])
+            .join(",")}
         </output>
         <div data-testid="tree-titles">{renderTitles(treeData)}</div>
-        <button onClick={() => onExpand?.([])} type="button">collapse catalog</button>
-        <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">expand catalog</button>
-        <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">select connector</button>
-        <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">load more logical catalogs</button>
-        <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">select catalog</button>
+        <button onClick={() => onExpand?.([])} type="button">
+          collapse catalog
+        </button>
+        <button onClick={() => onExpand?.(["catalog:catalog-1"])} type="button">
+          expand catalog
+        </button>
+        <button onClick={() => onSelect?.(["connector:postgresql"])} type="button">
+          select connector
+        </button>
+        <button onClick={() => onSelect?.(["catalog-load-more:logical"])} type="button">
+          load more logical catalogs
+        </button>
+        <button onClick={() => onSelect?.(["catalog:catalog-1"])} type="button">
+          select catalog
+        </button>
       </>
     );
   },
-  BusinessTreePanel: ({ children, footer, headerActions }: { children: ReactNode; footer?: ReactNode; headerActions: ReactNode }) => (
+  BusinessTreePanel: ({
+    children,
+    footer,
+    headerActions,
+  }: {
+    children: ReactNode;
+    footer?: ReactNode;
+    headerActions: ReactNode;
+  }) => (
     <div>
       {headerActions}
       {children}
@@ -157,7 +180,9 @@ describe("CatalogTreePanel", () => {
     render(
       <CatalogTreePanel
         catalogs={[]}
-        connectorTypeStats={[{ catalogCount: 1, catalogType: "physical", connectorType: "postgresql" }]}
+        connectorTypeStats={[
+          { catalogCount: 1, catalogType: "physical", connectorType: "postgresql" },
+        ]}
         discoveringCatalogIds={[]}
         keyword="orders"
         onRefresh={vi.fn()}
@@ -209,18 +234,20 @@ describe("CatalogTreePanel", () => {
       />,
     );
 
-    expect(screen.getByTestId("catalog-tree-keys").textContent).toBe([
-      "group:physical",
-      "connector:postgresql",
-      "catalog:physical-zulu",
-      "catalog:physical-chinese",
-      "catalog:physical-alpha",
-      "group:logical",
-      "catalog:logical-builtin",
-      "catalog:logical-zulu",
-      "catalog:logical-chinese",
-      "catalog:logical-alpha",
-    ].join(","));
+    expect(screen.getByTestId("catalog-tree-keys").textContent).toBe(
+      [
+        "group:physical",
+        "connector:postgresql",
+        "catalog:physical-zulu",
+        "catalog:physical-chinese",
+        "catalog:physical-alpha",
+        "group:logical",
+        "catalog:logical-builtin",
+        "catalog:logical-zulu",
+        "catalog:logical-chinese",
+        "catalog:logical-alpha",
+      ].join(","),
+    );
   });
 
   it("exposes complete names for truncated catalog and schema nodes", () => {

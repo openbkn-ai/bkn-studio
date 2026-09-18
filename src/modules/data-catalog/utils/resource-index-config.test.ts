@@ -15,26 +15,36 @@ import {
 
 describe("resource-index-config", () => {
   it("distinguishes persisted build features from editor defaults", () => {
-    expect(hasPersistedBuildFeatures({
-      schema: [{ name: "content", type: "text" }],
-    })).toBe(false);
-    expect(hasPersistedBuildFeatures({
-      schema: [{
-        features: [
-          { config: { ignore_above: 256 }, featureType: "keyword" },
-          { featureType: "fulltext" },
+    expect(
+      hasPersistedBuildFeatures({
+        schema: [{ name: "content", type: "text" }],
+      }),
+    ).toBe(false);
+    expect(
+      hasPersistedBuildFeatures({
+        schema: [
+          {
+            features: [
+              { config: { ignore_above: 256 }, featureType: "keyword" },
+              { featureType: "fulltext" },
+            ],
+            name: "content",
+            type: "text",
+          },
         ],
-        name: "content",
-        type: "text",
-      }],
-    })).toBe(true);
-    expect(hasPersistedBuildFeatures({
-      schema: [{
-        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
-        name: "code",
-        type: "string",
-      }],
-    })).toBe(true);
+      }),
+    ).toBe(true);
+    expect(
+      hasPersistedBuildFeatures({
+        schema: [
+          {
+            features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+            name: "code",
+            type: "string",
+          },
+        ],
+      }),
+    ).toBe(true);
   });
 
   it("writes defaults and per-field overrides into schema features", () => {
@@ -104,25 +114,22 @@ describe("resource-index-config", () => {
   });
 
   it("writes one feature per type", () => {
-    const result = applyIndexFormToSchema(
-      [{ name: "body", type: "string", displayName: "Body" }],
-      {
-        primaryKeyFields: [],
-        incrementalFields: [],
-        embeddingFields: ["body"],
-        embeddingModel: "embed-default",
-        fieldEmbeddingModels: {},
-        fieldEmbeddingModelGroups: {
-          body: ["embed-a", "embed-b", "embed-c", "embed-d"],
-        },
-        fulltextFields: ["body"],
-        fulltextAnalyzer: "standard",
-        fieldFulltextAnalyzers: {},
-        fieldFulltextAnalyzerGroups: {
-          body: ["ik_max_word", "", "standard", "hanlp_index"],
-        },
+    const result = applyIndexFormToSchema([{ name: "body", type: "string", displayName: "Body" }], {
+      primaryKeyFields: [],
+      incrementalFields: [],
+      embeddingFields: ["body"],
+      embeddingModel: "embed-default",
+      fieldEmbeddingModels: {},
+      fieldEmbeddingModelGroups: {
+        body: ["embed-a", "embed-b", "embed-c", "embed-d"],
       },
-    );
+      fulltextFields: ["body"],
+      fulltextAnalyzer: "standard",
+      fieldFulltextAnalyzers: {},
+      fieldFulltextAnalyzerGroups: {
+        body: ["ik_max_word", "", "standard", "hanlp_index"],
+      },
+    });
 
     expect(result.schema[0].features).toEqual([
       {
@@ -146,11 +153,15 @@ describe("resource-index-config", () => {
 
   it("writes and reads keyword feature name and ignore_above", () => {
     const result = applyIndexFormToSchema(
-      [{
-        features: [{ featureType: "keyword", name: "legacy_keyword", config: { ignore_above: 64 } }],
-        name: "body",
-        type: "text",
-      }],
+      [
+        {
+          features: [
+            { featureType: "keyword", name: "legacy_keyword", config: { ignore_above: 64 } },
+          ],
+          name: "body",
+          type: "text",
+        },
+      ],
       {
         defaultKeywordIgnoreAbove: 512,
         primaryKeyFields: [],
@@ -166,31 +177,37 @@ describe("resource-index-config", () => {
       },
     );
 
-    expect(result.schema[0].features).toEqual([{
-      config: { ignore_above: 512 },
-      displayName: "exact",
-      featureType: "keyword",
-      isDefault: true,
-      name: "exact",
-    }]);
-    expect(indexFormValuesFromResource(result).fieldKeywordGroups).toEqual({
-      body: [{
-        description: undefined,
+    expect(result.schema[0].features).toEqual([
+      {
+        config: { ignore_above: 512 },
+        displayName: "exact",
+        featureType: "keyword",
         isDefault: true,
         name: "exact",
-        value: "512",
-      }],
+      },
+    ]);
+    expect(indexFormValuesFromResource(result).fieldKeywordGroups).toEqual({
+      body: [
+        {
+          description: undefined,
+          isDefault: true,
+          name: "exact",
+          value: "512",
+        },
+      ],
     });
   });
 
   it("preserves an explicit keyword limit that equals the resource default", () => {
     const values = indexFormValuesFromResource({
       indexConfig: { defaultKeywordIgnoreAbove: 256 },
-      schema: [{
-        features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
-        name: "code",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { ignore_above: 256 }, featureType: "keyword" }],
+          name: "code",
+          type: "string",
+        },
+      ],
     });
 
     const keyword = values.fieldKeywordGroups?.code?.[0];
@@ -235,7 +252,9 @@ describe("resource-index-config", () => {
       embeddingModel: "embed-default",
       fieldEmbeddingModelGroups: {
         body: [{ value: "", name: undefined, description: undefined, isDefault: undefined }],
-        note: [{ value: "embed-special", name: undefined, description: undefined, isDefault: undefined }],
+        note: [
+          { value: "embed-special", name: undefined, description: undefined, isDefault: undefined },
+        ],
       },
       fieldEmbeddingModels: { note: "embed-special" },
       fieldKeywordGroups: {
@@ -245,7 +264,9 @@ describe("resource-index-config", () => {
       },
       fieldFulltextAnalyzerGroups: {
         body: [{ value: "", name: undefined, description: undefined, isDefault: undefined }],
-        title: [{ value: "ik_max_word", name: undefined, description: undefined, isDefault: undefined }],
+        title: [
+          { value: "ik_max_word", name: undefined, description: undefined, isDefault: undefined },
+        ],
       },
       fieldFulltextAnalyzers: { title: "ik_max_word" },
       fulltextFields: ["title", "body"],
@@ -273,14 +294,18 @@ describe("resource-index-config", () => {
 
   it("preserves a referenced vector without turning it into a native vector", () => {
     const resource = {
-      schema: [{
-        features: [{
-          featureType: "vector" as const,
-          refProperty: "content_embedding",
-        }],
-        name: "content",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [
+            {
+              featureType: "vector" as const,
+              refProperty: "content_embedding",
+            },
+          ],
+          name: "content",
+          type: "string",
+        },
+      ],
     };
     const values = indexFormValuesFromResource(resource);
 
@@ -315,11 +340,13 @@ describe("resource-index-config", () => {
           type: "text",
         },
         {
-          features: [{
-            config: { dimension: 1024, embedding_model: "embed-default" },
-            featureType: "vector" as const,
-            name: "embedding",
-          }],
+          features: [
+            {
+              config: { dimension: 1024, embedding_model: "embed-default" },
+              featureType: "vector" as const,
+              name: "embedding",
+            },
+          ],
           name: "content_embedding",
           type: "vector",
         },

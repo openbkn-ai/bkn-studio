@@ -141,9 +141,7 @@ export function ObjectTypeDataAttributeFormDrawer({
         const valid =
           codePoints.length >= 1 &&
           codePoints.length <= 8 &&
-          codePoints.every(
-            (character) => !/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}]/u.test(character),
-          );
+          codePoints.every((character) => !/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}]/u.test(character));
         return valid
           ? Promise.resolve()
           : Promise.reject(new Error(t("knowledgeNetwork.objectTypeMaskRuleReplacementInvalid")));
@@ -250,10 +248,12 @@ export function ObjectTypeDataAttributeFormDrawer({
             rules={[{ required: true }]}
           >
             <Select
-              options={maskGranularitiesForPropertyType(maskRulePropertyType).map((granularity) => ({
-                label: t(`knowledgeNetwork.objectTypeMaskRuleGranularityValue.${granularity}`),
-                value: granularity,
-              }))}
+              options={maskGranularitiesForPropertyType(maskRulePropertyType).map(
+                (granularity) => ({
+                  label: t(`knowledgeNetwork.objectTypeMaskRuleGranularityValue.${granularity}`),
+                  value: granularity,
+                }),
+              )}
             />
           </Form.Item>
         );
@@ -336,8 +336,8 @@ export function ObjectTypeDataAttributeFormDrawer({
               name: property?.displayName || property?.name || "",
             })
           : property
-          ? t("knowledgeNetwork.objectTypeEditDataProperty")
-          : t("knowledgeNetwork.objectTypeAddDataProperty")
+            ? t("knowledgeNetwork.objectTypeEditDataProperty")
+            : t("knowledgeNetwork.objectTypeAddDataProperty")
       }
       width={560}
     >

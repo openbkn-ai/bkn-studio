@@ -81,7 +81,9 @@ describe("parseContentDispositionFilename", () => {
       ),
     ).toBe("fallback.zip");
     expect(
-      parseContentDispositionFilename("attachment; filename=\"fallback.zip\"; filename*=UTF-8''%E9%ZZ"),
+      parseContentDispositionFilename(
+        "attachment; filename=\"fallback.zip\"; filename*=UTF-8''%E9%ZZ",
+      ),
     ).toBe("fallback.zip");
   });
 

@@ -50,9 +50,9 @@ describe("oauth", () => {
   });
 
   it("computes the RFC 7636 S256 code challenge", async () => {
-    await expect(
-      computeCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
-    ).resolves.toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+    await expect(computeCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk")).resolves.toBe(
+      "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+    );
   });
 
   it("sends the normalized Studio locale through OIDC ui_locales", () => {
@@ -83,9 +83,7 @@ describe("oauth", () => {
     window.sessionStorage.setItem("bkn_oauth_state", "expected");
     window.sessionStorage.setItem("bkn_oauth_verifier", "verifier");
 
-    await expect(completeLogin("?code=abc&state=tampered")).rejects.toThrow(
-      /state mismatch/i,
-    );
+    await expect(completeLogin("?code=abc&state=tampered")).rejects.toThrow(/state mismatch/i);
   });
 
   it("surfaces authorization errors from the callback URL", async () => {
@@ -110,9 +108,7 @@ describe("oauth", () => {
       ),
     );
 
-    await expect(completeLogin("?code=abc&state=state-1")).resolves.toBe(
-      "/knowledge-network",
-    );
+    await expect(completeLogin("?code=abc&state=state-1")).resolves.toBe("/knowledge-network");
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/oauth2/token",
@@ -144,15 +140,15 @@ describe("oauth", () => {
       }),
     );
 
-    await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow(
-      "invalid_grant",
-    );
+    await expect(completeLogin("?code=abc&state=state-1")).rejects.toThrow("invalid_grant");
   });
 
   it("records a voluntary standalone logout before leaving Studio", async () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     document.cookie = "bkn_access_token=access-for-logout; path=/";
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
 
     await logout("standalone");
 
@@ -298,21 +294,15 @@ describe("login CSRF flow lock", () => {
     const onRelease = vi.fn();
     const unsubscribe = subscribeFlowLockRelease(onRelease);
 
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
-    );
+    window.dispatchEvent(new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }));
     expect(onRelease).toHaveBeenCalledTimes(1);
 
     // An unrelated key must not wake the wait screen.
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "something_else", newValue: null }),
-    );
+    window.dispatchEvent(new StorageEvent("storage", { key: "something_else", newValue: null }));
     expect(onRelease).toHaveBeenCalledTimes(1);
 
     unsubscribe();
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }),
-    );
+    window.dispatchEvent(new StorageEvent("storage", { key: FLOW_LOCK_KEY, newValue: null }));
     expect(onRelease).toHaveBeenCalledTimes(1);
   });
 });

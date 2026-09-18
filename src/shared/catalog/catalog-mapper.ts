@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type {
-  CatalogHealthStatus,
-  CatalogListQuery,
-  CatalogRecord,
-} from "@/shared/catalog/types";
+import type { CatalogHealthStatus, CatalogListQuery, CatalogRecord } from "@/shared/catalog/types";
 
 type BackendAccountInfo = {
   id?: string | null;
@@ -58,9 +54,9 @@ function normalizeCatalogTimestamp(value?: number) {
 }
 
 function catalogSchemas(item: BackendCatalogSummary, metadata: Record<string, unknown>) {
-	if (item.schemas?.length) {
-		return item.schemas;
-	}
+  if (item.schemas?.length) {
+    return item.schemas;
+  }
   const schemas = metadata.schemas;
   return Array.isArray(schemas)
     ? schemas.filter((schema): schema is string => typeof schema === "string")
@@ -139,11 +135,12 @@ export function filterCatalogs(items: CatalogRecord[], query: CatalogListQuery) 
       keyword.length === 0 ||
       item.name.toLowerCase().includes(keyword) ||
       item.description.toLowerCase().includes(keyword);
-    const matchesConnectorType =
-      !query.connectorType || item.connectorType === query.connectorType;
+    const matchesConnectorType = !query.connectorType || item.connectorType === query.connectorType;
     const matchesEnabled = query.enabled === undefined || item.enabled === query.enabled;
     const matchesHealthStatus = !query.healthStatus || item.healthStatus === query.healthStatus;
 
-    return matchesType && matchesKeyword && matchesConnectorType && matchesEnabled && matchesHealthStatus;
+    return (
+      matchesType && matchesKeyword && matchesConnectorType && matchesEnabled && matchesHealthStatus
+    );
   });
 }

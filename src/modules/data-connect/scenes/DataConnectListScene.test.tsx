@@ -24,7 +24,10 @@ vi.mock("antd", async (importOriginal) => {
   const actual = await importOriginal<typeof import("antd")>();
   return {
     ...actual,
-    Dropdown: ({ children, menu }: {
+    Dropdown: ({
+      children,
+      menu,
+    }: {
       children: ReactNode;
       menu: {
         items?: Array<{ key?: string | number; label?: ReactNode } | null>;
@@ -33,18 +36,22 @@ vi.mock("antd", async (importOriginal) => {
     }) => (
       <div>
         {children}
-        {menu.items?.map((item) => item ? (
-          <button
-            key={item.key}
-            onClick={() => menu.onClick?.({
-              domEvent: { stopPropagation: vi.fn() },
-              key: String(item.key),
-            })}
-            type="button"
-          >
-            {item.label}
-          </button>
-        ) : null)}
+        {menu.items?.map((item) =>
+          item ? (
+            <button
+              key={item.key}
+              onClick={() =>
+                menu.onClick?.({
+                  domEvent: { stopPropagation: vi.fn() },
+                  key: String(item.key),
+                })
+              }
+              type="button"
+            >
+              {item.label}
+            </button>
+          ) : null,
+        )}
       </div>
     ),
   };
@@ -67,7 +74,10 @@ vi.mock("@/framework/safety/DangerDeleteModal", () => ({
 }));
 
 vi.mock("@/framework/ui/common/AppTable", () => ({
-  AppTable: ({ columns, dataSource }: {
+  AppTable: ({
+    columns,
+    dataSource,
+  }: {
     columns: Array<{
       key?: string;
       render?: (value: unknown, record: DataConnectRecord) => ReactNode;
@@ -147,12 +157,7 @@ describe("DataConnectListScene object permissions", () => {
       items: [
         record("catalog-view-only", ["view_detail"]),
         record("catalog-summary-only", ["view_summary"]),
-        record("catalog-manager", [
-          "delete",
-          "modify",
-          "task_manage",
-          "view_detail",
-        ]),
+        record("catalog-manager", ["delete", "modify", "task_manage", "view_detail"]),
       ],
       total: 2,
     });
@@ -170,13 +175,17 @@ describe("DataConnectListScene object permissions", () => {
     const managerRow = await screen.findByTestId("record-catalog-manager");
 
     expect(within(viewOnlyRow).getByRole("button", { name: "common.detail" })).toBeTruthy();
-    expect(within(viewOnlyRow).queryByRole("button", {
-      name: "dataConnect.discoverManage",
-    })).toBeNull();
+    expect(
+      within(viewOnlyRow).queryByRole("button", {
+        name: "dataConnect.discoverManage",
+      }),
+    ).toBeNull();
     expect(within(summaryOnlyRow).queryByRole("button", { name: "common.detail" })).toBeNull();
-    expect(within(summaryOnlyRow).queryByRole("button", {
-      name: "dataConnect.moreActions",
-    })).toBeNull();
+    expect(
+      within(summaryOnlyRow).queryByRole("button", {
+        name: "dataConnect.moreActions",
+      }),
+    ).toBeNull();
     for (const action of [
       "common.edit",
       "common.testConnection",
@@ -186,9 +195,11 @@ describe("DataConnectListScene object permissions", () => {
       expect(within(viewOnlyRow).queryByRole("button", { name: action })).toBeNull();
     }
 
-    fireEvent.click(within(managerRow).getByRole("button", {
-      name: "dataConnect.discoverManage",
-    }));
+    fireEvent.click(
+      within(managerRow).getByRole("button", {
+        name: "dataConnect.discoverManage",
+      }),
+    );
     fireEvent.click(within(managerRow).getByRole("button", { name: "common.edit" }));
 
     await waitFor(() => {
@@ -206,10 +217,9 @@ describe("DataConnectListScene object permissions", () => {
     );
 
     expect(await screen.findByText("connections unavailable")).toBeInTheDocument();
-    expect(listDataConnectRecordsMock).toHaveBeenCalledWith(
-      expect.anything(),
-      { skipErrorToast: true },
-    );
+    expect(listDataConnectRecordsMock).toHaveBeenCalledWith(expect.anything(), {
+      skipErrorToast: true,
+    });
     expect(screen.queryByRole("button", { name: "common.retry" })).toBeNull();
     expect(screen.getByText("dataConnect.loadErrorRefreshHint")).toBeInTheDocument();
   });
@@ -272,33 +282,42 @@ describe("DataConnectListScene object permissions", () => {
 
     const search = screen.getByPlaceholderText("dataConnect.searchPlaceholder");
     fireEvent.change(search, { target: { value: "orders" } });
-    await waitFor(() => expect(listDataConnectRecordsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ connectorType: "postgresql", keyword: "orders" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listDataConnectRecordsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ connectorType: "postgresql", keyword: "orders" }),
+        { skipErrorToast: true },
+      ),
+    );
     const beforeRefresh = listDataConnectRecordsMock.mock.calls.length;
 
     fireEvent.click(screen.getByRole("button", { name: /common\.refresh$/ }));
 
     expect(search).toHaveValue("orders");
-    await waitFor(() => expect(listDataConnectRecordsMock).toHaveBeenCalledTimes(beforeRefresh + 1));
-    expect(listDataConnectRecordsMock).toHaveBeenLastCalledWith(expect.objectContaining({
-      connectorType: "postgresql",
-      keyword: "orders",
-    }), { skipErrorToast: true });
+    await waitFor(() =>
+      expect(listDataConnectRecordsMock).toHaveBeenCalledTimes(beforeRefresh + 1),
+    );
+    expect(listDataConnectRecordsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        connectorType: "postgresql",
+        keyword: "orders",
+      }),
+      { skipErrorToast: true },
+    );
   });
 
   it("does not let an older search result replace the latest connection records", async () => {
-    let resolveSlow: (value: { items: DataConnectRecord[]; total: number }) => void = () => undefined;
+    let resolveSlow: (value: { items: DataConnectRecord[]; total: number }) => void = () =>
+      undefined;
     const slowResult = new Promise<{ items: DataConnectRecord[]; total: number }>((resolve) => {
       resolveSlow = resolve;
     });
     listDataConnectRecordsMock.mockImplementation(({ keyword }: { keyword: string }) => {
       if (keyword === "slow") return slowResult;
-      if (keyword === "fast") return Promise.resolve({
-        items: [record("catalog-fast", ["view_detail"])],
-        total: 1,
-      });
+      if (keyword === "fast")
+        return Promise.resolve({
+          items: [record("catalog-fast", ["view_detail"])],
+          total: 1,
+        });
       return Promise.resolve({
         items: [record("catalog-initial", ["view_detail"])],
         total: 1,
@@ -314,10 +333,12 @@ describe("DataConnectListScene object permissions", () => {
     expect(await screen.findByTestId("record-catalog-initial")).toBeInTheDocument();
     const search = screen.getByPlaceholderText("dataConnect.searchPlaceholder");
     fireEvent.change(search, { target: { value: "slow" } });
-    await waitFor(() => expect(listDataConnectRecordsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ keyword: "slow" }),
-      { skipErrorToast: true },
-    ));
+    await waitFor(() =>
+      expect(listDataConnectRecordsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: "slow" }),
+        { skipErrorToast: true },
+      ),
+    );
     fireEvent.change(search, { target: { value: "fast" } });
     expect(await screen.findByTestId("record-catalog-fast")).toBeInTheDocument();
 
@@ -331,9 +352,11 @@ describe("DataConnectListScene object permissions", () => {
 
   it("does not show an older load error after a newer refresh succeeds", async () => {
     let rejectFirst: (error: Error) => void = () => undefined;
-    const firstResult = new Promise<{ items: DataConnectRecord[]; total: number }>((_resolve, reject) => {
-      rejectFirst = reject;
-    });
+    const firstResult = new Promise<{ items: DataConnectRecord[]; total: number }>(
+      (_resolve, reject) => {
+        rejectFirst = reject;
+      },
+    );
     listDataConnectRecordsMock.mockImplementationOnce(() => firstResult);
     listDataConnectRecordsMock.mockResolvedValue({
       items: [record("catalog-current", ["view_detail"])],

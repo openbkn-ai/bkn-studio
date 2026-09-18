@@ -12,15 +12,7 @@ import {
 } from "@/modules/execution-factory/utils/metadata-content";
 import type { ToolIoParameter, ToolIoSpec } from "@/modules/execution-factory/types/tool";
 
-const HTTP_METHODS = new Set([
-  "delete",
-  "get",
-  "head",
-  "options",
-  "patch",
-  "post",
-  "put",
-]);
+const HTTP_METHODS = new Set(["delete", "get", "head", "options", "patch", "post", "put"]);
 
 export type OpenApiOperationWithIo = OpenApiOperationPreview & {
   description?: string;
@@ -81,9 +73,7 @@ export function resolveOpenApiLocalRefs(
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) =>
-      resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1),
-    );
+    return value.map((item) => resolveOpenApiLocalRefs(item, document, resolvingRefs, depth + 1));
   }
 
   const record = value as Record<string, unknown>;
@@ -118,11 +108,7 @@ export function resolveOpenApiLocalRefs(
         ]),
       );
 
-      if (
-        resolvedTarget &&
-        typeof resolvedTarget === "object" &&
-        !Array.isArray(resolvedTarget)
-      ) {
+      if (resolvedTarget && typeof resolvedTarget === "object" && !Array.isArray(resolvedTarget)) {
         return {
           ...(resolvedTarget as Record<string, unknown>),
           ...resolvedSiblings,
@@ -164,12 +150,7 @@ type OpenApiMediaContent = {
   schema?: unknown;
 };
 
-const PREFERRED_MEDIA_TYPES = [
-  "application/json",
-  "application/problem+json",
-  "text/json",
-  "*/*",
-];
+const PREFERRED_MEDIA_TYPES = ["application/json", "application/problem+json", "text/json", "*/*"];
 
 function isMediaContent(value: unknown): value is OpenApiMediaContent {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -189,7 +170,9 @@ function pickPreferredContentEntry(
     }
   }
 
-  const jsonLikeKey = Object.keys(content).find((key) => /json/i.test(key) || key.endsWith("+json"));
+  const jsonLikeKey = Object.keys(content).find(
+    (key) => /json/i.test(key) || key.endsWith("+json"),
+  );
   if (jsonLikeKey) {
     const entry = content[jsonLikeKey];
     if (isMediaContent(entry)) {
@@ -286,8 +269,7 @@ export function parseOpenApiOperationIo(
   );
 
   const requestBody = resolveOpenApiLocalRefs(operation.requestBody, document) as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   let requestBodyDescription: string | undefined;
   let requestBodyRequired: boolean | undefined;
   let requestBodyExample: unknown;

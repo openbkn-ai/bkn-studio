@@ -188,13 +188,14 @@ export function ObjectTypePropertyTable({
     ];
   }, [rowIndexOffset, t, tableColumns]);
 
-  const visibleColumnKeys = useMemo(
-    () => columns.map((column) => String(column.key)),
-    [columns],
-  );
+  const visibleColumnKeys = useMemo(() => columns.map((column) => String(column.key)), [columns]);
 
   return (
-    <div className={showToolbar ? styles.tableSection : `${styles.tableSection} ${styles.tableSectionCompact}`}>
+    <div
+      className={
+        showToolbar ? styles.tableSection : `${styles.tableSection} ${styles.tableSectionCompact}`
+      }
+    >
       {showToolbar ? (
         <div className={styles.tableToolbar}>
           {toolbarExtra}

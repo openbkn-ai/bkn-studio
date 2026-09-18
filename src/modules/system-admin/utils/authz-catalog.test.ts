@@ -23,7 +23,23 @@ describe("object authorization types", () => {
     expect(isAuthzObjectType("small_model")).toBe(false);
     expect(isAuthzObjectType("concept_group")).toBe(true);
 
-    for (const type of ["resource", "small_model", "large_model", "concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type", "admin-user", "admin-dept", "admin-role", "admin-authz", "admin-audit", "safe_admin"]) {
+    for (const type of [
+      "resource",
+      "small_model",
+      "large_model",
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+      "risk_type",
+      "admin-user",
+      "admin-dept",
+      "admin-role",
+      "admin-authz",
+      "admin-audit",
+      "safe_admin",
+    ]) {
       expect(AUTHZ_OBJECT_PICKER_TYPES).not.toContain(type);
       expect(isAuthzObjectPickerType(type)).toBe(false);
     }

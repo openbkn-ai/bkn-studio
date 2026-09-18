@@ -44,8 +44,7 @@ export function useDangerDelete() {
     setTyped("");
   }, []);
 
-  const canConfirm =
-    !config?.requireTypeName || typed.trim() === config.targetName.trim();
+  const canConfirm = !config?.requireTypeName || typed.trim() === config.targetName.trim();
 
   const handleOk = useCallback(async () => {
     if (!config || !canConfirm) {
@@ -103,13 +102,7 @@ export function useDangerDelete() {
 }
 
 /** Impact notice: an orange irreversible warning for indexed high-risk cases, otherwise a standard empty-object message. */
-export function DeleteImpactAlert({
-  detail,
-  warning,
-}: {
-  detail: ReactNode;
-  warning?: ReactNode;
-}) {
+export function DeleteImpactAlert({ detail, warning }: { detail: ReactNode; warning?: ReactNode }) {
   return (
     <Alert
       description={warning}

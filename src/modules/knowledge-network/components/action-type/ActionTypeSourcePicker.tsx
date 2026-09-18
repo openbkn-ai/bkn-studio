@@ -51,10 +51,7 @@ export function ActionTypeSourcePicker({
   return (
     <>
       <div
-        className={[
-          styles.selectTrigger,
-          invalid ? styles.selectTriggerError : "",
-        ]
+        className={[styles.selectTrigger, invalid ? styles.selectTriggerError : ""]
           .filter(Boolean)
           .join(" ")}
         onClick={() => setModalOpen(true)}

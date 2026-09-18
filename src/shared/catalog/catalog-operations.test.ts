@@ -7,10 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  hasCatalogOperation,
-  isCatalogSummaryOnly,
-} from "@/shared/catalog/catalog-operations";
+import { hasCatalogOperation, isCatalogSummaryOnly } from "@/shared/catalog/catalog-operations";
 
 describe("hasCatalogOperation", () => {
   it("does not leak an operation from one catalog to another", () => {

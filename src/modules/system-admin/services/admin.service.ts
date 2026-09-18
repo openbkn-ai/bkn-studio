@@ -7,7 +7,10 @@
 
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
-import { childDepartments, computeSubtreeMemberCounts } from "@/modules/system-admin/utils/admin-helpers";
+import {
+  childDepartments,
+  computeSubtreeMemberCounts,
+} from "@/modules/system-admin/utils/admin-helpers";
 import type {
   AdminDepartment,
   AdminRole,
@@ -32,7 +35,7 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 const ADMIN = "/safe/v1/admin";
 
-const wait = async <T,>(value: T) =>
+const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 160);
   });
@@ -58,74 +61,242 @@ let departments: AdminDepartment[] = [
 ];
 
 let users: AdminUser[] = [
-  { id: "u-admin", account: "local-admin", name: "Local Admin", email: "admin@bkn.local", telephone: "", enabled: true, accountType: "local", builtin: true, roleIds: [], departmentIds: ["dep-root"], updatedAt: daysAgo(2) },
-  { id: "u-chen", account: "chen.yanqiu", name: "Yanqiu Chen", email: "chen.yanqiu@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-ke"], updatedAt: daysAgo(4) },
-  { id: "u-li", account: "li.mubai", name: "Mubai Li", email: "li.mubai@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-gov"], updatedAt: daysAgo(9) },
-  { id: "u-wang", account: "wang.xiaoou", name: "Xiaoou Wang", email: "wang.xiaoou@bkn.local", telephone: "", enabled: true, accountType: "local", roleIds: [], departmentIds: ["dep-rd"], updatedAt: daysAgo(1) },
-  { id: "u-zhao", account: "zhao.qinglan", name: "Qinglan Zhao", email: "zhao.qinglan@bkn.local", telephone: "", enabled: false, accountType: "local", roleIds: [], departmentIds: ["dep-cs"], updatedAt: daysAgo(15) },
+  {
+    id: "u-admin",
+    account: "local-admin",
+    name: "Local Admin",
+    email: "admin@bkn.local",
+    telephone: "",
+    enabled: true,
+    accountType: "local",
+    builtin: true,
+    roleIds: [],
+    departmentIds: ["dep-root"],
+    updatedAt: daysAgo(2),
+  },
+  {
+    id: "u-chen",
+    account: "chen.yanqiu",
+    name: "Yanqiu Chen",
+    email: "chen.yanqiu@bkn.local",
+    telephone: "",
+    enabled: true,
+    accountType: "local",
+    roleIds: [],
+    departmentIds: ["dep-ke"],
+    updatedAt: daysAgo(4),
+  },
+  {
+    id: "u-li",
+    account: "li.mubai",
+    name: "Mubai Li",
+    email: "li.mubai@bkn.local",
+    telephone: "",
+    enabled: true,
+    accountType: "local",
+    roleIds: [],
+    departmentIds: ["dep-gov"],
+    updatedAt: daysAgo(9),
+  },
+  {
+    id: "u-wang",
+    account: "wang.xiaoou",
+    name: "Xiaoou Wang",
+    email: "wang.xiaoou@bkn.local",
+    telephone: "",
+    enabled: true,
+    accountType: "local",
+    roleIds: [],
+    departmentIds: ["dep-rd"],
+    updatedAt: daysAgo(1),
+  },
+  {
+    id: "u-zhao",
+    account: "zhao.qinglan",
+    name: "Qinglan Zhao",
+    email: "zhao.qinglan@bkn.local",
+    telephone: "",
+    enabled: false,
+    accountType: "local",
+    roleIds: [],
+    departmentIds: ["dep-cs"],
+    updatedAt: daysAgo(15),
+  },
 ];
 
 const auditLog: AuditLog[] = [
-  { id: "al-1", actorId: "u-admin", method: "POST", resource: "users", action: "users", targetId: "u-chen", status: 201, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(4)).toISOString() },
-  { id: "al-2", actorId: "u-admin", method: "POST", resource: "roles", action: "roles.permissions", targetId: "role-network-builder", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(3)).toISOString() },
-  { id: "al-3", actorId: "u-admin", method: "DELETE", resource: "users", action: "users", targetId: "u-ghost", status: 404, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(2)).toISOString() },
-  { id: "al-4", actorId: "u-li", method: "POST", resource: "departments", action: "departments.members", targetId: "dep-gov", status: 204, clientIp: "127.0.0.2", createdAt: new Date(daysAgo(1)).toISOString() },
-  { id: "al-5", actorId: "u-admin", method: "POST", resource: "role-bindings", action: "role-bindings", targetId: "", status: 204, clientIp: "127.0.0.1", createdAt: new Date(daysAgo(1)).toISOString() },
+  {
+    id: "al-1",
+    actorId: "u-admin",
+    method: "POST",
+    resource: "users",
+    action: "users",
+    targetId: "u-chen",
+    status: 201,
+    clientIp: "127.0.0.1",
+    createdAt: new Date(daysAgo(4)).toISOString(),
+  },
+  {
+    id: "al-2",
+    actorId: "u-admin",
+    method: "POST",
+    resource: "roles",
+    action: "roles.permissions",
+    targetId: "role-network-builder",
+    status: 204,
+    clientIp: "127.0.0.1",
+    createdAt: new Date(daysAgo(3)).toISOString(),
+  },
+  {
+    id: "al-3",
+    actorId: "u-admin",
+    method: "DELETE",
+    resource: "users",
+    action: "users",
+    targetId: "u-ghost",
+    status: 404,
+    clientIp: "127.0.0.1",
+    createdAt: new Date(daysAgo(2)).toISOString(),
+  },
+  {
+    id: "al-4",
+    actorId: "u-li",
+    method: "POST",
+    resource: "departments",
+    action: "departments.members",
+    targetId: "dep-gov",
+    status: 204,
+    clientIp: "127.0.0.2",
+    createdAt: new Date(daysAgo(1)).toISOString(),
+  },
+  {
+    id: "al-5",
+    actorId: "u-admin",
+    method: "POST",
+    resource: "role-bindings",
+    action: "role-bindings",
+    targetId: "",
+    status: 204,
+    clientIp: "127.0.0.1",
+    createdAt: new Date(daysAgo(1)).toISOString(),
+  },
 ];
 
 let roles: AdminRole[] = [
   {
-    id: "role-super-admin", name: "super_admin", description: "Built-in hidden and controlled role with full platform permissions.",
-    builtin: true, source: "system",
+    id: "role-super-admin",
+    name: "super_admin",
+    description: "Built-in hidden and controlled role with full platform permissions.",
+    builtin: true,
+    source: "system",
     permissions: [grant("*", "*", ["*"])],
-    accessorIds: ["u-admin"], updatedAt: daysAgo(30),
+    accessorIds: ["u-admin"],
+    updatedAt: daysAgo(30),
   },
   {
-    id: "role-admin", name: "admin", description: "System administrator for operations, users, and departments.",
-    builtin: true, source: "system",
+    id: "role-admin",
+    name: "admin",
+    description: "System administrator for operations, users, and departments.",
+    builtin: true,
+    source: "system",
     permissions: [
       grant("admin-user", "*", ["create", "edit", "delete", "toggle", "reset-password"]),
       grant("admin-dept", "*", ["create", "edit", "delete", "members"]),
     ],
-    accessorIds: [], updatedAt: daysAgo(30),
+    accessorIds: [],
+    updatedAt: daysAgo(30),
   },
   {
-    id: "role-security", name: "security", description: "Security administrator for roles, authorization, and account security.",
-    builtin: true, source: "system",
+    id: "role-security",
+    name: "security",
+    description: "Security administrator for roles, authorization, and account security.",
+    builtin: true,
+    source: "system",
     permissions: [
       grant("admin-role", "*", ["create", "edit", "delete", "members"]),
       grant("admin-authz", "*", ["grant", "revoke"]),
       grant("admin-user", "*", ["edit", "toggle", "reset-password"]),
     ],
-    accessorIds: [], updatedAt: daysAgo(30),
+    accessorIds: [],
+    updatedAt: daysAgo(30),
   },
   {
-    id: "role-audit", name: "audit", description: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
-    builtin: true, source: "system",
-    permissions: [
-      grant("admin-audit", "*", ["view"]),
-    ],
-    accessorIds: [], updatedAt: daysAgo(30),
+    id: "role-audit",
+    name: "audit",
+    description:
+      "Audit administrator for audit logs, permission review, and admin behavior supervision.",
+    builtin: true,
+    source: "system",
+    permissions: [grant("admin-audit", "*", ["view"])],
+    accessorIds: [],
+    updatedAt: daysAgo(30),
   },
   {
-    id: "role-network-builder", name: "network_builder", description: "Business network builder for data, knowledge, and execution factory assets.",
-    builtin: true, source: "business",
+    id: "role-network-builder",
+    name: "network_builder",
+    description: "Business network builder for data, knowledge, and execution factory assets.",
+    builtin: true,
+    source: "business",
     permissions: [
       grant("catalog", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
       grant("resource", "*", ["view", "create", "modify", "delete", "authorize", "task_manage"]),
-      grant("knowledge_network", "*", ["view_detail", "create", "modify", "delete", "query_data", "authorize", "execute"]),
+      grant("knowledge_network", "*", [
+        "view_detail",
+        "create",
+        "modify",
+        "delete",
+        "query_data",
+        "authorize",
+        "execute",
+      ]),
       grant("small_model", "*", ["display", "create", "modify"]),
       grant("large_model", "*", ["display", "create", "modify"]),
-      grant("operator", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
-      grant("tool_box", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
-      grant("skill", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
-      grant("mcp", "*", ["view", "create", "modify", "execute", "public_access", "publish", "unpublish"]),
+      grant("operator", "*", [
+        "view",
+        "create",
+        "modify",
+        "execute",
+        "public_access",
+        "publish",
+        "unpublish",
+      ]),
+      grant("tool_box", "*", [
+        "view",
+        "create",
+        "modify",
+        "execute",
+        "public_access",
+        "publish",
+        "unpublish",
+      ]),
+      grant("skill", "*", [
+        "view",
+        "create",
+        "modify",
+        "execute",
+        "public_access",
+        "publish",
+        "unpublish",
+      ]),
+      grant("mcp", "*", [
+        "view",
+        "create",
+        "modify",
+        "execute",
+        "public_access",
+        "publish",
+        "unpublish",
+      ]),
     ],
-    accessorIds: ["u-li", "dep-gov", "u-wang", "dep-rd"], updatedAt: daysAgo(8),
+    accessorIds: ["u-li", "dep-gov", "u-wang", "dep-rd"],
+    updatedAt: daysAgo(8),
   },
   {
-    id: "role-normal-user", name: "normal_user", description: "Regular user for viewing, querying, executing, and invoking module capabilities.",
-    builtin: true, source: "business",
+    id: "role-normal-user",
+    name: "normal_user",
+    description: "Regular user for viewing, querying, executing, and invoking module capabilities.",
+    builtin: true,
+    source: "business",
     permissions: [
       grant("catalog", "*", ["view_detail"]),
       grant("resource", "*", ["view_detail"]),
@@ -138,7 +309,8 @@ let roles: AdminRole[] = [
       grant("mcp", "*", ["view", "execute"]),
       grant("agent", "*", ["use"]),
     ],
-    accessorIds: ["u-chen", "u-zhao"], updatedAt: daysAgo(45),
+    accessorIds: ["u-chen", "u-zhao"],
+    updatedAt: daysAgo(45),
   },
 ];
 
@@ -171,7 +343,12 @@ export async function listUsersPage(
   if (useMock) {
     const keyword = query.search?.trim().toLowerCase() ?? "";
     let list = users.filter((user) => {
-      if (keyword && !`${user.name} ${user.account} ${user.email} ${user.telephone}`.toLowerCase().includes(keyword)) {
+      if (
+        keyword &&
+        !`${user.name} ${user.account} ${user.email} ${user.telephone}`
+          .toLowerCase()
+          .includes(keyword)
+      ) {
         return false;
       }
       if (query.enabled !== undefined && user.enabled !== query.enabled) {
@@ -230,7 +407,9 @@ export async function listUsers(options?: { skipErrorToast?: boolean }): Promise
   return result.users;
 }
 
-export async function listDepartments(options?: { skipErrorToast?: boolean }): Promise<AdminDepartment[]> {
+export async function listDepartments(options?: {
+  skipErrorToast?: boolean;
+}): Promise<AdminDepartment[]> {
   if (useMock) {
     const subtreeCounts = computeSubtreeMemberCounts(departments, users);
     return wait(
@@ -257,7 +436,13 @@ function isRoleListItemComplete(item: BackendRole): boolean {
 
 export async function listRoles(options?: { withMembers?: boolean }): Promise<AdminRole[]> {
   if (useMock) {
-    return wait(roles.map((item) => ({ ...item, accessorIds: [...item.accessorIds], permissions: item.permissions.map((p) => ({ ...p })) })));
+    return wait(
+      roles.map((item) => ({
+        ...item,
+        accessorIds: [...item.accessorIds],
+        permissions: item.permissions.map((p) => ({ ...p })),
+      })),
+    );
   }
   const listResponse = await http.get<{ roles?: BackendRole[] }>(`${ADMIN}/roles`);
   const basics = listResponse.data.roles ?? [];
@@ -271,7 +456,9 @@ export async function listRoles(options?: { withMembers?: boolean }): Promise<Ad
         return mapped[index];
       }
       try {
-        const detail = await http.get<BackendRole>(`${ADMIN}/roles/${encodeURIComponent(basic.id)}`);
+        const detail = await http.get<BackendRole>(
+          `${ADMIN}/roles/${encodeURIComponent(basic.id)}`,
+        );
         return mapRole({ ...basic, ...detail.data });
       } catch {
         return mapped[index];
@@ -281,7 +468,10 @@ export async function listRoles(options?: { withMembers?: boolean }): Promise<Ad
   return detailed;
 }
 
-export async function getRole(id: string, options?: { skipErrorToast?: boolean }): Promise<AdminRole> {
+export async function getRole(
+  id: string,
+  options?: { skipErrorToast?: boolean },
+): Promise<AdminRole> {
   if (useMock) {
     const role = findRole(id);
     if (!role) {
@@ -290,7 +480,10 @@ export async function getRole(id: string, options?: { skipErrorToast?: boolean }
     return wait({
       ...role,
       accessorIds: [...role.accessorIds],
-      permissions: role.permissions.map((grant) => ({ ...grant, operations: [...grant.operations] })),
+      permissions: role.permissions.map((grant) => ({
+        ...grant,
+        operations: [...grant.operations],
+      })),
     });
   }
   const response = await http.get<BackendRole>(`${ADMIN}/roles/${encodeURIComponent(id)}`, {
@@ -407,18 +600,21 @@ export async function listAuditLogs(
     const offset = query.offset ?? 0;
     return wait({ logs: logs.slice(offset, offset + (query.limit ?? 50)), total });
   }
-  const response = await http.get<{ logs?: BackendAudit[]; total?: number }>(`${ADMIN}/audit-logs`, {
-    params: {
-      actor_id: query.actorId || undefined,
-      resource: query.resource || undefined,
-      action: query.action || undefined,
-      target_id: query.targetId || undefined,
-      from: query.from || undefined,
-      to: query.to || undefined,
-      offset: query.offset ?? 0,
-      limit: query.limit ?? 50,
+  const response = await http.get<{ logs?: BackendAudit[]; total?: number }>(
+    `${ADMIN}/audit-logs`,
+    {
+      params: {
+        actor_id: query.actorId || undefined,
+        resource: query.resource || undefined,
+        action: query.action || undefined,
+        target_id: query.targetId || undefined,
+        from: query.from || undefined,
+        to: query.to || undefined,
+        offset: query.offset ?? 0,
+        limit: query.limit ?? 50,
+      },
     },
-  });
+  );
   const all = (response.data.logs ?? []).map(mapAudit);
   // The backend has no status filter, so filter the current page on the frontend.
   const logs = query.failedOnly ? all.filter((log) => log.status >= 400) : all;
@@ -433,7 +629,9 @@ export async function createUser(
 ): Promise<void> {
   if (useMock) {
     if (users.some((item) => item.account === input.account)) {
-      throw new Error(i18n.t("systemAdmin.errors.userAccountDuplicateWithAccount", { account: input.account }));
+      throw new Error(
+        i18n.t("systemAdmin.errors.userAccountDuplicateWithAccount", { account: input.account }),
+      );
     }
     const user: AdminUser = {
       id: uid("u"),
@@ -693,7 +891,11 @@ export async function createRole(
   options?: { skipErrorToast?: boolean },
 ): Promise<string> {
   if (useMock) {
-    if (roles.some((item) => item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase())) {
+    if (
+      roles.some(
+        (item) => item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase(),
+      )
+    ) {
       throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
     }
     const id = uid("role");
@@ -713,10 +915,14 @@ export async function createRole(
     await wait(undefined);
     return id;
   }
-  const created = await http.post<{ id: string }>(`${ADMIN}/roles`, {
-    name: input.name,
-    description: input.description,
-  }, { skipErrorToast: options?.skipErrorToast });
+  const created = await http.post<{ id: string }>(
+    `${ADMIN}/roles`,
+    {
+      name: input.name,
+      description: input.description,
+    },
+    { skipErrorToast: options?.skipErrorToast },
+  );
   return created.data.id;
 }
 
@@ -733,7 +939,13 @@ export async function updateRole(
     if (role.builtin) {
       throw new Error(i18n.t("systemAdmin.errors.builtinRoleCannotModify"));
     }
-    if (roles.some((item) => item.id !== id && item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase())) {
+    if (
+      roles.some(
+        (item) =>
+          item.id !== id &&
+          item.name.trim().toLocaleLowerCase() === input.name.trim().toLocaleLowerCase(),
+      )
+    ) {
       throw new Error(i18n.t("systemAdmin.errors.roleNameDuplicateWithName", { name: input.name }));
     }
     role.name = input.name;
@@ -742,10 +954,14 @@ export async function updateRole(
     await wait(undefined);
     return;
   }
-  await http.put(`${ADMIN}/roles/${encodeURIComponent(id)}`, {
-    name: input.name,
-    description: input.description,
-  }, { skipErrorToast: options?.skipErrorToast });
+  await http.put(
+    `${ADMIN}/roles/${encodeURIComponent(id)}`,
+    {
+      name: input.name,
+      description: input.description,
+    },
+    { skipErrorToast: options?.skipErrorToast },
+  );
 }
 
 export async function deleteRole(id: string): Promise<void> {
@@ -955,7 +1171,7 @@ function mapUser(item: BackendUser, detail = false): AdminUser {
   const departmentIds = detail
     ? (item.departments ?? item.Departments ?? item.department_ids ?? [])
     : item.department_ids;
-  const roleIds = item.role_ids ?? (detail ? item.roles ?? [] : []);
+  const roleIds = item.role_ids ?? (detail ? (item.roles ?? []) : []);
   return {
     id: item.id,
     account: item.account ?? item.id,

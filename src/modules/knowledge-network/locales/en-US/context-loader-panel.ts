@@ -8,17 +8,51 @@
 export const contextLoaderPanelPart = {
   contextLoaderPanel: {
     toolGroups: {
-      network: { label: "Knowledge Network Info", description: "Knowledge network list and current network details" },
-      lifecycle: { label: "Interaction Lifecycle", description: "Managed sessions, interactions, and operation status" },
-      discovery: { label: "Networks and Schema", description: "Knowledge network lists, structure, schema discovery, and type details" },
-      model: { label: "Knowledge Model Search", description: "Semantic search, object types, relation types, action types, and metrics" },
-      query: { label: "Object Instances and Subgraphs", description: "Object instance queries and relation subgraph queries" },
-      data: { label: "Data Resources and SQL", description: "Data resource lists, field schemas, and SQL queries" },
-      logic: { label: "Logical Attributes and Actions", description: "Logical attribute calculation, action recall, and execution" },
-      resource: { label: "Data Resources", description: "Data resource inspection, skill recall, and execution" },
-      action: { label: "Actions", description: "Action tool recall, execution, and execution history" },
-      execution: { label: "Code Execution", description: "Run Python or a shell command in the sandbox, calling the tools above from inside the script" },
-      skill: { label: "Skills and Dynamic Tools", description: "Skill retrieval and online dynamic tools" },
+      network: {
+        label: "Knowledge Network Info",
+        description: "Knowledge network list and current network details",
+      },
+      lifecycle: {
+        label: "Interaction Lifecycle",
+        description: "Managed sessions, interactions, and operation status",
+      },
+      discovery: {
+        label: "Networks and Schema",
+        description: "Knowledge network lists, structure, schema discovery, and type details",
+      },
+      model: {
+        label: "Knowledge Model Search",
+        description: "Semantic search, object types, relation types, action types, and metrics",
+      },
+      query: {
+        label: "Object Instances and Subgraphs",
+        description: "Object instance queries and relation subgraph queries",
+      },
+      data: {
+        label: "Data Resources and SQL",
+        description: "Data resource lists, field schemas, and SQL queries",
+      },
+      logic: {
+        label: "Logical Attributes and Actions",
+        description: "Logical attribute calculation, action recall, and execution",
+      },
+      resource: {
+        label: "Data Resources",
+        description: "Data resource inspection, skill recall, and execution",
+      },
+      action: {
+        label: "Actions",
+        description: "Action tool recall, execution, and execution history",
+      },
+      execution: {
+        label: "Code Execution",
+        description:
+          "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
+      },
+      skill: {
+        label: "Skills and Dynamic Tools",
+        description: "Skill retrieval and online dynamic tools",
+      },
       other: { label: "Other Capabilities", description: "Uncategorized MCP capabilities" },
     },
     toolNames: {
@@ -73,7 +107,8 @@ export const contextLoaderPanelPart = {
       unknownError: "unknown error",
       toolFailed: "{{tool}} failed ({{code}})",
       callFailed: "{{tool}} call failed",
-      stuckInteraction: "The current session still has an unfinished interaction. Clear the chat and try again.",
+      stuckInteraction:
+        "The current session still has an unfinished interaction. Clear the chat and try again.",
       toolNotRegistered: "{{tool}} is not registered",
       malformedToolResult: "{{tool}} did not return structured content",
       missingTurnIds: "bkn_start_interaction did not return conversation or interaction ID",
@@ -111,13 +146,17 @@ export const contextLoaderPanelPart = {
       jsonParseFailed: "JSON parse failed",
       debugTurn: "Console call {{id}}",
       requestFailed: "Request failed. It may be blocked by CORS or the service may be unavailable.",
-      noQueryableObjectType: "The current knowledge network has no object type bound to a data resource, so test data cannot be generated.",
-      noObjectTypeForMetric: "The current knowledge network has no object types, so metric test data cannot be generated.",
-      noMetricForObjectType: "Object type {{name}} has no available metrics, so test data cannot be generated.",
+      noQueryableObjectType:
+        "The current knowledge network has no object type bound to a data resource, so test data cannot be generated.",
+      noObjectTypeForMetric:
+        "The current knowledge network has no object types, so metric test data cannot be generated.",
+      noMetricForObjectType:
+        "Object type {{name}} has no available metrics, so test data cannot be generated.",
       testDataFilled: "Test data filled",
       testDataFilledWithNote: "Test data filled - {{note}}",
       generateTestDataFailed: "Failed to generate test data",
-      objectTypeNoResource: "This object type is not bound to a data resource, so SQL test data cannot be generated.",
+      objectTypeNoResource:
+        "This object type is not bound to a data resource, so SQL test data cannot be generated.",
       testRequestFilledFromObject: "Filled test request with {{name}}{{note}}",
       subgraphFilled: "Subgraph path filled - {{name}}",
       fieldFilled: "Filled {{key}}",
@@ -125,7 +164,8 @@ export const contextLoaderPanelPart = {
       resourceFilledSql: "Resource filled into SQL",
       resourcePlaceholderCopied: "Resource placeholder copied",
       conceptGroupAdded: "Added resource group {{id}}",
-      conceptGroupCopiedFallback: "Copied resource group {{id}}. The current API has no concept_groups field.",
+      conceptGroupCopiedFallback:
+        "Copied resource group {{id}}. The current API has no concept_groups field.",
       back: "Back to {{name}}",
       modes: {
         agent: "Agent Chat",
@@ -135,7 +175,8 @@ export const contextLoaderPanelPart = {
       knId: "Knowledge Network kn_id",
       serviceAddress: "Service Address",
       authMode: "Auth Mode",
-      authModeTooltip: "OAuth Token uses the current login session and is short-lived for this page only. API Key uses a long-lived bak_ key issued in Account Center and pasted here. It is only valid for Context Loader.",
+      authModeTooltip:
+        "OAuth Token uses the current login session and is short-lived for this page only. API Key uses a long-lived bak_ key issued in Account Center and pasted here. It is only valid for Context Loader.",
     },
     appKey: {
       placeholder: "bak_<long-lived API Key issued in Account Center>",
@@ -145,15 +186,19 @@ export const contextLoaderPanelPart = {
       configure: "Configure API Key",
       modalTitle: "Configure API Key",
       apply: "Apply",
-      description: "Paste a long-lived API Key that starts with bak_. This page will update the Bearer Key in the MCP config below.",
+      description:
+        "Paste a long-lived API Key that starts with bak_. This page will update the Bearer Key in the MCP config below.",
       inputPlaceholder: "Paste API Key",
       hint: "Only used to generate the current page config. It will not be saved.",
     },
     dataAssistant: {
       conceptGroup: "Select resource groups and fill concept_groups to narrow semantic search.",
-      objectType: "Select an object type and fill ot_id. Real sample rows can generate a test request.",
-      resource: "Select a data resource and fill SQL resource placeholders. You can inspect fields and sample data.",
-      relation: "Select a relation type and generate the relation path needed for a subgraph query.",
+      objectType:
+        "Select an object type and fill ot_id. Real sample rows can generate a test request.",
+      resource:
+        "Select a data resource and fill SQL resource placeholders. You can inspect fields and sample data.",
+      relation:
+        "Select a relation type and generate the relation path needed for a subgraph query.",
       title: "Request Data Assistant",
       open: "Request Data Assistant",
       close: "Close Assistant",
@@ -162,17 +207,22 @@ export const contextLoaderPanelPart = {
     },
     empty: {
       noMcpServices: "No MCP Services",
-      noMcpServicesDescription: "The MCP server returned no available tools. Check the service configuration and refresh the service list.",
+      noMcpServicesDescription:
+        "The MCP server returned no available tools. Check the service configuration and refresh the service list.",
       noDebuggableMcpServices: "No Debuggable MCP Services",
-      noDebuggableMcpServicesDescription: "After the service list returns, select a tool on the left and run it.",
+      noDebuggableMcpServicesDescription:
+        "After the service list returns, select a tool on the left and run it.",
     },
     mcpConnect: {
       title: "Let Agents Call OpenBKN Capabilities",
       description:
         "This page generates MCP integration config. After copying it into an agent platform, the agent can access OpenBKN retrieval, query, and action capabilities through MCP tools.",
-      stepIssueKey: "Issue an API Key in Account Center and put the long-lived bak_ key into the Bearer Key on the right.",
-      stepCopyConfig: "Choose the agent platform type, then copy the full config into the matching MCP service configuration.",
-      stepUseAgent: "Save it, return to the agent chat, ask directly, and let the agent use MCP tools for retrieval, query, or action calls.",
+      stepIssueKey:
+        "Issue an API Key in Account Center and put the long-lived bak_ key into the Bearer Key on the right.",
+      stepCopyConfig:
+        "Choose the agent platform type, then copy the full config into the matching MCP service configuration.",
+      stepUseAgent:
+        "Save it, return to the agent chat, ask directly, and let the agent use MCP tools for retrieval, query, or action calls.",
       genericTab: "Generic mcp.json",
       cliTitle: "CLI One-Line Setup",
       projectConfigTitle: "Project .mcp.json",
@@ -199,12 +249,14 @@ export const contextLoaderPanelPart = {
       externalPrefix: "This guide is for ",
       externalClient: "external MCP clients",
       externalMiddle: " such as Cursor and Claude Code. Use ",
-      externalSuffix: " for authentication. It is a long-lived bak_ key issued and managed in Account Center.",
+      externalSuffix:
+        " for authentication. It is a long-lived bak_ key issued and managed in Account Center.",
       issueApiKey: "Issue API Key ->",
       authDifferenceTitle: "Difference from this page login: ",
       authDifferencePrefix: "This page uses your ",
       sessionToken: "session token",
-      authDifferenceMiddle: " (ory_at_, short-lived and only suitable for immediate debugging). Long-lived external clients must use ",
+      authDifferenceMiddle:
+        " (ory_at_, short-lived and only suitable for immediate debugging). Long-lived external clients must use ",
       authDifferenceSuffix: " (bak_, long-lived, revocable, and rotatable). Both use the same ",
       authDifferenceEnd: " header, and the gateway identifies them by prefix.",
       cliTitle: "1. CLI one-line setup",
@@ -244,15 +296,18 @@ export const contextLoaderPanelPart = {
       queryCollapsed_other: "Collapsed. Expand to edit {{count}} parameters",
       body: "Request Body",
       bodyCollapsed: "Collapsed. Expand to edit body.json",
-      autoFillTooltip: "Fill from real schema and sample rows in the current network. It can be called directly.",
-      autoFillRestTooltip: "Fill from real schema and sample rows in the current network. It can be sent directly.",
+      autoFillTooltip:
+        "Fill from real schema and sample rows in the current network. It can be called directly.",
+      autoFillRestTooltip:
+        "Fill from real schema and sample rows in the current network. It can be sent directly.",
       autoFill: "Auto Fill",
       fillTestParams: "Fill Test Parameters",
       sendRequest: "Send Request",
     },
     schema: {
       title: "{{name}} · API Docs",
-      intro: "Input field definitions describe callable parameters, types, and filling rules. Output field definitions describe the returned data structures and fields.",
+      intro:
+        "Input field definitions describe callable parameters, types, and filling rules. Output field definitions describe the returned data structures and fields.",
       view: "Documentation view",
       docsTab: "Guided Docs",
       rawTab: "Raw JSON Schema",
@@ -266,9 +321,11 @@ export const contextLoaderPanelPart = {
       businessParamsHint: "These are the values to choose for this call.",
       traceTitle: "Trace / Managed Context",
       traceBadge: "System-managed",
-      traceHint: "Studio injects this required lifecycle context when you run a tool here. External MCP clients must provide IDs returned by lifecycle tools.",
+      traceHint:
+        "Studio injects this required lifecycle context when you run a tool here. External MCP clients must provide IDs returned by lifecycle tools.",
       responseShape: "Response Shape",
-      responseShapeHint: "Known fields are listed below. A dynamic-field note means the server may include additional fields.",
+      responseShapeHint:
+        "Known fields are listed below. A dynamic-field note means the server may include additional fields.",
       field: "Field",
       type: "Type",
       requirement: "Required",
@@ -280,7 +337,8 @@ export const contextLoaderPanelPart = {
       defaultValue: "Default: {{value}}",
       enumValues: "Allowed: {{values}}",
       dynamicFields: "Additional dynamic fields may be returned.",
-      truncatedFields: "Some fields deeper than four levels are not shown. View the Raw JSON Schema for the complete definition.",
+      truncatedFields:
+        "Some fields deeper than four levels are not shown. View the Raw JSON Schema for the complete definition.",
       loading: "Loading field definitions...",
       loadFailed: "Load failed: {{error}}",
       inputTitle: "Input Field Definition",
@@ -303,7 +361,8 @@ export const contextLoaderPanelPart = {
       notSent: "Request not sent yet",
       failed: "Request Failed",
       waitingTitle: "Waiting to Run",
-      waitingDescription: "Confirm the request parameters and click Run. The {{mode}} result will appear here.",
+      waitingDescription:
+        "Confirm the request parameters and click Run. The {{mode}} result will appear here.",
       debugHint: "cURL command for this run",
       copyCommand: "Copy Command",
     },

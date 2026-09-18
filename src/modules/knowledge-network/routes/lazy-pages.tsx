@@ -29,9 +29,8 @@ export const KnowledgeNetworkIntegrationPage = lazyNamedExport(
 );
 
 export const KnowledgeNetworkWorkspaceStandalonePage = lazy(async () => {
-  const module = await import(
-    "@/modules/knowledge-network/pages/KnowledgeNetworkWorkspaceStandalonePage"
-  );
+  const module =
+    await import("@/modules/knowledge-network/pages/KnowledgeNetworkWorkspaceStandalonePage");
   return { default: module.KnowledgeNetworkWorkspaceStandalonePage };
 }) as LazyExoticComponent<ComponentType<{ section: KnowledgeNetworkWorkspaceSection }>>;
 

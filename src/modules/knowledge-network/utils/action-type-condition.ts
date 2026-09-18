@@ -92,4 +92,3 @@ export function promoteLegacyActionCondition(
     valueFrom: "const",
   };
 }
-

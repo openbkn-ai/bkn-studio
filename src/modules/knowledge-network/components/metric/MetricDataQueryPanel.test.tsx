@@ -86,18 +86,14 @@ describe("MetricDataQueryPanel", () => {
     );
 
     const modeLabel = screen.getByText("knowledgeNetwork.metricQueryModeLabel");
-    const modeSelect = modeLabel
-      .closest(".ant-form-item")
-      ?.querySelector(".ant-select-selector");
+    const modeSelect = modeLabel.closest(".ant-form-item")?.querySelector(".ant-select-selector");
 
     expect(modeSelect).toBeTruthy();
     fireEvent.mouseDown(modeSelect!);
     fireEvent.click(screen.getByText("knowledgeNetwork.metricQueryMode.trend"));
 
     const stepLabel = screen.getByText("knowledgeNetwork.metricQueryStepLabel");
-    const stepSelect = stepLabel
-      .closest(".ant-form-item")
-      ?.querySelector(".ant-select-selector");
+    const stepSelect = stepLabel.closest(".ant-form-item")?.querySelector(".ant-select-selector");
 
     expect(stepSelect).toBeTruthy();
     fireEvent.mouseDown(stepSelect!);
@@ -122,18 +118,14 @@ describe("MetricDataQueryPanel", () => {
     );
 
     const modeLabel = screen.getByText("knowledgeNetwork.metricQueryModeLabel");
-    const modeSelect = modeLabel
-      .closest(".ant-form-item")
-      ?.querySelector(".ant-select-selector");
+    const modeSelect = modeLabel.closest(".ant-form-item")?.querySelector(".ant-select-selector");
 
     expect(modeSelect).toBeTruthy();
     fireEvent.mouseDown(modeSelect!);
     fireEvent.click(screen.getByText("knowledgeNetwork.metricQueryMode.trend"));
 
     const rangeLabel = screen.getByText("knowledgeNetwork.metricQueryTimeRangeLabel");
-    const rangeSelect = rangeLabel
-      .closest(".ant-form-item")
-      ?.querySelector(".ant-select-selector");
+    const rangeSelect = rangeLabel.closest(".ant-form-item")?.querySelector(".ant-select-selector");
 
     expect(rangeSelect).toBeTruthy();
     fireEvent.mouseDown(rangeSelect!);

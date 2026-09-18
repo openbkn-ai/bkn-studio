@@ -20,13 +20,7 @@ type CrudFormPageProps = PropsWithChildren<{
   title?: string;
 }>;
 
-export function CrudFormPage({
-  actions,
-  children,
-  description,
-  onBack,
-  title,
-}: CrudFormPageProps) {
+export function CrudFormPage({ actions, children, description, onBack, title }: CrudFormPageProps) {
   const { t } = useTranslation();
 
   return (

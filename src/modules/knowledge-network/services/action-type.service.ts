@@ -7,10 +7,7 @@
 
 import { isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ActionTypeDetail,
@@ -70,10 +67,7 @@ import {
   wait,
 } from "@/modules/knowledge-network/services/shared/runtime";
 
-function resolveActionTypeMutationResultId(
-  value: unknown,
-  fallbackId?: string,
-): string | null {
+function resolveActionTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
     return fallbackId.trim();
   }
@@ -96,12 +90,7 @@ function resolveActionTypeMutationResultId(
 }
 
 function isBackendActionTypeRecord(value: unknown): value is BackendActionType {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "name" in value
-  );
+  return typeof value === "object" && value !== null && "id" in value && "name" in value;
 }
 
 export async function listKnowledgeNetworkActionTypes(networkId: string) {
@@ -129,10 +118,7 @@ export async function listKnowledgeNetworkActionTypes(networkId: string) {
   return response.data.entries.map(mapActionType);
 }
 
-export async function getKnowledgeNetworkActionType(
-  networkId: string,
-  actionTypeId: string,
-) {
+export async function getKnowledgeNetworkActionType(networkId: string, actionTypeId: string) {
   if (useMock) {
     return wait(
       (() => {
@@ -276,18 +262,13 @@ export async function executeKnowledgeNetworkActionTypeNow(
 
   const response = await http.post<{ execution_id?: string }>(
     `/ontology-query/v1/knowledge-networks/${networkId}/action-types/${actionTypeId}/execute`,
-    dynamicParams && Object.keys(dynamicParams).length > 0
-      ? { dynamic_params: dynamicParams }
-      : {},
+    dynamicParams && Object.keys(dynamicParams).length > 0 ? { dynamic_params: dynamicParams } : {},
   );
 
   return response.data;
 }
 
-export async function cancelKnowledgeNetworkActionTypeExecution(
-  networkId: string,
-  logId: string,
-) {
+export async function cancelKnowledgeNetworkActionTypeExecution(networkId: string, logId: string) {
   if (useMock) {
     cancelMockActionTypeExecutionLog(networkId, logId);
     await wait(undefined);
@@ -397,10 +378,7 @@ export async function updateKnowledgeNetworkActionType(
     : getKnowledgeNetworkActionType(networkId, actionTypeId);
 }
 
-export async function deleteKnowledgeNetworkActionType(
-  networkId: string,
-  actionTypeId: string,
-) {
+export async function deleteKnowledgeNetworkActionType(networkId: string, actionTypeId: string) {
   if (useMock) {
     mockActionTypes[networkId] = (mockActionTypes[networkId] ?? []).filter(
       (item) => item.id !== actionTypeId,

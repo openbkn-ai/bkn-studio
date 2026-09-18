@@ -7,11 +7,7 @@
 
 /* eslint-disable react-refresh/only-export-components */
 
-import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+import { ArrowDownOutlined, ArrowUpOutlined, SettingOutlined } from "@ant-design/icons";
 import { Checkbox, Popover } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -82,10 +78,7 @@ export function writeDetailTableColumnConfig(scope: string, config: SavedColumnC
   localStorage.setItem(`${STORAGE_PREFIX}${scope}`, JSON.stringify(config));
 }
 
-export function getDisplayedColumns(
-  columnOrder: string[],
-  visibility: ColumnVisibilityPayload,
-) {
+export function getDisplayedColumns(columnOrder: string[], visibility: ColumnVisibilityPayload) {
   return columnOrder.filter((key) => visibility[key] !== false);
 }
 
@@ -110,10 +103,7 @@ function areColumnVisibilityPayloadsEqual(
 ) {
   const leftKeys = Object.keys(left);
   const rightKeys = Object.keys(right);
-  return (
-    leftKeys.length === rightKeys.length &&
-    leftKeys.every((key) => left[key] === right[key])
-  );
+  return leftKeys.length === rightKeys.length && leftKeys.every((key) => left[key] === right[key]);
 }
 
 function isColumnVisible(key: string, visibility: ColumnVisibilityPayload) {
@@ -142,9 +132,7 @@ export function DetailTableColumnSettingsButton({
       return;
     }
     const nextOrder = mergeColumnOrder(columnOrder, columns);
-    setDraftOrder((current) =>
-      areStringArraysEqual(current, nextOrder) ? current : nextOrder,
-    );
+    setDraftOrder((current) => (areStringArraysEqual(current, nextOrder) ? current : nextOrder));
     setDraftVisibility((current) =>
       areColumnVisibilityPayloadsEqual(current, value) ? current : value,
     );
@@ -169,10 +157,7 @@ export function DetailTableColumnSettingsButton({
   };
 
   const apply = () => {
-    const order = getDisplayedColumns(
-      mergeColumnOrder(draftOrder, columns),
-      draftVisibility,
-    );
+    const order = getDisplayedColumns(mergeColumnOrder(draftOrder, columns), draftVisibility);
     const visibility = Object.fromEntries(
       columns.map((column) => [column.key, isColumnVisible(column.key, draftVisibility)]),
     );

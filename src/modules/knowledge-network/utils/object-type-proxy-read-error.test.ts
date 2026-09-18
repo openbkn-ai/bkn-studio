@@ -42,7 +42,10 @@ describe("classifyObjectTypeProxyReadFailure", () => {
     ["OntologyQuery.Proxy.SyncFailed", "sync-failed"],
     ["OntologyQuery.Proxy.SyncPending", "sync-pending"],
   ] as const)("maps stable proxy error %s", (code, kind) => {
-    expect(classifyObjectTypeProxyReadFailure(createAxiosLikeError(503, code))).toEqual({ code, kind });
+    expect(classifyObjectTypeProxyReadFailure(createAxiosLikeError(503, code))).toEqual({
+      code,
+      kind,
+    });
   });
 
   it("classifies the current ontology-query proxy dependency error without exposing details", () => {

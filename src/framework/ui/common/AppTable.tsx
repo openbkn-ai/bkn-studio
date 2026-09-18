@@ -18,9 +18,7 @@ type AppTableProps<RecordType extends object> = TableProps<RecordType> & {
   paginationOptions?: StandardTablePaginationOptions;
 };
 
-export function AppTable<RecordType extends object>(
-  props: AppTableProps<RecordType>,
-) {
+export function AppTable<RecordType extends object>(props: AppTableProps<RecordType>) {
   const { pagination, paginationOptions, ...restProps } = props;
 
   const resolvedPagination =
@@ -30,4 +28,3 @@ export function AppTable<RecordType extends object>(
 
   return <Table<RecordType> {...restProps} pagination={resolvedPagination} />;
 }
-

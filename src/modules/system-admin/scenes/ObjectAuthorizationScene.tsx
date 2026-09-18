@@ -76,11 +76,11 @@ export function ObjectAuthorizationScene() {
     if (workspace === "user" && loadError) {
       return (
         <Alert
-          action={(
+          action={
             <AppButton onClick={() => void loadData()} type="link">
               {t("common.retry")}
             </AppButton>
-          )}
+          }
           message={loadError}
           showIcon
           type="error"
@@ -92,12 +92,14 @@ export function ObjectAuthorizationScene() {
         <TopResourceAuthorizationPanel
           fineGrained={fineGrained}
           key={`resource-${workspaceRevision}`}
-          onManage={(target) => openDrawer({
-            id: target.id,
-            name: target.name,
-            sub: target.sub,
-            type: target.type,
-          })}
+          onManage={(target) =>
+            openDrawer({
+              id: target.id,
+              name: target.name,
+              sub: target.sub,
+              type: target.type,
+            })
+          }
         />
       );
     }
@@ -117,11 +119,7 @@ export function ObjectAuthorizationScene() {
               {t("systemAdmin.objectGrants.create")}
             </AppButton>
           </PermissionGate>
-          <AppButton
-            icon={<ReloadOutlined />}
-            loading={loading}
-            onClick={() => void loadData()}
-          >
+          <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void loadData()}>
             {t("common.refresh")}
           </AppButton>
         </div>

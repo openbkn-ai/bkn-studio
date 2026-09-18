@@ -21,10 +21,7 @@ type CapabilityUpgradeTooltipProps = PropsWithChildren<{
  * 代码库——这正是当初把端点的 403 升级提示撤掉、收到 /capabilities 一处的原因。
  * 具体去哪买由授权管理页说，这里只负责告诉用户"这是付费能力，你这套没买"。
  */
-export function CapabilityUpgradeTooltip({
-  children,
-  title,
-}: CapabilityUpgradeTooltipProps) {
+export function CapabilityUpgradeTooltip({ children, title }: CapabilityUpgradeTooltipProps) {
   const { t } = useTranslation();
 
   return <Tooltip title={title ?? t("common.entitlement.upgradeHint")}>{children}</Tooltip>;

@@ -32,7 +32,9 @@
   gap: 10px;
   padding: 12px 14px;
   text-align: left;
-  transition: border-color 0.2s ease, color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
   width: 100%;
 }
 

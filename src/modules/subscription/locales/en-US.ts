@@ -85,8 +85,7 @@ export const subscriptionEnUS = {
       indexing: "Data discovery, batch indexing and vectorisation",
       localAuth: "Local sign-in with user, department and built-in role management",
       mcpTooling: "Connect, debug and invoke MCP servers, tools and Skills",
-      modelingSurfaces:
-        "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
+      modelingSurfaces: "Model and manage knowledge networks from BKN Studio, CLI, SDK and Skills",
       modelingTypes: "Object, relation, action and metric modelling",
       queryAndSearch: "Relation queries, path queries and semantic search",
       selfHosted: "Source builds, basic deployment, health checks and upgrade docs",
@@ -104,7 +103,8 @@ export const subscriptionEnUS = {
       import: "Import licence",
       importHint:
         "Already have a licence file? Import it under licence management — it takes effect on the next request, no restart required.",
-      needAdmin: "Importing a licence requires licence management permission. Ask an administrator.",
+      needAdmin:
+        "Importing a licence requires licence management permission. Ask an administrator.",
       apply: "Request a licence",
       details: "View details",
     },

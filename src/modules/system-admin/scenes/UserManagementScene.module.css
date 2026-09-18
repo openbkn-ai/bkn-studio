@@ -50,7 +50,9 @@
   width: 1px;
   background: var(--admin-color-border);
   content: "";
-  transition: background 0.15s ease, width 0.15s ease;
+  transition:
+    background 0.15s ease,
+    width 0.15s ease;
 }
 
 .deptPanelSplitter:hover::after,

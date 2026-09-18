@@ -34,6 +34,8 @@ describe("relation type mapper", () => {
   });
 
   it("reads indirect relation types as resource mappings", () => {
-    expect(mapRelationType({ id: "indirect-1", name: "Indirect", type: "indirect" }).mappingMode).toBe("resource");
+    expect(
+      mapRelationType({ id: "indirect-1", name: "Indirect", type: "indirect" }).mappingMode,
+    ).toBe("resource");
   });
 });

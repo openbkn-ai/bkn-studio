@@ -253,11 +253,7 @@ describe("capability-manifest", () => {
 
     const readiness = getCapabilityReadiness(manifest);
 
-    expect(readiness.missing).toEqual([
-      "business intent",
-      "input semantics",
-      "output semantics",
-    ]);
+    expect(readiness.missing).toEqual(["business intent", "input semantics", "output semantics"]);
     expect(readiness.missing).not.toContain("passed verification");
     expect(readiness.missing).not.toContain("Agent callable policy");
     expect(readiness.missing).not.toContain("verified example");

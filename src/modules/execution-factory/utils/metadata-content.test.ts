@@ -502,8 +502,10 @@ describe("metadata-content OpenAPI helpers", () => {
   it("keeps script_type empty when the backend did not return one", () => {
     // Filling "python" on reads makes backend-returned and absent values indistinguishable, so the
     // list badge cannot decide whether to render. Write paths have a separate fallback.
-    expect(mapFunctionContent({ function_content: { code: "def handler(e):\n    return e\n" } })
-      ?.script_type).toBeUndefined();
+    expect(
+      mapFunctionContent({ function_content: { code: "def handler(e):\n    return e\n" } })
+        ?.script_type,
+    ).toBeUndefined();
     expect(
       mapFunctionContent({
         function_content: { code: "def handler(e):\n    return e\n", script_type: "python" },

@@ -13,7 +13,11 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import { fetchKnDetailRest, type KnDetail, type McpAuth } from "@/modules/knowledge-network/services/context-loader.service";
+import {
+  fetchKnDetailRest,
+  type KnDetail,
+  type McpAuth,
+} from "@/modules/knowledge-network/services/context-loader.service";
 import {
   NODE_LIMIT,
   PATH_MAX_HOPS,
@@ -61,12 +65,20 @@ import {
 
 import { ExplorerToolbar } from "./ExplorerToolbar";
 import { OBJECT_TYPE_PALETTE, type MenuAction } from "./constants";
-import { GraphCanvas, type CanvasMarks, type ConceptGrouping, type GraphCanvasHandle } from "./GraphCanvas";
+import {
+  GraphCanvas,
+  type CanvasMarks,
+  type ConceptGrouping,
+  type GraphCanvasHandle,
+} from "./GraphCanvas";
 import styles from "./GraphExplorerPage.module.css";
 import { HistoryDrawer } from "./HistoryDrawer";
 import { NodeDrawer } from "./NodeDrawer";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
-import { createChatModel, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+import {
+  createChatModel,
+  type AgentTokenProvider,
+} from "@/modules/knowledge-network/services/agent-chat.service";
 
 import {
   newHistoryId,
@@ -83,8 +95,23 @@ import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network
 import { buildCondition } from "./condition-builder";
 import { buildShareUrl, combineLinkSource, parseDeepLink } from "./deep-link";
 import { generateCypherFragment, type CypherPromptTexts } from "./cypher-ai";
-import { buildExplorePrompt, conditionFrom, createExploreTools, runExploreAgent, type ExploreDeps, type ExplorePromptTexts, type ExploreStep } from "./explore-agent";
-import { buildCypherQuery, cypherRowsToGraph, isCypherParseError, parseCypherPattern, type ResolvedEdgeRef, type ResolvedNodeRef } from "./cypher-pattern";
+import {
+  buildExplorePrompt,
+  conditionFrom,
+  createExploreTools,
+  runExploreAgent,
+  type ExploreDeps,
+  type ExplorePromptTexts,
+  type ExploreStep,
+} from "./explore-agent";
+import {
+  buildCypherQuery,
+  cypherRowsToGraph,
+  isCypherParseError,
+  parseCypherPattern,
+  type ResolvedEdgeRef,
+  type ResolvedNodeRef,
+} from "./cypher-pattern";
 import { BROWSE_PAGE_SIZE, SearchPanel } from "./SearchPanel";
 
 const SAVE_DEBOUNCE_MS = 500;
@@ -93,7 +120,8 @@ const CYPHER_ROW_LIMIT = 200;
 /** Deploy-time default layout, set in the runtime config file next to the bundle. */
 function runtimeGraphLayout(): unknown {
   if (typeof window === "undefined") return null;
-  const runtime = (window as { __BKN_STUDIO_RUNTIME__?: { graphExplorer?: { layout?: unknown } } }).__BKN_STUDIO_RUNTIME__;
+  const runtime = (window as { __BKN_STUDIO_RUNTIME__?: { graphExplorer?: { layout?: unknown } } })
+    .__BKN_STUDIO_RUNTIME__;
   return runtime?.graphExplorer?.layout ?? null;
 }
 const EXPAND_SEED_LIMIT = 50;
@@ -124,26 +152,39 @@ export function GraphExplorerScene() {
     [runtimeConfig],
   );
   // Plain REST calls: a click here is not an agent turn, so no interaction is opened for it.
-  const client = useMemo(() => createGraphExplorerClient({ base, token: "", knId: networkId }, auth), [auth, base, networkId]);
+  const client = useMemo(
+    () => createGraphExplorerClient({ base, token: "", knId: networkId }, auth),
+    [auth, base, networkId],
+  );
 
   // Snapshot read once; the canvas is seeded from it and the maps below are filled from it.
   // A link carrying ids or a Cypher fragment opens on a fresh canvas; the cached settings still apply.
   const [initial] = useState(() => {
-    const link = typeof window === "undefined" ? null : parseDeepLink(combineLinkSource(window.location.search, window.location.hash));
+    const link =
+      typeof window === "undefined"
+        ? null
+        : parseDeepLink(combineLinkSource(window.location.search, window.location.hash));
     const cached = readCache(networkId);
     return {
       link,
       snapshot: link ? null : cached,
       settings: {
         // What the user last chose wins; a fresh canvas takes the deployment's default layout.
-        ...(cached?.settings ?? { ...DEFAULT_SETTINGS, layout: layoutFromConfig(runtimeGraphLayout()) ?? DEFAULT_SETTINGS.layout }),
+        ...(cached?.settings ?? {
+          ...DEFAULT_SETTINGS,
+          layout: layoutFromConfig(runtimeGraphLayout()) ?? DEFAULT_SETTINGS.layout,
+        }),
         ...(link?.layout ? { layout: link.layout } : {}),
       },
     };
   });
   const snapshot = initial.snapshot;
-  const nodesRef = useRef<Map<string, GNode>>(new Map(snapshot?.nodes.map((node) => [node.id, node]) ?? []));
-  const edgesRef = useRef<Map<string, GEdge>>(new Map(snapshot?.edges.map((edge) => [edge.id, edge]) ?? []));
+  const nodesRef = useRef<Map<string, GNode>>(
+    new Map(snapshot?.nodes.map((node) => [node.id, node]) ?? []),
+  );
+  const edgesRef = useRef<Map<string, GEdge>>(
+    new Map(snapshot?.edges.map((edge) => [edge.id, edge]) ?? []),
+  );
   const positionsRef = useRef<Record<string, NodePosition>>(snapshot?.positions ?? {});
   const [graphRev, setGraphRev] = useState(0);
   // After "clear cache" nothing is written again until the graph itself changes: moving a
@@ -158,7 +199,12 @@ export function GraphExplorerScene() {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
   const [pinned, setPinned] = useState<Set<string>>(
-    () => new Set(Object.entries(snapshot?.positions ?? {}).filter(([, position]) => position.fixed).map(([id]) => id)),
+    () =>
+      new Set(
+        Object.entries(snapshot?.positions ?? {})
+          .filter(([, position]) => position.fixed)
+          .map(([id]) => id),
+      ),
   );
   const [pathStart, setPathStart] = useState<string | null>(null);
   const [pathEnd, setPathEnd] = useState<string | null>(null);
@@ -183,7 +229,10 @@ export function GraphExplorerScene() {
     listLlmModels({ page: 1, size: 100 })
       .then((result) => {
         if (cancelled) return;
-        const models = result.items.map((item) => ({ name: item.modelName, isDefault: item.default }));
+        const models = result.items.map((item) => ({
+          name: item.modelName,
+          isDefault: item.default,
+        }));
         models.sort((a, b) => Number(Boolean(b.isDefault)) - Number(Boolean(a.isDefault)));
         setLlmModels(models);
       })
@@ -202,17 +251,18 @@ export function GraphExplorerScene() {
 
   /* ------------------------------ colours ------------------------------ */
 
-  const colorOf = useCallback(
-    (otId: string): string => {
-      const index = settingsRef.current.colorByOt[otId];
-      return index === undefined ? UNKNOWN_COLOR : OBJECT_TYPE_PALETTE[index % OBJECT_TYPE_PALETTE.length];
-    },
-    [],
-  );
+  const colorOf = useCallback((otId: string): string => {
+    const index = settingsRef.current.colorByOt[otId];
+    return index === undefined
+      ? UNKNOWN_COLOR
+      : OBJECT_TYPE_PALETTE[index % OBJECT_TYPE_PALETTE.length];
+  }, []);
 
   const assignColors = useCallback((nodes: GNode[]) => {
     const current = settingsRef.current.colorByOt;
-    const missing = [...new Set(nodes.map((node) => node.otId))].filter((otId) => current[otId] === undefined);
+    const missing = [...new Set(nodes.map((node) => node.otId))].filter(
+      (otId) => current[otId] === undefined,
+    );
     if (missing.length === 0) return;
     const next = { ...current };
     let cursor = Object.keys(next).length;
@@ -240,7 +290,9 @@ export function GraphExplorerScene() {
   type CallContext = { raw?: unknown };
 
   const logCall = useCallback((entry: Omit<HistoryEntry, "id" | "at">) => {
-    setHistory((previous) => pushHistory(previous, { ...entry, id: newHistoryId(), at: Date.now() }));
+    setHistory((previous) =>
+      pushHistory(previous, { ...entry, id: newHistoryId(), at: Date.now() }),
+    );
   }, []);
 
   /** Runs one user action: busy flag, history entry, and an error toast unless the caller rethrows. */
@@ -255,13 +307,32 @@ export function GraphExplorerScene() {
       try {
         const value = await run(ctx);
         if (options.log) {
-          logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? value, ok: true, ms: Math.round(performance.now() - started), summary: options.log.summarize(value), rerun: options.log.rerun, graph: options.log.graph?.(value) });
+          logCall({
+            kind: options.log.kind,
+            title: options.log.title,
+            input: options.log.input,
+            output: ctx.raw ?? value,
+            ok: true,
+            ms: Math.round(performance.now() - started),
+            summary: options.log.summarize(value),
+            rerun: options.log.rerun,
+            graph: options.log.graph?.(value),
+          });
         }
         return value;
       } catch (error) {
         const text = friendlyError(error);
         if (options.log) {
-          logCall({ kind: options.log.kind, title: options.log.title, input: options.log.input, output: ctx.raw ?? text, ok: false, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.failed"), rerun: options.log.rerun });
+          logCall({
+            kind: options.log.kind,
+            title: options.log.title,
+            input: options.log.input,
+            output: ctx.raw ?? text,
+            ok: false,
+            ms: Math.round(performance.now() - started),
+            summary: t("knowledgeNetwork.graphExplorer.history.summary.failed"),
+            rerun: options.log.rerun,
+          });
         }
         // Panels with their own error area ask for the readable message instead of a toast.
         if (options.rethrow) throw new Error(text);
@@ -275,7 +346,10 @@ export function GraphExplorerScene() {
   );
 
   const rememberForUndo = useCallback(() => {
-    pushSnapshot(undoRef.current, takeSnapshot(nodesRef.current.values(), edgesRef.current.values(), positionsRef.current));
+    pushSnapshot(
+      undoRef.current,
+      takeSnapshot(nodesRef.current.values(), edgesRef.current.values(), positionsRef.current),
+    );
     setUndoCount(undoRef.current.length);
   }, []);
 
@@ -287,12 +361,19 @@ export function GraphExplorerScene() {
       // The display property is configured on the object type definition in bkn-backend;
       // Context Loader does not carry it, so ask Studio's own service, best effort. The same
       // definition supplies the property display names, which REST get_object_types leaves out.
-      const definitions = await Promise.all(missing.map((id) => getKnowledgeNetworkObjectTypeDetail(networkId, id).catch(() => null)));
+      const definitions = await Promise.all(
+        missing.map((id) => getKnowledgeNetworkObjectTypeDetail(networkId, id).catch(() => null)),
+      );
       const definitionById = new Map(missing.map((id, index) => [id, definitions[index]]));
       const next = { ...metaRef.current };
       for (const meta of loaded) {
         const definition = definitionById.get(meta.id);
-        const displayNames = new Map((definition?.dataProperties ?? []).map((property) => [property.name, property.displayName]));
+        const displayNames = new Map(
+          (definition?.dataProperties ?? []).map((property) => [
+            property.name,
+            property.displayName,
+          ]),
+        );
         const properties = meta.properties.map((property) => {
           const displayName = property.displayName || displayNames.get(property.name);
           return displayName ? { ...property, displayName } : property;
@@ -302,9 +383,14 @@ export function GraphExplorerScene() {
       metaRef.current = next;
       setMetaByOt(next);
       // Nodes already on the canvas pick up the display key they were missing.
-      const touched = [...nodesRef.current.values()].filter((node) => missing.includes(node.otId) && next[node.otId]?.displayKey);
+      const touched = [...nodesRef.current.values()].filter(
+        (node) => missing.includes(node.otId) && next[node.otId]?.displayKey,
+      );
       if (touched.length > 0) {
-        const relabeled = relabel(touched, effectiveLabelsFrom(next, settingsRef.current.labelByOt));
+        const relabeled = relabel(
+          touched,
+          effectiveLabelsFrom(next, settingsRef.current.labelByOt),
+        );
         for (const node of relabeled) nodesRef.current.set(node.id, node);
         void canvasRef.current?.updateNodes(relabeled);
       }
@@ -314,7 +400,10 @@ export function GraphExplorerScene() {
   );
 
   /** Labels in effect: configured display keys, then the user's per-type choice on top. */
-  const labelMap = useCallback(() => effectiveLabelsFrom(metaRef.current, settingsRef.current.labelByOt), []);
+  const labelMap = useCallback(
+    () => effectiveLabelsFrom(metaRef.current, settingsRef.current.labelByOt),
+    [],
+  );
 
   const ensureMeta = useCallback(
     async (otId: string): Promise<ObjectTypeMeta | null> => {
@@ -345,23 +434,44 @@ export function GraphExplorerScene() {
 
   /** Edges as they should sit on the canvas: in each relation type's declared direction. */
   const orient = useCallback((edges: GEdge[], nodes: GNode[]) => {
-    const relations = new Map((detailRef.current?.relation_types ?? []).map((item) => [item.id, { id: item.id, sourceOtId: item.sourceId, targetOtId: item.targetId }]));
+    const relations = new Map(
+      (detailRef.current?.relation_types ?? []).map((item) => [
+        item.id,
+        { id: item.id, sourceOtId: item.sourceId, targetOtId: item.targetId },
+      ]),
+    );
     const incoming = new Map(nodes.map((node) => [node.id, node.otId]));
-    return orientEdges(edges, relations, (id) => incoming.get(id) ?? nodesRef.current.get(id)?.otId);
+    return orientEdges(
+      edges,
+      relations,
+      (id) => incoming.get(id) ?? nodesRef.current.get(id)?.otId,
+    );
   }, []);
 
   const addToCanvas = useCallback(
-    async (incomingNodes: GNode[], rawEdges: GEdge[], anchorId?: string): Promise<{ nodes: number; edges: number } | null> => {
+    async (
+      incomingNodes: GNode[],
+      rawEdges: GEdge[],
+      anchorId?: string,
+    ): Promise<{ nodes: number; edges: number } | null> => {
       const incomingEdges = orient(rawEdges, incomingNodes);
       // Over the limit the batch is cut to what still fits, never refused outright: partial data on
       // the canvas beats a warning and nothing. Edges to dropped nodes fall out in mergeGraph.
       const capped = capIncomingNodes(incomingNodes, new Set(nodesRef.current.keys()), NODE_LIMIT);
       if (capped.dropped > 0) {
-        message.warning(t("knowledgeNetwork.graphExplorer.toast.limitTruncated", { limit: NODE_LIMIT, dropped: capped.dropped }));
+        message.warning(
+          t("knowledgeNetwork.graphExplorer.toast.limitTruncated", {
+            limit: NODE_LIMIT,
+            dropped: capped.dropped,
+          }),
+        );
       }
       if (capped.nodes.length === 0 && incomingNodes.length > 0) return null;
       rememberForUndo();
-      const { addedNodes, addedEdges } = mergeGraph(nodesRef.current, edgesRef.current, { nodes: capped.nodes, edges: incomingEdges });
+      const { addedNodes, addedEdges } = mergeGraph(nodesRef.current, edgesRef.current, {
+        nodes: capped.nodes,
+        edges: incomingEdges,
+      });
       if (addedNodes.length === 0 && addedEdges.length === 0) {
         undoRef.current.pop();
         setUndoCount(undoRef.current.length);
@@ -392,11 +502,18 @@ export function GraphExplorerScene() {
         const meta = metas[otId];
         if (!meta || meta.primaryKeys.length !== 1) continue;
         const pk = meta.primaryKeys[0];
-        const keys = list.map((node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)));
+        const keys = list.map(
+          (node) => node.identity[pk] ?? keyValueFor(meta, node.id.slice(otId.length + 1)),
+        );
         for (let start = 0; start < keys.length; start += 50) {
           const chunk = keys.slice(start, start + 50);
-          const payload = await client.queryInstances(otId, { field: pk, operation: "in", value: chunk }, chunk.length);
-          for (const full of fromQueryObjectInstance(meta, payload, labelMap()[otId])) out.set(full.id, full);
+          const payload = await client.queryInstances(
+            otId,
+            { field: pk, operation: "in", value: chunk },
+            chunk.length,
+          );
+          for (const full of fromQueryObjectInstance(meta, payload, labelMap()[otId]))
+            out.set(full.id, full);
         }
       }
       return nodes.map((node) => out.get(node.id) ?? node);
@@ -419,7 +536,10 @@ export function GraphExplorerScene() {
       void enrichNodes(nodes)
         .then((full) => addToCanvas(full, []))
         .then((added) => {
-          if (added && added.nodes > 0) message.success(t("knowledgeNetwork.graphExplorer.toast.added", { count: added.nodes }));
+          if (added && added.nodes > 0)
+            message.success(
+              t("knowledgeNetwork.graphExplorer.toast.added", { count: added.nodes }),
+            );
           else if (added) message.info(t("knowledgeNetwork.graphExplorer.toast.nothingNew"));
         });
     },
@@ -432,13 +552,28 @@ export function GraphExplorerScene() {
       if (!node) return;
       const condition = identityCondition(node.identity);
       if (!condition) {
-        message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: node.otName }));
+        message.warning(
+          t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: node.otName }),
+        );
         return;
       }
-      const input = { tool: "explore_subgraph", kn_id: networkId, source_object_type_id: node.otId, direction, path_length: 1, condition, limit: 1 };
+      const input = {
+        tool: "explore_subgraph",
+        kn_id: networkId,
+        source_object_type_id: node.otId,
+        direction,
+        path_length: 1,
+        condition,
+        limit: 1,
+      };
       const result = await runCall(
         async (ctx) => {
-          const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction, pathLength: 1 });
+          const payload = await client.exploreSubgraph({
+            sourceOtId: node.otId,
+            condition,
+            direction,
+            pathLength: 1,
+          });
           ctx.raw = payload;
           return fromExploreSubgraph(payload, labelMap());
         },
@@ -447,15 +582,20 @@ export function GraphExplorerScene() {
             kind: "expand",
             title: `${node.display} · ${direction}`,
             input,
-            summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.nodes", { nodes: value.nodes.length, edges: value.edges.length }),
-          graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.nodes", {
+                nodes: value.nodes.length,
+                edges: value.edges.length,
+              }),
+            graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
             rerun: { kind: "expand", id, direction },
           },
         },
       );
       if (!result) return;
       const added = await addToCanvas(result.nodes, result.edges, id);
-      if (added && added.nodes === 0 && added.edges === 0) message.info(t("knowledgeNetwork.graphExplorer.toast.noNeighbors"));
+      if (added && added.nodes === 0 && added.edges === 0)
+        message.info(t("knowledgeNetwork.graphExplorer.toast.noNeighbors"));
     },
     [addToCanvas, client, labelMap, message, networkId, runCall, t],
   );
@@ -470,74 +610,113 @@ export function GraphExplorerScene() {
     const conditionA = identityCondition(start.identity);
     const conditionB = identityCondition(end.identity);
     if (!conditionA || !conditionB) {
-      message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: conditionA ? end.otName : start.otName }));
+      message.warning(
+        t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", {
+          name: conditionA ? end.otName : start.otName,
+        }),
+      );
       return;
     }
-    const outcome = await runCall(async (ctx) => {
-      // Each side walks as wide as the backend allows: three hops, narrowing when a wider query
-      // is refused (a path that crosses an object type with no published data returns 500).
-      // Joining the two walks at a shared node reaches up to six hops, and still finds a short
-      // path when one side can only manage one hop.
-      // A refusal is a property of the object type (its wider neighbourhood crosses the broken
-      // type), so the widest hop count that worked is remembered per type for this session and
-      // the other side, and later searches, skip the calls that would fail again.
-      const walk = async (node: GNode, condition: KnCondition) => {
-        let lastError: unknown = null;
-        // Never below one hop: a one-hop failure is not a width problem and is not remembered.
-        const widest = Math.max(1, Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS));
-        for (let hops = widest; hops >= 1; hops -= 1) {
-          try {
-            const payload = await client.exploreSubgraph({ sourceOtId: node.otId, condition, direction: "bidirectional", pathLength: hops });
-            return { payload, hops };
-          } catch (error) {
-            lastError = error;
-            if (hops > 1) hopCapRef.current.set(node.otId, hops - 1);
+    const outcome = await runCall(
+      async (ctx) => {
+        // Each side walks as wide as the backend allows: three hops, narrowing when a wider query
+        // is refused (a path that crosses an object type with no published data returns 500).
+        // Joining the two walks at a shared node reaches up to six hops, and still finds a short
+        // path when one side can only manage one hop.
+        // A refusal is a property of the object type (its wider neighbourhood crosses the broken
+        // type), so the widest hop count that worked is remembered per type for this session and
+        // the other side, and later searches, skip the calls that would fail again.
+        const walk = async (node: GNode, condition: KnCondition) => {
+          let lastError: unknown = null;
+          // Never below one hop: a one-hop failure is not a width problem and is not remembered.
+          const widest = Math.max(
+            1,
+            Math.min(PATH_MAX_HOPS, hopCapRef.current.get(node.otId) ?? PATH_MAX_HOPS),
+          );
+          for (let hops = widest; hops >= 1; hops -= 1) {
+            try {
+              const payload = await client.exploreSubgraph({
+                sourceOtId: node.otId,
+                condition,
+                direction: "bidirectional",
+                pathLength: hops,
+              });
+              return { payload, hops };
+            } catch (error) {
+              lastError = error;
+              if (hops > 1) hopCapRef.current.set(node.otId, hops - 1);
+            }
           }
+          throw lastError instanceof Error ? lastError : new Error(String(lastError));
+        };
+        const sideA = await walk(start, conditionA);
+        const pathsA = parseRelationPaths(sideA.payload.relation_paths);
+        let chain = shortestChainTo(pathsA, start.id, end.id);
+        let sideB: { payload: Record<string, unknown>; hops: number } | null = null;
+        if (!chain) {
+          sideB = await walk(end, conditionB);
+          chain = meetInTheMiddle(
+            pathsA,
+            start.id,
+            parseRelationPaths(sideB.payload.relation_paths),
+            end.id,
+          );
         }
-        throw lastError instanceof Error ? lastError : new Error(String(lastError));
-      };
-      const sideA = await walk(start, conditionA);
-      const pathsA = parseRelationPaths(sideA.payload.relation_paths);
-      let chain = shortestChainTo(pathsA, start.id, end.id);
-      let sideB: { payload: Record<string, unknown>; hops: number } | null = null;
-      if (!chain) {
-        sideB = await walk(end, conditionB);
-        chain = meetInTheMiddle(pathsA, start.id, parseRelationPaths(sideB.payload.relation_paths), end.id);
-      }
-      ctx.raw = { start: sideA.payload, end: sideB?.payload ?? null };
-      const reached = { a: sideA.hops, b: sideB?.hops ?? PATH_MAX_HOPS };
-      if (!chain) return { chain: null, nodes: [] as GNode[], reached };
-      const onPath = new Set<string>([start.id, end.id]);
-      for (const relation of chain) {
-        onPath.add(relation.source_object_id);
-        onPath.add(relation.target_object_id);
-      }
-      const pool = new Map<string, GNode>();
-      for (const payload of [sideA.payload, sideB?.payload]) {
-        if (!payload) continue;
-        for (const node of fromExploreSubgraph(payload, labelMap()).nodes) pool.set(node.id, node);
-      }
-      return { chain, nodes: [...pool.values()].filter((node) => onPath.has(node.id)), reached };
-    }, {
-      log: {
-        kind: "path",
-        title: `${start.display} → ${end.display}`,
-        input: { tool: "explore_subgraph", kn_id: networkId, from: start.id, to: end.id, direction: "bidirectional", path_length: `${PATH_MAX_HOPS}→1 per side` },
-        summarize: (value) =>
-          value.chain
-            ? t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: value.chain.length })
-            : t("knowledgeNetwork.graphExplorer.toast.pathNotFound", { hops: value.reached.a + value.reached.b }),
-        rerun: { kind: "path" },
-        graph: (value) => (value.chain ? { nodes: value.nodes, edges: orient(value.chain.map(edgeFromRelation), value.nodes) } : undefined),
+        ctx.raw = { start: sideA.payload, end: sideB?.payload ?? null };
+        const reached = { a: sideA.hops, b: sideB?.hops ?? PATH_MAX_HOPS };
+        if (!chain) return { chain: null, nodes: [] as GNode[], reached };
+        const onPath = new Set<string>([start.id, end.id]);
+        for (const relation of chain) {
+          onPath.add(relation.source_object_id);
+          onPath.add(relation.target_object_id);
+        }
+        const pool = new Map<string, GNode>();
+        for (const payload of [sideA.payload, sideB?.payload]) {
+          if (!payload) continue;
+          for (const node of fromExploreSubgraph(payload, labelMap()).nodes)
+            pool.set(node.id, node);
+        }
+        return { chain, nodes: [...pool.values()].filter((node) => onPath.has(node.id)), reached };
       },
-    });
+      {
+        log: {
+          kind: "path",
+          title: `${start.display} → ${end.display}`,
+          input: {
+            tool: "explore_subgraph",
+            kn_id: networkId,
+            from: start.id,
+            to: end.id,
+            direction: "bidirectional",
+            path_length: `${PATH_MAX_HOPS}→1 per side`,
+          },
+          summarize: (value) =>
+            value.chain
+              ? t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: value.chain.length })
+              : t("knowledgeNetwork.graphExplorer.toast.pathNotFound", {
+                  hops: value.reached.a + value.reached.b,
+                }),
+          rerun: { kind: "path" },
+          graph: (value) =>
+            value.chain
+              ? {
+                  nodes: value.nodes,
+                  edges: orient(value.chain.map(edgeFromRelation), value.nodes),
+                }
+              : undefined,
+        },
+      },
+    );
     if (!outcome) return;
     if (!outcome.chain) {
       setHighlight(null);
       const limited = outcome.reached.a < PATH_MAX_HOPS || outcome.reached.b < PATH_MAX_HOPS;
       message.info(
         limited
-          ? t("knowledgeNetwork.graphExplorer.toast.pathNotFoundLimited", { a: outcome.reached.a, b: outcome.reached.b })
+          ? t("knowledgeNetwork.graphExplorer.toast.pathNotFoundLimited", {
+              a: outcome.reached.a,
+              b: outcome.reached.b,
+            })
           : t("knowledgeNetwork.graphExplorer.toast.pathNotFound", { hops: PATH_MAX_HOPS * 2 }),
       );
       return;
@@ -549,7 +728,9 @@ export function GraphExplorerScene() {
       nodes: new Set([start.id, end.id, ...edges.flatMap((edge) => [edge.source, edge.target])]),
       edges: new Set(edges.map((edge) => edge.id)),
     });
-    message.success(t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: outcome.chain.length }));
+    message.success(
+      t("knowledgeNetwork.graphExplorer.toast.pathFound", { hops: outcome.chain.length }),
+    );
   }, [addToCanvas, client, labelMap, message, networkId, orient, pathEnd, pathStart, runCall, t]);
 
   const removeNodes = useCallback(
@@ -571,7 +752,9 @@ export function GraphExplorerScene() {
       if (pathStart && removed.has(pathStart)) setPathStart(null);
       if (pathEnd && removed.has(pathEnd)) setPathEnd(null);
       if (selectedId && removed.has(selectedId)) setSelectedId(null);
-      setHighlight((previous) => (previous && [...removed].some((id) => previous.nodes.has(id)) ? null : previous));
+      setHighlight((previous) =>
+        previous && [...removed].some((id) => previous.nodes.has(id)) ? null : previous,
+      );
       bump();
       return present.length;
     },
@@ -587,7 +770,8 @@ export function GraphExplorerScene() {
       return;
     }
     const count = await removeNodes(ids);
-    if (count > 0) message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
+    if (count > 0)
+      message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
   }, [message, removeNodes, t]);
 
   const handleUndo = useCallback(async () => {
@@ -608,7 +792,11 @@ export function GraphExplorerScene() {
     setSelectedId((previous) => (previous && ids.has(previous) ? previous : null));
     setHighlight(null);
     bump();
-    message.success({ content: t("knowledgeNetwork.graphExplorer.toast.undone"), key: "graph-explorer-undo", duration: 2 });
+    message.success({
+      content: t("knowledgeNetwork.graphExplorer.toast.undone"),
+      key: "graph-explorer-undo",
+      duration: 2,
+    });
   }, [bump, message, t]);
 
   const handleExport = useCallback(async () => {
@@ -726,7 +914,10 @@ export function GraphExplorerScene() {
       if (property) labelByOt[otId] = property;
       else delete labelByOt[otId];
       updateSettings({ labelByOt });
-      const relabeled = relabel([...nodesRef.current.values()].filter((node) => node.otId === otId), effectiveLabelsFrom(metaRef.current, labelByOt));
+      const relabeled = relabel(
+        [...nodesRef.current.values()].filter((node) => node.otId === otId),
+        effectiveLabelsFrom(metaRef.current, labelByOt),
+      );
       for (const node of relabeled) nodesRef.current.set(node.id, node);
       void canvasRef.current?.updateNodes(relabeled);
       bump();
@@ -762,7 +953,9 @@ export function GraphExplorerScene() {
       saveTimerRef.current = null;
       const positions: Record<string, NodePosition> = {};
       for (const [id, position] of Object.entries(positionsRef.current)) {
-        positions[id] = pinned.has(id) ? { ...position, fixed: true } : { x: position.x, y: position.y };
+        positions[id] = pinned.has(id)
+          ? { ...position, fixed: true }
+          : { x: position.x, y: position.y };
       }
       const outcome = writeCache(networkId, {
         nodes: [...nodesRef.current.values()],
@@ -770,7 +963,8 @@ export function GraphExplorerScene() {
         positions,
         settings,
       });
-      if (outcome === "settings-only") message.warning(t("knowledgeNetwork.graphExplorer.toast.cacheSaveFailed"));
+      if (outcome === "settings-only")
+        message.warning(t("knowledgeNetwork.graphExplorer.toast.cacheSaveFailed"));
     }, SAVE_DEBOUNCE_MS);
     saveTimerRef.current = handle;
     return () => {
@@ -796,34 +990,52 @@ export function GraphExplorerScene() {
   const handleSearch = useCallback(
     async (query: string, options: SearchOptions, rrf: RrfOptions): Promise<GNode[]> => {
       const viaKnSearch = needsKnSearch(rrf);
-      const nodes = await runCall(async (ctx) => {
-        // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep search_instance.
-        const payload = viaKnSearch
-          ? await knSearchInstances({ base, token: "", knId: networkId }, auth, query, options, rrf)
-          : await client.searchInstances(query, options);
-        ctx.raw = payload;
-        const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
-        const needMeta = new Set<string>();
-        for (const hit of hits) {
-          if (!isRecord(hit) || typeof hit.object_type_id !== "string") continue;
-          const props = isRecord(hit.properties) ? hit.properties : {};
-          if (typeof props._instance_id !== "string") needMeta.add(hit.object_type_id);
-        }
-        const metas = await loadMetas([...needMeta]);
-        const mapped = fromSearchInstance(payload, metas, labelMap());
-        for (const skipped of mapped.skipped) {
-          message.warning(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: skipped.otName }));
-        }
-        return mapped.nodes;
-      }, {
-        log: {
-          kind: "search",
-          title: query,
-          input: { tool: viaKnSearch ? "kn_search" : "search_instance", kn_id: networkId, query, ...options, ...(viaKnSearch ? { rrf } : {}) },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
-        graph: (value) => ({ nodes: value, edges: [] }),
+      const nodes = await runCall(
+        async (ctx) => {
+          // Fusion knobs are only reachable through kn_search's retrieval_config; defaults keep search_instance.
+          const payload = viaKnSearch
+            ? await knSearchInstances(
+                { base, token: "", knId: networkId },
+                auth,
+                query,
+                options,
+                rrf,
+              )
+            : await client.searchInstances(query, options);
+          ctx.raw = payload;
+          const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
+          const needMeta = new Set<string>();
+          for (const hit of hits) {
+            if (!isRecord(hit) || typeof hit.object_type_id !== "string") continue;
+            const props = isRecord(hit.properties) ? hit.properties : {};
+            if (typeof props._instance_id !== "string") needMeta.add(hit.object_type_id);
+          }
+          const metas = await loadMetas([...needMeta]);
+          const mapped = fromSearchInstance(payload, metas, labelMap());
+          for (const skipped of mapped.skipped) {
+            message.warning(
+              t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: skipped.otName }),
+            );
+          }
+          return mapped.nodes;
         },
-      });
+        {
+          log: {
+            kind: "search",
+            title: query,
+            input: {
+              tool: viaKnSearch ? "kn_search" : "search_instance",
+              kn_id: networkId,
+              query,
+              ...options,
+              ...(viaKnSearch ? { rrf } : {}),
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+            graph: (value) => ({ nodes: value, edges: [] }),
+          },
+        },
+      );
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
@@ -833,21 +1045,31 @@ export function GraphExplorerScene() {
   const handleQuery = useCallback(
     async (otId: string, condition: KnCondition | null): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runCall(async (ctx) => {
-        const metas = await loadMetas([otId]);
-        const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
-        const payload = await client.queryInstances(otId, condition, 50);
-        ctx.raw = payload;
-        return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
-      }, {
-        log: {
-          kind: "query",
-          title: otName,
-          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, condition, limit: 50 },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
-        graph: (value) => ({ nodes: value, edges: [] }),
+      const nodes = await runCall(
+        async (ctx) => {
+          const metas = await loadMetas([otId]);
+          const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
+          const payload = await client.queryInstances(otId, condition, 50);
+          ctx.raw = payload;
+          return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
         },
-      });
+        {
+          log: {
+            kind: "query",
+            title: otName,
+            input: {
+              tool: "query_object_instance",
+              kn_id: networkId,
+              ot_id: otId,
+              condition,
+              limit: 50,
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+            graph: (value) => ({ nodes: value, edges: [] }),
+          },
+        },
+      );
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
@@ -857,36 +1079,53 @@ export function GraphExplorerScene() {
   const handleLocate = useCallback(
     async (otId: string, rawKey: string): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
-      const nodes = await runCall(async (ctx) => {
-        const metas = await loadMetas([otId]);
-        const meta = metas[otId];
-        if (!meta || meta.primaryKeys.length === 0) {
-          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: otName }));
-        }
-        // One value per primary key, in key order; a single-key type takes the whole input verbatim.
-        const values = meta.primaryKeys.length === 1 ? [rawKey] : rawKey.split(",").map((part) => part.trim());
-        const rows = meta.primaryKeys.map((field, index) => ({ field, operator: "==", value: values[index] ?? "" }));
-        const condition = buildCondition(rows, meta.properties);
-        if (!condition) return [];
-        const payload = await client.queryInstances(otId, condition, 10);
-        ctx.raw = payload;
-        return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
-      }, {
-        log: {
-          kind: "locate",
-          title: `${otName} = ${rawKey}`,
-          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, key: rawKey },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
-        graph: (value) => ({ nodes: value, edges: [] }),
+      const nodes = await runCall(
+        async (ctx) => {
+          const metas = await loadMetas([otId]);
+          const meta = metas[otId];
+          if (!meta || meta.primaryKeys.length === 0) {
+            throw new Error(
+              t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: otName }),
+            );
+          }
+          // One value per primary key, in key order; a single-key type takes the whole input verbatim.
+          const values =
+            meta.primaryKeys.length === 1 ? [rawKey] : rawKey.split(",").map((part) => part.trim());
+          const rows = meta.primaryKeys.map((field, index) => ({
+            field,
+            operator: "==",
+            value: values[index] ?? "",
+          }));
+          const condition = buildCondition(rows, meta.properties);
+          if (!condition) return [];
+          const payload = await client.queryInstances(otId, condition, 10);
+          ctx.raw = payload;
+          return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
         },
-      });
+        {
+          log: {
+            kind: "locate",
+            title: `${otName} = ${rawKey}`,
+            input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, key: rawKey },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+            graph: (value) => ({ nodes: value, edges: [] }),
+          },
+        },
+      );
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
     [client, detail, labelMap, loadMetas, networkId, runCall, t],
   );
 
-  type CypherOutcome = { nodes: GNode[]; edges: GEdge[]; rows: number; query: string; raw: unknown };
+  type CypherOutcome = {
+    nodes: GNode[];
+    edges: GEdge[];
+    rows: number;
+    query: string;
+    raw: unknown;
+  };
 
   /** Parses, resolves and runs a MATCH fragment; shared by the Cypher tab and the AI explorer. */
   const cypherCore = useCallback(
@@ -900,20 +1139,32 @@ export function GraphExplorerScene() {
           return_present: "parseReturn",
           unlabeled: "parseUnlabeled",
         }[parsed.error];
-        throw new Error(t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }));
+        throw new Error(
+          t(`knowledgeNetwork.graphExplorer.cypher.${key}`, { variable: parsed.detail ?? "" }),
+        );
       }
       const types = detail?.object_types ?? [];
       const relations = detail?.relation_types ?? [];
-      const typeByLabel = (label: string) => types.find((item) => item.id === label) ?? types.find((item) => (item.name ?? "").trim() === label);
+      const typeByLabel = (label: string) =>
+        types.find((item) => item.id === label) ??
+        types.find((item) => (item.name ?? "").trim() === label);
       const otIds: string[] = [];
       for (const node of parsed.nodes) {
         const found = typeByLabel(node.label);
-        if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: node.label }));
+        if (!found)
+          throw new Error(
+            t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: node.label }),
+          );
         otIds.push(found.id);
       }
       const resolvedEdges: ResolvedEdgeRef[] = parsed.edges.map((edge) => {
-        const found = relations.find((item) => item.id === edge.relation) ?? relations.find((item) => (item.name ?? "").trim() === edge.relation);
-        if (!found) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }));
+        const found =
+          relations.find((item) => item.id === edge.relation) ??
+          relations.find((item) => (item.name ?? "").trim() === edge.relation);
+        if (!found)
+          throw new Error(
+            t("knowledgeNetwork.graphExplorer.cypher.unknownRelation", { relation: edge.relation }),
+          );
         return { ...edge, relTypeId: found.id, relTypeName: found.name?.trim() || found.id };
       });
       const metas = await loadMetas([...new Set(otIds)]);
@@ -921,7 +1172,11 @@ export function GraphExplorerScene() {
         const otId = otIds[index];
         const meta = metas[otId];
         if (!meta || meta.primaryKeys.length === 0) {
-          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
+          throw new Error(
+            t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", {
+              name: meta?.name ?? otId,
+            }),
+          );
         }
         return { ...node, otId, otName: meta.name, primaryKeys: meta.primaryKeys };
       });
@@ -933,16 +1188,32 @@ export function GraphExplorerScene() {
       for (const node of resolvedNodes) {
         if (node.primaryKeys.length !== 1) continue;
         const pk = node.primaryKeys[0];
-        const values = graph.nodes.filter((item) => item.otId === node.otId).map((item) => item.identity[pk]);
+        const values = graph.nodes
+          .filter((item) => item.otId === node.otId)
+          .map((item) => item.identity[pk]);
         for (let start = 0; start < values.length; start += 50) {
           const chunk = values.slice(start, start + 50);
-          const payload = await client.queryInstances(node.otId, { field: pk, operation: "in", value: chunk }, chunk.length);
-          for (const full of fromQueryObjectInstance(metas[node.otId], payload, labelMap()[node.otId])) {
+          const payload = await client.queryInstances(
+            node.otId,
+            { field: pk, operation: "in", value: chunk },
+            chunk.length,
+          );
+          for (const full of fromQueryObjectInstance(
+            metas[node.otId],
+            payload,
+            labelMap()[node.otId],
+          )) {
             if (enriched.has(full.id)) enriched.set(full.id, full);
           }
         }
       }
-      return { nodes: [...enriched.values()], edges: graph.edges, rows: result.entries.length, query, raw: result };
+      return {
+        nodes: [...enriched.values()],
+        edges: graph.edges,
+        rows: result.entries.length,
+        query,
+        raw: result,
+      };
     },
     [client, detail, labelMap, loadMetas, t],
   );
@@ -950,21 +1221,36 @@ export function GraphExplorerScene() {
   const handleCypher = useCallback(
     async (fragment: string): Promise<{ nodes: GNode[]; edges: GEdge[]; rows: number }> => {
       let sentQuery = "";
-      const outcome = await runCall(async (ctx) => {
-        const value = await cypherCore(fragment);
-        sentQuery = value.query;
-        ctx.raw = value.raw;
-        return value;
-      }, {
-        rethrow: true,
-        log: {
-          kind: "cypher",
-          title: fragment.trim().split("\n")[0],
-          input: { tool: "run_cypher", kn_id: networkId, fragment, get query() { return sentQuery; } },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows: value.rows, nodes: value.nodes.length, edges: value.edges.length }),
-        graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
+      const outcome = await runCall(
+        async (ctx) => {
+          const value = await cypherCore(fragment);
+          sentQuery = value.query;
+          ctx.raw = value.raw;
+          return value;
         },
-      });
+        {
+          rethrow: true,
+          log: {
+            kind: "cypher",
+            title: fragment.trim().split("\n")[0],
+            input: {
+              tool: "run_cypher",
+              kn_id: networkId,
+              fragment,
+              get query() {
+                return sentQuery;
+              },
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.rows", {
+                rows: value.rows,
+                nodes: value.nodes.length,
+                edges: value.edges.length,
+              }),
+            graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
+          },
+        },
+      );
       if (!outcome) throw new Error("");
       return outcome;
     },
@@ -980,11 +1266,15 @@ export function GraphExplorerScene() {
   );
 
   const cypherPromptTexts = useMemo<CypherPromptTexts>(() => {
-    const rules: unknown = t("knowledgeNetwork.graphExplorer.cypher.prompt.rules", { returnObjects: true });
+    const rules: unknown = t("knowledgeNetwork.graphExplorer.cypher.prompt.rules", {
+      returnObjects: true,
+    });
     return {
       intro: t("knowledgeNetwork.graphExplorer.cypher.prompt.intro"),
       rulesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.rulesHeader"),
-      rules: Array.isArray(rules) ? rules.filter((rule): rule is string => typeof rule === "string") : [],
+      rules: Array.isArray(rules)
+        ? rules.filter((rule): rule is string => typeof rule === "string")
+        : [],
       propertiesLabel: t("knowledgeNetwork.graphExplorer.cypher.prompt.propertiesLabel"),
       objectTypesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.objectTypesHeader"),
       relationTypesHeader: t("knowledgeNetwork.graphExplorer.cypher.prompt.relationTypesHeader"),
@@ -997,11 +1287,36 @@ export function GraphExplorerScene() {
       setBusy(true);
       const started = performance.now();
       try {
-        const fragment = await generateCypherFragment({ base, token: "", knId: networkId }, tokenProvider, modelName, detail, question, cypherPromptTexts);
-        logCall({ kind: "ai", title: question, input: { model: modelName, question }, output: fragment, ok: true, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.text", { chars: fragment.length }) });
+        const fragment = await generateCypherFragment(
+          { base, token: "", knId: networkId },
+          tokenProvider,
+          modelName,
+          detail,
+          question,
+          cypherPromptTexts,
+        );
+        logCall({
+          kind: "ai",
+          title: question,
+          input: { model: modelName, question },
+          output: fragment,
+          ok: true,
+          ms: Math.round(performance.now() - started),
+          summary: t("knowledgeNetwork.graphExplorer.history.summary.text", {
+            chars: fragment.length,
+          }),
+        });
         return fragment;
       } catch (error) {
-        logCall({ kind: "ai", title: question, input: { model: modelName, question }, output: friendlyError(error), ok: false, ms: Math.round(performance.now() - started), summary: t("knowledgeNetwork.graphExplorer.history.summary.failed") });
+        logCall({
+          kind: "ai",
+          title: question,
+          input: { model: modelName, question },
+          output: friendlyError(error),
+          ok: false,
+          ms: Math.round(performance.now() - started),
+          summary: t("knowledgeNetwork.graphExplorer.history.summary.failed"),
+        });
         throw error;
       } finally {
         setBusy(false);
@@ -1011,11 +1326,15 @@ export function GraphExplorerScene() {
   );
 
   const explorePromptTexts = useMemo<ExplorePromptTexts>(() => {
-    const rules: unknown = t("knowledgeNetwork.graphExplorer.ai.prompt.rules", { returnObjects: true });
+    const rules: unknown = t("knowledgeNetwork.graphExplorer.ai.prompt.rules", {
+      returnObjects: true,
+    });
     return {
       intro: t("knowledgeNetwork.graphExplorer.ai.prompt.intro"),
       rulesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.rulesHeader"),
-      rules: Array.isArray(rules) ? rules.filter((rule): rule is string => typeof rule === "string") : [],
+      rules: Array.isArray(rules)
+        ? rules.filter((rule): rule is string => typeof rule === "string")
+        : [],
       propertiesLabel: t("knowledgeNetwork.graphExplorer.ai.prompt.propertiesLabel"),
       objectTypesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.objectTypesHeader"),
       relationTypesHeader: t("knowledgeNetwork.graphExplorer.ai.prompt.relationTypesHeader"),
@@ -1027,104 +1346,174 @@ export function GraphExplorerScene() {
    * Cypher tools; everything a tool draws lands on the canvas as it happens.
    */
   const handleAiExplore = useCallback(
-    async (question: string, modelName: string, onStep: (step: ExploreStep) => void, signal?: AbortSignal): Promise<{ text: string; steps: ExploreStep[] }> => {
+    async (
+      question: string,
+      modelName: string,
+      onStep: (step: ExploreStep) => void,
+      signal?: AbortSignal,
+    ): Promise<{ text: string; steps: ExploreStep[] }> => {
       if (!detail) throw new Error(t("knowledgeNetwork.graphExplorer.ai.notReady"));
       const steps: ExploreStep[] = [];
       const report = (step: ExploreStep) => {
         steps.push(step);
         onStep(step);
       };
-      const outcome = await runCall(async (ctx) => {
-        // Candidates the model has seen this run; expand accepts them even before they are drawn.
-        const known = new Map<string, GNode>();
-        const remember = (nodes: GNode[]) => {
-          for (const node of nodes) known.set(node.id, node);
-          return nodes;
-        };
-        const typeIds = detail.object_types.map((item) => item.id);
-        const deps: ExploreDeps = {
-          search: async (query, objectTypes, limit) => {
-            const payload = await client.searchInstances(query, { objectTypes, maxInstancesPerType: limit });
-            const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
-            const needMeta = new Set<string>();
-            for (const hit of hits) if (isRecord(hit) && typeof hit.object_type_id === "string") needMeta.add(hit.object_type_id);
-            const metas = await loadMetas([...needMeta]);
-            return remember(await enrichCore(fromSearchInstance(payload, metas, labelMap()).nodes));
-          },
-          query: async (otId, filters, limit) => {
-            const meta = (await loadMetas([otId]))[otId];
-            if (!meta) throw new Error(t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: otId }));
-            const payload = await client.queryInstances(otId, conditionFrom(filters), limit);
-            return remember(fromQueryObjectInstance(meta, payload, labelMap()[otId]));
-          },
-          show: async (ids) => {
-            const parsed = parseIdList(ids.join("\n"), typeIds);
-            if (parsed.items.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
-            const otIds = [...new Set(parsed.items.map((item) => item.otId))];
-            const metas = await loadMetas(otIds);
-            for (const otId of otIds) {
-              const meta = metas[otId];
-              if (!meta || meta.primaryKeys.length !== 1) throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: meta?.name ?? otId }));
-            }
-            const collected = await collectSubgraphByIds(client, parsed.items, metas, detail.relation_types, labelMap());
-            remember(collected.nodes);
-            const added = (await addToCanvas(collected.nodes, collected.edges)) ?? { nodes: 0, edges: 0 };
-            return { nodes: collected.nodes, edges: collected.edges, added };
-          },
-          expand: async (ids, direction) => {
-            const seeds = ids.map((id) => nodesRef.current.get(id) ?? known.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
-            if (seeds.length === 0) throw new Error(t("knowledgeNetwork.graphExplorer.ai.unknownIds", { list: ids.slice(0, 5).join(", ") }));
-            const absent = seeds.filter((node) => !nodesRef.current.has(node.id));
-            if (absent.length > 0) await addToCanvas(absent, []);
-            const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
-            const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
-            remember(collected.nodes);
-            const added = (await addToCanvas(collected.nodes, collected.edges, seeds.length === 1 ? seeds[0].id : undefined)) ?? { nodes: 0, edges: 0 };
-            return { nodes: collected.nodes, edges: collected.edges, added };
-          },
-          cypher: async (match) => {
-            const value = await cypherCore(match);
-            remember(value.nodes);
-            const added = (await addToCanvas(value.nodes, value.edges)) ?? { nodes: 0, edges: 0 };
-            return { nodes: value.nodes, edges: value.edges, rows: value.rows, added };
-          },
-          canvas: () => ({ nodes: [...nodesRef.current.values()], edges: [...edgesRef.current.values()] }),
-        };
-        const tools = createExploreTools(deps, report, {
-          found: (count) => t("knowledgeNetwork.graphExplorer.ai.step.found", { count }),
-          drawn: (nodes, edges) => t("knowledgeNetwork.graphExplorer.ai.step.drawn", { nodes, edges }),
-          rows: (rows, nodes, edges) => t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows, nodes, edges }),
-          failed: (message) => t("knowledgeNetwork.graphExplorer.ai.step.failed", { message }),
-        });
-        const result = await runExploreAgent({
-          model: createChatModel({ base, token: "", knId: networkId }, modelName, tokenProvider),
-          system: buildExplorePrompt(detail, explorePromptTexts),
-          question,
-          tools,
-          maxSteps: AI_MAX_STEPS,
-          signal,
-        });
-        ctx.raw = { answer: result.text, steps };
-        return { text: result.text, steps };
-      }, {
-        rethrow: true,
-        log: {
-          kind: "explore",
-          title: question.trim().split("\n")[0],
-          input: { model: modelName, question, max_steps: AI_MAX_STEPS },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.ai.summary", { steps: value.steps.length }),
+      const outcome = await runCall(
+        async (ctx) => {
+          // Candidates the model has seen this run; expand accepts them even before they are drawn.
+          const known = new Map<string, GNode>();
+          const remember = (nodes: GNode[]) => {
+            for (const node of nodes) known.set(node.id, node);
+            return nodes;
+          };
+          const typeIds = detail.object_types.map((item) => item.id);
+          const deps: ExploreDeps = {
+            search: async (query, objectTypes, limit) => {
+              const payload = await client.searchInstances(query, {
+                objectTypes,
+                maxInstancesPerType: limit,
+              });
+              const hits = Array.isArray(payload.nodes) ? payload.nodes : [];
+              const needMeta = new Set<string>();
+              for (const hit of hits)
+                if (isRecord(hit) && typeof hit.object_type_id === "string")
+                  needMeta.add(hit.object_type_id);
+              const metas = await loadMetas([...needMeta]);
+              return remember(
+                await enrichCore(fromSearchInstance(payload, metas, labelMap()).nodes),
+              );
+            },
+            query: async (otId, filters, limit) => {
+              const meta = (await loadMetas([otId]))[otId];
+              if (!meta)
+                throw new Error(
+                  t("knowledgeNetwork.graphExplorer.cypher.unknownLabel", { label: otId }),
+                );
+              const payload = await client.queryInstances(otId, conditionFrom(filters), limit);
+              return remember(fromQueryObjectInstance(meta, payload, labelMap()[otId]));
+            },
+            show: async (ids) => {
+              const parsed = parseIdList(ids.join("\n"), typeIds);
+              if (parsed.items.length === 0)
+                throw new Error(
+                  t("knowledgeNetwork.graphExplorer.browse.idsUnknown", {
+                    list: parsed.unknown.slice(0, 5).join(", "),
+                  }),
+                );
+              const otIds = [...new Set(parsed.items.map((item) => item.otId))];
+              const metas = await loadMetas(otIds);
+              for (const otId of otIds) {
+                const meta = metas[otId];
+                if (!meta || meta.primaryKeys.length !== 1)
+                  throw new Error(
+                    t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", {
+                      name: meta?.name ?? otId,
+                    }),
+                  );
+              }
+              const collected = await collectSubgraphByIds(
+                client,
+                parsed.items,
+                metas,
+                detail.relation_types,
+                labelMap(),
+              );
+              remember(collected.nodes);
+              const added = (await addToCanvas(collected.nodes, collected.edges)) ?? {
+                nodes: 0,
+                edges: 0,
+              };
+              return { nodes: collected.nodes, edges: collected.edges, added };
+            },
+            expand: async (ids, direction) => {
+              const seeds = ids
+                .map((id) => nodesRef.current.get(id) ?? known.get(id))
+                .filter((node): node is GNode => Boolean(node))
+                .slice(0, EXPAND_SEED_LIMIT);
+              if (seeds.length === 0)
+                throw new Error(
+                  t("knowledgeNetwork.graphExplorer.ai.unknownIds", {
+                    list: ids.slice(0, 5).join(", "),
+                  }),
+                );
+              const absent = seeds.filter((node) => !nodesRef.current.has(node.id));
+              if (absent.length > 0) await addToCanvas(absent, []);
+              const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
+              const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
+              remember(collected.nodes);
+              const added = (await addToCanvas(
+                collected.nodes,
+                collected.edges,
+                seeds.length === 1 ? seeds[0].id : undefined,
+              )) ?? { nodes: 0, edges: 0 };
+              return { nodes: collected.nodes, edges: collected.edges, added };
+            },
+            cypher: async (match) => {
+              const value = await cypherCore(match);
+              remember(value.nodes);
+              const added = (await addToCanvas(value.nodes, value.edges)) ?? { nodes: 0, edges: 0 };
+              return { nodes: value.nodes, edges: value.edges, rows: value.rows, added };
+            },
+            canvas: () => ({
+              nodes: [...nodesRef.current.values()],
+              edges: [...edgesRef.current.values()],
+            }),
+          };
+          const tools = createExploreTools(deps, report, {
+            found: (count) => t("knowledgeNetwork.graphExplorer.ai.step.found", { count }),
+            drawn: (nodes, edges) =>
+              t("knowledgeNetwork.graphExplorer.ai.step.drawn", { nodes, edges }),
+            rows: (rows, nodes, edges) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.rows", { rows, nodes, edges }),
+            failed: (message) => t("knowledgeNetwork.graphExplorer.ai.step.failed", { message }),
+          });
+          const result = await runExploreAgent({
+            model: createChatModel({ base, token: "", knId: networkId }, modelName, tokenProvider),
+            system: buildExplorePrompt(detail, explorePromptTexts),
+            question,
+            tools,
+            maxSteps: AI_MAX_STEPS,
+            signal,
+          });
+          ctx.raw = { answer: result.text, steps };
+          return { text: result.text, steps };
         },
-      });
+        {
+          rethrow: true,
+          log: {
+            kind: "explore",
+            title: question.trim().split("\n")[0],
+            input: { model: modelName, question, max_steps: AI_MAX_STEPS },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.ai.summary", { steps: value.steps.length }),
+          },
+        },
+      );
       if (!outcome) throw new Error("");
       return outcome;
     },
-    [addToCanvas, base, client, cypherCore, detail, enrichCore, explorePromptTexts, labelMap, loadMetas, networkId, runCall, t, tokenProvider],
+    [
+      addToCanvas,
+      base,
+      client,
+      cypherCore,
+      detail,
+      enrichCore,
+      explorePromptTexts,
+      labelMap,
+      loadMetas,
+      networkId,
+      runCall,
+      t,
+      tokenProvider,
+    ],
   );
 
   const handleAddGraph = useCallback(
     (nodes: GNode[], edges: GEdge[]) => {
       void addToCanvas(nodes, edges).then((added) => {
-        if (added && (added.nodes > 0 || added.edges > 0)) message.success(t("knowledgeNetwork.graphExplorer.toast.added", { count: added.nodes }));
+        if (added && (added.nodes > 0 || added.edges > 0))
+          message.success(t("knowledgeNetwork.graphExplorer.toast.added", { count: added.nodes }));
         else if (added) message.info(t("knowledgeNetwork.graphExplorer.toast.nothingNew"));
       });
     },
@@ -1135,21 +1524,31 @@ export function GraphExplorerScene() {
     async (otId: string, offset: number): Promise<GNode[]> => {
       const otName = detail?.object_types.find((item) => item.id === otId)?.name ?? otId;
       const page = Math.floor(offset / BROWSE_PAGE_SIZE) + 1;
-      const nodes = await runCall(async (ctx) => {
-        const metas = await loadMetas([otId]);
-        const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
-        const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, offset);
-        ctx.raw = payload;
-        return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
-      }, {
-        log: {
-          kind: "browse",
-          title: `${otName} · ${page}`,
-          input: { tool: "query_object_instance", kn_id: networkId, ot_id: otId, limit: BROWSE_PAGE_SIZE, offset },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
-        graph: (value) => ({ nodes: value, edges: [] }),
+      const nodes = await runCall(
+        async (ctx) => {
+          const metas = await loadMetas([otId]);
+          const meta = metas[otId] ?? { id: otId, name: otName, primaryKeys: [], properties: [] };
+          const payload = await client.queryInstances(otId, null, BROWSE_PAGE_SIZE, offset);
+          ctx.raw = payload;
+          return fromQueryObjectInstance(meta, payload, labelMap()[otId]);
         },
-      });
+        {
+          log: {
+            kind: "browse",
+            title: `${otName} · ${page}`,
+            input: {
+              tool: "query_object_instance",
+              kn_id: networkId,
+              ot_id: otId,
+              limit: BROWSE_PAGE_SIZE,
+              offset,
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.hits", { count: value.length }),
+            graph: (value) => ({ nodes: value, edges: [] }),
+          },
+        },
+      );
       if (nodes === undefined) throw new Error("");
       return nodes;
     },
@@ -1163,41 +1562,71 @@ export function GraphExplorerScene() {
       // Ids that resolve are drawn; the rest are reported and skipped, because a list pasted from
       // elsewhere often carries a few that this network does not know.
       if (parsed.items.length === 0) {
-        throw new Error(t("knowledgeNetwork.graphExplorer.browse.idsUnknown", { list: parsed.unknown.slice(0, 5).join(", ") }));
+        throw new Error(
+          t("knowledgeNetwork.graphExplorer.browse.idsUnknown", {
+            list: parsed.unknown.slice(0, 5).join(", "),
+          }),
+        );
       }
       if (parsed.unknown.length > 0) {
-        message.warning(t("knowledgeNetwork.graphExplorer.browse.idsSkipped", { count: parsed.unknown.length, list: parsed.unknown.slice(0, 3).join(", ") }));
+        message.warning(
+          t("knowledgeNetwork.graphExplorer.browse.idsSkipped", {
+            count: parsed.unknown.length,
+            list: parsed.unknown.slice(0, 3).join(", "),
+          }),
+        );
       }
       const relations = detail?.relation_types ?? [];
-      const outcome = await runCall(async (ctx) => {
-        const otIds = [...new Set(parsed.items.map((item) => item.otId))];
-        const metas = await loadMetas(otIds);
-        // A composite-key object type cannot be looked up by a single key; skip it rather than
-        // refusing every other id in the list.
-        const usable = otIds.filter((otId) => metas[otId]?.primaryKeys.length === 1);
-        if (usable.length === 0) {
-          throw new Error(t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", { name: metas[otIds[0]]?.name ?? otIds[0] }));
-        }
-        const items = parsed.items.filter((item) => usable.includes(item.otId));
-        const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap());
-        ctx.raw = collected.raw;
-        return { nodes: collected.nodes, edges: collected.edges, requested: items.length };
-      }, {
-        rethrow: true,
-        log: {
-          kind: "ids",
-          title: `${parsed.items.length} ids`,
-          input: { tools: ["query_object_instance", "query_instance_subgraph"], kn_id: networkId, ids: parsed.items },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.nodes", { nodes: value.nodes.length, edges: value.edges.length }),
-          graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
+      const outcome = await runCall(
+        async (ctx) => {
+          const otIds = [...new Set(parsed.items.map((item) => item.otId))];
+          const metas = await loadMetas(otIds);
+          // A composite-key object type cannot be looked up by a single key; skip it rather than
+          // refusing every other id in the list.
+          const usable = otIds.filter((otId) => metas[otId]?.primaryKeys.length === 1);
+          if (usable.length === 0) {
+            throw new Error(
+              t("knowledgeNetwork.graphExplorer.toast.missingPrimaryKey", {
+                name: metas[otIds[0]]?.name ?? otIds[0],
+              }),
+            );
+          }
+          const items = parsed.items.filter((item) => usable.includes(item.otId));
+          const collected = await collectSubgraphByIds(client, items, metas, relations, labelMap());
+          ctx.raw = collected.raw;
+          return { nodes: collected.nodes, edges: collected.edges, requested: items.length };
         },
-      });
+        {
+          rethrow: true,
+          log: {
+            kind: "ids",
+            title: `${parsed.items.length} ids`,
+            input: {
+              tools: ["query_object_instance", "query_instance_subgraph"],
+              kn_id: networkId,
+              ids: parsed.items,
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.nodes", {
+                nodes: value.nodes.length,
+                edges: value.edges.length,
+              }),
+            graph: (value) => ({ nodes: value.nodes, edges: value.edges }),
+          },
+        },
+      );
       if (!outcome) return;
       const added = await addToCanvas(outcome.nodes, outcome.edges);
       if (added === null) return;
       const missing = outcome.requested - outcome.nodes.length;
-      if (missing > 0) message.warning(t("knowledgeNetwork.graphExplorer.browse.idsMissing", { count: missing }));
-      message.success(t("knowledgeNetwork.graphExplorer.browse.idsDone", { nodes: outcome.nodes.length, edges: outcome.edges.length }));
+      if (missing > 0)
+        message.warning(t("knowledgeNetwork.graphExplorer.browse.idsMissing", { count: missing }));
+      message.success(
+        t("knowledgeNetwork.graphExplorer.browse.idsDone", {
+          nodes: outcome.nodes.length,
+          edges: outcome.edges.length,
+        }),
+      );
     },
     [addToCanvas, client, detail, labelMap, loadMetas, message, networkId, runCall, t],
   );
@@ -1205,25 +1634,52 @@ export function GraphExplorerScene() {
   /** Expands many nodes one hop at once: one explore_subgraph per object type with `pk in`. */
   const expandMany = useCallback(
     async (ids: string[], direction: ExpandDirection): Promise<void> => {
-      const seeds = ids.map((id) => nodesRef.current.get(id)).filter((node): node is GNode => Boolean(node)).slice(0, EXPAND_SEED_LIMIT);
+      const seeds = ids
+        .map((id) => nodesRef.current.get(id))
+        .filter((node): node is GNode => Boolean(node))
+        .slice(0, EXPAND_SEED_LIMIT);
       if (seeds.length === 0) return;
-      if (ids.length > EXPAND_SEED_LIMIT) message.warning(t("knowledgeNetwork.graphExplorer.toast.expandSeedsCapped", { limit: EXPAND_SEED_LIMIT }));
-      const result = await runCall(async (ctx) => {
-        const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
-        const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
-        ctx.raw = collected.raw;
-        return { nodes: collected.nodes, edges: collected.edges, failed: collected.failed ?? [] };
-      }, {
-        log: {
-          kind: "expand",
-          title: `${seeds.length} × ${direction}`,
-          input: { tool: "explore_subgraph", kn_id: networkId, seeds: seeds.map((node) => node.id), direction, path_length: 1 },
-          summarize: (value) => t("knowledgeNetwork.graphExplorer.history.summary.nodes", { nodes: value.nodes.length, edges: value.edges.length }),
+      if (ids.length > EXPAND_SEED_LIMIT)
+        message.warning(
+          t("knowledgeNetwork.graphExplorer.toast.expandSeedsCapped", { limit: EXPAND_SEED_LIMIT }),
+        );
+      const result = await runCall(
+        async (ctx) => {
+          const metas = await loadMetas([...new Set(seeds.map((node) => node.otId))]);
+          const collected = await expandSeeds(client, seeds, metas, direction, labelMap());
+          ctx.raw = collected.raw;
+          return { nodes: collected.nodes, edges: collected.edges, failed: collected.failed ?? [] };
         },
-      });
+        {
+          log: {
+            kind: "expand",
+            title: `${seeds.length} × ${direction}`,
+            input: {
+              tool: "explore_subgraph",
+              kn_id: networkId,
+              seeds: seeds.map((node) => node.id),
+              direction,
+              path_length: 1,
+            },
+            summarize: (value) =>
+              t("knowledgeNetwork.graphExplorer.history.summary.nodes", {
+                nodes: value.nodes.length,
+                edges: value.edges.length,
+              }),
+          },
+        },
+      );
       if (!result) return;
       if (result.failed.length > 0) {
-        message.warning(t("knowledgeNetwork.graphExplorer.toast.expandPartial", { count: result.failed.length, list: result.failed.map((item) => item.objectType).slice(0, 3).join(", ") }));
+        message.warning(
+          t("knowledgeNetwork.graphExplorer.toast.expandPartial", {
+            count: result.failed.length,
+            list: result.failed
+              .map((item) => item.objectType)
+              .slice(0, 3)
+              .join(", "),
+          }),
+        );
       }
       await addToCanvas(result.nodes, result.edges);
     },
@@ -1254,7 +1710,18 @@ export function GraphExplorerScene() {
         if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
       }
     })();
-  }, [addToCanvas, detail, expandMany, handleCypher, handleSubgraphByIds, initial.link, labelMap, message, setSearchParams, t]);
+  }, [
+    addToCanvas,
+    detail,
+    expandMany,
+    handleCypher,
+    handleSubgraphByIds,
+    initial.link,
+    labelMap,
+    message,
+    setSearchParams,
+    t,
+  ]);
 
   const handleShare = useCallback(() => {
     const base = `${window.location.origin}${window.location.pathname}`;
@@ -1265,8 +1732,11 @@ export function GraphExplorerScene() {
     });
     void writeTextToClipboard(url)
       .then(() => {
-        message.success(t("knowledgeNetwork.graphExplorer.toast.linkCopied", { count: ids.length - dropped }));
-        if (dropped > 0) message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { dropped }));
+        message.success(
+          t("knowledgeNetwork.graphExplorer.toast.linkCopied", { count: ids.length - dropped }),
+        );
+        if (dropped > 0)
+          message.warning(t("knowledgeNetwork.graphExplorer.toast.linkTruncated", { dropped }));
       })
       .catch(() => undefined);
   }, [message, t]);
@@ -1328,7 +1798,8 @@ export function GraphExplorerScene() {
         if (ids.length > 0) {
           event.preventDefault();
           void removeNodes(ids).then((count) => {
-            if (count > 0) message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
+            if (count > 0)
+              message.success(t("knowledgeNetwork.graphExplorer.toast.removedSelected", { count }));
           });
         }
       }
@@ -1353,8 +1824,21 @@ export function GraphExplorerScene() {
       if (!entry.graph || entry.graph.nodes.length === 0) return;
       void addToCanvas(entry.graph.nodes, entry.graph.edges).then((added) => {
         if (!added) return;
-        if (added.nodes === 0 && added.edges === 0) message.info({ content: t("knowledgeNetwork.graphExplorer.search.nothingNew"), key: "graph-explorer-history-send", duration: 2 });
-        else message.success({ content: t("knowledgeNetwork.graphExplorer.browse.idsDone", { nodes: added.nodes, edges: added.edges }), key: "graph-explorer-history-send", duration: 2 });
+        if (added.nodes === 0 && added.edges === 0)
+          message.info({
+            content: t("knowledgeNetwork.graphExplorer.search.nothingNew"),
+            key: "graph-explorer-history-send",
+            duration: 2,
+          });
+        else
+          message.success({
+            content: t("knowledgeNetwork.graphExplorer.browse.idsDone", {
+              nodes: added.nodes,
+              edges: added.edges,
+            }),
+            key: "graph-explorer-history-send",
+            duration: 2,
+          });
       });
     },
     [addToCanvas, message, t],
@@ -1363,7 +1847,13 @@ export function GraphExplorerScene() {
   const copyText = useCallback(
     (text: string) => {
       void writeTextToClipboard(text)
-        .then(() => message.success({ content: t("knowledgeNetwork.graphExplorer.toast.copied"), key: "graph-explorer-copy", duration: 1.5 }))
+        .then(() =>
+          message.success({
+            content: t("knowledgeNetwork.graphExplorer.toast.copied"),
+            key: "graph-explorer-copy",
+            duration: 1.5,
+          }),
+        )
         .catch(() => undefined);
     },
     [message, t],
@@ -1382,8 +1872,11 @@ export function GraphExplorerScene() {
   /** One row per object type on the canvas, so the node colours can be read. */
   const legend = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const node of nodesRef.current.values()) counts.set(node.otId, (counts.get(node.otId) ?? 0) + 1);
-    return canvasObjectTypes.map((item) => ({ ...item, count: counts.get(item.id) ?? 0 })).sort((a, b) => b.count - a.count);
+    for (const node of nodesRef.current.values())
+      counts.set(node.otId, (counts.get(node.otId) ?? 0) + 1);
+    return canvasObjectTypes
+      .map((item) => ({ ...item, count: counts.get(item.id) ?? 0 }))
+      .sort((a, b) => b.count - a.count);
   }, [canvasObjectTypes]);
   const propertyNamesByOt = useMemo(() => {
     const out: Record<string, string[]> = {};
@@ -1406,11 +1899,19 @@ export function GraphExplorerScene() {
   }, [canvasObjectTypes, metaByOt]);
 
   const objectTypes = useMemo(
-    () => (detail?.object_types ?? []).map((item) => ({ id: item.id, name: item.name?.trim() || item.id })),
+    () =>
+      (detail?.object_types ?? []).map((item) => ({
+        id: item.id,
+        name: item.name?.trim() || item.id,
+      })),
     [detail],
   );
   const conceptGroups = useMemo(
-    () => (detail?.concept_groups ?? []).map((item) => ({ id: item.id, name: item.name?.trim() || item.id })),
+    () =>
+      (detail?.concept_groups ?? []).map((item) => ({
+        id: item.id,
+        name: item.name?.trim() || item.id,
+      })),
     [detail],
   );
 
@@ -1430,33 +1931,33 @@ export function GraphExplorerScene() {
     [t],
   );
 
-  const selectedNode = selectedId ? nodesRef.current.get(selectedId) ?? null : null;
+  const selectedNode = selectedId ? (nodesRef.current.get(selectedId) ?? null) : null;
   const disabled = !networkId;
 
   return (
     <div className={styles.root}>
       {settings.sidebarCollapsed ? null : (
-      <SearchPanel
-        objectTypes={objectTypes}
-        conceptGroups={conceptGroups}
-        metaByOt={metaByOt}
-        ensureMeta={ensureMeta}
-        onSearch={handleSearch}
-        onLocate={handleLocate}
-        onQuery={handleQuery}
-        onBrowse={handleBrowse}
-        onSubgraphByIds={handleSubgraphByIds}
-        onCypher={handleCypher}
-        onAddGraph={handleAddGraph}
-        cypherRowLimit={CYPHER_ROW_LIMIT}
-        onGenerateCypher={llmModels.length > 0 && detail ? handleGenerateCypher : null}
-        onAiExplore={llmModels.length > 0 && detail ? handleAiExplore : null}
-        cypherModels={llmModels}
-        onAdd={handleAdd}
-        canvasIds={canvasIds}
-        disabled={disabled}
-        colorOf={colorOf}
-      />
+        <SearchPanel
+          objectTypes={objectTypes}
+          conceptGroups={conceptGroups}
+          metaByOt={metaByOt}
+          ensureMeta={ensureMeta}
+          onSearch={handleSearch}
+          onLocate={handleLocate}
+          onQuery={handleQuery}
+          onBrowse={handleBrowse}
+          onSubgraphByIds={handleSubgraphByIds}
+          onCypher={handleCypher}
+          onAddGraph={handleAddGraph}
+          cypherRowLimit={CYPHER_ROW_LIMIT}
+          onGenerateCypher={llmModels.length > 0 && detail ? handleGenerateCypher : null}
+          onAiExplore={llmModels.length > 0 && detail ? handleAiExplore : null}
+          cypherModels={llmModels}
+          onAdd={handleAdd}
+          canvasIds={canvasIds}
+          disabled={disabled}
+          colorOf={colorOf}
+        />
       )}
       <div className={styles.main}>
         <ExplorerToolbar
@@ -1469,8 +1970,8 @@ export function GraphExplorerScene() {
           canvasObjectTypes={canvasObjectTypes}
           propertyNamesByOt={propertyNamesByOt}
           labelByOt={settings.labelByOt}
-          pathStart={pathStart ? nodesRef.current.get(pathStart) ?? null : null}
-          pathEnd={pathEnd ? nodesRef.current.get(pathEnd) ?? null : null}
+          pathStart={pathStart ? (nodesRef.current.get(pathStart) ?? null) : null}
+          pathEnd={pathEnd ? (nodesRef.current.get(pathEnd) ?? null) : null}
           pathActive={highlight !== null}
           busy={busy}
           disabled={disabled}
@@ -1547,7 +2048,9 @@ export function GraphExplorerScene() {
           />
           {nodesRef.current.size === 0 ? (
             <div className={styles.emptyHint}>
-              <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.emptyCanvas")}</Typography.Text>
+              <Typography.Text type="secondary">
+                {t("knowledgeNetwork.graphExplorer.emptyCanvas")}
+              </Typography.Text>
             </div>
           ) : null}
           {legend.length > 0 ? (
@@ -1568,8 +2071,20 @@ export function GraphExplorerScene() {
           ) : null}
         </div>
       </div>
-      <NodeDrawer node={selectedNode} color={selectedNode ? colorOf(selectedNode.otId) : UNKNOWN_COLOR} onClose={() => setSelectedId(null)} />
-      <HistoryDrawer open={historyOpen} entries={history} onClose={() => setHistoryOpen(false)} onCopy={copyText} onRerun={handleRerun} onSendToCanvas={handleSendToCanvas} onClear={() => setHistory([])} />
+      <NodeDrawer
+        node={selectedNode}
+        color={selectedNode ? colorOf(selectedNode.otId) : UNKNOWN_COLOR}
+        onClose={() => setSelectedId(null)}
+      />
+      <HistoryDrawer
+        open={historyOpen}
+        entries={history}
+        onClose={() => setHistoryOpen(false)}
+        onCopy={copyText}
+        onRerun={handleRerun}
+        onSendToCanvas={handleSendToCanvas}
+        onClear={() => setHistory([])}
+      />
     </div>
   );
 }

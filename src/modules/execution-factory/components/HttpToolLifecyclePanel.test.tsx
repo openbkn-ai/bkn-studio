@@ -40,10 +40,16 @@ describe("HttpToolLifecyclePanel", () => {
     expect(screen.getByText("OpenAPI")).toBeTruthy();
 
     // Primary column: business then advanced
-    expect(business.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      business.compareDocumentPosition(advanced) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     // Side column: IO then debug; both after business in document order
-    expect(business.compareDocumentPosition(ioPreview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(ioPreview.compareDocumentPosition(debug) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      business.compareDocumentPosition(ioPreview) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      ioPreview.compareDocumentPosition(debug) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     const panel = container.firstElementChild;
     expect(panel?.children).toHaveLength(2);

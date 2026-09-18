@@ -46,6 +46,11 @@ export function useConsoleNavigation(): ConsoleNavItem[] {
         ),
         snapshot,
       ),
-    [features.catalog, runtimeConfig.currentUser.isSuperAdmin, runtimeConfig.currentUser.permissions, snapshot],
+    [
+      features.catalog,
+      runtimeConfig.currentUser.isSuperAdmin,
+      runtimeConfig.currentUser.permissions,
+      snapshot,
+    ],
   );
 }

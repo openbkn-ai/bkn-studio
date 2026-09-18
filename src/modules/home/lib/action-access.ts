@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  hasPermissions,
-  type PermissionCheckMode,
-} from "@/framework/permission/has-permissions";
+import { hasPermissions, type PermissionCheckMode } from "@/framework/permission/has-permissions";
 
 export type HomeActionAccess = {
   path?: string;
@@ -22,10 +19,7 @@ const NAVIGATION_ENTRY_PATHS = new Set([
   "/execution-factory/units",
 ]);
 
-export function canAccessHomeAction(
-  currentPermissions: string[],
-  action: HomeActionAccess,
-) {
+export function canAccessHomeAction(currentPermissions: string[], action: HomeActionAccess) {
   if (action.path && NAVIGATION_ENTRY_PATHS.has(action.path)) {
     return true;
   }

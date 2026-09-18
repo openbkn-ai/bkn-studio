@@ -6,10 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkMetricMutationPayload,
@@ -350,7 +347,9 @@ export async function deleteKnowledgeNetworkMetrics(networkId: string, metricIds
     return;
   }
 
-  await http.delete(`/bkn-backend/v1/knowledge-networks/${networkId}/metrics/${metricIds.join(",")}`);
+  await http.delete(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/metrics/${metricIds.join(",")}`,
+  );
   updateMetricApiAvailability("ready");
 }
 
@@ -426,9 +425,7 @@ export function buildMetricDataQueryPayload(params: MetricDataQueryParams) {
 
   // Same-period: sync time.step from comparison granularity (no separate step UI).
   const step =
-    params.mode === "sameperiod"
-      ? (params.samePeriodGranularity ?? "day")
-      : (params.step ?? "day");
+    params.mode === "sameperiod" ? (params.samePeriodGranularity ?? "day") : (params.step ?? "day");
 
   const payload: Record<string, unknown> = {
     limit: params.limit,
@@ -680,8 +677,7 @@ export function normalizeMetricDataResponse(
     rows: (firstData.values ?? []).map((value, index) => ({
       growthRate: firstData.growth_rates?.[index] ?? "",
       growthValue: firstData.growth_values?.[index] ?? "",
-      timestamp:
-        times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
+      timestamp: times[index] == null ? "--" : formatMetricTimeLabel(times[index]),
       [valueKey]: value,
     })),
     visualHint: "trend-bars",
@@ -742,9 +738,24 @@ export async function queryKnowledgeNetworkMetricData(
         ],
         durationMs: 233,
         rows: [
-          { current: `68.2${unitSuffix}`, growthRate: "4.2%", growthValue: "2.8", timestamp: "2026-06-05 08:00" },
-          { current: `70.1${unitSuffix}`, growthRate: "5.1%", growthValue: "3.4", timestamp: "2026-06-05 09:00" },
-          { current: `72.5${unitSuffix}`, growthRate: "6.0%", growthValue: "4.1", timestamp: "2026-06-05 10:00" },
+          {
+            current: `68.2${unitSuffix}`,
+            growthRate: "4.2%",
+            growthValue: "2.8",
+            timestamp: "2026-06-05 08:00",
+          },
+          {
+            current: `70.1${unitSuffix}`,
+            growthRate: "5.1%",
+            growthValue: "3.4",
+            timestamp: "2026-06-05 09:00",
+          },
+          {
+            current: `72.5${unitSuffix}`,
+            growthRate: "6.0%",
+            growthValue: "4.1",
+            timestamp: "2026-06-05 10:00",
+          },
         ],
         visualHint: "trend-bars",
       };

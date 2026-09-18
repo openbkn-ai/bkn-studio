@@ -58,10 +58,7 @@ type MetricListPanelProps = {
   unsupported?: boolean;
 };
 
-function getMetricTypeLabel(
-  value: KnowledgeNetworkMetricType,
-  t: (key: string) => string,
-) {
+function getMetricTypeLabel(value: KnowledgeNetworkMetricType, t: (key: string) => string) {
   switch (value) {
     case "derived":
       return t("knowledgeNetwork.metricTypeDerived");
@@ -99,8 +96,9 @@ export function MetricListPanel({
   const [pageSize, setPageSize] = usePersistentPageSize("metrics");
   const [total, setTotal] = useState(metrics.length);
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const [authorizingRecord, setAuthorizingRecord] =
-    useState<KnowledgeNetworkMetricRecord | null>(null);
+  const [authorizingRecord, setAuthorizingRecord] = useState<KnowledgeNetworkMetricRecord | null>(
+    null,
+  );
   const accountDirectory = useAccountDirectory();
 
   const tagOptions = useMemo(() => {
@@ -120,8 +118,7 @@ export function MetricListPanel({
   );
 
   const hasActiveFilter = useMemo(
-    () =>
-      Boolean(keyword.trim()) || selectedTag !== "all" || selectedBoundObjectType !== "all",
+    () => Boolean(keyword.trim()) || selectedTag !== "all" || selectedBoundObjectType !== "all",
     [keyword, selectedBoundObjectType, selectedTag],
   );
 
@@ -143,7 +140,16 @@ export function MetricListPanel({
     } finally {
       setTableLoading(false);
     }
-  }, [keyword, networkId, page, pageSize, selectedBoundObjectType, selectedTag, sortBy, sortDirection]);
+  }, [
+    keyword,
+    networkId,
+    page,
+    pageSize,
+    selectedBoundObjectType,
+    selectedTag,
+    sortBy,
+    sortDirection,
+  ]);
 
   useEffect(() => {
     void listKnowledgeNetworkObjectTypes(networkId).then(setObjectTypes);
@@ -241,14 +247,16 @@ export function MetricListPanel({
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
           ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
-            ? [{
-                key: "authorize",
-                label: (
-                  <KnowledgeNetworkAuthorizationActionLabel>
-                    {t("knowledgeNetwork.authorizeAction")}
-                  </KnowledgeNetworkAuthorizationActionLabel>
-                ),
-              }]
+            ? [
+                {
+                  key: "authorize",
+                  label: (
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]
@@ -289,20 +297,14 @@ export function MetricListPanel({
       key: "boundObjectType",
       title: t("knowledgeNetwork.metricBoundObjectType"),
       width: 180,
-      render: (_value: string, record) =>
-        resolveMetricBoundObjectTypeName(record, objectTypes),
+      render: (_value: string, record) => resolveMetricBoundObjectTypeName(record, objectTypes),
     },
     {
       dataIndex: "tags",
       key: "tags",
       title: t("common.tag"),
       width: 160,
-      render: (tags: string[]) =>
-        tags.length > 0 ? (
-          <ResourceTagList tags={tags} />
-        ) : (
-          "--"
-        ),
+      render: (tags: string[]) => (tags.length > 0 ? <ResourceTagList tags={tags} /> : "--"),
     },
     {
       dataIndex: "updaterName",
@@ -332,10 +334,7 @@ export function MetricListPanel({
 
     if (!canModify) {
       return (
-        <Empty
-          className={styles.emptyPanel}
-          description={t("knowledgeNetwork.emptyMetrics")}
-        />
+        <Empty className={styles.emptyPanel} description={t("knowledgeNetwork.emptyMetrics")} />
       );
     }
 
@@ -389,149 +388,148 @@ export function MetricListPanel({
   return (
     <>
       <section className={`${styles.page} ${styles.objectTypePage} ${styles.metricPage}`}>
-      <h2 className={styles.title}>{t("knowledgeNetwork.metricsTitle")}</h2>
-      {unsupported ? (
-        <Alert
-          className={styles.noticeBanner}
-          message={t("knowledgeNetwork.metricApiUnavailableTitle")}
-          showIcon
-          type="warning"
-          description={t("knowledgeNetwork.metricApiUnavailableDescription")}
-        />
-      ) : null}
+        <h2 className={styles.title}>{t("knowledgeNetwork.metricsTitle")}</h2>
+        {unsupported ? (
+          <Alert
+            className={styles.noticeBanner}
+            message={t("knowledgeNetwork.metricApiUnavailableTitle")}
+            showIcon
+            type="warning"
+            description={t("knowledgeNetwork.metricApiUnavailableDescription")}
+          />
+        ) : null}
 
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          {canModify || canDelete ? (
-            <>
-              {canModify ? (
-              <AppButton
-                className={styles.toolbarButton}
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  void navigate(`/knowledge-network/workspace/${networkId}/metrics/create`);
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarLeft}>
+            {canModify || canDelete ? (
+              <>
+                {canModify ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      void navigate(`/knowledge-network/workspace/${networkId}/metrics/create`);
+                    }}
+                    type="primary"
+                  >
+                    {t("common.create")}
+                  </AppButton>
+                ) : null}
+                {canDelete ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    danger
+                    disabled={selectedRowKeys.length === 0}
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      const pageSelectedRecords = tableMetrics.filter(
+                        (item) =>
+                          selectedRowKeys.includes(item.id) &&
+                          hasKnowledgeNetworkRecordOperation(item, "delete"),
+                      );
+                      confirmDelete(pageSelectedRecords);
+                    }}
+                  >
+                    {t("common.delete")}
+                  </AppButton>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <div className={styles.toolbarRight}>
+            <Input
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => {
+                setKeyword(event.target.value);
+                setPage(1);
+              }}
+              placeholder={t("knowledgeNetwork.searchPlaceholder")}
+              prefix={<SearchOutlined className={styles.searchIcon} />}
+              value={keyword}
+            />
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>
+                {t("knowledgeNetwork.metricBoundObjectType")}
+              </span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedBoundObjectType(value);
+                  setPage(1);
                 }}
-                type="primary"
-              >
-                {t("common.create")}
-              </AppButton>
-              ) : null}
-              {canDelete ? (
-              <AppButton
-                className={styles.toolbarButton}
-                danger
-                disabled={selectedRowKeys.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={() => {
-                  const pageSelectedRecords = tableMetrics.filter(
-                    (item) =>
-                      selectedRowKeys.includes(item.id) &&
-                      hasKnowledgeNetworkRecordOperation(item, "delete"),
+                optionFilterProp="label"
+                options={[{ label: t("common.all"), value: "all" }, ...boundObjectTypeOptions]}
+                showSearch
+                value={selectedBoundObjectType}
+              />
+            </div>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("common.tag")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setSelectedTag(value);
+                  setPage(1);
+                }}
+                options={[
+                  { label: t("common.all"), value: "all" },
+                  ...tagOptions.map((tag) => ({ label: tag, value: tag })),
+                ]}
+                value={selectedTag}
+              />
+            </div>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
+                  { key: "name", label: t("knowledgeNetwork.sortByName") },
+                ],
+                onClick: ({ key }) => {
+                  const nextSortBy = key as "name" | "updateTime";
+                  setSortDirection((current) =>
+                    nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
                   );
-                  confirmDelete(pageSelectedRecords);
-                }}
-              >
-                {t("common.delete")}
-              </AppButton>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className={styles.toolbarRight}>
-          <Input
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => {
-              setKeyword(event.target.value);
-              setPage(1);
-            }}
-            placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            value={keyword}
-          />
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("knowledgeNetwork.metricBoundObjectType")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSelectedBoundObjectType(value);
-                setPage(1);
+                  setSortBy(nextSortBy);
+                  setPage(1);
+                },
               }}
-              optionFilterProp="label"
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...boundObjectTypeOptions,
-              ]}
-              showSearch
-              value={selectedBoundObjectType}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>{t("common.tag")}</span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setSelectedTag(value);
-                setPage(1);
-              }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-              ]}
-              value={selectedTag}
-            />
-          </div>
-          <Dropdown
-            menu={{
-              items: [
-                { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
-                { key: "name", label: t("knowledgeNetwork.sortByName") },
-              ],
-              onClick: ({ key }) => {
-                const nextSortBy = key as "name" | "updateTime";
-                setSortDirection((current) =>
-                  nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
-                );
-                setSortBy(nextSortBy);
-                setPage(1);
-              },
-            }}
-            trigger={["click"]}
-          >
-            <button
-              aria-label={t("knowledgeNetwork.sortByUpdateTime")}
-              className={styles.iconButton}
-              type="button"
+              trigger={["click"]}
             >
-              <SortAscendingOutlined />
-            </button>
-          </Dropdown>
-          <AppButton
-            aria-label={t("common.refresh")}
-            className={styles.iconButton}
-            icon={<ReloadOutlined />}
-            onClick={() => void Promise.all([fetchMetrics(), onRefresh()])}
-          />
+              <button
+                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                className={styles.iconButton}
+                type="button"
+              >
+                <SortAscendingOutlined />
+              </button>
+            </Dropdown>
+            <AppButton
+              aria-label={t("common.refresh")}
+              className={styles.iconButton}
+              icon={<ReloadOutlined />}
+              onClick={() => void Promise.all([fetchMetrics(), onRefresh()])}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className={styles.tableCard}>{tableContent}</div>
+        <div className={styles.tableCard}>{tableContent}</div>
 
-      {total > 0 ? (
-        <div className={styles.paginationBar}>
-          <TablePaginationBar
-            current={page}
-            onChange={(nextPage, nextPageSize) => {
-              setPage(nextPage);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            showSizeChanger
-            showTotal={(total) => t("common.total", { total })}
-            total={total}
-          />
-        </div>
-      ) : null}
+        {total > 0 ? (
+          <div className={styles.paginationBar}>
+            <TablePaginationBar
+              current={page}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              pageSize={pageSize}
+              showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
+              total={total}
+            />
+          </div>
+        ) : null}
       </section>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

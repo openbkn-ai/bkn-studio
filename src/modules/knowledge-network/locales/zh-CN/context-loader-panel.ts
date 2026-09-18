@@ -10,14 +10,23 @@ export const contextLoaderPanelPart = {
     toolGroups: {
       network: { label: "知识网络信息", description: "知识网络列表、当前网络详情" },
       lifecycle: { label: "交互生命周期", description: "受管会话、交互和操作状态" },
-      discovery: { label: "知识网络与 Schema", description: "知识网络列表、结构、Schema 探索和类型详情" },
-      model: { label: "知识网络模型检索", description: "语义检索、对象类、关系类、行动类、指标定义查询" },
+      discovery: {
+        label: "知识网络与 Schema",
+        description: "知识网络列表、结构、Schema 探索和类型详情",
+      },
+      model: {
+        label: "知识网络模型检索",
+        description: "语义检索、对象类、关系类、行动类、指标定义查询",
+      },
       query: { label: "对象实例与关系子图查询", description: "对象实例查询、关系子图查询" },
       data: { label: "数据资源与 SQL 查询", description: "数据资源列表、字段结构、SQL 数据查询" },
       logic: { label: "逻辑属性与行动调用", description: "逻辑属性计算、行动工具召回与执行" },
       resource: { label: "数据资源", description: "数据资源检查、技能召回和执行" },
       action: { label: "行动", description: "行动工具召回、执行与执行记录" },
-      execution: { label: "代码执行", description: "在沙箱内运行 Python 或 shell 命令，脚本里可直接调用上面这些工具" },
+      execution: {
+        label: "代码执行",
+        description: "在沙箱内运行 Python 或 shell 命令，脚本里可直接调用上面这些工具",
+      },
       skill: { label: "技能与动态工具", description: "Skill 检索和线上动态工具" },
       other: { label: "其他能力", description: "暂未归类的 MCP 能力" },
     },
@@ -135,7 +144,8 @@ export const contextLoaderPanelPart = {
       knId: "知识网络 kn_id",
       serviceAddress: "服务地址",
       authMode: "认证方式",
-      authModeTooltip: "OAuth Token：使用当前登录态（短期，仅本页调试）。API Key：在个人中心签发长期 bak_ Key 后粘贴到此处，仅对 Context Loader 有效。",
+      authModeTooltip:
+        "OAuth Token：使用当前登录态（短期，仅本页调试）。API Key：在个人中心签发长期 bak_ Key 后粘贴到此处，仅对 Context Loader 有效。",
     },
     appKey: {
       placeholder: "bak_<在个人中心 API Key 签发的长期 Key>",
@@ -170,9 +180,11 @@ export const contextLoaderPanelPart = {
       title: "让智能体调用 OpenBKN 能力",
       description:
         "这里生成的是 MCP 接入配置。复制到智能体平台后，智能体可通过 MCP 工具访问 OpenBKN 暴露的检索、查询和行动能力。",
-      stepIssueKey: "前往个人中心签发 API Key，并将 bak_ 开头的长期 Key 填入右侧配置的 Bearer Key。",
+      stepIssueKey:
+        "前往个人中心签发 API Key，并将 bak_ 开头的长期 Key 填入右侧配置的 Bearer Key。",
       stepCopyConfig: "选择智能体平台类型，复制整段配置并粘贴到对应的 MCP 服务配置中。",
-      stepUseAgent: "保存后回到智能体对话，直接提问并让智能体通过 MCP 工具完成检索、查询或行动调用。",
+      stepUseAgent:
+        "保存后回到智能体对话，直接提问并让智能体通过 MCP 工具完成检索、查询或行动调用。",
       genericTab: "通用 mcp.json",
       cliTitle: "CLI 一行接入",
       projectConfigTitle: "项目 .mcp.json",
@@ -185,7 +197,8 @@ export const contextLoaderPanelPart = {
     },
     mcpSecurity: {
       httpTitle: "检测到 HTTP 连接",
-      httpDescription: "生成的配置会自动加入 --allow-http。Bearer Key 将以未加密方式传输，请仅在可信网络中使用。",
+      httpDescription:
+        "生成的配置会自动加入 --allow-http。Bearer Key 将以未加密方式传输，请仅在可信网络中使用。",
       httpsTitle: "已启用 HTTPS 证书校验",
       httpsDescription: "生成的配置默认校验服务端证书。",
       allowSelfSigned: "允许使用自签名证书",
@@ -203,7 +216,8 @@ export const contextLoaderPanelPart = {
       authDifferenceTitle: "和本页登录态的差异：",
       authDifferencePrefix: "本页调试用的是你的",
       sessionToken: "会话 token",
-      authDifferenceMiddle: "（ory_at_，几十分钟就过期，只够即时调试）；外部客户端要长期可用，必须用 ",
+      authDifferenceMiddle:
+        "（ory_at_，几十分钟就过期，只够即时调试）；外部客户端要长期可用，必须用 ",
       authDifferenceSuffix: "（bak_，长期有效、可撤销、可轮换）。两者都放同一个 ",
       authDifferenceEnd: " 头，网关按前缀自动识别。",
       cliTitle: "① CLI 一行接入",
@@ -251,7 +265,8 @@ export const contextLoaderPanelPart = {
     },
     schema: {
       title: "{{name}} · 接口文档",
-      intro: "输入字段定义说明调用时可传入的参数、类型和填写规则；输出字段定义说明调用后可能返回的数据结构和字段含义。",
+      intro:
+        "输入字段定义说明调用时可传入的参数、类型和填写规则；输出字段定义说明调用后可能返回的数据结构和字段含义。",
       view: "文档视图",
       docsTab: "阅读文档",
       rawTab: "原始 JSON Schema",
@@ -265,7 +280,8 @@ export const contextLoaderPanelPart = {
       businessParamsHint: "调用时需要由你选择或填写的参数。",
       traceTitle: "Trace / 受管上下文",
       traceBadge: "系统管理",
-      traceHint: "在 Studio 中运行时，系统会自动注入必需的生命周期上下文。外部 MCP 客户端需要传入 lifecycle 工具返回的 ID。",
+      traceHint:
+        "在 Studio 中运行时，系统会自动注入必需的生命周期上下文。外部 MCP 客户端需要传入 lifecycle 工具返回的 ID。",
       responseShape: "返回结构",
       responseShapeHint: "下方展示已声明的字段；动态字段提示表示服务端还可能返回其他字段。",
       field: "字段",

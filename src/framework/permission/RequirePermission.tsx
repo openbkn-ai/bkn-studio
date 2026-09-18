@@ -10,10 +10,7 @@ import { Navigate } from "react-router-dom";
 
 import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { useRuntimeConfig } from "@/framework/context/use-runtime-config";
-import {
-  hasPermissions,
-  type PermissionCheckMode,
-} from "@/framework/permission/has-permissions";
+import { hasPermissions, type PermissionCheckMode } from "@/framework/permission/has-permissions";
 
 type RequirePermissionProps = {
   children: ReactNode;
@@ -22,11 +19,7 @@ type RequirePermissionProps = {
 };
 
 /** Route-level permission guard that redirects unauthorized users before guarded pages mount. */
-export function RequirePermission({
-  children,
-  mode = "any",
-  permissions,
-}: RequirePermissionProps) {
+export function RequirePermission({ children, mode = "any", permissions }: RequirePermissionProps) {
   // Route guards also protect standalone routes, whose page-level Antd/App
   // providers are mounted inside the guarded element. Read only the runtime
   // context available above that boundary so the guard can redirect before a

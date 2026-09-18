@@ -236,7 +236,9 @@
   pointer-events: stroke;
   stroke: #b1b1b1;
   stroke-width: 1.5;
-  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+  transition:
+    stroke 0.2s ease,
+    stroke-width 0.2s ease;
 }
 
 .connectionLineHover {

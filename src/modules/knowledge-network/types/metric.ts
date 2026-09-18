@@ -9,13 +9,7 @@ export type KnowledgeNetworkMetricType = "atomic" | "derived" | "composite";
 
 export type KnowledgeNetworkMetricScopeType = "object_type" | "subgraph";
 
-export type MetricAggregationAggr =
-  | "sum"
-  | "avg"
-  | "max"
-  | "min"
-  | "count"
-  | "count_distinct";
+export type MetricAggregationAggr = "sum" | "avg" | "max" | "min" | "count" | "count_distinct";
 
 export type MetricUnitType =
   | "numUnit"
@@ -82,11 +76,7 @@ export type MetricUnit =
 
 export type MetricOrderDirection = "asc" | "desc";
 
-export type MetricDefaultRangePolicy =
-  | "last_1h"
-  | "last_24h"
-  | "calendar_day"
-  | "none";
+export type MetricDefaultRangePolicy = "last_1h" | "last_24h" | "calendar_day" | "none";
 
 export type MetricHavingOperator = ">" | ">=" | "<" | "<=" | "==" | "!=";
 
@@ -173,12 +163,7 @@ export type MetricSamePeriodTimeGranularity = "day" | "month" | "quarter" | "yea
 /** Calendar bucket for ontology-query `time.step` (trend / non-instant queries). */
 export type MetricQueryCalendarStep = "day" | "week" | "month" | "quarter" | "year";
 
-export type MetricDataQueryTimeRange =
-  | "last_1h"
-  | "last_24h"
-  | "last_7d"
-  | "last_30d"
-  | "custom";
+export type MetricDataQueryTimeRange = "last_1h" | "last_24h" | "last_7d" | "last_30d" | "custom";
 
 export type MetricDataQueryParams = {
   analysisDimensions?: string[];

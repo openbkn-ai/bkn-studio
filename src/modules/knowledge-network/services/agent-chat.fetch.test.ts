@@ -62,7 +62,9 @@ describe("makeAuthedFetch 退避重试", () => {
       .mockResolvedValueOnce(jsonResponse(200, { choices: [] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
+    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", {
+      method: "POST",
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await expect(response.json()).resolves.toEqual({ choices: [] });
@@ -71,7 +73,9 @@ describe("makeAuthedFetch 退避重试", () => {
   it("重试次数有上限，不会一直打正忙的网关", async () => {
     const busy = { code: "X", description: '{"code":50508,"message":"System is too busy now."}' };
     // Provide a new Response each time because a body can be consumed once; reuse makes clone() throw on the second request.
-    const fetchMock = vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(jsonResponse(200, busy)));
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(jsonResponse(200, busy)));
     vi.stubGlobal("fetch", fetchMock);
 
     await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
@@ -97,11 +101,15 @@ describe("makeAuthedFetch 退避重试", () => {
   });
 
   it("流式响应不读 body —— 读了会把整段缓冲住，正常对话的打字效果就没了", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(neverEndingStream("text/event-stream"));
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(neverEndingStream("text/event-stream"));
     vi.stubGlobal("fetch", fetchMock);
 
     // Peeking at the body here leaves the promise unresolved forever and makes the case time out.
-    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
+    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", {
+      method: "POST",
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(response.status).toBe(200);
@@ -111,7 +119,9 @@ describe("makeAuthedFetch 退避重试", () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(neverEndingStream(null));
     vi.stubGlobal("fetch", fetchMock);
 
-    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", { method: "POST" });
+    const response = await makeAuthedFetch(provider)("https://example.test/v1/chat/completions", {
+      method: "POST",
+    });
 
     expect(response.status).toBe(200);
   });

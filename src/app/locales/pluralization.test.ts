@@ -10,7 +10,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import i18n from "@/app/locales/i18n";
 import { enUS } from "@/app/locales/resources/en-US";
 
-const countNounPattern = /\b(?:calls?|candidates?|capabilities?|characters?|connections?|connector types?|endpoints?|facts?|fields?|files?|grants?|interactions?|issues?|mappings?|members?|objects?|object types?|operators?|parameters?|properties?|records?|references?|relation types?|resources?|roles?|rows?|samples?|sources?|subjects?|tables?|tags?|tasks?|tools?)\b/i;
+const countNounPattern =
+  /\b(?:calls?|candidates?|capabilities?|characters?|connections?|connector types?|endpoints?|facts?|fields?|files?|grants?|interactions?|issues?|mappings?|members?|objects?|object types?|operators?|parameters?|properties?|records?|references?|relation types?|resources?|roles?|rows?|samples?|sources?|subjects?|tables?|tags?|tasks?|tools?)\b/i;
 
 function flattenStrings(value: unknown, prefix = "", result: Record<string, string> = {}) {
   if (typeof value === "string") {
@@ -99,9 +100,9 @@ describe("English count pluralization", () => {
       for (const count of [0, 1, 2]) {
         const template = count === 1 ? one : other;
         const values = interpolationValues(template, count);
-        expect.soft(i18n.t(key, values), `${key} with count=${count}`).toBe(
-          interpolate(template, values),
-        );
+        expect
+          .soft(i18n.t(key, values), `${key} with count=${count}`)
+          .toBe(interpolate(template, values));
       }
     }
   });
@@ -109,11 +110,12 @@ describe("English count pluralization", () => {
   it("requires plural resources for user-facing count nouns", () => {
     const strings = flattenStrings(enUS);
     const missingPluralKeys = Object.entries(strings)
-      .filter(([key, value]) =>
-        !key.endsWith("_one")
-        && !key.endsWith("_other")
-        && value.includes("{{count}}")
-        && countNounPattern.test(value),
+      .filter(
+        ([key, value]) =>
+          !key.endsWith("_one") &&
+          !key.endsWith("_other") &&
+          value.includes("{{count}}") &&
+          countNounPattern.test(value),
       )
       .filter(([key]) => !(strings[`${key}_one`] && strings[`${key}_other`]))
       .map(([key]) => key);
@@ -123,9 +125,7 @@ describe("English count pluralization", () => {
 
   it("does not use parenthesized pseudo-plurals", () => {
     const pseudoPluralKeys = Object.entries(flattenStrings(enUS))
-      .filter(([, value]) =>
-        /\b[A-Za-z]+\(s\)/.test(value) && !/https?\(s\)/i.test(value),
-      )
+      .filter(([, value]) => /\b[A-Za-z]+\(s\)/.test(value) && !/https?\(s\)/i.test(value))
       .map(([key]) => key);
 
     expect(pseudoPluralKeys).toEqual([]);

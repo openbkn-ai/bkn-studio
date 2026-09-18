@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export function isValidDiscoverScheduleTimeRange(
-  startTime?: number,
-  endTime?: number,
-): boolean {
+export function isValidDiscoverScheduleTimeRange(startTime?: number, endTime?: number): boolean {
   const start = startTime ?? 0;
   const end = endTime ?? 0;
   return (

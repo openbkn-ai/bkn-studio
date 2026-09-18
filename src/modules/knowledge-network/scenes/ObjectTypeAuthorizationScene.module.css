@@ -269,7 +269,10 @@
   min-height: 36px;
   min-width: 112px;
   padding: 6px 14px;
-  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
 }
 
 .baseGrantOperation:hover {
@@ -869,7 +872,6 @@
     flex-direction: column;
     gap: 8px;
   }
-
 
   .matrixFilters > :first-child,
   .matrixFilters > :last-child {

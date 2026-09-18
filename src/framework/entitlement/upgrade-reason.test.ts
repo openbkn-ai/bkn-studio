@@ -8,10 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Entitlement } from "@/framework/entitlement/types";
-import {
-  capabilitySatisfied,
-  upgradeReason,
-} from "@/framework/entitlement/upgrade-reason";
+import { capabilitySatisfied, upgradeReason } from "@/framework/entitlement/upgrade-reason";
 
 /** 客户实际会处在的三种部署组合,加上「都齐了」那种。 */
 function deployment(overrides: Partial<Entitlement>): Entitlement {
@@ -82,9 +79,7 @@ describe("upgradeReason — 别的服务实现的能力", () => {
   });
 
   it("档位不够 → 仍是买证书", () => {
-    expect(upgradeReason("business_provenance", deployment({}), "enterprise", false)).toBe(
-      "buy",
-    );
+    expect(upgradeReason("business_provenance", deployment({}), "enterprise", false)).toBe("buy");
   });
 });
 
@@ -122,9 +117,7 @@ describe("capabilitySatisfied — 核实到哪一步就按哪一步判", () => {
   });
 
   it("别的服务实现的能力：档位不够仍不算满足", () => {
-    expect(capabilitySatisfied("business_provenance", licensed, "enterprise", false)).toBe(
-      false,
-    );
+    expect(capabilitySatisfied("business_provenance", licensed, "enterprise", false)).toBe(false);
   });
 
   it("bkn-safe 的能力：证够 + 装了才算满足", () => {

@@ -49,7 +49,11 @@ export type QuickAddApiFormValues = QuickApiContractFormValues & {
 type QuickAddApiFormProps = {
   formId: string;
   initialBoxId?: string;
-  onSubmit: (payload: { openapiSpec: string; serviceUrl: string; values: QuickAddApiFormValues }) => void;
+  onSubmit: (payload: {
+    openapiSpec: string;
+    serviceUrl: string;
+    values: QuickAddApiFormValues;
+  }) => void;
 };
 
 type QuickAddApiSubmitErrorField = "curlText" | "serverUrl" | "apiUrl" | "summary" | "toolboxName";
@@ -95,386 +99,394 @@ function buildCurlContract(parsed: {
 
 export const QuickAddApiForm = forwardRef<QuickAddApiFormHandle, QuickAddApiFormProps>(
   function QuickAddApiForm({ formId, initialBoxId, onSubmit }, ref) {
-  const { t } = useTranslation();
-  const [form] = Form.useForm<QuickAddApiFormValues>();
-  useImperativeHandle(ref, () => ({
-    submit: () => {
-      form.submit();
-    },
-    showSubmitError: ({ field, message }) => {
-      const targetField = field ?? (inputMode === "curl" ? "curlText" : "serverUrl");
-      setInputMode(targetField === "curlText" ? "curl" : "form");
-      setParseHint(message);
-      form.setFields([{ name: targetField, errors: [message] }]);
-      window.setTimeout(() => {
-        form.scrollToField(targetField, { behavior: "smooth", focus: true });
-      });
-    },
-  }));
-  const [inputMode, setInputMode] = useState<"curl" | "form">("curl");
-  const [parseHint, setParseHintState] = useState<{ text: string; tone: "info" | "error" } | null>(
-    null,
-  );
-  const setParseHint = (text: string) => setParseHintState({ text, tone: "error" });
-  const setParseOkHint = (text: string) => setParseHintState({ text, tone: "info" });
-  const [detectedUrlParameters, setDetectedUrlParameters] = useState<QuickApiParameter[]>([]);
-  const [detectedCurlContract, setDetectedCurlContract] = useState<
-    Partial<QuickApiContractFormValues> | undefined
-  >();
-  /**
-   * Source cURL text that produced detectedCurlContract. The contract does not invalidate as the
-   * input changes, so submit compares it to determine whether the user changed the command after
-   * detection. A change requires reparsing; otherwise a tool is silently created from the old command.
-   */
-  const curlContractSourceRef = useRef<string | undefined>(undefined);
-  const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>([]);
-  const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
-  const watchedValues = Form.useWatch([], form) as QuickAddApiFormValues | undefined;
-
-  const previewSpec = useMemo(() => {
-    if (!watchedValues) {
-      return undefined;
-    }
-
-    const contractValues =
-      inputMode === "form" ? resolveQuickApiFormContract(watchedValues) : watchedValues;
-
-    return buildSpecFromValues(
-      buildEffectiveQuickApiValues(
-        contractValues,
-        inputMode,
-        detectedUrlParameters,
-        detectedCurlContract,
-      ),
+    const { t } = useTranslation();
+    const [form] = Form.useForm<QuickAddApiFormValues>();
+    useImperativeHandle(ref, () => ({
+      submit: () => {
+        form.submit();
+      },
+      showSubmitError: ({ field, message }) => {
+        const targetField = field ?? (inputMode === "curl" ? "curlText" : "serverUrl");
+        setInputMode(targetField === "curlText" ? "curl" : "form");
+        setParseHint(message);
+        form.setFields([{ name: targetField, errors: [message] }]);
+        window.setTimeout(() => {
+          form.scrollToField(targetField, { behavior: "smooth", focus: true });
+        });
+      },
+    }));
+    const [inputMode, setInputMode] = useState<"curl" | "form">("curl");
+    const [parseHint, setParseHintState] = useState<{
+      text: string;
+      tone: "info" | "error";
+    } | null>(null);
+    const setParseHint = (text: string) => setParseHintState({ text, tone: "error" });
+    const setParseOkHint = (text: string) => setParseHintState({ text, tone: "info" });
+    const [detectedUrlParameters, setDetectedUrlParameters] = useState<QuickApiParameter[]>([]);
+    const [detectedCurlContract, setDetectedCurlContract] = useState<
+      Partial<QuickApiContractFormValues> | undefined
+    >();
+    /**
+     * Source cURL text that produced detectedCurlContract. The contract does not invalidate as the
+     * input changes, so submit compares it to determine whether the user changed the command after
+     * detection. A change requires reparsing; otherwise a tool is silently created from the old command.
+     */
+    const curlContractSourceRef = useRef<string | undefined>(undefined);
+    const [toolboxOptions, setToolboxOptions] = useState<Array<{ label: string; value: string }>>(
+      [],
     );
-  }, [detectedCurlContract, detectedUrlParameters, inputMode, watchedValues]);
+    const toolboxMode = Form.useWatch("toolboxMode", form) ?? (initialBoxId ? "existing" : "new");
+    const watchedValues = Form.useWatch([], form) as QuickAddApiFormValues | undefined;
 
-  const previewValidation = useMemo(
-    () => (previewSpec ? analyzeOpenApiDocumentText(previewSpec) : { ok: false as const, reason: "" }),
-    [previewSpec],
-  );
+    const previewSpec = useMemo(() => {
+      if (!watchedValues) {
+        return undefined;
+      }
 
-  useEffect(() => {
-    form.setFieldsValue({
-      method: "GET",
-      toolboxMode: initialBoxId ? "existing" : "new",
-      boxId: initialBoxId,
-      category: "other_category",
-      requestBodyEnabled: false,
-      requestBodyContentType: "application/json",
-      requestBodyRequired: true,
-      responses: [
-        {
-          statusCode: "200",
-          description: "OK",
-          contentType: "application/json",
-          schemaText: '{\n  "type": "object"\n}',
-        },
-      ],
-    });
-  }, [form, initialBoxId]);
+      const contractValues =
+        inputMode === "form" ? resolveQuickApiFormContract(watchedValues) : watchedValues;
 
-  useEffect(() => {
-    void (async () => {
-      const result = await listToolboxes({ page: 1, pageSize: 100 });
-      setToolboxOptions(
-        result.items.map((item) => ({
-          label: item.name,
-          value: item.boxId,
-        })),
+      return buildSpecFromValues(
+        buildEffectiveQuickApiValues(
+          contractValues,
+          inputMode,
+          detectedUrlParameters,
+          detectedCurlContract,
+        ),
       );
-    })();
-  }, []);
+    }, [detectedCurlContract, detectedUrlParameters, inputMode, watchedValues]);
 
-  const applyParsedApi = (
-    parsed: {
-      method: string;
-      serverUrl: string;
-      path: string;
-      summary: string;
-      queryParams: QuickApiParameter[];
-      requestBody?: QuickApiRequestBody;
-    },
-    options?: { preserveManualContract?: boolean },
-  ) => {
-    const preserveManualContract = options?.preserveManualContract === true;
-    setDetectedUrlParameters(preserveManualContract ? parsed.queryParams : []);
-    setDetectedCurlContract(preserveManualContract ? undefined : buildCurlContract(parsed));
-    if (preserveManualContract) {
-      // Clear the source with the contract, or comparison would use stale source text.
-      curlContractSourceRef.current = undefined;
-    }
-
-    form.setFieldsValue({
-      method: preserveManualContract
-        ? ((form.getFieldValue("method") as string | undefined) ?? parsed.method)
-        : parsed.method,
-      serverUrl: parsed.serverUrl,
-      path: parsed.path,
-      summary: parsed.summary,
-    });
-    setParseOkHint(
-      parsed.queryParams.length > 0
-        ? t("executionFactory.quickApiParsedParams", { count: parsed.queryParams.length })
-        : t("executionFactory.quickApiParsedOk"),
+    const previewValidation = useMemo(
+      () =>
+        previewSpec ? analyzeOpenApiDocumentText(previewSpec) : { ok: false as const, reason: "" },
+      [previewSpec],
     );
-  };
 
-  const handleParseCurl = () => {
-    const curlText = form.getFieldValue("curlText") as string | undefined;
-    const result = parseCurlCommand(curlText ?? "");
-    if (!result.ok) {
-      setParseHint(result.reason);
-      form.setFields([{ name: "curlText", errors: [result.reason] }]);
-      return;
-    }
+    useEffect(() => {
+      form.setFieldsValue({
+        method: "GET",
+        toolboxMode: initialBoxId ? "existing" : "new",
+        boxId: initialBoxId,
+        category: "other_category",
+        requestBodyEnabled: false,
+        requestBodyContentType: "application/json",
+        requestBodyRequired: true,
+        responses: [
+          {
+            statusCode: "200",
+            description: "OK",
+            contentType: "application/json",
+            schemaText: '{\n  "type": "object"\n}',
+          },
+        ],
+      });
+    }, [form, initialBoxId]);
 
-    form.setFields([{ name: "curlText", errors: [] }]);
-    applyParsedApi(result.value);
-    curlContractSourceRef.current = curlText ?? "";
-  };
+    useEffect(() => {
+      void (async () => {
+        const result = await listToolboxes({ page: 1, pageSize: 100 });
+        setToolboxOptions(
+          result.items.map((item) => ({
+            label: item.name,
+            value: item.boxId,
+          })),
+        );
+      })();
+    }, []);
 
-  const handleParseUrl = () => {
-    const apiUrl = form.getFieldValue("apiUrl") as string | undefined;
-    const result = parseQuickApiUrl(apiUrl ?? "");
-    if (!result.ok) {
-      setParseHint(result.reason);
-      form.setFields([{ name: "apiUrl", errors: [result.reason] }]);
-      return;
-    }
+    const applyParsedApi = (
+      parsed: {
+        method: string;
+        serverUrl: string;
+        path: string;
+        summary: string;
+        queryParams: QuickApiParameter[];
+        requestBody?: QuickApiRequestBody;
+      },
+      options?: { preserveManualContract?: boolean },
+    ) => {
+      const preserveManualContract = options?.preserveManualContract === true;
+      setDetectedUrlParameters(preserveManualContract ? parsed.queryParams : []);
+      setDetectedCurlContract(preserveManualContract ? undefined : buildCurlContract(parsed));
+      if (preserveManualContract) {
+        // Clear the source with the contract, or comparison would use stale source text.
+        curlContractSourceRef.current = undefined;
+      }
 
-    form.setFields([{ name: "apiUrl", errors: [] }]);
-    const currentParams = (form.getFieldValue("parameters") ?? []) as QuickApiParameter[];
-    const mergedParams = mergeQuickApiParameters(result.value.queryParams, currentParams);
-    applyParsedApi(result.value, { preserveManualContract: true });
-    setDetectedUrlParameters([]);
-    form.setFieldsValue({ parameters: mergedParams });
-  };
+      form.setFieldsValue({
+        method: preserveManualContract
+          ? ((form.getFieldValue("method") as string | undefined) ?? parsed.method)
+          : parsed.method,
+        serverUrl: parsed.serverUrl,
+        path: parsed.path,
+        summary: parsed.summary,
+      });
+      setParseOkHint(
+        parsed.queryParams.length > 0
+          ? t("executionFactory.quickApiParsedParams", { count: parsed.queryParams.length })
+          : t("executionFactory.quickApiParsedOk"),
+      );
+    };
 
-  const handleFinish = (values: QuickAddApiFormValues) => {
-    const resolvedValues =
-      inputMode === "form" ? resolveQuickApiFormContract(values) : values;
-
-    // In cURL mode, detecting API information is optional and users often submit directly. The
-    // missing piece is parsing, not input, so parse on submit and report the real reason.
-    const curlText = values.curlText ?? "";
-    // Handle both never detecting and changing cURL after detection. detectedCurlContract does not
-    // invalidate with input and overwrites method/serverUrl/path/parameters/requestBody, so retaining
-    // it would create a tool from the old command while displaying the new one without notice.
-    let curlContract = detectedCurlContract;
-    if (inputMode === "curl" && (!curlContract || curlContractSourceRef.current !== curlText)) {
-      const parsed = parseCurlCommand(curlText);
-      if (!parsed.ok) {
-        setParseHint(parsed.reason);
-        form.setFields([{ name: "curlText", errors: [parsed.reason] }]);
-        form.scrollToField("curlText", { behavior: "smooth", focus: true });
+    const handleParseCurl = () => {
+      const curlText = form.getFieldValue("curlText") as string | undefined;
+      const result = parseCurlCommand(curlText ?? "");
+      if (!result.ok) {
+        setParseHint(result.reason);
+        form.setFields([{ name: "curlText", errors: [result.reason] }]);
         return;
       }
-      curlContract = buildCurlContract(parsed.value);
-      form.setFields([{ name: "curlText", errors: [] }]);
-      setDetectedCurlContract(curlContract);
-      curlContractSourceRef.current = curlText;
-    }
 
-    if (inputMode === "form") {
-      if (
-        !resolvedValues.serverUrl?.trim() ||
-        !resolvedValues.path?.trim() ||
-        !resolvedValues.method?.trim()
-      ) {
+      form.setFields([{ name: "curlText", errors: [] }]);
+      applyParsedApi(result.value);
+      curlContractSourceRef.current = curlText ?? "";
+    };
+
+    const handleParseUrl = () => {
+      const apiUrl = form.getFieldValue("apiUrl") as string | undefined;
+      const result = parseQuickApiUrl(apiUrl ?? "");
+      if (!result.ok) {
+        setParseHint(result.reason);
+        form.setFields([{ name: "apiUrl", errors: [result.reason] }]);
+        return;
+      }
+
+      form.setFields([{ name: "apiUrl", errors: [] }]);
+      const currentParams = (form.getFieldValue("parameters") ?? []) as QuickApiParameter[];
+      const mergedParams = mergeQuickApiParameters(result.value.queryParams, currentParams);
+      applyParsedApi(result.value, { preserveManualContract: true });
+      setDetectedUrlParameters([]);
+      form.setFieldsValue({ parameters: mergedParams });
+    };
+
+    const handleFinish = (values: QuickAddApiFormValues) => {
+      const resolvedValues = inputMode === "form" ? resolveQuickApiFormContract(values) : values;
+
+      // In cURL mode, detecting API information is optional and users often submit directly. The
+      // missing piece is parsing, not input, so parse on submit and report the real reason.
+      const curlText = values.curlText ?? "";
+      // Handle both never detecting and changing cURL after detection. detectedCurlContract does not
+      // invalidate with input and overwrites method/serverUrl/path/parameters/requestBody, so retaining
+      // it would create a tool from the old command while displaying the new one without notice.
+      let curlContract = detectedCurlContract;
+      if (inputMode === "curl" && (!curlContract || curlContractSourceRef.current !== curlText)) {
+        const parsed = parseCurlCommand(curlText);
+        if (!parsed.ok) {
+          setParseHint(parsed.reason);
+          form.setFields([{ name: "curlText", errors: [parsed.reason] }]);
+          form.scrollToField("curlText", { behavior: "smooth", focus: true });
+          return;
+        }
+        curlContract = buildCurlContract(parsed.value);
+        form.setFields([{ name: "curlText", errors: [] }]);
+        setDetectedCurlContract(curlContract);
+        curlContractSourceRef.current = curlText;
+      }
+
+      if (inputMode === "form") {
+        if (
+          !resolvedValues.serverUrl?.trim() ||
+          !resolvedValues.path?.trim() ||
+          !resolvedValues.method?.trim()
+        ) {
+          setParseHint(t("executionFactory.quickApiBuildFailed"));
+          return;
+        }
+      }
+
+      const submission = buildQuickApiSubmissionFromValues(
+        buildEffectiveQuickApiValues(
+          resolvedValues,
+          inputMode,
+          detectedUrlParameters,
+          curlContract,
+        ),
+      );
+      if (!submission) {
         setParseHint(t("executionFactory.quickApiBuildFailed"));
         return;
       }
-    }
 
-    const submission = buildQuickApiSubmissionFromValues(
-      buildEffectiveQuickApiValues(
-        resolvedValues,
-        inputMode,
-        detectedUrlParameters,
-        curlContract,
-      ),
-    );
-    if (!submission) {
-      setParseHint(t("executionFactory.quickApiBuildFailed"));
-      return;
-    }
+      const validation = analyzeOpenApiDocumentText(submission.openapiSpec);
+      if (!validation.ok) {
+        setParseHint(validation.reason);
+        return;
+      }
 
-    const validation = analyzeOpenApiDocumentText(submission.openapiSpec);
-    if (!validation.ok) {
-      setParseHint(validation.reason);
-      return;
-    }
+      const targetValues =
+        resolvedValues.toolboxMode === "existing"
+          ? {
+              ...resolvedValues,
+              toolboxName: undefined,
+              toolboxDescription: undefined,
+            }
+          : {
+              ...resolvedValues,
+              boxId: undefined,
+            };
 
-    const targetValues =
-      resolvedValues.toolboxMode === "existing"
-        ? {
-            ...resolvedValues,
-            toolboxName: undefined,
-            toolboxDescription: undefined,
-          }
-        : {
-            ...resolvedValues,
-            boxId: undefined,
-          };
+      onSubmit({
+        openapiSpec: submission.openapiSpec,
+        serviceUrl: submission.serviceUrl,
+        values: {
+          ...targetValues,
+          serverUrl: submission.serviceUrl,
+          method: submission.method,
+          path: submission.path,
+        },
+      });
+    };
 
-    onSubmit({
-      openapiSpec: submission.openapiSpec,
-      serviceUrl: submission.serviceUrl,
-      values: {
-        ...targetValues,
-        serverUrl: submission.serviceUrl,
-        method: submission.method,
-        path: submission.path,
-      },
-    });
-  };
-
-  return (
-    <Form form={form} id={formId} layout="vertical" onFinish={handleFinish}>
-      <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.quickApiTop" />
-      <Tabs
-        activeKey={inputMode}
-        destroyInactiveTabPane
-        items={[
-          {
-            key: "curl",
-            label: t("executionFactory.quickApiTabCurl"),
-            children: (
-              <>
-                <CapabilityBusinessIntro
-                  messageKey="executionFactory.businessIntro.quickApiInputCurl"
-                  variant="section"
-                />
-                <Form.Item label={t("executionFactory.quickApiCurlLabel")} name="curlText">
-                  <Input.TextArea
-                    autoSize={{ minRows: 4, maxRows: 8 }}
-                    placeholder={t("executionFactory.quickApiCurlPlaceholder")}
+    return (
+      <Form form={form} id={formId} layout="vertical" onFinish={handleFinish}>
+        <CapabilityBusinessIntro messageKey="executionFactory.businessIntro.quickApiTop" />
+        <Tabs
+          activeKey={inputMode}
+          destroyInactiveTabPane
+          items={[
+            {
+              key: "curl",
+              label: t("executionFactory.quickApiTabCurl"),
+              children: (
+                <>
+                  <CapabilityBusinessIntro
+                    messageKey="executionFactory.businessIntro.quickApiInputCurl"
+                    variant="section"
                   />
-                </Form.Item>
-                <button className={styles.inlineAction} onClick={handleParseCurl} type="button">
-                  {t("executionFactory.quickApiParseAction")}
-                </button>
-              </>
-            ),
-          },
-          {
-            key: "form",
-            label: t("executionFactory.quickApiTabForm"),
-            children: (
-              <>
-                <CapabilityBusinessIntro
-                  messageKey="executionFactory.businessIntro.quickApiInputForm"
-                  variant="section"
-                />
-                <Form.Item label={t("executionFactory.quickApiUrlLabel")} name="apiUrl">
-                  <Input placeholder="https://example.com/api/v1/resource" />
-                </Form.Item>
-                <Form.Item
-                  label={t("executionFactory.quickApiMethod")}
-                  name="method"
-                  rules={[{ required: true, message: t("common.required") }]}
-                >
-                  <Select options={HTTP_METHODS.map((value) => ({ label: value, value }))} />
-                </Form.Item>
-                <QuickApiContractEditor />
-                <button className={styles.inlineAction} onClick={handleParseUrl} type="button">
-                  {t("executionFactory.quickApiParseAction")}
-                </button>
-              </>
-            ),
-          },
-        ]}
-        onChange={(key) => setInputMode(key as "curl" | "form")}
-      />
+                  <Form.Item label={t("executionFactory.quickApiCurlLabel")} name="curlText">
+                    <Input.TextArea
+                      autoSize={{ minRows: 4, maxRows: 8 }}
+                      placeholder={t("executionFactory.quickApiCurlPlaceholder")}
+                    />
+                  </Form.Item>
+                  <button className={styles.inlineAction} onClick={handleParseCurl} type="button">
+                    {t("executionFactory.quickApiParseAction")}
+                  </button>
+                </>
+              ),
+            },
+            {
+              key: "form",
+              label: t("executionFactory.quickApiTabForm"),
+              children: (
+                <>
+                  <CapabilityBusinessIntro
+                    messageKey="executionFactory.businessIntro.quickApiInputForm"
+                    variant="section"
+                  />
+                  <Form.Item label={t("executionFactory.quickApiUrlLabel")} name="apiUrl">
+                    <Input placeholder="https://example.com/api/v1/resource" />
+                  </Form.Item>
+                  <Form.Item
+                    label={t("executionFactory.quickApiMethod")}
+                    name="method"
+                    rules={[{ required: true, message: t("common.required") }]}
+                  >
+                    <Select options={HTTP_METHODS.map((value) => ({ label: value, value }))} />
+                  </Form.Item>
+                  <QuickApiContractEditor />
+                  <button className={styles.inlineAction} onClick={handleParseUrl} type="button">
+                    {t("executionFactory.quickApiParseAction")}
+                  </button>
+                </>
+              ),
+            },
+          ]}
+          onChange={(key) => setInputMode(key as "curl" | "form")}
+        />
 
-      <Form.Item hidden name="serverUrl">
-        <Input />
-      </Form.Item>
-      <Form.Item hidden name="path">
-        <Input />
-      </Form.Item>
+        <Form.Item hidden name="serverUrl">
+          <Input />
+        </Form.Item>
+        <Form.Item hidden name="path">
+          <Input />
+        </Form.Item>
 
-      <CapabilityBusinessIntro
-        messageKey="executionFactory.businessIntro.toolMetadataSection"
-        variant="section"
-      />
+        <CapabilityBusinessIntro
+          messageKey="executionFactory.businessIntro.toolMetadataSection"
+          variant="section"
+        />
 
-      <Form.Item
-        label={t("executionFactory.quickApiSummary")}
-        name="summary"
-        rules={[{ required: true, message: t("common.required") }]}
-      >
-        <Input />
-      </Form.Item>
-      <Form.Item label={t("common.description")} name="description">
-        <Input.TextArea rows={2} />
-      </Form.Item>
+        <Form.Item
+          label={t("executionFactory.quickApiSummary")}
+          name="summary"
+          rules={[{ required: true, message: t("common.required") }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item label={t("common.description")} name="description">
+          <Input.TextArea rows={2} />
+        </Form.Item>
 
-      {parseHint ? (
-        <Alert message={parseHint.text} showIcon style={{ marginBottom: 16 }} type={parseHint.tone} />
-      ) : null}
-
-      {previewValidation.ok && previewSpec ? (
-        <div style={{ marginBottom: 16 }}>
+        {parseHint ? (
           <Alert
-            className={styles.interfaceSuccessAlert}
-            message={t("executionFactory.quickApiIoPreviewTitle")}
+            message={parseHint.text}
             showIcon
-            style={{ marginBottom: 8 }}
-            type="success"
+            style={{ marginBottom: 16 }}
+            type={parseHint.tone}
           />
-          <OpenApiOperationsIoPreview limit={1} openapiSpec={previewSpec} />
-        </div>
-      ) : null}
+        ) : null}
 
-      {!initialBoxId ? (
-        <>
-          <CapabilityBusinessIntro
-            messageKey="executionFactory.businessIntro.toolboxPlacementSection"
-            variant="section"
-          />
-          <Form.Item label={t("executionFactory.quickApiToolboxTarget")} name="toolboxMode">
-            <Radio.Group>
-              <Radio value="existing">{t("executionFactory.quickApiToolboxExisting")}</Radio>
-              <Radio value="new">{t("executionFactory.quickApiToolboxNew")}</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <ToolboxPlacementIntro mode={toolboxMode} />
-          {toolboxMode === "existing" ? (
-            <Form.Item
-              label={t("executionFactory.toolboxName")}
-              name="boxId"
-              preserve={false}
-              rules={[{ required: true, message: t("common.required") }]}
-            >
-              <Select options={toolboxOptions} showSearch optionFilterProp="label" />
+        {previewValidation.ok && previewSpec ? (
+          <div style={{ marginBottom: 16 }}>
+            <Alert
+              className={styles.interfaceSuccessAlert}
+              message={t("executionFactory.quickApiIoPreviewTitle")}
+              showIcon
+              style={{ marginBottom: 8 }}
+              type="success"
+            />
+            <OpenApiOperationsIoPreview limit={1} openapiSpec={previewSpec} />
+          </div>
+        ) : null}
+
+        {!initialBoxId ? (
+          <>
+            <CapabilityBusinessIntro
+              messageKey="executionFactory.businessIntro.toolboxPlacementSection"
+              variant="section"
+            />
+            <Form.Item label={t("executionFactory.quickApiToolboxTarget")} name="toolboxMode">
+              <Radio.Group>
+                <Radio value="existing">{t("executionFactory.quickApiToolboxExisting")}</Radio>
+                <Radio value="new">{t("executionFactory.quickApiToolboxNew")}</Radio>
+              </Radio.Group>
             </Form.Item>
-          ) : (
-            <>
+            <ToolboxPlacementIntro mode={toolboxMode} />
+            {toolboxMode === "existing" ? (
               <Form.Item
                 label={t("executionFactory.toolboxName")}
-                name="toolboxName"
+                name="boxId"
                 preserve={false}
                 rules={[{ required: true, message: t("common.required") }]}
               >
-                <Input />
+                <Select options={toolboxOptions} showSearch optionFilterProp="label" />
               </Form.Item>
-              <Form.Item
-                label={t("common.description")}
-                name="toolboxDescription"
-                preserve={false}
-              >
-                <Input.TextArea rows={2} />
-              </Form.Item>
-              <CapabilityCategoryFields />
-            </>
-          )}
-        </>
-      ) : null}
-    </Form>
-  );
-},
+            ) : (
+              <>
+                <Form.Item
+                  label={t("executionFactory.toolboxName")}
+                  name="toolboxName"
+                  preserve={false}
+                  rules={[{ required: true, message: t("common.required") }]}
+                >
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label={t("common.description")}
+                  name="toolboxDescription"
+                  preserve={false}
+                >
+                  <Input.TextArea rows={2} />
+                </Form.Item>
+                <CapabilityCategoryFields />
+              </>
+            )}
+          </>
+        ) : null}
+      </Form>
+    );
+  },
 );
 
 function buildSpecFromValues(values: QuickAddApiFormValues) {

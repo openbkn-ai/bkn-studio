@@ -7,11 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  ALL_METRIC_UNITS,
-  METRIC_UNIT_TYPE_OPTIONS,
-  METRIC_UNITS_BY_TYPE,
-} from "./metric-units";
+import { ALL_METRIC_UNITS, METRIC_UNIT_TYPE_OPTIONS, METRIC_UNITS_BY_TYPE } from "./metric-units";
 
 describe("metric-units", () => {
   it("covers every backend unit exactly once across unit types", () => {

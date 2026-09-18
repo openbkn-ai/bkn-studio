@@ -235,10 +235,7 @@ export async function enableOrchestrationViaLabApi(
   return response.json() as Promise<{ operator_id?: string }>;
 }
 
-export async function getOrchestrationViaLabApi(
-  request: APIRequestContext,
-  capabilityId: string,
-) {
+export async function getOrchestrationViaLabApi(request: APIRequestContext, capabilityId: string) {
   const response = await request.get(
     `${LAB_API_BASE_URL}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`,
     { headers: labApiHeaders() },
@@ -468,10 +465,7 @@ export async function registerSkillContentViaLabApi(
   }>;
 }
 
-export async function exportCapabilityViaLabApi(
-  request: APIRequestContext,
-  capabilityId: string,
-) {
+export async function exportCapabilityViaLabApi(request: APIRequestContext, capabilityId: string) {
   const response = await request.get(
     `${LAB_API_BASE_URL}/capabilities/${encodeURIComponent(capabilityId)}/export`,
     { headers: labApiHeaders() },

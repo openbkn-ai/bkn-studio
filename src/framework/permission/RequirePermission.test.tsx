@@ -46,11 +46,11 @@ describe("RequirePermission", () => {
         <Routes>
           <Route
             path="/knowledge-network"
-            element={(
+            element={
               <RequirePermission permissions="knowledge-network:view">
                 <div>standalone content</div>
               </RequirePermission>
-            )}
+            }
           />
           <Route path={DEFAULT_APP_ENTRY_PATH}>
             <Route index element={<Navigate replace to="/custom-default" />} />

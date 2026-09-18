@@ -45,7 +45,8 @@ export const dataCatalogModuleManifest = {
     {
       id: "data-catalog.index-builds",
       exportName: "TaskManagementScene",
-      description: "Task management with index build, discover, and semantic-understanding task lists.",
+      description:
+        "Task management with index build, discover, and semantic-understanding task lists.",
       inputs: [],
     },
     {

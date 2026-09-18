@@ -369,7 +369,11 @@
   color: var(--txt);
   font-weight: 500;
 }
-.paneMenu :global(.ant-select-item-option-selected:not(.ant-select-item-option-disabled) .ant-select-item-option-state) {
+.paneMenu
+  :global(
+    .ant-select-item-option-selected:not(.ant-select-item-option-disabled)
+      .ant-select-item-option-state
+  ) {
   color: var(--accent);
 }
 
@@ -750,7 +754,10 @@
   border-radius: 18px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
 }
 .sug:hover {
   border-color: var(--accent);
@@ -764,7 +771,9 @@
   flex: 0 0 auto;
   color: var(--faint);
   font-size: 12px;
-  transition: transform 0.15s, color 0.15s;
+  transition:
+    transform 0.15s,
+    color 0.15s;
 }
 .sug:hover .sugArrow {
   color: var(--accent);

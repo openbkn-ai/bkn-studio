@@ -8,7 +8,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import { formatCount, formatRowCount, formatTaskDateTime, timeAgo } from "@/modules/data-catalog/lib/format";
+import {
+  formatCount,
+  formatRowCount,
+  formatTaskDateTime,
+  timeAgo,
+} from "@/modules/data-catalog/lib/format";
 
 describe("data-catalog format", () => {
   beforeEach(() => {

@@ -76,9 +76,7 @@ export function McpFormScene({ onBack, onSubmitSuccess }: McpFormSceneProps) {
 
   return (
     <PermissionGate
-      fallback={
-        <Result status="403" subTitle={t("common.noPermission")} title="403" />
-      }
+      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
       permissions="execution-factory:mcp:create"
     >
       <CrudFormPage
@@ -113,9 +111,7 @@ export function McpFormScene({ onBack, onSubmitSuccess }: McpFormSceneProps) {
               rules={[{ required: true, message: t("common.required") }]}
             >
               <Radio.Group>
-                <Radio value="custom">
-                  {t("executionFactory.mcpCreationTypes.custom")}
-                </Radio>
+                <Radio value="custom">{t("executionFactory.mcpCreationTypes.custom")}</Radio>
                 <Radio value="tool_imported">
                   {t("executionFactory.mcpCreationTypes.tool_imported")}
                 </Radio>

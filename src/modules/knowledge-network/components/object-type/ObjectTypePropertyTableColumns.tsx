@@ -19,10 +19,7 @@ export const ObjectTypePropertyTableColumns: DetailTableColumnDefinition[] = [
   { key: "displayKey", labelKey: "knowledgeNetwork.objectTypePropertyTitle" },
 ];
 
-export function getObjectTypePropertyTableColumnLabel(
-  columnKey: string,
-  t: TFunction,
-): string {
+export function getObjectTypePropertyTableColumnLabel(columnKey: string, t: TFunction): string {
   const column = ObjectTypePropertyTableColumns.find((item) => item.key === columnKey);
   return column ? t(column.labelKey) : columnKey;
 }

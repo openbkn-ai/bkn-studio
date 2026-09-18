@@ -235,11 +235,31 @@
   color: var(--color-text-link);
 }
 
-.statusTagSuccess { border-color: var(--color-success-border); background: var(--color-success-bg); color: var(--color-success-text); }
-.statusTagWarning { border-color: var(--color-warning-border); background: var(--color-warning-bg); color: var(--color-warning-text); }
-.statusTagNeutral { border-color: var(--color-border); background: var(--color-interface-panel-bg); color: var(--color-text-secondary); }
-.statusTagProcessing { border-color: var(--color-info-border); background: var(--color-info-bg); color: var(--color-text-link); }
-.statusTagError { border-color: var(--color-error-border); background: var(--color-error-bg); color: var(--color-error-text); }
+.statusTagSuccess {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.statusTagWarning {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+.statusTagNeutral {
+  border-color: var(--color-border);
+  background: var(--color-interface-panel-bg);
+  color: var(--color-text-secondary);
+}
+.statusTagProcessing {
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-text-link);
+}
+.statusTagError {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
 
 .descriptionInput {
   display: inline-flex;

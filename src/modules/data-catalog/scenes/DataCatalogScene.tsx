@@ -7,7 +7,16 @@
 
 import { DatabaseOutlined } from "@ant-design/icons";
 import { Alert, Spin } from "antd";
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -39,9 +48,7 @@ import styles from "./DataCatalogScene.module.css";
 
 const CATALOG_PAGE_SIZE = 100;
 
-const ResourceListPanel = lazy(
-  () => import("@/modules/data-catalog/components/ResourceListPanel"),
-);
+const ResourceListPanel = lazy(() => import("@/modules/data-catalog/components/ResourceListPanel"));
 
 export type DataCatalogSceneProps = {
   selection: CatalogTreeSelection | null;
@@ -78,10 +85,8 @@ function mergeCatalogPage(
   replaceLoadedPageItems: boolean,
   hydratedCatalogIds: Set<string>,
 ) {
-  const belongsToPageScope = (catalog: CatalogRecord) => (
-    catalog.type === type
-    && (type !== "physical" || catalog.connectorType === connectorType)
-  );
+  const belongsToPageScope = (catalog: CatalogRecord) =>
+    catalog.type === type && (type !== "physical" || catalog.connectorType === connectorType);
   const pageIds = new Set(pageItems.map((catalog) => catalog.id));
 
   const outsidePageScope = current.filter(
@@ -89,36 +94,30 @@ function mergeCatalogPage(
   );
   const loadedPageItems = replaceLoadedPageItems
     ? []
-    : current.filter((catalog) => (
-      belongsToPageScope(catalog)
-      && !hydratedCatalogIds.has(catalog.id)
-      && !pageIds.has(catalog.id)
-    ));
-  const pendingHydratedItems = current.filter((catalog) => (
-    belongsToPageScope(catalog)
-    && hydratedCatalogIds.has(catalog.id)
-    && !pageIds.has(catalog.id)
-  ));
+    : current.filter(
+        (catalog) =>
+          belongsToPageScope(catalog) &&
+          !hydratedCatalogIds.has(catalog.id) &&
+          !pageIds.has(catalog.id),
+      );
+  const pendingHydratedItems = current.filter(
+    (catalog) =>
+      belongsToPageScope(catalog) && hydratedCatalogIds.has(catalog.id) && !pageIds.has(catalog.id),
+  );
   const catalogIds = new Set<string>();
 
-  return [
-    ...outsidePageScope,
-    ...loadedPageItems,
-    ...pageItems,
-    ...pendingHydratedItems,
-  ].filter((catalog) => {
-    if (catalogIds.has(catalog.id)) {
-      return false;
-    }
-    catalogIds.add(catalog.id);
-    return true;
-  });
+  return [...outsidePageScope, ...loadedPageItems, ...pageItems, ...pendingHydratedItems].filter(
+    (catalog) => {
+      if (catalogIds.has(catalog.id)) {
+        return false;
+      }
+      catalogIds.add(catalog.id);
+      return true;
+    },
+  );
 }
 
-export function DataCatalogScene({
-  selection,
-  suppressAutoSelect = false,
-}: DataCatalogSceneProps) {
+export function DataCatalogScene({ selection, suppressAutoSelect = false }: DataCatalogSceneProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -168,86 +167,98 @@ export function DataCatalogScene({
     selectedCatalogIdRef.current = selection?.type === "catalog" ? selection.id : null;
   }, [selection]);
 
-  const loadCatalogs = useCallback(async (
-    keyword = "",
-    preservePhysicalCatalogs = true,
-    generation = catalogQueryGeneration.current,
-    applyKeyword = false,
-  ) => {
-    const [logicalCatalogResult, statsResult] = await Promise.all([
-      listCatalogs({
+  const loadCatalogs = useCallback(
+    async (
+      keyword = "",
+      preservePhysicalCatalogs = true,
+      generation = catalogQueryGeneration.current,
+      applyKeyword = false,
+    ) => {
+      const [logicalCatalogResult, statsResult] = await Promise.all([
+        listCatalogs({
+          direction: "asc",
+          keyword,
+          page: 1,
+          pageSize: CATALOG_PAGE_SIZE,
+          sort: "name",
+          type: "logical",
+        }),
+        listCatalogConnectorTypeStats(keyword),
+      ]);
+      if (generation !== catalogQueryGeneration.current) {
+        return false;
+      }
+      if (!preservePhysicalCatalogs) {
+        hydratedCatalogIds.current.clear();
+        paginatedCatalogScopes.current.clear();
+      }
+      recordPaginatedCatalogs(
+        paginatedCatalogScopes.current,
+        logicalCatalogResult.items,
+        "logical",
+        "",
+        true,
+      );
+      logicalCatalogResult.items.forEach((catalog) =>
+        hydratedCatalogIds.current.delete(catalog.id),
+      );
+      setCatalogs((current) =>
+        mergeCatalogPage(
+          preservePhysicalCatalogs ? current : [],
+          logicalCatalogResult.items,
+          "logical",
+          "",
+          true,
+          hydratedCatalogIds.current,
+        ),
+      );
+      if (applyKeyword) {
+        setCatalogKeyword(keyword);
+      }
+      setConnectorTypeStats(statsResult);
+      return true;
+    },
+    [],
+  );
+
+  const loadCatalogsByConnectorType = useCallback(
+    async (connectorType: string, offset = 0) => {
+      const generation = catalogQueryGeneration.current;
+      const type = connectorType ? "physical" : "logical";
+      const pageOffset = Math.floor(offset / CATALOG_PAGE_SIZE) * CATALOG_PAGE_SIZE;
+      const result = await listCatalogs({
+        connectorType,
         direction: "asc",
-        keyword,
-        page: 1,
+        keyword: catalogKeyword,
+        page: pageOffset / CATALOG_PAGE_SIZE + 1,
         pageSize: CATALOG_PAGE_SIZE,
         sort: "name",
-        type: "logical",
-      }),
-      listCatalogConnectorTypeStats(keyword),
-    ]);
-    if (generation !== catalogQueryGeneration.current) {
-      return false;
-    }
-    if (!preservePhysicalCatalogs) {
-      hydratedCatalogIds.current.clear();
-      paginatedCatalogScopes.current.clear();
-    }
-    recordPaginatedCatalogs(
-      paginatedCatalogScopes.current,
-      logicalCatalogResult.items,
-      "logical",
-      "",
-      true,
-    );
-    logicalCatalogResult.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
-    setCatalogs((current) => mergeCatalogPage(
-      preservePhysicalCatalogs ? current : [],
-      logicalCatalogResult.items,
-      "logical",
-      "",
-      true,
-      hydratedCatalogIds.current,
-    ));
-    if (applyKeyword) {
-      setCatalogKeyword(keyword);
-    }
-    setConnectorTypeStats(statsResult);
-    return true;
-  }, []);
-
-  const loadCatalogsByConnectorType = useCallback(async (connectorType: string, offset = 0) => {
-    const generation = catalogQueryGeneration.current;
-    const type = connectorType ? "physical" : "logical";
-    const pageOffset = Math.floor(offset / CATALOG_PAGE_SIZE) * CATALOG_PAGE_SIZE;
-    const result = await listCatalogs({
-      connectorType,
-      direction: "asc",
-      keyword: catalogKeyword,
-      page: pageOffset / CATALOG_PAGE_SIZE + 1,
-      pageSize: CATALOG_PAGE_SIZE,
-      sort: "name",
-      type,
-    });
-    if (generation !== catalogQueryGeneration.current) {
-      return;
-    }
-    recordPaginatedCatalogs(
-      paginatedCatalogScopes.current,
-      result.items,
-      type,
-      connectorType,
-      pageOffset === 0,
-    );
-    result.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
-    setCatalogs((current) => mergeCatalogPage(
-      current,
-      result.items,
-      type,
-      connectorType,
-      pageOffset === 0,
-      hydratedCatalogIds.current,
-    ));
-  }, [catalogKeyword]);
+        type,
+      });
+      if (generation !== catalogQueryGeneration.current) {
+        return;
+      }
+      recordPaginatedCatalogs(
+        paginatedCatalogScopes.current,
+        result.items,
+        type,
+        connectorType,
+        pageOffset === 0,
+      );
+      result.items.forEach((catalog) => hydratedCatalogIds.current.delete(catalog.id));
+      setCatalogs((current) =>
+        mergeCatalogPage(
+          current,
+          result.items,
+          type,
+          connectorType,
+          pageOffset === 0,
+          hydratedCatalogIds.current,
+        ),
+      );
+    },
+    [catalogKeyword],
+  );
 
   const refreshResourceTotal = useCallback(async () => {
     setResourceTotal(await countCatalogResources());
@@ -270,33 +281,36 @@ export function DataCatalogScene({
     }
   }, [catalogKeyword, loadCatalogs, refreshResourceTotal]);
 
-  const handleCatalogSearch = useCallback((searchKeyword = catalogSearchInput) => {
-    if (catalogSearchLoading) {
-      return;
-    }
-    const keyword = searchKeyword;
-    const generation = catalogQueryGeneration.current + 1;
-    catalogQueryGeneration.current = generation;
-    setLoadError(null);
-    setCatalogSearchLoading(true);
-    void loadCatalogs(keyword, false, generation, true)
-      .then((applied) => {
-        if (applied && selection?.type === "catalog") {
-          void navigate("/data-catalog", { replace: true });
-        }
-      })
-      .catch((error) => {
-        if (generation === catalogQueryGeneration.current) {
-          setLoadError(extractRequestErrorMessage(error));
-        }
-      })
-      .finally(() => {
-        if (generation === catalogQueryGeneration.current) {
-          setCatalogSearchLoading(false);
-          setLoading(false);
-        }
-      });
-  }, [catalogSearchInput, catalogSearchLoading, loadCatalogs, navigate, selection]);
+  const handleCatalogSearch = useCallback(
+    (searchKeyword = catalogSearchInput) => {
+      if (catalogSearchLoading) {
+        return;
+      }
+      const keyword = searchKeyword;
+      const generation = catalogQueryGeneration.current + 1;
+      catalogQueryGeneration.current = generation;
+      setLoadError(null);
+      setCatalogSearchLoading(true);
+      void loadCatalogs(keyword, false, generation, true)
+        .then((applied) => {
+          if (applied && selection?.type === "catalog") {
+            void navigate("/data-catalog", { replace: true });
+          }
+        })
+        .catch((error) => {
+          if (generation === catalogQueryGeneration.current) {
+            setLoadError(extractRequestErrorMessage(error));
+          }
+        })
+        .finally(() => {
+          if (generation === catalogQueryGeneration.current) {
+            setCatalogSearchLoading(false);
+            setLoading(false);
+          }
+        });
+    },
+    [catalogSearchInput, catalogSearchLoading, loadCatalogs, navigate, selection],
+  );
 
   const loadDiscovers = useCallback(async () => {
     if (!selectedCatalog || isCatalogSummaryOnly(selectedCatalog)) {
@@ -372,7 +386,7 @@ export function DataCatalogScene({
       })
       .finally(() => {
         selectedCatalogRequestIds.current.delete(selection.id);
-        setSelectedCatalogLoadingId((current) => current === selection.id ? null : current);
+        setSelectedCatalogLoadingId((current) => (current === selection.id ? null : current));
       });
   }, [catalogs, loading, selection]);
 
@@ -462,10 +476,7 @@ export function DataCatalogScene({
       );
     }
 
-    if (
-      selection?.type === "catalog" &&
-      selectedCatalogError?.catalogId === selection.id
-    ) {
+    if (selection?.type === "catalog" && selectedCatalogError?.catalogId === selection.id) {
       return (
         <Alert
           description={t("dataCatalog.loadErrorRefreshHint")}
@@ -640,10 +651,10 @@ export function DataCatalogScene({
         catalogs={catalogs}
         defaultCatalogId={resourceDrawer.catalogId}
         onClose={() => setResourceDrawer({ open: false })}
-          onCreated={(resource) => {
-            void refreshResourceTotal();
-            openResourceWorkspace(resource.id);
-          }}
+        onCreated={(resource) => {
+          void refreshResourceTotal();
+          openResourceWorkspace(resource.id);
+        }}
         open={resourceDrawer.open}
       />
     </>

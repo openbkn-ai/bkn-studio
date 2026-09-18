@@ -90,9 +90,7 @@ describe("ActionTypeListPanel menu access", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common.actions" }));
 
-    expect(
-      await screen.findByText("knowledgeNetwork.actionTypeExecutionEntry"),
-    ).not.toBeNull();
+    expect(await screen.findByText("knowledgeNetwork.actionTypeExecutionEntry")).not.toBeNull();
     expect(screen.queryByText("common.edit")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.authorizeAction")).toBeNull();
   });

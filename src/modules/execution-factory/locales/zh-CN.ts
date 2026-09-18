@@ -8,8 +8,7 @@
 export const executionFactoryZhCN = {
   executionFactory: {
     unitManagementTitle: "能力管理",
-    unitManagementDescription:
-      "在当前平台注册和管理 MCP、工具箱、算子与 SKILL，供智能体调用。",
+    unitManagementDescription: "在当前平台注册和管理 MCP、工具箱、算子与 SKILL，供智能体调用。",
     catalogTitle: "能力市场",
     catalogDescription:
       "浏览市场中已发布的能力包：工具集、MCP 服务与 SKILL 包。布局与「能力管理」一致；可将资源引入当前平台，或同步已引入副本的最新版本。",
@@ -56,8 +55,7 @@ export const executionFactoryZhCN = {
         "将现有 HTTP 接口注册为可调用工具。粘贴 cURL 或填写地址后，系统会自动生成 OpenAPI 定义。",
       quickApiInputCurl:
         "从浏览器或接口文档复制 cURL，系统会解析请求方式、地址与参数，并预填工具信息。",
-      quickApiInputForm:
-        "手动填写服务地址与路径，适合尚未整理成 cURL、但已明确接口地址的场景。",
+      quickApiInputForm: "手动填写服务地址与路径，适合尚未整理成 cURL、但已明确接口地址的场景。",
       toolboxPlacementSection:
         "工具集是工具的归类容器。同一工具集下的接口可统一分类、发布与授权，智能体按工具集发现并调用其中工具。",
       toolboxPlacementNew:
@@ -167,13 +165,11 @@ export const executionFactoryZhCN = {
     addCapabilityFunctionNextHint: "先创建函数型工具集，随后在工具列表中编写每个函数工具。",
     developerOperatorEntry: "算子开发：OpenAPI / 函数算子注册与调试",
     advancedOperatorEntry: "函数开发",
-    advancedOperatorBanner:
-      "函数列表与调试入口。可在此注册、调试和发布函数。",
+    advancedOperatorBanner: "函数列表与调试入口。可在此注册、调试和发布函数。",
     quickApiTabCurl: "粘贴 cURL",
     quickApiTabForm: "填表单",
     quickApiCurlLabel: "cURL 命令",
-    quickApiCurlPlaceholder:
-      "curl 'https://example.com/api/v1/resource?city=北京'",
+    quickApiCurlPlaceholder: "curl 'https://example.com/api/v1/resource?city=北京'",
     quickApiParseAction: "识别接口信息",
     quickApiUrlLabel: "完整 API 地址",
     quickApiServerUrl: "服务地址",
@@ -207,8 +203,7 @@ export const executionFactoryZhCN = {
     searchPlaceholder: "按函数名称或 ID 搜索",
     toolboxSearchPlaceholder: "按工具箱名称或 ID 搜索",
     statusFilterPlaceholder: "按状态筛选",
-    toolbarHint:
-      "管理当前平台已注册的执行资源，可创建、发布、调试与导入导出。",
+    toolbarHint: "管理当前平台已注册的执行资源，可创建、发布、调试与导入导出。",
     catalogToolbarHint:
       "与能力管理相同的列表视图；数据来自市场目录。可按分类筛选，已引入当前平台的会标记「已引入」，可引入或同步最新版本。",
     empty: "暂无执行单元",
@@ -348,7 +343,8 @@ export const executionFactoryZhCN = {
     runDebug: "运行调试",
     debugRequestBody: "请求体（JSON）",
     debugRequestHeaders: "请求头（JSON）",
-    debugSensitiveMaskHint: "凭据类字段（token、api_key、Authorization 等）的值不会写入运行记录，实际请求仍按原值发送",
+    debugSensitiveMaskHint:
+      "凭据类字段（token、api_key、Authorization 等）的值不会写入运行记录，实际请求仍按原值发送",
     debugQueryParameters: "查询参数（JSON）",
     debugPathParameters: "路径参数（JSON）",
     debugMethod: "请求方法",
@@ -418,10 +414,9 @@ export const executionFactoryZhCN = {
       more: "更多操作",
     },
     operatorStatusChangeConfirmTitle: "更新算子状态",
-    operatorStatusChangeConfirmDescription:
-      '确认将“{{name}}”的状态更新为“{{status}}”吗？',
+    operatorStatusChangeConfirmDescription: "确认将“{{name}}”的状态更新为“{{status}}”吗？",
     operatorDeleteConfirmTitle: "删除算子",
-    operatorDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    operatorDeleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     releaseUser: "发布人",
     releaseTime: "发布时间",
     operatorsTab: "函数开发",
@@ -440,10 +435,8 @@ export const executionFactoryZhCN = {
     toolboxCreateFunctionFlowHint:
       "函数工具箱创建后，请在「查看工具详情」中为每个工具配置函数代码、入参和出参。",
     toolboxEditFlowHint: "编辑操作仅更新工具箱元数据，不会替换已注册的规范。",
-    functionToolCreateHint:
-      "请填写函数代码、入参和出参。保存后可在工具配置页继续调试与编辑。",
-    createToolboxFunctionNextStep:
-      "创建完成后将引导您进入工具管理页，添加第一个函数工具。",
+    functionToolCreateHint: "请填写函数代码、入参和出参。保存后可在工具配置页继续调试与编辑。",
+    createToolboxFunctionNextStep: "创建完成后将引导您进入工具管理页，添加第一个函数工具。",
     serviceUrl: "服务地址",
     toolsSectionTitle: "工具",
     toolsEmpty: "该工具箱中暂无工具",
@@ -462,15 +455,14 @@ export const executionFactoryZhCN = {
       offline: "未发布",
     },
     statusChangeConfirmTitle: "更新算子状态",
-    statusChangeConfirmDescription: '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    statusChangeConfirmDescription: "确认将“{{name}}”的状态变更为“{{status}}”吗？",
     statusChangeConfirmOk: "确认",
     deleteConfirmTitle: "删除算子",
-    deleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    deleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     toolboxStatusChangeConfirmTitle: "更新工具箱状态",
-    toolboxStatusChangeConfirmDescription:
-      '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    toolboxStatusChangeConfirmDescription: "确认将“{{name}}”的状态变更为“{{status}}”吗？",
     toolboxDeleteConfirmTitle: "删除工具箱",
-    toolboxDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    toolboxDeleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     manageTools: "管理工具",
     viewToolsDetail: "查看工具详情",
     viewMcpDetail: "查看 MCP 详情",
@@ -512,10 +504,9 @@ export const executionFactoryZhCN = {
     enable: "启用",
     disable: "禁用",
     toolStatusChangeConfirmTitle: "更新工具状态",
-    toolStatusChangeConfirmDescription:
-      '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    toolStatusChangeConfirmDescription: "确认将“{{name}}”的状态变更为“{{status}}”吗？",
     toolDeleteConfirmTitle: "删除工具",
-    toolDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    toolDeleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     marketIntroduce: "引入",
     marketSync: "同步",
     marketIntroducedTag: "已引入",
@@ -525,14 +516,13 @@ export const executionFactoryZhCN = {
     introduceConfirm: "确认引入",
     introduceSuccess: "引入成功",
     syncTitle: "从市场同步",
-    syncDescription:
-      "「{{name}}」已在当前平台中。可将市场最新版本同步到本地副本。",
+    syncDescription: "「{{name}}」已在当前平台中。可将市场最新版本同步到本地副本。",
     syncConfirm: "开始同步",
     syncSuccess: "同步成功",
     syncModeHint: "将用市场版本覆盖或更新当前平台中的已有副本。",
     install: "安装",
     installTitle: "从市场安装",
-    installDescription: '确认将“{{name}}”安装到当前平台吗？',
+    installDescription: "确认将“{{name}}”安装到当前平台吗？",
     importMode: "导入模式",
     importModeCreate: "新建",
     importModeCreateHint: "仅当当前平台中尚不存在该资源时使用。",
@@ -540,8 +530,7 @@ export const executionFactoryZhCN = {
     importModeUpsertHint: "当前平台已有同名资源时，用市场版本覆盖或更新。",
     installError: {
       generic: "操作失败，请稍后重试或联系管理员。",
-      alreadyExistsHint:
-        "该资源已在当前平台中。请改用「同步」，或前往「能力管理」直接使用。",
+      alreadyExistsHint: "该资源已在当前平台中。请改用「同步」，或前往「能力管理」直接使用。",
       alreadyExists: {
         toolbox: "该工具箱已在当前平台中，无法再次以「新建」方式引入。",
         operator: "该算子已在当前平台中，无法再次以「新建」方式引入。",
@@ -619,17 +608,13 @@ export const executionFactoryZhCN = {
     toolDetailTitle: "工具配置",
     toolDetailDescription: "编辑工具信息、接口配置、使用规则与调试设置。",
     httpToolLifecycleSummaryTitle: "能力信息",
-    httpToolLifecycleSummaryDesc:
-      "保持业务名称、描述和使用规则清晰，方便人员和智能体理解。",
+    httpToolLifecycleSummaryDesc: "保持业务名称、描述和使用规则清晰，方便人员和智能体理解。",
     httpToolLifecyclePreviewTitle: "接口预览",
-    httpToolLifecyclePreviewDesc:
-      "发布前核对生成的请求参数、请求体、响应和调试结果。",
+    httpToolLifecyclePreviewDesc: "发布前核对生成的请求参数、请求体、响应和调试结果。",
     httpToolLifecycleAdvancedTitle: "高级配置",
-    httpToolLifecycleAdvancedDesc:
-      "原始 OpenAPI、函数定义和全局参数保留在这里，用于底层配置。",
+    httpToolLifecycleAdvancedDesc: "原始 OpenAPI、函数定义和全局参数保留在这里，用于底层配置。",
     toolDebugWorkbenchTitle: "调试验证",
-    toolDebugWorkbenchDesc:
-      "在当前页面运行工具，查看响应结果，再继续编辑配置，避免丢失上下文。",
+    toolDebugWorkbenchDesc: "在当前页面运行工具，查看响应结果，再继续编辑配置，避免丢失上下文。",
     toolDebugWorkbenchEmpty: "运行调试后，这里会显示状态码、耗时、响应体和错误详情。",
     openToolIde: "编辑配置",
     importResourceTitle: {
@@ -660,8 +645,7 @@ export const executionFactoryZhCN = {
     mcpToolImportedRequired: "请至少选择一个工具",
     toolBatchSelectedCount: "已选择 {{count}} 项",
     toolBatchStatusConfirmTitle: "批量更新工具状态",
-    toolBatchStatusConfirmDescription:
-      "确认将选中的 {{count}} 个工具状态变更为“{{status}}”吗？",
+    toolBatchStatusConfirmDescription: "确认将选中的 {{count}} 个工具状态变更为“{{status}}”吗？",
     toolBatchStatusConfirmDescription_one:
       "确认将选中的 {{count}} 个工具状态变更为“{{status}}”吗？",
     toolBatchStatusConfirmDescription_other:
@@ -693,10 +677,9 @@ export const executionFactoryZhCN = {
       editing: "编辑中",
     },
     mcpStatusChangeConfirmTitle: "更新 MCP 状态",
-    mcpStatusChangeConfirmDescription:
-      '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    mcpStatusChangeConfirmDescription: "确认将“{{name}}”的状态变更为“{{status}}”吗？",
     mcpDeleteConfirmTitle: "删除 MCP 服务器",
-    mcpDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    mcpDeleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     skillListTitle: "SKILL 管理",
     skillListDescription: "管理当前平台中的 Agent SKILL。",
     skillName: "SKILL 名称",
@@ -710,14 +693,12 @@ export const executionFactoryZhCN = {
       offline: "未发布",
     },
     skillStatusChangeConfirmTitle: "更新 SKILL 状态",
-    skillStatusChangeConfirmDescription:
-      '确认将“{{name}}”的状态变更为“{{status}}”吗？',
+    skillStatusChangeConfirmDescription: "确认将“{{name}}”的状态变更为“{{status}}”吗？",
     skillDeleteConfirmTitle: "删除 SKILL",
-    skillDeleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    skillDeleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     skillCreateTitle: "注册 SKILL",
     skillCreateDescription: "上传 SKILL ZIP 包，或直接粘贴 SKILL.md 内容。",
-    skillCreateFlowHint:
-      "ZIP 模式会从上传的压缩包中解析 SKILL.md 与文件清单。",
+    skillCreateFlowHint: "ZIP 模式会从上传的压缩包中解析 SKILL.md 与文件清单。",
     skillFileType: "文件类型",
     skillUpload: "SKILL 包",
     skillUploadRequired: "请选择 SKILL 包文件。",
@@ -727,9 +708,11 @@ export const executionFactoryZhCN = {
     skillDetailPageTitle: "SKILL 详情",
     skillDetailDescription: "查看 SKILL 正文、包内文件与版本信息。",
     skillDetailEnterEdit: "编辑 SKILL",
-    skillDetailViewHint: "可查看 SKILL 正文与包内文件；具备编辑权限的用户可点击「编辑 SKILL」修改元数据或替换包。",
+    skillDetailViewHint:
+      "可查看 SKILL 正文与包内文件；具备编辑权限的用户可点击「编辑 SKILL」修改元数据或替换包。",
     skillDetailEditHint: "编辑模式下可修改元数据、下载包或查看发布历史。",
-    skillDetailCatalogContentHint: "目录模式下完整正文需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
+    skillDetailCatalogContentHint:
+      "目录模式下完整正文需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
     skillFileCountLabel: "{{count}} 个文件",
     skillFileCountLabel_one: "{{count}} 个文件",
     skillFileCountLabel_other: "{{count}} 个文件",
@@ -752,9 +735,11 @@ export const executionFactoryZhCN = {
     mcpDetailPageTitle: "MCP 详情",
     mcpDetailDescription: "查看 MCP 服务工具列表、参数 schema 并调试。",
     mcpDetailEnterEdit: "编辑 MCP",
-    mcpDetailViewHint: "可查看每个 MCP 工具的参数说明并调试；具备编辑权限的用户可点击「编辑 MCP」修改配置。",
+    mcpDetailViewHint:
+      "可查看每个 MCP 工具的参数说明并调试；具备编辑权限的用户可点击「编辑 MCP」修改配置。",
     mcpDetailEditHint: "编辑模式下可修改 MCP 配置或导出备份。",
-    mcpDetailCatalogToolsHint: "目录模式下工具列表需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
+    mcpDetailCatalogToolsHint:
+      "目录模式下工具列表需在引入到当前平台后查看；若已引入仍无法加载，请从能力管理进入。",
     mcpToolCountLabel: "{{count}} 个 MCP 工具",
     mcpToolCountLabel_one: "{{count}} 个 MCP 工具",
     mcpToolCountLabel_other: "{{count}} 个 MCP 工具",
@@ -762,8 +747,7 @@ export const executionFactoryZhCN = {
     mcpToolSchemaEmptyHint: "该工具未返回 input schema，调试时请参考 MCP 服务文档手动填写参数。",
     mcpToolSchemaRawTitle: "Input Schema",
     mcpToolOutputSchemaTitle: "Output Schema",
-    mcpToolOutputSchemaUndeclared:
-      "该 MCP 服务未声明输出 Schema，返回结构以实际调用结果为准。",
+    mcpToolOutputSchemaUndeclared: "该 MCP 服务未声明输出 Schema，返回结构以实际调用结果为准。",
     mcpMarketDetailTitle: "市场 MCP 详情",
     parseSse: "解析工具",
     parseSseTitle: "解析 SSE MCP 端点",
@@ -777,31 +761,29 @@ export const executionFactoryZhCN = {
     skillEditDescription: "更新 SKILL 元数据或替换 SKILL 包。",
     skillEditMetadataTab: "元数据",
     skillEditPackageTab: "SKILL 包",
-    skillEditPackageHint:
-      "包更新会作用于草稿状态；上传 ZIP 时会重新解析 SKILL.md。",
+    skillEditPackageHint: "包更新会作用于草稿状态；上传 ZIP 时会重新解析 SKILL.md。",
     skillSource: "来源",
     skillHistoryTitle: "发布历史",
     skillHistoryEmpty: "暂无发布历史记录。",
     skillHistoryRepublish: "恢复为草稿",
     skillHistoryPublish: "发布版本",
     skillHistoryRepublishConfirmTitle: "恢复历史版本",
-    skillHistoryRepublishConfirmDescription:
-      '确认将版本“{{version}}”恢复为草稿状态吗？',
+    skillHistoryRepublishConfirmDescription: "确认将版本“{{version}}”恢复为草稿状态吗？",
     skillHistoryPublishConfirmTitle: "发布历史版本",
-    skillHistoryPublishConfirmDescription:
-      '确认将版本“{{version}}”发布为当前版本吗？',
+    skillHistoryPublishConfirmDescription: "确认将版本“{{version}}”发布为当前版本吗？",
     mcpToolListTitle: "MCP 工具 - {{count}}",
     mcpToolListTitle_one: "MCP 工具 - {{count}}",
     mcpToolListTitle_other: "MCP 工具 - {{count}}",
     mcpFilterTools: "筛选工具…",
     mcpToolListEmptyFiltered: "没有匹配的工具",
     mcpToolsEmpty: "该 MCP 服务器暂未发现任何工具。",
-    mcpToolDebugTitle: '调试 MCP 工具“{{tool}}”',
+    mcpToolDebugTitle: "调试 MCP 工具“{{tool}}”",
     functionAiGenerate: "AI 生成",
     functionAiGenerateTitle: "AI 函数生成器",
     functionAiGenerateType: "生成器类型",
     functionAiGenerateQuery: "需求描述",
-    functionAiGenerateQueryPlaceholder: "用一两句话说清这个函数要做什么，例如：把一段文本按句号切分并去掉空白句",
+    functionAiGenerateQueryPlaceholder:
+      "用一两句话说清这个函数要做什么，例如：把一段文本按句号切分并去掉空白句",
     functionAiGenerateResultTitle: "生成结果",
     functionAiGenerateApply: "应用到编辑器",
     functionAiGenerateTypes: {
@@ -829,17 +811,20 @@ export const executionFactoryZhCN = {
     functionTemplateOverwriteOk: "覆盖",
     functionDeriveParams: "反推参数",
     functionDeriveApplied: "已按代码推导出参数，请核对后保存。",
-    functionDeriveUnsupported: "这段代码推导不出函数契约，请检查入口是否为 handler(event) 或 @tool 函数。",
+    functionDeriveUnsupported:
+      "这段代码推导不出函数契约，请检查入口是否为 handler(event) 或 @tool 函数。",
     functionTemplateInserted: "已插入函数骨架",
     workbenchDirty: "有未保存改动",
     workbenchPublishedLive: "已发布 · 保存即生效",
     workbenchPublishedLiveHint:
       "该工具集已发布，函数改动保存后 Agent 下次调用立即使用，无需再次发布。需要停用请到能力列表取消发布。",
     workbenchSavePublishedTitle: "保存后立即生效",
-    workbenchSavePublishedContent: "这个工具集已发布。保存后，Agent 下次调用就会用到新的代码和参数。",
+    workbenchSavePublishedContent:
+      "这个工具集已发布。保存后，Agent 下次调用就会用到新的代码和参数。",
     parameterRequired: "必填",
     parameterDescriptionPlaceholder: "参数说明（供 Agent 理解）",
-    parameterArrayItemHint: "数组元素结构：改这一项的类型即可描述元素形状；后端要求数组恰好一个元素定义。",
+    parameterArrayItemHint:
+      "数组元素结构：改这一项的类型即可描述元素形状；后端要求数组恰好一个元素定义。",
     addInputParameter: "添加输入参数",
     addOutputParameter: "添加输出参数",
     addSubParameter: "添加子参数",
@@ -877,7 +862,8 @@ export const executionFactoryZhCN = {
     workbenchParamsViewJson: "JSON",
     workbenchDepsTab: "依赖",
     workbenchNoParameters: "暂无参数，添加以声明函数契约",
-    workbenchParamsHint: "参数与代码需你自行保持一致（后端不强制）。改完代码可用「AI 生成 → 代码转参数」对齐。",
+    workbenchParamsHint:
+      "参数与代码需你自行保持一致（后端不强制）。改完代码可用「AI 生成 → 代码转参数」对齐。",
     workbenchNoFunction: "还没有函数，从左侧新建一个",
     workbenchConsoleTitle: "在线调试",
     workbenchConsoleNote: "运行的是当前编辑框代码 · 临时、不落库",
@@ -907,7 +893,8 @@ export const executionFactoryZhCN = {
     workbenchDependencyPlaceholder: "包名，如 pandas / requests",
     workbenchDependencyDuplicate: "该依赖已声明",
     workbenchDependencyInvalidName: "包名只能包含字母、数字和 - _ .，且需以字母或数字开头结尾",
-    workbenchDependencyHint: "依赖按工具存储、按沙箱会话安装；会话是共享池，不同函数的依赖可能互相影响。",
+    workbenchDependencyHint:
+      "依赖按工具存储、按沙箱会话安装；会话是共享池，不同函数的依赖可能互相影响。",
     publishAnyway: "仍然发布",
     publishPreflightSummary: "发布前检查到 {{count}} 个问题：",
     publishPreflightSummary_one: "发布前检查到 {{count}} 个问题：",
@@ -1000,7 +987,8 @@ export const executionFactoryZhCN = {
     openApiDocumentErrors: {
       componentRefMissing:
         "\u6587\u6863\u5f15\u7528\u4e86\u672a\u5b9a\u4e49\u7684\u7ec4\u4ef6 {{ref}}\u3002\u8bf7\u8865\u9f50 components \u6bb5\uff0c\u6216\u6539\u4e3a\u5185\u8054\u54cd\u5e94\u5b9a\u4e49\u3002",
-      infoRequired: "info \u5fc5\u987b\u4e3a\u5bf9\u8c61\uff0c\u4e14\u5305\u542b title \u4e0e version\u3002",
+      infoRequired:
+        "info \u5fc5\u987b\u4e3a\u5bf9\u8c61\uff0c\u4e14\u5305\u542b title \u4e0e version\u3002",
       infoTitleRequired: "info.title \u4e0d\u80fd\u4e3a\u7a7a\u3002",
       infoVersionRequired: "info.version \u4e0d\u80fd\u4e3a\u7a7a\u3002",
       invalidJsonOrYaml:
@@ -1013,20 +1001,21 @@ export const executionFactoryZhCN = {
         "\u63a5\u53e3 {{method}} {{path}} \u7684 description \u8d85\u8fc7 {{limit}} \u5b57\u7b26\u3002\u8bf7\u7f29\u77ed\u540e\u518d\u4fdd\u5b58\u3002",
       operationSummaryRequired:
         "\u63a5\u53e3 {{method}} {{path}} \u7f3a\u5c11 summary\uff0c\u8bf7\u8865\u5145\u540e\u518d\u4fdd\u5b58\u3002",
-      operationsRequired: "paths \u4e2d\u672a\u627e\u5230\u6709\u6548\u7684 HTTP \u63a5\u53e3\u5b9a\u4e49\u3002",
+      operationsRequired:
+        "paths \u4e2d\u672a\u627e\u5230\u6709\u6548\u7684 HTTP \u63a5\u53e3\u5b9a\u4e49\u3002",
       pathsRequired: "\u7f3a\u5c11\u5fc5\u586b\u9876\u5c42\u5b57\u6bb5 paths\u3002",
       relativeServerRequiresManualUrl:
         "OpenAPI servers[0].url \u662f\u76f8\u5bf9\u8def\u5f84 {{serverUrl}}\uff0c\u8bf7\u586b\u5199\u5b8c\u6574\u670d\u52a1\u5730\u5740\u3002",
       serverUrlRequired: "servers[0].url \u4e0d\u80fd\u4e3a\u7a7a\u3002",
       specRequired: "OpenAPI \u89c4\u8303\u4e0d\u80fd\u4e3a\u7a7a\u3002",
-      topLevelObjectRequired: "OpenAPI \u6587\u6863\u9876\u5c42\u5fc5\u987b\u662f\u5bf9\u8c61\u3002",
+      topLevelObjectRequired:
+        "OpenAPI \u6587\u6863\u9876\u5c42\u5fc5\u987b\u662f\u5bf9\u8c61\u3002",
     },
     installedStateSyncFailed: "安装状态同步失败，已安装标记可能不准确。",
     loadMoreFailed: "加载更多失败，请重试。",
     routeMigrated: "页面地址已更新，已为您跳转到新的能力管理入口。",
     sandboxRuntimeTitle: "沙箱运行时管理",
-    sandboxRuntimeDescription:
-      "查看可调用能力使用的沙箱健康状态、会话池压力、依赖安装与任务会话。",
+    sandboxRuntimeDescription: "查看可调用能力使用的沙箱健康状态、会话池压力、依赖安装与任务会话。",
     navExecutionUnitManagementTooltip: "管理当前平台内的算子、工具箱、MCP 与 SKILL。",
     navAllExecutionUnitsTooltip: "浏览市场目录并将资源引入当前平台。",
   },

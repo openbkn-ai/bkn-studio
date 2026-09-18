@@ -360,8 +360,7 @@
   box-shadow: none !important;
 }
 
-.tableSurface
-  :global(.ant-pagination-options-size-changer .ant-select-selection-item) {
+.tableSurface :global(.ant-pagination-options-size-changer .ant-select-selection-item) {
   color: var(--business-color-text);
   font-size: var(--business-font-size-body);
   line-height: 38px !important;

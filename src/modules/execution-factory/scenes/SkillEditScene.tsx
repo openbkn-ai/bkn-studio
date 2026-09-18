@@ -28,11 +28,7 @@ import styles from "./UnitFormScene.module.css";
 
 type MetadataFormValues = SkillMetadataEditInput;
 
-export function SkillEditScene({
-  onBack,
-  onSubmitSuccess,
-  skillId,
-}: SkillEditSceneProps) {
+export function SkillEditScene({ onBack, onSubmitSuccess, skillId }: SkillEditSceneProps) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const navigate = useNavigate();
@@ -141,9 +137,7 @@ export function SkillEditScene({
 
   return (
     <PermissionGate
-      fallback={
-        <Result status="403" subTitle={t("common.noPermission")} title="403" />
-      }
+      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
       permissions="execution-factory:skill:edit"
     >
       <CrudFormPage
@@ -182,9 +176,7 @@ export function SkillEditScene({
                           rules={[{ required: true, message: t("common.required") }]}
                         >
                           <Select
-                            options={(
-                              ["other_category", "system"] as const
-                            ).map((value) => ({
+                            options={(["other_category", "system"] as const).map((value) => ({
                               label: t(`executionFactory.skillCategories.${value}`),
                               value,
                             }))}
@@ -223,12 +215,14 @@ export function SkillEditScene({
                       <p className={styles.formHint}>
                         {t("executionFactory.skillEditPackageHint")}
                       </p>
-                      <Form form={packageForm} initialValues={{ fileType: "zip" }} layout="vertical">
+                      <Form
+                        form={packageForm}
+                        initialValues={{ fileType: "zip" }}
+                        layout="vertical"
+                      >
                         <Form.Item label={t("executionFactory.skillFileType")} name="fileType">
                           <Radio.Group>
-                            <Radio value="zip">
-                              {t("executionFactory.skillFileTypes.zip")}
-                            </Radio>
+                            <Radio value="zip">{t("executionFactory.skillFileTypes.zip")}</Radio>
                             <Radio value="content">
                               {t("executionFactory.skillFileTypes.content")}
                             </Radio>

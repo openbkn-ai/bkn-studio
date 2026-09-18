@@ -46,10 +46,7 @@ export function ActionTypeDetailScene() {
   const canViewToolbox = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     mode: "any",
-    requiredPermissions: [
-      "execution-factory:toolbox:view",
-      "execution-factory:function:view",
-    ],
+    requiredPermissions: ["execution-factory:toolbox:view", "execution-factory:function:view"],
   });
   const canViewMcp = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
@@ -171,20 +168,20 @@ export function ActionTypeDetailScene() {
             record={detail}
           />
         }
-      onBack={() => {
-        void navigate(listPath);
-      }}
-      subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
-      title={detail.name}
-    >
-      <div className={styles.contentPanel}>
-        <ActionTypeOverviewPanel
-          canResolveActionSource={canResolveActionSource}
-          detail={detail}
-          networkId={networkId}
-          objectTypes={objectTypes}
-        />
-      </div>
+        onBack={() => {
+          void navigate(listPath);
+        }}
+        subtitle={t("knowledgeNetwork.actionTypeDetailDescription")}
+        title={detail.name}
+      >
+        <div className={styles.contentPanel}>
+          <ActionTypeOverviewPanel
+            canResolveActionSource={canResolveActionSource}
+            detail={detail}
+            networkId={networkId}
+            objectTypes={objectTypes}
+          />
+        </div>
       </KnowledgeNetworkResourceConfigShell>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

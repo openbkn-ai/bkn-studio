@@ -55,9 +55,11 @@ describe("useBuildTaskActions", () => {
 
     result.current.pauseOrResume(runningTask);
 
-    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: "dataCatalog.task.pauseResumeConfirmPauseTitle",
-    }));
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.task.pauseResumeConfirmPauseTitle",
+      }),
+    );
     expect(pauseBuildTaskMock).not.toHaveBeenCalled();
 
     const config = modalConfirmMock.mock.calls[0][0] as { onOk: () => Promise<void> };

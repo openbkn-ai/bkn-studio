@@ -17,12 +17,7 @@ describe("capability-create-menu", () => {
     const items = getCapabilityCreateMenuItems();
 
     // Matches list tabs one-to-one: API toolboxes, function sets, MCP services, and SKILL packages.
-    expect(items.map((item) => item.action)).toEqual([
-      "quick-api",
-      "function",
-      "mcp",
-      "skill",
-    ]);
+    expect(items.map((item) => item.action)).toEqual(["quick-api", "function", "mcp", "skill"]);
 
     // Import uses the toolbar Import action and no longer appears in Add capability.
     expect(items.map((item) => item.action)).not.toContain("import-openapi");

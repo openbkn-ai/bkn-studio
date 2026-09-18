@@ -16,9 +16,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
-import {
-  formatKnowledgeNetworkObjectTypeIndexStateLabel,
-} from "@/modules/knowledge-network/utils/resource-index-state";
+import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 import {
   classifyObjectTypeProxyReadFailure,
   getObjectTypeProxyReadFailureTranslationKeys,
@@ -201,23 +199,26 @@ export function ObjectTypeDetailScene() {
   const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
   const [relatedRelationsLoading, setRelatedRelationsLoading] = useState(false);
   const [relatedRelationsError, setRelatedRelationsError] = useState<string | null>(null);
-  const [relatedRelationsLoadedObjectTypeId, setRelatedRelationsLoadedObjectTypeId] =
-    useState<string | null>(null);
+  const [relatedRelationsLoadedObjectTypeId, setRelatedRelationsLoadedObjectTypeId] = useState<
+    string | null
+  >(null);
   const [relatedRelationsPage, setRelatedRelationsPage] = useState(1);
   const [relatedRelationsPageSize, setRelatedRelationsPageSize] = useState(10);
   const [relatedMetrics, setRelatedMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
   const [relatedMetricsTotalCount, setRelatedMetricsTotalCount] = useState(0);
   const [relatedMetricsLoading, setRelatedMetricsLoading] = useState(false);
   const [relatedMetricsError, setRelatedMetricsError] = useState<string | null>(null);
-  const [relatedMetricsLoadedObjectTypeId, setRelatedMetricsLoadedObjectTypeId] =
-    useState<string | null>(null);
+  const [relatedMetricsLoadedObjectTypeId, setRelatedMetricsLoadedObjectTypeId] = useState<
+    string | null
+  >(null);
   const [relatedMetricsPage, setRelatedMetricsPage] = useState(1);
   const [relatedMetricsPageSize, setRelatedMetricsPageSize] = useState(10);
   const [relatedActions, setRelatedActions] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [relatedActionsLoading, setRelatedActionsLoading] = useState(false);
   const [relatedActionsError, setRelatedActionsError] = useState<string | null>(null);
-  const [relatedActionsLoadedObjectTypeId, setRelatedActionsLoadedObjectTypeId] =
-    useState<string | null>(null);
+  const [relatedActionsLoadedObjectTypeId, setRelatedActionsLoadedObjectTypeId] = useState<
+    string | null
+  >(null);
   const [relatedActionsPage, setRelatedActionsPage] = useState(1);
   const [relatedActionsPageSize, setRelatedActionsPageSize] = useState(10);
   const [dataPage, setDataPage] = useState(1);
@@ -232,12 +233,11 @@ export function ObjectTypeDetailScene() {
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
   const locationState = location.state as ObjectTypeDetailLocationState | null;
-  const returnPath =
-    locationState?.knowledgeNetworkReturnTo?.startsWith(
-      `/knowledge-network/workspace/${networkId}/`,
-    )
-      ? locationState.knowledgeNetworkReturnTo
-      : listPath;
+  const returnPath = locationState?.knowledgeNetworkReturnTo?.startsWith(
+    `/knowledge-network/workspace/${networkId}/`,
+  )
+    ? locationState.knowledgeNetworkReturnTo
+    : listPath;
 
   const confirmDelete = () => {
     if (!detail) {
@@ -261,77 +261,89 @@ export function ObjectTypeDetailScene() {
     });
   };
 
-  const openMetricTrial = useCallback((metricId: string) => {
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.set("tab", "data");
-      next.set("section", "metric");
-      next.set("metricId", metricId);
-      next.delete("logicProperty");
-      return next;
-    }, { replace: true });
-  }, [setSearchParams]);
+  const openMetricTrial = useCallback(
+    (metricId: string) => {
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set("tab", "data");
+          next.set("section", "metric");
+          next.set("metricId", metricId);
+          next.delete("logicProperty");
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   const openLogicPropertyTrial = useCallback(
     (logicPropertyName: string, sampleRowKey?: string | null) => {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.set("tab", "data");
-        next.set("section", "logic");
-        next.set("logicProperty", logicPropertyName);
-        next.delete("metricId");
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.set("tab", "data");
+          next.set("section", "logic");
+          next.set("logicProperty", logicPropertyName);
+          next.delete("metricId");
 
-        if (sampleRowKey) {
-          next.set("sampleRow", sampleRowKey);
-        } else {
-          next.delete("sampleRow");
-        }
+          if (sampleRowKey) {
+            next.set("sampleRow", sampleRowKey);
+          } else {
+            next.delete("sampleRow");
+          }
 
-        return next;
-      }, { replace: true });
+          return next;
+        },
+        { replace: true },
+      );
     },
     [setSearchParams],
   );
 
   const openTab = useCallback(
     (tab: ObjectTypeDetailTabKey, params?: Record<string, string>) => {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
 
-        if (tab === "overview") {
-          next.delete("tab");
-          next.delete("section");
-          next.delete("relatedSection");
-          next.delete("metricId");
-          next.delete("logicProperty");
-          next.delete("sampleRow");
-        } else {
-          next.set("tab", tab);
-        }
+          if (tab === "overview") {
+            next.delete("tab");
+            next.delete("section");
+            next.delete("relatedSection");
+            next.delete("metricId");
+            next.delete("logicProperty");
+            next.delete("sampleRow");
+          } else {
+            next.set("tab", tab);
+          }
 
-        if (tab !== "data") {
-          next.delete("section");
-          next.delete("metricId");
-          next.delete("logicProperty");
-          next.delete("sampleRow");
-        }
+          if (tab !== "data") {
+            next.delete("section");
+            next.delete("metricId");
+            next.delete("logicProperty");
+            next.delete("sampleRow");
+          }
 
-        if (tab !== "related") {
-          next.delete("relatedSection");
-        }
+          if (tab !== "related") {
+            next.delete("relatedSection");
+          }
 
-        if (params) {
-          Object.entries(params).forEach(([key, value]) => {
-            if (value) {
-              next.set(key, value);
-            } else {
-              next.delete(key);
-            }
-          });
-        }
+          if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+              if (value) {
+                next.set(key, value);
+              } else {
+                next.delete(key);
+              }
+            });
+          }
 
-        return next;
-      }, { replace: true });
+          return next;
+        },
+        { replace: true },
+      );
     },
     [setSearchParams],
   );
@@ -470,16 +482,19 @@ export function ObjectTypeDetailScene() {
     setRelatedActionsError(null);
     setRelatedActionsLoadedObjectTypeId(null);
     setRelatedActionsPage(1);
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete("tab");
-      next.delete("section");
-      next.delete("relatedSection");
-      next.delete("metricId");
-      next.delete("logicProperty");
-      next.delete("sampleRow");
-      return next;
-    }, { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("tab");
+        next.delete("section");
+        next.delete("relatedSection");
+        next.delete("metricId");
+        next.delete("logicProperty");
+        next.delete("sampleRow");
+        return next;
+      },
+      { replace: true },
+    );
   }, [networkId, objectTypeId, setSearchParams]);
 
   useEffect(() => {
@@ -527,12 +542,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [
-    networkId,
-    objectTypeId,
-    relatedMetricsLoadedObjectTypeId,
-    shouldLoadRelatedMetrics,
-  ]);
+  }, [networkId, objectTypeId, relatedMetricsLoadedObjectTypeId, shouldLoadRelatedMetrics]);
 
   useEffect(() => {
     if (!shouldLoadRelatedActions || !networkId || !objectTypeId) {
@@ -571,12 +581,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [
-    networkId,
-    objectTypeId,
-    relatedActionsLoadedObjectTypeId,
-    shouldLoadRelatedActions,
-  ]);
+  }, [networkId, objectTypeId, relatedActionsLoadedObjectTypeId, shouldLoadRelatedActions]);
 
   useEffect(() => {
     if (!shouldLoadRelatedRelations || !networkId || !objectTypeId) {
@@ -643,12 +648,7 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [
-    networkId,
-    objectTypeId,
-    relatedRelationsLoadedObjectTypeId,
-    shouldLoadRelatedRelations,
-  ]);
+  }, [networkId, objectTypeId, relatedRelationsLoadedObjectTypeId, shouldLoadRelatedRelations]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -689,7 +689,11 @@ export function ObjectTypeDetailScene() {
     }
 
     return rows.filter((row) =>
-      Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(normalized)),
+      Object.values(row).some((value) =>
+        String(value ?? "")
+          .toLowerCase()
+          .includes(normalized),
+      ),
     );
   }, [preview?.rows, previewKeyword]);
 
@@ -1016,10 +1020,7 @@ export function ObjectTypeDetailScene() {
       <div className={styles.overviewHero}>
         <section className={styles.overviewIdentity}>
           <div className={styles.summaryHead}>
-            <span
-              className={styles.objectIconSquare}
-              style={{ backgroundColor: detail.color }}
-            >
+            <span className={styles.objectIconSquare} style={{ backgroundColor: detail.color }}>
               {renderResourceIcon(detail.icon)}
             </span>
             <div className={styles.overviewIdentityMain}>
@@ -1272,14 +1273,11 @@ export function ObjectTypeDetailScene() {
         <button
           className={styles.tableLink}
           onClick={() => {
-            void navigate(
-              `/knowledge-network/workspace/${networkId}/metrics/${record.id}/detail`,
-              {
-                state: {
-                  knowledgeNetworkReturnTo: detailPath,
-                },
+            void navigate(`/knowledge-network/workspace/${networkId}/metrics/${record.id}/detail`, {
+              state: {
+                knowledgeNetworkReturnTo: detailPath,
               },
-            );
+            });
           }}
           title={value}
           type="button"
@@ -1528,27 +1526,30 @@ export function ObjectTypeDetailScene() {
             onChange={(value) => {
               const nextSection = value as ObjectTypeDataSectionKey;
               setPreviewPage(1);
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                next.set("tab", "data");
+              setSearchParams(
+                (current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("tab", "data");
 
-                if (nextSection === "instance") {
-                  next.delete("section");
-                  next.delete("metricId");
-                  next.delete("logicProperty");
-                  next.delete("sampleRow");
-                } else {
-                  next.set("section", nextSection);
-
-                  if (nextSection === "logic") {
+                  if (nextSection === "instance") {
+                    next.delete("section");
                     next.delete("metricId");
-                  } else {
                     next.delete("logicProperty");
-                  }
-                }
+                    next.delete("sampleRow");
+                  } else {
+                    next.set("section", nextSection);
 
-                return next;
-              }, { replace: true });
+                    if (nextSection === "logic") {
+                      next.delete("metricId");
+                    } else {
+                      next.delete("logicProperty");
+                    }
+                  }
+
+                  return next;
+                },
+                { replace: true },
+              );
             }}
             options={[
               {
@@ -1585,18 +1586,21 @@ export function ObjectTypeDetailScene() {
                   <button
                     className={styles.cardHeaderLink}
                     onClick={() => {
-                      setSearchParams((current) => {
-                        const next = new URLSearchParams(current);
-                        next.set("tab", "data");
-                        next.set("section", "logic");
-                        next.set("sampleRow", selectedSampleRowKey);
+                      setSearchParams(
+                        (current) => {
+                          const next = new URLSearchParams(current);
+                          next.set("tab", "data");
+                          next.set("section", "logic");
+                          next.set("sampleRow", selectedSampleRowKey);
 
-                        if (selectedLogicPropertyName) {
-                          next.set("logicProperty", selectedLogicPropertyName);
-                        }
+                          if (selectedLogicPropertyName) {
+                            next.set("logicProperty", selectedLogicPropertyName);
+                          }
 
-                        return next;
-                      }, { replace: true });
+                          return next;
+                        },
+                        { replace: true },
+                      );
                     }}
                     type="button"
                   >
@@ -1627,24 +1631,28 @@ export function ObjectTypeDetailScene() {
               />
             ) : previewError ? (
               <Alert
-                action={(
+                action={
                   <Button
                     onClick={() => setPreviewReloadToken((current) => current + 1)}
                     size="small"
                   >
                     {t("common.retry")}
                   </Button>
-                )}
-                description={previewError.kind === "unknown" && previewError.description
-                  ? previewError.description
-                  : t(getObjectTypeProxyReadFailureTranslationKeys(previewError).description)}
-                message={t(
-                  getObjectTypeProxyReadFailureTranslationKeys(previewError).message,
-                )}
+                }
+                description={
+                  previewError.kind === "unknown" && previewError.description
+                    ? previewError.description
+                    : t(getObjectTypeProxyReadFailureTranslationKeys(previewError).description)
+                }
+                message={t(getObjectTypeProxyReadFailureTranslationKeys(previewError).message)}
                 showIcon
-                type={previewError.kind === "caller-forbidden" ||
+                type={
+                  previewError.kind === "caller-forbidden" ||
                   previewError.kind === "proxy-permission-denied" ||
-                  previewError.kind === "binding-invalid" ? "warning" : "error"}
+                  previewError.kind === "binding-invalid"
+                    ? "warning"
+                    : "error"
+                }
               />
             ) : previewLoading ? (
               <div className={styles.loadingState}>
@@ -1671,18 +1679,21 @@ export function ObjectTypeDetailScene() {
                   rowSelection={{
                     onChange: (selectedRowKeys) => {
                       const nextKey = selectedRowKeys[0];
-                      setSearchParams((current) => {
-                        const next = new URLSearchParams(current);
-                        next.set("tab", "data");
+                      setSearchParams(
+                        (current) => {
+                          const next = new URLSearchParams(current);
+                          next.set("tab", "data");
 
-                        if (typeof nextKey === "string" && nextKey) {
-                          next.set("sampleRow", nextKey);
-                        } else {
-                          next.delete("sampleRow");
-                        }
+                          if (typeof nextKey === "string" && nextKey) {
+                            next.set("sampleRow", nextKey);
+                          } else {
+                            next.delete("sampleRow");
+                          }
 
-                        return next;
-                      }, { replace: true });
+                          return next;
+                        },
+                        { replace: true },
+                      );
                     },
                     selectedRowKeys: selectedSampleRowKey ? [selectedSampleRowKey] : [],
                     type: "radio",
@@ -1727,22 +1738,25 @@ export function ObjectTypeDetailScene() {
             previewLoading={previewLoading}
             primaryKeys={objectTypePrimaryKeys}
             onSelectedRowKeysChange={(rowKeys) => {
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                next.set("tab", "data");
-                next.set("section", "logic");
+              setSearchParams(
+                (current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("tab", "data");
+                  next.set("section", "logic");
 
-                if (rowKeys.length === 1) {
-                  const sampleRow = rowKeys[0];
-                  if (sampleRow !== undefined) {
-                    next.set("sampleRow", sampleRow);
+                  if (rowKeys.length === 1) {
+                    const sampleRow = rowKeys[0];
+                    if (sampleRow !== undefined) {
+                      next.set("sampleRow", sampleRow);
+                    }
+                  } else {
+                    next.delete("sampleRow");
                   }
-                } else {
-                  next.delete("sampleRow");
-                }
 
-                return next;
-              }, { replace: true });
+                  return next;
+                },
+                { replace: true },
+              );
             }}
           />
         ) : null}
@@ -1756,13 +1770,16 @@ export function ObjectTypeDetailScene() {
             objectTypeId={objectTypeId}
             objectTypeName={detail.name}
             onSelectMetricId={(metricId) => {
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                next.set("tab", "data");
-                next.set("section", "metric");
-                next.set("metricId", metricId);
-                return next;
-              }, { replace: true });
+              setSearchParams(
+                (current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("tab", "data");
+                  next.set("section", "metric");
+                  next.set("metricId", metricId);
+                  return next;
+                },
+                { replace: true },
+              );
             }}
             selectedMetricId={selectedTrialMetricId}
           />
@@ -1782,18 +1799,21 @@ export function ObjectTypeDetailScene() {
               setRelatedRelationsPage(1);
               setRelatedMetricsPage(1);
               setRelatedActionsPage(1);
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                next.set("tab", "related");
+              setSearchParams(
+                (current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("tab", "related");
 
-                if (nextSection === "relations") {
-                  next.delete("relatedSection");
-                } else {
-                  next.set("relatedSection", nextSection);
-                }
+                  if (nextSection === "relations") {
+                    next.delete("relatedSection");
+                  } else {
+                    next.set("relatedSection", nextSection);
+                  }
 
-                return next;
-              }, { replace: true });
+                  return next;
+                },
+                { replace: true },
+              );
             }}
             options={[
               {
@@ -1843,9 +1863,7 @@ export function ObjectTypeDetailScene() {
                   loading={relatedRelationsLoading}
                   locale={{
                     emptyText: (
-                      <Empty
-                        description={t("knowledgeNetwork.objectTypeRelatedRelationsEmpty")}
-                      />
+                      <Empty description={t("knowledgeNetwork.objectTypeRelatedRelationsEmpty")} />
                     ),
                   }}
                   pagination={false}
@@ -1895,7 +1913,9 @@ export function ObjectTypeDetailScene() {
                   loading={relatedMetricsLoading}
                   locale={{
                     emptyText: (
-                      <Empty description={t("knowledgeNetwork.objectTypeDetailRelatedMetricsEmpty")} />
+                      <Empty
+                        description={t("knowledgeNetwork.objectTypeDetailRelatedMetricsEmpty")}
+                      />
                     ),
                   }}
                   pagination={false}
@@ -1935,7 +1955,9 @@ export function ObjectTypeDetailScene() {
                   loading={relatedActionsLoading}
                   locale={{
                     emptyText: (
-                      <Empty description={t("knowledgeNetwork.objectTypeDetailRelatedActionsEmpty")} />
+                      <Empty
+                        description={t("knowledgeNetwork.objectTypeDetailRelatedActionsEmpty")}
+                      />
                     ),
                   }}
                   pagination={false}

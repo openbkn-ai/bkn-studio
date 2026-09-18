@@ -56,7 +56,10 @@ const minutesAgo = (minutes: number) => now - minutes * 60_000;
 const daysAgo = (days: number) => now - days * 86_400_000;
 
 function makeResource(
-  input: Omit<CatalogResource, "columnCount" | "enabled" | "localIndexStatus" | "operations" | "updateTime"> &
+  input: Omit<
+    CatalogResource,
+    "columnCount" | "enabled" | "localIndexStatus" | "operations" | "updateTime"
+  > &
     Partial<Pick<CatalogResource, "enabled" | "localIndexStatus" | "operations">>,
 ): CatalogResource {
   const sourceMetadata =
@@ -121,9 +124,7 @@ export const mockResources: CatalogResource[] = [
         originalName: "name",
         originalType: "varchar(128)",
         originalDescription: "客户显示名称",
-        features: [
-          { featureType: "fulltext", config: { analyzer: "ik_max_word" } },
-        ],
+        features: [{ featureType: "fulltext", config: { analyzer: "ik_max_word" } }],
       },
       {
         name: "segment",
@@ -884,7 +885,12 @@ export const mockResources: CatalogResource[] = [
         originalDescription: "BKN中概念的名称",
         features: [
           { featureType: "keyword", name: "keyword_name", isDefault: true },
-          { featureType: "fulltext", name: "fulltext_name", isDefault: true, config: { analyzer: "standard" } },
+          {
+            featureType: "fulltext",
+            name: "fulltext_name",
+            isDefault: true,
+            config: { analyzer: "standard" },
+          },
         ],
       },
       {
@@ -897,7 +903,12 @@ export const mockResources: CatalogResource[] = [
         originalDescription: "BKN中概念的注释说明",
         features: [
           { featureType: "keyword", name: "keyword_comment", isDefault: true },
-          { featureType: "fulltext", name: "fulltext_comment", isDefault: true, config: { analyzer: "standard" } },
+          {
+            featureType: "fulltext",
+            name: "fulltext_comment",
+            isDefault: true,
+            config: { analyzer: "standard" },
+          },
         ],
       },
       {
@@ -910,7 +921,12 @@ export const mockResources: CatalogResource[] = [
         originalDescription: "BKN中概念的详细信息描述",
         features: [
           { featureType: "keyword", name: "keyword_detail", isDefault: true },
-          { featureType: "fulltext", name: "fulltext_detail", isDefault: true, config: { analyzer: "standard" } },
+          {
+            featureType: "fulltext",
+            name: "fulltext_detail",
+            isDefault: true,
+            config: { analyzer: "standard" },
+          },
         ],
       },
       {
@@ -987,11 +1003,7 @@ export function mockCatalogName(id?: string) {
 function makeTask(
   input: Omit<
     BuildTask,
-    | "finishTime"
-    | "fulltextAnalyzer"
-    | "fulltextFields"
-    | "lastProgressTime"
-    | "startTime"
+    "finishTime" | "fulltextAnalyzer" | "fulltextFields" | "lastProgressTime" | "startTime"
   > & {
     finishedAt?: number | null;
     lastProgressAt?: number | null;

@@ -15,11 +15,7 @@ type AppProvidersProps = PropsWithChildren<{
   updateLocale: (locale: SupportedLocale) => Promise<void>;
 }>;
 
-export function AppProviders({
-  children,
-  runtimeConfig,
-  updateLocale,
-}: AppProvidersProps) {
+export function AppProviders({ children, runtimeConfig, updateLocale }: AppProvidersProps) {
   return (
     <AppServicesProvider runtimeConfig={runtimeConfig} updateLocale={updateLocale}>
       {children}

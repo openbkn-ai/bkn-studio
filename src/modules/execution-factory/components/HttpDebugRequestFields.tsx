@@ -147,11 +147,7 @@ export function HttpDebugRequestFields({
         </div>
       ) : null}
       {pathParameters.length > 0
-        ? renderJsonField(
-            "requestPath",
-            t("executionFactory.debugPathParameters"),
-            pathParameters,
-          )
+        ? renderJsonField("requestPath", t("executionFactory.debugPathParameters"), pathParameters)
         : null}
       {queryParameters.length > 0
         ? renderJsonField(

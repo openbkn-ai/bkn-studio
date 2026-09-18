@@ -10,10 +10,7 @@ import { useContext, useEffect, useMemo } from "react";
 
 import { App as AntdApp } from "antd";
 
-import {
-  AppServicesContext,
-  PendingContext,
-} from "@/framework/context/contexts";
+import { AppServicesContext, PendingContext } from "@/framework/context/contexts";
 import { setRequestErrorHandler } from "@/framework/request/http";
 import type { RuntimeConfig, SupportedLocale } from "@/framework/runtime/types";
 
@@ -35,11 +32,7 @@ export function AppServicesProvider({
     [runtimeConfig, updateLocale],
   );
 
-  return (
-    <PendingContext.Provider value={pendingValue}>
-      {children}
-    </PendingContext.Provider>
-  );
+  return <PendingContext.Provider value={pendingValue}>{children}</PendingContext.Provider>;
 }
 
 export function AppServicesProviderBridge({ children }: PropsWithChildren) {
@@ -67,9 +60,5 @@ export function AppServicesProviderBridge({ children }: PropsWithChildren) {
     };
   }, [message]);
 
-  return (
-    <AppServicesContext.Provider value={value}>
-      {children}
-    </AppServicesContext.Provider>
-  );
+  return <AppServicesContext.Provider value={value}>{children}</AppServicesContext.Provider>;
 }

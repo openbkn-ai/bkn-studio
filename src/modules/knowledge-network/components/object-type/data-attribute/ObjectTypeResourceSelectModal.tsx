@@ -12,7 +12,18 @@ import {
   DownOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Dropdown, Empty, Input, Modal, Pagination, Splitter, Table } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Dropdown,
+  Empty,
+  Input,
+  Modal,
+  Pagination,
+  Splitter,
+  Table,
+} from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -101,43 +112,40 @@ export function ObjectTypeResourceSelectModal({
     [t],
   );
 
-  const treeData = useMemo<DataNode[]>(
-    () => {
-      const nodeMap = new Map<string, DataNode>();
-      const roots: DataNode[] = [];
+  const treeData = useMemo<DataNode[]>(() => {
+    const nodeMap = new Map<string, DataNode>();
+    const roots: DataNode[] = [];
 
-      groups.forEach((group) => {
-        nodeMap.set(group.id, {
-          children: [],
-          key: group.id,
-          selectable: group.selectable !== false,
-          title: renderGroupTitle(group),
-        });
+    groups.forEach((group) => {
+      nodeMap.set(group.id, {
+        children: [],
+        key: group.id,
+        selectable: group.selectable !== false,
+        title: renderGroupTitle(group),
       });
+    });
 
-      groups.forEach((group) => {
-        const node = nodeMap.get(group.id);
-        if (!node) {
+    groups.forEach((group) => {
+      const node = nodeMap.get(group.id);
+      if (!node) {
+        return;
+      }
+
+      if (group.parentId) {
+        const parent = nodeMap.get(group.parentId);
+        if (parent) {
+          const nextChildren = parent.children ?? [];
+          nextChildren.push(node);
+          parent.children = nextChildren;
           return;
         }
+      }
 
-        if (group.parentId) {
-          const parent = nodeMap.get(group.parentId);
-          if (parent) {
-            const nextChildren = parent.children ?? [];
-            nextChildren.push(node);
-            parent.children = nextChildren;
-            return;
-          }
-        }
+      roots.push(node);
+    });
 
-        roots.push(node);
-      });
-
-      return roots;
-    },
-    [groups, renderGroupTitle],
-  );
+    return roots;
+  }, [groups, renderGroupTitle]);
 
   const dropdownItems = useMemo(() => {
     if (!checkedItem) {
@@ -179,24 +187,27 @@ export function ObjectTypeResourceSelectModal({
     setGroups(nextGroups);
   }, [networkId]);
 
-  const loadPreview = useCallback(async (resourceId: string) => {
-    if (!resourceId) {
-      setPreview(null);
-      return;
-    }
+  const loadPreview = useCallback(
+    async (resourceId: string) => {
+      if (!resourceId) {
+        setPreview(null);
+        return;
+      }
 
-    setPreviewLoading(true);
-    setPreviewError(null);
-    try {
-      const nextPreview = await getObjectTypeResourcePreview(networkId, resourceId);
-      setPreview(nextPreview);
-    } catch (error) {
-      setPreview(null);
-      setPreviewError(extractRequestErrorMessage(error));
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, [networkId]);
+      setPreviewLoading(true);
+      setPreviewError(null);
+      try {
+        const nextPreview = await getObjectTypeResourcePreview(networkId, resourceId);
+        setPreview(nextPreview);
+      } catch (error) {
+        setPreview(null);
+        setPreviewError(extractRequestErrorMessage(error));
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [networkId],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -238,9 +249,7 @@ export function ObjectTypeResourceSelectModal({
 
     const timer = window.setTimeout(() => {
       setDebouncedSearchValue(searchValue.trim());
-      setPagination((current) =>
-        current.page === 1 ? current : { ...current, page: 1 },
-      );
+      setPagination((current) => (current.page === 1 ? current : { ...current, page: 1 }));
     }, RESOURCE_SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
@@ -393,7 +402,9 @@ export function ObjectTypeResourceSelectModal({
                   setPagination((current) => ({ ...current, page: 1 }));
                 }}
                 placeholder={t("common.search")}
-                prefix={<SearchOutlined style={{ color: "var(--color-text-disabled)", fontSize: 16 }} />}
+                prefix={
+                  <SearchOutlined style={{ color: "var(--color-text-disabled)", fontSize: 16 }} />
+                }
                 value={searchValue}
               />
             </div>
@@ -410,10 +421,7 @@ export function ObjectTypeResourceSelectModal({
                       {isDisabled ? (
                         <Checkbox checked disabled />
                       ) : (
-                        <Checkbox
-                          checked={isChecked}
-                          onChange={() => handleToggleItem(item)}
-                        />
+                        <Checkbox checked={isChecked} onChange={() => handleToggleItem(item)} />
                       )}
                       <div
                         className={styles.listItemContent}

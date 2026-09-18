@@ -31,28 +31,29 @@ const appServices = vi.hoisted(() => ({
   },
 }));
 const authorizationRegistry = vi.hoisted(() => ({
-  operationsForType: (type: string) => ({
-    action_type: [
-      { key: "view_detail", label: "view_detail", requires: [] },
-      { key: "modify", label: "modify", requires: ["view_detail"] },
-      { key: "delete", label: "delete", requires: ["view_detail"] },
-      { key: "execute", label: "execute", requires: [] },
-    ],
-    catalog: [
-      { key: "view_detail", label: "view_detail", requires: [] },
-      { key: "create", label: "create", requires: [] },
-      { key: "modify", label: "modify", requires: [] },
-      { key: "delete", label: "delete", requires: [] },
-      { key: "authorize", label: "authorize", requires: [] },
-      { key: "task_manage", label: "task_manage", requires: [] },
-      { key: "resource_manage", label: "resource_manage", requires: ["view_detail"] },
-      { key: "query_data", label: "query_data", requires: [] },
-    ],
-    resource: [
-      { key: "view_detail", label: "view_detail", requires: [] },
-      { key: "query_data", label: "query_data", requires: [] },
-    ],
-  }[type] ?? []),
+  operationsForType: (type: string) =>
+    ({
+      action_type: [
+        { key: "view_detail", label: "view_detail", requires: [] },
+        { key: "modify", label: "modify", requires: ["view_detail"] },
+        { key: "delete", label: "delete", requires: ["view_detail"] },
+        { key: "execute", label: "execute", requires: [] },
+      ],
+      catalog: [
+        { key: "view_detail", label: "view_detail", requires: [] },
+        { key: "create", label: "create", requires: [] },
+        { key: "modify", label: "modify", requires: [] },
+        { key: "delete", label: "delete", requires: [] },
+        { key: "authorize", label: "authorize", requires: [] },
+        { key: "task_manage", label: "task_manage", requires: [] },
+        { key: "resource_manage", label: "resource_manage", requires: ["view_detail"] },
+        { key: "query_data", label: "query_data", requires: [] },
+      ],
+      resource: [
+        { key: "view_detail", label: "view_detail", requires: [] },
+        { key: "query_data", label: "query_data", requires: [] },
+      ],
+    })[type] ?? [],
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -117,9 +118,13 @@ function source(overrides: Partial<GrantRecord>): GrantRecord {
 }
 
 function grant(records: GrantRecord[], overrides: Partial<ObjectGrant> = {}): ObjectGrant {
-  const operations = [...new Set(records
-    .filter((record) => record.active && record.effect === "allow")
-    .map((record) => record.operation))];
+  const operations = [
+    ...new Set(
+      records
+        .filter((record) => record.active && record.effect === "allow")
+        .map((record) => record.operation),
+    ),
+  ];
   return {
     accessorId: "u-mate",
     effectiveDecisions: operations.map((operation) => ({
@@ -164,38 +169,53 @@ describe("ObjectAuthorizeDrawer source records", () => {
     mocks.hydrateUserLookupDetails.mockResolvedValue({ deleted: [], unavailable: [] });
     mocks.isDeletedUserSync.mockReturnValue(false);
     appServices.runtimeConfig.currentUser.id = "u-admin";
-    appServices.runtimeConfig.currentUser.permissions = [
-      "admin-authz:grant",
-      "admin-authz:revoke",
-    ];
+    appServices.runtimeConfig.currentUser.permissions = ["admin-authz:grant", "admin-authz:revoke"];
     mocks.listUsersPage.mockResolvedValue({ total: 0, users: [] });
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(), matches: false,
-      media: query, onchange: null, removeEventListener: vi.fn(), removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: false,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     }));
   });
 
   it("renders the backend effective decision instead of merging source operations", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant(
-        [
-          source({}),
-          source({ grantId: "role-view", inherited: true, policySource: "role_permission" }),
-        ],
-        {
-          effectiveDecisions: [{
-            basis: "direct",
-            decision: "deny",
-            deniedRequirement: "view_detail",
-            operation: "modify",
-            requires: ["view_detail"],
-          }],
-        },
-      )],
+      grants: [
+        grant(
+          [
+            source({}),
+            source({ grantId: "role-view", inherited: true, policySource: "role_permission" }),
+          ],
+          {
+            effectiveDecisions: [
+              {
+                basis: "direct",
+                decision: "deny",
+                deniedRequirement: "view_detail",
+                operation: "modify",
+                requires: ["view_detail"],
+              },
+            ],
+          },
+        ),
+      ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByLabelText(/systemAdmin\.objectGrants\.permissionDenied/)).not.toBeNull();
@@ -209,13 +229,23 @@ describe("ObjectAuthorizeDrawer source records", () => {
   it("renders the object-scoped response name without waiting for the user cache", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant([source({})], {
-        accessorAccount: "b",
-        accessorName: "普通用户 B",
-      })],
+      grants: [
+        grant([source({})], {
+          accessorAccount: "b",
+          accessorName: "普通用户 B",
+        }),
+      ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByText("普通用户 B")).not.toBeNull();
@@ -224,26 +254,38 @@ describe("ObjectAuthorizeDrawer source records", () => {
   });
 
   it("shows the actual grantor name for each independent source", async () => {
-    mocks.getCachedUserSync.mockImplementation((id: string) => id === "u-grantor"
-      ? {
-          account: "grantor.account",
-          accountType: "local",
-          email: "",
-          enabled: true,
-          id,
-          name: "Grantor B",
-          roleIds: [],
-          telephone: "",
-        }
-      : undefined);
+    mocks.getCachedUserSync.mockImplementation((id: string) =>
+      id === "u-grantor"
+        ? {
+            account: "grantor.account",
+            accountType: "local",
+            email: "",
+            enabled: true,
+            id,
+            name: "Grantor B",
+            roleIds: [],
+            telephone: "",
+          }
+        : undefined,
+    );
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant([source({ createdBy: "u-grantor" })], {
-        accessorName: "Grantee C",
-      })],
+      grants: [
+        grant([source({ createdBy: "u-grantor" })], {
+          accessorName: "Grantee C",
+        }),
+      ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
     fireEvent.click(screen.getByText("common.viewDetails"));
 
@@ -261,7 +303,15 @@ describe("ObjectAuthorizeDrawer source records", () => {
       grants: [grant([source({})])],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByText("systemAdmin.objectGrants.deletedUser")).not.toBeNull();
@@ -274,22 +324,29 @@ describe("ObjectAuthorizeDrawer source records", () => {
     mocks.isDeletedUserSync.mockImplementation((id: string) => id === "role-readers");
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant([source({ accessorId: "role-readers" })], {
-        accessorId: "role-readers",
-        accessorName: "Readers",
-        accessorType: "role",
-      })],
+      grants: [
+        grant([source({ accessorId: "role-readers" })], {
+          accessorId: "role-readers",
+          accessorName: "Readers",
+          accessorType: "role",
+        }),
+      ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByText("Readers")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
-    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith(
-      [],
-      expect.any(Object),
-    );
+    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith([], expect.any(Object));
   });
 
   it("renders the public subject without looking it up as a deleted user", async () => {
@@ -297,26 +354,44 @@ describe("ObjectAuthorizeDrawer source records", () => {
     mocks.isDeletedUserSync.mockImplementation((id: string) => id === PUBLIC_ACCESSOR_ID);
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant([source({ accessorId: PUBLIC_ACCESSOR_ID })], {
-        accessorId: PUBLIC_ACCESSOR_ID,
-        accessorType: "public",
-      })],
+      grants: [
+        grant([source({ accessorId: PUBLIC_ACCESSOR_ID })], {
+          accessorId: PUBLIC_ACCESSOR_ID,
+          accessorType: "public",
+        }),
+      ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByText("systemAdmin.objectGrants.publicSubject")).not.toBeNull();
     expect(screen.queryByText("systemAdmin.objectGrants.deletedUser")).toBeNull();
-    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith(
-      [],
-      expect.any(Object),
-    );
+    expect(mocks.hydrateUserLookupDetails).toHaveBeenCalledWith([], expect.any(Object));
   });
 
   it("revokes one direct source by stable grant_id", async () => {
-    mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [grant([source({})])] });
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    mocks.listObjectGrantsForObject.mockResolvedValue({
+      accounts: [],
+      grants: [grant([source({})])],
+    });
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     fireEvent.click(screen.getByText("common.viewDetails"));
@@ -329,25 +404,28 @@ describe("ObjectAuthorizeDrawer source records", () => {
   });
 
   it("allows ordinary direct grants for a built-in administrator to be revoked", async () => {
-    mocks.getCachedUserSync.mockImplementation((id: string) => id === "u-admin"
-      ? {
-          account: "local-admin",
-          accountType: "local",
-          builtin: true,
-          email: "",
-          enabled: true,
-          id,
-          name: "Local Admin",
-          roleIds: [],
-          telephone: "",
-        }
-      : undefined);
+    mocks.getCachedUserSync.mockImplementation((id: string) =>
+      id === "u-admin"
+        ? {
+            account: "local-admin",
+            accountType: "local",
+            builtin: true,
+            email: "",
+            enabled: true,
+            id,
+            name: "Local Admin",
+            roleIds: [],
+            telephone: "",
+          }
+        : undefined,
+    );
     mocks.listObjectGrantsForObject.mockResolvedValue({
       accounts: [],
-      grants: [grant(
-        [source({ accessorId: "u-admin", grantId: "grant-admin-view" })],
-        { accessorId: "u-admin" },
-      )],
+      grants: [
+        grant([source({ accessorId: "u-admin", grantId: "grant-admin-view" })], {
+          accessorId: "u-admin",
+        }),
+      ],
     });
     render(
       <ObjectAuthorizeDrawer
@@ -373,7 +451,15 @@ describe("ObjectAuthorizeDrawer source records", () => {
 
   it("keeps prerequisites selected in the explicit operation picker", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     const viewOperation = screen.getByRole("button", { name: /view_detail/ });
@@ -386,7 +472,15 @@ describe("ObjectAuthorizeDrawer source records", () => {
 
   it("renders a stable permission summary and a dedicated empty state", async () => {
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [] });
-    render(<ObjectAuthorizeDrawer objId="resource-1" objName="Orders" objType="resource" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="resource-1"
+        objName="Orders"
+        objType="resource"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(screen.getByText("systemAdmin.objectGrants.newGrantTitle")).not.toBeNull();
@@ -401,12 +495,14 @@ describe("ObjectAuthorizeDrawer source records", () => {
       grants: [
         grant([], { accessorId: "empty-admin", operations: [] }),
         grant(
-          [source({
-            accessorId: "u-community",
-            grantId: "community-bundle-1",
-            operation: "full_business_access",
-            policySource: "community_bundle",
-          })],
+          [
+            source({
+              accessorId: "u-community",
+              grantId: "community-bundle-1",
+              operation: "full_business_access",
+              policySource: "community_bundle",
+            }),
+          ],
           {
             accessorId: "u-community",
             bundle: "full_business_access",
@@ -434,9 +530,7 @@ describe("ObjectAuthorizeDrawer source records", () => {
     expect(bundleButton.getAttribute("aria-pressed")).toBe("false");
     expect(addButton.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText("systemAdmin.objectGrants.grantNeedsBundle")).not.toBeNull();
-    expect(screen.getByText(
-      "systemAdmin.objectGrants.selectedOperationCount:0/1",
-    )).not.toBeNull();
+    expect(screen.getByText("systemAdmin.objectGrants.selectedOperationCount:0/1")).not.toBeNull();
     expect(screen.queryByText("empty-admin")).toBeNull();
     expect(screen.getByText("systemAdmin.objectGrants.effectivePermissions")).not.toBeNull();
 
@@ -517,7 +611,15 @@ describe("ObjectAuthorizeDrawer source records", () => {
       },
     ];
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [dependentGrant] });
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     fireEvent.click(screen.getByText("common.viewDetails"));
@@ -542,7 +644,15 @@ describe("ObjectAuthorizeDrawer source records", () => {
       },
     ];
     mocks.listObjectGrantsForObject.mockResolvedValue({ accounts: [], grants: [duplicateGrant] });
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     fireEvent.click(screen.getByText("common.viewDetails"));
@@ -574,19 +684,33 @@ describe("ObjectAuthorizeDrawer source records", () => {
           ],
           { accessorId: "u-owner" },
         ),
-        grant(
-          [source({ accessorId: publicAccessorId, grantId: "public-view" })],
-          { accessorId: publicAccessorId },
-        ),
+        grant([source({ accessorId: publicAccessorId, grantId: "public-view" })], {
+          accessorId: publicAccessorId,
+        }),
         grant([source({ authoritySource: "owner_delegate", createdBy: "u-owner" })]),
         grant(
-          [source({ accessorId: "u-other", authoritySource: "owner_delegate", createdBy: "u-another" })],
+          [
+            source({
+              accessorId: "u-other",
+              authoritySource: "owner_delegate",
+              createdBy: "u-another",
+            }),
+          ],
           { accessorId: "u-other" },
         ),
       ],
     });
 
-    render(<ObjectAuthorizeDrawer objectAuthorized objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objectAuthorized
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(rowDeleteButton("u-owner").disabled).toBe(false);
@@ -605,14 +729,21 @@ describe("ObjectAuthorizeDrawer source records", () => {
           [source({ accessorId: "u-owner", grantId: "owner-authorize", operation: "authorize" })],
           { accessorId: "u-owner" },
         ),
-        grant(
-          [source({ grantId: "mate-authorize", operation: "authorize" })],
-          { accessorId: "u-mate" },
-        ),
+        grant([source({ grantId: "mate-authorize", operation: "authorize" })], {
+          accessorId: "u-mate",
+        }),
       ],
     });
 
-    render(<ObjectAuthorizeDrawer objId="catalog-1" objName="Customer catalog" objType="catalog" onClose={vi.fn()} open />);
+    render(
+      <ObjectAuthorizeDrawer
+        objId="catalog-1"
+        objName="Customer catalog"
+        objType="catalog"
+        onClose={vi.fn()}
+        open
+      />,
+    );
     await act(async () => {});
 
     expect(rowDeleteButton("u-owner").disabled).toBe(true);

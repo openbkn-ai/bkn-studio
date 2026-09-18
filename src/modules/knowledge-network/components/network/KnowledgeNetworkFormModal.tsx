@@ -80,9 +80,7 @@ export function KnowledgeNetworkFormModal({
       open={open}
       rootClassName={styles.businessModal}
       title={
-        mode === "create"
-          ? t("knowledgeNetwork.createTitle")
-          : t("knowledgeNetwork.editTitle")
+        mode === "create" ? t("knowledgeNetwork.createTitle") : t("knowledgeNetwork.editTitle")
       }
       width={640}
     >
@@ -115,10 +113,7 @@ export function KnowledgeNetworkFormModal({
             },
           ]}
         >
-          <Input
-            disabled={mode === "edit"}
-            placeholder={t("knowledgeNetwork.pleaseInput")}
-          />
+          <Input disabled={mode === "edit"} placeholder={t("knowledgeNetwork.pleaseInput")} />
         </Form.Item>
         <Form.Item label={t("knowledgeNetwork.color")} name="color">
           <ResourceColorSelect inModal />
@@ -128,8 +123,7 @@ export function KnowledgeNetworkFormModal({
           name="tags"
           rules={[
             {
-              validator: (_rule, value) =>
-                validateKnowledgeNetworkTags(t, _rule, value),
+              validator: (_rule, value) => validateKnowledgeNetworkTags(t, _rule, value),
             },
           ]}
         >

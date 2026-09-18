@@ -7,10 +7,7 @@
 
 import { http } from "@/framework/request/http";
 import { transformPrecisionSafeJSONResponse } from "@/framework/request/precision-safe-json";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   KnowledgeNetworkImportMode,
@@ -47,10 +44,7 @@ import {
 } from "@/modules/knowledge-network/services/shared/runtime";
 import { listKnowledgeNetworkConceptGroups } from "@/modules/knowledge-network/services/concept-group.service";
 
-function resolveObjectTypeMutationResultId(
-  value: unknown,
-  fallbackId?: string,
-): string | null {
+function resolveObjectTypeMutationResultId(value: unknown, fallbackId?: string): string | null {
   if (typeof fallbackId === "string" && fallbackId.trim()) {
     return fallbackId.trim();
   }
@@ -73,12 +67,7 @@ function resolveObjectTypeMutationResultId(
 }
 
 function isBackendObjectTypeRecord(value: unknown): value is BackendObjectType {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "name" in value
-  );
+  return typeof value === "object" && value !== null && "id" in value && "name" in value;
 }
 
 type BackendObjectTypeSampleDataResponse = {
@@ -166,9 +155,9 @@ export async function listKnowledgeNetworkObjectTypes(
     entries.push(...pageEntries);
 
     hasMore = Boolean(
-      options.allPages
-      && pageEntries.length === pageSize
-      && entries.length < response.data.total_count
+      options.allPages &&
+      pageEntries.length === pageSize &&
+      entries.length < response.data.total_count,
     );
     if (!hasMore) {
       break;
@@ -179,10 +168,7 @@ export async function listKnowledgeNetworkObjectTypes(
   return entries.map(mapObjectType);
 }
 
-export async function getKnowledgeNetworkObjectType(
-  networkId: string,
-  objectTypeId: string,
-) {
+export async function getKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {
   if (useMock) {
     const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);
     return wait(record ? { ...record, operations: mockKnowledgeNetworkChildOperations } : null);
@@ -196,10 +182,7 @@ export async function getKnowledgeNetworkObjectType(
   return record ? mapObjectType(record) : null;
 }
 
-export async function getKnowledgeNetworkObjectTypeDetail(
-  networkId: string,
-  objectTypeId: string,
-) {
+export async function getKnowledgeNetworkObjectTypeDetail(networkId: string, objectTypeId: string) {
   if (useMock) {
     const detail = buildMockObjectTypeDetail(networkId, objectTypeId);
     return wait(detail ? { ...detail, operations: mockKnowledgeNetworkChildOperations } : null);
@@ -211,11 +194,7 @@ export async function getKnowledgeNetworkObjectTypeDetail(
 
   const record = unwrapSingleEntryResponse(response.data);
   return record
-    ? ensureKnowledgeNetworkChildOperations(
-        networkId,
-        "object-types",
-        mapObjectTypeDetail(record),
-      )
+    ? ensureKnowledgeNetworkChildOperations(networkId, "object-types", mapObjectTypeDetail(record))
     : null;
 }
 
@@ -426,10 +405,7 @@ export async function validateKnowledgeNetworkObjectType(
   });
 }
 
-export async function deleteKnowledgeNetworkObjectType(
-  networkId: string,
-  objectTypeId: string,
-) {
+export async function deleteKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {
   if (useMock) {
     mockObjectTypes[networkId] = (mockObjectTypes[networkId] ?? []).filter(
       (item) => item.id !== objectTypeId,

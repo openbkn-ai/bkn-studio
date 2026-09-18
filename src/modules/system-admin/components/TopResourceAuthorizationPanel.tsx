@@ -56,7 +56,10 @@ const DEFAULT_PAGE_SIZE = 10;
 const CHILD_PAGE_SIZE = 10;
 type ChildPageState = { page: number; pageSize: number };
 
-export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopResourceAuthorizationPanelProps) {
+export function TopResourceAuthorizationPanel({
+  fineGrained,
+  onManage,
+}: TopResourceAuthorizationPanelProps) {
   const { t } = useTranslation();
   const [keyword, setKeyword] = useState("");
   const query = useDebouncedValue(keyword.trim(), 300);
@@ -88,9 +91,15 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
         setRootTotal(result.total);
         setExpanded(new Set());
       })
-      .catch(() => { if (!cancelled) setLoadError(true); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [page, pageSize, query, resourceType]);
 
   const loadChildPage = (root: AuthorizableObject, category: string, nextPage: ChildPageState) => {
@@ -116,12 +125,14 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
         if (childRequestVersions.current.get(key) !== requestVersion) return;
         setChildLoadErrors((current) => new Set(current).add(key));
       })
-      .finally(() => setLoadingChildren((current) => {
-        if (childRequestVersions.current.get(key) !== requestVersion) return current;
-        const loading = new Set(current);
-        loading.delete(key);
-        return loading;
-      }));
+      .finally(() =>
+        setLoadingChildren((current) => {
+          if (childRequestVersions.current.get(key) !== requestVersion) return current;
+          const loading = new Set(current);
+          loading.delete(key);
+          return loading;
+        }),
+      );
   };
 
   const toggleRoot = (root: AuthorizableObject) => {
@@ -168,69 +179,124 @@ export function TopResourceAuthorizationPanel({ fineGrained, onManage }: TopReso
           value={keyword}
         />
       </div>
-      {loadError ? <Alert message={t("systemAdmin.objectGrants.topResourceLoadError")} showIcon type="error" /> : null}
-      {loading ? <div className={styles.topResourceLoading}><Spin /></div> : null}
-      {!loading && roots.length === 0 ? <Empty description={t("systemAdmin.objectGrants.empty")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
-      {!loading && roots.map((root) => {
-        const key = `${root.type}:${root.id}`;
-        const canExpand = fineGrained && listTopResourceChildCategories(root).length > 0;
-        const isExpanded = expanded.has(key);
-        return (
-          <article className={styles.topResourceRow} key={`${root.type}:${root.id}`}>
-            {canExpand ? <button
-              aria-label={t("systemAdmin.objectGrants.topResourceToggle", { name: root.name })}
-              className={styles.topResourceToggle}
-              onClick={() => toggleRoot(root)}
-              type="button"
-            >{isExpanded ? <DownOutlined /> : <RightOutlined />}</button> : <span />}
-            <span className={styles.authzAvatar}>{ICONS[root.type] ?? <AppstoreOutlined />}</span>
-            <div className={styles.topResourceName}>
-              <strong>{root.name}</strong>
-              <small>{root.sub || root.id}</small>
-            </div>
-            <Tag className={styles.roleTag}>{resourceTypeLabel(root.type)}</Tag>
-            <AppButton onClick={() => onManage(root)} type="link">
-              {t("systemAdmin.objectGrants.manage")}
-            </AppButton>
-            {canExpand && isExpanded ? <div className={styles.topResourceChildren}>
-              {listTopResourceChildCategories(root).map((category) => {
-                const childKey = `${key}:${category}`;
-                const result = children[childKey];
-                const childPage = childPages[childKey] ?? { page: 1, pageSize: CHILD_PAGE_SIZE };
-                const failed = childLoadErrors.has(childKey);
-                const loadingChild = loadingChildren.has(childKey);
-                if (!result && !failed && loadingChild) return <div className={styles.topResourceLoading} key={category}><Spin size="small" /></div>;
-                if (!result && !failed) return null;
-                return <section className={styles.topResourceCategory} key={category}>
-                  <div className={styles.topResourceCategoryHead}><span>{resourceTypeLabel(category)}</span></div>
-                  {failed ? <Alert
-                    action={<AppButton onClick={() => loadChildPage(root, category, childPage)} type="link">{t("common.retry")}</AppButton>}
-                    message={t("systemAdmin.objectGrants.topResourceLoadError")}
-                    showIcon
-                    type="error"
-                  /> : null}
-                  {result?.children.map((child) => <div className={styles.topResourceChildRow} key={`${child.type}:${child.id}`}>
-                    <div><strong>{child.name}</strong><small>{child.sub}</small></div>
-                    <AppButton onClick={() => onManage(child)} type="link">{t("systemAdmin.objectGrants.manage")}</AppButton>
-                  </div>)}
-                  {result && result.total > 0 ? <TablePaginationBar
-                    current={childPage.page}
-                    onChange={(nextPage, nextPageSize) => loadChildPage(root, category, {
-                      page: nextPageSize === childPage.pageSize ? nextPage : 1,
-                      pageSize: nextPageSize,
-                    })}
-                    pageSize={childPage.pageSize}
-                    showSizeChanger
-                    showTotal={(count) => t("common.total", { total: count })}
-                    size="small"
-                    total={result.total}
-                  /> : null}
-                </section>;
-              })}
-            </div> : null}
-          </article>
-        );
-      })}
+      {loadError ? (
+        <Alert message={t("systemAdmin.objectGrants.topResourceLoadError")} showIcon type="error" />
+      ) : null}
+      {loading ? (
+        <div className={styles.topResourceLoading}>
+          <Spin />
+        </div>
+      ) : null}
+      {!loading && roots.length === 0 ? (
+        <Empty
+          description={t("systemAdmin.objectGrants.empty")}
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      ) : null}
+      {!loading &&
+        roots.map((root) => {
+          const key = `${root.type}:${root.id}`;
+          const canExpand = fineGrained && listTopResourceChildCategories(root).length > 0;
+          const isExpanded = expanded.has(key);
+          return (
+            <article className={styles.topResourceRow} key={`${root.type}:${root.id}`}>
+              {canExpand ? (
+                <button
+                  aria-label={t("systemAdmin.objectGrants.topResourceToggle", { name: root.name })}
+                  className={styles.topResourceToggle}
+                  onClick={() => toggleRoot(root)}
+                  type="button"
+                >
+                  {isExpanded ? <DownOutlined /> : <RightOutlined />}
+                </button>
+              ) : (
+                <span />
+              )}
+              <span className={styles.authzAvatar}>{ICONS[root.type] ?? <AppstoreOutlined />}</span>
+              <div className={styles.topResourceName}>
+                <strong>{root.name}</strong>
+                <small>{root.sub || root.id}</small>
+              </div>
+              <Tag className={styles.roleTag}>{resourceTypeLabel(root.type)}</Tag>
+              <AppButton onClick={() => onManage(root)} type="link">
+                {t("systemAdmin.objectGrants.manage")}
+              </AppButton>
+              {canExpand && isExpanded ? (
+                <div className={styles.topResourceChildren}>
+                  {listTopResourceChildCategories(root).map((category) => {
+                    const childKey = `${key}:${category}`;
+                    const result = children[childKey];
+                    const childPage = childPages[childKey] ?? {
+                      page: 1,
+                      pageSize: CHILD_PAGE_SIZE,
+                    };
+                    const failed = childLoadErrors.has(childKey);
+                    const loadingChild = loadingChildren.has(childKey);
+                    if (!result && !failed && loadingChild)
+                      return (
+                        <div className={styles.topResourceLoading} key={category}>
+                          <Spin size="small" />
+                        </div>
+                      );
+                    if (!result && !failed) return null;
+                    return (
+                      <section className={styles.topResourceCategory} key={category}>
+                        <div className={styles.topResourceCategoryHead}>
+                          <span>{resourceTypeLabel(category)}</span>
+                        </div>
+                        {failed ? (
+                          <Alert
+                            action={
+                              <AppButton
+                                onClick={() => loadChildPage(root, category, childPage)}
+                                type="link"
+                              >
+                                {t("common.retry")}
+                              </AppButton>
+                            }
+                            message={t("systemAdmin.objectGrants.topResourceLoadError")}
+                            showIcon
+                            type="error"
+                          />
+                        ) : null}
+                        {result?.children.map((child) => (
+                          <div
+                            className={styles.topResourceChildRow}
+                            key={`${child.type}:${child.id}`}
+                          >
+                            <div>
+                              <strong>{child.name}</strong>
+                              <small>{child.sub}</small>
+                            </div>
+                            <AppButton onClick={() => onManage(child)} type="link">
+                              {t("systemAdmin.objectGrants.manage")}
+                            </AppButton>
+                          </div>
+                        ))}
+                        {result && result.total > 0 ? (
+                          <TablePaginationBar
+                            current={childPage.page}
+                            onChange={(nextPage, nextPageSize) =>
+                              loadChildPage(root, category, {
+                                page: nextPageSize === childPage.pageSize ? nextPage : 1,
+                                pageSize: nextPageSize,
+                              })
+                            }
+                            pageSize={childPage.pageSize}
+                            showSizeChanger
+                            showTotal={(count) => t("common.total", { total: count })}
+                            size="small"
+                            total={result.total}
+                          />
+                        ) : null}
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </article>
+          );
+        })}
       {!loading && rootTotal > 0 ? (
         <TablePaginationBar
           current={page}

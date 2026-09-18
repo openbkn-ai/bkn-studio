@@ -177,11 +177,11 @@
   line-height: 1.35;
 }
 
-.progressMeta>span {
+.progressMeta > span {
   white-space: nowrap;
 }
 
-.progressMetaCompact>span {
+.progressMetaCompact > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -541,7 +541,9 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-inverse);
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .frtMark svg {

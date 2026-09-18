@@ -12,13 +12,15 @@ import type { AxiosAdapter } from "axios";
 import { http, setRequestErrorHandler } from "@/framework/request/http";
 import { createRuntimeConfig, setRuntimeConfig } from "@/framework/runtime/config";
 
-const adapter = vi.fn<AxiosAdapter>((config) => Promise.resolve({
-  config,
-  data: {},
-  headers: {},
-  status: 200,
-  statusText: "OK",
-}));
+const adapter = vi.fn<AxiosAdapter>((config) =>
+  Promise.resolve({
+    config,
+    data: {},
+    headers: {},
+    status: 200,
+    statusText: "OK",
+  }),
+);
 
 describe("http request headers", () => {
   beforeEach(() => {
@@ -60,13 +62,18 @@ describe("http request headers", () => {
   it("does not notify globally when an expected request error opts out", async () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);
-    const missingRoute: AxiosAdapter = (config) => Promise.reject(Object.assign(
-      new Error("Request failed with status code 404"),
-      { config, isAxiosError: true, response: { status: 404 } },
-    ));
+    const missingRoute: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("Request failed with status code 404"), {
+          config,
+          isAxiosError: true,
+          response: { status: 404 },
+        }),
+      );
 
-    await expect(http.get("/enterprise-only", { adapter: missingRoute, skipErrorToast: true }))
-      .rejects.toThrow("Request failed with status code 404");
+    await expect(
+      http.get("/enterprise-only", { adapter: missingRoute, skipErrorToast: true }),
+    ).rejects.toThrow("Request failed with status code 404");
 
     expect(notify).not.toHaveBeenCalled();
   });
@@ -75,27 +82,28 @@ describe("http request headers", () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);
     const errorBody = JSON.stringify({ description: "capability names are unavailable" });
-    const failedDownload: AxiosAdapter = (config) => Promise.reject(Object.assign(
-      new Error("Request failed with status code 503"),
-      {
-        config,
-        isAxiosError: true,
-        response: {
-          // jsdom's Blob has no text(), so the body a browser would read back is
-          // attached here rather than left to a method the test environment lacks.
-          data: Object.assign(
-            new Blob([errorBody], { type: "application/json" }),
-            { text: () => Promise.resolve(errorBody) },
-          ),
-          status: 503,
-        },
-      },
-    ));
+    const failedDownload: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("Request failed with status code 503"), {
+          config,
+          isAxiosError: true,
+          response: {
+            // jsdom's Blob has no text(), so the body a browser would read back is
+            // attached here rather than left to a method the test environment lacks.
+            data: Object.assign(new Blob([errorBody], { type: "application/json" }), {
+              text: () => Promise.resolve(errorBody),
+            }),
+            status: 503,
+          },
+        }),
+      );
 
-    await expect(http.get("/bkn-backend/v1/bkns/kn-1", {
-      adapter: failedDownload,
-      responseType: "blob",
-    })).rejects.toThrow("Request failed with status code 503");
+    await expect(
+      http.get("/bkn-backend/v1/bkns/kn-1", {
+        adapter: failedDownload,
+        responseType: "blob",
+      }),
+    ).rejects.toThrow("Request failed with status code 503");
 
     expect(notify).toHaveBeenCalledWith("capability names are unavailable");
   });
@@ -103,13 +111,18 @@ describe("http request headers", () => {
   it("notifies globally when a request error does not opt out", async () => {
     const notify = vi.fn();
     setRequestErrorHandler(notify);
-    const missingRoute: AxiosAdapter = (config) => Promise.reject(Object.assign(
-      new Error("Request failed with status code 404"),
-      { config, isAxiosError: true, response: { status: 404 } },
-    ));
+    const missingRoute: AxiosAdapter = (config) =>
+      Promise.reject(
+        Object.assign(new Error("Request failed with status code 404"), {
+          config,
+          isAxiosError: true,
+          response: { status: 404 },
+        }),
+      );
 
-    await expect(http.get("/enterprise-only", { adapter: missingRoute }))
-      .rejects.toThrow("Request failed with status code 404");
+    await expect(http.get("/enterprise-only", { adapter: missingRoute })).rejects.toThrow(
+      "Request failed with status code 404",
+    );
 
     expect(notify).toHaveBeenCalledTimes(1);
   });

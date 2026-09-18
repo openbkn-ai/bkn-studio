@@ -95,8 +95,7 @@ export function ConceptGroupAddObjectTypesModal({
 
     return objectTypes.filter(
       (item) =>
-        item.name.toLowerCase().includes(normalized) ||
-        item.id.toLowerCase().includes(normalized),
+        item.name.toLowerCase().includes(normalized) || item.id.toLowerCase().includes(normalized),
     );
   }, [keyword, objectTypes]);
 
@@ -179,7 +178,9 @@ export function ConceptGroupAddObjectTypesModal({
       key: "tags",
       title: t("common.tag"),
       render: (value: string[]) =>
-        value.length > 0 ? value.map((tag) => <Tag key={tag}>{tag}</Tag>) : t("knowledgeNetwork.noTags"),
+        value.length > 0
+          ? value.map((tag) => <Tag key={tag}>{tag}</Tag>)
+          : t("knowledgeNetwork.noTags"),
     },
   ];
 

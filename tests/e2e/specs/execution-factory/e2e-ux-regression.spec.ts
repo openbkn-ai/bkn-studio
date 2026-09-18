@@ -92,7 +92,11 @@ test.describe("Execution Factory — UX regression", () => {
     await expect(page).toHaveURL(/activeTab=skill/);
     await expect(page).toHaveURL(/create=1/);
     await expect(
-      page.getByText(/能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i).first(),
+      page
+        .getByText(
+          /能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i,
+        )
+        .first(),
     ).toBeVisible();
   });
 
@@ -139,14 +143,14 @@ test.describe("Execution Factory — UX regression", () => {
     await expect(drawer.getByRole("button", { name: /保\s*存|Save/i })).toBeVisible();
   });
 
-  test("UX-025: toolbox detail drawer export triggers backup download", async ({ page, request }) => {
+  test("UX-025: toolbox detail drawer export triggers backup download", async ({
+    page,
+    request,
+  }) => {
     const toolbox = await createToolboxViaApi(request, buildToolboxName("drawer_export"));
     createdBoxIds.push(toolbox.boxId);
 
-    await gotoE2ePage(
-      page,
-      `/execution-factory/units?activeTab=toolbox&detailId=${toolbox.boxId}`,
-    );
+    await gotoE2ePage(page, `/execution-factory/units?activeTab=toolbox&detailId=${toolbox.boxId}`);
     const drawer = page.locator(".ant-drawer").first();
     await expect(drawer.getByText(/工具箱详情|Toolbox Detail/i)).toBeVisible({
       timeout: 60_000,

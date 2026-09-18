@@ -53,18 +53,14 @@ export type ParsedQuickApi = {
   warnings?: string[];
 };
 
-export type ParseCurlResult =
-  | { ok: true; value: ParsedQuickApi }
-  | { ok: false; reason: string };
+export type ParseCurlResult = { ok: true; value: ParsedQuickApi } | { ok: false; reason: string };
 
 type CurlHeader = {
   name: string;
   value: string;
 };
 
-type TokenizeResult =
-  | { ok: true; tokens: string[] }
-  | { ok: false; reason: string };
+type TokenizeResult = { ok: true; tokens: string[] } | { ok: false; reason: string };
 
 type CurlScan = {
   dataParts: string[];
@@ -75,13 +71,9 @@ type CurlScan = {
   urls: string[];
 };
 
-type CurlScanResult =
-  | { ok: true; value: CurlScan }
-  | { ok: false; reason: string };
+type CurlScanResult = { ok: true; value: CurlScan } | { ok: false; reason: string };
 
-type RequestBodyResult =
-  | { ok: true; value?: QuickApiRequestBody }
-  | { ok: false; reason: string };
+type RequestBodyResult = { ok: true; value?: QuickApiRequestBody } | { ok: false; reason: string };
 
 const HEADER_ERROR = "headerFormat";
 const JSON_ERROR = "invalidJson";
@@ -127,7 +119,7 @@ function tokenizeCurl(input: string): TokenizeResult {
       continue;
     }
 
-    if (char === "'" || char === "\"") {
+    if (char === "'" || char === '"') {
       quote = char;
       continue;
     }
@@ -269,12 +261,9 @@ function scanCurlTokens(tokens: string[]): CurlScanResult {
       continue;
     }
 
-    const dataOption = [
-      "--data=",
-      "--data-raw=",
-      "--data-binary=",
-      "--data-urlencode=",
-    ].find((prefix) => token.startsWith(prefix));
+    const dataOption = ["--data=", "--data-raw=", "--data-binary=", "--data-urlencode="].find(
+      (prefix) => token.startsWith(prefix),
+    );
     if (dataOption) {
       const value = token.slice(dataOption.length);
       if (value.startsWith("@")) {
@@ -603,10 +592,12 @@ export function parseCurlCommand(raw: string): ParseCurlResult {
   };
 }
 
-export function buildOpenApiFromQuickApi(input: QuickApiDraft & {
-  /** @deprecated Use parameters. */
-  queryParams?: QuickApiParameter[];
-}): string {
+export function buildOpenApiFromQuickApi(
+  input: QuickApiDraft & {
+    /** @deprecated Use parameters. */
+    queryParams?: QuickApiParameter[];
+  },
+): string {
   const method = input.method.toLowerCase();
   const parameters = (input.parameters ?? input.queryParams ?? []).map((param) => ({
     name: param.name,

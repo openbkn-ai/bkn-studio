@@ -85,9 +85,7 @@ export function InstallSkillFromCatalogModal({
         void handleInstall();
       }}
       open={open}
-      title={t(
-        alreadyInstalled ? "executionFactory.syncTitle" : "executionFactory.introduceTitle",
-      )}
+      title={t(alreadyInstalled ? "executionFactory.syncTitle" : "executionFactory.introduceTitle")}
     >
       <p>
         {t(

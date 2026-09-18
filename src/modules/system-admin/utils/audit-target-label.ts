@@ -62,9 +62,7 @@ export function resolveAuditTargetLabel(
   if (log.resource === "role-bindings" && roleId) {
     const roleName = resolveTarget("roles", roleId) ?? roleId;
     const accessorName =
-      resolveTarget("users", accessorId) ??
-      resolveTarget("departments", accessorId) ??
-      accessorId;
+      resolveTarget("users", accessorId) ?? resolveTarget("departments", accessorId) ?? accessorId;
     return accessorName ? `${roleName} / ${accessorName}` : roleName;
   }
 

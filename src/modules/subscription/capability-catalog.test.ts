@@ -76,7 +76,6 @@ describe("capability catalog", () => {
       expect(keys).toContain(key);
     }
   });
-
 });
 
 describe("resolveQuota", () => {

@@ -7,11 +7,7 @@
 
 import type { ResourceSchemaField } from "@/modules/data-catalog/types/data-catalog";
 
-const PRIMARY_KEY_TYPES = new Set([
-  "integer",
-  "unsigned integer",
-  "string",
-]);
+const PRIMARY_KEY_TYPES = new Set(["integer", "unsigned integer", "string"]);
 
 const INCREMENTAL_FIELD_TYPES = new Set([
   ...PRIMARY_KEY_TYPES,
@@ -35,7 +31,9 @@ export function invalidKeyFields(
   isSupported: (field: ResourceSchemaField) => boolean,
 ): string[] {
   const fieldsByName = new Map(schema.map((field) => [field.name, field]));
-  return keyFields.filter((name) => !fieldsByName.get(name) || !isSupported(fieldsByName.get(name)!));
+  return keyFields.filter(
+    (name) => !fieldsByName.get(name) || !isSupported(fieldsByName.get(name)!),
+  );
 }
 
 export function excludedBuildSchemaFields(schema: ResourceSchemaField[]): ResourceSchemaField[] {

@@ -6,7 +6,23 @@
  */
 
 import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Collapse, Empty, Input, InputNumber, Select, Slider, Spin, Switch, Tabs, Tag, Tooltip, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Collapse,
+  Empty,
+  Input,
+  InputNumber,
+  Select,
+  Slider,
+  Spin,
+  Switch,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,7 +38,12 @@ import {
   type SearchOptions,
 } from "@/modules/knowledge-network/services/graph-explorer.service";
 
-import { OPERATORS_BY_KIND, buildCondition, propertyKind, type ConditionRow } from "./condition-builder";
+import {
+  OPERATORS_BY_KIND,
+  buildCondition,
+  propertyKind,
+  type ConditionRow,
+} from "./condition-builder";
 import type { ExploreStep } from "./explore-agent";
 import styles from "./SearchPanel.module.css";
 
@@ -49,7 +70,14 @@ export type SearchPanelProps = {
   /** Turns a natural-language question into a MATCH fragment through the default LLM; null when no model is available. */
   onGenerateCypher: ((question: string, modelName: string) => Promise<string>) | null;
   /** Lets the model explore with tools; every step is reported as it completes. Null when no model is available. */
-  onAiExplore: ((question: string, modelName: string, onStep: (step: ExploreStep) => void, signal: AbortSignal) => Promise<{ text: string; steps: ExploreStep[] }>) | null;
+  onAiExplore:
+    | ((
+        question: string,
+        modelName: string,
+        onStep: (step: ExploreStep) => void,
+        signal: AbortSignal,
+      ) => Promise<{ text: string; steps: ExploreStep[] }>)
+    | null;
   /** Model factory LLMs offered for generation; the first is the default. */
   cypherModels: { name: string; isDefault?: boolean }[];
   onAdd: (nodes: GNode[]) => void;
@@ -59,7 +87,10 @@ export type SearchPanelProps = {
 };
 
 /** Lets the user type either the display name or the id into a searchable select. */
-function matchIdOrLabel(input: string, option?: { value?: string | number; label?: unknown }): boolean {
+function matchIdOrLabel(
+  input: string,
+  option?: { value?: string | number; label?: unknown },
+): boolean {
   const needle = input.trim().toLowerCase();
   if (!needle) return true;
   const value = String(option?.value ?? "").toLowerCase();
@@ -85,7 +116,13 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
   const someSelected = selectedVisible.length > 0 && !allSelected;
 
   if (nodes.length === 0) {
-    return searched ? <Empty className={styles.empty} image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} /> : null;
+    return searched ? (
+      <Empty
+        className={styles.empty}
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={emptyText}
+      />
+    ) : null;
   }
 
   return (
@@ -97,11 +134,17 @@ function ResultList({ nodes, canvasIds, onAdd, colorOf, emptyText, searched }: R
             disabled={selectable.length === 0}
             checked={allSelected}
             indeterminate={someSelected}
-            onChange={(event) => setSelected(event.target.checked ? new Set(selectable.map((node) => node.id)) : new Set())}
+            onChange={(event) =>
+              setSelected(
+                event.target.checked ? new Set(selectable.map((node) => node.id)) : new Set(),
+              )
+            }
           >
             {t("knowledgeNetwork.graphExplorer.selectAll")}
           </Checkbox>
-          <Typography.Text type="secondary">{t("knowledgeNetwork.graphExplorer.search.resultCount", { count: nodes.length })}</Typography.Text>
+          <Typography.Text type="secondary">
+            {t("knowledgeNetwork.graphExplorer.search.resultCount", { count: nodes.length })}
+          </Typography.Text>
         </span>
         <Button
           size="small"
@@ -201,11 +244,18 @@ export function SearchPanel({
     setExploreSteps([]);
     setExploreAnswer(null);
     try {
-      const result = await onAiExplore(question, effectiveAiModel, (step) => setExploreSteps((previous) => [...previous, step]), controller.signal);
+      const result = await onAiExplore(
+        question,
+        effectiveAiModel,
+        (step) => setExploreSteps((previous) => [...previous, step]),
+        controller.signal,
+      );
       setExploreAnswer(result.text || null);
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      setExploreError(controller.signal.aborted ? t("knowledgeNetwork.graphExplorer.ai.stopped") : text || null);
+      setExploreError(
+        controller.signal.aborted ? t("knowledgeNetwork.graphExplorer.ai.stopped") : text || null,
+      );
     } finally {
       exploreAbortRef.current = null;
       setExploring(false);
@@ -213,7 +263,8 @@ export function SearchPanel({
   };
   const [cypherRunning, setCypherRunning] = useState(false);
 
-  const effectiveAiModel = aiModel ?? cypherModels.find((model) => model.isDefault)?.name ?? cypherModels[0]?.name;
+  const effectiveAiModel =
+    aiModel ?? cypherModels.find((model) => model.isDefault)?.name ?? cypherModels[0]?.name;
 
   const runGenerate = async () => {
     const question = aiQuestion.trim();
@@ -239,7 +290,11 @@ export function SearchPanel({
     }
   };
   const [cypherError, setCypherError] = useState<string | null>(null);
-  const [cypherGraph, setCypherGraph] = useState<{ nodes: GNode[]; edges: GEdge[]; rows: number } | null>(null);
+  const [cypherGraph, setCypherGraph] = useState<{
+    nodes: GNode[];
+    edges: GEdge[];
+    rows: number;
+  } | null>(null);
 
   const runCypher = async () => {
     if (!cypherText.trim() || disabled) return;
@@ -330,10 +385,14 @@ export function SearchPanel({
   };
 
   const [query, setQuery] = useState("");
-  const [searchOptions, setSearchOptions] = useState<Required<SearchOptions>>({ ...DEFAULT_SEARCH_OPTIONS });
-  const patchSearch = (patch: Partial<SearchOptions>) => setSearchOptions((previous) => ({ ...previous, ...patch }));
+  const [searchOptions, setSearchOptions] = useState<Required<SearchOptions>>({
+    ...DEFAULT_SEARCH_OPTIONS,
+  });
+  const patchSearch = (patch: Partial<SearchOptions>) =>
+    setSearchOptions((previous) => ({ ...previous, ...patch }));
   const [rrf, setRrf] = useState<RrfOptions>({ ...DEFAULT_RRF_OPTIONS });
-  const patchRrf = (patch: Partial<RrfOptions>) => setRrf((previous) => ({ ...previous, ...patch }));
+  const patchRrf = (patch: Partial<RrfOptions>) =>
+    setRrf((previous) => ({ ...previous, ...patch }));
   const viaKnSearch = needsKnSearch(rrf);
 
   /** Label with a hover explanation; every tunable carries one so the panel documents itself. */
@@ -366,7 +425,9 @@ export function SearchPanel({
     setSearching(true);
     setSearchError(null);
     try {
-      setSearchResults(await onSearch(text, { ...searchOptions, rerank: rrf.rerankMode === "on" }, rrf));
+      setSearchResults(
+        await onSearch(text, { ...searchOptions, rerank: rrf.rerankMode === "on" }, rrf),
+      );
       setSearched(true);
     } catch (error) {
       // Stale hits must not stay addable after a failed search; an empty message means a toast already said it.
@@ -398,7 +459,9 @@ export function SearchPanel({
   };
 
   const updateRow = (index: number, patch: Partial<ConditionRow>) => {
-    setRows((previous) => previous.map((row, position) => (position === index ? { ...row, ...patch } : row)));
+    setRows((previous) =>
+      previous.map((row, position) => (position === index ? { ...row, ...patch } : row)),
+    );
   };
 
   const semanticPane = (
@@ -453,23 +516,41 @@ export function SearchPanel({
                   onChange={(value: string[]) => patchSearch({ conceptGroups: value })}
                 />
                 <div className={styles.advancedGrid}>
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType"), t("knowledgeNetwork.graphExplorer.search.maxInstancesPerTypeHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.maxInstancesPerType"),
+                    t("knowledgeNetwork.graphExplorer.search.maxInstancesPerTypeHelp"),
+                  )}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
                     min={1}
                     max={200}
                     value={searchOptions.maxInstancesPerType}
-                    onChange={(value) => patchSearch({ maxInstancesPerType: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxInstancesPerType })}
+                    onChange={(value) =>
+                      patchSearch({
+                        maxInstancesPerType:
+                          typeof value === "number"
+                            ? value
+                            : DEFAULT_SEARCH_OPTIONS.maxInstancesPerType,
+                      })
+                    }
                   />
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.maxObjectTypes"), t("knowledgeNetwork.graphExplorer.search.maxObjectTypesHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.maxObjectTypes"),
+                    t("knowledgeNetwork.graphExplorer.search.maxObjectTypesHelp"),
+                  )}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
                     min={1}
                     max={100}
                     value={searchOptions.maxObjectTypes}
-                    onChange={(value) => patchSearch({ maxObjectTypes: typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxObjectTypes })}
+                    onChange={(value) =>
+                      patchSearch({
+                        maxObjectTypes:
+                          typeof value === "number" ? value : DEFAULT_SEARCH_OPTIONS.maxObjectTypes,
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -484,47 +565,92 @@ export function SearchPanel({
                   {t("knowledgeNetwork.graphExplorer.search.rrfIntro")}
                 </Typography.Paragraph>
                 <div className={styles.advancedGrid}>
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.enableRrf"), t("knowledgeNetwork.graphExplorer.search.enableRrfHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.enableRrf"),
+                    t("knowledgeNetwork.graphExplorer.search.enableRrfHelp"),
+                  )}
                   <span className={styles.advancedControl}>
-                    <Switch size="small" data-testid="graph-explorer-rrf-enable" checked={rrf.enableRrfFusion} onChange={(checked) => patchRrf({ enableRrfFusion: checked })} />
+                    <Switch
+                      size="small"
+                      data-testid="graph-explorer-rrf-enable"
+                      checked={rrf.enableRrfFusion}
+                      onChange={(checked) => patchRrf({ enableRrfFusion: checked })}
+                    />
                   </span>
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.enableKnn"), t("knowledgeNetwork.graphExplorer.search.enableKnnHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.enableKnn"),
+                    t("knowledgeNetwork.graphExplorer.search.enableKnnHelp"),
+                  )}
                   <span className={styles.advancedControl}>
-                    <Switch size="small" checked={rrf.enableKnn} onChange={(checked) => patchRrf({ enableKnn: checked })} />
+                    <Switch
+                      size="small"
+                      checked={rrf.enableKnn}
+                      onChange={(checked) => patchRrf({ enableKnn: checked })}
+                    />
                   </span>
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.rrfK"), t("knowledgeNetwork.graphExplorer.search.rrfKHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.rrfK"),
+                    t("knowledgeNetwork.graphExplorer.search.rrfKHelp"),
+                  )}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
                     min={1}
                     max={1000}
                     value={rrf.rrfK}
-                    onChange={(value) => patchRrf({ rrfK: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.rrfK })}
+                    onChange={(value) =>
+                      patchRrf({
+                        rrfK: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.rrfK,
+                      })
+                    }
                   />
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.knnWeight"), t("knowledgeNetwork.graphExplorer.search.knnWeightHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.knnWeight"),
+                    t("knowledgeNetwork.graphExplorer.search.knnWeightHelp"),
+                  )}
                   <div className={styles.sliderCell}>
                     <Slider
                       min={0}
                       max={1}
                       step={0.05}
                       value={rrf.knnWeight}
-                      tooltip={{ formatter: (value) => (typeof value === "number" ? value.toFixed(2) : "") }}
-                      onChange={(value: number) => patchRrf({ knnWeight: Math.round(value * 100) / 100 })}
+                      tooltip={{
+                        formatter: (value) => (typeof value === "number" ? value.toFixed(2) : ""),
+                      }}
+                      onChange={(value: number) =>
+                        patchRrf({ knnWeight: Math.round(value * 100) / 100 })
+                      }
                     />
                     <span className={styles.sliderValue}>
-                      {t("knowledgeNetwork.graphExplorer.search.knnWeightValue", { knn: rrf.knnWeight.toFixed(2), text: (1 - rrf.knnWeight).toFixed(2) })}
+                      {t("knowledgeNetwork.graphExplorer.search.knnWeightValue", {
+                        knn: rrf.knnWeight.toFixed(2),
+                        text: (1 - rrf.knnWeight).toFixed(2),
+                      })}
                     </span>
                   </div>
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.initialCandidateCount"), t("knowledgeNetwork.graphExplorer.search.initialCandidateCountHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.initialCandidateCount"),
+                    t("knowledgeNetwork.graphExplorer.search.initialCandidateCountHelp"),
+                  )}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
                     min={1}
                     max={1000}
                     value={rrf.initialCandidateCount}
-                    onChange={(value) => patchRrf({ initialCandidateCount: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.initialCandidateCount })}
+                    onChange={(value) =>
+                      patchRrf({
+                        initialCandidateCount:
+                          typeof value === "number"
+                            ? value
+                            : DEFAULT_RRF_OPTIONS.initialCandidateCount,
+                      })
+                    }
                   />
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.minDirectRelevance"), t("knowledgeNetwork.graphExplorer.search.minDirectRelevanceHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.minDirectRelevance"),
+                    t("knowledgeNetwork.graphExplorer.search.minDirectRelevanceHelp"),
+                  )}
                   <InputNumber
                     size="small"
                     className={styles.advancedNumber}
@@ -532,24 +658,42 @@ export function SearchPanel({
                     max={1}
                     step={0.05}
                     value={rrf.minDirectRelevance}
-                    onChange={(value) => patchRrf({ minDirectRelevance: typeof value === "number" ? value : DEFAULT_RRF_OPTIONS.minDirectRelevance })}
+                    onChange={(value) =>
+                      patchRrf({
+                        minDirectRelevance:
+                          typeof value === "number"
+                            ? value
+                            : DEFAULT_RRF_OPTIONS.minDirectRelevance,
+                      })
+                    }
                   />
-                  {helpLabel(t("knowledgeNetwork.graphExplorer.search.rerankMode"), t("knowledgeNetwork.graphExplorer.search.rerankModeHelp"))}
+                  {helpLabel(
+                    t("knowledgeNetwork.graphExplorer.search.rerankMode"),
+                    t("knowledgeNetwork.graphExplorer.search.rerankModeHelp"),
+                  )}
                   <Select
                     size="small"
                     className={styles.advancedNumber}
                     value={rrf.rerankMode}
                     options={[
                       { value: "off", label: t("knowledgeNetwork.graphExplorer.search.rerankOff") },
-                      { value: "shadow", label: t("knowledgeNetwork.graphExplorer.search.rerankShadow") },
+                      {
+                        value: "shadow",
+                        label: t("knowledgeNetwork.graphExplorer.search.rerankShadow"),
+                      },
                       { value: "on", label: t("knowledgeNetwork.graphExplorer.search.rerankOn") },
                     ]}
                     onChange={(value: RrfOptions["rerankMode"]) => patchRrf({ rerankMode: value })}
                   />
                 </div>
                 {viaKnSearch ? (
-                  <Tooltip title={t("knowledgeNetwork.graphExplorer.search.viaKnSearchHelp")} placement="right">
-                    <Typography.Text type="warning">{t("knowledgeNetwork.graphExplorer.search.viaKnSearch")}</Typography.Text>
+                  <Tooltip
+                    title={t("knowledgeNetwork.graphExplorer.search.viaKnSearchHelp")}
+                    placement="right"
+                  >
+                    <Typography.Text type="warning">
+                      {t("knowledgeNetwork.graphExplorer.search.viaKnSearch")}
+                    </Typography.Text>
                   </Tooltip>
                 ) : null}
               </div>
@@ -567,7 +711,9 @@ export function SearchPanel({
         onChange={(event) => setQuery(event.target.value)}
         onSearch={() => void runSearch()}
       />
-      {searchError ? <Alert className={styles.alert} type="error" showIcon message={searchError} /> : null}
+      {searchError ? (
+        <Alert className={styles.alert} type="error" showIcon message={searchError} />
+      ) : null}
       <Spin spinning={searching}>
         <ResultList
           nodes={searchResults}
@@ -613,11 +759,21 @@ export function SearchPanel({
               disabled={disabled || !otId}
               value={row.field || undefined}
               placeholder={t("knowledgeNetwork.graphExplorer.condition.field")}
-              options={properties.map((property) => ({ value: property.name, label: property.displayName ? `${property.displayName} (${property.name})` : property.name }))}
+              options={properties.map((property) => ({
+                value: property.name,
+                label: property.displayName
+                  ? `${property.displayName} (${property.name})`
+                  : property.name,
+              }))}
               onChange={(value: string) => {
-                const nextKind = propertyKind(properties.find((property) => property.name === value)?.type);
+                const nextKind = propertyKind(
+                  properties.find((property) => property.name === value)?.type,
+                );
                 const nextOperators = OPERATORS_BY_KIND[nextKind];
-                updateRow(index, { field: value, operator: nextOperators.includes(row.operator) ? row.operator : nextOperators[0] });
+                updateRow(index, {
+                  field: value,
+                  operator: nextOperators.includes(row.operator) ? row.operator : nextOperators[0],
+                });
               }}
             />
             <Select
@@ -641,20 +797,37 @@ export function SearchPanel({
               type="text"
               icon={<DeleteOutlined />}
               disabled={rows.length === 1}
-              onClick={() => setRows((previous) => previous.filter((_, position) => position !== index))}
+              onClick={() =>
+                setRows((previous) => previous.filter((_, position) => position !== index))
+              }
             />
           </div>
         );
       })}
       <div className={styles.conditionActions}>
-        <Button type="dashed" icon={<PlusOutlined />} disabled={disabled || !otId} onClick={() => setRows((previous) => [...previous, { field: "", operator: "==", value: "" }])}>
+        <Button
+          type="dashed"
+          icon={<PlusOutlined />}
+          disabled={disabled || !otId}
+          onClick={() =>
+            setRows((previous) => [...previous, { field: "", operator: "==", value: "" }])
+          }
+        >
           {t("knowledgeNetwork.graphExplorer.condition.addRow")}
         </Button>
-        <Button type="primary" data-testid="graph-explorer-query" loading={querying} disabled={disabled || !otId} onClick={() => void runQuery()}>
+        <Button
+          type="primary"
+          data-testid="graph-explorer-query"
+          loading={querying}
+          disabled={disabled || !otId}
+          onClick={() => void runQuery()}
+        >
           {t("knowledgeNetwork.graphExplorer.condition.query")}
         </Button>
       </div>
-      {queryError ? <Alert className={styles.alert} type="error" showIcon message={queryError} /> : null}
+      {queryError ? (
+        <Alert className={styles.alert} type="error" showIcon message={queryError} />
+      ) : null}
       <Spin spinning={querying}>
         <ResultList
           nodes={queryResults}
@@ -702,13 +875,23 @@ export function SearchPanel({
         onChange={(event) => setLocateKey(event.target.value)}
         onSearch={() => void runLocate()}
       />
-      <Button type="primary" data-testid="graph-explorer-browse" loading={browsing} disabled={disabled || !browseOt} onClick={() => void runBrowse(false)}>
+      <Button
+        type="primary"
+        data-testid="graph-explorer-browse"
+        loading={browsing}
+        disabled={disabled || !browseOt}
+        onClick={() => void runBrowse(false)}
+      >
         {t("knowledgeNetwork.graphExplorer.browse.load")}
       </Button>
-      {browseError ? <Alert className={styles.alert} type="error" showIcon message={browseError} /> : null}
+      {browseError ? (
+        <Alert className={styles.alert} type="error" showIcon message={browseError} />
+      ) : null}
       {/* Above the candidate list: pasting a list of ids is a starting point, not a refinement of the rows below. */}
       <div className={styles.aiBox}>
-        <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.browse.idsTitle")}</Typography.Text>
+        <Typography.Text strong>
+          {t("knowledgeNetwork.graphExplorer.browse.idsTitle")}
+        </Typography.Text>
         <Input.TextArea
           data-testid="graph-explorer-ids"
           value={idsText}
@@ -717,7 +900,13 @@ export function SearchPanel({
           placeholder={t("knowledgeNetwork.graphExplorer.browse.idsPlaceholder")}
           onChange={(event) => setIdsText(event.target.value)}
         />
-        <Button type="primary" data-testid="graph-explorer-ids-run" loading={idsRunning} disabled={disabled || !idsText.trim()} onClick={() => void runIds()}>
+        <Button
+          type="primary"
+          data-testid="graph-explorer-ids-run"
+          loading={idsRunning}
+          disabled={disabled || !idsText.trim()}
+          onClick={() => void runIds()}
+        >
           {t("knowledgeNetwork.graphExplorer.browse.idsRun")}
         </Button>
       </div>
@@ -785,19 +974,37 @@ export function SearchPanel({
         }}
       />
       <div className={styles.conditionActions}>
-        <Button type="primary" data-testid="graph-explorer-cypher-run" loading={cypherRunning} disabled={disabled || !cypherText.trim()} onClick={() => void runCypher()}>
+        <Button
+          type="primary"
+          data-testid="graph-explorer-cypher-run"
+          loading={cypherRunning}
+          disabled={disabled || !cypherText.trim()}
+          onClick={() => void runCypher()}
+        >
           {t("knowledgeNetwork.graphExplorer.cypher.run")}
         </Button>
         {cypherGraph && cypherGraph.nodes.length > 0 ? (
-          <Button data-testid="graph-explorer-cypher-add-all" onClick={() => onAddGraph(cypherGraph.nodes, cypherGraph.edges)}>
-            {t("knowledgeNetwork.graphExplorer.cypher.addAll", { nodes: cypherGraph.nodes.length, edges: cypherGraph.edges.length })}
+          <Button
+            data-testid="graph-explorer-cypher-add-all"
+            onClick={() => onAddGraph(cypherGraph.nodes, cypherGraph.edges)}
+          >
+            {t("knowledgeNetwork.graphExplorer.cypher.addAll", {
+              nodes: cypherGraph.nodes.length,
+              edges: cypherGraph.edges.length,
+            })}
           </Button>
         ) : null}
       </div>
-      {cypherError ? <Alert className={styles.alert} type="error" showIcon message={cypherError} /> : null}
+      {cypherError ? (
+        <Alert className={styles.alert} type="error" showIcon message={cypherError} />
+      ) : null}
       {cypherGraph ? (
         <Typography.Text type="secondary">
-          {t("knowledgeNetwork.graphExplorer.cypher.summary", { rows: cypherGraph.rows, nodes: cypherGraph.nodes.length, edges: cypherGraph.edges.length })}
+          {t("knowledgeNetwork.graphExplorer.cypher.summary", {
+            rows: cypherGraph.rows,
+            nodes: cypherGraph.nodes.length,
+            edges: cypherGraph.edges.length,
+          })}
         </Typography.Text>
       ) : null}
       <Spin spinning={cypherRunning}>
@@ -840,16 +1047,29 @@ export function SearchPanel({
             onChange={(value: string) => setAiModel(value)}
           />
         ) : null}
-        <Button type="primary" size="small" data-testid="graph-explorer-ai-run" loading={exploring} disabled={disabled || !exploreQuestion.trim()} onClick={() => void runExplore()}>
+        <Button
+          type="primary"
+          size="small"
+          data-testid="graph-explorer-ai-run"
+          loading={exploring}
+          disabled={disabled || !exploreQuestion.trim()}
+          onClick={() => void runExplore()}
+        >
           {t("knowledgeNetwork.graphExplorer.ai.run")}
         </Button>
         {exploring ? (
-          <Button size="small" data-testid="graph-explorer-ai-stop" onClick={() => exploreAbortRef.current?.abort()}>
+          <Button
+            size="small"
+            data-testid="graph-explorer-ai-stop"
+            onClick={() => exploreAbortRef.current?.abort()}
+          >
             {t("knowledgeNetwork.graphExplorer.ai.stop")}
           </Button>
         ) : null}
       </div>
-      {exploreError ? <Alert className={styles.alert} type="error" showIcon message={exploreError} /> : null}
+      {exploreError ? (
+        <Alert className={styles.alert} type="error" showIcon message={exploreError} />
+      ) : null}
       {exploreSteps.length > 0 ? (
         <ol className={styles.steps} data-testid="graph-explorer-ai-steps">
           {exploreSteps.map((step, index) => (
@@ -864,7 +1084,12 @@ export function SearchPanel({
           {exploreAnswer}
         </Typography.Paragraph>
       ) : null}
-      {!exploring && !exploreError && exploreSteps.length === 0 && !exploreAnswer ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("knowledgeNetwork.graphExplorer.ai.empty")} /> : null}
+      {!exploring && !exploreError && exploreSteps.length === 0 && !exploreAnswer ? (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={t("knowledgeNetwork.graphExplorer.ai.empty")}
+        />
+      ) : null}
     </div>
   ) : null;
 
@@ -876,11 +1101,29 @@ export function SearchPanel({
         onChange={(key) => setTab(key as "semantic" | "condition" | "browse" | "cypher" | "ai")}
         className={styles.tabs}
         items={[
-          { key: "semantic", label: t("knowledgeNetwork.graphExplorer.tabs.semantic"), children: semanticPane },
-          { key: "condition", label: t("knowledgeNetwork.graphExplorer.tabs.condition"), children: conditionPane },
-          { key: "browse", label: t("knowledgeNetwork.graphExplorer.tabs.browse"), children: browsePane },
-          { key: "cypher", label: t("knowledgeNetwork.graphExplorer.tabs.cypher"), children: cypherPane },
-          ...(aiPane ? [{ key: "ai", label: t("knowledgeNetwork.graphExplorer.tabs.ai"), children: aiPane }] : []),
+          {
+            key: "semantic",
+            label: t("knowledgeNetwork.graphExplorer.tabs.semantic"),
+            children: semanticPane,
+          },
+          {
+            key: "condition",
+            label: t("knowledgeNetwork.graphExplorer.tabs.condition"),
+            children: conditionPane,
+          },
+          {
+            key: "browse",
+            label: t("knowledgeNetwork.graphExplorer.tabs.browse"),
+            children: browsePane,
+          },
+          {
+            key: "cypher",
+            label: t("knowledgeNetwork.graphExplorer.tabs.cypher"),
+            children: cypherPane,
+          },
+          ...(aiPane
+            ? [{ key: "ai", label: t("knowledgeNetwork.graphExplorer.tabs.ai"), children: aiPane }]
+            : []),
         ]}
       />
     </aside>

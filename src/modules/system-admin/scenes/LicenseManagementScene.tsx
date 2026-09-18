@@ -274,20 +274,14 @@ export function LicenseManagementScene() {
     : [];
   const fingerprintValue = detail ? fingerprint || detail.instanceFp || "-" : "-";
   const licensedUntil = detail
-    ? formatUnixSeconds(
-        detail.contractExpiresAt,
-        i18n.language,
-        t("systemAdmin.license.permanent"),
-      )
+    ? formatUnixSeconds(detail.contractExpiresAt, i18n.language, t("systemAdmin.license.permanent"))
     : "-";
   const metricItems = detail
     ? [
         {
           label: t("systemAdmin.license.metrics.edition"),
           title: detail.edition || undefined,
-          value: detail.edition
-            ? translatedLicenseKey(t, "editionLabels", detail.edition)
-            : "-",
+          value: detail.edition ? translatedLicenseKey(t, "editionLabels", detail.edition) : "-",
         },
         {
           label: t("systemAdmin.license.metrics.licensedUntil"),
@@ -310,9 +304,7 @@ export function LicenseManagementScene() {
         <div className={styles.operationPrimary}>
           <div>
             <div className={styles.pageTitle}>{t("systemAdmin.license.title")}</div>
-            <div className={styles.pageSubtitle}>
-              {t("systemAdmin.license.description")}
-            </div>
+            <div className={styles.pageSubtitle}>{t("systemAdmin.license.description")}</div>
           </div>
         </div>
         <div className={styles.toolbarActions}>

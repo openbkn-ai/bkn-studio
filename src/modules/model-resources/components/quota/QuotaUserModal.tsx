@@ -151,7 +151,7 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
       userName: item.userName,
       modelQuotaId: record.confId,
       inputTokens: item.inputTokens ?? 0,
-      outputTokens: record.billingType === 1 ? item.outputTokens ?? 0 : undefined,
+      outputTokens: record.billingType === 1 ? (item.outputTokens ?? 0) : undefined,
       numType: item.numType,
     }));
 
@@ -233,7 +233,9 @@ export function QuotaUserModal({ onClose, open, record }: QuotaUserModalProps) {
           placeholder={t("modelResources.quotas.userModal.selectUser")}
           value={selectedUserId}
         />
-        <AppButton onClick={handleAddUser}>{t("modelResources.quotas.userModal.addUser")}</AppButton>
+        <AppButton onClick={handleAddUser}>
+          {t("modelResources.quotas.userModal.addUser")}
+        </AppButton>
       </section>
 
       <Table<EditableUserQuota>

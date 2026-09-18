@@ -16,8 +16,7 @@ export const capabilityPart = {
   capabilityApisTitle: "API",
   capabilityApisDescription:
     "挂载执行工厂里 OpenAPI 工具集中的 API。与函数同属工具绑定，区别只在工具集是 OpenAPI 类还是代码函数类。",
-  capabilitySkillsDescription:
-    "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
+  capabilitySkillsDescription: "挂载已发布的 SKILL 包。只有挂载过的 SKILL 才会被本知识网络召回。",
   capabilityManageInFactory: "去执行工厂管理",
   capabilityUsageTipLabel: "使用说明",
   capabilityUsageTipFunctions:
@@ -35,8 +34,7 @@ export const capabilityPart = {
   capabilityDetach: "解绑",
   capabilityDetachSelected: "解绑所选",
   capabilityDetachConfirmTitle: "确认解绑该能力？",
-  capabilityDetachConfirmContent:
-    "解绑后本知识网络不再能调用它，执行工厂中的资产本身不受影响。",
+  capabilityDetachConfirmContent: "解绑后本知识网络不再能调用它，执行工厂中的资产本身不受影响。",
   capabilityDetachSuccess: "已解绑",
   capabilityMountSuccess: "已挂载 {{count}} 项",
   capabilityMountSuccess_one: "已挂载 {{count}} 项",
@@ -51,7 +49,8 @@ export const capabilityPart = {
   capabilitySourceManual: "手动挂载",
   capabilitySourceActionType: "行动类【{{names}}】",
   capabilitySourceObjectType: "对象类【{{names}}】",
-  capabilityDetachBlockedHint: "该能力是被对象类或行动类引用才进来的，没有手动挂载可解绑。要移除请去改引用它的对象类或行动类。",
+  capabilityDetachBlockedHint:
+    "该能力是被对象类或行动类引用才进来的，没有手动挂载可解绑。要移除请去改引用它的对象类或行动类。",
   capabilityDetachKeptByReference: "已取消手动挂载；该能力仍被对象类或行动类引用，继续留在列表中。",
   capabilityColumnComment: "备注",
   capabilityColumnMountTime: "挂载时间",

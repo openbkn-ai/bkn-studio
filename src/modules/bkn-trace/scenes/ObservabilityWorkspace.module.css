@@ -6,15 +6,15 @@
  */
 
 .workspace {
-	background: var(--color-bg-surface);
-	border: 1px solid var(--color-border);
-	container-type: inline-size;
-	display: grid;
-	gap: 16px;
-	min-height: 100%;
-	min-width: 0;
-	overflow: hidden;
-	padding: 24px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  container-type: inline-size;
+  display: grid;
+  gap: 16px;
+  min-height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 24px;
 }
 
 .header {
@@ -42,7 +42,9 @@
 }
 
 .filterRow {
-  grid-template-columns: minmax(280px, 1.2fr) minmax(180px, 0.7fr) minmax(160px, 0.6fr) minmax(180px, 0.7fr) auto;
+  grid-template-columns:
+    minmax(280px, 1.2fr) minmax(180px, 0.7fr) minmax(160px, 0.6fr) minmax(180px, 0.7fr)
+    auto;
 }
 
 .sourceStrip {
@@ -243,9 +245,9 @@
 }
 
 @media (max-width: 900px) {
-	.workspace {
-		padding: 16px;
-	}
+  .workspace {
+    padding: 16px;
+  }
 
   .filterRow {
     grid-template-columns: 1fr;

@@ -101,12 +101,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.data.required.connection.outcome",
         path: "/data-connect",
         permissionMode: "any",
-        permissions: [
-          "catalog:view_detail",
-          "catalog:create",
-          "catalog:modify",
-          "catalog:delete",
-        ],
+        permissions: ["catalog:view_detail", "catalog:create", "catalog:modify", "catalog:delete"],
         summaryKey: "home.platform.stages.data.required.connection.summary",
         titleKey: "home.platform.stages.data.required.connection.title",
       },
@@ -306,10 +301,7 @@ const PLATFORM_STAGES: BuildStage[] = [
         outcomeKey: "home.platform.stages.validate.required.mcpDebug.outcome",
         path: "/knowledge-network",
         permissionMode: "any",
-        permissions: [
-          "knowledge-network:preview",
-          "knowledge-network:metric:query",
-        ],
+        permissions: ["knowledge-network:preview", "knowledge-network:metric:query"],
         titleKey: "home.platform.stages.validate.required.mcpDebug.title",
       },
       {
@@ -354,7 +346,8 @@ const ENGINEERING_SKILLS = [
     id: "requirement",
   },
   {
-    command: "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-ontology-builder",
+    command:
+      "npx skills add https://github.com/openbkn-ai/bkn-engineering --skill bkn-ontology-builder",
     icon: <ApartmentOutlined />,
     id: "ontologyBuilder",
   },
@@ -391,7 +384,8 @@ export function HomeScene() {
   const greeting = userName
     ? t(greetingKey(new Date().getHours(), true), { name: userName })
     : t(greetingKey(new Date().getHours(), false));
-  const currentStage = PLATFORM_STAGES.find((stage) => stage.id === activeStage) ?? PLATFORM_STAGES[0];
+  const currentStage =
+    PLATFORM_STAGES.find((stage) => stage.id === activeStage) ?? PLATFORM_STAGES[0];
 
   const copyInstallCommand = (command: string) => {
     void writeTextToClipboard(command).then(
@@ -416,7 +410,9 @@ export function HomeScene() {
               aria-selected={activePath === path}
               className={activePath === path ? styles.pathTabActive : styles.pathTab}
               key={path}
-              onClick={() => setSearchParams(writeHomeBuildState(searchParams, { path, stage: activeStage }))}
+              onClick={() =>
+                setSearchParams(writeHomeBuildState(searchParams, { path, stage: activeStage }))
+              }
               role="tab"
               type="button"
             >
@@ -429,154 +425,171 @@ export function HomeScene() {
       <main className={styles.content}>
         <div className={styles.contentInner}>
           {activePath === "platform" ? (
-          <section aria-labelledby="platform-build-title" className={styles.buildArea}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <h2 id="platform-build-title">{t("home.paths.platform.heading")}</h2>
-                <p className={styles.platformDescription}>{t("home.paths.platform.description")}</p>
-              </div>
-              <div className={styles.sectionActionSpacer} aria-hidden />
-            </div>
-
-            <ol className={styles.stageRail}>
-              {PLATFORM_STAGES.map((stage, index) => (
-                <li className={styles.stageRailItem} key={stage.id}>
-                  <button
-                    aria-current={activeStage === stage.id ? "step" : undefined}
-                    className={activeStage === stage.id ? styles.stageButtonActive : styles.stageButton}
-                    onClick={() => setSearchParams(writeHomeBuildState(searchParams, { path: "platform", stage: stage.id }))}
-                    type="button"
-                  >
-                    <span className={styles.stageNumber}>{index + 1}</span>
-                    <span className={styles.stageFlowIcon} aria-hidden>{stage.icon}</span>
-                    <span className={styles.stageCopy}>
-                      <strong>{t(`home.platform.stages.${stage.id}.title`)}</strong>
-                      <small>{t(`home.platform.stages.${stage.id}.summary`)}</small>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-
-            <div className={styles.stageDetail}>
-              <div className={styles.actionSectionHeader}>
-                <h3>{t("home.platform.required")}</h3>
-                <p>{t(`home.platform.stages.${currentStage.id}.detail`)}</p>
+            <section aria-labelledby="platform-build-title" className={styles.buildArea}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <h2 id="platform-build-title">{t("home.paths.platform.heading")}</h2>
+                  <p className={styles.platformDescription}>
+                    {t("home.paths.platform.description")}
+                  </p>
+                </div>
+                <div className={styles.sectionActionSpacer} aria-hidden />
               </div>
 
-              <div className={styles.actionList}>
-                {currentStage.required.map((action, index) => {
-                  const actionAllowed = canAccessHomeAction(
-                    runtimeConfig.currentUser.permissions,
-                    action,
-                  );
-                  const actionButton = (
+              <ol className={styles.stageRail}>
+                {PLATFORM_STAGES.map((stage, index) => (
+                  <li className={styles.stageRailItem} key={stage.id}>
                     <button
-                      aria-disabled={!actionAllowed}
-                      className={styles.actionNavigate}
-                      disabled={!actionAllowed}
-                      onClick={() => void navigate(action.path)}
+                      aria-current={activeStage === stage.id ? "step" : undefined}
+                      className={
+                        activeStage === stage.id ? styles.stageButtonActive : styles.stageButton
+                      }
+                      onClick={() =>
+                        setSearchParams(
+                          writeHomeBuildState(searchParams, { path: "platform", stage: stage.id }),
+                        )
+                      }
                       type="button"
                     >
-                      <span className={styles.actionOrdinal}>{index + 1}</span>
-                      <span className={styles.actionMain}>
-                        <strong>
-                          {t(action.titleKey)}
-                          {action.optional ? <span className={styles.optionalBadge}>{t("home.platform.optional")}</span> : null}
-                        </strong>
-                        <small>{t(action.summaryKey ?? action.descriptionKey)}</small>
+                      <span className={styles.stageNumber}>{index + 1}</span>
+                      <span className={styles.stageFlowIcon} aria-hidden>
+                        {stage.icon}
                       </span>
-                      <ArrowRightOutlined aria-hidden />
+                      <span className={styles.stageCopy}>
+                        <strong>{t(`home.platform.stages.${stage.id}.title`)}</strong>
+                        <small>{t(`home.platform.stages.${stage.id}.summary`)}</small>
+                      </span>
                     </button>
-                  );
+                  </li>
+                ))}
+              </ol>
 
-                  return (
-                    <div className={styles.actionRowCompact} key={action.titleKey}>
-                      {actionAllowed ? actionButton : (
-                        <Tooltip title={t("home.platform.noPermission")}>
-                          <span className={styles.actionNavigateTarget}>{actionButton}</span>
-                        </Tooltip>
-                      )}
-                      {action.showDetails !== false ? (
-                        <Tooltip
-                          autoAdjustOverflow
-                          color="var(--color-bg-surface)"
-                          overlayClassName={styles.actionDetailsTooltip}
-                          placement="left"
-                          title={(
-                            <div className={styles.actionTooltipContent}>
-                              <p>
-                                <strong>{t("home.platform.configurationLabel")}</strong>
-                                {t(action.descriptionKey)}
-                              </p>
-                              <p>
-                                <strong>{t("home.platform.roleLabel")}</strong>
-                                {t(action.outcomeKey)}
-                              </p>
-                              <p>
-                                <strong>{t("home.platform.impactLabel")}</strong>
-                                {t(action.impactKey)}
-                              </p>
-                            </div>
-                          )}
-                        >
-                          <button
-                            aria-label={t("home.platform.details")}
-                            className={styles.actionHelp}
-                            type="button"
+              <div className={styles.stageDetail}>
+                <div className={styles.actionSectionHeader}>
+                  <h3>{t("home.platform.required")}</h3>
+                  <p>{t(`home.platform.stages.${currentStage.id}.detail`)}</p>
+                </div>
+
+                <div className={styles.actionList}>
+                  {currentStage.required.map((action, index) => {
+                    const actionAllowed = canAccessHomeAction(
+                      runtimeConfig.currentUser.permissions,
+                      action,
+                    );
+                    const actionButton = (
+                      <button
+                        aria-disabled={!actionAllowed}
+                        className={styles.actionNavigate}
+                        disabled={!actionAllowed}
+                        onClick={() => void navigate(action.path)}
+                        type="button"
+                      >
+                        <span className={styles.actionOrdinal}>{index + 1}</span>
+                        <span className={styles.actionMain}>
+                          <strong>
+                            {t(action.titleKey)}
+                            {action.optional ? (
+                              <span className={styles.optionalBadge}>
+                                {t("home.platform.optional")}
+                              </span>
+                            ) : null}
+                          </strong>
+                          <small>{t(action.summaryKey ?? action.descriptionKey)}</small>
+                        </span>
+                        <ArrowRightOutlined aria-hidden />
+                      </button>
+                    );
+
+                    return (
+                      <div className={styles.actionRowCompact} key={action.titleKey}>
+                        {actionAllowed ? (
+                          actionButton
+                        ) : (
+                          <Tooltip title={t("home.platform.noPermission")}>
+                            <span className={styles.actionNavigateTarget}>{actionButton}</span>
+                          </Tooltip>
+                        )}
+                        {action.showDetails !== false ? (
+                          <Tooltip
+                            autoAdjustOverflow
+                            color="var(--color-bg-surface)"
+                            overlayClassName={styles.actionDetailsTooltip}
+                            placement="left"
+                            title={
+                              <div className={styles.actionTooltipContent}>
+                                <p>
+                                  <strong>{t("home.platform.configurationLabel")}</strong>
+                                  {t(action.descriptionKey)}
+                                </p>
+                                <p>
+                                  <strong>{t("home.platform.roleLabel")}</strong>
+                                  {t(action.outcomeKey)}
+                                </p>
+                                <p>
+                                  <strong>{t("home.platform.impactLabel")}</strong>
+                                  {t(action.impactKey)}
+                                </p>
+                              </div>
+                            }
                           >
-                            <QuestionCircleOutlined />
-                          </button>
-                        </Tooltip>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                            <button
+                              aria-label={t("home.platform.details")}
+                              className={styles.actionHelp}
+                              type="button"
+                            >
+                              <QuestionCircleOutlined />
+                            </button>
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
           ) : (
-          <section aria-labelledby="engineering-build-title" className={styles.buildArea}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <h2 id="engineering-build-title">{t("home.paths.engineering.heading")}</h2>
-                <p>{t("home.paths.engineering.description")}</p>
+            <section aria-labelledby="engineering-build-title" className={styles.buildArea}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <h2 id="engineering-build-title">{t("home.paths.engineering.heading")}</h2>
+                  <p>{t("home.paths.engineering.description")}</p>
+                </div>
+                <AppButton
+                  className={styles.sectionAction}
+                  onClick={() => setSkillsModalOpen(true)}
+                >
+                  {t("home.engineering.install.trigger")}
+                </AppButton>
               </div>
-              <AppButton
-                className={styles.sectionAction}
-                onClick={() => setSkillsModalOpen(true)}
-              >
-                {t("home.engineering.install.trigger")}
-              </AppButton>
-            </div>
 
-            <ol className={styles.skillFlow}>
-              {ENGINEERING_SKILLS.map((skill, index) => (
-                <li className={styles.skillFlowItem} key={skill.id}>
-                  <span className={styles.skillNumber}>{index + 1}</span>
-                  <span className={styles.skillIcon} aria-hidden>{skill.icon}</span>
-                  <div className={styles.skillBody}>
-                    <div className={styles.skillTitleRow}>
-                      <h3>{t(`home.engineering.skills.${skill.id}.title`)}</h3>
-                      <span aria-hidden>{t("home.engineering.skillNameSeparator")}</span>
-                      <code>{`bkn-${skill.id === "ontologyBuilder" ? "ontology-builder" : skill.id}`}</code>
+              <ol className={styles.skillFlow}>
+                {ENGINEERING_SKILLS.map((skill, index) => (
+                  <li className={styles.skillFlowItem} key={skill.id}>
+                    <span className={styles.skillNumber}>{index + 1}</span>
+                    <span className={styles.skillIcon} aria-hidden>
+                      {skill.icon}
+                    </span>
+                    <div className={styles.skillBody}>
+                      <div className={styles.skillTitleRow}>
+                        <h3>{t(`home.engineering.skills.${skill.id}.title`)}</h3>
+                        <span aria-hidden>{t("home.engineering.skillNameSeparator")}</span>
+                        <code>{`bkn-${skill.id === "ontologyBuilder" ? "ontology-builder" : skill.id}`}</code>
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>{t("home.engineering.labels.scenario")}</dt>
+                          <dd>{t(`home.engineering.skills.${skill.id}.scenario`)}</dd>
+                        </div>
+                        <div>
+                          <dt>{t("home.engineering.labels.output")}</dt>
+                          <dd>{t(`home.engineering.skills.${skill.id}.output`)}</dd>
+                        </div>
+                      </dl>
                     </div>
-                    <dl>
-                      <div>
-                        <dt>{t("home.engineering.labels.scenario")}</dt>
-                        <dd>{t(`home.engineering.skills.${skill.id}.scenario`)}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("home.engineering.labels.output")}</dt>
-                        <dd>{t(`home.engineering.skills.${skill.id}.output`)}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-          </section>
+                  </li>
+                ))}
+              </ol>
+            </section>
           )}
         </div>
       </main>

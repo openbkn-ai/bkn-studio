@@ -37,8 +37,8 @@ const routeContributions: AppRouteContribution[] = [
 ];
 
 export const defaultModuleRoutePath =
-  routeContributions.find((contribution) => contribution.defaultEntryPath)
-    ?.defaultEntryPath ?? "/home";
+  routeContributions.find((contribution) => contribution.defaultEntryPath)?.defaultEntryPath ??
+  "/home";
 
 export const moduleRoutes: RouteObject[] = routeContributions.flatMap(
   (contribution) => contribution.routes,

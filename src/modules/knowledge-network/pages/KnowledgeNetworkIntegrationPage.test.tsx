@@ -81,21 +81,15 @@ describe("KnowledgeNetworkIntegrationPage clipboard fallback", () => {
     const copiedTexts = installHttpClipboardFallback(true);
     renderPage();
 
-    fireEvent.click(
-      screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.sdk/ }),
-    );
+    fireEvent.click(screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.sdk/ }));
     const sdkCopyButtons = screen.getAllByRole("button", {
       name: /knowledgeNetwork\.integration\.copy/,
     });
     fireEvent.click(sdkCopyButtons[0]);
     fireEvent.click(sdkCopyButtons[1]);
 
-    fireEvent.click(
-      screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.cli/ }),
-    );
-    fireEvent.click(
-      screen.getByRole("button", { name: /knowledgeNetwork\.integration\.copy/ }),
-    );
+    fireEvent.click(screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.cli/ }));
+    fireEvent.click(screen.getByRole("button", { name: /knowledgeNetwork\.integration\.copy/ }));
 
     await waitFor(() => {
       expect(copiedTexts).toEqual([
@@ -112,9 +106,7 @@ describe("KnowledgeNetworkIntegrationPage clipboard fallback", () => {
     installHttpClipboardFallback(false);
     renderPage();
 
-    fireEvent.click(
-      screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.sdk/ }),
-    );
+    fireEvent.click(screen.getByRole("tab", { name: /knowledgeNetwork\.integration\.tabs\.sdk/ }));
     fireEvent.click(
       screen.getAllByRole("button", {
         name: /knowledgeNetwork\.integration\.copy/,
@@ -122,9 +114,7 @@ describe("KnowledgeNetworkIntegrationPage clipboard fallback", () => {
     );
 
     await waitFor(() => {
-      expect(messageMock.error).toHaveBeenCalledWith(
-        "knowledgeNetwork.integration.copyFailed",
-      );
+      expect(messageMock.error).toHaveBeenCalledWith("knowledgeNetwork.integration.copyFailed");
     });
     expect(messageMock.success).not.toHaveBeenCalled();
   });

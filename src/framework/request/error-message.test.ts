@@ -60,9 +60,7 @@ describe("extractRequestErrorDetails", () => {
       statusText: "Bad Request",
     });
 
-    expect(extractRequestErrorDetails(error).details).toBe(
-      '{"missing_fields":["id"]}',
-    );
+    expect(extractRequestErrorDetails(error).details).toBe('{"missing_fields":["id"]}');
   });
 
   it("uses details when description is absent", () => {

@@ -103,7 +103,7 @@ corepack pnpm test:execution-factory:e2e
 
 Environment overrides:
 
-| Variable | Default |
-|----------|---------|
-| `E2E_BASE_URL` | `http://127.0.0.1:5173` |
+| Variable           | Default                     |
+| ------------------ | --------------------------- |
+| `E2E_BASE_URL`     | `http://127.0.0.1:5173`     |
 | `E2E_API_BASE_URL` | `http://127.0.0.1:9000/api` |

@@ -200,7 +200,9 @@ export function DeptMembersModal({
               user.enabled ? styles.statusEnabled : styles.statusDisabled,
             ].join(" ")}
           >
-            {user.enabled ? t("systemAdmin.users.statusEnabled") : t("systemAdmin.users.statusDisabled")}
+            {user.enabled
+              ? t("systemAdmin.users.statusEnabled")
+              : t("systemAdmin.users.statusDisabled")}
           </Tag>
         ),
       },
@@ -261,7 +263,9 @@ export function DeptMembersModal({
       onCancel={onClose}
       open={open}
       rootClassName={styles.adminOverlay}
-      title={t("systemAdmin.users.deptMembers.title", { name: deptPath(departments, department.id) })}
+      title={t("systemAdmin.users.deptMembers.title", {
+        name: deptPath(departments, department.id),
+      })}
       width={920}
     >
       <p className={styles.mutedText} style={{ marginBottom: 12 }}>

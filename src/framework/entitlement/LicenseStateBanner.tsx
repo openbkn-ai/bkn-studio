@@ -37,11 +37,6 @@ export function LicenseStateBanner() {
   }
 
   return (
-    <Alert
-      banner
-      closable
-      message={t("common.entitlement.banner.unlicensed")}
-      type="warning"
-    />
+    <Alert banner closable message={t("common.entitlement.banner.unlicensed")} type="warning" />
   );
 }

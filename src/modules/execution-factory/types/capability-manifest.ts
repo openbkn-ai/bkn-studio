@@ -7,12 +7,7 @@
 
 export type CapabilitySourceType = "tool" | "mcp" | "skill" | "operator";
 
-export type CapabilitySideEffect =
-  | "none"
-  | "read"
-  | "write"
-  | "external_action"
-  | "unknown";
+export type CapabilitySideEffect = "none" | "read" | "write" | "external_action" | "unknown";
 
 export type CapabilityRiskLevel = "low" | "medium" | "high";
 
@@ -20,10 +15,7 @@ export type CapabilityTestStatus = "untested" | "passed" | "failed" | "stale";
 
 export type AgentVisibility = "hidden" | "discoverable" | "callable";
 
-export type AgentInvokePolicy =
-  | "manual_only"
-  | "approval_required"
-  | "auto_allowed";
+export type AgentInvokePolicy = "manual_only" | "approval_required" | "auto_allowed";
 
 export type CapabilityInputSemantic = {
   name: string;
@@ -57,9 +49,7 @@ export type CapabilityExample = {
 };
 
 export type CapabilityReadinessDimension =
-  | "business intent"
-  | "input semantics"
-  | "output semantics";
+  "business intent" | "input semantics" | "output semantics";
 
 export type CapabilityManifest = {
   id: string;
@@ -98,4 +88,3 @@ export type CapabilityReadiness = {
   missing: string[];
   notApplicable: CapabilityReadinessDimension[];
 };
-

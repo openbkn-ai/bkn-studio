@@ -102,7 +102,9 @@ test.describe("Execution Factory — UI tab navigation", () => {
 
   test("UI-operator-wizard: create overlay opens with type selection step", async ({ page }) => {
     const drawer = await openCreateWizard(page, "operator");
-    await expect(drawer.getByText(/选择类型|Select type|选择方式|Choose method/i).first()).toBeVisible();
+    await expect(
+      drawer.getByText(/选择类型|Select type|选择方式|Choose method/i).first(),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
   });
 
