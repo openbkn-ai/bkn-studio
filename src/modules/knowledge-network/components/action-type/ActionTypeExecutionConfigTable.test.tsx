@@ -190,4 +190,42 @@ describe("ActionTypeExecutionConfigTable", () => {
     expect(screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length).toBeGreaterThan(0);
     expect(screen.queryByText(/box-1|tool-1/)).toBeNull();
   });
+
+  it("lists the tool's parameters when the action type saved none", async () => {
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    resolveActionTypeToolInputSchema.mockResolvedValue([
+      {
+        key: "body",
+        name: "body",
+        source: "Body",
+        type: "object",
+        children: [
+          {
+            key: "body.roleName",
+            name: "roleName",
+            source: "Body",
+            type: "string",
+          },
+          {
+            key: "body.roleKey",
+            name: "roleKey",
+            source: "Body",
+            type: "string",
+          },
+        ],
+      },
+    ]);
+
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource
+        detail={createDetail([])}
+        networkId="network-1"
+      />,
+    );
+
+    expect(await screen.findByText("roleName")).toBeTruthy();
+    expect(screen.getByText("roleKey")).toBeTruthy();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionParameterEmpty")).toBeNull();
+  });
 });

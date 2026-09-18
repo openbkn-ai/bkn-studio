@@ -21,9 +21,13 @@ import {
 import type {
   ActionTypeActionSource,
   ActionTypeDetail,
-  ActionTypeExecutionParameter,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type { ActionTypeToolInputParam } from "@/modules/knowledge-network/utils/tool-input-params";
+import { getAllExpandableParamKeys } from "@/modules/knowledge-network/utils/tool-input-params";
+import {
+  buildParamTableRows,
+  type ActionTypeParamTableRow,
+} from "@/modules/knowledge-network/utils/tool-params-table-state";
 
 import styles from "./ActionTypeExecutionConfigTable.module.css";
 
@@ -33,11 +37,7 @@ type ActionTypeExecutionConfigTableProps = {
   networkId: string;
 };
 
-type ParameterRow = ActionTypeExecutionParameter & { key: string };
-
-type ParameterSchemaInfo = Pick<ActionTypeToolInputParam, "source" | "type">;
-
-function getParameterValueFromKey(valueFrom: ActionTypeExecutionParameter["valueFrom"]) {
+function getParameterValueFromKey(valueFrom: ActionTypeParamTableRow["valueFrom"]) {
   switch (valueFrom) {
     case "const":
       return "knowledgeNetwork.actionTypeExecutionValueFromConst";
@@ -49,29 +49,11 @@ function getParameterValueFromKey(valueFrom: ActionTypeExecutionParameter["value
   }
 }
 
-function flattenParameterSchema(
-  params: ActionTypeToolInputParam[],
-  result: Record<string, ParameterSchemaInfo> = {},
-) {
-  for (const param of params) {
-    result[param.key] = {
-      source: param.source,
-      type: param.type,
-    };
-
-    if (param.name !== param.key) {
-      result[param.name] = {
-        source: param.source,
-        type: param.type,
-      };
-    }
-
-    if (param.children?.length) {
-      flattenParameterSchema(param.children, result);
-    }
-  }
-
-  return result;
+function countLeafRows(rows: ActionTypeParamTableRow[]): number {
+  return rows.reduce(
+    (count, row) => count + (row.children?.length ? countLeafRows(row.children) : 1),
+    0,
+  );
 }
 
 export function ActionTypeExecutionConfigTable({
@@ -84,11 +66,11 @@ export function ActionTypeExecutionConfigTable({
   const [resolvedActionSource, setResolvedActionSource] = useState<
     ActionTypeActionSource | undefined
   >(detail.executionConfig.actionSource);
-  const [parameterSchemaMap, setParameterSchemaMap] = useState<Record<string, ParameterSchemaInfo>>(
-    {},
-  );
+  const [parameterSchema, setParameterSchema] = useState<ActionTypeToolInputParam[]>([]);
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [actionSourceResolutionFailed, setActionSourceResolutionFailed] = useState(false);
   const [isResolvingActionSource, setIsResolvingActionSource] = useState(false);
+  const [isLoadingParameterSchema, setIsLoadingParameterSchema] = useState(false);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -158,20 +140,26 @@ export function ActionTypeExecutionConfigTable({
   useEffect(() => {
     const actionSource = detail.executionConfig.actionSource;
     if (!canResolveActionSource || !actionSource) {
-      setParameterSchemaMap({});
+      setParameterSchema([]);
+      setIsLoadingParameterSchema(false);
       return;
     }
 
     let cancelled = false;
     const loadParameterSchema = async () => {
+      setIsLoadingParameterSchema(true);
       try {
         const schema = await resolveActionTypeToolInputSchema(actionSource);
         if (!cancelled) {
-          setParameterSchemaMap(flattenParameterSchema(schema));
+          setParameterSchema(schema);
         }
       } catch {
         if (!cancelled) {
-          setParameterSchemaMap({});
+          setParameterSchema([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingParameterSchema(false);
         }
       }
     };
@@ -183,20 +171,36 @@ export function ActionTypeExecutionConfigTable({
     };
   }, [canResolveActionSource, detail.executionConfig.actionSource]);
 
-  const rows = useMemo<ParameterRow[]>(
-    () =>
-      detail.executionConfig.parameters
-        .filter((item) => item.name.trim())
-        .map((item, index) => ({
-          ...item,
-          key: `${item.name}-${index}`,
-          source: item.source || parameterSchemaMap[item.name]?.source,
-          type: item.type || parameterSchemaMap[item.name]?.type,
-        })),
-    [detail.executionConfig.parameters, parameterSchemaMap],
-  );
+  useEffect(() => {
+    setExpandedRowKeys(getAllExpandableParamKeys(parameterSchema));
+  }, [parameterSchema]);
 
-  const columns: TableProps<ParameterRow>["columns"] = [
+  // The tool's input schema is the full parameter list; the saved parameters only
+  // carry the bindings the author changed, and an action type imported from a spec
+  // often has none at all. Render the schema and overlay the saved bindings so the
+  // detail view lists the same parameters the editor does (issue: detail showed an
+  // empty table while the editor showed every tool parameter).
+  const rows = useMemo<ActionTypeParamTableRow[]>(() => {
+    const savedParameters = detail.executionConfig.parameters;
+
+    if (parameterSchema.length > 0) {
+      return buildParamTableRows(parameterSchema, savedParameters);
+    }
+
+    return savedParameters
+      .filter((item) => item.name.trim())
+      .map((item, index) => ({
+        description: item.description,
+        key: `${item.name}-${index}`,
+        name: item.name,
+        source: item.source,
+        type: item.type ?? "",
+        value: item.value ?? item.sourcePropertyName ?? "",
+        valueFrom: item.valueFrom ?? "input",
+      }));
+  }, [detail.executionConfig.parameters, parameterSchema]);
+
+  const columns: TableProps<ActionTypeParamTableRow>["columns"] = [
     {
       dataIndex: "name",
       key: "name",
@@ -213,22 +217,28 @@ export function ActionTypeExecutionConfigTable({
     {
       dataIndex: "source",
       key: "source",
-      render: (value: string | undefined) => value || t("knowledgeNetwork.actionTypeEmptyValue"),
+      render: (value: string | undefined, record) =>
+        record.children?.length ? "" : value || t("knowledgeNetwork.actionTypeEmptyValue"),
       title: t("knowledgeNetwork.actionTypeExecutionParameterSource"),
       width: 120,
     },
     {
       key: "valueFrom",
-      render: (_value, record) => t(getParameterValueFromKey(record.valueFrom ?? "input")),
+      render: (_value, record) =>
+        record.children?.length ? "" : t(getParameterValueFromKey(record.valueFrom ?? "input")),
       title: t("knowledgeNetwork.actionTypeExecutionParameterValueSource"),
       width: 140,
     },
     {
       key: "value",
       render: (_value, record) => {
+        if (record.children?.length) {
+          return "";
+        }
+
         const valueFrom = record.valueFrom ?? "input";
         if (valueFrom === "property") {
-          const propertyName = record.sourcePropertyName || record.value || "";
+          const propertyName = record.value || "";
           return (
             <div className={styles.propertyCell}>
               <FieldTypeIcon type={propertyTypeMap[propertyName] ?? "string"} />
@@ -275,13 +285,20 @@ export function ActionTypeExecutionConfigTable({
         </div>
         <div>
           <span>{t("knowledgeNetwork.actionTypeExecutionParameters")}</span>
-          <strong>{rows.length}</strong>
+          <strong>{countLeafRows(rows)}</strong>
         </div>
       </div>
-      <Table<ParameterRow>
+      <Table<ActionTypeParamTableRow>
         bordered
         columns={columns}
         dataSource={rows}
+        expandable={{
+          expandRowByClick: true,
+          expandedRowKeys,
+          indentSize: 20,
+          onExpandedRowsChange: (keys) => setExpandedRowKeys(keys as string[]),
+        }}
+        loading={isLoadingParameterSchema}
         locale={{ emptyText: t("knowledgeNetwork.actionTypeExecutionParameterEmpty") }}
         pagination={false}
         rowKey="key"
