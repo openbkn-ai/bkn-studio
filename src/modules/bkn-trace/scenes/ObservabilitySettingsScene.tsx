@@ -85,7 +85,7 @@ export function ObservabilitySettingsScene() {
     getAccessProfile()
       .then(async (profile) => {
         if (!active) return;
-        setTraceEvidenceWrite(profile.traceEvidenceConfigurationWrite);
+        setTraceEvidenceWrite(Boolean(profile.traceEvidenceConfigurationWrite));
         if (!profile.globalLogSearch && !profile.logPolicyRead && !profile.traceEvidenceConfigurationRead) {
           if (active) {
             setDenied(true);

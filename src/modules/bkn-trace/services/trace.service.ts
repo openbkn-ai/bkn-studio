@@ -19,8 +19,8 @@ export type TraceAccessProfile = {
   logPolicyRead: boolean;
   observabilityArchiveManage: boolean;
   logSensitiveFields: boolean;
-  traceEvidenceConfigurationRead: boolean;
-  traceEvidenceConfigurationWrite: boolean;
+  traceEvidenceConfigurationRead?: boolean;
+  traceEvidenceConfigurationWrite?: boolean;
   managementAudit: boolean;
   securityAudit: boolean;
   technicalTrace: boolean;
