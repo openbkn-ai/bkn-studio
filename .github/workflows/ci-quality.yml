@@ -83,7 +83,11 @@ jobs:
           if ! git cat-file -e "${BASE_SHA}^{commit}"; then
             echo "PR base commit is unavailable; using the full unit test suite."
             echo "scope=full" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "${BASE_SHA}" HEAD | grep -Eq "$full_suite_pattern"; then
+            exit 0
+          fi
+
+          changed_files=$(git diff --name-only "${BASE_SHA}" HEAD)
+          if grep -Eq "$full_suite_pattern" <<< "$changed_files"; then
             echo "Shared runtime or tooling changed; using the full unit test suite."
             echo "scope=full" >> "$GITHUB_OUTPUT"
           else
@@ -106,6 +110,16 @@ jobs:
           else
             pnpm exec vitest --run
           fi
+
+      - name: Boundary contract tests
+        if: steps.unit-tests.outputs.scope == 'affected'
+        run: |
+          # These tests inspect source files with node:fs, so Vitest's import
+          # graph cannot select them from changes to the files they enforce.
+          pnpm exec vitest --run \
+            src/framework/compat/clipboard-boundary.test.ts \
+            src/modules/bkn-trace/legacy-business-provenance.boundary.test.ts \
+            src/modules/bkn-trace/trace-analysis/trace-analysis.boundary.test.ts
 
       - name: Type check
         run: pnpm exec tsc -b --pretty false
