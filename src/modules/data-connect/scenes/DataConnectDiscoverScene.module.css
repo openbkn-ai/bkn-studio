@@ -87,6 +87,7 @@
 
 .operationBar {
   composes: operationBar from "../../../framework/ui/common/BusinessPageTemplate.module.css";
+  border-bottom: 0;
 }
 
 .operationPrimary {
@@ -194,6 +195,13 @@
 .panelSection {
   composes: tableSurface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
   padding-top: 0;
+}
+
+.panelSection :global(.ant-table-wrapper),
+.panelSection :global(.ant-table),
+.panelSection :global(.ant-table-container),
+.panelSection :global(.ant-table-content) {
+  border: 0 !important;
 }
 
 .panelSection :global(.ant-alert) {

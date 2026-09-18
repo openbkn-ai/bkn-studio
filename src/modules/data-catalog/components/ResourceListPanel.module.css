@@ -12,7 +12,6 @@
 
 .operationBar {
   align-items: center;
-  border-bottom: 1px solid var(--business-color-border);
   display: flex;
   flex-wrap: wrap;
   gap: 12px 20px;
@@ -47,6 +46,17 @@
   justify-content: flex-end;
   min-width: 0;
   width: auto;
+}
+
+.moreFilters {
+  align-items: center;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
 }
 
 .searchInput {
@@ -119,6 +129,16 @@
   composes: tableSurface from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
 
+.tableSurface :global(.ant-table-wrapper) {
+  border: 0 !important;
+}
+
+.tableSurface :global(.ant-table),
+.tableSurface :global(.ant-table-container),
+.tableSurface :global(.ant-table-content) {
+  border: 0 !important;
+}
+
 .tableSurface :global(.ant-table-thead > tr > th) {
   white-space: nowrap;
 }
@@ -182,6 +202,24 @@
 
 .ellipsisLink .cellEllipsis {
   min-width: 0;
+}
+
+.resourceNameCell {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+
+.sourceIdentifier {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .resourceNameTooltip:global(.ant-tooltip) {

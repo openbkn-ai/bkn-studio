@@ -376,10 +376,32 @@ function filterResources(items: CatalogResource[], query: ResourceListQuery) {
       item.id.toLowerCase().includes(keyword);
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
     const matchesCategory = !query.category || item.category === query.category;
+    const matchesStatus = !query.status || item.status === query.status;
+    const matchesEnabled =
+      query.enabled === undefined || (item.enabled !== false) === query.enabled;
+    const matchesDiscoverStatus =
+      !query.lastDiscoverStatus || item.lastDiscoverStatus === query.lastDiscoverStatus;
     const matchesSchema = !query.schema || item.schemaName === query.schema;
 
-    return matchesKeyword && matchesCatalog && matchesCategory && matchesSchema;
+    return (
+      matchesKeyword &&
+      matchesCatalog &&
+      matchesCategory &&
+      matchesStatus &&
+      matchesEnabled &&
+      matchesDiscoverStatus &&
+      matchesSchema
+    );
   });
+}
+
+function sortResources(items: CatalogResource[], query: ResourceListQuery) {
+  if (query.sort !== "name") {
+    return items;
+  }
+
+  const multiplier = query.direction === "desc" ? -1 : 1;
+  return [...items].sort((left, right) => left.name.localeCompare(right.name) * multiplier);
 }
 
 export type CatalogResourcePage = {
@@ -394,7 +416,7 @@ export async function listCatalogResourcePage(
   const limit = query.limit ?? RESOURCE_LIST_PAGE_SIZE;
 
   if (useMock) {
-    const filtered = filterResources([...mockResources], query);
+    const filtered = sortResources(filterResources([...mockResources], query), query);
     const page = limit === -1 ? filtered.slice(offset) : filtered.slice(offset, offset + limit);
     return wait({
       items: page.map((resource) => ({
@@ -415,10 +437,15 @@ export async function listCatalogResourcePage(
       params: {
         catalog_id: query.catalogId || undefined,
         category: query.category || undefined,
+        direction: query.direction,
+        enabled: query.enabled,
+        last_discover_status: query.lastDiscoverStatus,
         schema: query.schema || undefined,
         limit,
         name: query.keyword?.trim() || undefined,
         offset,
+        sort: query.sort,
+        status: query.status,
       },
     },
   );

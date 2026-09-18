@@ -526,7 +526,7 @@ export function ResourceSemanticUnderstandingPanel({
       {error ? (
         <Alert message={error} showIcon type="error" />
       ) : (
-        <TableSurface>
+        <TableSurface className={styles.tableSurface}>
           <AppTable
             columns={columns}
             dataSource={tasks}

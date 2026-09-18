@@ -10,6 +10,13 @@
   gap: 12px;
 }
 
+.tableSurface :global(.ant-table-wrapper),
+.tableSurface :global(.ant-table),
+.tableSurface :global(.ant-table-container),
+.tableSurface :global(.ant-table-content) {
+  border: 0 !important;
+}
+
 .summaryCard {
   display: flex;
   align-items: center;

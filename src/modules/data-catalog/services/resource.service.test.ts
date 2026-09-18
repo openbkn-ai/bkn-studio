@@ -239,19 +239,23 @@ describe("resource.service · listCatalogResourcePage", () => {
 
     const result = await listCatalogResourcePage({
       catalogId: "cat-1",
+      direction: "desc",
       limit: 10,
       offset: 10,
       schema: "external_data",
+      sort: "name",
     });
 
     expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources", {
       params: {
         catalog_id: "cat-1",
         category: undefined,
+        direction: "desc",
         limit: 10,
         name: undefined,
         offset: 10,
         schema: "external_data",
+        sort: "name",
       },
     });
     expect(result).toEqual({

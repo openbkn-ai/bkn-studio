@@ -5,9 +5,15 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DatabaseOutlined, EllipsisOutlined, KeyOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  DatabaseOutlined,
+  EllipsisOutlined,
+  FilterOutlined,
+  KeyOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import { Alert, Dropdown, Input, Select, Space, Spin, Tag, Tooltip, type MenuProps } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -38,6 +44,15 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 import styles from "./ResourceListPanel.module.css";
 
 const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
+const RESOURCE_STATUS_FILTERS = ["active", "deprecated", "stale"] as const;
+const DISCOVER_STATUS_FILTERS = [
+  "error",
+  "missing",
+  "new",
+  "restored",
+  "unchanged",
+  "updated",
+] as const;
 
 const DISCOVER_STATUS_CLASSES: Record<ResourceDiscoverStatus, string> = {
   error: styles.statusTagError,
@@ -118,6 +133,13 @@ export function ResourceListPanel({
   const activeSchema = searchParams.get("schema")?.trim() || "";
   const [resourceKeyword, setResourceKeyword] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<CatalogResource["status"] | "">("");
+  const [enabledFilter, setEnabledFilter] = useState<"" | "true" | "false">("");
+  const [discoverStatusFilter, setDiscoverStatusFilter] = useState<
+    CatalogResource["lastDiscoverStatus"] | ""
+  >("");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [nameSortDirection, setNameSortDirection] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [resources, setResources] = useState<CatalogResource[]>([]);
@@ -140,7 +162,13 @@ export function ResourceListPanel({
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
-  const hasResourceQuery = resourceKeyword.trim().length > 0 || categoryFilter.length > 0;
+  const activeFilterCount = [
+    categoryFilter,
+    statusFilter,
+    enabledFilter,
+    discoverStatusFilter,
+  ].filter(Boolean).length;
+  const hasResourceQuery = resourceKeyword.trim().length > 0 || activeFilterCount > 0;
   const canAuthorizeGrants = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.grant,
@@ -160,7 +188,15 @@ export function ResourceListPanel({
 
   useEffect(() => {
     setPage(1);
-  }, [resourceKeyword, categoryFilter, catalog.id, activeSchema]);
+  }, [
+    activeSchema,
+    catalog.id,
+    categoryFilter,
+    discoverStatusFilter,
+    enabledFilter,
+    resourceKeyword,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,10 +206,15 @@ export function ResourceListPanel({
     void listCatalogResourcePage({
       catalogId: catalog.id,
       category: categoryFilter ? (categoryFilter as CatalogResource["category"]) : undefined,
+      status: statusFilter || undefined,
+      enabled: enabledFilter === "" ? undefined : enabledFilter === "true",
+      lastDiscoverStatus: discoverStatusFilter || undefined,
       schema: activeSchema || undefined,
       keyword: resourceKeyword,
       limit: pageSize,
       offset: (page - 1) * pageSize,
+      sort: "name",
+      direction: nameSortDirection,
     })
       .then((result) => {
         if (cancelled) {
@@ -199,7 +240,18 @@ export function ResourceListPanel({
     return () => {
       cancelled = true;
     };
-  }, [activeSchema, catalog.id, categoryFilter, page, pageSize, resourceKeyword]);
+  }, [
+    activeSchema,
+    catalog.id,
+    categoryFilter,
+    discoverStatusFilter,
+    enabledFilter,
+    nameSortDirection,
+    page,
+    pageSize,
+    resourceKeyword,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     const handleMove = (event: MouseEvent) => {
@@ -238,6 +290,10 @@ export function ResourceListPanel({
     {
       dataIndex: "name",
       ellipsis: true,
+      key: "name",
+      sorter: true,
+      sortDirections: ["ascend", "descend"],
+      sortOrder: nameSortDirection === "asc" ? "ascend" : "descend",
       width: nameColumnWidth,
       title: (
         <div className={styles.resizableHeader}>
@@ -257,15 +313,25 @@ export function ResourceListPanel({
         const displayName = deriveDisplayName(record, catalog.connectorType);
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
-          <Tooltip classNames={{ root: styles.resourceNameTooltip }} title={tooltip}>
-            <AppButton
-              className={styles.ellipsisLink}
-              onClick={() => onOpenResource(record.id, "detail")}
-              type="link"
-            >
-              <span className={styles.cellEllipsis}>{displayName}</span>
-            </AppButton>
-          </Tooltip>
+          <div className={styles.resourceNameCell}>
+            <Tooltip classNames={{ root: styles.resourceNameTooltip }} title={tooltip}>
+              <AppButton
+                className={styles.ellipsisLink}
+                onClick={() => onOpenResource(record.id, "detail")}
+                type="link"
+              >
+                <span className={styles.cellEllipsis}>{displayName}</span>
+              </AppButton>
+            </Tooltip>
+            {record.sourceIdentifier ? (
+              <Tooltip
+                classNames={{ root: styles.resourceNameTooltip }}
+                title={record.sourceIdentifier}
+              >
+                <span className={styles.sourceIdentifier}>{record.sourceIdentifier}</span>
+              </Tooltip>
+            ) : null}
+          </div>
         );
       },
     },
@@ -491,6 +557,27 @@ export function ResourceListPanel({
     },
   ];
 
+  const handleTableChange: TableProps<CatalogResource>["onChange"] = (
+    _pagination,
+    _filters,
+    sorter,
+    extra,
+  ) => {
+    if (extra.action !== "sort") {
+      return;
+    }
+    const single = Array.isArray(sorter) ? sorter[0] : sorter;
+    setNameSortDirection(single.order === "descend" ? "desc" : "asc");
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setCategoryFilter("");
+    setStatusFilter("");
+    setEnabledFilter("");
+    setDiscoverStatusFilter("");
+  };
+
   return (
     <section className={styles.contentSurface}>
       {showOperationBar ? (
@@ -529,23 +616,90 @@ export function ResourceListPanel({
                 prefix={<SearchOutlined className={styles.searchIcon} />}
                 value={resourceKeyword}
               />
-              <div className={styles.toolbarFilters}>
-                <div className={styles.filterField}>
-                  <span className={styles.filterLabel}>{t("dataCatalog.resource.category")}</span>
-                  <Select
-                    className={styles.filterSelect}
-                    onChange={(value) => setCategoryFilter(value)}
-                    options={[
-                      { label: t("common.all"), value: "" },
-                      ...CATEGORY_FILTERS.map((key) => ({
-                        label: t(`dataCatalog.categories.${key}`),
-                        value: key,
-                      })),
-                    ]}
-                    value={categoryFilter}
-                  />
+              <AppButton
+                icon={<FilterOutlined />}
+                onClick={() => setFiltersExpanded((value) => !value)}
+              >
+                {t(
+                  activeFilterCount > 0
+                    ? "dataCatalog.resource.moreFiltersWithCount"
+                    : "dataCatalog.resource.moreFilters",
+                  { count: activeFilterCount },
+                )}
+              </AppButton>
+              {filtersExpanded ? (
+                <div className={styles.moreFilters}>
+                  <div className={styles.filterField}>
+                    <span className={styles.filterLabel}>{t("dataCatalog.resource.category")}</span>
+                    <Select
+                      className={styles.filterSelect}
+                      onChange={setCategoryFilter}
+                      options={[
+                        { label: t("common.all"), value: "" },
+                        ...CATEGORY_FILTERS.map((key) => ({
+                          label: t(`dataCatalog.categories.${key}`),
+                          value: key,
+                        })),
+                      ]}
+                      value={categoryFilter}
+                    />
+                  </div>
+                  <div className={styles.filterField}>
+                    <span className={styles.filterLabel}>
+                      {t("dataCatalog.resource.resourceStatus")}
+                    </span>
+                    <Select
+                      className={styles.filterSelect}
+                      onChange={setStatusFilter}
+                      options={[
+                        { label: t("common.all"), value: "" },
+                        ...RESOURCE_STATUS_FILTERS.map((key) => ({
+                          label: t(`dataCatalog.resourceStatuses.${key}`),
+                          value: key,
+                        })),
+                      ]}
+                      value={statusFilter}
+                    />
+                  </div>
+                  <div className={styles.filterField}>
+                    <span className={styles.filterLabel}>
+                      {t("dataCatalog.resource.enabledStatus")}
+                    </span>
+                    <Select
+                      className={styles.filterSelect}
+                      onChange={setEnabledFilter}
+                      options={[
+                        { label: t("common.all"), value: "" },
+                        { label: t("common.enabled"), value: "true" },
+                        { label: t("common.disabled"), value: "false" },
+                      ]}
+                      value={enabledFilter}
+                    />
+                  </div>
+                  <div className={styles.filterField}>
+                    <span className={styles.filterLabel}>
+                      {t("dataCatalog.resource.discoverStatus")}
+                    </span>
+                    <Select
+                      className={styles.filterSelect}
+                      onChange={setDiscoverStatusFilter}
+                      options={[
+                        { label: t("common.all"), value: "" },
+                        ...DISCOVER_STATUS_FILTERS.map((key) => ({
+                          label: t(`dataCatalog.discoverStatuses.${key}`),
+                          value: key,
+                        })),
+                      ]}
+                      value={discoverStatusFilter}
+                    />
+                  </div>
+                  {activeFilterCount > 0 ? (
+                    <AppButton onClick={clearFilters} type="link">
+                      {t("dataCatalog.resource.clearFilters")}
+                    </AppButton>
+                  ) : null}
                 </div>
-              </div>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -602,6 +756,7 @@ export function ResourceListPanel({
             columns={resourceColumns}
             dataSource={displayResources}
             locale={{ emptyText: t("dataCatalog.resource.noMatch") }}
+            onChange={handleTableChange}
             pagination={false}
             rowKey="id"
             scroll={{ x: 1040 }}

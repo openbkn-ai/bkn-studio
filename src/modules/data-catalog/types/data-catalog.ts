@@ -109,10 +109,15 @@ export type CatalogResource = {
 export type ResourceListQuery = {
   catalogId?: string;
   category?: ResourceCategory;
+  direction?: "asc" | "desc";
+  enabled?: boolean;
   keyword?: string;
+  lastDiscoverStatus?: CatalogResource["lastDiscoverStatus"];
   limit?: number;
   offset?: number;
   schema?: string;
+  sort?: "name";
+  status?: ResourceStatus;
 };
 
 export type ResourceCreateInput = {

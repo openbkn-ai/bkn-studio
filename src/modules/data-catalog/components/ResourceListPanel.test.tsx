@@ -124,6 +124,44 @@ describe("ResourceListPanel", () => {
     );
   });
 
+  it("sorts resource names ascending by default and supports descending order", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "customers",
+          operations: ["view_detail"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "db.customers",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ direction: "asc", sort: "name" }),
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("columnheader", { name: "dataCatalog.resource.name" }));
+
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ direction: "desc", sort: "name" }),
+      ),
+    );
+  });
+
   // The bug: the button asked for admin-authz:grant, which no network_builder holds, so the person
   // who created the data connection could not share it — while bkn-safe was already accepting the
   // grant from them on /me/object-grants.
@@ -217,6 +255,33 @@ describe("ResourceListPanel", () => {
     expect(screen.getByText("dataCatalog.resource.localIndexStatuses.unavailable")).toBeTruthy();
     expect(screen.queryByText("dataCatalog.resource.fieldCount")).toBeNull();
     expect(screen.queryByText("dataCatalog.resource.rowCount")).toBeNull();
+  });
+
+  it("shows the source identifier below the resource name", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "table",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "resource-1",
+          localIndexStatus: "unavailable",
+          name: "客户订单",
+          operations: ["view_detail"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "crm_core.orders",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+
+    expect(await screen.findByText("客户订单")).toBeTruthy();
+    expect(screen.getByText("crm_core.orders")).toBeTruthy();
   });
 
   it("opens preview when list summaries omit schema and scale fields", async () => {
