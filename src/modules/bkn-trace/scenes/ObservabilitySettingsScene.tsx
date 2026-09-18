@@ -5,10 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { Alert, Button, Empty, message, Modal, Spin, Table, Tag, Typography } from "antd";
+import { Alert, Button, Empty, message, Modal, Spin, Switch, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -18,16 +18,19 @@ import {
   createArchive,
   downloadArchive,
   getArchiveOverview,
+  getTraceEvidenceConfiguration,
   listArchiveJobs,
   listLogPolicies,
   listLogSources,
   retryArchiveCleanup,
+  updateTraceEvidenceConfiguration,
   type ArchiveJob,
   type ArchiveKind,
   type ArchiveOverview,
   type BusinessModule,
   type LogPolicy,
   type LogSourceStatus,
+  type TraceEvidenceConfiguration,
 } from "@/modules/bkn-trace/services/observability.service";
 import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
 
@@ -48,6 +51,7 @@ type ModuleSourceRow = {
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
+  const mounted = useRef(true);
   const { runtimeConfig } = useAppServices();
   const superAdmin = runtimeConfig.currentUser.isSuperAdmin;
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
@@ -59,6 +63,17 @@ export function ObservabilitySettingsScene() {
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
+  const [traceEvidence, setTraceEvidence] = useState<TraceEvidenceConfiguration>();
+  const [traceEvidenceWrite, setTraceEvidenceWrite] = useState(false);
+  const [updatingTraceEvidence, setUpdatingTraceEvidence] = useState(false);
+  const [pendingTraceEvidence, setPendingTraceEvidence] = useState<boolean>();
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!superAdmin) {
@@ -69,7 +84,9 @@ export function ObservabilitySettingsScene() {
     let active = true;
     getAccessProfile()
       .then(async (profile) => {
-        if (!profile.globalLogSearch && !profile.logPolicyRead) {
+        if (!active) return;
+        setTraceEvidenceWrite(profile.traceEvidenceConfigurationWrite);
+        if (!profile.globalLogSearch && !profile.logPolicyRead && !profile.traceEvidenceConfigurationRead) {
           if (active) {
             setDenied(true);
             setLoading(false);
@@ -84,6 +101,7 @@ export function ObservabilitySettingsScene() {
           traceArchiveResult,
           logJobsResult,
           traceJobsResult,
+          traceEvidenceResult,
         ] = await Promise.allSettled([
           profile.globalLogSearch ? listLogSources() : Promise.resolve([]),
           profile.logPolicyRead ? listLogPolicies() : Promise.resolve([]),
@@ -99,6 +117,9 @@ export function ObservabilitySettingsScene() {
           profile.observabilityArchiveManage
             ? listArchiveJobs("trace")
             : Promise.resolve<ArchiveJob[]>([]),
+          profile.traceEvidenceConfigurationRead
+            ? getTraceEvidenceConfiguration()
+            : Promise.resolve<TraceEvidenceConfiguration | undefined>(undefined),
         ]);
         if (!active) return;
         if (sourceResult.status === "fulfilled") {
@@ -116,6 +137,7 @@ export function ObservabilitySettingsScene() {
           ...(logJobsResult.status === "fulfilled" ? logJobsResult.value : []),
           ...(traceJobsResult.status === "fulfilled" ? traceJobsResult.value : []),
         ]);
+        if (traceEvidenceResult.status === "fulfilled") setTraceEvidence(traceEvidenceResult.value);
         if (sourceResult.status === "rejected" || policyResult.status === "rejected")
           setError(t("bknTrace.errors.queryFailed"));
         setLoading(false);
@@ -130,6 +152,48 @@ export function ObservabilitySettingsScene() {
       active = false;
     };
   }, [superAdmin, t]);
+
+  const operationActive = traceEvidence?.operation
+    ? ["pending", "rolling_out", "rolling_back"].includes(traceEvidence.operation.phase)
+    : false;
+  const operationFailed = traceEvidence?.operation
+    ? ["failed", "rollback_failed"].includes(traceEvidence.operation.phase)
+    : false;
+
+  useEffect(() => {
+    if (!operationActive) return;
+    let active = true;
+    const timer = window.setInterval(() => {
+      getTraceEvidenceConfiguration()
+        .then((configuration) => {
+          if (active) setTraceEvidence(configuration);
+        })
+        .catch(() => undefined);
+    }, 1500);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [operationActive]);
+
+  const updateTraceEvidence = async (enabled: boolean) => {
+    if (!traceEvidence) return;
+    setUpdatingTraceEvidence(true);
+    try {
+      const configuration = await updateTraceEvidenceConfiguration(enabled, traceEvidence.revision);
+      if (mounted.current) setTraceEvidence(configuration);
+    } catch {
+      try {
+        const configuration = await getTraceEvidenceConfiguration();
+        if (mounted.current) setTraceEvidence(configuration);
+      } catch {
+        // Keep the last known state when the recovery read is unavailable.
+      }
+      if (mounted.current) setError(t("bknTrace.errors.traceEvidenceUpdateFailed"));
+    } finally {
+      if (mounted.current) setUpdatingTraceEvidence(false);
+    }
+  };
 
   const moduleSources = useMemo<ModuleSourceRow[]>(
     () =>
@@ -298,6 +362,58 @@ export function ObservabilitySettingsScene() {
       </header>
       <Alert message={t("bknTrace.settings.readOnlyNotice")} showIcon type="info" />
       {error ? <Alert message={error} showIcon type="error" /> : null}
+
+      {traceEvidence ? (
+        <SettingsSection title={t("bknTrace.settings.traceEvidence")}>
+          <Typography.Paragraph>
+            {operationActive
+              ? t("bknTrace.settings.traceEvidenceOperation", { phase: traceEvidence.operation?.phase })
+              : operationFailed
+                ? t("bknTrace.settings.traceEvidenceFailed", {
+                    desired: String(traceEvidence.desiredEnabled),
+                    effective: String(traceEvidence.effectiveEnabled),
+                    phase: traceEvidence.operation?.phase,
+                  })
+                : traceEvidence.effectiveEnabled
+                  ? t("bknTrace.settings.traceEvidenceEnabled")
+                  : t("bknTrace.settings.traceEvidenceDisabled")}
+          </Typography.Paragraph>
+          {traceEvidenceWrite ? (
+            <Switch
+              checked={traceEvidence.desiredEnabled}
+              disabled={updatingTraceEvidence || operationActive}
+              onChange={setPendingTraceEvidence}
+            />
+          ) : null}
+          <Typography.Paragraph type="secondary">
+            {t("bknTrace.settings.traceEvidenceRevision", { revision: traceEvidence.revision })}
+          </Typography.Paragraph>
+          {traceEvidence.operation?.error ? (
+            <Alert message={traceEvidence.operation.error} type="error" />
+          ) : null}
+          {traceEvidence.services.map((service) => (
+            <Typography.Paragraph key={service.name}>
+              {service.name}: {service.phase} ({service.readyReplicas}/{service.requiredReplicas})
+            </Typography.Paragraph>
+          ))}
+        </SettingsSection>
+      ) : null}
+      <Modal
+        open={pendingTraceEvidence !== undefined}
+        title={t(
+          pendingTraceEvidence
+            ? "bknTrace.settings.confirmEnableTitle"
+            : "bknTrace.settings.confirmDisableTitle",
+        )}
+        onCancel={() => setPendingTraceEvidence(undefined)}
+        onOk={() => {
+          const enabled = pendingTraceEvidence;
+          setPendingTraceEvidence(undefined);
+          if (enabled !== undefined) void updateTraceEvidence(enabled);
+        }}
+      >
+        <Typography.Text>{t("bknTrace.settings.confirmReleaseImpact")}</Typography.Text>
+      </Modal>
 
       <SettingsSection title={t("bknTrace.settings.overview")}>
         <div className={styles.metricGrid}>

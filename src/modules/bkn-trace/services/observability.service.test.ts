@@ -8,15 +8,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock },
+  http: { get: getMock, put: putMock },
 }));
 
 describe("observability service", () => {
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
+    putMock.mockReset();
   });
 
   it("queries the operation audit API with stable business filters", async () => {
@@ -152,6 +154,71 @@ describe("observability service", () => {
       retentionDays: 7,
       readOnly: true,
     });
+  });
+
+  it("loads the effective trace evidence release state", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        desired_enabled: true,
+        effective_enabled: false,
+        revision: 8,
+        operation: { id: "tec-8", phase: "rolling_out" },
+        services: [
+          {
+            name: "bkn-backend",
+            desired_revision: 8,
+            applied_revision: 7,
+            phase: "waiting_ready",
+            ready_replicas: 1,
+            required_replicas: 2,
+          },
+        ],
+      },
+    });
+    const { getTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/observability.service");
+
+    const result = await getTraceEvidenceConfiguration();
+
+    expect(getMock).toHaveBeenCalledWith("/observability/v1/trace-evidence-configuration", {
+      skipErrorToast: true,
+    });
+    expect(result).toMatchObject({
+      desiredEnabled: true,
+      effectiveEnabled: false,
+      revision: 8,
+      operation: { id: "tec-8", phase: "rolling_out" },
+    });
+    expect(result.services[0]).toMatchObject({
+      name: "bkn-backend",
+      desiredRevision: 8,
+      appliedRevision: 7,
+      readyReplicas: 1,
+      requiredReplicas: 2,
+    });
+  });
+
+  it("submits only the desired boolean and optimistic revision", async () => {
+    putMock.mockResolvedValueOnce({
+      data: {
+        desired_enabled: true,
+        effective_enabled: false,
+        revision: 8,
+        operation: { id: "tec-8", phase: "pending" },
+        services: [],
+      },
+    });
+    const { updateTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/observability.service");
+
+    const result = await updateTraceEvidenceConfiguration(true, 7);
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/observability/v1/trace-evidence-configuration",
+      { enabled: true, expected_revision: 7 },
+      { skipErrorToast: true },
+    );
+    expect(result).toMatchObject({ desiredEnabled: true, effectiveEnabled: false, revision: 8 });
   });
 
   it("keeps log and trace archive overview endpoints separate", async () => {

@@ -141,6 +141,23 @@ export type LogPolicy = {
   storageTargetRef?: string;
 };
 
+export type TraceEvidenceServiceStatus = {
+  appliedRevision: number;
+  desiredRevision: number;
+  name: string;
+  phase: string;
+  readyReplicas: number;
+  requiredReplicas: number;
+};
+
+export type TraceEvidenceConfiguration = {
+  desiredEnabled: boolean;
+  effectiveEnabled: boolean;
+  operation?: { error?: string; id: string; phase: string };
+  revision: number;
+  services: TraceEvidenceServiceStatus[];
+};
+
 export type ArchiveKind = "log" | "trace";
 
 export type ArchiveOverview = {
@@ -291,6 +308,58 @@ export async function listLogPolicies(): Promise<LogPolicy[]> {
     scope: policy.scope,
     ...(policy.storage_target_ref ? { storageTargetRef: policy.storage_target_ref } : {}),
   }));
+}
+
+export async function getTraceEvidenceConfiguration(): Promise<TraceEvidenceConfiguration> {
+  const response = await http.get<BackendTraceEvidenceConfiguration>(
+    `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
+    { skipErrorToast: true },
+  );
+  return mapTraceEvidenceConfiguration(response.data);
+}
+
+export async function updateTraceEvidenceConfiguration(
+  enabled: boolean,
+  expectedRevision: number,
+): Promise<TraceEvidenceConfiguration> {
+  const response = await http.put<BackendTraceEvidenceConfiguration>(
+    `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
+    { enabled, expected_revision: expectedRevision },
+    { skipErrorToast: true },
+  );
+  return mapTraceEvidenceConfiguration(response.data);
+}
+
+type BackendTraceEvidenceConfiguration = {
+  desired_enabled: boolean;
+  effective_enabled: boolean;
+  operation?: { error?: string; id: string; phase: string };
+  revision: number;
+  services: Array<{
+    applied_revision: number;
+    desired_revision: number;
+    name: string;
+    phase: string;
+    ready_replicas: number;
+    required_replicas: number;
+  }>;
+};
+
+function mapTraceEvidenceConfiguration(response: BackendTraceEvidenceConfiguration): TraceEvidenceConfiguration {
+  return {
+    desiredEnabled: response.desired_enabled,
+    effectiveEnabled: response.effective_enabled,
+    ...(response.operation ? { operation: response.operation } : {}),
+    revision: response.revision,
+    services: response.services.map((service) => ({
+      appliedRevision: service.applied_revision,
+      desiredRevision: service.desired_revision,
+      name: service.name,
+      phase: service.phase,
+      readyReplicas: service.ready_replicas,
+      requiredReplicas: service.required_replicas,
+    })),
+  };
 }
 
 export async function getArchiveOverview(kind: ArchiveKind): Promise<ArchiveOverview> {

@@ -1081,7 +1081,17 @@ export const bknTraceEnUS = {
       overview: "Runtime overview",
       policies: "Retention and storage policies",
       readOnlyNotice:
-        "Version 0.1.4 remains read-only and shows only maintenance facts returned by the server.",
+        "Retention and archive policies remain read-only. Trace and evidence changes run through the managed release controller with automatic rollback.",
+      traceEvidence: "Trace and evidence chain",
+      traceEvidenceDisabled: "Disabled",
+      traceEvidenceEnabled: "Enabled",
+      traceEvidenceOperation: "Release in progress: {{phase}}",
+      traceEvidenceFailed: "Release {{phase}} (desired: {{desired}}, effective: {{effective}})",
+      confirmEnableTitle: "Enable Trace and evidence chain?",
+      confirmDisableTitle: "Disable Trace and evidence chain?",
+      confirmReleaseImpact:
+        "This performs a rolling release of managed services; old and new instances may briefly coexist.",
+      traceEvidenceRevision: "Configuration revision {{revision}}",
       recentArchives: "Recent archives",
       sources: "Collection sources",
       sourceLabels: {
@@ -1148,6 +1158,8 @@ export const bknTraceEnUS = {
         "Unable to load the current provenance access profile. Refresh and try again.",
       missingScope: "Enter a trace id or request id.",
       queryFailed: "Query failed.",
+      traceEvidenceUpdateFailed:
+        "The release request was not accepted. The latest server state has been reloaded; review it and try again.",
     },
     emptyStates: {
       businessNodes: "No business semantic nodes returned.",
