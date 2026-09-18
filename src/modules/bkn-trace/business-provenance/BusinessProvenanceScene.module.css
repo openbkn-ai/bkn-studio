@@ -110,7 +110,7 @@
   line-height: 1.55;
 }
 .statusText {
-  color: #6b7a92;
+  color: var(--color-text-secondary);
 }
 .evidence {
   display: inline-block;

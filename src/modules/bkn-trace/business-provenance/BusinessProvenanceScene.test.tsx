@@ -13,6 +13,13 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BusinessProvenanceScene } from "@/modules/bkn-trace/business-provenance/BusinessProvenanceScene";
 
+const normalizeCss = (source: string) =>
+  source
+    .replace(/\s+/g, " ")
+    .replace(/\s*([{}:;,>])\s*/g, "$1")
+    .replace(/;}/g, "}")
+    .replace(/(-?)0\.(\d+)/g, "$1.$2");
+
 const getConversations = vi.hoisted(() => vi.fn());
 const getInteractions = vi.hoisted(() => vi.fn());
 const getInteraction = vi.hoisted(() => vi.fn());
@@ -557,12 +564,14 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
   });
 
   it("defines compact typography for the analysis workspace", () => {
-    const styles = readFileSync(
-      resolve(
-        process.cwd(),
-        "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css",
+    const styles = normalizeCss(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css",
+        ),
+        "utf8",
       ),
-      "utf8",
     );
 
     expect(styles).toContain(".conversationHeading h1{font-size:18px}");
@@ -887,12 +896,14 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(within(inspector).getByText("op-34")).not.toBeNull();
     expect(inspector.scrollTop).toBe(0);
 
-    const styles = readFileSync(
-      resolve(
-        process.cwd(),
-        "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css",
+    const styles = normalizeCss(
+      readFileSync(
+        resolve(
+          process.cwd(),
+          "src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css",
+        ),
+        "utf8",
       ),
-      "utf8",
     );
 
     expect(styles).toContain(
