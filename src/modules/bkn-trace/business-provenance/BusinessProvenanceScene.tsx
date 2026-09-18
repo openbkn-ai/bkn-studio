@@ -11,6 +11,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { TimeRailView } from "../evidence-chain/BusinessProvenance016";
 import { CurrentExplanationPanel } from "../evidence-chain/CurrentExplanationPanel";
 import i18n from "@/app/locales/i18n";
 import { MarkdownText } from "@/framework/ui/common/MarkdownText";
@@ -703,7 +704,7 @@ export function BusinessProvenanceScene() {
             </footer>
           </section>
           <div className={styles.viewTabs} role="tablist" aria-label={bpText("views.label")}><button type="button" role="tab" aria-selected={view === "timeline"} className={view === "timeline" ? styles.viewTabSelected : ""} onClick={() => setView("timeline")}>{bpText("views.timeline")}</button><button type="button" role="tab" aria-selected={view === "evidence"} className={view === "evidence" ? styles.viewTabSelected : ""} onClick={() => setView("evidence")}>{bpText("views.evidence")}</button></div>
-          {view === "timeline" ? <section className={styles.timelineWorkspace}>
+          {view === "timeline" ? projection.timeRail?.some(item => item.capability?.evidence_contract === "managed_function_execution/v1") ? <TimeRailView items={projection.timeRail} summaries={Object.fromEntries(projection.operations.map(operation => [operation.operationId, { name: operationTitle(operation), object: requestedObjectDescription(operation, projection.operations), condition: operationCondition(operation), result: operationResult(operation, projection.derivedFacts) }]))} /> : <section className={styles.timelineWorkspace}>
             <header className={styles.timelineHeader}><div><h3>{bpText("timeline.title")}</h3><p>{bpText("timeline.description")}</p></div><span>{bpText("callCount", { count: projection.operations.length })}</span></header>
             <div className={styles.timelineFilters} role="group" aria-label={bpText("timeline.filterLabel")}><button type="button" className={timelineFilter === "all" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("all"); setDetailOperation(projection.operations[0]); }}>{bpText("timeline.all", { count: projection.operations.length })}</button><button type="button" className={timelineFilter === "completed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("completed"); setDetailOperation(projection.operations.find(item => item.callStatus === "completed")); }}>{bpText("timeline.completed", { count: projection.operations.filter(item => item.callStatus === "completed").length })}</button><button type="button" className={timelineFilter === "failed" ? styles.timelineFilterActive : ""} onClick={() => { setTimelineFilter("failed"); setDetailOperation(projection.operations.find(item => item.callStatus === "failed")); }}>{bpText("timeline.failed", { count: projection.operations.filter(item => item.callStatus === "failed").length })}</button></div>
             {projection.operations.length === 0 ? <Empty description={bpText("rounds.noOperations")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : visibleOperations.length === 0 ? <Empty description={bpText("timeline.emptyFiltered")} image={Empty.PRESENTED_IMAGE_SIMPLE} /> : <div className={styles.timelineLayout}>

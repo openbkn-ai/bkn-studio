@@ -485,4 +485,20 @@ describe("BusinessProvenanceScene", { timeout: 30_000 }, () => {
     expect(styles).toContain(".timelineLayout{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr}");
   });
 
+  it("opens managed function hierarchy on the default timeline without generating evidence", async () => {
+    getConversations.mockResolvedValue({ entries: [{ conversationId: "conv-managed", questionPreview: "最多能卖多少", interactionCount: 1 }], total: 1 });
+    getInteractions.mockResolvedValue({ entries: [{ interactionId: "int-managed", roundNumber: 1, questionPreview: "最多能卖多少" }], total: 1 });
+    getInteraction.mockResolvedValue({ interactionId: "int-managed", conversationContext: [], derivedFacts: [], contextRelations: [], operations: [{ operationId: "query", toolName: "query_object_instance", callStatus: "completed", query: { resultCount: 507 }, objects: [{ id: "bom", name: "产品BOM" }], elements: [{ kind: "object", id: "bom", name: "产品BOM" }], missingFacts: [] }], timeRail: [
+      { id: "function", order: 1, operation_id: "function", attempt: 1, interface_name: "function-id", status: "completed", capability: { evidence_contract: "managed_function_execution/v1" }, input: { mode: "inline", inline: { function_name: "合计可售", arguments: { product: "382-000005" } } }, output: { mode: "inline", inline: { total_sellable_qty: 534, fg_qty: 534, theoretical_build_qty: 0 } } },
+      { id: "query", order: 2, operation_id: "query", parent_operation_id: "function", attempt: 1, interface_name: "query_object_instance", status: "completed", input: { mode: "inline", inline: {} } },
+    ] });
+    render(<BusinessProvenanceScene />);
+    fireEvent.click(await screen.findByRole("button", { name: "最多能卖多少" }));
+    const expand = await screen.findByRole("button", { name: "展开内部执行（1）" });
+    expect(screen.getByRole("tab", { name: "时间链" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText(/实际结果.*合计可售 534.*成品现货 534.*理论可产 0/)).toBeInTheDocument();
+    fireEvent.click(expand);
+    expect(screen.getByRole("button", { name: /产品BOM.*返回 507/ })).toBeInTheDocument();
+  });
+
 });

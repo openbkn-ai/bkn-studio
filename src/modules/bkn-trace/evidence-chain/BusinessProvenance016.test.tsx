@@ -85,6 +85,11 @@ describe("BusinessProvenance016", () => {
     expect(screen.getAllByText("run_sql").length).toBeGreaterThan(0);
     expect(screen.getByText("artifact:sql-input")).toBeTruthy();
     expect(screen.getByText("op-sql")).toBeTruthy();
+    expect(screen.queryByText(/SELECT SUM\(available_qty\)/)).toBeNull();
+    const attempt = screen.getByText(/\(run_sql\)/).closest("details");
+    expect(attempt).toBeTruthy();
+    attempt!.open = true;
+    fireEvent(attempt!, new Event("toggle"));
     expect(screen.getByText(/SELECT SUM\(available_qty\)/)).toBeTruthy();
   });
 
@@ -173,6 +178,99 @@ describe("BusinessProvenance016", () => {
     expect(screen.getByText("op-sql")).toBeTruthy();
     expect(screen.getByText(/SELECT SUM\(available_qty\)/)).toBeTruthy();
     expect(screen.queryByText("汇总物料可用库存")).toBeNull();
+  });
+
+  it("groups a managed business function with its internal BKN calls", () => {
+    const managedView: EvidenceChainView = {
+      ...view,
+      timeRail: [
+        {
+          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:00Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { tool_id: "material_where_used" } },
+        },
+        {
+          id: "time:function:1", order: 2, operation_id: "op-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 100, inline: { function_name: "物料反查产品", function_description: "查询使用指定物料的产品", arguments: { material_code: "M-1" } } },
+          output: { mode: "inline", media_type: "application/json", byte_length: 60, inline: { result: { affected_product_count: 2, products: ["P-1", "P-2"] }, exit_code: 0 } },
+          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+        },
+        {
+          id: "time:query:1", order: 3, operation_id: "op-query", parent_operation_id: "op-function", attempt: 1, interface_name: "query_object_instance", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:02Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { ot_id: "material" } },
+        },
+        {
+          id: "time:sql:1", order: 4, operation_id: "op-sql-child", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { sql: "select ..." } },
+        },
+      ],
+    };
+
+    render(<BusinessProvenance016 view={managedView} panel="timeline" />);
+    expect(screen.getByRole("heading", { name: "物料反查产品" })).toBeTruthy();
+    expect(screen.getAllByText("execute_tool · material_where_used")).toHaveLength(2);
+    expect(screen.getByText(/业务输入：物料编码 M-1/)).toBeTruthy();
+    expect(screen.getByText(/实际结果：受影响产品数 2/)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "execute_tool" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "展开内部执行（2）" }));
+    expect(screen.getByRole("button", { name: /查询业务对象.*query_object_instance/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /查询业务数据.*run_sql/ })).toBeTruthy();
+  });
+
+  it("classifies a managed function with a failed child only as failed and keeps the inspector in the filtered set", () => {
+    const mixedView: EvidenceChainView = {
+      ...view,
+      timeRail: [
+        {
+          id: "time:function:mixed", order: 1, operation_id: "op-function-mixed", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } },
+          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+        },
+        {
+          id: "time:query:failed", order: 2, operation_id: "op-query-failed", parent_operation_id: "op-function-mixed", attempt: 1, interface_name: "query_object_instance", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:02Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { ot_id: "material" } },
+          error: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { code: "query_failed" } },
+        },
+        {
+          id: "time:sql:ok", order: 3, operation_id: "op-sql-ok", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { sql: "select ..." } },
+          output: { mode: "inline", media_type: "application/json", byte_length: 16, inline: { total: 906 } },
+        },
+      ],
+    };
+
+    render(<BusinessProvenance016 view={mixedView} panel="timeline" />);
+    expect(screen.getByRole("button", { name: "成功 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "失败 1" })).toBeTruthy();
+    expect(screen.getAllByText("失败").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "失败 1" }));
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("物料反查产品");
+    fireEvent.click(screen.getByRole("button", { name: "成功 1" }));
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("查询业务数据");
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("成功");
+  });
+
+  it("keeps deterministic functions visible when claims have no attribution edge", () => {
+    const unlinkedView: EvidenceChainView = {
+      ...view,
+      selectedPairGraphs: {
+        ...view.selectedPairGraphs,
+        "pair-stock": {
+          ...view.selectedPairGraphs!["pair-stock"],
+          businessFunctions: [{
+            id: "function:managed", displayName: "要X套净需求与齐套", capabilityKind: "registered_bkn_function",
+            businessPurpose: "核对齐套", businessInputs: [{ name: "material_code", value: "M-1" }], logicSummary: "读取 BOM 与库存",
+            businessOutputs: [{ summary: '{"result":{"affected_product_count":2,"products":["P-1","P-2"]},"exit_code":0}', evidenceRefs: [], adoptedRowRefs: [] }],
+            operationIds: ["op-function"], supportsClaimIds: [], schemaRefs: [],
+            technicalExecution: { interfaceNames: ["execute_tool"], inputPayloadRef: "", outputPayloadRef: "", completeness: "complete" },
+            validationStatus: "verified",
+          }],
+        },
+      },
+    };
+    render(<BusinessProvenance016 view={unlinkedView} panel="evidence" />);
+    expect(screen.getByRole("heading", { name: "要X套净需求与齐套" })).toBeTruthy();
+    expect(screen.getByText("物料编码")).toBeTruthy();
+    expect(screen.getByText("受影响产品数 2；products 2 项：P-1、P-2")).toBeTruthy();
   });
 
   it("supports a full-screen provenance workspace", () => {

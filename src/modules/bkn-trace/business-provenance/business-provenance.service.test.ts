@@ -40,6 +40,7 @@ describe("EE business provenance service", () => {
   it("reads an interaction projection and its canonical Markdown from EE", async () => {
     getMock
       .mockResolvedValueOnce({ data: {
+        time_rail: [{ id: "time:child:1", operation_id: "child", parent_operation_id: "function", order: 1 }],
         interaction_id: "int-1", interaction_question: "完整问题", interaction_result: "## 完整回答",
         conversation_context: [{ knowledge_network_id: "supply", source_interaction_id: "int-prior", source_operation_id: "op-prior" }],
         derived_facts: [{ rule: "changed_query_still_zero_result", source_operation_id: "op-0", operation_id: "op-1", element_id: "purchase_order" }],
@@ -60,6 +61,7 @@ describe("EE business provenance service", () => {
       "/agent-observability/v1/business-provenance/interactions/int-1/markdown",
       { responseType: "text" },
     );
+    expect(projection.timeRail?.[0]).toMatchObject({ operation_id: "child", parent_operation_id: "function" });
     expect(projection.operations[0]?.operationId).toBe("op-1");
     expect(projection).toMatchObject({ interactionQuestion: "完整问题", interactionResult: "## 完整回答" });
     expect(projection.operations[0]?.elements[0]).toMatchObject({ parentId: "inventory", field: "available_qty" });
