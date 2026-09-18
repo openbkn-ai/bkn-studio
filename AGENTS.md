@@ -37,9 +37,10 @@ Read this first, then load the relevant project documents below. Before working 
 
 ## Mandatory local pre-commit checks
 
-Before **every** commit, run the following local quality checks. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
+Before **every** commit, run the repository formatter first, review its changes, and then run the following local quality checks. Formatting is mandatory for every commit; do not rely on `format:check` or remote CI to discover files that still need formatting. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
 
 ```bash
+pnpm run format
 node scripts/check-license-headers.mjs
 pnpm run format:check
 pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
