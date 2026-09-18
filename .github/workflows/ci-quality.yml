@@ -116,10 +116,15 @@ jobs:
         run: |
           # These tests inspect source files with node:fs, so Vitest's import
           # graph cannot select them from changes to the files they enforce.
-          pnpm exec vitest --run \
-            src/framework/compat/clipboard-boundary.test.ts \
-            src/modules/bkn-trace/legacy-business-provenance.boundary.test.ts \
-            src/modules/bkn-trace/trace-analysis/trace-analysis.boundary.test.ts
+          # Discover all boundary-test files to keep this safety net in sync
+          # when a boundary contract is added or renamed.
+          mapfile -d '' -t boundary_tests < <(
+            find src -type f \( -name '*boundary.test.ts' -o -name '*boundary.test.tsx' \) -print0 | sort -z
+          )
+
+          if [ "${#boundary_tests[@]}" -gt 0 ]; then
+            pnpm exec vitest --run "${boundary_tests[@]}"
+          fi
 
       - name: Type check
         run: pnpm exec tsc -b --pretty false
