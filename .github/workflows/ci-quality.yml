@@ -119,7 +119,7 @@ jobs:
           # Discover all boundary-test files to keep this safety net in sync
           # when a boundary contract is added or renamed.
           mapfile -d '' -t boundary_tests < <(
-            find src -type f \( -name '*boundary.test.ts' -o -name '*boundary.test.tsx' \) -print0 | sort -z
+            rg --files -0 -g '*boundary.test.ts' -g '*boundary.test.tsx' | sort -z
           )
 
           if [ "${#boundary_tests[@]}" -gt 0 ]; then
