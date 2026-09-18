@@ -5,13 +5,14 @@
 
 name: ci-quality
 
-# Push events cover every branch, so same-repo PRs skip their duplicate run
-# (the push run on the head SHA reports the same check). The pull_request
-# trigger remains for fork PRs, whose pushes cannot run workflows here.
+# PRs run affected Vitest tests for fast feedback. Pushes to main retain the
+# complete quality suite, so the default branch remains the full regression
+# gate. Keeping the two triggers disjoint also avoids duplicate same-repo PR
+# runs for the same head SHA.
 on:
   pull_request:
   push:
-    branches: ["**"]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -24,11 +25,15 @@ permissions:
 jobs:
   quality:
     name: ci-quality
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        # Vitest's --changed mode needs the PR base commit to be available.
+        # A full history is also safer than relying on an event-specific
+        # shallow-fetch edge case; main still runs the unchanged full suite.
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -60,8 +65,45 @@ jobs:
       - name: Theme surface checks
         run: pnpm run theme:scan-surfaces
 
+      - name: Select unit test scope
+        id: unit-tests
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # The dependency graph selects tests for ordinary feature-module
+          # changes. Shared runtime and tooling changes can affect arbitrary
+          # modules, so they deliberately retain the full suite on PRs.
+          full_suite_pattern='^(src/(app|framework|shared|test)/|src/main\.tsx$|src/vite-env\.d\.ts$|vite\.config\.ts$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig[^/]*\.json$|eslint\.config[^/]*\.(js|mjs|cjs)$|prettier\.config[^/]*\.(js|mjs|cjs)$|\.github/workflows/)'
+
+          if ! git cat-file -e "${BASE_SHA}^{commit}"; then
+            echo "PR base commit is unavailable; using the full unit test suite."
+            echo "scope=full" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "${BASE_SHA}" HEAD | grep -Eq "$full_suite_pattern"; then
+            echo "Shared runtime or tooling changed; using the full unit test suite."
+            echo "scope=full" >> "$GITHUB_OUTPUT"
+          else
+            echo "Module-only change; using affected Vitest tests."
+            echo "scope=affected" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Unit tests
-        run: pnpm exec vitest --run
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_SCOPE: ${{ steps.unit-tests.outputs.scope || 'full' }}
+        run: |
+          set -euo pipefail
+
+          if [ "$TEST_SCOPE" = "affected" ]; then
+            # Dependency analysis can fail before tests run for packages that
+            # are only reached while tracing a changed source file. Preserve
+            # the regression gate by retrying the established full suite.
+            pnpm exec vitest --run --changed "$BASE_SHA" || pnpm exec vitest --run
+          else
+            pnpm exec vitest --run
+          fi
 
       - name: Type check
         run: pnpm exec tsc -b --pretty false
