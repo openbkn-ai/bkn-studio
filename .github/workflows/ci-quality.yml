@@ -5,14 +5,14 @@
 
 name: ci-quality
 
-# PRs run affected Vitest tests for fast feedback. Pushes to main retain the
-# complete quality suite, so the default branch remains the full regression
-# gate. Keeping the two triggers disjoint also avoids duplicate same-repo PR
-# runs for the same head SHA.
+# PRs run affected Vitest tests for fast feedback. Pushes to main and release
+# branches retain the complete quality suite, so protected branches remain
+# full regression gates. Keeping the two triggers disjoint also avoids
+# duplicate same-repo PR runs for the same head SHA.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
   workflow_dispatch:
 
 concurrency:
@@ -31,7 +31,8 @@ jobs:
       - uses: actions/checkout@v4
         # Vitest's --changed mode needs the PR base commit to be available.
         # A full history is also safer than relying on an event-specific
-        # shallow-fetch edge case; main still runs the unchanged full suite.
+        # shallow-fetch edge case; protected branches still run the unchanged
+        # full suite.
         with:
           fetch-depth: 0
 
@@ -67,7 +68,8 @@ jobs:
 
       - name: Select unit test scope
         id: unit-tests
-        if: github.event_name == 'pull_request'
+        # Release PRs use the full suite just like direct release pushes.
+        if: github.event_name == 'pull_request' && !startsWith(github.event.pull_request.base.ref, 'release/')
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
