@@ -96,24 +96,32 @@ describe("isStudioPermissionGranted", () => {
   });
 
   it("能力的写操作按 function 判定，且 edit 落到 modify、debug 落到 execute", () => {
-    expect(isStudioPermissionGranted("execution-factory-lab:capability:create", grants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory-lab:capability:create", grants, false),
+    ).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory-lab:capability:view", grants, false)).toBe(
+      true,
+    );
     expect(isStudioPermissionGranted("execution-factory:operator:edit", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("execution-factory:operator:debug", grants, false)).toBe(true);
   });
 
   it("能力列表接受任一执行单元的查看权限", () => {
     for (const type of ["function", "tool_box", "mcp", "skill"]) {
-      const viewOnly = flattenSafeGrants([
-        { operations: ["view"], resource: { id: "*", type } },
-      ]);
-      expect(isStudioPermissionGranted("execution-factory-lab:capability:view", viewOnly, false)).toBe(true);
+      const viewOnly = flattenSafeGrants([{ operations: ["view"], resource: { id: "*", type } }]);
+      expect(
+        isStudioPermissionGranted("execution-factory-lab:capability:view", viewOnly, false),
+      ).toBe(true);
     }
   });
 
   it("函数权限与 bkn-safe 的 function 资源类型一致", () => {
-    expect(isStudioPermissionGranted("execution-factory-lab:function:create", grants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory-lab:function:create", grants, false)).toBe(
+      true,
+    );
+    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", grants, false)).toBe(
+      true,
+    );
   });
 
   it("函数集页面不再把独立的 operator 资源授权当作 function 授权", () => {
@@ -121,15 +129,25 @@ describe("isStudioPermissionGranted", () => {
       { operations: ["view", "create", "execute"], resource: { id: "*", type: "operator" } },
     ]);
 
-    expect(isStudioPermissionGranted("execution-factory:operator:view", legacyOperatorGrants, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted("execution-factory:operator:view", legacyOperatorGrants, false),
+    ).toBe(false);
     expect(isStudioPermissionGranted("execution-factory:operator:view", grants, false)).toBe(true);
   });
 
   it("函数集授权不连带 API 工具集", () => {
-    const functionGrants = flattenSafeGrants([{ operations: ["create", "execute"], resource: { id: "*", type: "function" } }]);
-    expect(isStudioPermissionGranted("execution-factory-lab:function:create", functionGrants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory-lab:function:debug", functionGrants, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:toolbox:create", functionGrants, false)).toBe(false);
+    const functionGrants = flattenSafeGrants([
+      { operations: ["create", "execute"], resource: { id: "*", type: "function" } },
+    ]);
+    expect(
+      isStudioPermissionGranted("execution-factory-lab:function:create", functionGrants, false),
+    ).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory-lab:function:debug", functionGrants, false),
+    ).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory:toolbox:create", functionGrants, false),
+    ).toBe(false);
   });
 
   it("工具没有独立资源类型，写操作落到父工具箱的 modify", () => {
@@ -137,9 +155,15 @@ describe("isStudioPermissionGranted", () => {
       { operations: ["view", "create"], resource: { id: "*", type: "tool_box" } },
     ]);
 
-    expect(isStudioPermissionGranted("execution-factory:tool:view", withoutToolboxModify, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:tool:create", withoutToolboxModify, false)).toBe(false);
-    expect(isStudioPermissionGranted("execution-factory:tool:edit", withoutToolboxModify, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted("execution-factory:tool:view", withoutToolboxModify, false),
+    ).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory:tool:create", withoutToolboxModify, false),
+    ).toBe(false);
+    expect(
+      isStudioPermissionGranted("execution-factory:tool:edit", withoutToolboxModify, false),
+    ).toBe(false);
   });
 
   it("API 工具调试权限由已声明的 toolbox:debug 和 tool_box:execute 派生", () => {
@@ -155,9 +179,15 @@ describe("isStudioPermissionGranted", () => {
     ]);
 
     expect(defaultDevPermissions).toContain(permission);
-    expect(deriveStudioPermissions(defaultDevPermissions, executeGrants, false)).toContain(permission);
-    expect(deriveStudioPermissions(defaultDevPermissions, functionGrants, false)).not.toContain(permission);
-    expect(deriveStudioPermissions(defaultDevPermissions, wildcardGrants, false)).toContain(permission);
+    expect(deriveStudioPermissions(defaultDevPermissions, executeGrants, false)).toContain(
+      permission,
+    );
+    expect(deriveStudioPermissions(defaultDevPermissions, functionGrants, false)).not.toContain(
+      permission,
+    );
+    expect(deriveStudioPermissions(defaultDevPermissions, wildcardGrants, false)).toContain(
+      permission,
+    );
   });
 
   it("市场浏览按 public_access 判定，不误用 bkn-safe 的同名 catalog 数据目录", () => {
@@ -165,14 +195,22 @@ describe("isStudioPermissionGranted", () => {
     const onlyDataCatalog = flattenSafeGrants([
       { operations: ["view_detail", "create"], resource: { id: "*", type: "catalog" } },
     ]);
-    expect(isStudioPermissionGranted("execution-factory-lab:catalog:view", onlyDataCatalog, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted("execution-factory-lab:catalog:view", onlyDataCatalog, false),
+    ).toBe(false);
 
-    expect(isStudioPermissionGranted("execution-factory-lab:catalog:view", grants, false)).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory-lab:catalog:view", grants, false)).toBe(
+      true,
+    );
   });
 
   it("市场安装暂时屏蔽，超管也不放行", () => {
-    expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, false)).toBe(false);
-    expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, true)).toBe(false);
+    expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, false)).toBe(
+      false,
+    );
+    expect(isStudioPermissionGranted("execution-factory-lab:catalog:install", grants, true)).toBe(
+      false,
+    );
   });
 
   it("沙箱运行时不由 is_admin 推导，避免三员角色取得业务入口", () => {
@@ -193,7 +231,9 @@ describe("isStudioPermissionGranted", () => {
 
   it("无法解析的权限点 fail-closed", () => {
     expect(isStudioPermissionGranted("execution-factory:unknown:view", grants, false)).toBe(false);
-    expect(isStudioPermissionGranted("execution-factory:operator:teleport", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("execution-factory:operator:teleport", grants, false)).toBe(
+      false,
+    );
     expect(isStudioPermissionGranted("garbage", grants, false)).toBe(false);
   });
 
@@ -203,7 +243,9 @@ describe("isStudioPermissionGranted", () => {
     const knowledgeGrants = flattenSafeGrants([
       { operations: ["create"], resource: { id: "*", type: "knowledge_network" } },
     ]);
-    expect(isStudioPermissionGranted("knowledge-network:create", knowledgeGrants, false)).toBe(true);
+    expect(isStudioPermissionGranted("knowledge-network:create", knowledgeGrants, false)).toBe(
+      true,
+    );
     expect(isStudioPermissionGranted("knowledge-network:edit", knowledgeGrants, false)).toBe(false);
   });
 });
@@ -266,11 +308,19 @@ describe("折叠通配契约", () => {
       { operations: ["*"], resource: { id: "*", type: "function" } },
     ]);
 
-    expect(isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:operator:edit", typeWildcard, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:operator:debug", typeWildcard, false)).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory:operator:create", typeWildcard, false),
+    ).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:operator:edit", typeWildcard, false)).toBe(
+      true,
+    );
+    expect(isStudioPermissionGranted("execution-factory:operator:debug", typeWildcard, false)).toBe(
+      true,
+    );
     // Other resource types remain unaffected.
-    expect(isStudioPermissionGranted("execution-factory:toolbox:create", typeWildcard, false)).toBe(false);
+    expect(isStudioPermissionGranted("execution-factory:toolbox:create", typeWildcard, false)).toBe(
+      false,
+    );
   });
 
   it("全局通配 *:* 放行所有可映射权限点(非 is_admin 也算)", () => {
@@ -278,9 +328,15 @@ describe("折叠通配契约", () => {
       { operations: ["*"], resource: { id: "*", type: "*" } },
     ]);
 
-    expect(isStudioPermissionGranted("execution-factory:operator:create", globalWildcard, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory:tool:edit", globalWildcard, false)).toBe(true);
-    expect(isStudioPermissionGranted("execution-factory-lab:catalog:view", globalWildcard, false)).toBe(true);
+    expect(
+      isStudioPermissionGranted("execution-factory:operator:create", globalWildcard, false),
+    ).toBe(true);
+    expect(isStudioPermissionGranted("execution-factory:tool:edit", globalWildcard, false)).toBe(
+      true,
+    );
+    expect(
+      isStudioPermissionGranted("execution-factory-lab:catalog:view", globalWildcard, false),
+    ).toBe(true);
   });
 
   it("通配不绕过有意屏蔽:catalog:install 与 sandbox-runtime:view 仍锁死", () => {
@@ -289,10 +345,18 @@ describe("折叠通配契约", () => {
     ]);
 
     // The backend has no installation endpoint, so it remains permanently blocked even by a wildcard.
-    expect(isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted("execution-factory:catalog:install", globalWildcard, false),
+    ).toBe(false);
     // Sandbox runtime does not use the grant mapper; fetchCurrentUser gives resource-wildcard
     // super administrators the complete registered permission set directly.
-    expect(isStudioPermissionGranted("execution-factory-lab:sandbox-runtime:view", globalWildcard, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted(
+        "execution-factory-lab:sandbox-runtime:view",
+        globalWildcard,
+        false,
+      ),
+    ).toBe(false);
   });
 
   it("大模型查看权限开放模型统计，小模型查看不开放", () => {
@@ -305,7 +369,9 @@ describe("折叠通配契约", () => {
 
     expect(isStudioPermissionGranted("model-resources:model:view", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:large-model:view", grants, false)).toBe(true);
-    expect(isStudioPermissionGranted("model-resources:small-model:view", grants, false)).toBe(false);
+    expect(isStudioPermissionGranted("model-resources:small-model:view", grants, false)).toBe(
+      false,
+    );
     expect(isStudioPermissionGranted("model-resources:model:create", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:model:edit", grants, false)).toBe(true);
     expect(isStudioPermissionGranted("model-resources:model:delete", grants, false)).toBe(false);
@@ -315,7 +381,9 @@ describe("折叠通配契约", () => {
     const smallModelDisplay = flattenSafeGrants([
       { operations: ["display"], resource: { id: "*", type: "small_model" } },
     ]);
-    expect(isStudioPermissionGranted("model-resources:statistics:view", smallModelDisplay, false)).toBe(false);
+    expect(
+      isStudioPermissionGranted("model-resources:statistics:view", smallModelDisplay, false),
+    ).toBe(false);
   });
 });
 

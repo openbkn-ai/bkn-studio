@@ -129,9 +129,7 @@ export function CapabilityMountModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // `boxId` marks an error raised by that container's failed read, which a later read retracts.
-  const [error, setError] = useState<{ boxId?: string; details: RequestErrorDetails } | null>(
-    null,
-  );
+  const [error, setError] = useState<{ boxId?: string; details: RequestErrorDetails } | null>(null);
   const [skills, setSkills] = useState<SkillRecord[]>([]);
   const [boxes, setBoxes] = useState<PickerContainer[]>([]);
   const [toolsByBox, setToolsByBox] = useState<Record<string, PickerTool[]>>({});
@@ -238,10 +236,7 @@ export function CapabilityMountModal({
     [mountableToolKeys, toolsByBox],
   );
 
-  const reasonLabel = useCallback(
-    (reason: PickerReason) => t(REASON_LABEL_KEYS[reason]),
-    [t],
-  );
+  const reasonLabel = useCallback((reason: PickerReason) => t(REASON_LABEL_KEYS[reason]), [t]);
 
   const fetchContainer = useCallback(
     async (containerId: string): Promise<LoadedContainer> => {
@@ -330,7 +325,9 @@ export function CapabilityMountModal({
           );
         } catch (requestError) {
           setFailedBoxIds((current) => [...new Set([...current, boxId])]);
-          setExpandedKeys((current) => current.filter((key) => key !== `${BOX_KEY_PREFIX}${boxId}`));
+          setExpandedKeys((current) =>
+            current.filter((key) => key !== `${BOX_KEY_PREFIX}${boxId}`),
+          );
           setError({ boxId, details: extractRequestErrorDetails(requestError) });
         } finally {
           loadingBoxes.current.delete(boxId);
@@ -589,79 +586,79 @@ export function CapabilityMountModal({
     const trimmed = keyword.trim().toLowerCase();
 
     return visibleBoxes.reduce<TreeDataNode[]>((nodes, box) => {
-        const tools = toolsByBox[box.id];
-        const boxMatches = !trimmed || box.name.toLowerCase().includes(trimmed);
-        const matchedTools = (tools ?? []).filter(
-          (tool) =>
-            !trimmed ||
-            boxMatches ||
-            tool.name.toLowerCase().includes(trimmed) ||
-            tool.id.toLowerCase().includes(trimmed),
-        );
+      const tools = toolsByBox[box.id];
+      const boxMatches = !trimmed || box.name.toLowerCase().includes(trimmed);
+      const matchedTools = (tools ?? []).filter(
+        (tool) =>
+          !trimmed ||
+          boxMatches ||
+          tool.name.toLowerCase().includes(trimmed) ||
+          tool.id.toLowerCase().includes(trimmed),
+      );
 
-        if (trimmed && !boxMatches && matchedTools.length === 0) {
-          return nodes;
-        }
+      if (trimmed && !boxMatches && matchedTools.length === 0) {
+        return nodes;
+      }
 
-        const boxReason = containerReason(box);
-        // Count what the person can act on, not only what exists: a toolset of three whose tools
-        // are all disabled mounts nothing, and "3 tools" alone would not say so. An MCP Server's
-        // tools carry no status and its listing no count, so it shows a count once one is known.
-        const countLabel = tools
-          ? tools.some((tool) => tool.status !== undefined)
-            ? t("knowledgeNetwork.capabilityPickerBoxToolCountEnabled", {
-                count: tools.length,
-                enabled: tools.filter((tool) => tool.status === "enabled").length,
-              })
-            : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: tools.length })
-          : box.toolCount === undefined
-            ? null
-            : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: box.toolCount });
+      const boxReason = containerReason(box);
+      // Count what the person can act on, not only what exists: a toolset of three whose tools
+      // are all disabled mounts nothing, and "3 tools" alone would not say so. An MCP Server's
+      // tools carry no status and its listing no count, so it shows a count once one is known.
+      const countLabel = tools
+        ? tools.some((tool) => tool.status !== undefined)
+          ? t("knowledgeNetwork.capabilityPickerBoxToolCountEnabled", {
+              count: tools.length,
+              enabled: tools.filter((tool) => tool.status === "enabled").length,
+            })
+          : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: tools.length })
+        : box.toolCount === undefined
+          ? null
+          : t("knowledgeNetwork.capabilityPickerBoxToolCount", { count: box.toolCount });
 
-        nodes.push({
-          children: tools
-            ? matchedTools.map((tool) => {
-                const mounted = isToolMounted(box.id, tool.id);
-                const blocked = toolBlockReason(box, tool);
+      nodes.push({
+        children: tools
+          ? matchedTools.map((tool) => {
+              const mounted = isToolMounted(box.id, tool.id);
+              const blocked = toolBlockReason(box, tool);
 
-                return {
-                  disabled: mounted || blocked !== null,
-                  isLeaf: true,
-                  key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
-                  title: (
-                    <span className={styles.pickerNode}>
-                      <span>{tool.name || tool.id}</span>
-                      {mounted ? (
-                        <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
-                      ) : blocked === "toolDisabled" ? (
-                        // An unpublished box already says so on its own row; repeating it on every
-                        // tool beneath would bury the one tag that differs.
-                        <Tag color="warning">{reasonLabel(blocked)}</Tag>
-                      ) : null}
-                      {tool.description ? (
-                        <span className={styles.pickerHint}>{tool.description}</span>
-                      ) : null}
-                    </span>
-                  ),
-                } satisfies TreeDataNode;
-              })
-            : undefined,
-          // Only the checkbox: the row can still be expanded to show which tools are unavailable.
-          disableCheckbox: boxReason !== null,
-          key: `${BOX_KEY_PREFIX}${box.id}`,
-          title: (
-            <span className={styles.pickerNode}>
-              <span>{box.name}</span>
-              {boxReason ? (
-                <Tag color={boxReason === "mounted" ? undefined : "warning"}>
-                  {reasonLabel(boxReason)}
-                </Tag>
-              ) : failedBoxIds.includes(box.id) ? (
-                <Tag color="warning">{reasonLabel("loadFailed")}</Tag>
-              ) : null}
-              {countLabel ? <span className={styles.pickerHint}>{countLabel}</span> : null}
-            </span>
-          ),
+              return {
+                disabled: mounted || blocked !== null,
+                isLeaf: true,
+                key: `${TOOL_KEY_PREFIX}${box.id}/${tool.id}`,
+                title: (
+                  <span className={styles.pickerNode}>
+                    <span>{tool.name || tool.id}</span>
+                    {mounted ? (
+                      <Tag>{t("knowledgeNetwork.capabilityPickerMounted")}</Tag>
+                    ) : blocked === "toolDisabled" ? (
+                      // An unpublished box already says so on its own row; repeating it on every
+                      // tool beneath would bury the one tag that differs.
+                      <Tag color="warning">{reasonLabel(blocked)}</Tag>
+                    ) : null}
+                    {tool.description ? (
+                      <span className={styles.pickerHint}>{tool.description}</span>
+                    ) : null}
+                  </span>
+                ),
+              } satisfies TreeDataNode;
+            })
+          : undefined,
+        // Only the checkbox: the row can still be expanded to show which tools are unavailable.
+        disableCheckbox: boxReason !== null,
+        key: `${BOX_KEY_PREFIX}${box.id}`,
+        title: (
+          <span className={styles.pickerNode}>
+            <span>{box.name}</span>
+            {boxReason ? (
+              <Tag color={boxReason === "mounted" ? undefined : "warning"}>
+                {reasonLabel(boxReason)}
+              </Tag>
+            ) : failedBoxIds.includes(box.id) ? (
+              <Tag color="warning">{reasonLabel("loadFailed")}</Tag>
+            ) : null}
+            {countLabel ? <span className={styles.pickerHint}>{countLabel}</span> : null}
+          </span>
+        ),
       });
 
       return nodes;
@@ -699,9 +696,7 @@ export function CapabilityMountModal({
 
   // Count tools, not nodes: a checked box stands for the tools it will mount. Boxes whose tools have
   // not been fetched yet fall back to the count the catalogue reported.
-  const checkedToolKeyCount = checkedKeys.filter((key) =>
-    key.startsWith(TOOL_KEY_PREFIX),
-  ).length;
+  const checkedToolKeyCount = checkedKeys.filter((key) => key.startsWith(TOOL_KEY_PREFIX)).length;
   const unloadedBoxToolCount = checkedBoxIds.reduce((total, boxId) => {
     if (toolsByBox[boxId]) {
       return total;
@@ -924,9 +919,7 @@ export function CapabilityMountModal({
                   checkable
                   checkedKeys={{ checked: checkedKeys, halfChecked: halfCheckedBoxKeys }}
                   expandedKeys={expandedKeys}
-                  loadData={(node) =>
-                    loadBoxTools(String(node.key).slice(BOX_KEY_PREFIX.length))
-                  }
+                  loadData={(node) => loadBoxTools(String(node.key).slice(BOX_KEY_PREFIX.length))}
                   loadedKeys={loadedBoxKeys}
                   onCheck={(keys) => {
                     const checked = Array.isArray(keys) ? keys : keys.checked;

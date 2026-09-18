@@ -42,18 +42,7 @@ const TYPE_OPERATION_MAPPING: Record<string, ActionTypeConditionOperation[]> = {
     "exist",
     "not_exist",
   ],
-  date: [
-    "==",
-    "!=",
-    "<",
-    "<=",
-    ">",
-    ">=",
-    "range",
-    "out_range",
-    "exist",
-    "not_exist",
-  ],
+  date: ["==", "!=", "<", "<=", ">", ">=", "range", "out_range", "exist", "not_exist"],
   boolean: ["==", "!=", "exist", "not_exist"],
   ip: ["==", "!=", "in", "not_in", "exist", "not_exist"],
   json: ["exist", "not_exist"],
@@ -83,9 +72,7 @@ export function transformConditionFieldType(type?: string): string {
   return type;
 }
 
-export function getConditionOperationsForFieldType(
-  type?: string,
-): ActionTypeConditionOperation[] {
+export function getConditionOperationsForFieldType(type?: string): ActionTypeConditionOperation[] {
   const formatType = transformConditionFieldType(type);
   const operations = TYPE_OPERATION_MAPPING[formatType] ?? DEFAULT_OPERATIONS;
 
@@ -116,14 +103,10 @@ export function findConditionProperty(
     return undefined;
   }
 
-  return propertyOptions.find(
-    (item) => item.name === fieldName || item.value === fieldName,
-  );
+  return propertyOptions.find((item) => item.name === fieldName || item.value === fieldName);
 }
 
-export function buildGroupedConditionFieldOptions(
-  propertyOptions: RelationTypePropertyOption[],
-) {
+export function buildGroupedConditionFieldOptions(propertyOptions: RelationTypePropertyOption[]) {
   const groups = new Map<string, RelationTypePropertyOption[]>();
 
   for (const property of propertyOptions) {

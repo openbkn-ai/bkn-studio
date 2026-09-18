@@ -199,9 +199,7 @@ export function ActionTypeExecuteModal({
                               type === "array"
                                 ? Array.isArray(parsed)
                                 : Boolean(
-                                    parsed &&
-                                      typeof parsed === "object" &&
-                                      !Array.isArray(parsed),
+                                    parsed && typeof parsed === "object" && !Array.isArray(parsed),
                                   );
                             return valid
                               ? Promise.resolve()

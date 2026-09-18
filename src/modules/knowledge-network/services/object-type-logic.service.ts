@@ -60,7 +60,9 @@ export async function listObjectTypeLogicMetricModels(networkId: string, scopeRe
   if (useMock) {
     const metrics = (mockMetrics[networkId] ?? []).filter((item) => item.scopeRef === scopeRef);
     return wait(
-      metrics.map((metric) => mapKnowledgeNetworkMetricToLogicMetricRecord(metric, scopeProperties)),
+      metrics.map((metric) =>
+        mapKnowledgeNetworkMetricToLogicMetricRecord(metric, scopeProperties),
+      ),
     );
   }
 
@@ -83,7 +85,9 @@ export async function listObjectTypeLogicMetricModelFields(networkId: string, me
   }
 
   if (useMock) {
-    const metric = Object.values(mockMetrics).flat().find((item) => item.id === metricId);
+    const metric = Object.values(mockMetrics)
+      .flat()
+      .find((item) => item.id === metricId);
     if (metric) {
       const scopeProperties = await loadScopeObjectTypeProperties(networkId, metric.scopeRef);
       return wait(

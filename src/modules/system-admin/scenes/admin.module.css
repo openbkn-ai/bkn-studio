@@ -1978,7 +1978,9 @@
 
 .sourceRow {
   display: grid;
-  grid-template-columns: auto minmax(90px, 0.8fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(180px, 1.4fr) auto;
+  grid-template-columns:
+    auto minmax(90px, 0.8fr) minmax(110px, 1fr) minmax(110px, 1fr) minmax(180px, 1.4fr)
+    auto;
   align-items: center;
   gap: 8px;
   min-height: 38px;
@@ -2134,7 +2136,9 @@
   margin: 0;
 }
 
-.memberPaneHeader strong { color: var(--admin-color-heading); }
+.memberPaneHeader strong {
+  color: var(--admin-color-heading);
+}
 .memberPaneHint,
 .memberName small,
 .memberResourceId {
@@ -2143,8 +2147,15 @@
   color: var(--admin-color-muted);
   font-size: var(--admin-font-size-tag);
 }
-.memberResourceCell { display: grid; gap: 3px; min-width: 0; }
-.memberResourceCell strong { color: var(--admin-color-heading); font-weight: var(--admin-font-weight-medium); }
+.memberResourceCell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.memberResourceCell strong {
+  color: var(--admin-color-heading);
+  font-weight: var(--admin-font-weight-medium);
+}
 .memberResourceCell small {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -2157,9 +2168,17 @@
   min-width: 0;
   white-space: nowrap;
 }
-.memberPermissionOverview :global(.ant-tag) { margin: 0; }
-.memberPermissionOverview :global(.ant-btn) { height: auto; padding-inline: 4px; }
-.memberPermissionDetail { display: grid; gap: 16px; }
+.memberPermissionOverview :global(.ant-tag) {
+  margin: 0;
+}
+.memberPermissionOverview :global(.ant-btn) {
+  height: auto;
+  padding-inline: 4px;
+}
+.memberPermissionDetail {
+  display: grid;
+  gap: 16px;
+}
 .memberPermissionResource {
   display: grid;
   gap: 4px;
@@ -2167,7 +2186,9 @@
   border: 1px solid var(--admin-color-border);
   background: var(--admin-color-surface-muted);
 }
-.memberPermissionResource strong { color: var(--admin-color-heading); }
+.memberPermissionResource strong {
+  color: var(--admin-color-heading);
+}
 .memberPermissionResource small,
 .memberPermissionDetail > p,
 .memberPermissionDecision small {
@@ -2176,7 +2197,10 @@
   font-size: var(--admin-font-size-tag);
   overflow-wrap: anywhere;
 }
-.memberPermissionDecisionList { display: grid; border-top: 1px solid var(--admin-color-border); }
+.memberPermissionDecisionList {
+  display: grid;
+  border-top: 1px solid var(--admin-color-border);
+}
 .memberPermissionDecision {
   display: grid;
   grid-template-columns: minmax(120px, 1fr) auto auto;
@@ -2186,8 +2210,12 @@
   padding: 8px 0;
   border-bottom: 1px solid var(--admin-color-border);
 }
-.memberPermissionDecision :global(.ant-tag) { margin: 0; }
-.memberPermissionDecision > :last-child { grid-column: 1 / -1; }
+.memberPermissionDecision :global(.ant-tag) {
+  margin: 0;
+}
+.memberPermissionDecision > :last-child {
+  grid-column: 1 / -1;
+}
 .memberSuperAdminAccess {
   display: flex;
   align-items: flex-start;
@@ -2213,16 +2241,29 @@
   font-size: var(--admin-font-size-tag);
   line-height: 1.6;
 }
-.memberName { display: inline-grid; gap: 2px; color: var(--admin-color-heading); }
-.memberSelectedRow > :global(td) { background: var(--admin-color-link-bg) !important; }
+.memberName {
+  display: inline-grid;
+  gap: 2px;
+  color: var(--admin-color-heading);
+}
+.memberSelectedRow > :global(td) {
+  background: var(--admin-color-link-bg) !important;
+}
 
 @media (max-width: 1200px) {
-  .memberAuthorizationLayout { grid-template-columns: 260px minmax(0, 1fr); }
+  .memberAuthorizationLayout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 760px) {
-  .memberAuthorizationLayout { grid-template-columns: 1fr; }
-  .memberUserPane { border-right: 0; border-bottom: 1px solid var(--admin-color-border); }
+  .memberAuthorizationLayout {
+    grid-template-columns: 1fr;
+  }
+  .memberUserPane {
+    border-right: 0;
+    border-bottom: 1px solid var(--admin-color-border);
+  }
 }
 
 .statValueCompact {
@@ -2880,7 +2921,6 @@
     padding-top: 8px;
     border-top: 1px solid var(--admin-color-border-soft);
   }
-
 }
 
 @media (max-width: 720px) {

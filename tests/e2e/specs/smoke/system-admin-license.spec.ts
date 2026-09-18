@@ -14,7 +14,9 @@ async function expectConsoleShell(page: Page) {
 }
 
 test.describe("system-admin license management", () => {
-  test("renders license summary and keeps permission management naming separate", async ({ page }) => {
+  test("renders license summary and keeps permission management naming separate", async ({
+    page,
+  }) => {
     await page.goto("/studio/system/license", { waitUntil: "domcontentloaded" });
     await expectConsoleShell(page);
 

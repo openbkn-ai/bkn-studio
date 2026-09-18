@@ -79,7 +79,7 @@ type ListResponse<T> = {
 };
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const wait = async <T,>(value: T, delay = 180) =>
+const wait = async <T>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), delay);
   });
@@ -375,9 +375,7 @@ export async function getBuildTask(id: string) {
     return wait(mockBuildTasks.find((item) => item.id === id) ?? null, 120);
   }
 
-  const response = await http.get<BackendBuildTask>(
-    `/vega-backend/v1/build-tasks/${id}`,
-  );
+  const response = await http.get<BackendBuildTask>(`/vega-backend/v1/build-tasks/${id}`);
 
   return response.data ? mapBuildTask(response.data) : null;
 }
@@ -386,9 +384,7 @@ function hasActiveTaskForResource(resourceId: string) {
   return mockBuildTasks.some(
     (task) =>
       task.resourceId === resourceId &&
-      (task.status === "pending" ||
-        task.status === "running" ||
-        task.status === "stopping"),
+      (task.status === "pending" || task.status === "running" || task.status === "stopping"),
   );
 }
 
@@ -406,11 +402,9 @@ function settleInteractiveMockBuildTask(task: BuildTask) {
   task.finishTime = now;
 }
 
-export class BuildTaskConflictError extends Error { }
+export class BuildTaskConflictError extends Error {}
 
-export async function createBuildTask(
-  input: BuildTaskCreateInput,
-): Promise<BuildTask> {
+export async function createBuildTask(input: BuildTaskCreateInput): Promise<BuildTask> {
   if (useMock) {
     if (hasActiveTaskForResource(input.resourceId)) {
       throw new BuildTaskConflictError("active task exists");
@@ -420,13 +414,13 @@ export async function createBuildTask(
     const form = resource
       ? indexFormValuesFromResource(resource)
       : {
-        incrementalFields: [] as string[],
-        primaryKeyFields: [] as string[],
-        embeddingFields: [] as string[],
-        embeddingModel: "",
-        fulltextFields: [] as string[],
-        fulltextAnalyzer: "",
-      };
+          incrementalFields: [] as string[],
+          primaryKeyFields: [] as string[],
+          embeddingFields: [] as string[],
+          embeddingModel: "",
+          fulltextFields: [] as string[],
+          fulltextAnalyzer: "",
+        };
     const createTime = Date.now();
     const task: BuildTask = {
       id: `bt-${mockSlug(8)}`,
@@ -460,16 +454,11 @@ export async function createBuildTask(
 
   // Creation returns only {id}, so load the complete task afterward.
   // The server derives an index-configuration snapshot from the resource; clients no longer send field configuration.
-  const response = await http.post<BackendBuildTask>(
-    "/vega-backend/v1/build-tasks",
-    {
-      resource_id: input.resourceId,
-      mode: input.mode,
-      ...(input.mode === "batch" && input.executeType
-        ? { execute_type: input.executeType }
-        : {}),
-    },
-  );
+  const response = await http.post<BackendBuildTask>("/vega-backend/v1/build-tasks", {
+    resource_id: input.resourceId,
+    mode: input.mode,
+    ...(input.mode === "batch" && input.executeType ? { execute_type: input.executeType } : {}),
+  });
 
   const created = await getBuildTask(response.data.id);
   if (!created) {
@@ -512,10 +501,7 @@ export async function resumeBuildTask(id: string) {
   await http.post(`/vega-backend/v1/build-tasks/${id}/start`, { reset: false });
 }
 
-export async function deleteBuildTask(
-  id: string,
-  options: { stopFirst?: boolean } = {},
-) {
+export async function deleteBuildTask(id: string, options: { stopFirst?: boolean } = {}) {
   if (useMock) {
     const index = mockBuildTasks.findIndex((item) => item.id === id);
     if (index >= 0) {
@@ -555,10 +541,7 @@ export async function deleteBuildTask(
 /**
  * Restarts a task. reset applies only to full tasks; the backend forces incremental tasks to resume from their checkpoint.
  */
-export async function retryBuildTask(
-  id: string,
-  reset = false,
-): Promise<BuildTask | null> {
+export async function retryBuildTask(id: string, reset = false): Promise<BuildTask | null> {
   if (useMock) {
     const source = mockBuildTasks.find((item) => item.id === id);
     if (!source) {

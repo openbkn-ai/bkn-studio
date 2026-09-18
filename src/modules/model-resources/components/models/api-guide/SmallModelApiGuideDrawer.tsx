@@ -72,9 +72,13 @@ export function SmallModelApiGuideDrawer({ onClose, open, record }: SmallModelAp
 
           <ModelApiGuideTable dataSource={tableRows} />
 
-          <h4 className={styles.sectionTitle}>{t("modelResources.models.apiGuide.initiateRequest")}</h4>
+          <h4 className={styles.sectionTitle}>
+            {t("modelResources.models.apiGuide.initiateRequest")}
+          </h4>
 
-          <h5 className={styles.subsectionTitle}>{t("modelResources.models.apiGuide.method1_2")}</h5>
+          <h5 className={styles.subsectionTitle}>
+            {t("modelResources.models.apiGuide.method1_2")}
+          </h5>
           <ModelApiGuideCodeBlock
             height={record.modelType === "reranker" ? 236 : 146}
             language="json"

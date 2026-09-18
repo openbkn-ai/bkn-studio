@@ -103,15 +103,11 @@ describe("DataConnectConfigForm", () => {
     );
 
     const databaseInput = screen
-      .getByText(
-        "留空自动发现全部数据库；输入名称后按回车逐个添加",
-      )
+      .getByText("留空自动发现全部数据库；输入名称后按回车逐个添加")
       .closest(".ant-select")
       ?.querySelector("input");
 
-    expect(
-      screen.getByText("填写时必须与数据库中的实际名称及大小写完全一致"),
-    ).not.toBeNull();
+    expect(screen.getByText("填写时必须与数据库中的实际名称及大小写完全一致")).not.toBeNull();
     expect(databaseInput).not.toBeNull();
     if (!databaseInput) {
       return;
@@ -145,8 +141,7 @@ describe("DataConnectConfigForm", () => {
 
 function getLastConnectorConfig(onFinish: ReturnType<typeof vi.fn>) {
   const payload = onFinish.mock.lastCall?.[0] as
-    | { connectorConfig: { databases?: string[] } }
-    | undefined;
+    { connectorConfig: { databases?: string[] } } | undefined;
 
   if (!payload) {
     throw new Error("Expected the form submission handler to be called");

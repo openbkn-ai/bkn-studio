@@ -47,10 +47,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
  * - 合同可以覆盖默认值(行业版尤其如此,§3.3 说定制只能落在 limits 上),所以当前
  *   档位必须以证书为准
  */
-export function resolveQuota(
-  fallback: number | null,
-  licensed: number | undefined,
-): number | null {
+export function resolveQuota(fallback: number | null, licensed: number | undefined): number | null {
   const value = licensed ?? fallback;
 
   return value === -1 ? null : value;

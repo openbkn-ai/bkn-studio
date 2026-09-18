@@ -72,12 +72,20 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
       const ids = String(url).split("/").pop()!.split(",").map(decodeURIComponent);
       return Promise.resolve({ data: { entries: ids.map((id) => ({ id, name: `n-${id}` })) } });
     });
-    await resolveGrantNames(Array.from({ length: 60 }, (_, index) => resourceGrant(`big-${index}`)));
+    await resolveGrantNames(
+      Array.from({ length: 60 }, (_, index) => resourceGrant(`big-${index}`)),
+    );
     expect(getMock).toHaveBeenCalledTimes(2);
   });
 
   it("后端已带真实名(objName ≠ id)则跳过解析,零请求", async () => {
-    const named: ObjectGrant = { accessorId: "u1", objId: "res-1", objName: "销售数据集", objType: "resource", operations: ["view"] };
+    const named: ObjectGrant = {
+      accessorId: "u1",
+      objId: "res-1",
+      objName: "销售数据集",
+      objType: "resource",
+      operations: ["view"],
+    };
     await expect(resolveGrantNames([named])).resolves.toEqual([named]);
     expect(getMock).not.toHaveBeenCalled();
   });
@@ -92,7 +100,11 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
   it("部分返回:缺失 id 退回 id 兜底,不牵连其余(按 entry.id 对齐)", async () => {
     getMock.mockImplementation((url: string) => {
       const ids = String(url).split("/").pop()!.split(",").map(decodeURIComponent);
-      return Promise.resolve({ data: { entries: ids.filter((id) => id !== "part-gone").map((id) => ({ id, name: `n-${id}` })) } });
+      return Promise.resolve({
+        data: {
+          entries: ids.filter((id) => id !== "part-gone").map((id) => ({ id, name: `n-${id}` })),
+        },
+      });
     });
     const result = await resolveGrantNames(["part-a", "part-gone", "part-c"].map(resourceGrant));
     expect(result.map((grant) => grant.objName)).toEqual(["n-part-a", "part-gone", "n-part-c"]);
@@ -106,9 +118,9 @@ describe("authz-objects · resolveGrantNames 取名不再打请求风暴", () =>
     const grants = ["cache-1", "cache-2"].map(resourceGrant);
     await resolveGrantNames(grants);
     const afterFirst = getMock.mock.calls.length;
-    await expect(resolveGrantNames(grants)).resolves.toEqual(expect.arrayContaining([
-      expect.objectContaining({ objName: "c-cache-1" }),
-    ]));
+    await expect(resolveGrantNames(grants)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ objName: "c-cache-1" })]),
+    );
     expect(getMock.mock.calls.length).toBe(afterFirst);
   });
 });
@@ -125,12 +137,19 @@ describe("authz object picker catalog service", () => {
     });
 
     await expect(listDomainObjectsPage("catalog", { page: 1 })).resolves.toEqual({
-      items: [{ id: "catalog-101", name: "Beyond first page", type: "catalog" }], total: 2_018,
+      items: [{ id: "catalog-101", name: "Beyond first page", type: "catalog" }],
+      total: 2_018,
     });
     expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
       params: {
-        direction: "asc", limit: 100, name: undefined, offset: 100, resource_type: "catalog", sort: "name",
-      }, skipErrorToast: true,
+        direction: "asc",
+        limit: 100,
+        name: undefined,
+        offset: 100,
+        resource_type: "catalog",
+        sort: "name",
+      },
+      skipErrorToast: true,
     });
   });
 
@@ -143,14 +162,26 @@ describe("authz object picker catalog service", () => {
 
     expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
       params: {
-        direction: "asc", limit: 100, name: "Needle", offset: 0, resource_type: "catalog", sort: "name",
-      }, skipErrorToast: true,
+        direction: "asc",
+        limit: 100,
+        name: "Needle",
+        offset: 0,
+        resource_type: "catalog",
+        sort: "name",
+      },
+      skipErrorToast: true,
     });
   });
 
   it("requests the final partial page without treating it as another full page", async () => {
     getMock.mockResolvedValue({
-      data: { entries: Array.from({ length: 18 }, (_, index) => ({ id: `catalog-${index}`, name: `Catalog ${index}` })), total: 2_018 },
+      data: {
+        entries: Array.from({ length: 18 }, (_, index) => ({
+          id: `catalog-${index}`,
+          name: `Catalog ${index}`,
+        })),
+        total: 2_018,
+      },
     });
 
     const result = await listDomainObjectsPage("catalog", { page: 20 });
@@ -159,8 +190,14 @@ describe("authz object picker catalog service", () => {
     expect(result.total).toBe(2_018);
     expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
       params: {
-        direction: "asc", limit: 100, name: undefined, offset: 2_000, resource_type: "catalog", sort: "name",
-      }, skipErrorToast: true,
+        direction: "asc",
+        limit: 100,
+        name: undefined,
+        offset: 2_000,
+        resource_type: "catalog",
+        sort: "name",
+      },
+      skipErrorToast: true,
     });
   });
 
@@ -172,13 +209,15 @@ describe("authz object picker catalog service", () => {
   it("函数集授权按工具集 box_id 取名，不走算子接口", async () => {
     postMock.mockResolvedValue({ data: { entries: [{ id: "box-fn-1", name: "金额核对" }] } });
 
-    const [resolved] = await resolveGrantNames([{
-      accessorId: "u1",
-      objId: "box-fn-1",
-      objName: "box-fn-1",
-      objType: "function",
-      operations: ["view"],
-    }]);
+    const [resolved] = await resolveGrantNames([
+      {
+        accessorId: "u1",
+        objId: "box-fn-1",
+        objName: "box-fn-1",
+        objType: "function",
+        operations: ["view"],
+      },
+    ]);
 
     expect(resolved.objName).toBe("金额核对");
     expect(postMock).toHaveBeenCalledWith(
@@ -194,13 +233,15 @@ describe("authz object picker catalog service", () => {
     });
     listActionTypesMock.mockResolvedValue([{ id: "simulate-fulfillment", name: "模拟履约" }]);
 
-    const [resolved] = await resolveGrantNames([{
-      accessorId: "u1",
-      objId: "ecommerce-ops/simulate-fulfillment",
-      objName: "ecommerce-ops/simulate-fulfillment",
-      objType: "action_type",
-      operations: ["execute"],
-    }]);
+    const [resolved] = await resolveGrantNames([
+      {
+        accessorId: "u1",
+        objId: "ecommerce-ops/simulate-fulfillment",
+        objName: "ecommerce-ops/simulate-fulfillment",
+        objType: "action_type",
+        operations: ["execute"],
+      },
+    ]);
 
     expect(resolved.objName).toBe("模拟履约");
     expect(resolved.objSub).toBe("电商经营决策知识网络");
@@ -211,7 +252,9 @@ describe("authz object picker catalog service", () => {
     getMock.mockImplementation((url: string) => {
       if (url.startsWith("/vega-backend/v1/resources/")) {
         return Promise.resolve({
-          data: { entries: [{ catalog_id: "catalog-sales", id: "resource-orders", name: "销售订单" }] },
+          data: {
+            entries: [{ catalog_id: "catalog-sales", id: "resource-orders", name: "销售订单" }],
+          },
         });
       }
       if (url.startsWith("/vega-backend/v1/catalogs/")) {
@@ -247,54 +290,93 @@ describe("authz object picker catalog service", () => {
     });
     expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
       params: {
-        direction: "asc", limit: 20, name: "电商", offset: 20, resource_type: "knowledge_network", sort: "name",
+        direction: "asc",
+        limit: 20,
+        name: "电商",
+        offset: 20,
+        resource_type: "knowledge_network",
+        sort: "name",
       },
       skipErrorToast: true,
     });
   });
 
   it("清空顶级资源类型时聚合各类型总数，仍按全局页码取资源", async () => {
-    getMock.mockImplementation((_path: string, options: { params: Record<string, string | number> }) => {
-      const { limit, offset, resource_type: resourceType } = options.params;
-      if (resourceType === "catalog") {
-        return Promise.resolve({ data: { entries: offset === 2 ? [{ id: "catalog-3", name: "第三个目录" }] : [], total: 3 } });
-      }
-      if (resourceType === "knowledge_network") {
-        return Promise.resolve({
-          data: { entries: limit === 3 ? [
-            { id: "kn-1", name: "第一个知识网络" },
-            { id: "kn-2", name: "第二个知识网络" },
-            { id: "kn-3", name: "第三个知识网络" },
-          ] : [], total: 5 },
-        });
-      }
-      return Promise.resolve({ data: { entries: [], total: 0 } });
-    });
+    getMock.mockImplementation(
+      (_path: string, options: { params: Record<string, string | number> }) => {
+        const { limit, offset, resource_type: resourceType } = options.params;
+        if (resourceType === "catalog") {
+          return Promise.resolve({
+            data: {
+              entries: offset === 2 ? [{ id: "catalog-3", name: "第三个目录" }] : [],
+              total: 3,
+            },
+          });
+        }
+        if (resourceType === "knowledge_network") {
+          return Promise.resolve({
+            data: {
+              entries:
+                limit === 3
+                  ? [
+                      { id: "kn-1", name: "第一个知识网络" },
+                      { id: "kn-2", name: "第二个知识网络" },
+                      { id: "kn-3", name: "第三个知识网络" },
+                    ]
+                  : [],
+              total: 5,
+            },
+          });
+        }
+        return Promise.resolve({ data: { entries: [], total: 0 } });
+      },
+    );
 
-    await expect(listTopLevelAuthzObjects(undefined, "", { limit: 4, offset: 2 })).resolves.toEqual({
-      objects: [
-        { id: "catalog-3", name: "第三个目录", type: "catalog" },
-        { id: "kn-1", name: "第一个知识网络", type: "knowledge_network" },
-        { id: "kn-2", name: "第二个知识网络", type: "knowledge_network" },
-        { id: "kn-3", name: "第三个知识网络", type: "knowledge_network" },
-      ],
-      total: 8,
-    });
+    await expect(listTopLevelAuthzObjects(undefined, "", { limit: 4, offset: 2 })).resolves.toEqual(
+      {
+        objects: [
+          { id: "catalog-3", name: "第三个目录", type: "catalog" },
+          { id: "kn-1", name: "第一个知识网络", type: "knowledge_network" },
+          { id: "kn-2", name: "第二个知识网络", type: "knowledge_network" },
+          { id: "kn-3", name: "第三个知识网络", type: "knowledge_network" },
+        ],
+        total: 8,
+      },
+    );
   });
 
   it("父子资源通过 bkn-safe 资源目录查询", async () => {
     const catalog = { id: "catalog-1", name: "销售目录", type: "catalog" } as const;
-    getMock.mockResolvedValue({ data: { entries: [{ id: "resource-11", name: "第 11 个资源" }], total: 1 } });
+    getMock.mockResolvedValue({
+      data: { entries: [{ id: "resource-11", name: "第 11 个资源" }], total: 1 },
+    });
 
     expect(listTopResourceChildCategories(catalog)).toEqual(["resource"]);
-    await expect(listTopResourceChildren(catalog, "resource", { limit: 10, offset: 10 })).resolves.toEqual({
+    await expect(
+      listTopResourceChildren(catalog, "resource", { limit: 10, offset: 10 }),
+    ).resolves.toEqual({
       category: "resource",
-      children: [{ category: "resource", id: "resource-11", name: "第 11 个资源", sub: "销售目录", type: "resource" }], total: 1,
+      children: [
+        {
+          category: "resource",
+          id: "resource-11",
+          name: "第 11 个资源",
+          sub: "销售目录",
+          type: "resource",
+        },
+      ],
+      total: 1,
     });
     expect(getMock).toHaveBeenCalledWith("/safe/v1/admin/authorization-resources", {
       params: {
-        direction: "asc", limit: 10, name: undefined, offset: 10, parent_id: "catalog-1",
-        parent_type: "catalog", resource_type: "resource", sort: "name",
+        direction: "asc",
+        limit: 10,
+        name: undefined,
+        offset: 10,
+        parent_id: "catalog-1",
+        parent_type: "catalog",
+        resource_type: "resource",
+        sort: "name",
       },
       skipErrorToast: true,
     });

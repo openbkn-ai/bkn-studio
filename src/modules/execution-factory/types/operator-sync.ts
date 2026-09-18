@@ -5,7 +5,10 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { OperatorCategory, OperatorExecuteControl } from "@/modules/execution-factory/types/operator";
+import type {
+  OperatorCategory,
+  OperatorExecuteControl,
+} from "@/modules/execution-factory/types/operator";
 
 export type OperatorSyncPublishInput = {
   enabled?: boolean;

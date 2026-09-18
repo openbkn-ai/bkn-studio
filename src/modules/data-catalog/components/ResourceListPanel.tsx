@@ -28,7 +28,10 @@ import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
 import { listCatalogResourcePage } from "@/modules/data-catalog/services/resource.service";
-import type { CatalogResource, ResourceDiscoverStatus } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  CatalogResource,
+  ResourceDiscoverStatus,
+} from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogResourceOperation } from "@/modules/data-catalog/utils/resource-operations";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
@@ -63,7 +66,9 @@ function deriveDisplayName(resource: CatalogResource, connectorType: string) {
 
   const fromMatch = rawIdentifier.match(/\bfrom\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+){0,2})/i);
   const candidate = (fromMatch?.[1] ?? rawIdentifier).trim();
-  const byIdentifier = candidate.includes(".") ? candidate.split(".").filter(Boolean).at(-1) : candidate;
+  const byIdentifier = candidate.includes(".")
+    ? candidate.split(".").filter(Boolean).at(-1)
+    : candidate;
   return byIdentifier || "-";
 }
 
@@ -135,9 +140,7 @@ export function ResourceListPanel({
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
-  const hasResourceQuery =
-    resourceKeyword.trim().length > 0 ||
-    categoryFilter.length > 0;
+  const hasResourceQuery = resourceKeyword.trim().length > 0 || categoryFilter.length > 0;
   const canAuthorizeGrants = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: authzPoints.grant,
@@ -254,10 +257,7 @@ export function ResourceListPanel({
         const displayName = deriveDisplayName(record, catalog.connectorType);
         const tooltip = getResourceNameTooltip(record, catalog.connectorType, displayName);
         return (
-          <Tooltip
-            classNames={{ root: styles.resourceNameTooltip }}
-            title={tooltip}
-          >
+          <Tooltip classNames={{ root: styles.resourceNameTooltip }} title={tooltip}>
             <AppButton
               className={styles.ellipsisLink}
               onClick={() => onOpenResource(record.id, "detail")}
@@ -291,8 +291,12 @@ export function ResourceListPanel({
         return (
           <Tooltip title={tags.join(", ")}>
             <Space size={4}>
-              {visibleTags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
-              {tags.length > visibleTags.length ? <Tag>+{tags.length - visibleTags.length}</Tag> : null}
+              {visibleTags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+              {tags.length > visibleTags.length ? (
+                <Tag>+{tags.length - visibleTags.length}</Tag>
+              ) : null}
             </Space>
           </Tooltip>
         );
@@ -320,9 +324,7 @@ export function ResourceListPanel({
             {t(`dataCatalog.resourceStatuses.${value}`)}
           </Tag>
         );
-        return record.statusMessage ? (
-          <Tooltip title={record.statusMessage}>{tag}</Tooltip>
-        ) : tag;
+        return record.statusMessage ? <Tooltip title={record.statusMessage}>{tag}</Tooltip> : tag;
       },
     },
     {
@@ -332,7 +334,11 @@ export function ResourceListPanel({
       width: 96,
       render: (value: boolean | undefined) => {
         const enabled = value !== false;
-        return <Tag className={enabled ? styles.statusTagSuccess : styles.statusTagNeutral}>{t(enabled ? "common.enabled" : "common.disabled")}</Tag>;
+        return (
+          <Tag className={enabled ? styles.statusTagSuccess : styles.statusTagNeutral}>
+            {t(enabled ? "common.enabled" : "common.disabled")}
+          </Tag>
+        );
       },
     },
     {
@@ -394,17 +400,19 @@ export function ResourceListPanel({
             key: "preview",
             label: previewDisabled ? (
               <Tooltip
-                title={blockedByDisabledCatalog
-                  ? t("dataCatalog.gate.catalogDisabledShort")
-                  : t(
-                    queryBlockReason === "missing"
-                      ? "dataCatalog.actions.previewMissingHint"
-                      : queryBlockReason === "disabled"
-                        ? "dataCatalog.actions.previewDisabledHint"
-                        : queryBlockReason === "stale"
-                          ? "dataCatalog.actions.previewStaleHint"
-                          : "dataCatalog.actions.previewMetadataUnavailableHint",
-                  )}
+                title={
+                  blockedByDisabledCatalog
+                    ? t("dataCatalog.gate.catalogDisabledShort")
+                    : t(
+                        queryBlockReason === "missing"
+                          ? "dataCatalog.actions.previewMissingHint"
+                          : queryBlockReason === "disabled"
+                            ? "dataCatalog.actions.previewDisabledHint"
+                            : queryBlockReason === "stale"
+                              ? "dataCatalog.actions.previewStaleHint"
+                              : "dataCatalog.actions.previewMetadataUnavailableHint",
+                      )
+                }
               >
                 <span>{previewLabel}</span>
               </Tooltip>
@@ -424,10 +432,7 @@ export function ResourceListPanel({
             label: (
               <span className="console-tab-with-tier">
                 {t("dataCatalog.catalog.authorize")}
-                <EditionBadge
-                  capability={CAPABILITIES.PERM_FINE_GRAINED}
-                  edition="professional"
-                />
+                <EditionBadge capability={CAPABILITIES.PERM_FINE_GRAINED} edition="professional" />
               </span>
             ),
           });
@@ -474,7 +479,9 @@ export function ResourceListPanel({
                 className={styles.actionMore}
                 icon={<EllipsisOutlined />}
                 onClick={(event) => event.stopPropagation()}
-                title={blockedByDisabledCatalog ? t("dataCatalog.gate.catalogDisabledShort") : undefined}
+                title={
+                  blockedByDisabledCatalog ? t("dataCatalog.gate.catalogDisabledShort") : undefined
+                }
                 type="link"
               />
             </Dropdown>
@@ -486,58 +493,63 @@ export function ResourceListPanel({
 
   return (
     <section className={styles.contentSurface}>
-      {showOperationBar ? <div className={styles.operationBar}>
-        <div className={styles.operationPrimary}>
-          <div className={styles.toolbarActions}>
-            {dataCatalogCreationAvailable && !physical && !catalog.builtin && canManageResources ? (
+      {showOperationBar ? (
+        <div className={styles.operationBar}>
+          <div className={styles.operationPrimary}>
+            <div className={styles.toolbarActions}>
+              {dataCatalogCreationAvailable &&
+              !physical &&
+              !catalog.builtin &&
+              canManageResources ? (
                 <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                   {t("dataCatalog.resource.create")}
                 </AppButton>
-            ) : null}
-            {/*
+              ) : null}
+              {/*
               授权在抽屉里当场做完,走 /me/object-grants 自助面。原先这里跳系统管理的对象授权页,
               那张页面打的是 /admin/object-grants,整组挂在 RequireAdmin 后面——建这个连接的人
               够不到,而按钮本身又门控在 admin-authz:grant 上,于是"自己建的目录自己授不了"。
               判定改成问这个目录自己的 operations:建目录时创建者就拿到了 authorize,
               管理员则继续走平台点位。
             */}
-            {canAuthorizeCatalog ? (
-              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
-                {t("dataCatalog.catalog.authorize")}
-              </AppButton>
-            ) : null}
+              {canAuthorizeCatalog ? (
+                <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                  {t("dataCatalog.catalog.authorize")}
+                </AppButton>
+              ) : null}
+            </div>
           </div>
-        </div>
-        {resourceTotal > 0 || hasResourceQuery ? (
-          <>
-            <Input
-              allowClear
-              className={styles.searchInput}
-              onChange={(event) => setResourceKeyword(event.target.value)}
-              placeholder={t("dataCatalog.resource.searchPlaceholder")}
-              prefix={<SearchOutlined className={styles.searchIcon} />}
-              value={resourceKeyword}
-            />
-            <div className={styles.toolbarFilters}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>{t("dataCatalog.resource.category")}</span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => setCategoryFilter(value)}
-                options={[
-                  { label: t("common.all"), value: "" },
-                  ...CATEGORY_FILTERS.map((key) => ({
-                    label: t(`dataCatalog.categories.${key}`),
-                    value: key,
-                  })),
-                ]}
-                value={categoryFilter}
+          {resourceTotal > 0 || hasResourceQuery ? (
+            <>
+              <Input
+                allowClear
+                className={styles.searchInput}
+                onChange={(event) => setResourceKeyword(event.target.value)}
+                placeholder={t("dataCatalog.resource.searchPlaceholder")}
+                prefix={<SearchOutlined className={styles.searchIcon} />}
+                value={resourceKeyword}
               />
-            </div>
-            </div>
-          </>
-        ) : null}
-      </div> : null}
+              <div className={styles.toolbarFilters}>
+                <div className={styles.filterField}>
+                  <span className={styles.filterLabel}>{t("dataCatalog.resource.category")}</span>
+                  <Select
+                    className={styles.filterSelect}
+                    onChange={(value) => setCategoryFilter(value)}
+                    options={[
+                      { label: t("common.all"), value: "" },
+                      ...CATEGORY_FILTERS.map((key) => ({
+                        label: t(`dataCatalog.categories.${key}`),
+                        value: key,
+                      })),
+                    ]}
+                    value={categoryFilter}
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <TableSurface className={styles.tableSurface}>
         {resourcesLoading ? (
@@ -565,9 +577,9 @@ export function ResourceListPanel({
                 </AppButton>
               ) : !physical && !catalog.builtin ? (
                 dataCatalogCreationAvailable && canManageResources ? (
-                    <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
-                      {t("dataCatalog.resource.create")}
-                    </AppButton>
+                  <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
+                    {t("dataCatalog.resource.create")}
+                  </AppButton>
                 ) : null
               ) : null
             }

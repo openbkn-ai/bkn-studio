@@ -173,17 +173,14 @@ export function CapabilityListPanel({
 
   const isSkill = kind === "skill";
   const isMcp = kind === "mcp";
-  const capabilityType: CapabilityType = isSkill
-    ? "skill"
-    : isMcp
-      ? "mcp_tool"
-      : "function";
+  const capabilityType: CapabilityType = isSkill ? "skill" : isMcp ? "mcp_tool" : "function";
   const toolKind: "api" | "function" | undefined =
     kind === "api" || kind === "function" ? kind : undefined;
   const factoryTab = isSkill ? "skill" : isMcp ? "mcp" : "toolbox";
-  const factoryManagementPermission = kind === "function"
-    ? "execution-factory:function:view"
-    : executionFactoryViewPermissionByTab[factoryTab];
+  const factoryManagementPermission =
+    kind === "function"
+      ? "execution-factory:function:view"
+      : executionFactoryViewPermissionByTab[factoryTab];
   const canViewExecutionFactory = hasPermissions({
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: factoryManagementPermission,
@@ -315,7 +312,9 @@ export function CapabilityListPanel({
           <AppButton
             onClick={() => {
               // The detail scene's back button returns here rather than to its own list page.
-              void navigate(executionFactoryPath(record, kind), { state: buildReturnToState(location) });
+              void navigate(executionFactoryPath(record, kind), {
+                state: buildReturnToState(location),
+              });
             }}
             type="link"
           >
@@ -425,9 +424,7 @@ export function CapabilityListPanel({
     },
   ];
 
-  const topUpBoxes = data.boxes.filter(
-    (item) => item.unmountedTools > 0 || item.boxMissing,
-  );
+  const topUpBoxes = data.boxes.filter((item) => item.unmountedTools > 0 || item.boxMissing);
 
   return (
     <>
@@ -437,9 +434,7 @@ export function CapabilityListPanel({
         <div className={panelStyles.header}>
           <h2 className={`${styles.title} ${panelStyles.titleRow}`}>
             {t(`knowledgeNetwork.capability${TITLE_KEY[kind]}Title`)}
-            <Tooltip
-              title={t(`knowledgeNetwork.capabilityUsageTip${TITLE_KEY[kind]}`)}
-            >
+            <Tooltip title={t(`knowledgeNetwork.capabilityUsageTip${TITLE_KEY[kind]}`)}>
               <QuestionCircleOutlined
                 aria-label={t("knowledgeNetwork.capabilityUsageTipLabel")}
                 className={panelStyles.usageTip}
@@ -454,7 +449,7 @@ export function CapabilityListPanel({
                 void navigate(
                   isSkill
                     ? "/execution-factory/units?activeTab=skill"
-                  : isMcp
+                    : isMcp
                       ? "/execution-factory/units?activeTab=mcp"
                       : kind === "function"
                         ? "/execution-factory/units?activeTab=toolbox&toolboxView=function"
@@ -628,9 +623,7 @@ export function CapabilityListPanel({
           if (created === 0) {
             void message.info(t("knowledgeNetwork.capabilityMountNothingNew"));
           } else {
-            void message.success(
-              t("knowledgeNetwork.capabilityMountSuccess", { count: created }),
-            );
+            void message.success(t("knowledgeNetwork.capabilityMountSuccess", { count: created }));
           }
           setMountOpen(false);
         }}

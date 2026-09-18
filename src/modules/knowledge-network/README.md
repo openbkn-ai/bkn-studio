@@ -96,12 +96,12 @@ components/
 
 ## 分层规则
 
-| 层 | 职责 | 禁止 |
-| --- | --- | --- |
-| `pages/` | 读路由参数、挂壳层、渲染 scene | 承载复杂业务逻辑 |
-| `scenes/` | 完整业务流程、状态编排 | 被外部深层 import 私有组件 |
-| `components/` | 供 scene 拼装的 UI 块 | 替代 scene 作为复用入口 |
-| `services/` | HTTP / mock / DTO 映射 | 在组件内直接写 fetch |
+| 层            | 职责                           | 禁止                       |
+| ------------- | ------------------------------ | -------------------------- |
+| `pages/`      | 读路由参数、挂壳层、渲染 scene | 承载复杂业务逻辑           |
+| `scenes/`     | 完整业务流程、状态编排         | 被外部深层 import 私有组件 |
+| `components/` | 供 scene 拼装的 UI 块          | 替代 scene 作为复用入口    |
+| `services/`   | HTTP / mock / DTO 映射         | 在组件内直接写 fetch       |
 
 ## Services 拆分
 
@@ -134,15 +134,15 @@ services/
 
 ## 业务子域与 Scene 映射
 
-| 子域 | 主要 Scene | 路由示例 |
-| --- | --- | --- |
-| 网络列表 | `KnowledgeNetworkListScene` | `/knowledge-network` |
-| 工作台 | `KnowledgeNetworkWorkspaceScene` | `/knowledge-network/workspace/:id/*` |
-| 对象类 | `ObjectTypeFormScene` / `ObjectTypeDetailScene` | `.../object-types/create` |
-| 概念分组 | `ConceptGroupFormScene` / `ConceptGroupDetailScene` | `.../concept-groups/create` |
-| 关系类 | `RelationTypeFormScene` / `RelationTypeMappingScene` | `.../relation-types/create` |
-| 行动类 | `ActionTypeFormScene` / `ActionTypeExecutionScene` | `.../action-types/create` |
-| 指标 | `MetricFormScene` / `MetricDataQueryScene` | `.../metrics/create` |
+| 子域     | 主要 Scene                                           | 路由示例                             |
+| -------- | ---------------------------------------------------- | ------------------------------------ |
+| 网络列表 | `KnowledgeNetworkListScene`                          | `/knowledge-network`                 |
+| 工作台   | `KnowledgeNetworkWorkspaceScene`                     | `/knowledge-network/workspace/:id/*` |
+| 对象类   | `ObjectTypeFormScene` / `ObjectTypeDetailScene`      | `.../object-types/create`            |
+| 概念分组 | `ConceptGroupFormScene` / `ConceptGroupDetailScene`  | `.../concept-groups/create`          |
+| 关系类   | `RelationTypeFormScene` / `RelationTypeMappingScene` | `.../relation-types/create`          |
+| 行动类   | `ActionTypeFormScene` / `ActionTypeExecutionScene`   | `.../action-types/create`            |
+| 指标     | `MetricFormScene` / `MetricDataQueryScene`           | `.../metrics/create`                 |
 
 ## 开发 Mock
 

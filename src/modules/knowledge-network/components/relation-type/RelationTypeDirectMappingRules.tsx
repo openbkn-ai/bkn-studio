@@ -165,10 +165,7 @@ export function RelationTypeDirectMappingRules({
     });
   };
 
-  const handlePropertyChange = (
-    index: number,
-    patch: Partial<RelationTypePropertyMapping>,
-  ) => {
+  const handlePropertyChange = (index: number, patch: Partial<RelationTypePropertyMapping>) => {
     updateMappingRules({
       propertyMappings: value.propertyMappings.map((item, itemIndex) =>
         itemIndex === index ? { ...item, ...patch } : item,

@@ -41,7 +41,7 @@ export const apiKeysEnUS = {
     issueModal: {
       title: "Issue API key",
       name: "Name",
-      namePlaceholder: "To tell uses apart, e.g. \"My Cursor\"",
+      namePlaceholder: 'To tell uses apart, e.g. "My Cursor"',
       nameRequired: "Please enter a name",
       expiry: "Expiry",
       expiryDefault: "1 year (default)",
@@ -66,13 +66,13 @@ export const apiKeysEnUS = {
     revokeConfirm: {
       title: "Revoke API key (high-risk)",
       content:
-        "Revoking \"{{name}}\" takes effect immediately and cannot be undone; clients using it will get 401. Revoke?",
+        'Revoking "{{name}}" takes effect immediately and cannot be undone; clients using it will get 401. Revoke?',
       ok: "Confirm revoke",
     },
     regenerateConfirm: {
       title: "Regenerate API key (high-risk)",
       content:
-        "Regenerating immediately invalidates the old secret of \"{{name}}\" and produces a new one. Continue?",
+        'Regenerating immediately invalidates the old secret of "{{name}}" and produces a new one. Continue?',
       ok: "Confirm regenerate",
     },
   },

@@ -47,15 +47,24 @@ export function CreateExecutionUnitWizard({
 }: CreateExecutionUnitWizardProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
-  const allowedMetadataTypes = (["openapi", "function"] as const).filter((kind) => hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: kind === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create",
-  }));
-  const allowedTabs = (["operator", "toolbox", "mcp", "skill"] as const).filter((tab) =>
-    (!allowedTabsOverride || allowedTabsOverride.includes(tab)) && (tab === "toolbox" ? allowedMetadataTypes.length > 0 : hasPermissions({
+  const allowedMetadataTypes = (["openapi", "function"] as const).filter((kind) =>
+    hasPermissions({
       currentPermissions: runtimeConfig.currentUser.permissions,
-      requiredPermissions: `execution-factory:${tab}:create`,
-    })),
+      requiredPermissions:
+        kind === "function"
+          ? "execution-factory:function:create"
+          : "execution-factory:toolbox:create",
+    }),
+  );
+  const allowedTabs = (["operator", "toolbox", "mcp", "skill"] as const).filter(
+    (tab) =>
+      (!allowedTabsOverride || allowedTabsOverride.includes(tab)) &&
+      (tab === "toolbox"
+        ? allowedMetadataTypes.length > 0
+        : hasPermissions({
+            currentPermissions: runtimeConfig.currentUser.permissions,
+            requiredPermissions: `execution-factory:${tab}:create`,
+          })),
   );
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -103,19 +112,20 @@ export function CreateExecutionUnitWizard({
 
   const renderStepBody = () => {
     if (step === 0) {
-      return <CreateWizardTypeStep allowedTabs={allowedTabs} onChange={(tab) => {
-        if (allowedTabs.includes(tab)) setSelectedTab(tab);
-      }} value={selectedTab} />;
+      return (
+        <CreateWizardTypeStep
+          allowedTabs={allowedTabs}
+          onChange={(tab) => {
+            if (allowedTabs.includes(tab)) setSelectedTab(tab);
+          }}
+          value={selectedTab}
+        />
+      );
     }
 
     switch (selectedTab) {
       case "operator":
-        return (
-          <CreateOperatorTypeStep
-            mode={operatorMode}
-            onModeChange={setOperatorMode}
-          />
-        );
+        return <CreateOperatorTypeStep mode={operatorMode} onModeChange={setOperatorMode} />;
       case "toolbox":
         return (
           <CreateToolboxForm
@@ -161,11 +171,7 @@ export function CreateExecutionUnitWizard({
       return (
         <Space>
           <AppButton onClick={() => setStep(0)}>{t("common.back")}</AppButton>
-          <AppButton
-            disabled={!operatorMode}
-            onClick={handleOperatorContinue}
-            type="primary"
-          >
+          <AppButton disabled={!operatorMode} onClick={handleOperatorContinue} type="primary">
             {t("executionFactory.createWizardContinueConfigure")}
           </AppButton>
         </Space>
@@ -173,9 +179,7 @@ export function CreateExecutionUnitWizard({
     }
 
     if (selectedTab === "mcp") {
-      return (
-        <AppButton onClick={() => setStep(0)}>{t("common.back")}</AppButton>
-      );
+      return <AppButton onClick={() => setStep(0)}>{t("common.back")}</AppButton>;
     }
 
     return (

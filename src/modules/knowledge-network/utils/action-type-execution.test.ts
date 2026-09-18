@@ -36,10 +36,12 @@ function createExecutionConfig(
 describe("validateActionTypeExecutionConfig", () => {
   it("keeps requiring an execution tool", () => {
     expect(
-      validateActionTypeExecutionConfig(createExecutionConfig({
-        actionSource: undefined,
-        sourceName: "",
-      })),
+      validateActionTypeExecutionConfig(
+        createExecutionConfig({
+          actionSource: undefined,
+          sourceName: "",
+        }),
+      ),
     ).toBe(ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY);
   });
 

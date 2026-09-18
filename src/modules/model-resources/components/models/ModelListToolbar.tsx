@@ -5,7 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { DeleteOutlined, PlusOutlined, ReloadOutlined, SortAscendingOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SortAscendingOutlined,
+} from "@ant-design/icons";
 import { Dropdown, Input, Select } from "antd";
 import type { MenuProps } from "antd";
 import type { ReactNode } from "react";
@@ -64,7 +69,12 @@ export function ModelListToolbar({
   const { t } = useTranslation();
 
   const createButton = createNode ?? (
-    <AppButton className={styles.toolbarButton} icon={<PlusOutlined />} onClick={onCreate} type="primary">
+    <AppButton
+      className={styles.toolbarButton}
+      icon={<PlusOutlined />}
+      onClick={onCreate}
+      type="primary"
+    >
       {t("common.create")}
     </AppButton>
   );

@@ -45,19 +45,19 @@ on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'specs/**'
-      - 'scripts/**'
-      - 'deploy/**'
-      - 'public/**'
-      - 'Dockerfile'
-      - 'vite.config.ts'
+      - "src/**"
+      - "tests/**"
+      - "specs/**"
+      - "scripts/**"
+      - "deploy/**"
+      - "public/**"
+      - "Dockerfile"
+      - "vite.config.ts"
       # index.html 是 config.js 的载入点与 CSP 所在，package.json 承载依赖与构建脚本
       # ——两者都改得动运行时行为，此前不在清单里，改它们不触发评审。
-      - 'index.html'
-      - 'package.json'
-      - '!**/*.md'
+      - "index.html"
+      - "package.json"
+      - "!**/*.md"
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -65,7 +65,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to review'
+        description: "PR number to review"
         required: true
         type: string
 

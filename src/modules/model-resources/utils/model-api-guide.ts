@@ -21,11 +21,7 @@ export function resolveModelApiName(modelName: string, apiModel?: string) {
   return apiModel?.trim() || modelName;
 }
 
-export function buildLlmCurlExample(params: {
-  apiKey?: string;
-  host?: string;
-  modelName: string;
-}) {
+export function buildLlmCurlExample(params: { apiKey?: string; host?: string; modelName: string }) {
   const host = params.host ?? getModelApiHost();
   const apiKey = params.apiKey ?? MODEL_API_KEY_PLACEHOLDER;
 
@@ -39,11 +35,7 @@ export function buildLlmCurlExample(params: {
 }' -k`;
 }
 
-export function buildLlmSdkExample(params: {
-  apiKey?: string;
-  host?: string;
-  modelName: string;
-}) {
+export function buildLlmSdkExample(params: { apiKey?: string; host?: string; modelName: string }) {
   const host = params.host ?? getModelApiHost();
   const apiKey = params.apiKey ?? MODEL_API_KEY_PLACEHOLDER;
 

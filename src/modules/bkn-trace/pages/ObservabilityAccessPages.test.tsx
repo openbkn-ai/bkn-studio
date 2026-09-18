@@ -17,17 +17,30 @@ vi.mock("react-i18next", async (importOriginal) => {
   return { ...original, useTranslation: () => ({ t: (key: string) => key }) };
 });
 vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
+  const original =
+    await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
   return { ...original, getAccessProfile: vi.fn() };
 });
-vi.mock("@/modules/bkn-trace/business-provenance/BusinessProvenanceScene", () => ({ BusinessProvenanceScene: () => <div>business-provenance-content</div> }));
-vi.mock("@/modules/bkn-trace/trace-analysis/TraceAnalysisScene", () => ({ TraceAnalysisScene: () => <div>trace-analysis-content</div> }));
+vi.mock("@/modules/bkn-trace/business-provenance/BusinessProvenanceScene", () => ({
+  BusinessProvenanceScene: () => <div>business-provenance-content</div>,
+}));
+vi.mock("@/modules/bkn-trace/trace-analysis/TraceAnalysisScene", () => ({
+  TraceAnalysisScene: () => <div>trace-analysis-content</div>,
+}));
 
 const baseProfile = {
-  accessScopeFingerprint: "sha256:test", allowedLogCategories: [],
-  businessProvenanceManagedNetworks: false, businessProvenanceOwn: false,
-  globalLogSearch: false, logExport: false, logPolicyRead: false, logSensitiveFields: false,
-  managementAudit: false, observabilityArchiveManage: false, securityAudit: false, technicalTrace: false,
+  accessScopeFingerprint: "sha256:test",
+  allowedLogCategories: [],
+  businessProvenanceManagedNetworks: false,
+  businessProvenanceOwn: false,
+  globalLogSearch: false,
+  logExport: false,
+  logPolicyRead: false,
+  logSensitiveFields: false,
+  managementAudit: false,
+  observabilityArchiveManage: false,
+  securityAudit: false,
+  technicalTrace: false,
 };
 
 describe("observability capability pages", () => {

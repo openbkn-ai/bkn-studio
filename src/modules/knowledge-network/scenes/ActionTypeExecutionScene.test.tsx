@@ -72,15 +72,13 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   updateKnowledgeNetworkActionType: vi.fn(),
 }));
 
-vi.mock(
-  "@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal",
-  () => ({ ActionTypeExecuteModal: () => null }),
-);
+vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeExecuteModal", () => ({
+  ActionTypeExecuteModal: () => null,
+}));
 
-vi.mock(
-  "@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel",
-  () => ({ ActionTypeTaskManagementPanel: () => null }),
-);
+vi.mock("@/modules/knowledge-network/components/action-type/ActionTypeTaskManagementPanel", () => ({
+  ActionTypeTaskManagementPanel: () => null,
+}));
 
 vi.mock(
   "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell",
@@ -150,13 +148,12 @@ beforeEach(() => {
   mocks.getDetail.mockReset();
   mocks.needsResolution.mockReset();
   mocks.resolveDisplay.mockReset();
-  mocks.needsResolution.mockImplementation(
-    (source?: ActionTypeActionSource) =>
-      Boolean(
-        source?.type === "tool" &&
-          source.boxId &&
-          (!source.boxName || (source.toolId && !source.toolName)),
-      ),
+  mocks.needsResolution.mockImplementation((source?: ActionTypeActionSource) =>
+    Boolean(
+      source?.type === "tool" &&
+      source.boxId &&
+      (!source.boxName || (source.toolId && !source.toolName)),
+    ),
   );
 });
 
@@ -174,9 +171,9 @@ describe("ActionTypeExecutionScene review regressions", () => {
 
     expect(await screen.findByText("Update order")).not.toBeNull();
     await waitFor(() => {
-      expect(
-        screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length,
-      ).toBeGreaterThan(0);
+      expect(screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length).toBeGreaterThan(
+        0,
+      );
     });
     expect(screen.queryByText("box-1/tool-1")).toBeNull();
     expect(screen.queryByText("box-1")).toBeNull();
@@ -232,9 +229,7 @@ describe("ActionTypeExecutionScene review regressions", () => {
     render(<ActionTypeExecutionScene />);
 
     expect(await screen.findByText("Update order")).not.toBeNull();
-    expect(
-      screen.queryByText("knowledgeNetwork.actionTypeExecutionConfigReadonly"),
-    ).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionConfigReadonly")).toBeNull();
     expect(screen.getByTestId("execution-header-actions").childElementCount).toBe(0);
   });
 });

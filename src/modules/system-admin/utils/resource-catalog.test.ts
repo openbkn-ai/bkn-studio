@@ -123,7 +123,14 @@ describe("resource-catalog", () => {
   });
 
   it("keeps task management out of knowledge-network grants", () => {
-    for (const type of ["concept_group", "object_type", "relation_type", "action_type", "metric", "risk_type"]) {
+    for (const type of [
+      "concept_group",
+      "object_type",
+      "relation_type",
+      "action_type",
+      "metric",
+      "risk_type",
+    ]) {
       const operations = operationsForType(type).map((item) => item.key);
       expect(operations).not.toContain("authorize");
       expect(operations).not.toContain("task_manage");
@@ -142,11 +149,7 @@ describe("resource-catalog", () => {
   });
 
   it("offers data querying only for knowledge-network child types that declare it", () => {
-    for (const type of [
-      "object_type",
-      "relation_type",
-      "metric",
-    ]) {
+    for (const type of ["object_type", "relation_type", "metric"]) {
       expect(operationsForType(type).map((item) => item.key)).toContain("query_data");
     }
     expect(operationsForType("concept_group").map((item) => item.key)).not.toContain("query_data");
@@ -170,21 +173,26 @@ describe("resource-catalog", () => {
     expect(operationsForType("function").map((item) => item.key)).toEqual(
       expect.arrayContaining(["view", "modify", "execute"]),
     );
-    expect(operationsForType("function").find((item) => item.key === "modify")?.requires)
-      .toEqual(["view"]);
+    expect(operationsForType("function").find((item) => item.key === "modify")?.requires).toEqual([
+      "view",
+    ]);
   });
 
   it("uses only catalog-declared authoring prerequisites", () => {
-    expect(operationsForType("action_type").find((item) => item.key === "execute")?.requires)
-      .toEqual([]);
-    expect(operationsForType("catalog").find((item) => item.key === "resource_manage")?.requires)
-      .toEqual(["view_detail"]);
+    expect(
+      operationsForType("action_type").find((item) => item.key === "execute")?.requires,
+    ).toEqual([]);
+    expect(
+      operationsForType("catalog").find((item) => item.key === "resource_manage")?.requires,
+    ).toEqual(["view_detail"]);
     for (const operation of ["modify", "delete", "authorize"]) {
-      expect(operationsForType("knowledge_network").find((item) => item.key === operation)?.requires)
-        .toEqual(["view_detail"]);
+      expect(
+        operationsForType("knowledge_network").find((item) => item.key === operation)?.requires,
+      ).toEqual(["view_detail"]);
     }
-    expect(operationsForType("resource").find((item) => item.key === "query_data")?.requires)
-      .toEqual([]);
+    expect(
+      operationsForType("resource").find((item) => item.key === "query_data")?.requires,
+    ).toEqual([]);
   });
 
   it("localizes every knowledge-network child resource type in Chinese", async () => {

@@ -31,9 +31,7 @@ export function MetadataDetailSection({
   if (metadataType === "function") {
     return (
       <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>
-          {t("executionFactory.metadataSectionTitle")}
-        </h3>
+        <h3 className={styles.sectionTitle}>{t("executionFactory.metadataSectionTitle")}</h3>
         {functionInput?.code ? (
           <>
             <h4 className={styles.sectionTitle}>{t("executionFactory.functionCode")}</h4>
@@ -52,9 +50,7 @@ export function MetadataDetailSection({
 
     return (
       <section className={styles.sectionCard}>
-        <h3 className={styles.sectionTitle}>
-          {t("executionFactory.metadataSectionTitle")}
-        </h3>
+        <h3 className={styles.sectionTitle}>{t("executionFactory.metadataSectionTitle")}</h3>
         {endpoint ? (
           <Descriptions
             bordered

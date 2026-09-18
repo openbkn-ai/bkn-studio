@@ -59,15 +59,14 @@ export function StatisticsHeaderFilter({ onChange, value }: StatisticsHeaderFilt
   return (
     <div className={styles.filterBar}>
       <div className={styles.filterItem}>
-        <span className={styles.filterLabel}>{t("modelResources.statistics.filters.modelName")}</span>
+        <span className={styles.filterLabel}>
+          {t("modelResources.statistics.filters.modelName")}
+        </span>
         <Select
           onChange={(modelId) => {
             onChange({ ...value, modelId });
           }}
-          options={[
-            { value: "all", label: t("common.all") },
-            ...modelOptions,
-          ]}
+          options={[{ value: "all", label: t("common.all") }, ...modelOptions]}
           placeholder={t("modelResources.statistics.filters.modelPlaceholder")}
           style={{ width: 180 }}
           value={value.modelId}

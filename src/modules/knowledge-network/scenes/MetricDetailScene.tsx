@@ -25,9 +25,7 @@ import {
   getKnowledgeNetworkMetric,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
-import type {
-  KnowledgeNetworkMetricRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import {
   formatMetricUnitLabel,
   formatMetricUnitTypeLabel,
@@ -175,156 +173,155 @@ export function MetricDetailScene({
             record={detail}
           />
         }
-      onBack={leaveDetail}
-      subtitle={t("knowledgeNetwork.metricDetailDescription")}
-      title={detail.name}
-    >
-      <div className={styles.page}>
-        <section className={styles.sectionCard}>
-          <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricBasicInfo")}</h3>
-          <Descriptions bordered className={styles.basicDescriptions} column={2} size="small">
-            <Descriptions.Item label={t("knowledgeNetwork.metricName")} span={2}>
-              <span className={styles.nameCell}>
-                <span className={styles.summaryIcon} style={{ backgroundColor: "#126ee3" }}>
-                  <LineChartOutlined />
+        onBack={leaveDetail}
+        subtitle={t("knowledgeNetwork.metricDetailDescription")}
+        title={detail.name}
+      >
+        <div className={styles.page}>
+          <section className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricBasicInfo")}</h3>
+            <Descriptions bordered className={styles.basicDescriptions} column={2} size="small">
+              <Descriptions.Item label={t("knowledgeNetwork.metricName")} span={2}>
+                <span className={styles.nameCell}>
+                  <span className={styles.summaryIcon} style={{ backgroundColor: "#126ee3" }}>
+                    <LineChartOutlined />
+                  </span>
+                  <span>{detail.name}</span>
                 </span>
-                <span>{detail.name}</span>
-              </span>
-            </Descriptions.Item>
-            <Descriptions.Item label={t("knowledgeNetwork.descriptionField")} span={2}>
-              {detail.description || (
-                <span className={styles.placeholder}>{t("knowledgeNetwork.noDescription")}</span>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("knowledgeNetwork.metricTags")} span={2}>
-              {detail.tags.length > 0 ? (
-                <div className={styles.tagRow}>
-                  {detail.tags.map((tag) => (
-                    <Tag key={tag}>{tag}</Tag>
-                  ))}
-                </div>
-              ) : (
-                <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("common.id")}>{detail.id}</Descriptions.Item>
-            <Descriptions.Item label={t("knowledgeNetwork.modifier")}>
-              {resolvedUpdaterName}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("common.updateTime")} span={2}>
-              {detail.updateTime || "--"}
-            </Descriptions.Item>
-          </Descriptions>
-        </section>
+              </Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.descriptionField")} span={2}>
+                {detail.description || (
+                  <span className={styles.placeholder}>{t("knowledgeNetwork.noDescription")}</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.metricTags")} span={2}>
+                {detail.tags.length > 0 ? (
+                  <div className={styles.tagRow}>
+                    {detail.tags.map((tag) => (
+                      <Tag key={tag}>{tag}</Tag>
+                    ))}
+                  </div>
+                ) : (
+                  <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("common.id")}>{detail.id}</Descriptions.Item>
+              <Descriptions.Item label={t("knowledgeNetwork.modifier")}>
+                {resolvedUpdaterName}
+              </Descriptions.Item>
+              <Descriptions.Item label={t("common.updateTime")} span={2}>
+                {detail.updateTime || "--"}
+              </Descriptions.Item>
+            </Descriptions>
+          </section>
 
-        <section className={styles.sectionCard}>
-          <Tabs
-            activeKey={activeTab}
-            items={[
-              { key: "info", label: t("knowledgeNetwork.metricInfoTab") },
-              { key: "query", label: t("knowledgeNetwork.metricDataQuery") },
-            ]}
-            onChange={setActiveTab}
-          />
-
-          {activeTab === "info" ? (
-            <div className={styles.infoSections}>
-              <section className={styles.configBlock}>
-                <h3 className={styles.sectionTitle}>{t("knowledgeNetwork.metricConfigSection")}</h3>
-                <Descriptions bordered column={2} size="small">
-                  <Descriptions.Item label={t("knowledgeNetwork.metricBoundObjectType")}>
-                    {boundObjectTypeName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricType")}>
-                    {t("knowledgeNetwork.metricTypeAtomic")}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricUnitType")}>
-                    {formatMetricUnitTypeLabel(detail.unitType, t)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricUnit")}>
-                    {formatMetricUnitLabel(detail.unit, t)}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                <h4 className={styles.subsectionTitle}>
-                  {t("knowledgeNetwork.metricCalculationSection")}
-                </h4>
-                <Descriptions bordered column={2} size="small">
-                  <Descriptions.Item label={t("knowledgeNetwork.metricAggregationProperty")}>
-                    {resolvePropertyDisplayName(formula.aggregation.property, propertyOptions)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricAggregationAggr")}>
-                    {formula.aggregation.aggr
-                      ? t(`knowledgeNetwork.metricAggregationAggrOption.${formula.aggregation.aggr}`)
-                      : "--"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricFilterCondition")} span={2}>
-                    {formatSemanticConditionLabel(
-                      formula.condition,
-                      propertyOptions,
-                      t,
-                      "--",
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricGroupBy")}>
-                    {formatSemanticPropertyList(formula.groupBy, propertyOptions)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricOrderBy")}>
-                    {formatSemanticOrderByLabel(
-                      formula.orderBy?.property,
-                      formula.orderBy?.direction,
-                      propertyOptions,
-                      t,
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricHaving")} span={2}>
-                    {formula.having?.operator
-                      ? `${formula.having.operator} ${formula.having.value ?? ""}`.trim()
-                      : "--"}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                <h4 className={styles.subsectionTitle}>
-                  {t("knowledgeNetwork.metricTimeDimensionSection")}
-                </h4>
-                <Descriptions bordered column={2} size="small">
-                  <Descriptions.Item label={t("knowledgeNetwork.metricTimeDimensionProperty")}>
-                    {resolvePropertyDisplayName(detail.timeDimension?.property, propertyOptions)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("knowledgeNetwork.metricDefaultRangePolicy")}>
-                    {detail.timeDimension?.defaultRangePolicy
-                      ? t(
-                          `knowledgeNetwork.metricDefaultRangePolicyOption.${detail.timeDimension.defaultRangePolicy}`,
-                        )
-                      : "--"}
-                  </Descriptions.Item>
-                </Descriptions>
-
-                <h4 className={styles.subsectionTitle}>
-                  {t("knowledgeNetwork.metricAnalysisDimensionsSection")}
-                </h4>
-                <Descriptions bordered column={1} size="small">
-                  <Descriptions.Item label={t("knowledgeNetwork.metricAnalysisDimensions")}>
-                    {formatSemanticPropertyList(formula.analysisDimensions, propertyOptions)}
-                  </Descriptions.Item>
-                </Descriptions>
-              </section>
-            </div>
-          ) : (
-            <MetricDataQueryPanel
-              analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
-              boundObjectTypeId={detail.scopeType === "object_type" ? detail.scopeRef : undefined}
-              canQueryData={hasKnowledgeNetworkRecordOperation(detail, "query_data")}
-              embedded
-              metricId={detail.id}
-              metricName={detail.name}
-              networkId={networkId}
-              objectTypes={[]}
-              propertyOptions={propertyOptions}
+          <section className={styles.sectionCard}>
+            <Tabs
+              activeKey={activeTab}
+              items={[
+                { key: "info", label: t("knowledgeNetwork.metricInfoTab") },
+                { key: "query", label: t("knowledgeNetwork.metricDataQuery") },
+              ]}
+              onChange={setActiveTab}
             />
-          )}
-        </section>
-      </div>
+
+            {activeTab === "info" ? (
+              <div className={styles.infoSections}>
+                <section className={styles.configBlock}>
+                  <h3 className={styles.sectionTitle}>
+                    {t("knowledgeNetwork.metricConfigSection")}
+                  </h3>
+                  <Descriptions bordered column={2} size="small">
+                    <Descriptions.Item label={t("knowledgeNetwork.metricBoundObjectType")}>
+                      {boundObjectTypeName}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricType")}>
+                      {t("knowledgeNetwork.metricTypeAtomic")}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricUnitType")}>
+                      {formatMetricUnitTypeLabel(detail.unitType, t)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricUnit")}>
+                      {formatMetricUnitLabel(detail.unit, t)}
+                    </Descriptions.Item>
+                  </Descriptions>
+
+                  <h4 className={styles.subsectionTitle}>
+                    {t("knowledgeNetwork.metricCalculationSection")}
+                  </h4>
+                  <Descriptions bordered column={2} size="small">
+                    <Descriptions.Item label={t("knowledgeNetwork.metricAggregationProperty")}>
+                      {resolvePropertyDisplayName(formula.aggregation.property, propertyOptions)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricAggregationAggr")}>
+                      {formula.aggregation.aggr
+                        ? t(
+                            `knowledgeNetwork.metricAggregationAggrOption.${formula.aggregation.aggr}`,
+                          )
+                        : "--"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricFilterCondition")} span={2}>
+                      {formatSemanticConditionLabel(formula.condition, propertyOptions, t, "--")}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricGroupBy")}>
+                      {formatSemanticPropertyList(formula.groupBy, propertyOptions)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricOrderBy")}>
+                      {formatSemanticOrderByLabel(
+                        formula.orderBy?.property,
+                        formula.orderBy?.direction,
+                        propertyOptions,
+                        t,
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricHaving")} span={2}>
+                      {formula.having?.operator
+                        ? `${formula.having.operator} ${formula.having.value ?? ""}`.trim()
+                        : "--"}
+                    </Descriptions.Item>
+                  </Descriptions>
+
+                  <h4 className={styles.subsectionTitle}>
+                    {t("knowledgeNetwork.metricTimeDimensionSection")}
+                  </h4>
+                  <Descriptions bordered column={2} size="small">
+                    <Descriptions.Item label={t("knowledgeNetwork.metricTimeDimensionProperty")}>
+                      {resolvePropertyDisplayName(detail.timeDimension?.property, propertyOptions)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("knowledgeNetwork.metricDefaultRangePolicy")}>
+                      {detail.timeDimension?.defaultRangePolicy
+                        ? t(
+                            `knowledgeNetwork.metricDefaultRangePolicyOption.${detail.timeDimension.defaultRangePolicy}`,
+                          )
+                        : "--"}
+                    </Descriptions.Item>
+                  </Descriptions>
+
+                  <h4 className={styles.subsectionTitle}>
+                    {t("knowledgeNetwork.metricAnalysisDimensionsSection")}
+                  </h4>
+                  <Descriptions bordered column={1} size="small">
+                    <Descriptions.Item label={t("knowledgeNetwork.metricAnalysisDimensions")}>
+                      {formatSemanticPropertyList(formula.analysisDimensions, propertyOptions)}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </section>
+              </div>
+            ) : (
+              <MetricDataQueryPanel
+                analysisDimensionOptions={detail.calculationFormula.analysisDimensions ?? []}
+                boundObjectTypeId={detail.scopeType === "object_type" ? detail.scopeRef : undefined}
+                canQueryData={hasKnowledgeNetworkRecordOperation(detail, "query_data")}
+                embedded
+                metricId={detail.id}
+                metricName={detail.name}
+                networkId={networkId}
+                objectTypes={[]}
+                propertyOptions={propertyOptions}
+              />
+            )}
+          </section>
+        </div>
       </KnowledgeNetworkResourceConfigShell>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

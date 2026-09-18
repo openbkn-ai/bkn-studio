@@ -155,10 +155,7 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
               <p className={styles.emptyHint}>{ioSpec.requestBodyDescription}</p>
             ) : null}
             <JsonCodeBlock
-              value={resolveIoPreviewValue(
-                ioSpec?.requestBodyExample,
-                ioSpec?.requestBodySchema,
-              )}
+              value={resolveIoPreviewValue(ioSpec?.requestBodyExample, ioSpec?.requestBodySchema)}
             />
           </section>
           {responseTabs.length ? (
@@ -212,8 +209,8 @@ export function ToolIoPanel({ functionInput, ioSpec, runLogs = [] }: ToolIoPanel
             {runLogs.map((entry) => (
               <div className={styles.logItem} key={entry.id}>
                 <div className={styles.logMeta}>
-                  {formatExecutionUnitTime(entry.timestamp)} ·{" "}
-                  {entry.statusCode ?? "-"} · {entry.durationMs ?? "-"}ms
+                  {formatExecutionUnitTime(entry.timestamp)} · {entry.statusCode ?? "-"} ·{" "}
+                  {entry.durationMs ?? "-"}ms
                   {entry.error ? ` · ${entry.error}` : ""}
                 </div>
                 <JsonCodeBlock value={entry.body} />

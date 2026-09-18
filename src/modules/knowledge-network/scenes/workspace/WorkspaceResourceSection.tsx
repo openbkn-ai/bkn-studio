@@ -75,9 +75,7 @@ export function WorkspaceResourceSection({
           networkId={networkId}
           onDelete={async (records) => {
             await Promise.all(
-              records.map((record) =>
-                deleteKnowledgeNetworkConceptGroup(networkId, record.id),
-              ),
+              records.map((record) => deleteKnowledgeNetworkConceptGroup(networkId, record.id)),
             );
             void message.success(t("common.success"));
             await data.reloadConceptGroups();
@@ -98,9 +96,7 @@ export function WorkspaceResourceSection({
           networkId={networkId}
           onDelete={async (records) => {
             await Promise.all(
-              records.map((record) =>
-                deleteKnowledgeNetworkObjectType(networkId, record.id),
-              ),
+              records.map((record) => deleteKnowledgeNetworkObjectType(networkId, record.id)),
             );
             void message.success(t("common.success"));
             await data.reloadObjectTypes();
@@ -119,9 +115,7 @@ export function WorkspaceResourceSection({
           objectTypes={data.objectTypes}
           onDelete={async (records) => {
             await Promise.all(
-              records.map((record) =>
-                deleteKnowledgeNetworkRelationType(networkId, record.id),
-              ),
+              records.map((record) => deleteKnowledgeNetworkRelationType(networkId, record.id)),
             );
             void message.success(t("common.success"));
             await data.reloadRelationTypes();
@@ -140,9 +134,7 @@ export function WorkspaceResourceSection({
           objectTypes={data.objectTypes}
           onDelete={async (records) => {
             await Promise.all(
-              records.map((record) =>
-                deleteKnowledgeNetworkActionType(networkId, record.id),
-              ),
+              records.map((record) => deleteKnowledgeNetworkActionType(networkId, record.id)),
             );
             void message.success(t("common.success"));
             await data.reloadActionTypes();

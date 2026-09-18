@@ -27,11 +27,9 @@ const services = vi.hoisted(() => ({
   },
 }));
 const createMenu = vi.hoisted(() => ({
-  onResourceCreated: undefined as undefined | ((payload: {
-    tab: "toolbox" | "mcp" | "skill";
-    id: string;
-    toolId?: string;
-  }) => void),
+  onResourceCreated: undefined as
+    | undefined
+    | ((payload: { tab: "toolbox" | "mcp" | "skill"; id: string; toolId?: string }) => void),
 }));
 const auth = vi.hoisted(() => ({ refreshCurrentUser: vi.fn() }));
 const navigation = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -64,7 +62,11 @@ vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
 
 // Only the card grid and the confirmation it opens are under test.
 vi.mock("@/modules/execution-factory/components/create-menu/CreateMenu", () => ({
-  CreateMenu: ({ onResourceCreated }: { onResourceCreated: typeof createMenu.onResourceCreated }) => {
+  CreateMenu: ({
+    onResourceCreated,
+  }: {
+    onResourceCreated: typeof createMenu.onResourceCreated;
+  }) => {
     createMenu.onResourceCreated = onResourceCreated;
     return null;
   },
@@ -295,24 +297,42 @@ describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
   it("redirects a Function-only user away from the API view and hides the API tab", async () => {
     renderScene("?activeTab=toolbox&toolboxView=openapi");
 
-    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") })).toBeTruthy();
-    expect(screen.queryByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeNull();
-    await waitFor(() => expect(api.listToolboxes.mock.calls).toContainEqual([expect.objectContaining({ metadataType: "function" })]));
+    expect(
+      await screen.findByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") }),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(api.listToolboxes.mock.calls).toContainEqual([
+        expect.objectContaining({ metadataType: "function" }),
+      ]),
+    );
   });
 
   it("shows only the API view for an API-only user", async () => {
     services.runtimeConfig.currentUser.permissions = ["execution-factory:toolbox:view"];
     renderScene("?activeTab=toolbox&toolboxView=function");
 
-    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeTruthy();
-    expect(screen.queryByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") })).toBeNull();
-    await waitFor(() => expect(api.listToolboxes.mock.calls).toContainEqual([expect.objectContaining({ metadataType: "openapi" })]));
+    expect(
+      await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("tab", { name: i18n.t("executionFactory.functionToolboxTab") }),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(api.listToolboxes.mock.calls).toContainEqual([
+        expect.objectContaining({ metadataType: "openapi" }),
+      ]),
+    );
   });
 
   it("keeps both toolbox views in the catalog for a catalog-only user", async () => {
     services.runtimeConfig.currentUser.permissions = ["execution-factory:catalog:view"];
     render(
-      <MemoryRouter initialEntries={["/execution-factory/catalog?activeTab=toolbox&toolboxView=function"]}>
+      <MemoryRouter
+        initialEntries={["/execution-factory/catalog?activeTab=toolbox&toolboxView=function"]}
+      >
         <ExecutionUnitListScene
           descriptionKey="executionFactory.catalogDescription"
           marketMode
@@ -323,17 +343,27 @@ describe("ExecutionUnitListScene toolbox view permissions (#686)", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") })).toBeTruthy();
-    expect(screen.getByRole("tab", {
-      name: new RegExp(`^${i18n.t("executionFactory.functionToolboxTab")}`),
-      selected: true,
-    })).toBeTruthy();
-    expect(screen.getByTestId("location").textContent).toBe("/execution-factory/catalog?activeTab=toolbox&toolboxView=function");
-    await waitFor(() => expect(api.listToolboxMarket).toHaveBeenCalledWith(expect.objectContaining({
-      metadataType: "function",
-      page: 1,
-      pageSize: 20,
-    })));
+    expect(
+      await screen.findByRole("tab", { name: i18n.t("executionFactory.openapiToolboxTab") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("tab", {
+        name: new RegExp(`^${i18n.t("executionFactory.functionToolboxTab")}`),
+        selected: true,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByTestId("location").textContent).toBe(
+      "/execution-factory/catalog?activeTab=toolbox&toolboxView=function",
+    );
+    await waitFor(() =>
+      expect(api.listToolboxMarket).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadataType: "function",
+          page: 1,
+          pageSize: 20,
+        }),
+      ),
+    );
     expect(api.listToolboxes).not.toHaveBeenCalled();
   });
 });
@@ -350,31 +380,58 @@ describe("ExecutionUnitListScene creation navigation (#686)", () => {
   });
 
   it.each([
-    ["skill", "toolbox", "api-box", "api-tool", "/execution-factory/toolboxes/api-box/tools?toolId=api-tool", "toolbox"],
-    ["skill", "toolbox", "function-box", undefined, "/execution-factory/toolboxes/function-box/tools?create=1", "function"],
+    [
+      "skill",
+      "toolbox",
+      "api-box",
+      "api-tool",
+      "/execution-factory/toolboxes/api-box/tools?toolId=api-tool",
+      "toolbox",
+    ],
+    [
+      "skill",
+      "toolbox",
+      "function-box",
+      undefined,
+      "/execution-factory/toolboxes/function-box/tools?create=1",
+      "function",
+    ],
     ["skill", "mcp", "mcp-created", undefined, "/execution-factory/mcp/mcp-created", "mcp"],
-    ["mcp", "skill", "skill-created", undefined, "/execution-factory/skills/skill-created", "skill"],
-  ] as const)("refreshes owner grants before navigating from %s to %s", async (
-    startTab, tab, id, toolId, destination, grantType,
-  ) => {
-    services.runtimeConfig.currentUser.permissions = [`execution-factory:${startTab}:view`];
-    let resolveRefresh!: (user: typeof services.runtimeConfig.currentUser) => void;
-    auth.refreshCurrentUser.mockImplementation(() => new Promise((resolve) => {
-      resolveRefresh = resolve;
-    }));
-    renderScene(`?activeTab=${startTab}`);
+    [
+      "mcp",
+      "skill",
+      "skill-created",
+      undefined,
+      "/execution-factory/skills/skill-created",
+      "skill",
+    ],
+  ] as const)(
+    "refreshes owner grants before navigating from %s to %s",
+    async (startTab, tab, id, toolId, destination, grantType) => {
+      services.runtimeConfig.currentUser.permissions = [`execution-factory:${startTab}:view`];
+      let resolveRefresh!: (user: typeof services.runtimeConfig.currentUser) => void;
+      auth.refreshCurrentUser.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveRefresh = resolve;
+          }),
+      );
+      renderScene(`?activeTab=${startTab}`);
 
-    act(() => createMenu.onResourceCreated?.({ tab, id, toolId }));
-    expect(auth.refreshCurrentUser).toHaveBeenCalledOnce();
-    expect(navigation.navigate).not.toHaveBeenCalled();
+      act(() => createMenu.onResourceCreated?.({ tab, id, toolId }));
+      expect(auth.refreshCurrentUser).toHaveBeenCalledOnce();
+      expect(navigation.navigate).not.toHaveBeenCalled();
 
-    await act(async () => {
-      resolveRefresh({ permissions: [`execution-factory:${grantType}:view`] });
-      await Promise.resolve();
-    });
-    await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith(destination));
-    expect(services.runtimeConfig.currentUser.permissions).toContain(`execution-factory:${grantType}:view`);
-  });
+      await act(async () => {
+        resolveRefresh({ permissions: [`execution-factory:${grantType}:view`] });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(navigation.navigate).toHaveBeenCalledWith(destination));
+      expect(services.runtimeConfig.currentUser.permissions).toContain(
+        `execution-factory:${grantType}:view`,
+      );
+    },
+  );
 
   it("reloads the target route if refreshed permissions cannot be loaded", async () => {
     services.runtimeConfig.currentUser.permissions = ["execution-factory:skill:view"];
@@ -383,7 +440,9 @@ describe("ExecutionUnitListScene creation navigation (#686)", () => {
 
     act(() => createMenu.onResourceCreated?.({ tab: "mcp", id: "mcp-created" }));
 
-    await waitFor(() => expect(paths.buildAppPath).toHaveBeenCalledWith("/execution-factory/mcp/mcp-created"));
+    await waitFor(() =>
+      expect(paths.buildAppPath).toHaveBeenCalledWith("/execution-factory/mcp/mcp-created"),
+    );
     expect(window.location.hash).toBe("#reload-permissions");
     expect(navigation.navigate).not.toHaveBeenCalled();
     window.location.hash = "";

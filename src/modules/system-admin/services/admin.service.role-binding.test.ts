@@ -31,7 +31,10 @@ describe("admin.service · role bindings", () => {
   it("removes existing roles before binding replacements", async () => {
     let completeRemoval: () => void = () => undefined;
     deleteMock.mockImplementation(
-      () => new Promise<void>((resolve) => { completeRemoval = resolve; }),
+      () =>
+        new Promise<void>((resolve) => {
+          completeRemoval = resolve;
+        }),
     );
     const { syncUserRoleBindings } = await import("./admin.service");
 

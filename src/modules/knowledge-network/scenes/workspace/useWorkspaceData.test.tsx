@@ -12,15 +12,13 @@ import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/k
 
 import { useWorkspaceData } from "./useWorkspaceData";
 
-const {
-  getKnowledgeNetwork,
-  getMetricApiAvailability,
-  listKnowledgeNetworkMetrics,
-} = vi.hoisted(() => ({
-  getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
-  getMetricApiAvailability: vi.fn(() => "ready"),
-  listKnowledgeNetworkMetrics: vi.fn(),
-}));
+const { getKnowledgeNetwork, getMetricApiAvailability, listKnowledgeNetworkMetrics } = vi.hoisted(
+  () => ({
+    getKnowledgeNetwork: vi.fn<() => Promise<KnowledgeNetworkRecord | null>>(),
+    getMetricApiAvailability: vi.fn(() => "ready"),
+    listKnowledgeNetworkMetrics: vi.fn(),
+  }),
+);
 
 vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => ({
   getKnowledgeNetwork,

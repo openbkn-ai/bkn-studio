@@ -134,26 +134,17 @@ function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSe
   return `${networkId}:${section}`;
 }
 
-export function useWorkspaceData(
-  networkId: string,
-  section: KnowledgeNetworkWorkspaceSection,
-) {
+export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
   const [conceptGroups, setConceptGroups] = useState<ConceptGroupRecord[]>([]);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>(
-    [],
-  );
+  const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
-  const [functions, setFunctions] = useState<CapabilityBindingListResult>(
-    EMPTY_CAPABILITY_RESULT,
-  );
+  const [functions, setFunctions] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
-  const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(
-    EMPTY_CAPABILITY_RESULT,
-  );
+  const [mcpTools, setMcpTools] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [skills, setSkills] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [metricApiUnavailable, setMetricApiUnavailable] = useState(false);
   const [detailLoading, setDetailLoading] = useState(true);

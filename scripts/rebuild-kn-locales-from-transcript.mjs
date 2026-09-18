@@ -30,9 +30,7 @@ function extractEntries(text) {
     let block = lines[i];
     const rest = match[3];
     const completeOnLine =
-      rest.length > 0 &&
-      !/:\s*$/.test(lines[i]) &&
-      lines[i].trimEnd().endsWith(",");
+      rest.length > 0 && !/:\s*$/.test(lines[i]) && lines[i].trimEnd().endsWith(",");
     if (!completeOnLine) {
       i += 1;
       while (i < lines.length) {
@@ -117,17 +115,11 @@ const enOrdered = [...enEntries.entries()].sort(([a], [b]) => a.localeCompare(b)
 
 fs.writeFileSync(
   path.join(localeDir, "zh-CN.ts"),
-  renderLocale(
-    "knowledgeNetworkZhCN",
-    new Map(zhOrdered.map(([key, block]) => [key, block])),
-  ),
+  renderLocale("knowledgeNetworkZhCN", new Map(zhOrdered.map(([key, block]) => [key, block]))),
 );
 fs.writeFileSync(
   path.join(localeDir, "en-US.ts"),
-  renderLocale(
-    "knowledgeNetworkEnUS",
-    new Map(enOrdered.map(([key, block]) => [key, block])),
-  ),
+  renderLocale("knowledgeNetworkEnUS", new Map(enOrdered.map(([key, block]) => [key, block]))),
 );
 
 console.log("zh keys:", zhEntries.size);

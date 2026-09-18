@@ -5,9 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type {
-  ObjectTypeMaskRule,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { ObjectTypeMaskRule } from "@/modules/knowledge-network/types/knowledge-network";
 
 export type ObjectTypeMaskRuleKind = ObjectTypeMaskRule["kind"];
 
@@ -96,9 +94,7 @@ export function isMaskRuleValid(type: string | undefined, rule?: ObjectTypeMaskR
       return validReplacement(rule.replacement);
     case "partial":
       return (
-        validReplacement(rule.replacement) &&
-        validKeep(rule.keepStart) &&
-        validKeep(rule.keepEnd)
+        validReplacement(rule.replacement) && validKeep(rule.keepStart) && validKeep(rule.keepEnd)
       );
     case "email":
       return validReplacement(rule.replacement) && validKeep(rule.localKeepStart);
@@ -109,10 +105,7 @@ export function isMaskRuleValid(type: string | undefined, rule?: ObjectTypeMaskR
   }
 }
 
-export function defaultMaskPreviewInput(
-  type?: string,
-  ruleKind?: ObjectTypeMaskRuleKind,
-): string {
+export function defaultMaskPreviewInput(type?: string, ruleKind?: ObjectTypeMaskRuleKind): string {
   const normalizedType = normalizePropertyType(type);
   if (ruleKind === "email") {
     return "zhangsan@example.com";
@@ -145,19 +138,9 @@ function partialMask(input: string, keepStart: number, keepEnd: number, replacem
   }`;
 }
 
-function emailMask(
-  input: string,
-  keepStart: number,
-  preserveDomain: boolean,
-  replacement: string,
-) {
+function emailMask(input: string, keepStart: number, preserveDomain: boolean, replacement: string) {
   const at = input.lastIndexOf("@");
-  if (
-    at <= 0 ||
-    at === input.length - 1 ||
-    input.slice(0, at).includes("@") ||
-    /\s/.test(input)
-  ) {
+  if (at <= 0 || at === input.length - 1 || input.slice(0, at).includes("@") || /\s/.test(input)) {
     return replacement;
   }
   const local = Array.from(input.slice(0, at));

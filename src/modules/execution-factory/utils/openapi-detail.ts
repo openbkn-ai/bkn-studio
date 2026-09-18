@@ -16,15 +16,7 @@ export type OpenApiEndpointDetail = {
   serverUrl?: string;
 };
 
-const HTTP_METHODS = new Set([
-  "delete",
-  "get",
-  "head",
-  "options",
-  "patch",
-  "post",
-  "put",
-]);
+const HTTP_METHODS = new Set(["delete", "get", "head", "options", "patch", "post", "put"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

@@ -126,8 +126,18 @@ const mockConnectorTypes: BackendConnectorType[] = [
       username: mockField("Username", "SQL Server login username", "string", true),
       password: mockField("Password", "SQL Server login password", "string", true, true),
       database: mockField("Database", "SQL Server target database", "string", true),
-      schemas: mockField("Schema list", "Optional. Leave empty to scan all accessible non-system schemas.", "array", false),
-      options: mockField("Connection options", "Connection options such as encrypt, trustservercertificate, and connection timeout.", "object", false),
+      schemas: mockField(
+        "Schema list",
+        "Optional. Leave empty to scan all accessible non-system schemas.",
+        "array",
+        false,
+      ),
+      options: mockField(
+        "Connection options",
+        "Connection options such as encrypt, trustservercertificate, and connection timeout.",
+        "object",
+        false,
+      ),
     },
   },
   {
@@ -156,11 +166,32 @@ const mockConnectorTypes: BackendConnectorType[] = [
       protocol: mockField("Protocol", "http or https", "string", true),
       host: mockField("Host", "AnyShare service host", "string", true),
       port: mockField("Port", "AnyShare service port", "integer", true),
-      auth_type: mockField("Authentication type", "Token or application credentials", "integer", true),
+      auth_type: mockField(
+        "Authentication type",
+        "Token or application credentials",
+        "integer",
+        true,
+      ),
       token: mockField("Access token", "Required for token authentication", "string", false, true),
-      app_id: mockField("Application ID", "Required for application authentication", "string", false),
-      app_secret: mockField("Application secret", "Required for application authentication", "string", false, true),
-      doc_lib_type: mockField("Document library type", "Knowledge or document library", "integer", true),
+      app_id: mockField(
+        "Application ID",
+        "Required for application authentication",
+        "string",
+        false,
+      ),
+      app_secret: mockField(
+        "Application secret",
+        "Required for application authentication",
+        "string",
+        false,
+        true,
+      ),
+      doc_lib_type: mockField(
+        "Document library type",
+        "Knowledge or document library",
+        "integer",
+        true,
+      ),
       paths: mockField("Path list", "Optional document library paths", "array", false),
     },
   },
@@ -176,7 +207,7 @@ function mockField(
   return { description, encrypted, name, required, type };
 }
 
-const wait = async <T,>(value: T) =>
+const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 180);
   });
@@ -311,14 +342,11 @@ function assertConnectionTestSucceeded(result: CatalogConnectionTestResult) {
     return;
   }
 
-  throw new Error(
-    result.message?.trim() || i18n.t("dataConnect.testConnectionFailed"),
-  );
+  throw new Error(result.message?.trim() || i18n.t("dataConnect.testConnectionFailed"));
 }
 
 export function isDataConnectConnectionTestFailure(error: unknown) {
-  const expectedCode =
-    "VegaBackend.Catalog.InternalError.TestConnectionFailed";
+  const expectedCode = "VegaBackend.Catalog.InternalError.TestConnectionFailed";
 
   if (extractRequestErrorDetails(error).code === expectedCode) {
     return true;

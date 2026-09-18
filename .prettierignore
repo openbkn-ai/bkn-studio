@@ -2,3 +2,7 @@ node_modules
 dist
 coverage
 pnpm-lock.yaml
+
+# Helm templates contain Go template expressions that Prettier's YAML parser
+# cannot parse. Plain YAML files outside template directories remain formatted.
+deploy/charts/*/templates

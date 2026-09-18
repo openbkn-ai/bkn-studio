@@ -32,7 +32,11 @@ vi.mock("@/framework/ui/common/AppButton", () => ({
 }));
 vi.mock("@/framework/ui/common/AppTable", () => ({
   AppTable: ({ dataSource }: { dataSource: Array<{ id: string; label: string }> }) => (
-    <div>{dataSource.map((member) => <span key={member.id}>{member.label}</span>)}</div>
+    <div>
+      {dataSource.map((member) => (
+        <span key={member.id}>{member.label}</span>
+      ))}
+    </div>
   ),
 }));
 vi.mock("@/framework/ui/common/EmptyStatePanel", () => ({ EmptyStatePanel: () => <div /> }));
@@ -61,26 +65,38 @@ describe("RoleMembersModal user lookup lifecycle", () => {
   it("retries a member label after a member-list update cancels its first lookup", async () => {
     let resolveFirst!: () => void;
     let resolveSecond!: () => void;
-    const firstLookup = new Promise<void>((resolve) => { resolveFirst = resolve; });
-    const secondLookup = new Promise<void>((resolve) => { resolveSecond = resolve; });
+    const firstLookup = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondLookup = new Promise<void>((resolve) => {
+      resolveSecond = resolve;
+    });
     mocks.hydrateUserLookupDetails
       .mockImplementationOnce(() => firstLookup)
       .mockImplementation(() => secondLookup);
-    mocks.getCachedUserSync.mockImplementation((id: string): AdminUser | undefined => id === "u-second"
-      ? {
-          account: "second",
-          accountType: "local",
-          email: "",
-          enabled: true,
-          id,
-          name: "Second User",
-          roleIds: [],
-          telephone: "",
-        }
-      : undefined);
+    mocks.getCachedUserSync.mockImplementation((id: string): AdminUser | undefined =>
+      id === "u-second"
+        ? {
+            account: "second",
+            accountType: "local",
+            email: "",
+            enabled: true,
+            id,
+            name: "Second User",
+            roleIds: [],
+            telephone: "",
+          }
+        : undefined,
+    );
 
     const view = render(
-      <RoleMembersModal departments={noDepartments} onChanged={vi.fn()} onClose={vi.fn()} open role={role(["u-first"])} />,
+      <RoleMembersModal
+        departments={noDepartments}
+        onChanged={vi.fn()}
+        onClose={vi.fn()}
+        open
+        role={role(["u-first"])}
+      />,
     );
     await act(async () => {});
     view.rerender(

@@ -136,10 +136,7 @@ function readOrchestrationRuntimeConfig(capabilityId: string): OrchestrationRunt
   }
 }
 
-function saveOrchestrationRuntimeConfig(
-  capabilityId: string,
-  config: OrchestrationRuntimeConfig,
-) {
+function saveOrchestrationRuntimeConfig(capabilityId: string, config: OrchestrationRuntimeConfig) {
   window.localStorage.setItem(orchestrationRuntimeConfigKey(capabilityId), JSON.stringify(config));
 }
 
@@ -370,7 +367,10 @@ function buildCapabilityDebugBody(record: CapabilityRecord) {
   return JSON.stringify({}, null, 2);
 }
 
-function parseDebugInput(record: CapabilityRecord, raw: string): {
+function parseDebugInput(
+  record: CapabilityRecord,
+  raw: string,
+): {
   body: Record<string, unknown>;
   query?: Record<string, unknown>;
   path?: Record<string, unknown>;
@@ -479,8 +479,8 @@ export function CapabilityDetailDrawer({
     id: runtimeConfig.currentUser.id,
     name: runtimeConfig.currentUser.name,
   };
-  const [auditUserDirectory, setAuditUserDirectory] = useState<Map<string, string>>(
-    () => buildAuditUserDirectory([]),
+  const [auditUserDirectory, setAuditUserDirectory] = useState<Map<string, string>>(() =>
+    buildAuditUserDirectory([]),
   );
   const [detail, setDetail] = useState<CapabilityRecord | undefined>(capability);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
@@ -489,8 +489,9 @@ export function CapabilityDetailDrawer({
     operatorId?: string;
     audit?: CapabilityAudit;
   }>({ enabled: false });
-  const [orchestrationRuntime, setOrchestrationRuntime] =
-    useState<OrchestrationRuntimeConfig>(DEFAULT_ORCHESTRATION_RUNTIME_CONFIG);
+  const [orchestrationRuntime, setOrchestrationRuntime] = useState<OrchestrationRuntimeConfig>(
+    DEFAULT_ORCHESTRATION_RUNTIME_CONFIG,
+  );
   const [debugBody, setDebugBody] = useState("{}");
   const [mcpToolName, setMcpToolName] = useState("");
   const [debugResult, setDebugResult] = useState<string | null>(null);
@@ -992,424 +993,147 @@ export function CapabilityDetailDrawer({
 
   return (
     <>
-    <Drawer
-      onClose={onClose}
-      open={open}
-      styles={{
-        body: { background: "var(--color-bg-surface)" },
-        mask: { background: "rgba(15, 23, 42, 0.45)" },
-      }}
-      title={t("executionFactoryLab.detailTitle")}
-      width={720}
-    >
-      {error ? <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" /> : null}
+      <Drawer
+        onClose={onClose}
+        open={open}
+        styles={{
+          body: { background: "var(--color-bg-surface)" },
+          mask: { background: "rgba(15, 23, 42, 0.45)" },
+        }}
+        title={t("executionFactoryLab.detailTitle")}
+        width={720}
+      >
+        {error ? (
+          <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" />
+        ) : null}
 
-      <Tabs
-        activeKey={activeTab}
-        items={[
-          {
-            key: "overview",
-            label: t("executionFactoryLab.tabOverview"),
-            children: (
-              <>
-                <CapabilityStatusStepper kind={detail.kind} status={detail.status} />
-                <Alert
-                  description={
-                    <ul style={{ marginBottom: 0, paddingLeft: 18 }}>
-                      <li>{t("executionFactoryLab.operationDescPublish")}</li>
-                      <li>{t("executionFactoryLab.operationDescOffline")}</li>
-                      <li>{t("executionFactoryLab.operationDescEdit")}</li>
-                      <li>{t("executionFactoryLab.operationDescVersion")}</li>
-                      <li>{t("executionFactoryLab.operationDescDelete")}</li>
-                    </ul>
-                  }
-                  message={t("executionFactoryLab.operationDescTitle")}
-                  showIcon={false}
-                  style={{ marginBottom: 16 }}
-                  type="info"
-                />
-                <Descriptions bordered column={1} size="small">
-                  <Descriptions.Item label={t("executionFactoryLab.summaryLabel")}>
-                    {editing && isEditableKind ? (
-                      <Input onChange={(e) => setEditName(e.target.value)} value={editName} />
-                    ) : (
-                      detail.name
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("executionFactoryLab.kindLabel")}>
-                    <Tag>{detail.kind.toUpperCase()}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t("executionFactoryLab.descriptionLabel")}>
-                    {editing && isEditableKind ? (
-                      <Input.TextArea
-                        autoSize={{ minRows: 2, maxRows: 4 }}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        value={editDescription}
-                      />
-                    ) : (
-                      detail.description || "-"
-                    )}
-                  </Descriptions.Item>
-                  {detail.kind === "http" && editing ? (
-                    <Descriptions.Item label={t("executionFactoryLab.httpOpenApiLabel")}>
-                      <Input.TextArea
-                        autoSize={{ minRows: 4, maxRows: 12 }}
-                        onChange={(e) => setEditOpenApi(e.target.value)}
-                        placeholder={t("executionFactoryLab.importOpenApiPlaceholder")}
-                        value={editOpenApi}
-                      />
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.kind === "mcp" && editing ? (
-                    <Descriptions.Item label={t("executionFactoryLab.mcpUrlLabel")}>
-                      <Input
-                        onChange={(e) => setEditMcpUrl(e.target.value)}
-                        placeholder="http://ef-mcp-mock:8096/sse"
-                        value={editMcpUrl}
-                      />
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.kind === "function" && editing ? (
-                    <Descriptions.Item label={t("executionFactoryLab.functionCodeLabel")}>
-                      <Input.TextArea
-                        autoSize={{ minRows: 8, maxRows: 16 }}
-                        onChange={(e) => setEditFunctionCode(e.target.value)}
-                        value={editFunctionCode}
-                      />
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.kind === "function" ? (
-                    <Descriptions.Item label={t("executionFactoryLab.functionInputExampleLabel")}>
-                      {formatFunctionParameters(detail.inputs)}
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.kind === "function" ? (
-                    <Descriptions.Item label={t("executionFactoryLab.functionOutputExampleLabel")}>
-                      {formatFunctionParameters(detail.outputs)}
-                    </Descriptions.Item>
-                  ) : null}
-                  <Descriptions.Item label={t("executionFactoryLab.detailStatus")}>
-                    <Tag
-                      color={getCapabilityStatusTagColor(detail.status)}
-                      style={getCapabilityStatusTagStyle(detail.status)}
-                    >
-                      {formatCapabilityStatusLabel(detail.status, t)}
-                    </Tag>
-                  </Descriptions.Item>
-                  {detail.group ? (
-                    <Descriptions.Item label={t("executionFactoryLab.detailGroup")}>
-                      {detail.group.name}
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.endpoint ? (
-                    <Descriptions.Item label="Endpoint">
-                      {`${detail.endpoint.method ?? ""} ${detail.endpoint.path ?? ""}`.trim()}
-                    </Descriptions.Item>
-                  ) : null}
-                  {detail.version ? (
-                    <Descriptions.Item label={t("executionFactoryLab.versionLabel")}>
-                      {detail.version}
-                    </Descriptions.Item>
-                  ) : null}
-                  {features.catalog ? (
-                    <Descriptions.Item label={t("executionFactoryLab.catalogSourceLabel")}>
-                      <Link
-                        state={{ catalogKeyword: detail.name }}
-                        to="/execution-factory-lab/catalog"
-                      >
-                        {t("executionFactoryLab.viewInCatalogAction")}
-                      </Link>
-                    </Descriptions.Item>
-                  ) : null}
-                </Descriptions>
-                <div style={{ marginTop: 16 }}>
-                  <h4>{t("executionFactoryLab.auditInfoTitle")}</h4>
-                  <Descriptions
-                    bordered
-                    column={2}
-                    items={auditDescriptionItems(
-                      detail.audit,
-                      currentAuditUser,
-                      auditUserDirectory,
-                    ).map((item) => ({
-                      ...item,
-                      label: t(`executionFactoryLab.${item.key}`),
-                    }))}
-                    size="small"
-                  />
-                </div>
-                <Space direction="vertical" style={{ marginTop: 16, width: "100%" }}>
-                  <Space wrap>
-                    <LabPermissionHint permissions={publishPermission}>
-                      {canLifecycle && detail.status !== "published" ? (
-                        <Popconfirm
-                          onConfirm={() => void handlePublish()}
-                          title={t("executionFactoryLab.publishConfirm")}
-                        >
-                          <Button loading={loading} type="primary">
-                            {t("executionFactoryLab.publishAction")}
-                          </Button>
-                        </Popconfirm>
-                      ) : null}
-                      {canLifecycle && detail.status === "published" ? (
-                        <Button loading={loading} onClick={confirmOffline}>
-                          {t("executionFactoryLab.offlineAction")}
-                        </Button>
-                      ) : null}
-                    </LabPermissionHint>
-                    <LabPermissionHint permissions={editPermissionForKind(detail.kind)}>
-                      {isEditableKind && !editing ? (
-                        <Button onClick={startEdit}>{t("executionFactoryLab.editAction")}</Button>
-                      ) : null}
-                      {isEditableKind && editing ? (
-                        <>
-                          <Button loading={loading} onClick={() => void handleSaveMeta()} type="primary">
-                            {t("executionFactoryLab.saveAction")}
-                          </Button>
-                          <Button disabled={loading} onClick={cancelEdit}>
-                            {t("executionFactoryLab.cancelEditAction")}
-                          </Button>
-                        </>
-                      ) : null}
-                    </LabPermissionHint>
-                    {canLifecycle ? (
-                      <Dropdown menu={{ items: moreMenuItems }}>
-                        <Button loading={loading}>{t("executionFactoryLab.moreActions")}</Button>
-                      </Dropdown>
-                    ) : null}
-                  </Space>
-                </Space>
-                {detail.kind === "mcp" && mcpTools.length > 0 ? (
-                  <div style={{ marginTop: 24 }}>
-                    <h4>{t("executionFactoryLab.mcpToolsTitle")}</h4>
-                    <Table
-                      columns={[
-                        { title: t("executionFactoryLab.mcpToolNamePlaceholder"), dataIndex: "name" },
-                        { title: t("executionFactoryLab.descriptionLabel"), dataIndex: "description" },
-                      ]}
-                      dataSource={mcpTools.map((tool, index) => ({
-                        ...tool,
-                        key: tool.name ?? String(index),
-                        name: tool.name ?? "-",
-                        description: tool.description ?? "-",
-                      }))}
-                      pagination={false}
-                      size="small"
-                    />
-                  </div>
-                ) : null}
-                {detail.kind === "skill" && features.skill_files ? (
-                  <div style={{ marginTop: 24 }}>
-                    <h4>{t("executionFactoryLab.skillFilesTitle")}</h4>
-                    <SkillFileTreePanel capabilityId={detail.id} />
-                  </div>
-                ) : null}
-              </>
-            ),
-          },
-          {
-            key: "debug",
-            label:
-              detail.kind === "skill" ? (
-                <Tooltip title={t("executionFactoryLab.tabDebugSkillHint")}>
-                  <span>{t("executionFactoryLab.tabDebug")}</span>
-                </Tooltip>
-              ) : (
-                t("executionFactoryLab.tabDebug")
-              ),
-            disabled: detail.kind !== "http" && detail.kind !== "mcp" && detail.kind !== "function",
-            children: (
-              <Space direction="vertical" style={{ width: "100%" }}>
-                {detail.kind === "mcp" ? (
-                  <Select
-                    onChange={setMcpToolName}
-                    options={mcpTools.map((tool) => ({
-                      value: tool.name ?? "",
-                      label: tool.name ?? "-",
-                    }))}
-                    placeholder={t("executionFactoryLab.mcpToolNamePlaceholder")}
-                    style={{ width: "100%" }}
-                    value={mcpToolName || undefined}
-                  />
-                ) : null}
-                {detail.kind === "function" || detail.kind === "http" ? (
-                  <Button
-                    onClick={() =>
-                      setDebugBody(buildCapabilityDebugBody(detail))
+        <Tabs
+          activeKey={activeTab}
+          items={[
+            {
+              key: "overview",
+              label: t("executionFactoryLab.tabOverview"),
+              children: (
+                <>
+                  <CapabilityStatusStepper kind={detail.kind} status={detail.status} />
+                  <Alert
+                    description={
+                      <ul style={{ marginBottom: 0, paddingLeft: 18 }}>
+                        <li>{t("executionFactoryLab.operationDescPublish")}</li>
+                        <li>{t("executionFactoryLab.operationDescOffline")}</li>
+                        <li>{t("executionFactoryLab.operationDescEdit")}</li>
+                        <li>{t("executionFactoryLab.operationDescVersion")}</li>
+                        <li>{t("executionFactoryLab.operationDescDelete")}</li>
+                      </ul>
                     }
-                    size="small"
-                    type="link"
-                  >
-                    {t("executionFactoryLab.debugFillExample")}
-                  </Button>
-                ) : null}
-                <Collapse
-                  ghost
-                  items={[
-                    {
-                      key: "payload",
-                      label: t("executionFactoryLab.debugAdvancedJson"),
-                      children: (
-                        <Input.TextArea
-                          autoSize={{ minRows: 4, maxRows: 10 }}
-                          onChange={(event) => setDebugBody(event.target.value)}
-                          value={debugBody}
-                        />
-                      ),
-                    },
-                  ]}
-                />
-                <LabPermissionHint permissions={debugPermission}>
-                  <Button loading={loading} onClick={() => void handleDebug()} type="primary">
-                    {t("executionFactoryLab.debugAction")}
-                  </Button>
-                </LabPermissionHint>
-                {debugResult ? (
-                  <pre
-                    style={{
-                      background: "var(--color-hover)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 8,
-                      color: "var(--color-text-primary)",
-                      padding: 12,
-                    }}
-                  >
-                    {debugResult}
-                  </pre>
-                ) : null}
-              </Space>
-            ),
-          },
-          {
-            key: "versions",
-            label: t("executionFactoryLab.tabVersions"),
-            children: (
-              <Table
-                columns={[
-                  { title: t("executionFactoryLab.versionLabel"), dataIndex: "version" },
-                  {
-                    title: t("executionFactoryLab.detailStatus"),
-                    render: (_, row) => (
-                      <Tag
-                        color={getCapabilityStatusTagColor(row.status ?? "draft")}
-                        style={getCapabilityStatusTagStyle(row.status ?? "draft")}
-                      >
-                        {formatCapabilityStatusLabel(row.status ?? "draft", t)}
-                      </Tag>
-                    ),
-                  },
-                  {
-                    title: t("executionFactoryLab.releaseUser"),
-                    render: (_, row) =>
-                      formatAuditUserDisplay({
-                        id: row.releaseUser,
-                        name: row.releaseUserName,
-                        currentUser: currentAuditUser,
-                        directory: auditUserDirectory,
-                      }),
-                  },
-                  {
-                    title: t("executionFactoryLab.releaseTime"),
-                    render: (_, row) => formatAuditTime(row.releaseTime ?? row.updateTime),
-                  },
-                  {
-                    title: t("executionFactoryLab.versionAction"),
-                    render: (_, row) =>
-                      detail.kind === "skill" ||
-                      (detail.kind === "http" && orchestration.enabled) ? (
-                        <LabPermissionHint
-                          permissions={
-                            detail.kind === "skill"
-                              ? executionFactoryLabPermissions.skillPublish
-                              : executionFactoryLabPermissions.capabilityPublish
-                          }
-                        >
-                          <Button onClick={() => confirmRepublish(row.version)} size="small" type="link">
-                            {t("executionFactoryLab.republishAction")}
-                          </Button>
-                        </LabPermissionHint>
+                    message={t("executionFactoryLab.operationDescTitle")}
+                    showIcon={false}
+                    style={{ marginBottom: 16 }}
+                    type="info"
+                  />
+                  <Descriptions bordered column={1} size="small">
+                    <Descriptions.Item label={t("executionFactoryLab.summaryLabel")}>
+                      {editing && isEditableKind ? (
+                        <Input onChange={(e) => setEditName(e.target.value)} value={editName} />
                       ) : (
-                        "-"
-                      ),
-                  },
-                ]}
-                dataSource={versions.map((item) => ({ ...item, key: item.version }))}
-                pagination={false}
-                size="small"
-              />
-            ),
-          },
-          {
-            key: "orchestration",
-            label:
-              detail.kind !== "http" ? (
-                <Tooltip title={t("executionFactoryLab.tabOrchestrationHint")}>
-                  <span>{t("executionFactoryLab.tabOrchestration")}</span>
-                </Tooltip>
-              ) : (
-                t("executionFactoryLab.tabOrchestration")
-              ),
-            disabled: detail.kind !== "http",
-            children: (
-              <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <Alert
-                  description={
-                    orchestration.enabled
-                      ? t("executionFactoryLab.orchestrationEnabledDescription")
-                      : t("executionFactoryLab.orchestrationDisabledDescription")
-                  }
-                  message={
-                    orchestration.enabled
-                      ? t("executionFactoryLab.orchestrationEnabledTitle")
-                      : t("executionFactoryLab.orchestrationDisabledTitle")
-                  }
-                  icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
-                  showIcon
-                  style={ORCHESTRATION_NOTICE_STYLE}
-                  type={orchestration.enabled ? "success" : "info"}
-                />
-                <Alert
-                  description={
-                    <ul style={{ marginBottom: 0, paddingLeft: 18 }}>
-                      <li>{t("executionFactoryLab.operationDescEnableOrchestration")}</li>
-                      <li>{t("executionFactoryLab.operationDescSaveOrchestration")}</li>
-                      <li>{t("executionFactoryLab.operationDescDisableOrchestration")}</li>
-                    </ul>
-                  }
-                  icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
-                  message={t("executionFactoryLab.operationDescTitle")}
-                  showIcon
-                  style={ORCHESTRATION_NOTICE_STYLE}
-                  type="info"
-                />
-                <Descriptions bordered column={1} size="small">
-                  {orchestration.enabled ? (
-                    <Descriptions.Item label={t("executionFactoryLab.orchestrationOperatorId")}>
-                      {orchestration.operatorId ?? "-"}
+                        detail.name
+                      )}
                     </Descriptions.Item>
-                  ) : null}
-                  <Descriptions.Item label={t("executionFactoryLab.orchestrationTimeoutMs")}>
-                    <InputNumber
-                      min={0}
-                      onChange={(value) =>
-                        updateOrchestrationRuntime({
-                          timeoutMs: typeof value === "number" ? value : undefined,
-                        })
-                      }
-                      step={1_000}
-                      style={{ width: 180 }}
-                      value={orchestrationRuntime.timeoutMs}
-                    />
-                  </Descriptions.Item>
-                </Descriptions>
-                {orchestration.enabled ? (
-                  <div>
-                    <h4>{t("executionFactoryLab.operatorAuditInfoTitle")}</h4>
+                    <Descriptions.Item label={t("executionFactoryLab.kindLabel")}>
+                      <Tag>{detail.kind.toUpperCase()}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t("executionFactoryLab.descriptionLabel")}>
+                      {editing && isEditableKind ? (
+                        <Input.TextArea
+                          autoSize={{ minRows: 2, maxRows: 4 }}
+                          onChange={(e) => setEditDescription(e.target.value)}
+                          value={editDescription}
+                        />
+                      ) : (
+                        detail.description || "-"
+                      )}
+                    </Descriptions.Item>
+                    {detail.kind === "http" && editing ? (
+                      <Descriptions.Item label={t("executionFactoryLab.httpOpenApiLabel")}>
+                        <Input.TextArea
+                          autoSize={{ minRows: 4, maxRows: 12 }}
+                          onChange={(e) => setEditOpenApi(e.target.value)}
+                          placeholder={t("executionFactoryLab.importOpenApiPlaceholder")}
+                          value={editOpenApi}
+                        />
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.kind === "mcp" && editing ? (
+                      <Descriptions.Item label={t("executionFactoryLab.mcpUrlLabel")}>
+                        <Input
+                          onChange={(e) => setEditMcpUrl(e.target.value)}
+                          placeholder="http://ef-mcp-mock:8096/sse"
+                          value={editMcpUrl}
+                        />
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.kind === "function" && editing ? (
+                      <Descriptions.Item label={t("executionFactoryLab.functionCodeLabel")}>
+                        <Input.TextArea
+                          autoSize={{ minRows: 8, maxRows: 16 }}
+                          onChange={(e) => setEditFunctionCode(e.target.value)}
+                          value={editFunctionCode}
+                        />
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.kind === "function" ? (
+                      <Descriptions.Item label={t("executionFactoryLab.functionInputExampleLabel")}>
+                        {formatFunctionParameters(detail.inputs)}
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.kind === "function" ? (
+                      <Descriptions.Item
+                        label={t("executionFactoryLab.functionOutputExampleLabel")}
+                      >
+                        {formatFunctionParameters(detail.outputs)}
+                      </Descriptions.Item>
+                    ) : null}
+                    <Descriptions.Item label={t("executionFactoryLab.detailStatus")}>
+                      <Tag
+                        color={getCapabilityStatusTagColor(detail.status)}
+                        style={getCapabilityStatusTagStyle(detail.status)}
+                      >
+                        {formatCapabilityStatusLabel(detail.status, t)}
+                      </Tag>
+                    </Descriptions.Item>
+                    {detail.group ? (
+                      <Descriptions.Item label={t("executionFactoryLab.detailGroup")}>
+                        {detail.group.name}
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.endpoint ? (
+                      <Descriptions.Item label="Endpoint">
+                        {`${detail.endpoint.method ?? ""} ${detail.endpoint.path ?? ""}`.trim()}
+                      </Descriptions.Item>
+                    ) : null}
+                    {detail.version ? (
+                      <Descriptions.Item label={t("executionFactoryLab.versionLabel")}>
+                        {detail.version}
+                      </Descriptions.Item>
+                    ) : null}
+                    {features.catalog ? (
+                      <Descriptions.Item label={t("executionFactoryLab.catalogSourceLabel")}>
+                        <Link
+                          state={{ catalogKeyword: detail.name }}
+                          to="/execution-factory-lab/catalog"
+                        >
+                          {t("executionFactoryLab.viewInCatalogAction")}
+                        </Link>
+                      </Descriptions.Item>
+                    ) : null}
+                  </Descriptions>
+                  <div style={{ marginTop: 16 }}>
+                    <h4>{t("executionFactoryLab.auditInfoTitle")}</h4>
                     <Descriptions
                       bordered
                       column={2}
                       items={auditDescriptionItems(
-                        orchestration.audit,
+                        detail.audit,
                         currentAuditUser,
                         auditUserDirectory,
                       ).map((item) => ({
@@ -1419,134 +1143,444 @@ export function CapabilityDetailDrawer({
                       size="small"
                     />
                   </div>
-                ) : null}
-                <Collapse
-                  ghost
-                  items={[
+                  <Space direction="vertical" style={{ marginTop: 16, width: "100%" }}>
+                    <Space wrap>
+                      <LabPermissionHint permissions={publishPermission}>
+                        {canLifecycle && detail.status !== "published" ? (
+                          <Popconfirm
+                            onConfirm={() => void handlePublish()}
+                            title={t("executionFactoryLab.publishConfirm")}
+                          >
+                            <Button loading={loading} type="primary">
+                              {t("executionFactoryLab.publishAction")}
+                            </Button>
+                          </Popconfirm>
+                        ) : null}
+                        {canLifecycle && detail.status === "published" ? (
+                          <Button loading={loading} onClick={confirmOffline}>
+                            {t("executionFactoryLab.offlineAction")}
+                          </Button>
+                        ) : null}
+                      </LabPermissionHint>
+                      <LabPermissionHint permissions={editPermissionForKind(detail.kind)}>
+                        {isEditableKind && !editing ? (
+                          <Button onClick={startEdit}>{t("executionFactoryLab.editAction")}</Button>
+                        ) : null}
+                        {isEditableKind && editing ? (
+                          <>
+                            <Button
+                              loading={loading}
+                              onClick={() => void handleSaveMeta()}
+                              type="primary"
+                            >
+                              {t("executionFactoryLab.saveAction")}
+                            </Button>
+                            <Button disabled={loading} onClick={cancelEdit}>
+                              {t("executionFactoryLab.cancelEditAction")}
+                            </Button>
+                          </>
+                        ) : null}
+                      </LabPermissionHint>
+                      {canLifecycle ? (
+                        <Dropdown menu={{ items: moreMenuItems }}>
+                          <Button loading={loading}>{t("executionFactoryLab.moreActions")}</Button>
+                        </Dropdown>
+                      ) : null}
+                    </Space>
+                  </Space>
+                  {detail.kind === "mcp" && mcpTools.length > 0 ? (
+                    <div style={{ marginTop: 24 }}>
+                      <h4>{t("executionFactoryLab.mcpToolsTitle")}</h4>
+                      <Table
+                        columns={[
+                          {
+                            title: t("executionFactoryLab.mcpToolNamePlaceholder"),
+                            dataIndex: "name",
+                          },
+                          {
+                            title: t("executionFactoryLab.descriptionLabel"),
+                            dataIndex: "description",
+                          },
+                        ]}
+                        dataSource={mcpTools.map((tool, index) => ({
+                          ...tool,
+                          key: tool.name ?? String(index),
+                          name: tool.name ?? "-",
+                          description: tool.description ?? "-",
+                        }))}
+                        pagination={false}
+                        size="small"
+                      />
+                    </div>
+                  ) : null}
+                  {detail.kind === "skill" && features.skill_files ? (
+                    <div style={{ marginTop: 24 }}>
+                      <h4>{t("executionFactoryLab.skillFilesTitle")}</h4>
+                      <SkillFileTreePanel capabilityId={detail.id} />
+                    </div>
+                  ) : null}
+                </>
+              ),
+            },
+            {
+              key: "debug",
+              label:
+                detail.kind === "skill" ? (
+                  <Tooltip title={t("executionFactoryLab.tabDebugSkillHint")}>
+                    <span>{t("executionFactoryLab.tabDebug")}</span>
+                  </Tooltip>
+                ) : (
+                  t("executionFactoryLab.tabDebug")
+                ),
+              disabled:
+                detail.kind !== "http" && detail.kind !== "mcp" && detail.kind !== "function",
+              children: (
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  {detail.kind === "mcp" ? (
+                    <Select
+                      onChange={setMcpToolName}
+                      options={mcpTools.map((tool) => ({
+                        value: tool.name ?? "",
+                        label: tool.name ?? "-",
+                      }))}
+                      placeholder={t("executionFactoryLab.mcpToolNamePlaceholder")}
+                      style={{ width: "100%" }}
+                      value={mcpToolName || undefined}
+                    />
+                  ) : null}
+                  {detail.kind === "function" || detail.kind === "http" ? (
+                    <Button
+                      onClick={() => setDebugBody(buildCapabilityDebugBody(detail))}
+                      size="small"
+                      type="link"
+                    >
+                      {t("executionFactoryLab.debugFillExample")}
+                    </Button>
+                  ) : null}
+                  <Collapse
+                    ghost
+                    items={[
+                      {
+                        key: "payload",
+                        label: t("executionFactoryLab.debugAdvancedJson"),
+                        children: (
+                          <Input.TextArea
+                            autoSize={{ minRows: 4, maxRows: 10 }}
+                            onChange={(event) => setDebugBody(event.target.value)}
+                            value={debugBody}
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                  <LabPermissionHint permissions={debugPermission}>
+                    <Button loading={loading} onClick={() => void handleDebug()} type="primary">
+                      {t("executionFactoryLab.debugAction")}
+                    </Button>
+                  </LabPermissionHint>
+                  {debugResult ? (
+                    <pre
+                      style={{
+                        background: "var(--color-hover)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: 8,
+                        color: "var(--color-text-primary)",
+                        padding: 12,
+                      }}
+                    >
+                      {debugResult}
+                    </pre>
+                  ) : null}
+                </Space>
+              ),
+            },
+            {
+              key: "versions",
+              label: t("executionFactoryLab.tabVersions"),
+              children: (
+                <Table
+                  columns={[
+                    { title: t("executionFactoryLab.versionLabel"), dataIndex: "version" },
                     {
-                      key: "retry",
-                      label: t("executionFactoryLab.orchestrationRetryPolicy"),
-                      children: (
-                        <Descriptions bordered column={1} size="small">
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationMaxAttempts")}>
-                            <InputNumber
-                              min={0}
-                              onChange={(value) =>
-                                updateOrchestrationRetryPolicy({
-                                  maxAttempts: typeof value === "number" ? value : undefined,
-                                })
-                              }
-                              style={{ width: 180 }}
-                              value={orchestrationRuntime.retryPolicy.maxAttempts}
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationInitialDelayMs")}>
-                            <InputNumber
-                              min={0}
-                              onChange={(value) =>
-                                updateOrchestrationRetryPolicy({
-                                  initialDelayMs: typeof value === "number" ? value : undefined,
-                                })
-                              }
-                              step={100}
-                              style={{ width: 180 }}
-                              value={orchestrationRuntime.retryPolicy.initialDelayMs}
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationMaxDelayMs")}>
-                            <InputNumber
-                              min={0}
-                              onChange={(value) =>
-                                updateOrchestrationRetryPolicy({
-                                  maxDelayMs: typeof value === "number" ? value : undefined,
-                                })
-                              }
-                              step={100}
-                              style={{ width: 180 }}
-                              value={orchestrationRuntime.retryPolicy.maxDelayMs}
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationBackoffFactor")}>
-                            <InputNumber
-                              min={1}
-                              onChange={(value) =>
-                                updateOrchestrationRetryPolicy({
-                                  backoffFactor: typeof value === "number" ? value : undefined,
-                                })
-                              }
-                              style={{ width: 180 }}
-                              value={orchestrationRuntime.retryPolicy.backoffFactor}
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationRetryStatusCodes")}>
-                            <Select
-                              mode="tags"
-                              onChange={(values) =>
-                                updateOrchestrationRetryPolicy({
-                                  retryStatusCodes: values
-                                    .map((value) => Number(value))
-                                    .filter((value) => !Number.isNaN(value)),
-                                })
-                              }
-                              placeholder="500, 502"
-                              style={{ width: "100%" }}
-                              tokenSeparators={[","]}
-                              value={orchestrationRuntime.retryPolicy.retryStatusCodes?.map(String)}
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label={t("executionFactoryLab.orchestrationRetryErrorCodes")}>
-                            <Select
-                              mode="tags"
-                              onChange={(values) =>
-                                updateOrchestrationRetryPolicy({ retryErrorCodes: values.map(String) })
-                              }
-                              placeholder="TIMEOUT"
-                              style={{ width: "100%" }}
-                              tokenSeparators={[","]}
-                              value={orchestrationRuntime.retryPolicy.retryErrorCodes}
-                            />
-                          </Descriptions.Item>
-                        </Descriptions>
+                      title: t("executionFactoryLab.detailStatus"),
+                      render: (_, row) => (
+                        <Tag
+                          color={getCapabilityStatusTagColor(row.status ?? "draft")}
+                          style={getCapabilityStatusTagStyle(row.status ?? "draft")}
+                        >
+                          {formatCapabilityStatusLabel(row.status ?? "draft", t)}
+                        </Tag>
                       ),
                     },
+                    {
+                      title: t("executionFactoryLab.releaseUser"),
+                      render: (_, row) =>
+                        formatAuditUserDisplay({
+                          id: row.releaseUser,
+                          name: row.releaseUserName,
+                          currentUser: currentAuditUser,
+                          directory: auditUserDirectory,
+                        }),
+                    },
+                    {
+                      title: t("executionFactoryLab.releaseTime"),
+                      render: (_, row) => formatAuditTime(row.releaseTime ?? row.updateTime),
+                    },
+                    {
+                      title: t("executionFactoryLab.versionAction"),
+                      render: (_, row) =>
+                        detail.kind === "skill" ||
+                        (detail.kind === "http" && orchestration.enabled) ? (
+                          <LabPermissionHint
+                            permissions={
+                              detail.kind === "skill"
+                                ? executionFactoryLabPermissions.skillPublish
+                                : executionFactoryLabPermissions.capabilityPublish
+                            }
+                          >
+                            <Button
+                              onClick={() => confirmRepublish(row.version)}
+                              size="small"
+                              type="link"
+                            >
+                              {t("executionFactoryLab.republishAction")}
+                            </Button>
+                          </LabPermissionHint>
+                        ) : (
+                          "-"
+                        ),
+                    },
                   ]}
+                  dataSource={versions.map((item) => ({ ...item, key: item.version }))}
+                  pagination={false}
+                  size="small"
                 />
-                <Space wrap>
-                  <LabPermissionHint permissions={editPermissionForKind(detail.kind)}>
-                    <Space wrap>
-                      <Button
-                        disabled={orchestration.enabled}
-                        loading={!orchestration.enabled && loading}
-                        onClick={() => void handleEnableOrchestration()}
-                        type="primary"
-                      >
-                        {t("executionFactoryLab.enableOrchestrationAction")}
-                      </Button>
-                      <Button
-                        disabled={!orchestration.enabled}
-                        loading={orchestration.enabled && loading}
-                        onClick={() => void handleSaveOrchestrationRuntime()}
-                        type="primary"
-                      >
-                        {t("executionFactoryLab.orchestrationSaveConfigAction")}
-                      </Button>
-                      <Button
-                        danger
-                        disabled={!orchestration.enabled || loading}
-                        onClick={confirmDisableOrchestration}
-                      >
-                        {t("executionFactoryLab.disableOrchestrationAction")}
-                      </Button>
-                    </Space>
-                  </LabPermissionHint>
+              ),
+            },
+            {
+              key: "orchestration",
+              label:
+                detail.kind !== "http" ? (
+                  <Tooltip title={t("executionFactoryLab.tabOrchestrationHint")}>
+                    <span>{t("executionFactoryLab.tabOrchestration")}</span>
+                  </Tooltip>
+                ) : (
+                  t("executionFactoryLab.tabOrchestration")
+                ),
+              disabled: detail.kind !== "http",
+              children: (
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  <Alert
+                    description={
+                      orchestration.enabled
+                        ? t("executionFactoryLab.orchestrationEnabledDescription")
+                        : t("executionFactoryLab.orchestrationDisabledDescription")
+                    }
+                    message={
+                      orchestration.enabled
+                        ? t("executionFactoryLab.orchestrationEnabledTitle")
+                        : t("executionFactoryLab.orchestrationDisabledTitle")
+                    }
+                    icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
+                    showIcon
+                    style={ORCHESTRATION_NOTICE_STYLE}
+                    type={orchestration.enabled ? "success" : "info"}
+                  />
+                  <Alert
+                    description={
+                      <ul style={{ marginBottom: 0, paddingLeft: 18 }}>
+                        <li>{t("executionFactoryLab.operationDescEnableOrchestration")}</li>
+                        <li>{t("executionFactoryLab.operationDescSaveOrchestration")}</li>
+                        <li>{t("executionFactoryLab.operationDescDisableOrchestration")}</li>
+                      </ul>
+                    }
+                    icon={<InfoCircleOutlined style={ORCHESTRATION_NOTICE_ICON_STYLE} />}
+                    message={t("executionFactoryLab.operationDescTitle")}
+                    showIcon
+                    style={ORCHESTRATION_NOTICE_STYLE}
+                    type="info"
+                  />
+                  <Descriptions bordered column={1} size="small">
+                    {orchestration.enabled ? (
+                      <Descriptions.Item label={t("executionFactoryLab.orchestrationOperatorId")}>
+                        {orchestration.operatorId ?? "-"}
+                      </Descriptions.Item>
+                    ) : null}
+                    <Descriptions.Item label={t("executionFactoryLab.orchestrationTimeoutMs")}>
+                      <InputNumber
+                        min={0}
+                        onChange={(value) =>
+                          updateOrchestrationRuntime({
+                            timeoutMs: typeof value === "number" ? value : undefined,
+                          })
+                        }
+                        step={1_000}
+                        style={{ width: 180 }}
+                        value={orchestrationRuntime.timeoutMs}
+                      />
+                    </Descriptions.Item>
+                  </Descriptions>
+                  {orchestration.enabled ? (
+                    <div>
+                      <h4>{t("executionFactoryLab.operatorAuditInfoTitle")}</h4>
+                      <Descriptions
+                        bordered
+                        column={2}
+                        items={auditDescriptionItems(
+                          orchestration.audit,
+                          currentAuditUser,
+                          auditUserDirectory,
+                        ).map((item) => ({
+                          ...item,
+                          label: t(`executionFactoryLab.${item.key}`),
+                        }))}
+                        size="small"
+                      />
+                    </div>
+                  ) : null}
+                  <Collapse
+                    ghost
+                    items={[
+                      {
+                        key: "retry",
+                        label: t("executionFactoryLab.orchestrationRetryPolicy"),
+                        children: (
+                          <Descriptions bordered column={1} size="small">
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationMaxAttempts")}
+                            >
+                              <InputNumber
+                                min={0}
+                                onChange={(value) =>
+                                  updateOrchestrationRetryPolicy({
+                                    maxAttempts: typeof value === "number" ? value : undefined,
+                                  })
+                                }
+                                style={{ width: 180 }}
+                                value={orchestrationRuntime.retryPolicy.maxAttempts}
+                              />
+                            </Descriptions.Item>
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationInitialDelayMs")}
+                            >
+                              <InputNumber
+                                min={0}
+                                onChange={(value) =>
+                                  updateOrchestrationRetryPolicy({
+                                    initialDelayMs: typeof value === "number" ? value : undefined,
+                                  })
+                                }
+                                step={100}
+                                style={{ width: 180 }}
+                                value={orchestrationRuntime.retryPolicy.initialDelayMs}
+                              />
+                            </Descriptions.Item>
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationMaxDelayMs")}
+                            >
+                              <InputNumber
+                                min={0}
+                                onChange={(value) =>
+                                  updateOrchestrationRetryPolicy({
+                                    maxDelayMs: typeof value === "number" ? value : undefined,
+                                  })
+                                }
+                                step={100}
+                                style={{ width: 180 }}
+                                value={orchestrationRuntime.retryPolicy.maxDelayMs}
+                              />
+                            </Descriptions.Item>
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationBackoffFactor")}
+                            >
+                              <InputNumber
+                                min={1}
+                                onChange={(value) =>
+                                  updateOrchestrationRetryPolicy({
+                                    backoffFactor: typeof value === "number" ? value : undefined,
+                                  })
+                                }
+                                style={{ width: 180 }}
+                                value={orchestrationRuntime.retryPolicy.backoffFactor}
+                              />
+                            </Descriptions.Item>
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationRetryStatusCodes")}
+                            >
+                              <Select
+                                mode="tags"
+                                onChange={(values) =>
+                                  updateOrchestrationRetryPolicy({
+                                    retryStatusCodes: values
+                                      .map((value) => Number(value))
+                                      .filter((value) => !Number.isNaN(value)),
+                                  })
+                                }
+                                placeholder="500, 502"
+                                style={{ width: "100%" }}
+                                tokenSeparators={[","]}
+                                value={orchestrationRuntime.retryPolicy.retryStatusCodes?.map(
+                                  String,
+                                )}
+                              />
+                            </Descriptions.Item>
+                            <Descriptions.Item
+                              label={t("executionFactoryLab.orchestrationRetryErrorCodes")}
+                            >
+                              <Select
+                                mode="tags"
+                                onChange={(values) =>
+                                  updateOrchestrationRetryPolicy({
+                                    retryErrorCodes: values.map(String),
+                                  })
+                                }
+                                placeholder="TIMEOUT"
+                                style={{ width: "100%" }}
+                                tokenSeparators={[","]}
+                                value={orchestrationRuntime.retryPolicy.retryErrorCodes}
+                              />
+                            </Descriptions.Item>
+                          </Descriptions>
+                        ),
+                      },
+                    ]}
+                  />
+                  <Space wrap>
+                    <LabPermissionHint permissions={editPermissionForKind(detail.kind)}>
+                      <Space wrap>
+                        <Button
+                          disabled={orchestration.enabled}
+                          loading={!orchestration.enabled && loading}
+                          onClick={() => void handleEnableOrchestration()}
+                          type="primary"
+                        >
+                          {t("executionFactoryLab.enableOrchestrationAction")}
+                        </Button>
+                        <Button
+                          disabled={!orchestration.enabled}
+                          loading={orchestration.enabled && loading}
+                          onClick={() => void handleSaveOrchestrationRuntime()}
+                          type="primary"
+                        >
+                          {t("executionFactoryLab.orchestrationSaveConfigAction")}
+                        </Button>
+                        <Button
+                          danger
+                          disabled={!orchestration.enabled || loading}
+                          onClick={confirmDisableOrchestration}
+                        >
+                          {t("executionFactoryLab.disableOrchestrationAction")}
+                        </Button>
+                      </Space>
+                    </LabPermissionHint>
+                  </Space>
                 </Space>
-              </Space>
-            ),
-          },
-        ]}
-        onChange={setActiveTab}
-      />
-    </Drawer>
+              ),
+            },
+          ]}
+          onChange={setActiveTab}
+        />
+      </Drawer>
 
       <Modal
         cancelText={t("common.cancel")}
@@ -1594,9 +1628,7 @@ export function CapabilityDetailDrawer({
             return false;
           }}
           fileList={
-            skillReplaceFile
-              ? [{ uid: skillReplaceFile.name, name: skillReplaceFile.name }]
-              : []
+            skillReplaceFile ? [{ uid: skillReplaceFile.name, name: skillReplaceFile.name }] : []
           }
           maxCount={1}
           onRemove={() => setSkillReplaceFile(null)}

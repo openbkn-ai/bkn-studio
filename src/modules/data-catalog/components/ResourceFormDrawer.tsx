@@ -13,10 +13,7 @@ import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { createCatalogResource } from "@/modules/data-catalog/services/resource.service";
-import type {
-  CatalogResource,
-  ResourceCategory,
-} from "@/modules/data-catalog/types/data-catalog";
+import type { CatalogResource, ResourceCategory } from "@/modules/data-catalog/types/data-catalog";
 import type { CatalogRecord } from "@/shared/catalog";
 
 type ResourceFormValues = {

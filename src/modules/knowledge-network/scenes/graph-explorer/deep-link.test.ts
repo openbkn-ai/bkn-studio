@@ -7,7 +7,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SHARE_URL_LIMIT, buildShareUrl, combineLinkSource, packIds, parseDeepLink, unpackIds } from "./deep-link";
+import {
+  SHARE_URL_LIMIT,
+  buildShareUrl,
+  combineLinkSource,
+  packIds,
+  parseDeepLink,
+  unpackIds,
+} from "./deep-link";
 
 describe("parseDeepLink", () => {
   it("reads ids, cypher, expand aliases and layout", () => {
@@ -17,19 +24,34 @@ describe("parseDeepLink", () => {
       expand: "backward",
       layout: "radial",
     });
-    expect(parseDeepLink("?cypher=MATCH%20(k%3Aknowledge)&expand=both")).toEqual({ ids: [], cypher: "MATCH (k:knowledge)", expand: "bidirectional", layout: null });
+    expect(parseDeepLink("?cypher=MATCH%20(k%3Aknowledge)&expand=both")).toEqual({
+      ids: [],
+      cypher: "MATCH (k:knowledge)",
+      expand: "bidirectional",
+      layout: null,
+    });
   });
 
   it("returns null without ids or cypher and ignores unknown values", () => {
     expect(parseDeepLink("")).toBeNull();
     expect(parseDeepLink("?layout=radial&expand=out")).toBeNull();
-    expect(parseDeepLink("?ids=x&expand=sideways&layout=spiral")).toEqual({ ids: ["x"], cypher: null, expand: null, layout: null });
+    expect(parseDeepLink("?ids=x&expand=sideways&layout=spiral")).toEqual({
+      ids: ["x"],
+      cypher: null,
+      expand: null,
+      layout: null,
+    });
   });
 });
 
 describe("combineLinkSource", () => {
   it("reads the query string and the fragment as one source", () => {
-    expect(parseDeepLink(combineLinkSource("?layout=grid", "#ids=a-1"))).toEqual({ ids: ["a-1"], cypher: null, expand: null, layout: "grid" });
+    expect(parseDeepLink(combineLinkSource("?layout=grid", "#ids=a-1"))).toEqual({
+      ids: ["a-1"],
+      cypher: null,
+      expand: null,
+      layout: "grid",
+    });
     expect(combineLinkSource("", "")).toBe("");
   });
 });
@@ -56,16 +78,27 @@ describe("packIds / unpackIds", () => {
 
 describe("buildShareUrl", () => {
   it("puts ids in the fragment, packed by object type, and round-trips", () => {
-    const { url, dropped } = buildShareUrl("https://h/studio/kn/x/graph-explorer", ["product-a b", "fact-1", "fact-1"], { layout: "dagre", objectTypeIds: ["product", "fact"] });
+    const { url, dropped } = buildShareUrl(
+      "https://h/studio/kn/x/graph-explorer",
+      ["product-a b", "fact-1", "fact-1"],
+      { layout: "dagre", objectTypeIds: ["product", "fact"] },
+    );
     expect(dropped).toBe(0);
     expect(url).toContain("#");
     expect(url.slice(0, url.indexOf("#"))).toBe("https://h/studio/kn/x/graph-explorer");
-    expect(parseDeepLink(url.slice(url.indexOf("#")))).toEqual({ ids: ["product-a b", "fact-1"], cypher: null, expand: null, layout: "dagre" });
+    expect(parseDeepLink(url.slice(url.indexOf("#")))).toEqual({
+      ids: ["product-a b", "fact-1"],
+      cypher: null,
+      expand: null,
+      layout: "dagre",
+    });
   });
 
   it("keeps a whole canvas of long ids well inside the limit", () => {
     const ids = Array.from({ length: 500 }, (_, index) => `player_appearances-${20000 + index}`);
-    const { url, dropped } = buildShareUrl("https://h/p", ids, { objectTypeIds: ["player_appearances"] });
+    const { url, dropped } = buildShareUrl("https://h/p", ids, {
+      objectTypeIds: ["player_appearances"],
+    });
     expect(dropped).toBe(0);
     expect(url.length).toBeLessThan(SHARE_URL_LIMIT);
     expect(parseDeepLink(url.slice(url.indexOf("#")))?.ids).toHaveLength(500);

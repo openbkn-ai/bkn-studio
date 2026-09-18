@@ -52,7 +52,8 @@ export function isRetryableStatus(status: number | undefined): boolean {
 }
 
 /** Runtime network errors vary, so they are matched by feature strings. */
-const NETWORK_PATTERN = /network\s*error|failed to fetch|load failed|networkerror|econnreset|socket hang up|terminated/i;
+const NETWORK_PATTERN =
+  /network\s*error|failed to fetch|load failed|networkerror|econnreset|socket hang up|terminated/i;
 
 /**
  * When the business code is lost, busy states are detected from text so retryable
@@ -63,7 +64,8 @@ const BUSY_PATTERN =
   /too busy|rate.?limit|overloaded|try again later|temporarily unavailable|service unavailable|over capacity|at capacity/i;
 
 /** AI SDK parse-error text signatures used after errors are rewrapped. */
-const PARSE_FAILURE_PATTERN = /type validation failed|json parsing failed|invalid_union|could not parse/i;
+const PARSE_FAILURE_PATTERN =
+  /type validation failed|json parsing failed|invalid_union|could not parse/i;
 
 const DETAIL_MAX = 4000;
 const MESSAGE_MAX = 200;
@@ -86,11 +88,14 @@ function stringifyDetail(value: unknown): string | undefined {
 type ModelFactoryError = { code?: number | string; message?: string };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  if (value && typeof value === "object" && !Array.isArray(value))
+    return value as Record<string, unknown>;
   if (typeof value !== "string") return null;
   try {
     const parsed: unknown = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
@@ -111,15 +116,22 @@ export function parseModelFactoryEnvelope(raw: unknown): ModelFactoryError | nul
   for (const candidate of candidates) {
     if (!candidate) continue;
     const code =
-      typeof candidate.code === "number" || typeof candidate.code === "string" ? candidate.code : undefined;
-    const message = typeof candidate.message === "string" && candidate.message ? candidate.message : undefined;
+      typeof candidate.code === "number" || typeof candidate.code === "string"
+        ? candidate.code
+        : undefined;
+    const message =
+      typeof candidate.message === "string" && candidate.message ? candidate.message : undefined;
     // String-only codes are usually category strings, so keep looking inward.
     if (message !== undefined || typeof code === "number") return { code, message };
   }
   return null;
 }
 
-function fromModelFactory(mf: ModelFactoryError, detail?: string, retryable?: boolean): NormalizedAgentError {
+function fromModelFactory(
+  mf: ModelFactoryError,
+  detail?: string,
+  retryable?: boolean,
+): NormalizedAgentError {
   const key = mf.code !== undefined ? String(mf.code) : undefined;
   const base =
     (key !== undefined && MF_MESSAGE_KEYS[key] ? i18n.t(MF_MESSAGE_KEYS[key]) : undefined) ??
@@ -134,10 +146,12 @@ function fromModelFactory(mf: ModelFactoryError, detail?: string, retryable?: bo
 }
 
 function fromStatus(status: number | undefined): string {
-  if (status === 401 || status === 403) return i18n.t("knowledgeNetwork.agentChat.errors.authExpired");
+  if (status === 401 || status === 403)
+    return i18n.t("knowledgeNetwork.agentChat.errors.authExpired");
   if (status === 404) return i18n.t("knowledgeNetwork.agentChat.errors.modelNotFound");
   if (status === 429) return i18n.t("knowledgeNetwork.agentChat.errors.modelRateLimited");
-  if (status !== undefined && status >= 500) return i18n.t("knowledgeNetwork.agentChat.errors.modelTemporaryUnavailable");
+  if (status !== undefined && status >= 500)
+    return i18n.t("knowledgeNetwork.agentChat.errors.modelTemporaryUnavailable");
   return status !== undefined
     ? i18n.t("knowledgeNetwork.agentChat.errors.requestFailedWithStatus", { status })
     : i18n.t("knowledgeNetwork.agentChat.errors.requestFailed");
@@ -151,7 +165,11 @@ export function normalizeAgentError(error: unknown): NormalizedAgentError {
     const detail = stringifyDetail(error.value);
     const mf = parseModelFactoryEnvelope(error.value);
     if (mf) return fromModelFactory(mf, detail);
-    return { message: i18n.t("knowledgeNetwork.agentChat.errors.unparseableResponse"), detail, retryable: false };
+    return {
+      message: i18n.t("knowledgeNetwork.agentChat.errors.unparseableResponse"),
+      detail,
+      retryable: false,
+    };
   }
 
   if (APICallError.isInstance(error)) {
@@ -177,15 +195,27 @@ export function normalizeAgentError(error: unknown): NormalizedAgentError {
   const mf = parseModelFactoryEnvelope(raw);
   if (mf) return fromModelFactory(mf, stringifyDetail(raw));
   if (NETWORK_PATTERN.test(raw)) {
-    return { message: i18n.t("knowledgeNetwork.agentChat.errors.connectionInterrupted"), detail: stringifyDetail(raw), retryable: true };
+    return {
+      message: i18n.t("knowledgeNetwork.agentChat.errors.connectionInterrupted"),
+      detail: stringifyDetail(raw),
+      retryable: true,
+    };
   }
   // The SDK dropped the code, so use text matching to keep the retry path available.
   if (BUSY_PATTERN.test(raw)) {
-    return { message: i18n.t("knowledgeNetwork.agentChat.errors.modelBusy"), detail: stringifyDetail(raw), retryable: true };
+    return {
+      message: i18n.t("knowledgeNetwork.agentChat.errors.modelBusy"),
+      detail: stringifyDetail(raw),
+      retryable: true,
+    };
   }
   // Rewrapped parse errors no longer pass isInstance, so match text before fallback.
   if (PARSE_FAILURE_PATTERN.test(raw)) {
-    return { message: i18n.t("knowledgeNetwork.agentChat.errors.unparseableResponse"), detail: stringifyDetail(raw), retryable: false };
+    return {
+      message: i18n.t("knowledgeNetwork.agentChat.errors.unparseableResponse"),
+      detail: stringifyDetail(raw),
+      retryable: false,
+    };
   }
   return {
     message: truncate(raw, MESSAGE_MAX) || i18n.t("knowledgeNetwork.agentChat.errors.chatFailed"),

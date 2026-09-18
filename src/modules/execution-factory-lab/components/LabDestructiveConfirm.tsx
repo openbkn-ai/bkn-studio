@@ -14,11 +14,7 @@ import type { TFunction } from "i18next";
 import { formatCapabilityStatusLabel } from "@/modules/execution-factory-lab/utils/capability-status";
 
 export type LabDestructiveAction =
-  | "delete"
-  | "offline"
-  | "republish"
-  | "skillReplace"
-  | "disableOrchestration";
+  "delete" | "offline" | "republish" | "skillReplace" | "disableOrchestration";
 
 export type LabDestructiveConfirmContext = {
   name: string;
@@ -111,7 +107,9 @@ export function LabDestructiveImpactAlert({
         type="warning"
       />
       <Typography.Paragraph style={{ marginBottom: 0 }}>
-        <Typography.Text strong>{t("executionFactoryLab.destructiveTargetLabel")}: </Typography.Text>
+        <Typography.Text strong>
+          {t("executionFactoryLab.destructiveTargetLabel")}:{" "}
+        </Typography.Text>
         {context.name}
       </Typography.Paragraph>
       <Typography.Paragraph style={{ marginBottom: 0 }} type="secondary">
@@ -135,7 +133,9 @@ export function openLabDestructiveConfirm(params: {
 }) {
   Modal.confirm({
     cancelText: params.t("common.cancel"),
-    content: <LabDestructiveImpactAlert action={params.action} context={params.context} t={params.t} />,
+    content: (
+      <LabDestructiveImpactAlert action={params.action} context={params.context} t={params.t} />
+    ),
     okButtonProps: { danger: true },
     okText: params.okText,
     onOk: params.onOk,

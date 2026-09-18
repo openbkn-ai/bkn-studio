@@ -16,4 +16,3 @@
   },
   "include": ["vite.config.ts", "eslint.config.js", "scripts/vite-dev-auth-plugin.ts"]
 }
-

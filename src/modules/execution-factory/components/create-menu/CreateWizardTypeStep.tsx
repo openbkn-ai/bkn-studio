@@ -45,21 +45,23 @@ export function CreateWizardTypeStep({ allowedTabs, onChange, value }: CreateWiz
         value={value}
       >
         <div className={styles.wizardTypeGrid}>
-          {TAB_OPTIONS.filter(({ key }) => !allowedTabs || allowedTabs.includes(key)).map(({ key, icon: Icon }) => (
-            <label
-              className={`${styles.optionCard} ${value === key ? styles.optionCardActive : ""}`}
-              key={key}
-            >
-              <Radio value={key} />
-              <Icon style={{ fontSize: 22, color: "var(--color-primary-600)" }} />
-              <div className={styles.optionTitle}>
-                {t(`executionFactory.executionUnitTabs.${key}`)}
-              </div>
-              <div className={styles.optionDesc}>
-                {t(`executionFactory.createWizardTypeDesc.${key}`)}
-              </div>
-            </label>
-          ))}
+          {TAB_OPTIONS.filter(({ key }) => !allowedTabs || allowedTabs.includes(key)).map(
+            ({ key, icon: Icon }) => (
+              <label
+                className={`${styles.optionCard} ${value === key ? styles.optionCardActive : ""}`}
+                key={key}
+              >
+                <Radio value={key} />
+                <Icon style={{ fontSize: 22, color: "var(--color-primary-600)" }} />
+                <div className={styles.optionTitle}>
+                  {t(`executionFactory.executionUnitTabs.${key}`)}
+                </div>
+                <div className={styles.optionDesc}>
+                  {t(`executionFactory.createWizardTypeDesc.${key}`)}
+                </div>
+              </label>
+            ),
+          )}
         </div>
       </Radio.Group>
     </div>

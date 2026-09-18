@@ -9,11 +9,7 @@ import { http } from "@/framework/request/http";
 import type { BackendListResponse } from "@/modules/knowledge-network/services/mappers/backend-types";
 
 export type KnowledgeNetworkChildCollection =
-  | "action-types"
-  | "concept-groups"
-  | "metrics"
-  | "object-types"
-  | "relation-types";
+  "action-types" | "concept-groups" | "metrics" | "object-types" | "relation-types";
 
 type OperationRecord = {
   id: string;

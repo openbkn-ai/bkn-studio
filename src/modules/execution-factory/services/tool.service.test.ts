@@ -28,7 +28,11 @@ describe("tool.service mock persistence", () => {
             summary: "httpbin_get",
             parameters: [
               { name: "customerId", in: "query", schema: { type: "string", example: "1001" } },
-              { name: "x-demo-source", in: "header", schema: { type: "string", example: "openbkn" } },
+              {
+                name: "x-demo-source",
+                in: "header",
+                schema: { type: "string", example: "openbkn" },
+              },
             ],
             responses: { "200": { description: "OK" } },
           },
@@ -117,9 +121,7 @@ describe("tool.service mock persistence", () => {
         {
           get: {
             summary: `petstoreResource${index + 1}`,
-            parameters: [
-              { name: "limit", in: "query", schema: { type: "integer" } },
-            ],
+            parameters: [{ name: "limit", in: "query", schema: { type: "integer" } }],
             responses: { "200": { description: "OK" } },
           },
         },
@@ -153,11 +155,11 @@ describe("extractCreateToolFailureMessage", () => {
       extractCreateToolFailureMessage({
         tool_name: "test",
         error_msg: {
-          description: '工具 “test” 已存在',
+          description: "工具 “test” 已存在",
           details: "tool name test exist",
         },
       }),
-    ).toBe('工具 “test” 已存在');
+    ).toBe("工具 “test” 已存在");
   });
 
   it("falls back to legacy error.description when error_msg is absent", () => {

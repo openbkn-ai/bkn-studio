@@ -8,10 +8,7 @@
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
-export function isResourceIndexReadOnly(
-  catalog: CatalogRecord | null,
-  canModifyResource = true,
-) {
+export function isResourceIndexReadOnly(catalog: CatalogRecord | null, canModifyResource = true) {
   return Boolean(catalog?.builtin) || !canModifyResource;
 }
 
@@ -19,9 +16,11 @@ export function canManageResourceBuildTasks(
   resource: CatalogResource,
   catalog: CatalogRecord | null,
 ) {
-  return resource.category !== "dataset"
-    && !isResourceIndexReadOnly(catalog)
-    && hasCatalogOperation(catalog, "task_manage");
+  return (
+    resource.category !== "dataset" &&
+    !isResourceIndexReadOnly(catalog) &&
+    hasCatalogOperation(catalog, "task_manage")
+  );
 }
 
 export function canViewResourceIndexTasks(

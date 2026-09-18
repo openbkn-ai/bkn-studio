@@ -14,10 +14,7 @@ import type { DataConnectFormSceneProps } from "@/modules/data-connect/contracts
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
-import {
-  extractRequestErrorMessage,
-  isRequestConflict,
-} from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ConnectorTypePicker } from "@/modules/data-connect/components/ConnectorTypePicker";
 import { DataConnectConfigForm } from "@/modules/data-connect/components/DataConnectConfigForm";
@@ -110,9 +107,9 @@ export function DataConnectFormScene({
             if (!active) {
               return;
             }
-            setConnectorTypes((currentTypes) => currentTypes.map((item) => (
-              item.type === connector.type ? connector : item
-            )));
+            setConnectorTypes((currentTypes) =>
+              currentTypes.map((item) => (item.type === connector.type ? connector : item)),
+            );
             selectConnectorType(currentRecord.connectorType);
             form.setFieldsValue({
               connectorConfig: sanitizeConnectorConfig(
@@ -172,9 +169,7 @@ export function DataConnectFormScene({
 
       setRecord(latestRecord);
       if (latestRecord) {
-        const connector = connectorTypes.find(
-          (item) => item.type === latestRecord.connectorType,
-        );
+        const connector = connectorTypes.find((item) => item.type === latestRecord.connectorType);
         selectConnectorType(latestRecord.connectorType);
         form.setFieldsValue({
           connectorConfig: sanitizeConnectorConfig(
@@ -208,12 +203,9 @@ export function DataConnectFormScene({
   // Align with backend catalog operation vocabulary (catalog.json): create=catalog:create and edit=catalog:modify.
   // Legacy data-connect:create/edit keys were invented by the frontend and absent from /me/permissions, causing permanent 403 responses.
   const permission = mode === "create" ? "catalog:create" : "catalog:modify";
-  const pageTitle =
-    mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");
+  const pageTitle = mode === "create" ? t("dataConnect.createTitle") : t("dataConnect.editTitle");
   const pageDescription =
-    mode === "create"
-      ? t("dataConnect.createDescription")
-      : t("dataConnect.editDescription");
+    mode === "create" ? t("dataConnect.createDescription") : t("dataConnect.editDescription");
 
   const stepItems = [
     { title: t("dataConnect.connectorTypeStep") },
@@ -257,11 +249,14 @@ export function DataConnectFormScene({
       if (selectedConnectorTypeRef.current !== selectedConnectorType) {
         return;
       }
-      setConnectorTypes((currentTypes) => currentTypes.map((item) => (
-        item.type === connector.type ? connector : item
-      )));
+      setConnectorTypes((currentTypes) =>
+        currentTypes.map((item) => (item.type === connector.type ? connector : item)),
+      );
       const defaults = getConnectorConfigDefaults(connector);
-      const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<string, unknown>;
+      const currentConfig = (form.getFieldValue("connectorConfig") ?? {}) as Record<
+        string,
+        unknown
+      >;
       const mergedConfig: DataConnectMutationInput["connectorConfig"] = {
         ...defaults,
         ...sanitizeConnectorConfig(currentConfig, connector.fieldConfig),
@@ -313,9 +308,10 @@ export function DataConnectFormScene({
     const values = (await form.validateFields([["connectorConfig"]], {
       recursive: true,
     })) as Pick<DataConnectMutationInput, "connectorConfig">;
-    const currentValues = form.getFieldsValue([
-      "connectorType",
-    ]) as Pick<DataConnectMutationInput, "connectorType">;
+    const currentValues = form.getFieldsValue(["connectorType"]) as Pick<
+      DataConnectMutationInput,
+      "connectorType"
+    >;
 
     return {
       connectorConfig: normalizeConnectorConfig(
@@ -323,8 +319,7 @@ export function DataConnectFormScene({
         selectedConnector?.fieldConfig,
         selectedConnector?.type,
       ),
-      connectorType:
-        selectedConnectorType ?? currentValues.connectorType,
+      connectorType: selectedConnectorType ?? currentValues.connectorType,
     };
   };
 
@@ -343,12 +338,16 @@ export function DataConnectFormScene({
         if (!record) {
           throw new Error(t("common.requestFailed"));
         }
-        await updateDataConnectRecord(recordId, {
-          ...payload,
-          expectedUpdateTime: record.expectedUpdateTime,
-        }, {
-          skipErrorToast: true,
-        });
+        await updateDataConnectRecord(
+          recordId,
+          {
+            ...payload,
+            expectedUpdateTime: record.expectedUpdateTime,
+          },
+          {
+            skipErrorToast: true,
+          },
+        );
       }
 
       if (recordIdentityRef.current !== submittedRecordIdentity) {
@@ -356,11 +355,7 @@ export function DataConnectFormScene({
       }
       finishSubmit();
     } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "errorFields" in error
-      ) {
+      if (typeof error === "object" && error !== null && "errorFields" in error) {
         return;
       }
 
@@ -393,13 +388,17 @@ export function DataConnectFormScene({
                 if (!record) {
                   throw new Error(t("common.requestFailed"));
                 }
-                await updateDataConnectRecord(recordId, {
-                  ...retryPayload,
-                  expectedUpdateTime: record.expectedUpdateTime,
-                }, {
-                  allowUnhealthy: true,
-                  skipErrorToast: true,
-                });
+                await updateDataConnectRecord(
+                  recordId,
+                  {
+                    ...retryPayload,
+                    expectedUpdateTime: record.expectedUpdateTime,
+                  },
+                  {
+                    allowUnhealthy: true,
+                    skipErrorToast: true,
+                  },
+                );
               }
 
               if (recordIdentityRef.current === submittedRecordIdentity) {
@@ -428,11 +427,7 @@ export function DataConnectFormScene({
       }
 
       void message.error(extractRequestErrorMessage(error));
-      await refreshRecordAfterConflict(
-        error,
-        submittedRecordId,
-        submittedRecordIdentity,
-      );
+      await refreshRecordAfterConflict(error, submittedRecordId, submittedRecordIdentity);
     } finally {
       if (recordIdentityRef.current === submittedRecordIdentity) {
         setSubmitting(false);
@@ -461,11 +456,7 @@ export function DataConnectFormScene({
       }
       message.success(t("dataConnect.testConnectionSuccess"));
     } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "errorFields" in error
-      ) {
+      if (typeof error === "object" && error !== null && "errorFields" in error) {
         return;
       }
       void message.error(extractRequestErrorMessage(error));
@@ -474,12 +465,7 @@ export function DataConnectFormScene({
     }
   };
 
-  if (
-    mode === "edit" &&
-    !loading &&
-    record &&
-    !hasCatalogOperation(record, "modify")
-  ) {
+  if (mode === "edit" && !loading && record && !hasCatalogOperation(record, "modify")) {
     return <Result status="403" subTitle={t("dataConnect.permissionRequired")} title="403" />;
   }
 
@@ -520,9 +506,7 @@ export function DataConnectFormScene({
             <div className={styles.stepPanel}>
               <Form
                 className={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : styles.configFormHorizontal
+                  currentStep === 0 && mode === "create" ? undefined : styles.configFormHorizontal
                 }
                 colon={false}
                 form={form}
@@ -530,19 +514,9 @@ export function DataConnectFormScene({
                   setHasUnsavedChanges(true);
                 }}
                 labelAlign="right"
-                labelCol={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : { flex: "0 0 96px" }
-                }
-                layout={
-                  currentStep === 0 && mode === "create" ? "vertical" : "horizontal"
-                }
-                wrapperCol={
-                  currentStep === 0 && mode === "create"
-                    ? undefined
-                    : { flex: "1 1 0" }
-                }
+                labelCol={currentStep === 0 && mode === "create" ? undefined : { flex: "0 0 96px" }}
+                layout={currentStep === 0 && mode === "create" ? "vertical" : "horizontal"}
+                wrapperCol={currentStep === 0 && mode === "create" ? undefined : { flex: "1 1 0" }}
               >
                 {currentStep === 0 && mode === "create" ? (
                   <ConnectorTypePicker
@@ -579,7 +553,7 @@ export function DataConnectFormScene({
                 {t("common.previous")}
               </AppButton>
             ) : null}
-            {((currentStep === 1 && mode === "create") || (mode === "edit" && record)) ? (
+            {(currentStep === 1 && mode === "create") || (mode === "edit" && record) ? (
               <AppButton
                 disabled={mode === "edit" && !canTestUnsavedConfig && hasUnsavedChanges}
                 loading={testingConnection}
@@ -621,16 +595,9 @@ function sanitizeConnectorConfig(
 ) {
   return Object.fromEntries(
     Object.entries(config)
-      .filter(
-        ([key, value]) =>
-          !shouldOmitConnectorConfigValue(fieldConfig[key], value),
-      )
+      .filter(([key, value]) => !shouldOmitConnectorConfigValue(fieldConfig[key], value))
       .map(([key, value]) => {
-        if (
-          typeof value === "string" ||
-          typeof value === "number" ||
-          typeof value === "boolean"
-        ) {
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
           return [key, value];
         }
 
@@ -679,10 +646,7 @@ function normalizeConnectorConfig(
   ) as Record<string, unknown>;
 }
 
-function shouldOmitConnectorConfigValue(
-  field: ConnectorFieldConfig | undefined,
-  value: unknown,
-) {
+function shouldOmitConnectorConfigValue(field: ConnectorFieldConfig | undefined, value: unknown) {
   if (field?.encrypted) {
     return value === undefined || value === null || value === "";
   }

@@ -14,9 +14,5 @@ type TableSurfaceProps = PropsWithChildren<{
 }>;
 
 export function TableSurface({ children, className }: TableSurfaceProps) {
-  return (
-    <div className={[styles.surface, className].filter(Boolean).join(" ")}>
-      {children}
-    </div>
-  );
+  return <div className={[styles.surface, className].filter(Boolean).join(" ")}>{children}</div>;
 }

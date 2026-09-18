@@ -150,8 +150,7 @@ export function mapRelationTypeMappingsFromBackend(
     return {
       backingDataSourceId: mappingRules.backing_data_source?.id ?? "",
       backingDataSourceName:
-        mappingRules.backing_data_source?.name ??
-        mappingRules.backing_data_source?.display_name,
+        mappingRules.backing_data_source?.name ?? mappingRules.backing_data_source?.display_name,
       resourceMappings,
       propertyMappings: [],
     };

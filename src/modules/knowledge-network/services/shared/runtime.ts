@@ -27,11 +27,7 @@ export function stringFromUnknown(value: unknown, fallback = ""): string {
     return value;
   }
 
-  if (
-    typeof value === "number" ||
-    typeof value === "bigint" ||
-    typeof value === "boolean"
-  ) {
+  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
     return String(value);
   }
 
@@ -47,7 +43,7 @@ export const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 /** Metrics are visible in every environment and degrade with a warning if the backend is absent. */
 export const integrateWorkspaceMetrics = true;
 
-export const wait = async <T,>(value: T) =>
+export const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 160);
   });
@@ -160,8 +156,7 @@ export function getRequestErrorStatus(error: unknown): number | undefined {
 
 function formatServiceFallbackReason(error: unknown): string {
   const status = getRequestErrorStatus(error);
-  const message =
-    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
 
   return [status ? `status=${status}` : null, message].filter(Boolean).join(" · ");
 }
@@ -203,8 +198,7 @@ export function filterKnowledgeNetworks(
       item.name.toLowerCase().includes(keyword) ||
       item.identifier.toLowerCase().includes(keyword) ||
       item.description.toLowerCase().includes(keyword);
-    const matchesTag =
-      !tag || item.tags.some((itemTag) => itemTag.toLowerCase() === tag);
+    const matchesTag = !tag || item.tags.some((itemTag) => itemTag.toLowerCase() === tag);
 
     return matchesKeyword && matchesTag;
   });

@@ -35,9 +35,11 @@ export const systemAdminZhCN = {
     },
     resourceCatalog: {
       descriptions: {
-        operator: "存量算子授权，算子已下线，不再用于新授权。函数集的创建、AI 生成和临时代码执行由函数集权限管控。",
+        operator:
+          "存量算子授权，算子已下线，不再用于新授权。函数集的创建、AI 生成和临时代码执行由函数集权限管控。",
         tool_box: "仅管控 API 工具集。新建用于创建集合，修改用于编辑 API，执行用于调用。",
-        function: "仅管控函数集。新建用于创建集合和 AI 生成函数，修改用于编辑函数，执行用于调用及临时代码执行。",
+        function:
+          "仅管控函数集。新建用于创建集合和 AI 生成函数，修改用于编辑函数，执行用于调用及临时代码执行。",
       },
       operations: {
         "*": "全部操作",
@@ -98,204 +100,233 @@ export const systemAdminZhCN = {
         },
       },
       operationDescriptions: {
-        "agent": {
-          "use": "使用数据智能体。",
-          "publish": "发布数据智能体，使其可被其他用户使用。",
-          "unpublish": "取消发布数据智能体。",
-          "unpublish_other_user_agent": "取消发布其他用户的智能体。",
-          "publish_to_be_skill_agent": "将智能体发布为技能。",
-          "publish_to_be_web_sdk_agent": "将智能体发布为 Web SDK。",
-          "publish_to_be_api_agent": "将智能体发布为 API。",
-          "publish_to_be_data_flow_agent": "将智能体发布为数据流。",
-          "create_system_agent": "创建系统智能体。",
-          "mgnt_built_in_agent": "管理内置智能体。",
-          "see_trajectory_analysis": "查看智能体运行轨迹分析。",
+        agent: {
+          use: "使用数据智能体。",
+          publish: "发布数据智能体，使其可被其他用户使用。",
+          unpublish: "取消发布数据智能体。",
+          unpublish_other_user_agent: "取消发布其他用户的智能体。",
+          publish_to_be_skill_agent: "将智能体发布为技能。",
+          publish_to_be_web_sdk_agent: "将智能体发布为 Web SDK。",
+          publish_to_be_api_agent: "将智能体发布为 API。",
+          publish_to_be_data_flow_agent: "将智能体发布为数据流。",
+          create_system_agent: "创建系统智能体。",
+          mgnt_built_in_agent: "管理内置智能体。",
+          see_trajectory_analysis: "查看智能体运行轨迹分析。",
         },
-        "agent_tpl": {
-          "publish": "发布数据智能体模板，使其可被其他用户使用。",
-          "unpublish": "取消发布数据智能体模板。",
-          "unpublish_other_user_agent_tpl": "取消发布其他用户的智能体模板。",
+        agent_tpl: {
+          publish: "发布数据智能体模板，使其可被其他用户使用。",
+          unpublish: "取消发布数据智能体模板。",
+          unpublish_other_user_agent_tpl: "取消发布其他用户的智能体模板。",
         },
-        "catalog": {
-          "view_detail": "查看数据目录的配置与概览。当目录下数据资源未显式授予查看权限时，可回退到数据目录的查看权限。",
-          "create": "创建数据目录。",
-          "modify": "修改数据目录自身配置，并配置目录健康检查计划；不包含目录下的数据资源。需要同时具有查看数据目录权限。",
-          "delete": "删除数据目录；需要同时具有查看数据目录权限。",
-          "authorize": "配置数据目录的访问权限；需要同时具有查看数据目录权限。",
-          "task_manage": "查看、创建、取消和管理数据目录下的构建任务、资源发现任务、语义理解任务及资源发现调度；需要同时具有查看数据目录权限。",
-          "resource_manage": "管理数据目录下的数据资源及其配置。当目录下数据资源未显式授予修改或删除权限时，可回退到数据目录的资源管理权限。需要同时具有查看数据目录权限。",
-          "query_data": "查询数据目录下资源的数据，支持数据集和物理表。当目录下数据资源未显式授予查询权限时，可回退到数据目录的查询权限。",
-          "data_write": "仅可写入或删除数据集文档，不支持操作 MariaDB/MySQL 等物理表数据。当目录下数据资源未显式授予写入权限时，可回退到数据目录的写入权限。",
+        catalog: {
+          view_detail:
+            "查看数据目录的配置与概览。当目录下数据资源未显式授予查看权限时，可回退到数据目录的查看权限。",
+          create: "创建数据目录。",
+          modify:
+            "修改数据目录自身配置，并配置目录健康检查计划；不包含目录下的数据资源。需要同时具有查看数据目录权限。",
+          delete: "删除数据目录；需要同时具有查看数据目录权限。",
+          authorize: "配置数据目录的访问权限；需要同时具有查看数据目录权限。",
+          task_manage:
+            "查看、创建、取消和管理数据目录下的构建任务、资源发现任务、语义理解任务及资源发现调度；需要同时具有查看数据目录权限。",
+          resource_manage:
+            "管理数据目录下的数据资源及其配置。当目录下数据资源未显式授予修改或删除权限时，可回退到数据目录的资源管理权限。需要同时具有查看数据目录权限。",
+          query_data:
+            "查询数据目录下资源的数据，支持数据集和物理表。当目录下数据资源未显式授予查询权限时，可回退到数据目录的查询权限。",
+          data_write:
+            "仅可写入或删除数据集文档，不支持操作 MariaDB/MySQL 等物理表数据。当目录下数据资源未显式授予写入权限时，可回退到数据目录的写入权限。",
         },
-        "resource": {
-          "view_detail": "查看数据资源的配置、结构和内容。未显式授予时，可回退到所属数据目录的查看权限。",
-          "modify": "修改数据资源配置。未显式授予时，可回退到所属数据目录的资源管理权限。",
-          "delete": "删除数据资源。未显式授予时，可回退到所属数据目录的资源管理权限。",
-          "query_data": "查询数据资源的数据。未显式授予时，可回退到所属数据目录的查询权限。",
-          "data_write": "仅可写入或删除数据集文档；物理表不支持数据写入。未显式授予时，可回退到所属数据目录的写入权限。",
+        resource: {
+          view_detail:
+            "查看数据资源的配置、结构和内容。未显式授予时，可回退到所属数据目录的查看权限。",
+          modify: "修改数据资源配置。未显式授予时，可回退到所属数据目录的资源管理权限。",
+          delete: "删除数据资源。未显式授予时，可回退到所属数据目录的资源管理权限。",
+          query_data: "查询数据资源的数据。未显式授予时，可回退到所属数据目录的查询权限。",
+          data_write:
+            "仅可写入或删除数据集文档；物理表不支持数据写入。未显式授予时，可回退到所属数据目录的写入权限。",
         },
-        "connector_type": {
-          "view_detail": "查看连接器类型的详细配置与内容。",
-          "create": "新建连接器类型。",
-          "modify": "修改连接器类型配置。需要同时具有连接器类型的查看权限。",
-          "delete": "删除连接器类型。需要同时具有连接器类型的查看权限。",
-          "authorize": "配置连接器类型的访问权限。需要同时具有连接器类型的查看权限。",
+        connector_type: {
+          view_detail: "查看连接器类型的详细配置与内容。",
+          create: "新建连接器类型。",
+          modify: "修改连接器类型配置。需要同时具有连接器类型的查看权限。",
+          delete: "删除连接器类型。需要同时具有连接器类型的查看权限。",
+          authorize: "配置连接器类型的访问权限。需要同时具有连接器类型的查看权限。",
         },
-        "knowledge_network": {
-          "view_detail": "查看知识网络的详细配置与内容。当知识网络下的概念分组、对象类型、关系类型、动作类型、指标和风险类型未显式授予查看权限时，可回退到知识网络的查看权限。",
-          "create": "新建知识网络。",
-          "modify": "修改知识网络配置。当知识网络下的概念分组、对象类型、关系类型、动作类型、指标和风险类型未显式授予修改或删除权限时，可回退到知识网络的修改权限。需要同时具有知识网络的查看权限。",
-          "delete": "删除知识网络。需要同时具有知识网络的查看权限。",
-          "query_data": "查询知识网络的数据。当知识网络下的对象类型、关系类型和指标未显式授予查询权限时，可回退到知识网络的查询权限。",
-          "authorize": "配置知识网络的访问权限。需要同时具有知识网络的查看权限。",
-          "execute": "执行或调用知识网络。当知识网络下的动作类型未显式授予执行权限时，可回退到知识网络的执行权限。",
+        knowledge_network: {
+          view_detail:
+            "查看知识网络的详细配置与内容。当知识网络下的概念分组、对象类型、关系类型、动作类型、指标和风险类型未显式授予查看权限时，可回退到知识网络的查看权限。",
+          create: "新建知识网络。",
+          modify:
+            "修改知识网络配置。当知识网络下的概念分组、对象类型、关系类型、动作类型、指标和风险类型未显式授予修改或删除权限时，可回退到知识网络的修改权限。需要同时具有知识网络的查看权限。",
+          delete: "删除知识网络。需要同时具有知识网络的查看权限。",
+          query_data:
+            "查询知识网络的数据。当知识网络下的对象类型、关系类型和指标未显式授予查询权限时，可回退到知识网络的查询权限。",
+          authorize: "配置知识网络的访问权限。需要同时具有知识网络的查看权限。",
+          execute:
+            "执行或调用知识网络。当知识网络下的动作类型未显式授予执行权限时，可回退到知识网络的执行权限。",
         },
-        "concept_group": {
-          "view_detail": "查看Concept Group的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "modify": "修改Concept Group配置。需要同时具有Concept Group的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Concept Group。需要同时具有Concept Group的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+        concept_group: {
+          view_detail:
+            "查看Concept Group的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          modify:
+            "修改Concept Group配置。需要同时具有Concept Group的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Concept Group。需要同时具有Concept Group的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
         },
-        "object_type": {
-          "view_detail": "查看Object Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "query_data": "查询Object Type的数据。未显式授予时，可回退到所属知识网络的查询权限。",
-          "modify": "修改Object Type配置。需要同时具有Object Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Object Type。需要同时具有Object Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+        object_type: {
+          view_detail:
+            "查看Object Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          query_data: "查询Object Type的数据。未显式授予时，可回退到所属知识网络的查询权限。",
+          modify:
+            "修改Object Type配置。需要同时具有Object Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Object Type。需要同时具有Object Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
         },
-        "relation_type": {
-          "view_detail": "查看Relation Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "query_data": "查询Relation Type的数据。未显式授予时，可回退到所属知识网络的查询权限。",
-          "modify": "修改Relation Type配置。需要同时具有Relation Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Relation Type。需要同时具有Relation Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+        relation_type: {
+          view_detail:
+            "查看Relation Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          query_data: "查询Relation Type的数据。未显式授予时，可回退到所属知识网络的查询权限。",
+          modify:
+            "修改Relation Type配置。需要同时具有Relation Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Relation Type。需要同时具有Relation Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
         },
-        "action_type": {
-          "view_detail": "查看Action Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "modify": "修改Action Type配置。需要同时具有Action Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Action Type。需要同时具有Action Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "execute": "执行或调用Action Type。未显式授予时，可回退到所属知识网络的执行权限。",
+        action_type: {
+          view_detail:
+            "查看Action Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          modify:
+            "修改Action Type配置。需要同时具有Action Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Action Type。需要同时具有Action Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          execute: "执行或调用Action Type。未显式授予时，可回退到所属知识网络的执行权限。",
         },
-        "metric": {
-          "view_detail": "查看Metric的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "query_data": "查询Metric的数据。未显式授予时，可回退到所属知识网络的查询权限。",
-          "modify": "修改Metric配置。需要同时具有Metric的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Metric。需要同时具有Metric的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+        metric: {
+          view_detail: "查看Metric的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          query_data: "查询Metric的数据。未显式授予时，可回退到所属知识网络的查询权限。",
+          modify:
+            "修改Metric配置。需要同时具有Metric的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Metric。需要同时具有Metric的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
         },
-        "risk_type": {
-          "view_detail": "查看Risk Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
-          "modify": "修改Risk Type配置。需要同时具有Risk Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
-          "delete": "删除Risk Type。需要同时具有Risk Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+        risk_type: {
+          view_detail:
+            "查看Risk Type的详细配置与内容。未显式授予时，可回退到所属知识网络的查看权限。",
+          modify:
+            "修改Risk Type配置。需要同时具有Risk Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
+          delete:
+            "删除Risk Type。需要同时具有Risk Type的查看权限。未显式授予时，可回退到所属知识网络的修改权限。",
         },
-        "function": {
-          "create": "新建函数集。",
-          "modify": "修改函数集配置。需要同时具有函数集的查看权限。",
-          "delete": "删除函数集。需要同时具有函数集的查看权限。",
-          "view": "查看函数集。",
-          "publish": "发布函数集，使其可被其他用户使用。需要同时具有函数集的查看权限。",
-          "unpublish": "取消发布函数集。需要同时具有函数集的查看权限。",
-          "authorize": "配置函数集的访问权限。需要同时具有函数集的查看权限。",
-          "public_access": "配置函数集的公开访问。",
-          "execute": "执行或调用函数集。",
+        function: {
+          create: "新建函数集。",
+          modify: "修改函数集配置。需要同时具有函数集的查看权限。",
+          delete: "删除函数集。需要同时具有函数集的查看权限。",
+          view: "查看函数集。",
+          publish: "发布函数集，使其可被其他用户使用。需要同时具有函数集的查看权限。",
+          unpublish: "取消发布函数集。需要同时具有函数集的查看权限。",
+          authorize: "配置函数集的访问权限。需要同时具有函数集的查看权限。",
+          public_access: "配置函数集的公开访问。",
+          execute: "执行或调用函数集。",
         },
-        "tool_box": {
-          "create": "新建API 工具集。",
-          "modify": "修改API 工具集配置。需要同时具有API 工具集的查看权限。",
-          "delete": "删除API 工具集。需要同时具有API 工具集的查看权限。",
-          "view": "查看API 工具集。",
-          "publish": "发布API 工具集，使其可被其他用户使用。需要同时具有API 工具集的查看权限。",
-          "unpublish": "取消发布API 工具集。需要同时具有API 工具集的查看权限。",
-          "authorize": "配置API 工具集的访问权限。需要同时具有API 工具集的查看权限。",
-          "public_access": "配置API 工具集的公开访问。",
-          "execute": "执行或调用API 工具集。",
+        tool_box: {
+          create: "新建API 工具集。",
+          modify: "修改API 工具集配置。需要同时具有API 工具集的查看权限。",
+          delete: "删除API 工具集。需要同时具有API 工具集的查看权限。",
+          view: "查看API 工具集。",
+          publish: "发布API 工具集，使其可被其他用户使用。需要同时具有API 工具集的查看权限。",
+          unpublish: "取消发布API 工具集。需要同时具有API 工具集的查看权限。",
+          authorize: "配置API 工具集的访问权限。需要同时具有API 工具集的查看权限。",
+          public_access: "配置API 工具集的公开访问。",
+          execute: "执行或调用API 工具集。",
         },
-        "mcp": {
-          "create": "新建MCP。",
-          "modify": "修改MCP配置。需要同时具有MCP的查看权限。",
-          "delete": "删除MCP。需要同时具有MCP的查看权限。",
-          "view": "查看MCP。",
-          "publish": "发布MCP，使其可被其他用户使用。需要同时具有MCP的查看权限。",
-          "unpublish": "取消发布MCP。需要同时具有MCP的查看权限。",
-          "authorize": "配置MCP的访问权限。需要同时具有MCP的查看权限。",
-          "public_access": "配置MCP的公开访问。",
-          "execute": "执行或调用MCP。",
+        mcp: {
+          create: "新建MCP。",
+          modify: "修改MCP配置。需要同时具有MCP的查看权限。",
+          delete: "删除MCP。需要同时具有MCP的查看权限。",
+          view: "查看MCP。",
+          publish: "发布MCP，使其可被其他用户使用。需要同时具有MCP的查看权限。",
+          unpublish: "取消发布MCP。需要同时具有MCP的查看权限。",
+          authorize: "配置MCP的访问权限。需要同时具有MCP的查看权限。",
+          public_access: "配置MCP的公开访问。",
+          execute: "执行或调用MCP。",
         },
-        "operator": {
-          "create": "新建算子。",
-          "modify": "修改算子配置。需要同时具有算子的查看权限。",
-          "delete": "删除算子。需要同时具有算子的查看权限。",
-          "view": "查看算子。",
-          "publish": "发布算子，使其可被其他用户使用。需要同时具有算子的查看权限。",
-          "unpublish": "取消发布算子。需要同时具有算子的查看权限。",
-          "authorize": "配置算子的访问权限。需要同时具有算子的查看权限。",
-          "public_access": "配置算子的公开访问。",
-          "execute": "执行或调用算子。",
+        operator: {
+          create: "新建算子。",
+          modify: "修改算子配置。需要同时具有算子的查看权限。",
+          delete: "删除算子。需要同时具有算子的查看权限。",
+          view: "查看算子。",
+          publish: "发布算子，使其可被其他用户使用。需要同时具有算子的查看权限。",
+          unpublish: "取消发布算子。需要同时具有算子的查看权限。",
+          authorize: "配置算子的访问权限。需要同时具有算子的查看权限。",
+          public_access: "配置算子的公开访问。",
+          execute: "执行或调用算子。",
         },
-        "skill": {
-          "create": "新建Skill。",
-          "modify": "修改Skill配置。需要同时具有Skill的查看权限。",
-          "delete": "删除Skill。需要同时具有Skill的查看权限。",
-          "view": "查看Skill。",
-          "publish": "发布Skill，使其可被其他用户使用。需要同时具有Skill的查看权限。",
-          "unpublish": "取消发布Skill。需要同时具有Skill的查看权限。",
-          "authorize": "配置Skill的访问权限。需要同时具有Skill的查看权限。",
-          "public_access": "配置Skill的公开访问。",
-          "execute": "执行或调用Skill。",
+        skill: {
+          create: "新建Skill。",
+          modify: "修改Skill配置。需要同时具有Skill的查看权限。",
+          delete: "删除Skill。需要同时具有Skill的查看权限。",
+          view: "查看Skill。",
+          publish: "发布Skill，使其可被其他用户使用。需要同时具有Skill的查看权限。",
+          unpublish: "取消发布Skill。需要同时具有Skill的查看权限。",
+          authorize: "配置Skill的访问权限。需要同时具有Skill的查看权限。",
+          public_access: "配置Skill的公开访问。",
+          execute: "执行或调用Skill。",
         },
-        "small_model": {
-          "create": "新建小模型。",
-          "display": "查看小模型的配置与状态。",
-          "modify": "修改小模型配置。需要同时具有小模型的查看权限。",
-          "delete": "删除小模型。需要同时具有小模型的查看权限。",
-          "execute": "执行或调用小模型。",
+        small_model: {
+          create: "新建小模型。",
+          display: "查看小模型的配置与状态。",
+          modify: "修改小模型配置。需要同时具有小模型的查看权限。",
+          delete: "删除小模型。需要同时具有小模型的查看权限。",
+          execute: "执行或调用小模型。",
         },
-        "large_model": {
-          "create": "新建大模型。",
-          "display": "查看大模型的配置与状态。",
-          "modify": "修改大模型配置。需要同时具有大模型的查看权限。",
-          "delete": "删除大模型。需要同时具有大模型的查看权限。",
-          "execute": "执行或调用大模型。",
+        large_model: {
+          create: "新建大模型。",
+          display: "查看大模型的配置与状态。",
+          modify: "修改大模型配置。需要同时具有大模型的查看权限。",
+          delete: "删除大模型。需要同时具有大模型的查看权限。",
+          execute: "执行或调用大模型。",
         },
         "admin-user": {
-          "view": "查看系统用户列表。",
-          "create": "创建系统用户。",
-          "edit": "编辑系统用户信息。",
-          "delete": "删除系统用户。",
-          "toggle": "启用或停用账号。",
+          view: "查看系统用户列表。",
+          create: "创建系统用户。",
+          edit: "编辑系统用户信息。",
+          delete: "删除系统用户。",
+          toggle: "启用或停用账号。",
           "reset-password": "重置用户密码。",
         },
         "admin-dept": {
-          "view": "查看系统部门列表。",
-          "create": "创建系统部门。",
-          "edit": "编辑系统部门信息。",
-          "delete": "删除系统部门。",
-          "members": "管理部门成员。",
+          view: "查看系统部门列表。",
+          create: "创建系统部门。",
+          edit: "编辑系统部门信息。",
+          delete: "删除系统部门。",
+          members: "管理部门成员。",
         },
         "admin-role": {
-          "view": "查看系统角色列表。",
-          "create": "创建系统角色。",
-          "edit": "编辑系统角色信息。",
-          "delete": "删除系统角色。",
-          "members": "管理角色成员。",
-          "permissions": "配置角色权限。",
+          view: "查看系统角色列表。",
+          create: "创建系统角色。",
+          edit: "编辑系统角色信息。",
+          delete: "删除系统角色。",
+          members: "管理角色成员。",
+          permissions: "配置角色权限。",
         },
         "admin-authz": {
-          "view": "查看系统授权记录。",
-          "grant": "授予访问权限。",
-          "revoke": "撤销访问权限。",
+          view: "查看系统授权记录。",
+          grant: "授予访问权限。",
+          revoke: "撤销访问权限。",
         },
         "admin-audit": {
-          "view": "查看系统审计日志。",
+          view: "查看系统审计日志。",
         },
-        "safe_admin": {
-          "manage": "管理 bkn-safe 管理 API 配置。",
+        safe_admin: {
+          manage: "管理 bkn-safe 管理 API 配置。",
         },
         "admin-license": {
-          "view": "查看产品授权信息。",
-          "manage": "管理产品授权配置。",
+          view: "查看产品授权信息。",
+          manage: "管理产品授权配置。",
         },
         "admin-client": {
-          "manage": "管理登录客户端配置。",
+          manage: "管理登录客户端配置。",
         },
         "admin-apikey": {
-          "manage": "管理全局 AppKey。",
+          manage: "管理全局 AppKey。",
         },
       },
       resources: {
@@ -378,7 +409,8 @@ export const systemAdminZhCN = {
     },
     objectGrants: {
       title: "权限管理",
-      description: "在角色权限之上，为用户配置某个具体对象（数据目录 / 模型 / 函数 / 工具箱 等）的可用操作。",
+      description:
+        "在角色权限之上，为用户配置某个具体对象（数据目录 / 模型 / 函数 / 工具箱 等）的可用操作。",
       create: "新建权限配置",
       authorizedSubjects: "已授权主体",
       unresolvedObject: "未解析的{{type}}",
@@ -401,14 +433,17 @@ export const systemAdminZhCN = {
       memberRoles: "角色",
       memberSource: "权限来源",
       memberUserTitle: "选择用户",
-      memberUserDescription: "按所属组织筛选用户，查看其被直接配置的对象级授权。部门仅用于筛选，不作为授权主体。",
+      memberUserDescription:
+        "按所属组织筛选用户，查看其被直接配置的对象级授权。部门仅用于筛选，不作为授权主体。",
       memberListTitle: "用户列表",
       memberListMeta: "共 {{count}} 名用户",
       memberSearchPlaceholder: "搜索姓名或账号",
-      memberAccessHint: "以下为该用户直接配置的对象级授权记录；角色及上级资源带来的权限不会单独列出，当前有效权限以服务端计算为准。",
+      memberAccessHint:
+        "以下为该用户直接配置的对象级授权记录；角色及上级资源带来的权限不会单独列出，当前有效权限以服务端计算为准。",
       memberEmpty: "请选择一个用户查看对象级授权",
       memberSuperAdminTitle: "全部资源与操作",
-      memberSuperAdminDescription: "该用户持有 super_admin 全局通配角色，权限为 *，无需查询或叠加对象级授权记录。",
+      memberSuperAdminDescription:
+        "该用户持有 super_admin 全局通配角色，权限为 *，无需查询或叠加对象级授权记录。",
       memberEffectivePermissions: "有效权限",
       memberPermissionAllowCount: "允许 {{count}} 项",
       memberPermissionDenyCount: "拒绝 {{count}} 项",
@@ -424,12 +459,12 @@ export const systemAdminZhCN = {
       granteeUser: "用户",
       granteeDept: "部门",
       deptPrefix: "部门",
-    granteeCount: "{{count}} 个权限主体",
-    granteeCount_one: "{{count}} 个权限主体",
-    granteeCount_other: "{{count}} 个权限主体",
-    objectCount: "可访问 {{count}} 个对象",
-    objectCount_one: "可访问 {{count}} 个对象",
-    objectCount_other: "可访问 {{count}} 个对象",
+      granteeCount: "{{count}} 个权限主体",
+      granteeCount_one: "{{count}} 个权限主体",
+      granteeCount_other: "{{count}} 个权限主体",
+      objectCount: "可访问 {{count}} 个对象",
+      objectCount_one: "可访问 {{count}} 个对象",
+      objectCount_other: "可访问 {{count}} 个对象",
       pickObjectFirst: "请先选择一个对象",
       pickGranteeFirst: "请先选择用户",
       pickerNext: "下一步 · 配置权限",
@@ -474,7 +509,8 @@ export const systemAdminZhCN = {
       editionCommunity: "社区版",
       editionProfessional: "专业版及以上",
       modeCommunityTitle: "完整包授权模式",
-      modeCommunityDescription: "当前版本只配置顶层业务对象与完整业务访问包，不展示子资源、操作或拒绝规则。",
+      modeCommunityDescription:
+        "当前版本只配置顶层业务对象与完整业务访问包，不展示子资源、操作或拒绝规则。",
       modeFineTitle: "细粒度授权模式",
       modeFineDescription: "允许与拒绝分别记录；最终结果、继承关系和前置条件以服务端判定为准。",
       authorizationModeHelp: "查看当前授权模式说明",
@@ -537,21 +573,28 @@ export const systemAdminZhCN = {
       sourceEmpty: "没有可展示的授权来源。",
       deleteGrant: "删除授权",
       deleteGrantTitle: "删除用户授权",
-      deleteGrantConfirm: "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
-      deleteGrantConfirm_one: "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
-      deleteGrantConfirm_other: "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+      deleteGrantConfirm:
+        "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+      deleteGrantConfirm_one:
+        "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
+      deleteGrantConfirm_other:
+        "将删除「{{name}}」的 {{count}} 条可直接删除来源。角色继承、系统派生等只读权限不会被删除，是否继续？",
       deleteGrantUnavailable: "当前没有可直接删除的授权来源",
       deleteSourceTitle: "删除授权来源",
-      deleteSourceConfirm: "将删除 {{name}} 的 {{effect}} / {{operation}} 授权，来源为 {{source}}，授权记录 ID 为 {{grantId}}。同一对象上的其他授权来源不受影响。",
-      deleteRequiredSourceBlocked: "“{{requirement}}”仍是“{{dependents}}”的前置权限，请先删除依赖它的授权。",
+      deleteSourceConfirm:
+        "将删除 {{name}} 的 {{effect}} / {{operation}} 授权，来源为 {{source}}，授权记录 ID 为 {{grantId}}。同一对象上的其他授权来源不受影响。",
+      deleteRequiredSourceBlocked:
+        "“{{requirement}}”仍是“{{dependents}}”的前置权限，请先删除依赖它的授权。",
       sourceRecords: "授权来源记录",
       revokeSource: "撤销此来源",
       revokeSourceTitle: "撤销一条授权来源",
-      revokeSourceConfirm: "将撤销 {{name}} 的 {{effect}} / {{operation}}，来源 {{source}}，grant_id={{grantId}}。同一对象上的其他来源不受影响。",
+      revokeSourceConfirm:
+        "将撤销 {{name}} 的 {{effect}} / {{operation}}，来源 {{source}}，grant_id={{grantId}}。同一对象上的其他来源不受影响。",
       readOnlySource: "只读来源",
       legacySourceUnavailable: "旧版本数据未返回来源记录，当前只能查看汇总，不能安全撤销。",
       enterpriseRulesTitle: "企业对象规则 · 只读兼容层",
-      enterpriseRulesDescription: "只展示服务端激活状态和运行时资格；休眠、实验性、无效或降档规则不会参与最终权限。编辑请使用 API / CLI。",
+      enterpriseRulesDescription:
+        "只展示服务端激活状态和运行时资格；休眠、实验性、无效或降档规则不会参与最终权限。编辑请使用 API / CLI。",
       enterpriseRulesEmpty: "当前对象没有企业兼容规则",
       runtimeEligible: "运行时生效",
       runtimeInactive: "不参与运行时",
@@ -598,8 +641,7 @@ export const systemAdminZhCN = {
         migration: "迁移",
       },
       drawerTitle: "权限配置 · {{name}}",
-      drawerHint:
-        "选择用户和明确的资源操作进行授权；最终权限及继承关系以服务端判定为准。",
+      drawerHint: "选择用户和明确的资源操作进行授权；最终权限及继承关系以服务端判定为准。",
       drawerReadOnly: "只读：当前账号可以查看该对象的授权，但不能授权或撤权",
       drawerEmpty: "尚未配置任何用户",
       addGranteePlaceholder: "选择用户，添加权限主体…",
@@ -608,7 +650,8 @@ export const systemAdminZhCN = {
       removeLastOpConfirm: "该权限主体将不再拥有任何操作，权限配置会被移除。是否继续？",
       delegateLocked: "该授权包含受保护权限或公共访问，仅平台管理员可调整或删除。",
       protectedGrantNotice: "部分授权受系统策略保护，无法删除；可将鼠标悬停在锁定图标上查看原因。",
-      selfAuthorizeLocked: "该授权包含你自己的授权管理权限；当前角色无法重新授予，已禁止删除以避免失去管理能力。",
+      selfAuthorizeLocked:
+        "该授权包含你自己的授权管理权限；当前角色无法重新授予，已禁止删除以避免失去管理能力。",
       revokeTitle: "撤销权限",
       revokeConfirm: "确定撤销「{{name}}」对「{{object}}」的权限吗？",
       stats: {
@@ -659,14 +702,14 @@ export const systemAdminZhCN = {
       tabDepts: "部门 / 组织架构",
       allUsersNode: "全部用户",
       allUsersScopeLabel: "全部用户",
-    allUsersScopeWithCount: "当前范围：全部用户（{{count}} 人）",
-    allUsersScopeWithCount_one: "当前范围：全部用户（{{count}} 人）",
-    allUsersScopeWithCount_other: "当前范围：全部用户（{{count}} 人）",
+      allUsersScopeWithCount: "当前范围：全部用户（{{count}} 人）",
+      allUsersScopeWithCount_one: "当前范围：全部用户（{{count}} 人）",
+      allUsersScopeWithCount_other: "当前范围：全部用户（{{count}} 人）",
       deptTreeTitle: "组织架构",
       deptScopeLabel: "当前范围：{{name}}",
-    deptScopeWithCount: "当前范围：{{name}}（含子部门 {{count}} 人）",
-    deptScopeWithCount_one: "当前范围：{{name}}（含子部门 {{count}} 人）",
-    deptScopeWithCount_other: "当前范围：{{name}}（含子部门 {{count}} 人）",
+      deptScopeWithCount: "当前范围：{{name}}（含子部门 {{count}} 人）",
+      deptScopeWithCount_one: "当前范围：{{name}}（含子部门 {{count}} 人）",
+      deptScopeWithCount_other: "当前范围：{{name}}（含子部门 {{count}} 人）",
       builtinLocked: "内置账号不可停用或删除",
       createUser: "新建用户",
       createDept: "新建部门",
@@ -711,7 +754,8 @@ export const systemAdminZhCN = {
       deleteUserConfirm: "确定删除用户「{{name}}」（{{account}}）吗？其角色绑定将一并移除。",
       disableUserTitle: "停用用户",
       disableUser: "停用",
-      disableUserConfirm: "停用「{{name}}」（{{account}}）后该账号将无法登录；角色绑定保留，重新启用即恢复。",
+      disableUserConfirm:
+        "停用「{{name}}」（{{account}}）后该账号将无法登录；角色绑定保留，重新启用即恢复。",
       deleteDeptTitle: "删除部门",
       deleteDeptConfirm: "确定删除部门「{{name}}」吗？（有子部门或成员时后端会拒绝）",
       toast: {
@@ -758,14 +802,16 @@ export const systemAdminZhCN = {
         businessRoles: "业务角色",
         systemRoles: "三员管理角色",
         roleExclusiveHint: "三员角色用于系统运维、安全授权和审计监督；业务建设能力请授予业务角色。",
-        superAdminControlledHint: "该账号持有 super_admin 受控角色，已拥有平台全量权限；不需要再叠加业务角色或三员角色。",
+        superAdminControlledHint:
+          "该账号持有 super_admin 受控角色，已拥有平台全量权限；不需要再叠加业务角色或三员角色。",
         threeAdminConflictTitle: "存在三员职责冲突",
-        threeAdminConflictDesc: "当前组合：{{roles}}。同一账号不允许同时拥有多个三员角色，请取消冲突角色后再保存。",
+        threeAdminConflictDesc:
+          "当前组合：{{roles}}。同一账号不允许同时拥有多个三员角色，请取消冲突角色后再保存。",
         rolesHint: "选择该用户拥有的角色，决定其权限。",
         roleSearchPlaceholder: "搜索角色名称或描述",
-    rolesSelected: "已选择 {{count}} 个角色",
-    rolesSelected_one: "已选择 {{count}} 个角色",
-    rolesSelected_other: "已选择 {{count}} 个角色",
+        rolesSelected: "已选择 {{count}} 个角色",
+        rolesSelected_one: "已选择 {{count}} 个角色",
+        rolesSelected_other: "已选择 {{count}} 个角色",
         controlledRoles: "受控角色",
         controlledRolesReadOnly: "只读保留",
         controlledRolesSelected: "受控角色 {{count}} 个",
@@ -805,9 +851,9 @@ export const systemAdminZhCN = {
       },
       deptMembers: {
         title: "成员管理 · {{name}}",
-    memberCount: "共 {{count}} 人",
-    memberCount_one: "共 {{count}} 人",
-    memberCount_other: "共 {{count}} 人",
+        memberCount: "共 {{count}} 人",
+        memberCount_one: "共 {{count}} 人",
+        memberCount_other: "共 {{count}} 人",
         addPlaceholder: "选择用户加入该部门（可多选）…",
         memberSearchPlaceholder: "搜索姓名、登录名、邮箱、电话或角色",
         add: "添加",
@@ -815,9 +861,9 @@ export const systemAdminZhCN = {
         remove: "移出",
         added: "已加入部门",
         removed: "已移出部门",
-    batchAdded: "已添加 {{count}} 名成员",
-    batchAdded_one: "已添加 {{count}} 名成员",
-    batchAdded_other: "已添加 {{count}} 名成员",
+        batchAdded: "已添加 {{count}} 名成员",
+        batchAdded_one: "已添加 {{count}} 名成员",
+        batchAdded_other: "已添加 {{count}} 名成员",
         note: "此处管理的是该部门的直接成员；不含子部门下的用户。",
       },
       reset: {
@@ -856,8 +902,10 @@ export const systemAdminZhCN = {
       deleteTitle: "删除角色",
       deleteConfirm: "确定删除角色「{{name}}」吗？",
       deleteConfirmWithMembers: "确定删除角色「{{name}}」吗？其 {{count}} 个成员的绑定将被移除。",
-      deleteConfirmWithMembers_one: "确定删除角色「{{name}}」吗？其 {{count}} 个成员的绑定将被移除。",
-      deleteConfirmWithMembers_other: "确定删除角色「{{name}}」吗？其 {{count}} 个成员的绑定将被移除。",
+      deleteConfirmWithMembers_one:
+        "确定删除角色「{{name}}」吗？其 {{count}} 个成员的绑定将被移除。",
+      deleteConfirmWithMembers_other:
+        "确定删除角色「{{name}}」吗？其 {{count}} 个成员的绑定将被移除。",
       toast: {
         created: "角色已创建",
         saved: "角色已保存",
@@ -898,9 +946,9 @@ export const systemAdminZhCN = {
       detail: {
         title: "角色详情 · {{name}}",
         updatedAt: "创建时间 {{time}}",
-    grantCount: "{{count}} 条授权",
-    grantCount_one: "{{count}} 条授权",
-    grantCount_other: "{{count}} 条授权",
+        grantCount: "{{count}} 条授权",
+        grantCount_one: "{{count}} 条授权",
+        grantCount_other: "{{count}} 条授权",
         hasWildcard: "含全局授权",
         searchPlaceholder: "搜索资源类型、资源 ID 或操作…",
         filteredCount: "展示 {{shown}} / {{total}} 条",
@@ -947,14 +995,16 @@ export const systemAdminZhCN = {
         onlineFlowImport: "导入授权文件",
         onlineFlowBind: "自动联系签发服务完成绑定",
         offlineActivationTitle: "内网 / 离线环境",
-        offlineSimpleHint: "先从上方复制设备指纹，到授权平台兑换激活证书，再导入新的 .lic 完成离线激活。",
+        offlineSimpleHint:
+          "先从上方复制设备指纹，到授权平台兑换激活证书，再导入新的 .lic 完成离线激活。",
         offlineFlowFingerprint: "复制当前实例设备指纹",
         offlineFlowExchange: "到授权平台兑换激活证书",
         offlineFlowImport: "导入新的 .lic 激活证书",
         importLicense: "导入授权文件",
         importLicenseHint: "粘贴完整 .lic 文本，不会写入本地缓存。",
         importActivationCertificate: "导入激活证书",
-        importActivationCertificateHint: "把授权平台生成的新 .lic 激活证书粘贴到这里，导入后完成离线激活。",
+        importActivationCertificateHint:
+          "把授权平台生成的新 .lic 激活证书粘贴到这里，导入后完成离线激活。",
       },
       scenarios: {
         online: "在线激活",
@@ -1023,7 +1073,8 @@ export const systemAdminZhCN = {
         validUnbound: "授权已导入但尚未绑定本集群，请完成离线激活以满足合规要求；功能不受影响。",
         grace: "授权已过期，宽限剩余 {{days}} 天。续期状态：{{reason}}。",
         fallback_community: "商业授权已到期，当前运行社区能力集，数据完整保留。",
-        invalid: "当前没有可用授权。请到授权平台申请 .lic 授权文件，或复制设备指纹兑换离线激活证书后导入。",
+        invalid:
+          "当前没有可用授权。请到授权平台申请 .lic 授权文件，或复制设备指纹兑换离线激活证书后导入。",
         renewError: "自动续期失败：{{reason}}。系统将持续重试，当前授权不降档。",
       },
       placeholders: {
@@ -1049,7 +1100,8 @@ export const systemAdminZhCN = {
     },
     audit: {
       title: "审计日志",
-      description: "记录用户、部门、角色等的新增 / 修改 / 删除操作，按时间倒序；只读查看不会被记录。",
+      description:
+        "记录用户、部门、角色等的新增 / 修改 / 删除操作，按时间倒序；只读查看不会被记录。",
       resourceAll: "全部资源",
       actorAll: "全部操作人",
       failedOnly: "仅看失败",

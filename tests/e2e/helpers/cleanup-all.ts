@@ -9,12 +9,7 @@ import type { APIRequestContext } from "@playwright/test";
 
 import { API_PREFIX, defaultApiHeaders } from "./common";
 
-const TEST_NAME_PATTERNS = [
-  /^at_e2e_/i,
-  /^e2e_/i,
-  /^demo_/i,
-  /^quick_api_/i,
-];
+const TEST_NAME_PATTERNS = [/^at_e2e_/i, /^e2e_/i, /^demo_/i, /^quick_api_/i];
 
 export type CleanupSummary = {
   operators: number;
@@ -134,9 +129,9 @@ export async function cleanupAllE2eAssets(
   const toolboxes = await listAllPages(
     (page) => `${API_PREFIX}/tool-box/list?page=${page}&page_size=100`,
     (body) =>
-      (
-        (body.data as Array<{ box_id: string; box_name?: string; name?: string }>) ?? []
-      ).filter((item) => isTestAssetName(item.box_name ?? item.name)),
+      ((body.data as Array<{ box_id: string; box_name?: string; name?: string }>) ?? []).filter(
+        (item) => isTestAssetName(item.box_name ?? item.name),
+      ),
   );
   for (const toolbox of toolboxes) {
     summary.toolboxes += 1;

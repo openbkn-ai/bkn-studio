@@ -110,34 +110,41 @@ export function ToolboxDetailDrawer({
   const [submitting, setSubmitting] = useState(false);
   const { exportComponentById, isExporting } = useImpexExport();
   const auditUserDirectory = useAuditUserDirectory();
-  const editPermission = record?.metadataType === "function"
-    ? "execution-factory:function:edit"
-    : record?.metadataType === "openapi"
-      ? "execution-factory:toolbox:edit"
-      : "";
-  const canEditRecord = Boolean(editPermission && hasPermissions({
-    currentPermissions: runtimeConfig.currentUser.permissions,
-    requiredPermissions: editPermission,
-  }));
+  const editPermission =
+    record?.metadataType === "function"
+      ? "execution-factory:function:edit"
+      : record?.metadataType === "openapi"
+        ? "execution-factory:toolbox:edit"
+        : "";
+  const canEditRecord = Boolean(
+    editPermission &&
+    hasPermissions({
+      currentPermissions: runtimeConfig.currentUser.permissions,
+      requiredPermissions: editPermission,
+    }),
+  );
 
-  const loadRecord = useCallback(async (targetBoxId: string) => {
-    setLoading(true);
-    setLoadError(null);
-    setRecord(null);
+  const loadRecord = useCallback(
+    async (targetBoxId: string) => {
+      setLoading(true);
+      setLoadError(null);
+      setRecord(null);
 
-    try {
-      const nextRecord = marketMode
-        ? await getToolboxMarket(targetBoxId)
-        : await getToolbox(targetBoxId);
-      setRecord(nextRecord);
-      return nextRecord;
-    } catch (error) {
-      setLoadError(extractRequestErrorMessage(error));
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [marketMode]);
+      try {
+        const nextRecord = marketMode
+          ? await getToolboxMarket(targetBoxId)
+          : await getToolbox(targetBoxId);
+        setRecord(nextRecord);
+        return nextRecord;
+      } catch (error) {
+        setLoadError(extractRequestErrorMessage(error));
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [marketMode],
+  );
 
   useEffect(() => {
     if (!open || !boxId) {
@@ -370,9 +377,7 @@ export function ToolboxDetailDrawer({
                 {record.metadataType ? (
                   <Tag>{t(`executionFactory.metadataTypes.${record.metadataType}`)}</Tag>
                 ) : null}
-                {record.isInternal ? (
-                  <Tag>{t("executionFactory.internalTag")}</Tag>
-                ) : null}
+                {record.isInternal ? <Tag>{t("executionFactory.internalTag")}</Tag> : null}
               </div>
             </div>
           </section>
@@ -426,9 +431,7 @@ export function ToolboxDetailDrawer({
                         ) : null}
                       </div>
                       <Tag>
-                        {tool.status
-                          ? t(`executionFactory.toolStatuses.${tool.status}`)
-                          : "-"}
+                        {tool.status ? t(`executionFactory.toolStatuses.${tool.status}`) : "-"}
                       </Tag>
                     </div>
                   ))}

@@ -18,7 +18,10 @@ import {
   registerMcpCapability,
 } from "@/modules/execution-factory-lab/services/capabilities-lab.service";
 import { useLabFeatures } from "@/modules/execution-factory-lab/hooks/useLabFeatures";
-import type { CapabilityRecord, McpParsedTool } from "@/modules/execution-factory-lab/types/capability";
+import type {
+  CapabilityRecord,
+  McpParsedTool,
+} from "@/modules/execution-factory-lab/types/capability";
 
 type RegisterMcpDrawerProps = {
   open: boolean;
@@ -148,7 +151,11 @@ export function RegisterMcpDrawer({ open, onClose, onRegistered }: RegisterMcpDr
         >
           <Input placeholder="http://ef-mcp-mock:8096/sse" />
         </Form.Item>
-        <Form.Item label={t("executionFactoryLab.categoryLabel")} name="category" initialValue="other_category">
+        <Form.Item
+          label={t("executionFactoryLab.categoryLabel")}
+          name="category"
+          initialValue="other_category"
+        >
           <CategorySelect />
         </Form.Item>
         <Space style={{ marginBottom: 16 }}>

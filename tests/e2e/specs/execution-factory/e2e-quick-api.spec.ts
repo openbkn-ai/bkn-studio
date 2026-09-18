@@ -90,8 +90,7 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
   test("QA-01b: quick add API from cURL tab submits parsed service URL", async ({ page }) => {
     const toolboxName = buildToolboxName("quick_api_curl");
     const toolName = `manual_http_weather_${Date.now()}`;
-    const curl =
-      'curl -X GET "http://host.docker.internal:8080/proxy/uapis/weather"';
+    const curl = 'curl -X GET "http://host.docker.internal:8080/proxy/uapis/weather"';
 
     const drawer = await openAddCapabilityWizard(page, "toolbox");
 
@@ -162,7 +161,10 @@ test.describe("Execution Factory — Quick Add API lifecycle", () => {
 
     await gotoToolboxToolsPage(page, boxId, toolboxName, { editMode: true });
     await triggerImpexExport(page, "toolbox", async () => {
-      await page.getByRole("button", { name: /导出|Export/i }).first().click();
+      await page
+        .getByRole("button", { name: /导出|Export/i })
+        .first()
+        .click();
     });
   });
 

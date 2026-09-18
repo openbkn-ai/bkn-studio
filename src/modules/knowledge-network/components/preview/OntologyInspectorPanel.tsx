@@ -18,9 +18,7 @@ import type {
   KnowledgeNetworkRelationTypeRecord,
   ObjectTypeDetail,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import {
-  formatKnowledgeNetworkObjectTypeIndexStateLabel,
-} from "@/modules/knowledge-network/utils/resource-index-state";
+import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 
 import styles from "./OntologyInspectorPanel.module.css";
 
@@ -111,7 +109,8 @@ export function OntologyInspectorPanel({
   }
 
   const relations = relationTypes.filter(
-    (relation) => relation.sourceObjectTypeId === entity.id || relation.targetObjectTypeId === entity.id,
+    (relation) =>
+      relation.sourceObjectTypeId === entity.id || relation.targetObjectTypeId === entity.id,
   );
 
   return (

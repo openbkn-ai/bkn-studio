@@ -171,7 +171,9 @@
 .edge line {
   stroke: var(--color-text-faint);
   stroke-width: 1.6;
-  transition: stroke 0.15s ease, opacity 0.15s ease;
+  transition:
+    stroke 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .edgeActive line {
@@ -191,7 +193,9 @@
   fill: var(--color-bg-raised);
   stroke: var(--color-border);
   stroke-width: 1;
-  transition: fill 0.15s ease, stroke 0.15s ease;
+  transition:
+    fill 0.15s ease,
+    stroke 0.15s ease;
 }
 
 .edgeLabel {

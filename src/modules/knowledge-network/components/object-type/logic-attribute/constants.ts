@@ -92,9 +92,7 @@ export function removeParameterById<T extends { children?: T[]; id: string }>(
   return items
     .filter((item) => item.id !== id)
     .map((item) =>
-      item.children?.length
-        ? { ...item, children: removeParameterById(item.children, id) }
-        : item,
+      item.children?.length ? { ...item, children: removeParameterById(item.children, id) } : item,
     );
 }
 

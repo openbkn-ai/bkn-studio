@@ -41,16 +41,8 @@ import {
   registerOperatorViaApi,
   type RegisteredOperator,
 } from "../../helpers/operator";
-import {
-  buildMcpName,
-  cleanupMcpViaApi,
-  createToolImportedMcpViaApi,
-} from "../../helpers/mcp";
-import {
-  buildSkillName,
-  cleanupSkillViaApi,
-  registerSkillZipViaApi,
-} from "../../helpers/skill";
+import { buildMcpName, cleanupMcpViaApi, createToolImportedMcpViaApi } from "../../helpers/mcp";
+import { buildSkillName, cleanupSkillViaApi, registerSkillZipViaApi } from "../../helpers/skill";
 import {
   buildToolboxName,
   cleanupToolboxViaApi,
@@ -125,7 +117,10 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
     test("UI-COV-001: units page shows pageIntro and toolbar hint", async ({ page }) => {
       await gotoUnitsTab(page, "toolbox");
       await expect(
-        page.getByRole("heading", { level: 2, name: /能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i }),
+        page.getByRole("heading", {
+          level: 2,
+          name: /能力管理|执行能力管理|执行单元管理|Capability Management|Execution Capabilities|Execution Unit Management/i,
+        }),
       ).toBeVisible();
       await expect(
         page
@@ -143,9 +138,16 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       ).toBeVisible();
     });
 
-    test("UI-COV-002: catalog page shares management list shell and market intro", async ({ page }) => {
+    test("UI-COV-002: catalog page shares management list shell and market intro", async ({
+      page,
+    }) => {
       await gotoE2ePage(page, "/execution-factory/catalog?activeTab=toolbox");
-      await expect(page.getByRole("heading", { level: 2, name: /能力市场|全部执行单元|Capability Market|All Execution Units/i })).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          level: 2,
+          name: /能力市场|全部执行单元|Capability Market|All Execution Units/i,
+        }),
+      ).toBeVisible();
       await expect(page.getByRole("tab", { name: /工具集|Toolsets/i })).toBeVisible();
       await expect(page.getByText(/类型|Type/i).first()).toBeVisible();
       await expect(
@@ -196,8 +198,7 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
     }) => {
       const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_user"));
       createdBoxIds.push(toolbox.boxId);
-      const uuidText =
-        /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
+      const uuidText = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i;
 
       await gotoUnitsTab(page, "toolbox");
       const card = await executionUnitCard(page, toolbox.name);
@@ -325,7 +326,9 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
 
       await openAdvancedOperatorTab(page);
       await openCardMenu(page, operator.name, /编辑|Edit/i);
-      await expect(page).toHaveURL(new RegExp(`/execution-factory/units/${operator.operatorId}/edit`));
+      await expect(page).toHaveURL(
+        new RegExp(`/execution-factory/units/${operator.operatorId}/edit`),
+      );
       await expect(page.getByLabel(/算子名称|Operator Name/i)).toHaveValue(operator.name);
     });
 
@@ -342,16 +345,18 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await expect(card.locator(".ant-tag").filter({ hasText: /已发布|Published/i })).toBeVisible();
     });
 
-    test("UI-COV-024: mcp card click opens detail with view detail CTA", async ({ page, request }) => {
+    test("UI-COV-024: mcp card click opens detail with view detail CTA", async ({
+      page,
+      request,
+    }) => {
       const toolbox = await createToolboxViaApi(request, buildToolboxName("ui_cov_mcp_box"));
       createdBoxIds.push(toolbox.boxId);
-      const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("ui_cov_mcp_tool"));
-      const mcp = await createToolImportedMcpViaApi(
+      const tool = await createToolViaApi(
         request,
-        buildMcpName("ui_cov"),
-        toolbox,
-        tool,
+        toolbox.boxId,
+        buildToolboxName("ui_cov_mcp_tool"),
       );
+      const mcp = await createToolImportedMcpViaApi(request, buildMcpName("ui_cov"), toolbox, tool);
       createdMcpIds.push(mcp.mcpId);
 
       await gotoUnitsTab(page, "mcp");
@@ -401,7 +406,10 @@ test.describe("Execution Factory — UI comprehensive coverage", () => {
       await page.keyboard.press("Escape");
     });
 
-    test("UI-COV-027: skill card click lands on the detail page directly", async ({ page, request }) => {
+    test("UI-COV-027: skill card click lands on the detail page directly", async ({
+      page,
+      request,
+    }) => {
       const skill = await registerSkillZipViaApi(request, buildSkillName("ui_cov_detail"));
       createdSkillIds.push(skill.skillId);
 

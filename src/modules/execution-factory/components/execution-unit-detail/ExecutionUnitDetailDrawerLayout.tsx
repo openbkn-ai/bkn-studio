@@ -71,12 +71,8 @@ export function ExecutionUnitDetailDrawerLayout({
           <Spin />
         </div>
       ) : null}
-      {!loading && loadError ? (
-        <Alert message={loadError} showIcon type="error" />
-      ) : null}
-      {!loading && !loadError && empty ? (
-        <Empty description={t("common.notFound")} />
-      ) : null}
+      {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
+      {!loading && !loadError && empty ? <Empty description={t("common.notFound")} /> : null}
       {!loading && !loadError && !empty ? children : null}
     </Drawer>
   );

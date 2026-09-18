@@ -9,7 +9,10 @@ import { CopyOutlined, RedoOutlined, SendOutlined } from "@ant-design/icons";
 import { Button, Collapse, Drawer, Empty, Tag, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { truncateForDisplay, type HistoryEntry } from "@/modules/knowledge-network/utils/graph-explorer-history";
+import {
+  truncateForDisplay,
+  type HistoryEntry,
+} from "@/modules/knowledge-network/utils/graph-explorer-history";
 
 import styles from "./HistoryDrawer.module.css";
 
@@ -30,7 +33,15 @@ function formatTime(at: number): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendToCanvas, onClear }: HistoryDrawerProps) {
+export function HistoryDrawer({
+  open,
+  entries,
+  onClose,
+  onCopy,
+  onRerun,
+  onSendToCanvas,
+  onClear,
+}: HistoryDrawerProps) {
   const { t } = useTranslation();
   return (
     <Drawer
@@ -46,7 +57,10 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendT
       }
     >
       {entries.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("knowledgeNetwork.graphExplorer.history.empty")} />
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={t("knowledgeNetwork.graphExplorer.history.empty")}
+        />
       ) : (
         <Collapse
           size="small"
@@ -70,10 +84,19 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendT
             children: (
               <div className={styles.body}>
                 <div className={styles.sectionHead}>
-                  <Typography.Text strong>{t("knowledgeNetwork.graphExplorer.history.input")}</Typography.Text>
+                  <Typography.Text strong>
+                    {t("knowledgeNetwork.graphExplorer.history.input")}
+                  </Typography.Text>
                   <span className={styles.actions}>
                     {entry.graph && entry.graph.nodes.length > 0 ? (
-                      <Button size="small" type="primary" ghost icon={<SendOutlined />} data-testid="graph-explorer-history-send" onClick={() => onSendToCanvas(entry)}>
+                      <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        icon={<SendOutlined />}
+                        data-testid="graph-explorer-history-send"
+                        onClick={() => onSendToCanvas(entry)}
+                      >
                         {t("knowledgeNetwork.graphExplorer.history.sendToCanvas")}
                       </Button>
                     ) : null}
@@ -82,7 +105,13 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendT
                         {t("knowledgeNetwork.graphExplorer.history.rerun")}
                       </Button>
                     ) : null}
-                    <Button size="small" icon={<CopyOutlined />} onClick={() => onCopy(truncateForDisplay(entry.input, Number.MAX_SAFE_INTEGER))}>
+                    <Button
+                      size="small"
+                      icon={<CopyOutlined />}
+                      onClick={() =>
+                        onCopy(truncateForDisplay(entry.input, Number.MAX_SAFE_INTEGER))
+                      }
+                    >
                       {t("knowledgeNetwork.graphExplorer.history.copy")}
                     </Button>
                   </span>
@@ -92,7 +121,11 @@ export function HistoryDrawer({ open, entries, onClose, onCopy, onRerun, onSendT
                   <Typography.Text strong type={entry.ok ? undefined : "danger"}>
                     {t("knowledgeNetwork.graphExplorer.history.output")}
                   </Typography.Text>
-                  <Button size="small" icon={<CopyOutlined />} onClick={() => onCopy(truncateForDisplay(entry.output))}>
+                  <Button
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => onCopy(truncateForDisplay(entry.output))}
+                  >
                     {t("knowledgeNetwork.graphExplorer.history.copy")}
                   </Button>
                 </div>

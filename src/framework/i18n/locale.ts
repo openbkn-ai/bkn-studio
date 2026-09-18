@@ -33,7 +33,9 @@ export type LocaleResolutionInput = {
   runtimeLocale?: string | null;
 };
 
-export function normalizeSupportedLocale(locale: string | null | undefined): SupportedLocale | null {
+export function normalizeSupportedLocale(
+  locale: string | null | undefined,
+): SupportedLocale | null {
   if (!locale) {
     return null;
   }

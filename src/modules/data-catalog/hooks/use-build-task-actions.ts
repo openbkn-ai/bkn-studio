@@ -56,10 +56,18 @@ export function useBuildTaskActions(onRefresh: () => Promise<void> | void) {
       };
       void modal.confirm({
         cancelText: t("common.cancel"),
-        content: t(pausing ? "dataCatalog.task.pauseResumeConfirmPauseContent" : "dataCatalog.task.pauseResumeConfirmResumeContent"),
+        content: t(
+          pausing
+            ? "dataCatalog.task.pauseResumeConfirmPauseContent"
+            : "dataCatalog.task.pauseResumeConfirmResumeContent",
+        ),
         okText: t("common.confirm"),
         onOk: run,
-        title: t(pausing ? "dataCatalog.task.pauseResumeConfirmPauseTitle" : "dataCatalog.task.pauseResumeConfirmResumeTitle"),
+        title: t(
+          pausing
+            ? "dataCatalog.task.pauseResumeConfirmPauseTitle"
+            : "dataCatalog.task.pauseResumeConfirmResumeTitle",
+        ),
       });
     },
     [message, modal, onRefresh, t],

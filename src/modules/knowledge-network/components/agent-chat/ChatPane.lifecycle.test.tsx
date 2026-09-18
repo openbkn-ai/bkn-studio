@@ -17,13 +17,23 @@ import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
-import type { BknLifecycle, BknTurn } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
+import type {
+  BknLifecycle,
+  BknTurn,
+} from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import type { McpToolDef } from "@/modules/knowledge-network/services/context-loader.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 
 import { ANSWER_OPEN } from "@/modules/knowledge-network/services/agent-chat.service";
 
-import { BASE_EVIDENCE_HINT, ChatPane, DEFAULT_PROMPT, KN_EVIDENCE_HINT, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
+import {
+  BASE_EVIDENCE_HINT,
+  ChatPane,
+  DEFAULT_PROMPT,
+  KN_EVIDENCE_HINT,
+  type ChatPaneHandle,
+  type PaneProfile,
+} from "./ChatPane";
 
 type AgentChatModule = typeof import("@/modules/knowledge-network/services/agent-chat.service");
 type LifecycleModule = typeof import("@/modules/knowledge-network/services/bkn-lifecycle.service");
@@ -63,7 +73,11 @@ const baseProfile: PaneProfile = {
   evidenceHint: BASE_EVIDENCE_HINT,
 };
 
-const toolDefs: McpToolDef[] = [{ name: "bkn_start_interaction" }, { name: "run_sql" }, { name: "bkn_finish_interaction" }];
+const toolDefs: McpToolDef[] = [
+  { name: "bkn_start_interaction" },
+  { name: "run_sql" },
+  { name: "bkn_finish_interaction" },
+];
 const models = [{ modelName: "qwen-test", default: true }] as unknown as LlmModel[];
 
 function stubLifecycle() {
@@ -211,7 +225,12 @@ describe("ChatPane 受管生命周期接线", () => {
     runAgentChat.mockImplementation(({ onChunk }) => {
       // For intercepted tools, execute does not call session.callTool, so the panel must not show
       // kn_id or bkn_context as if they belonged to an actual outbound request body.
-      onChunk({ type: "tool-call", id: "c1", name: "bkn_finish_interaction", args: { outcome: "completed" } });
+      onChunk({
+        type: "tool-call",
+        id: "c1",
+        name: "bkn_finish_interaction",
+        args: { outcome: "completed" },
+      });
       onChunk({ type: "tool-call", id: "c2", name: "run_sql", args: { sql: "SELECT 1" } });
       // Platform tools that are not intercepted, such as lineage read tools, call the backend
       // directly and have real request bodies, which should still be displayed as sent.
@@ -355,7 +374,11 @@ describe("失败轮的重试", () => {
   it("原地重跑那一轮，不追加重复的提问，也不把空 assistant 回灌历史", async () => {
     stubLifecycle();
     runAgentChat.mockImplementation(({ onChunk }) => {
-      onChunk({ type: "error", error: "Model service is busy; retry later (50508)", retryable: true });
+      onChunk({
+        type: "error",
+        error: "Model service is busy; retry later (50508)",
+        retryable: true,
+      });
       onChunk({ type: "finish" });
       return Promise.resolve();
     });
@@ -367,13 +390,19 @@ describe("失败轮的重试", () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: i18n.t("knowledgeNetwork.agentChat.chatPane.error.retry") }));
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: i18n.t("knowledgeNetwork.agentChat.chatPane.error.retry"),
+        }),
+      );
       await Promise.resolve();
     });
 
     expect(runAgentChat).toHaveBeenCalledTimes(2);
     // Retry keeps only the original question in history instead of appending a duplicate turn.
-    expect(runAgentChat.mock.calls[1][0].history).toEqual([{ role: "user", content: "How many projects are in progress?" }]);
+    expect(runAgentChat.mock.calls[1][0].history).toEqual([
+      { role: "user", content: "How many projects are in progress?" },
+    ]);
     expect(screen.getAllByText("How many projects are in progress?")).toHaveLength(1);
   });
 });
@@ -390,7 +419,11 @@ describe("输出契约的下发方式", () => {
     // Simulate an existing conversation whose localStorage contains an old prompt without the contract.
     localStorage.setItem(
       "bkn-studio:agentchat:kn-demo",
-      JSON.stringify({ messages: [], model: "qwen-test", systemPrompt: "旧的自定义提示词，没有任何契约" }),
+      JSON.stringify({
+        messages: [],
+        model: "qwen-test",
+        systemPrompt: "旧的自定义提示词，没有任何契约",
+      }),
     );
     runAgentChat.mockResolvedValue(undefined);
 

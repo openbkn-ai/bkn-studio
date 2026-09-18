@@ -8,7 +8,13 @@
 import { generateText, jsonSchema, stepCountIs, tool, type LanguageModel, type ToolSet } from "ai";
 
 import type { KnDetail } from "@/modules/knowledge-network/services/context-loader.service";
-import { stringifyValue, type ExpandDirection, type GEdge, type GNode, type KnCondition } from "@/modules/knowledge-network/services/graph-explorer.service";
+import {
+  stringifyValue,
+  type ExpandDirection,
+  type GEdge,
+  type GNode,
+  type KnCondition,
+} from "@/modules/knowledge-network/services/graph-explorer.service";
 
 export type ExplorePromptTexts = {
   intro: string;
@@ -20,7 +26,10 @@ export type ExplorePromptTexts = {
 };
 
 /** System prompt: the role and rules from the locale, then the network's object and relation types. */
-export function buildExplorePrompt(detail: Pick<KnDetail, "object_types" | "relation_types">, texts: ExplorePromptTexts): string {
+export function buildExplorePrompt(
+  detail: Pick<KnDetail, "object_types" | "relation_types">,
+  texts: ExplorePromptTexts,
+): string {
   const objectLines = detail.object_types.map((item) => {
     const props = (item.data_properties ?? [])
       .slice(0, 12)
@@ -29,7 +38,10 @@ export function buildExplorePrompt(detail: Pick<KnDetail, "object_types" | "rela
     const comment = item.comment ? ` - ${item.comment.slice(0, 80)}` : "";
     return `- ${item.id} (${item.name?.trim() || item.id})${comment}${props ? `\n  ${texts.propertiesLabel}: ${props}` : ""}`;
   });
-  const relationLines = detail.relation_types.map((item) => `- ${item.id} (${item.name?.trim() || item.id}): ${item.sourceId} -> ${item.targetId}`);
+  const relationLines = detail.relation_types.map(
+    (item) =>
+      `- ${item.id} (${item.name?.trim() || item.id}): ${item.sourceId} -> ${item.targetId}`,
+  );
   return [
     texts.intro,
     "",
@@ -50,10 +62,19 @@ export const ITEM_CAP = 20;
 const PROP_CAP = 6;
 const VALUE_CAP = 60;
 
-export type ItemSummary = { id: string; type: string; label: string; props?: Record<string, string> };
+export type ItemSummary = {
+  id: string;
+  type: string;
+  label: string;
+  props?: Record<string, string>;
+};
 
 /** A compact view of nodes for the model: id, type, label and, when asked, a few properties. */
-export function summarizeNodes(nodes: GNode[], cap = ITEM_CAP, withProps = true): { count: number; items: ItemSummary[] } {
+export function summarizeNodes(
+  nodes: GNode[],
+  cap = ITEM_CAP,
+  withProps = true,
+): { count: number; items: ItemSummary[] } {
   const items = nodes.slice(0, cap).map((node) => {
     const item: ItemSummary = { id: node.id, type: node.otId, label: node.display };
     if (withProps) {
@@ -71,7 +92,12 @@ export function summarizeNodes(nodes: GNode[], cap = ITEM_CAP, withProps = true)
 }
 
 export function summarizeEdges(edges: GEdge[], cap = ITEM_CAP): { count: number; items: string[] } {
-  return { count: edges.length, items: edges.slice(0, cap).map((edge) => `${edge.source} -[${edge.relTypeId}]-> ${edge.target}`) };
+  return {
+    count: edges.length,
+    items: edges
+      .slice(0, cap)
+      .map((edge) => `${edge.source} -[${edge.relTypeId}]-> ${edge.target}`),
+  };
 }
 
 /* ------------------------------ tools ------------------------------ */
@@ -87,7 +113,11 @@ export function conditionFrom(filters: FilterInput[] | undefined): KnCondition |
   return leaves.length === 1 ? leaves[0] : { operation: "and", sub_conditions: leaves };
 }
 
-const DIRECTIONS: Record<string, ExpandDirection> = { out: "forward", in: "backward", both: "bidirectional" };
+const DIRECTIONS: Record<string, ExpandDirection> = {
+  out: "forward",
+  in: "backward",
+  both: "bidirectional",
+};
 
 export type Drawn = { nodes: GNode[]; edges: GEdge[]; added: { nodes: number; edges: number } };
 
@@ -101,7 +131,13 @@ export type ExploreDeps = {
   canvas: () => { nodes: GNode[]; edges: GEdge[] };
 };
 
-export type ExploreStep = { tool: string; input: unknown; summary: string; ok: boolean; ms: number };
+export type ExploreStep = {
+  tool: string;
+  input: unknown;
+  summary: string;
+  ok: boolean;
+  ms: number;
+};
 
 export type StepTexts = {
   found: (count: number) => string;
@@ -116,27 +152,58 @@ type IdsInput = { ids: string[] };
 type ExpandInput = { ids: string[]; direction?: "out" | "in" | "both" };
 type CypherInput = { match: string };
 
-const idsSchema = { type: "array", items: { type: "string" }, minItems: 1, description: "Instance ids, each `<object type id>-<primary key value>`." } as const;
+const idsSchema = {
+  type: "array",
+  items: { type: "string" },
+  minItems: 1,
+  description: "Instance ids, each `<object type id>-<primary key value>`.",
+} as const;
 
 /**
  * The tool set the model explores with. A failing call reports the failure as its result so
  * the model can try something else instead of the whole run aborting.
  */
-export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep) => void, texts: StepTexts): ToolSet {
-  const run = async <T,>(name: string, input: unknown, call: () => Promise<T>, summarize: (value: T) => string): Promise<T | { error: string }> => {
+export function createExploreTools(
+  deps: ExploreDeps,
+  report: (step: ExploreStep) => void,
+  texts: StepTexts,
+): ToolSet {
+  const run = async <T>(
+    name: string,
+    input: unknown,
+    call: () => Promise<T>,
+    summarize: (value: T) => string,
+  ): Promise<T | { error: string }> => {
     const started = performance.now();
     try {
       const value = await call();
-      report({ tool: name, input, summary: summarize(value), ok: true, ms: Math.round(performance.now() - started) });
+      report({
+        tool: name,
+        input,
+        summary: summarize(value),
+        ok: true,
+        ms: Math.round(performance.now() - started),
+      });
       return value;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      report({ tool: name, input, summary: texts.failed(message), ok: false, ms: Math.round(performance.now() - started) });
+      report({
+        tool: name,
+        input,
+        summary: texts.failed(message),
+        ok: false,
+        ms: Math.round(performance.now() - started),
+      });
       return { error: message };
     }
   };
-  const drawnSummary = (value: { added: { nodes: number; edges: number } }) => texts.drawn(value.added.nodes, value.added.edges);
-  const drawnResult = (value: Drawn) => ({ ...summarizeNodes(value.nodes, ITEM_CAP, false), edges: summarizeEdges(value.edges), added: value.added });
+  const drawnSummary = (value: { added: { nodes: number; edges: number } }) =>
+    texts.drawn(value.added.nodes, value.added.edges);
+  const drawnResult = (value: Drawn) => ({
+    ...summarizeNodes(value.nodes, ITEM_CAP, false),
+    edges: summarizeEdges(value.edges),
+    added: value.added,
+  });
 
   return {
     search_instances: tool({
@@ -146,13 +213,29 @@ export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep
         type: "object",
         properties: {
           query: { type: "string", description: "What to look for, in natural language." },
-          object_types: { type: "array", items: { type: "string" }, description: "Restrict to these object type ids." },
-          limit: { type: "integer", minimum: 1, maximum: 50, description: "Candidates per object type, default 20." },
+          object_types: {
+            type: "array",
+            items: { type: "string" },
+            description: "Restrict to these object type ids.",
+          },
+          limit: {
+            type: "integer",
+            minimum: 1,
+            maximum: 50,
+            description: "Candidates per object type, default 20.",
+          },
         },
         required: ["query"],
         additionalProperties: false,
       }),
-      execute: (input) => run("search_instances", input, async () => summarizeNodes(await deps.search(input.query, input.object_types, input.limit ?? 20)), (value) => texts.found(value.count)),
+      execute: (input) =>
+        run(
+          "search_instances",
+          input,
+          async () =>
+            summarizeNodes(await deps.search(input.query, input.object_types, input.limit ?? 20)),
+          (value) => texts.found(value.count),
+        ),
     }),
     query_instances: tool({
       description:
@@ -165,7 +248,14 @@ export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep
             type: "array",
             items: {
               type: "object",
-              properties: { field: { type: "string" }, operation: { type: "string", enum: ["==", "!=", ">", ">=", "<", "<=", "in", "like"] }, value: {} },
+              properties: {
+                field: { type: "string" },
+                operation: {
+                  type: "string",
+                  enum: ["==", "!=", ">", ">=", "<", "<=", "in", "like"],
+                },
+                value: {},
+              },
               required: ["field", "operation"],
             },
             description: "Filters joined with AND; empty lists the first instances.",
@@ -175,12 +265,33 @@ export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep
         required: ["object_type"],
         additionalProperties: false,
       }),
-      execute: (input) => run("query_instances", input, async () => summarizeNodes(await deps.query(input.object_type, input.filters ?? [], input.limit ?? 20)), (value) => texts.found(value.count)),
+      execute: (input) =>
+        run(
+          "query_instances",
+          input,
+          async () =>
+            summarizeNodes(
+              await deps.query(input.object_type, input.filters ?? [], input.limit ?? 20),
+            ),
+          (value) => texts.found(value.count),
+        ),
     }),
     show_instances: tool({
-      description: "Draw instances on the canvas by id, together with the relations among them. Returns what was drawn.",
-      inputSchema: jsonSchema<IdsInput>({ type: "object", properties: { ids: idsSchema }, required: ["ids"], additionalProperties: false }),
-      execute: (input) => run("show_instances", input, async () => drawnResult(await deps.show(input.ids)), drawnSummary),
+      description:
+        "Draw instances on the canvas by id, together with the relations among them. Returns what was drawn.",
+      inputSchema: jsonSchema<IdsInput>({
+        type: "object",
+        properties: { ids: idsSchema },
+        required: ["ids"],
+        additionalProperties: false,
+      }),
+      execute: (input) =>
+        run(
+          "show_instances",
+          input,
+          async () => drawnResult(await deps.show(input.ids)),
+          drawnSummary,
+        ),
     }),
     expand_neighbours: tool({
       description:
@@ -191,12 +302,29 @@ export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep
         required: ["ids"],
         additionalProperties: false,
       }),
-      execute: (input) => run("expand_neighbours", input, async () => drawnResult(await deps.expand(input.ids, DIRECTIONS[input.direction ?? "both"] ?? "bidirectional")), drawnSummary),
+      execute: (input) =>
+        run(
+          "expand_neighbours",
+          input,
+          async () =>
+            drawnResult(
+              await deps.expand(
+                input.ids,
+                DIRECTIONS[input.direction ?? "both"] ?? "bidirectional",
+              ),
+            ),
+          drawnSummary,
+        ),
     }),
     run_cypher: tool({
       description:
         "Run an openCypher fragment and draw the result. Only `MATCH ... [WHERE ...]`: one MATCH with one continuous path, node labels are object type ids, every relation is directed and names exactly one relation type id, no variable length, no RETURN (the page adds it). Star shapes must be written as one chain, e.g. (a)<-[:r1]-(b)-[:r2]->(c).",
-      inputSchema: jsonSchema<CypherInput>({ type: "object", properties: { match: { type: "string" } }, required: ["match"], additionalProperties: false }),
+      inputSchema: jsonSchema<CypherInput>({
+        type: "object",
+        properties: { match: { type: "string" } },
+        required: ["match"],
+        additionalProperties: false,
+      }),
       execute: (input) =>
         run(
           "run_cypher",
@@ -210,14 +338,21 @@ export function createExploreTools(deps: ExploreDeps, report: (step: ExploreStep
     }),
     canvas_state: tool({
       description: "What is on the canvas right now: nodes (id, type, label) and edges.",
-      inputSchema: jsonSchema<Record<string, never>>({ type: "object", properties: {}, additionalProperties: false }),
+      inputSchema: jsonSchema<Record<string, never>>({
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      }),
       execute: () =>
         run(
           "canvas_state",
           {},
           () => {
             const current = deps.canvas();
-            return Promise.resolve({ nodes: summarizeNodes(current.nodes, 50, false), edges: summarizeEdges(current.edges, 50) });
+            return Promise.resolve({
+              nodes: summarizeNodes(current.nodes, 50, false),
+              edges: summarizeEdges(current.edges, 50),
+            });
           },
           (value) => texts.drawn(value.nodes.count, value.edges.count),
         ),

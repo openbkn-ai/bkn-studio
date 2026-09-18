@@ -73,10 +73,7 @@ import {
   propertyAccessRowState,
   summarizePropertyGrantChanges,
 } from "@/modules/knowledge-network/utils/property-authorization";
-import {
-  listRoles,
-  listUsersPage,
-} from "@/modules/system-admin/services/admin.service";
+import { listRoles, listUsersPage } from "@/modules/system-admin/services/admin.service";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import {
   listObjectGrantsForObject,
@@ -160,12 +157,8 @@ export function ObjectTypeAuthorizationScene() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
-  const {
-    catalogError,
-    catalogLoading,
-    operationsForType,
-    retryAuthorizationRegistry,
-  } = useAuthorizationRegistry();
+  const { catalogError, catalogLoading, operationsForType, retryAuthorizationRegistry } =
+    useAuthorizationRegistry();
   const { networkId = "", objectTypeId = "" } = useParams<{
     networkId: string;
     objectTypeId: string;
@@ -220,36 +213,42 @@ export function ObjectTypeAuthorizationScene() {
     }
   }, []);
 
-  const loadBase = useCallback(async (signal?: AbortSignal) => {
-    setBaseLoading(true);
-    try {
-      const [grantResult, userResult, roleResult] = await Promise.all([
-        listObjectGrantsForObject("object_type", objectTypeRef),
-        listUsersPage({ limit: 500 }, { skipErrorToast: true }).catch(() => null),
-        listRoles({ withMembers: true }).catch(() => null),
-      ]);
-      if (signal?.aborted) {
-        return;
+  const loadBase = useCallback(
+    async (signal?: AbortSignal) => {
+      setBaseLoading(true);
+      try {
+        const [grantResult, userResult, roleResult] = await Promise.all([
+          listObjectGrantsForObject("object_type", objectTypeRef),
+          listUsersPage({ limit: 500 }, { skipErrorToast: true }).catch(() => null),
+          listRoles({ withMembers: true }).catch(() => null),
+        ]);
+        if (signal?.aborted) {
+          return;
+        }
+        const directoryUsers = mergeUsers(userResult?.users ?? [], grantResult.accounts);
+        primeUserLookupCache(directoryUsers);
+        setObjectGrants(grantResult.grants);
+        setUsers(directoryUsers);
+        setRoles(roleResult ?? []);
+        // Authorization data is ready now; enrich user labels without making
+        // the page wait for every historic grantor directory lookup.
+        void syncUserLookup(
+          grantResult.grants.flatMap((grant) => [
+            ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
+            ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
+          ]),
+          signal,
+        );
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        if (!signal?.aborted) {
+          setBaseLoading(false);
+        }
       }
-      const directoryUsers = mergeUsers(userResult?.users ?? [], grantResult.accounts);
-      primeUserLookupCache(directoryUsers);
-      setObjectGrants(grantResult.grants);
-      setUsers(directoryUsers);
-      setRoles(roleResult ?? []);
-      // Authorization data is ready now; enrich user labels without making
-      // the page wait for every historic grantor directory lookup.
-      void syncUserLookup(grantResult.grants.flatMap((grant) => [
-        ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
-        ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
-      ]), signal);
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      if (!signal?.aborted) {
-        setBaseLoading(false);
-      }
-    }
-  }, [message, objectTypeRef, syncUserLookup]);
+    },
+    [message, objectTypeRef, syncUserLookup],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -348,33 +347,42 @@ export function ObjectTypeAuthorizationScene() {
   );
 
   const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
-  const directoryUser = useCallback((id: string) => {
-    void userLookupRevision;
-    return userMap.get(id) ?? getCachedUserSync(id);
-  }, [userLookupRevision, userMap]);
-  const resolveGrantSubject = useCallback((grant: ObjectGrant) => {
-    const id = grant.accessorId;
-    const user = directoryUser(id);
-    const name = grantGranteeLabel(grant, user);
-    const roleSubject = isRoleGrantSubject(grant);
-    const publicSubject = grant.accessorType === "public" || id === PUBLIC_ACCESSOR_ID;
-    return {
-      account: grant.accessorAccount || user?.account,
-      name: name || (publicSubject
-        ? t("systemAdmin.objectGrants.publicSubject")
-        : roleSubject
-          ? t("systemAdmin.objectGrants.roleSubject")
-          : pendingUserIds.has(id)
-            ? t("systemAdmin.objectGrants.granteeLoading")
-            : isDeletedUserSync(id)
-              ? t("systemAdmin.objectGrants.deletedUser")
-              : t("systemAdmin.objectGrants.granteeUnresolved")),
-      publicSubject,
-      roleSubject,
-    };
-  }, [directoryUser, pendingUserIds, t]);
+  const directoryUser = useCallback(
+    (id: string) => {
+      void userLookupRevision;
+      return userMap.get(id) ?? getCachedUserSync(id);
+    },
+    [userLookupRevision, userMap],
+  );
+  const resolveGrantSubject = useCallback(
+    (grant: ObjectGrant) => {
+      const id = grant.accessorId;
+      const user = directoryUser(id);
+      const name = grantGranteeLabel(grant, user);
+      const roleSubject = isRoleGrantSubject(grant);
+      const publicSubject = grant.accessorType === "public" || id === PUBLIC_ACCESSOR_ID;
+      return {
+        account: grant.accessorAccount || user?.account,
+        name:
+          name ||
+          (publicSubject
+            ? t("systemAdmin.objectGrants.publicSubject")
+            : roleSubject
+              ? t("systemAdmin.objectGrants.roleSubject")
+              : pendingUserIds.has(id)
+                ? t("systemAdmin.objectGrants.granteeLoading")
+                : isDeletedUserSync(id)
+                  ? t("systemAdmin.objectGrants.deletedUser")
+                  : t("systemAdmin.objectGrants.granteeUnresolved")),
+        publicSubject,
+        roleSubject,
+      };
+    },
+    [directoryUser, pendingUserIds, t],
+  );
   const roleMap = useMemo(() => new Map(roles.map((role) => [role.id, role])), [roles]);
-  const currentSubjectRecord = subjectType === "user" ? userMap.get(subjectId ?? "") : roleMap.get(subjectId ?? "");
+  const currentSubjectRecord =
+    subjectType === "user" ? userMap.get(subjectId ?? "") : roleMap.get(subjectId ?? "");
 
   const subjectOperations = useMemo(() => {
     if (!subjectId || subjectType === "role") {
@@ -421,7 +429,15 @@ export function ObjectTypeAuthorizationScene() {
         }
         return true;
       });
-  }, [baseLevel, decisionMap, detail?.dataProperties, draft, entryMap, propertyFilter, propertyKeyword]);
+  }, [
+    baseLevel,
+    decisionMap,
+    detail?.dataProperties,
+    draft,
+    entryMap,
+    propertyFilter,
+    propertyKeyword,
+  ]);
 
   const setPropertySelection = (name: string, next: PropertyAccessSelection) => {
     setDraft((current) => {
@@ -462,12 +478,7 @@ export function ObjectTypeAuthorizationScene() {
   const tooManyChanges = draft.size > MAX_PROPERTY_GRANT_CHANGES;
 
   const savePropertyChanges = () => {
-    if (
-      !selectedSubject ||
-      !draft.size ||
-      invalidMaskedProperties.length ||
-      tooManyChanges
-    ) {
+    if (!selectedSubject || !draft.size || invalidMaskedProperties.length || tooManyChanges) {
       return;
     }
     const summary = summarizePropertyGrantChanges(baseLevel, entryMap, draft);
@@ -475,9 +486,7 @@ export function ObjectTypeAuthorizationScene() {
       cancelText: t("common.cancel"),
       content: (
         <div className={styles.confirmContent}>
-          <p>
-            {t("knowledgeNetwork.propertyAuthorizationConfirmSummary", summary)}
-          </p>
+          <p>{t("knowledgeNetwork.propertyAuthorizationConfirmSummary", summary)}</p>
           {summary.full ? (
             <Alert
               message={t("knowledgeNetwork.propertyAuthorizationFullRisk", {
@@ -545,7 +554,7 @@ export function ObjectTypeAuthorizationScene() {
       name: detail.name,
       tags: detail.tags,
     });
-    setDetail((current) => current ? { ...current, dataProperties } : current);
+    setDetail((current) => (current ? { ...current, dataProperties } : current));
     void message.success(t("common.success"));
   };
 
@@ -630,7 +639,13 @@ export function ObjectTypeAuthorizationScene() {
       render: (value: PropertyRow["maskState"], row) => (
         <div className={styles.maskStateCell}>
           <span className={`${styles.maskState} ${styles[`mask_${value}`]}`}>
-            {value === "configured" ? <CheckCircleOutlined /> : value === "invalid" ? <WarningOutlined /> : <LockOutlined />}
+            {value === "configured" ? (
+              <CheckCircleOutlined />
+            ) : value === "invalid" ? (
+              <WarningOutlined />
+            ) : (
+              <LockOutlined />
+            )}
             {t(`knowledgeNetwork.propertyAuthorizationMaskState.${value}`)}
           </span>
           {value !== "unsupported" && detail?.operations?.includes("modify") ? (
@@ -647,7 +662,9 @@ export function ObjectTypeAuthorizationScene() {
 
   const visibleRoles = useMemo(() => {
     const keyword = subjectKeyword.trim().toLowerCase();
-    return roles.filter((role) => `${role.name} ${role.description}`.toLowerCase().includes(keyword));
+    return roles.filter((role) =>
+      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
+    );
   }, [roles, subjectKeyword]);
 
   const isAdminGrantor = hasPermissions({
@@ -662,29 +679,32 @@ export function ObjectTypeAuthorizationScene() {
   const canRevoke = networkAuthorized || isAdminRevoker;
   const isPlatformAuthzRevoker = isAdminRevoker;
   const baseOps = useMemo(
-    () => operationsForType("object_type").filter(
-      (operation) =>
-        !HIDDEN_INSTANCE_OPS.has(operation.key) &&
-        (operation.key !== "authorize" || isAdminGrantor),
-    ),
+    () =>
+      operationsForType("object_type").filter(
+        (operation) =>
+          !HIDDEN_INSTANCE_OPS.has(operation.key) &&
+          (operation.key !== "authorize" || isAdminGrantor),
+      ),
     [isAdminGrantor, operationsForType],
   );
   const candidateRequirements = useMemo(
-    () => baseOps.flatMap((requirement) => {
-      const dependents = baseOps.filter(
-        (operation) =>
-          candidateOperations.includes(operation.key) &&
-          operation.requires.includes(requirement.key),
-      );
-      return dependents.length ? [{ dependents, requirement }] : [];
-    }),
+    () =>
+      baseOps.flatMap((requirement) => {
+        const dependents = baseOps.filter(
+          (operation) =>
+            candidateOperations.includes(operation.key) &&
+            operation.requires.includes(requirement.key),
+        );
+        return dependents.length ? [{ dependents, requirement }] : [];
+      }),
     [baseOps, candidateOperations],
   );
 
   const isProtectedBaseGrant = (grant: ObjectGrant) =>
     !isPlatformAuthzRevoker && isDelegateProtectedGrant(grant);
   const isSelfAuthorizeSourceLocked = (grant: ObjectGrant, operation: string) =>
-    operation === "authorize" && isSelfAuthorizeLockout({
+    operation === "authorize" &&
+    isSelfAuthorizeLockout({
       currentUserId: runtimeConfig.currentUser.id,
       grant,
       isAdminGrantor,
@@ -721,17 +741,21 @@ export function ObjectTypeAuthorizationScene() {
   const selectCandidateUser = (accessorId?: string) => {
     setCandidateUserId(accessorId);
     const grant = objectGrants.find((candidate) => candidate.accessorId === accessorId);
-    const directOperations = [...new Set((grant?.grants ?? [])
-      .filter(
-        (source) =>
-          source.active &&
-          !source.inherited &&
-          source.effect === "allow" &&
-          source.policySource === "professional_rule" &&
-          source.authoritySource === candidateAuthoritySource &&
-          source.createdBy === runtimeConfig.currentUser.id,
-      )
-      .map((source) => source.operation))];
+    const directOperations = [
+      ...new Set(
+        (grant?.grants ?? [])
+          .filter(
+            (source) =>
+              source.active &&
+              !source.inherited &&
+              source.effect === "allow" &&
+              source.policySource === "professional_rule" &&
+              source.authoritySource === candidateAuthoritySource &&
+              source.createdBy === runtimeConfig.currentUser.id,
+          )
+          .map((source) => source.operation),
+      ),
+    ];
     setCandidateOperations(directOperations);
   };
 
@@ -746,7 +770,8 @@ export function ObjectTypeAuthorizationScene() {
           ? current
           : current.filter((candidateOperation) => candidateOperation !== operationKey);
       }
-      const requirements = baseOps.find((operation) => operation.key === operationKey)?.requires ?? [];
+      const requirements =
+        baseOps.find((operation) => operation.key === operationKey)?.requires ?? [];
       return [...new Set([...current, ...requirements, operationKey])];
     });
   };
@@ -861,13 +886,14 @@ export function ObjectTypeAuthorizationScene() {
     return { name: t("systemAdmin.objectGrants.granteeUnresolved") };
   };
 
-  const allowedOperationsForGrant = (grant: ObjectGrant) => new Set(
-    grant.effectiveDecisions?.length
-      ? grant.effectiveDecisions
-        .filter((decision) => decision.decision === "allow")
-        .map((decision) => decision.operation)
-      : grant.operations,
-  );
+  const allowedOperationsForGrant = (grant: ObjectGrant) =>
+    new Set(
+      grant.effectiveDecisions?.length
+        ? grant.effectiveDecisions
+            .filter((decision) => decision.decision === "allow")
+            .map((decision) => decision.operation)
+        : grant.operations,
+    );
   const blockingDependentsForSource = (source: GrantSourceRow) => {
     if (!sourceGrant || source.effect !== "allow") {
       return [];
@@ -915,7 +941,8 @@ export function ObjectTypeAuthorizationScene() {
         effect: t(`systemAdmin.objectGrants.effect.${source.effect}`),
         grantId: source.grantIds.join("、"),
         name: sourceGrantee || t("systemAdmin.objectGrants.granteeUnresolved"),
-        operation: baseOps.find((operation) => operation.key === source.operation)?.label ??
+        operation:
+          baseOps.find((operation) => operation.key === source.operation)?.label ??
           source.operation,
         source: t(`systemAdmin.objectGrants.source.${source.policySource}`),
       }),
@@ -997,9 +1024,11 @@ export function ObjectTypeAuthorizationScene() {
         <div className={styles.sourceGrantIds}>
           <code>{source.grantIds[0]}</code>
           {source.grantIds.length > 1 ? (
-            <Tag>{t("systemAdmin.objectGrants.collapsedSourceCount", {
-              count: source.grantIds.length,
-            })}</Tag>
+            <Tag>
+              {t("systemAdmin.objectGrants.collapsedSourceCount", {
+                count: source.grantIds.length,
+              })}
+            </Tag>
           ) : null}
         </div>
       ),
@@ -1028,17 +1057,20 @@ export function ObjectTypeAuthorizationScene() {
           blockingDependents.length > 0;
         return (
           <Tooltip
-            title={blockingDependents.length
-              ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
-                dependents: blockingDependents.map((operation) => operation.label).join("、"),
-                requirement: baseOps.find((operation) => operation.key === source.operation)?.label ??
-                  source.operation,
-              })
-              : protectedGrant
-                ? t("systemAdmin.objectGrants.delegateLocked")
-                : source.inherited || source.policySource === "role_permission"
-                  ? t("systemAdmin.objectGrants.readOnlySource")
-                  : undefined}
+            title={
+              blockingDependents.length
+                ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
+                    dependents: blockingDependents.map((operation) => operation.label).join("、"),
+                    requirement:
+                      baseOps.find((operation) => operation.key === source.operation)?.label ??
+                      source.operation,
+                  })
+                : protectedGrant
+                  ? t("systemAdmin.objectGrants.delegateLocked")
+                  : source.inherited || source.policySource === "role_permission"
+                    ? t("systemAdmin.objectGrants.readOnlySource")
+                    : undefined
+            }
           >
             <span>
               <AppButton
@@ -1063,10 +1095,26 @@ export function ObjectTypeAuthorizationScene() {
     {
       dataIndex: "accessorId",
       render: (_id: string, grant: ObjectGrant) => {
-        const { account, name: displayName, publicSubject, roleSubject } = resolveGrantSubject(grant);
+        const {
+          account,
+          name: displayName,
+          publicSubject,
+          roleSubject,
+        } = resolveGrantSubject(grant);
         return (
           <div className={styles.subjectName}>
-            <Avatar icon={publicSubject ? <GlobalOutlined /> : roleSubject ? <TeamOutlined /> : <UserOutlined />} size={34} />
+            <Avatar
+              icon={
+                publicSubject ? (
+                  <GlobalOutlined />
+                ) : roleSubject ? (
+                  <TeamOutlined />
+                ) : (
+                  <UserOutlined />
+                )
+              }
+              size={34}
+            />
             <span>
               <strong>{displayName}</strong>
               {account ? <small>{account}</small> : null}
@@ -1084,8 +1132,8 @@ export function ObjectTypeAuthorizationScene() {
           const decision = grant.effectiveDecisions?.find(
             (candidate) => candidate.operation === operation.key,
           );
-          const state = decision?.decision ??
-            (grant.operations.includes(operation.key) ? "allow" : "unset");
+          const state =
+            decision?.decision ?? (grant.operations.includes(operation.key) ? "allow" : "unset");
           return state === "unset" ? [] : [{ operation, state }];
         });
         return visibleDecisions.length ? (
@@ -1093,8 +1141,12 @@ export function ObjectTypeAuthorizationScene() {
             {visibleDecisions.map(({ operation, state }) => (
               <Tooltip key={operation.key} title={operation.description ?? operation.key}>
                 <span
-                  aria-label={t(`systemAdmin.objectGrants.permission${state === "allow" ? "Allowed" : "Denied"
-                    }`, { operation: operation.label })}
+                  aria-label={t(
+                    `systemAdmin.objectGrants.permission${
+                      state === "allow" ? "Allowed" : "Denied"
+                    }`,
+                    { operation: operation.label },
+                  )}
                   className={`${styles.permissionDecision} ${styles[`permissionDecision_${state}`]}`}
                 >
                   {state === "allow" ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
@@ -1103,7 +1155,9 @@ export function ObjectTypeAuthorizationScene() {
               </Tooltip>
             ))}
           </div>
-        ) : <span className={styles.sourceEmptyMark}>—</span>;
+        ) : (
+          <span className={styles.sourceEmptyMark}>—</span>
+        );
       },
       title: t("systemAdmin.objectGrants.effectivePermissions"),
     },
@@ -1112,9 +1166,13 @@ export function ObjectTypeAuthorizationScene() {
       render: (_value, grant) => {
         const activeSources = (grant.grants ?? []).filter((source) => source.active);
         const collapsedSources = collapseGrantSources(activeSources);
-        const sourceLabels = [...new Set(collapsedSources.map((source) =>
-          t(`systemAdmin.objectGrants.source.${source.policySource}`),
-        ))];
+        const sourceLabels = [
+          ...new Set(
+            collapsedSources.map((source) =>
+              t(`systemAdmin.objectGrants.source.${source.policySource}`),
+            ),
+          ),
+        ];
         return collapsedSources.length ? (
           <AppButton
             className={styles.sourceSummary}
@@ -1122,10 +1180,14 @@ export function ObjectTypeAuthorizationScene() {
             size="small"
             type="link"
           >
-            <strong>{t("systemAdmin.objectGrants.sourceCount", { count: collapsedSources.length })}</strong>
+            <strong>
+              {t("systemAdmin.objectGrants.sourceCount", { count: collapsedSources.length })}
+            </strong>
             <small>{sourceLabels.join(" / ")}</small>
           </AppButton>
-        ) : <span className={styles.sourceEmptyMark}>—</span>;
+        ) : (
+          <span className={styles.sourceEmptyMark}>—</span>
+        );
       },
       title: t("systemAdmin.objectGrants.grantSource"),
       width: 138,
@@ -1147,11 +1209,13 @@ export function ObjectTypeAuthorizationScene() {
             </AppButton>
             <span aria-hidden className={styles.grantActionDivider} />
             <Tooltip
-              title={protectedGrant
-                ? t("systemAdmin.objectGrants.delegateLocked")
-                : !hasRevocableSource
-                  ? t("systemAdmin.objectGrants.deleteGrantUnavailable")
-                  : undefined}
+              title={
+                protectedGrant
+                  ? t("systemAdmin.objectGrants.delegateLocked")
+                  : !hasRevocableSource
+                    ? t("systemAdmin.objectGrants.deleteGrantUnavailable")
+                    : undefined
+              }
             >
               <span>
                 <AppButton
@@ -1239,9 +1303,9 @@ export function ObjectTypeAuthorizationScene() {
                     <button
                       aria-label={operation.key}
                       aria-pressed={selected}
-                      className={selected
-                        ? styles.baseGrantOperationSelected
-                        : styles.baseGrantOperation}
+                      className={
+                        selected ? styles.baseGrantOperationSelected : styles.baseGrantOperation
+                      }
                       disabled={catalogLoading}
                       onClick={() => toggleCandidateOperation(operation.key)}
                       type="button"
@@ -1305,7 +1369,9 @@ export function ObjectTypeAuthorizationScene() {
       <section className={styles.baseGrantMatrix}>
         <header className={styles.baseGrantMatrixHead}>
           <strong>{t("systemAdmin.objectGrants.grantDetails")}</strong>
-          <span>{t("systemAdmin.objectGrants.grantUserCount", { count: objectGrants.length })}</span>
+          <span>
+            {t("systemAdmin.objectGrants.grantUserCount", { count: objectGrants.length })}
+          </span>
         </header>
         <Table<ObjectGrant>
           className={styles.baseGrantTable}
@@ -1335,9 +1401,11 @@ export function ObjectTypeAuthorizationScene() {
         onClose={() => setSourceAccessorId(undefined)}
         open={Boolean(sourceGrant)}
         rootClassName={styles.baseSourceDrawer}
-        title={sourceGrant
-          ? `${sourceGrantee || sourceGrant.accessorId} / ${t("systemAdmin.objectGrants.grantSource")}`
-          : t("systemAdmin.objectGrants.grantSource")}
+        title={
+          sourceGrant
+            ? `${sourceGrantee || sourceGrant.accessorId} / ${t("systemAdmin.objectGrants.grantSource")}`
+            : t("systemAdmin.objectGrants.grantSource")
+        }
         width="min(760px, 100vw)"
       >
         <div className={styles.sourceDrawerIntro}>
@@ -1376,8 +1444,16 @@ export function ObjectTypeAuthorizationScene() {
             })
           }
           options={[
-            { icon: <UserOutlined />, label: t("knowledgeNetwork.propertyAuthorizationUser"), value: "user" },
-            { icon: <TeamOutlined />, label: t("knowledgeNetwork.propertyAuthorizationRole"), value: "role" },
+            {
+              icon: <UserOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationUser"),
+              value: "user",
+            },
+            {
+              icon: <TeamOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationRole"),
+              value: "role",
+            },
           ]}
           value={subjectType}
         />
@@ -1404,28 +1480,30 @@ export function ObjectTypeAuthorizationScene() {
               value={subjectKeyword}
             />
             <div className={styles.subjectList}>
-              {visibleRoles.length ? visibleRoles.map((role) => {
-                const selected = role.id === subjectId;
-                return (
-                  <button
-                    className={selected ? styles.subjectItemSelected : styles.subjectItem}
-                    key={role.id}
-                    onClick={() => confirmDiscard(() => setSubjectId(role.id))}
-                    type="button"
-                  >
-                    <Avatar icon={<TeamOutlined />} size={34} />
-                    <span>
-                      <strong>{role.name || role.id}</strong>
-                      <small>
-                        {t("knowledgeNetwork.propertyAuthorizationMemberCount", {
-                          count: role.accessorIds.length,
-                        })}
-                      </small>
-                    </span>
-                    <span className={styles.subjectChevron}>›</span>
-                  </button>
-                );
-              }) : (
+              {visibleRoles.length ? (
+                visibleRoles.map((role) => {
+                  const selected = role.id === subjectId;
+                  return (
+                    <button
+                      className={selected ? styles.subjectItemSelected : styles.subjectItem}
+                      key={role.id}
+                      onClick={() => confirmDiscard(() => setSubjectId(role.id))}
+                      type="button"
+                    >
+                      <Avatar icon={<TeamOutlined />} size={34} />
+                      <span>
+                        <strong>{role.name || role.id}</strong>
+                        <small>
+                          {t("knowledgeNetwork.propertyAuthorizationMemberCount", {
+                            count: role.accessorIds.length,
+                          })}
+                        </small>
+                      </span>
+                      <span className={styles.subjectChevron}>›</span>
+                    </button>
+                  );
+                })
+              ) : (
                 <Empty
                   className={styles.subjectListEmpty}
                   description={t("knowledgeNetwork.propertyAuthorizationRoleEmpty")}
@@ -1448,21 +1526,32 @@ export function ObjectTypeAuthorizationScene() {
           <>
             <div className={styles.subjectSummary}>
               <div className={styles.subjectSummaryIdentity}>
-                <Avatar icon={subjectType === "role" ? <TeamOutlined /> : <UserOutlined />} size={42} />
+                <Avatar
+                  icon={subjectType === "role" ? <TeamOutlined /> : <UserOutlined />}
+                  size={42}
+                />
                 <span>
                   <strong>{currentSubjectRecord?.name || selectedSubject.id}</strong>
                   <span className={styles.subjectSummaryMeta}>
-                    <small>{subjectType === "role" ? t("knowledgeNetwork.propertyAuthorizationRole") : (currentSubjectRecord as AdminUser | undefined)?.account}</small>
+                    <small>
+                      {subjectType === "role"
+                        ? t("knowledgeNetwork.propertyAuthorizationRole")
+                        : (currentSubjectRecord as AdminUser | undefined)?.account}
+                    </small>
                     {subjectType === "role" ? (
                       <Tooltip
                         title={t("knowledgeNetwork.propertyAuthorizationRoleImpact", {
-                          count: (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ?? 0,
+                          count:
+                            (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ??
+                            0,
                         })}
                       >
                         <span className={styles.roleImpactHint} tabIndex={0}>
                           <WarningOutlined />
                           {t("knowledgeNetwork.propertyAuthorizationRoleImpactCompact", {
-                            count: (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ?? 0,
+                            count:
+                              (currentSubjectRecord as AdminRole | undefined)?.accessorIds.length ??
+                              0,
                           })}
                         </span>
                       </Tooltip>
@@ -1475,11 +1564,19 @@ export function ObjectTypeAuthorizationScene() {
                 {levelTag(baseLevel)}
               </div>
               <div className={styles.summaryStat}>
-                <span>{t("knowledgeNetwork.propertyAuthorizationPropertyCount", { count: detail?.dataProperties.length ?? 0 })}</span>
+                <span>
+                  {t("knowledgeNetwork.propertyAuthorizationPropertyCount", {
+                    count: detail?.dataProperties.length ?? 0,
+                  })}
+                </span>
                 <strong>{detail?.dataProperties.length ?? 0}</strong>
               </div>
               <div className={styles.summaryStat}>
-                <span>{t("knowledgeNetwork.propertyAuthorizationExplicitCount", { count: entryMap.size })}</span>
+                <span>
+                  {t("knowledgeNetwork.propertyAuthorizationExplicitCount", {
+                    count: entryMap.size,
+                  })}
+                </span>
                 <strong>{entryMap.size}</strong>
               </div>
             </div>
@@ -1494,17 +1591,25 @@ export function ObjectTypeAuthorizationScene() {
                 />
                 <Select
                   onChange={setPropertyFilter}
-                  options={(["all", "explicit", "inherit", "invalid"] as PropertyFilter[]).map((value) => ({
-                    label: t(`knowledgeNetwork.propertyAuthorizationFilter${value[0].toUpperCase()}${value.slice(1)}`),
-                    value,
-                  }))}
+                  options={(["all", "explicit", "inherit", "invalid"] as PropertyFilter[]).map(
+                    (value) => ({
+                      label: t(
+                        `knowledgeNetwork.propertyAuthorizationFilter${value[0].toUpperCase()}${value.slice(1)}`,
+                      ),
+                      value,
+                    }),
+                  )}
                   value={propertyFilter}
                 />
               </div>
               {selectedProperties.length ? (
                 <div className={styles.matrixToolbarActions}>
                   <div className={styles.batchBar}>
-                    <strong>{t("knowledgeNetwork.propertyAuthorizationSelected", { count: selectedProperties.length })}</strong>
+                    <strong>
+                      {t("knowledgeNetwork.propertyAuthorizationSelected", {
+                        count: selectedProperties.length,
+                      })}
+                    </strong>
                     <Select
                       onChange={applyBatch}
                       options={LEVELS.filter((level) => level !== "inherit").map((level) => ({
@@ -1548,10 +1653,10 @@ export function ObjectTypeAuthorizationScene() {
               pagination={
                 propertyRows.length > PROPERTY_PAGE_SIZE
                   ? {
-                    defaultPageSize: PROPERTY_PAGE_SIZE,
-                    pageSizeOptions: [50, 100, 200],
-                    showSizeChanger: true,
-                  }
+                      defaultPageSize: PROPERTY_PAGE_SIZE,
+                      pageSizeOptions: [50, 100, 200],
+                      showSizeChanger: true,
+                    }
                   : false
               }
               rowKey="name"
@@ -1596,8 +1701,8 @@ export function ObjectTypeAuthorizationScene() {
               title={
                 tooManyChanges
                   ? t("knowledgeNetwork.propertyAuthorizationBatchLimit", {
-                    count: MAX_PROPERTY_GRANT_CHANGES,
-                  })
+                      count: MAX_PROPERTY_GRANT_CHANGES,
+                    })
                   : invalidMaskedProperties.length
                     ? t("knowledgeNetwork.propertyAuthorizationMaskedMissing")
                     : undefined
@@ -1622,7 +1727,10 @@ export function ObjectTypeAuthorizationScene() {
       title={t("knowledgeNetwork.propertyAuthorizationTitle", { name: detail.name })}
     >
       <div className={styles.page}>
-        <AuthorizationRegistryFailureAlert error={catalogError} onRetry={retryAuthorizationRegistry} />
+        <AuthorizationRegistryFailureAlert
+          error={catalogError}
+          onRetry={retryAuthorizationRegistry}
+        />
         <Tabs
           activeKey={activeTab}
           items={[
@@ -1649,10 +1757,7 @@ export function ObjectTypeAuthorizationScene() {
             },
             {
               children: (
-                <RequireEdition
-                  capability={CAPABILITIES.PERM_OBJECT_LEVEL}
-                  minEdition="enterprise"
-                >
+                <RequireEdition capability={CAPABILITIES.PERM_OBJECT_LEVEL} minEdition="enterprise">
                   {propertyPanel}
                 </RequireEdition>
               ),

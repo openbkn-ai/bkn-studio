@@ -87,11 +87,7 @@ type ResourceIconSelectProps = {
   value?: string;
 };
 
-export function ResourceIconSelect({
-  inModal = true,
-  onChange,
-  value,
-}: ResourceIconSelectProps) {
+export function ResourceIconSelect({ inModal = true, onChange, value }: ResourceIconSelectProps) {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState("");
   const { t } = useTranslation();
@@ -105,9 +101,7 @@ export function ResourceIconSelect({
       return ICON_GLYPHS;
     }
 
-    return ICON_GLYPHS.filter((glyph) =>
-      glyph.name.toLowerCase().includes(normalizedKeyword),
-    );
+    return ICON_GLYPHS.filter((glyph) => glyph.name.toLowerCase().includes(normalizedKeyword));
   }, [keyword]);
 
   const displayType = resolveIconType(value) ?? DEFAULT_RESOURCE_ICON;

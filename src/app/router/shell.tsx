@@ -24,10 +24,7 @@ export function AppShell() {
   });
 
   useEffect(() => {
-    window.localStorage.setItem(
-      SIDENAV_COLLAPSED_STORAGE_KEY,
-      sidenavCollapsed ? "true" : "false",
-    );
+    window.localStorage.setItem(SIDENAV_COLLAPSED_STORAGE_KEY, sidenavCollapsed ? "true" : "false");
   }, [sidenavCollapsed]);
 
   return (

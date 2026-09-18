@@ -7,9 +7,22 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildQuery, executeFunction, generateFunction, getFunctionPrompt } from "@/modules/execution-factory/services/function.service";
-import { debugMcpTool, listMcpTools, listMcps } from "@/modules/execution-factory/services/mcp.service";
-import { listOperators, operatorDetailToFormValues, resolveOperatorDescription } from "@/modules/execution-factory/services/operator.service";
+import {
+  buildQuery,
+  executeFunction,
+  generateFunction,
+  getFunctionPrompt,
+} from "@/modules/execution-factory/services/function.service";
+import {
+  debugMcpTool,
+  listMcpTools,
+  listMcps,
+} from "@/modules/execution-factory/services/mcp.service";
+import {
+  listOperators,
+  operatorDetailToFormValues,
+  resolveOperatorDescription,
+} from "@/modules/execution-factory/services/operator.service";
 import {
   getSkillReleaseHistory,
   listSkills,
@@ -102,9 +115,9 @@ describe("buildQuery", () => {
   });
 
   it("leaves metadata generation query untouched", () => {
-    expect(
-      buildQuery({ code: "x", query: "keep me", type: "metadata_param_generator" }),
-    ).toBe("keep me");
+    expect(buildQuery({ code: "x", query: "keep me", type: "metadata_param_generator" })).toBe(
+      "keep me",
+    );
   });
 
   it("returns empty query as-is instead of decorating it", () => {

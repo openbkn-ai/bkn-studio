@@ -1505,7 +1505,11 @@
   padding: 12px 15px 12px 17px;
   border: 1px solid var(--color-primary-border);
   border-radius: 8px;
-  background: linear-gradient(105deg, var(--color-primary-50) 0%, var(--color-interface-panel-bg) 76%);
+  background: linear-gradient(
+    105deg,
+    var(--color-primary-50) 0%,
+    var(--color-interface-panel-bg) 76%
+  );
 }
 
 .schemaOverview::before {
@@ -1633,7 +1637,10 @@
 .schemaFieldHeader,
 .schemaFieldRow {
   display: grid;
-  grid-template-columns: minmax(128px, 0.85fr) minmax(76px, 0.42fr) minmax(58px, 0.38fr) minmax(180px, 1.7fr);
+  grid-template-columns: minmax(128px, 0.85fr) minmax(76px, 0.42fr) minmax(58px, 0.38fr) minmax(
+      180px,
+      1.7fr
+    );
   gap: 12px;
   align-items: start;
 }
@@ -2963,7 +2970,9 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--color-bg-raised);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .dbCard:hover {

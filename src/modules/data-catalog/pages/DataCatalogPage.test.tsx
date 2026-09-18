@@ -30,7 +30,16 @@ import { DataCatalogPage } from "./DataCatalogPage";
 
 function OpenCatalogButton() {
   const navigate = useNavigate();
-  return <button onClick={() => { void navigate("/data-catalog/catalog/catalog-1"); }} type="button">open catalog</button>;
+  return (
+    <button
+      onClick={() => {
+        void navigate("/data-catalog/catalog/catalog-1");
+      }}
+      type="button"
+    >
+      open catalog
+    </button>
+  );
 }
 
 describe("DataCatalogPage", () => {

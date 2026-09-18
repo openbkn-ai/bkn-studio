@@ -55,10 +55,7 @@ import {
   updateTool,
   updateToolStatus,
 } from "@/modules/execution-factory/services/tool.service";
-import {
-  getToolbox,
-  updateToolbox,
-} from "@/modules/execution-factory/services/toolbox.service";
+import { getToolbox, updateToolbox } from "@/modules/execution-factory/services/toolbox.service";
 import type { FunctionExecuteResult } from "@/modules/execution-factory/types/function";
 import type { FunctionParameterDef } from "@/modules/execution-factory/types/function-input";
 import type { ToolStatus } from "@/modules/execution-factory/types/tool";
@@ -197,7 +194,11 @@ type FunctionWorkbenchSceneProps = {
   targetToolId?: string;
 };
 
-export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: FunctionWorkbenchSceneProps) {
+export function FunctionWorkbenchScene({
+  boxId,
+  onBack,
+  targetToolId,
+}: FunctionWorkbenchSceneProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
   const navigate = useNavigate();
@@ -206,10 +207,8 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     currentPermissions: runtimeConfig.currentUser.permissions,
     requiredPermissions: "execution-factory:function:edit",
   });
-  const {
-    canExecuteAdhoc: canExecuteAdhocFunction,
-    canGenerate: canCreateFunction,
-  } = useFunctionCodeAccess();
+  const { canExecuteAdhoc: canExecuteAdhocFunction, canGenerate: canCreateFunction } =
+    useFunctionCodeAccess();
   const canGenerateFunction = canEditFunction && canCreateFunction;
   // Derived parameters only land in the editable draft; a read-only caller would get a result
   // that is thrown away. Runs still derive silently to build their request inputs.
@@ -289,7 +288,6 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     };
   }, []);
 
-
   useEffect(() => {
     let cancelled = false;
 
@@ -346,8 +344,18 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
         setBoxCategory(record.categoryType ?? record.categoryName);
         // A view-only caller must not receive an unsaved local draft merely by opening an empty
         // toolbox. Editors still get the draft that starts the creation flow.
-        setFunctions(loaded.length > 0 ? loaded : canEditFunction ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)] : []);
-        setActiveKey(loaded.some((item) => item.key === targetToolId) ? targetToolId ?? null : loaded[0]?.key ?? null);
+        setFunctions(
+          loaded.length > 0
+            ? loaded
+            : canEditFunction
+              ? [emptyFunction(DEFAULT_FUNCTION_TEMPLATE)]
+              : [],
+        );
+        setActiveKey(
+          loaded.some((item) => item.key === targetToolId)
+            ? (targetToolId ?? null)
+            : (loaded[0]?.key ?? null),
+        );
       } catch (error) {
         if (!cancelled) {
           setLoadError(extractRequestErrorMessage(error));
@@ -383,7 +391,8 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
 
       // Function workbench can only come from Function sets, so do not return to API toolboxes.
       void navigate(
-        readReturnTo(location.state) ?? "/execution-factory/units?activeTab=toolbox&toolboxView=function",
+        readReturnTo(location.state) ??
+          "/execution-factory/units?activeTab=toolbox&toolboxView=function",
         { replace: true },
       );
     };
@@ -574,9 +583,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
     const nextStatus: ToolStatus = target.status === "enabled" ? "disabled" : "enabled";
     const applyLocal = () => {
       setFunctions((current) =>
-        current.map((item) =>
-          item.key === target.key ? { ...item, status: nextStatus } : item,
-        ),
+        current.map((item) => (item.key === target.key ? { ...item, status: nextStatus } : item)),
       );
     };
 
@@ -875,9 +882,10 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
    * model quota. Return inputs immediately so callers can build test data without waiting for
    * state updates; silent suppresses messages for implicit derivations.
    */
-  const handleDeriveParams = async (
-    options?: { persist?: boolean; silent?: boolean },
-  ): Promise<FunctionParameterDef[] | null> => {
+  const handleDeriveParams = async (options?: {
+    persist?: boolean;
+    silent?: boolean;
+  }): Promise<FunctionParameterDef[] | null> => {
     if (!active || !canExecuteAdhocFunction) {
       return null;
     }
@@ -888,9 +896,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
 
       if (!inferred.supported) {
         if (!options?.silent) {
-          void message.warning(
-            inferred.reason ?? t("executionFactory.functionDeriveUnsupported"),
-          );
+          void message.warning(inferred.reason ?? t("executionFactory.functionDeriveUnsupported"));
         }
         return null;
       }
@@ -1364,9 +1370,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                           />
                           <span
                             className={
-                              active.status === "enabled"
-                                ? styles.fnStatusOn
-                                : styles.fnStatusOff
+                              active.status === "enabled" ? styles.fnStatusOn : styles.fnStatusOff
                             }
                           >
                             {t(`executionFactory.toolStatuses.${active.status}`)}
@@ -1438,37 +1442,37 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
                     </span>
                     <div className={styles.editorTools}>
                       <PermissionGate permissions="execution-factory:function:edit">
-                      <Dropdown
-                        menu={{
-                          items: (["standard", "pydantic"] as FunctionTemplateId[]).map((id) => ({
-                            key: id,
-                            label: (
-                              <span className={styles.templateOption}>
-                                <span className={styles.templateOptionTitle}>
-                                  {t(`executionFactory.functionTemplates.${id}.title`)}
+                        <Dropdown
+                          menu={{
+                            items: (["standard", "pydantic"] as FunctionTemplateId[]).map((id) => ({
+                              key: id,
+                              label: (
+                                <span className={styles.templateOption}>
+                                  <span className={styles.templateOptionTitle}>
+                                    {t(`executionFactory.functionTemplates.${id}.title`)}
+                                  </span>
+                                  <span className={styles.templateOptionDesc}>
+                                    {t(`executionFactory.functionTemplates.${id}.desc`)}
+                                  </span>
                                 </span>
-                                <span className={styles.templateOptionDesc}>
-                                  {t(`executionFactory.functionTemplates.${id}.desc`)}
-                                </span>
-                              </span>
-                            ),
-                            onClick: () => applyTemplate(id),
-                          })),
-                        }}
-                      >
-                        <AppButton icon={<FileTextOutlined />}>
-                          {t("executionFactory.functionInsertTemplate")}
-                        </AppButton>
-                      </Dropdown>
-                      {hasDefaultLlm && canGenerateFunction ? (
-                        <AppButton
-                          icon={<ThunderboltOutlined />}
-                          onClick={() => setAiOpen(true)}
-                          type="primary"
+                              ),
+                              onClick: () => applyTemplate(id),
+                            })),
+                          }}
                         >
-                          {t("executionFactory.functionAiGenerate")}
-                        </AppButton>
-                      ) : null}
+                          <AppButton icon={<FileTextOutlined />}>
+                            {t("executionFactory.functionInsertTemplate")}
+                          </AppButton>
+                        </Dropdown>
+                        {hasDefaultLlm && canGenerateFunction ? (
+                          <AppButton
+                            icon={<ThunderboltOutlined />}
+                            onClick={() => setAiOpen(true)}
+                            type="primary"
+                          >
+                            {t("executionFactory.functionAiGenerate")}
+                          </AppButton>
+                        ) : null}
                       </PermissionGate>
                       <span className={styles.toolsDivider} />
                       <AppButton
@@ -1625,15 +1629,17 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
       </div>
 
       <Drawer
-        extra={canDeriveParams ? (
-          <AppButton
-            icon={<ReloadOutlined />}
-            loading={deriving}
-            onClick={() => void handleDeriveParams()}
-          >
-            {t("executionFactory.functionDeriveParams")}
-          </AppButton>
-        ) : null}
+        extra={
+          canDeriveParams ? (
+            <AppButton
+              icon={<ReloadOutlined />}
+              loading={deriving}
+              onClick={() => void handleDeriveParams()}
+            >
+              {t("executionFactory.functionDeriveParams")}
+            </AppButton>
+          ) : null
+        }
         onClose={() => setDockTab(null)}
         open={dockTab === "params"}
         title={t("executionFactory.workbenchParamsTab")}
@@ -1686,12 +1692,7 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
             value={ioTab === "inputs" ? active?.inputs : active?.outputs}
           />
         ) : (
-          <CodeEditor
-            height={360}
-            language="json"
-            readOnly
-            value={paramsJsonPreview}
-          />
+          <CodeEditor height={360} language="json" readOnly value={paramsJsonPreview} />
         )}
         <div className={styles.dockHint}>{t("executionFactory.workbenchParamsHint")}</div>
       </Drawer>
@@ -1734,7 +1735,6 @@ export function FunctionWorkbenchScene({ boxId, onBack, targetToolId }: Function
         onClose={() => setAiOpen(false)}
         open={canGenerateFunction && aiOpen}
       />
-
     </div>
   );
 }
@@ -1806,9 +1806,7 @@ function RunOutput({
     return (
       <pre className={`${styles.outBody} ${tab === "stderr" ? styles.outError : ""}`}>
         {text ?? (
-          <span className={styles.outEmpty}>
-            {t("executionFactory.workbenchStreamAbsent")}
-          </span>
+          <span className={styles.outEmpty}>{t("executionFactory.workbenchStreamAbsent")}</span>
         )}
       </pre>
     );
@@ -1816,9 +1814,11 @@ function RunOutput({
 
   return (
     <pre className={styles.outBody}>
-      {result.output === undefined
-        ? <span className={styles.outEmpty}>{t("executionFactory.workbenchStreamAbsent")}</span>
-        : JSON.stringify(result.output, null, 2)}
+      {result.output === undefined ? (
+        <span className={styles.outEmpty}>{t("executionFactory.workbenchStreamAbsent")}</span>
+      ) : (
+        JSON.stringify(result.output, null, 2)
+      )}
     </pre>
   );
 }

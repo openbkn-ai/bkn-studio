@@ -8,9 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ActionTypeCondition } from "@/modules/knowledge-network/types/knowledge-network";
-import {
-  promoteLegacyActionCondition,
-} from "@/modules/knowledge-network/utils/action-type-condition";
+import { promoteLegacyActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 import { toBackendActionTypeCreateEntry } from "@/modules/knowledge-network/services/mappers/action-type.mapper";
 
 describe("action-type-condition", () => {

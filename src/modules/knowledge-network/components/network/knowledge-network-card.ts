@@ -26,10 +26,7 @@ export function getKnowledgeNetworkCardMenuKeys(record: KnowledgeNetworkRecord) 
 }
 
 /** Offered in menu order: JSON first, since it is the format the import dialog reads back. */
-export const KNOWLEDGE_NETWORK_EXPORT_FORMATS: KnowledgeNetworkExportFormat[] = [
-  "json",
-  "bkn",
-];
+export const KNOWLEDGE_NETWORK_EXPORT_FORMATS: KnowledgeNetworkExportFormat[] = ["json", "bkn"];
 
 export function getKnowledgeNetworkExportMenuKey(format: KnowledgeNetworkExportFormat) {
   return `export-${format}`;

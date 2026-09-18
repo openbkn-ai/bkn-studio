@@ -115,7 +115,7 @@ export function extractLeafExecutionParameters(
         type: node.type,
         value: node.value ?? "",
         valueFrom: node.valueFrom ?? "input",
-        sourcePropertyName: node.valueFrom === "property" ? node.value ?? "" : "",
+        sourcePropertyName: node.valueFrom === "property" ? (node.value ?? "") : "",
       });
     }
   };

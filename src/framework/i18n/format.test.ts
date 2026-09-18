@@ -7,7 +7,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime, formatDateTimeYmdHms, formatFileSize, formatNumber, formatPercent } from "@/framework/i18n/format";
+import {
+  formatDateTime,
+  formatDateTimeYmdHms,
+  formatFileSize,
+  formatNumber,
+  formatPercent,
+} from "@/framework/i18n/format";
 
 describe("locale format helpers", () => {
   it("formats numbers with the requested locale", () => {

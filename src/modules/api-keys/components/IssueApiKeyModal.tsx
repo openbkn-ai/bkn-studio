@@ -79,11 +79,18 @@ export function IssueApiKeyModal({
       onCancel={handleClose}
       destroyOnClose
     >
-      <Form form={form} layout="vertical" initialValues={{ expiryMode: "default" }} preserve={false}>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ expiryMode: "default" }}
+        preserve={false}
+      >
         <Form.Item
           name="name"
           label={t("apiKeys.issueModal.name")}
-          rules={[{ required: true, whitespace: true, message: t("apiKeys.issueModal.nameRequired") }]}
+          rules={[
+            { required: true, whitespace: true, message: t("apiKeys.issueModal.nameRequired") },
+          ]}
         >
           <Input maxLength={64} placeholder={t("apiKeys.issueModal.namePlaceholder")} />
         </Form.Item>

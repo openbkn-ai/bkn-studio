@@ -43,10 +43,7 @@ function getInstallPermission() {
   return "execution-factory:catalog:install";
 }
 
-function canRunMenuAction(
-  item: ExecutionUnitCardItem,
-  action: ExecutionUnitCardAction,
-) {
+function canRunMenuAction(item: ExecutionUnitCardItem, action: ExecutionUnitCardAction) {
   switch (action) {
     case "edit":
     case "updatePackage":
@@ -124,7 +121,11 @@ export function ExecutionUnitCardMenu({
             size="small"
             type={installedInDomain ? "default" : "primary"}
           >
-            {t(installedInDomain ? "executionFactory.marketSync" : "executionFactory.marketIntroduce")}
+            {t(
+              installedInDomain
+                ? "executionFactory.marketSync"
+                : "executionFactory.marketIntroduce",
+            )}
           </AppButton>
         </div>
       </PermissionGate>
@@ -134,74 +135,25 @@ export function ExecutionUnitCardMenu({
   const menuItems: MenuProps["items"] = [];
 
   if (activeTab === "operator") {
-    pushMenuAction(
-      menuItems,
-      "view",
-      t("executionFactory.cardMenu.view"),
-      onAction,
-      "view",
-      item,
-    );
-    pushMenuAction(
-      menuItems,
-      "edit",
-      t("executionFactory.cardMenu.edit"),
-      onAction,
-      "edit",
-      item,
-    );
+    pushMenuAction(menuItems, "view", t("executionFactory.cardMenu.view"), onAction, "view", item);
+    pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
   }
 
   if (activeTab === "toolbox") {
-    pushMenuAction(
-      menuItems,
-      "view",
-      t("executionFactory.cardMenu.view"),
-      onAction,
-      "view",
-      item,
-    );
-    pushMenuAction(
-      menuItems,
-      "edit",
-      t("executionFactory.cardMenu.edit"),
-      onAction,
-      "edit",
-      item,
-    );
+    pushMenuAction(menuItems, "view", t("executionFactory.cardMenu.view"), onAction, "view", item);
+    pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
   }
 
   if (activeTab === "mcp" || activeTab === "skill") {
-    pushMenuAction(
-      menuItems,
-      "view",
-      t("executionFactory.cardMenu.view"),
-      onAction,
-      "view",
-      item,
-    );
+    pushMenuAction(menuItems, "view", t("executionFactory.cardMenu.view"), onAction, "view", item);
   }
 
   if (activeTab === "mcp") {
-    pushMenuAction(
-      menuItems,
-      "edit",
-      t("executionFactory.cardMenu.edit"),
-      onAction,
-      "edit",
-      item,
-    );
+    pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
   }
 
   if (activeTab === "skill") {
-    pushMenuAction(
-      menuItems,
-      "edit",
-      t("executionFactory.cardMenu.edit"),
-      onAction,
-      "edit",
-      item,
-    );
+    pushMenuAction(menuItems, "edit", t("executionFactory.cardMenu.edit"), onAction, "edit", item);
     pushMenuAction(
       menuItems,
       "download",
@@ -242,11 +194,7 @@ export function ExecutionUnitCardMenu({
     pushMenuAction(
       menuItems,
       lifecycleAction,
-      t(
-        lifecycleAction === "publish"
-          ? "executionFactory.publish"
-          : "executionFactory.offline",
-      ),
+      t(lifecycleAction === "publish" ? "executionFactory.publish" : "executionFactory.offline"),
       onAction,
       lifecycleAction,
       item,

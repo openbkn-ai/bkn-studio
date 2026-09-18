@@ -92,7 +92,14 @@ const RESOURCE_FALLBACK_LABELS: Record<string, string> = {
   function: "Function set",
 };
 
-const CATALOG_CRUD_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize", "task_manage"];
+const CATALOG_CRUD_AUTHZ = [
+  "view_detail",
+  "create",
+  "modify",
+  "delete",
+  "authorize",
+  "task_manage",
+];
 const CONNECTOR_TYPE_AUTHZ = ["view_detail", "create", "modify", "delete", "authorize"];
 // Child resources delegate sharing through the knowledge-network root. They never carry
 // `authorize` or `task_manage`; action execution is expressed by `execute`.

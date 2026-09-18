@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { hasPermissions } from "@/framework/permission/has-permissions";
-import { extractRequestErrorDetails, extractRequestErrorMessage } from "@/framework/request/error-message";
+import {
+  extractRequestErrorDetails,
+  extractRequestErrorMessage,
+} from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { ResourceGrantEditor } from "@/modules/system-admin/components/ResourceGrantEditor";
 import { authzPoints } from "@/modules/system-admin/permissions";
@@ -41,14 +44,27 @@ const grantKey = (resourceType: string, id: string) => `${resourceType}\u0000${i
 
 /** Calculates the difference between original and target grants, splitting it into attach and detach calls. */
 function diffGrants(original: ResourceGrant[], desired: ResourceGrant[]) {
-  const byKey = new Map<string, { type: string; id: string; orig: Set<string>; want: Set<string> }>();
+  const byKey = new Map<
+    string,
+    { type: string; id: string; orig: Set<string>; want: Set<string> }
+  >();
   for (const grant of original) {
     const key = grantKey(grant.resource.type, grant.resource.id);
-    byKey.set(key, { type: grant.resource.type, id: grant.resource.id, orig: new Set(grant.operations), want: new Set() });
+    byKey.set(key, {
+      type: grant.resource.type,
+      id: grant.resource.id,
+      orig: new Set(grant.operations),
+      want: new Set(),
+    });
   }
   for (const grant of desired) {
     const key = grantKey(grant.resource.type, grant.resource.id);
-    const entry = byKey.get(key) ?? { type: grant.resource.type, id: grant.resource.id, orig: new Set<string>(), want: new Set<string>() };
+    const entry = byKey.get(key) ?? {
+      type: grant.resource.type,
+      id: grant.resource.id,
+      orig: new Set<string>(),
+      want: new Set<string>(),
+    };
     grant.operations.forEach((op) => entry.want.add(op));
     byKey.set(key, entry);
   }
@@ -89,7 +105,11 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
       return;
     }
     form.setFieldsValue({ name: role?.name ?? "", description: role?.description ?? "" });
-    setGrants(role ? role.permissions.map((grant) => ({ ...grant, operations: [...grant.operations] })) : []);
+    setGrants(
+      role
+        ? role.permissions.map((grant) => ({ ...grant, operations: [...grant.operations] }))
+        : [],
+    );
   }, [form, open, role]);
 
   const handleSubmit = () => {
@@ -134,7 +154,9 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             await setRolePermission(savedRoleId, false, grant, { skipErrorToast: true });
           }
         }
-        message.success(isEdit ? t("systemAdmin.roles.toast.saved") : t("systemAdmin.roles.toast.created"));
+        message.success(
+          isEdit ? t("systemAdmin.roles.toast.saved") : t("systemAdmin.roles.toast.created"),
+        );
         onSaved();
         onClose();
       } catch (error) {
@@ -170,7 +192,10 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
       width={680}
     >
       {locked ? (
-        <div className={[styles.calloutBox, styles.calloutWarn].join(" ")} style={{ marginBottom: 16 }}>
+        <div
+          className={[styles.calloutBox, styles.calloutWarn].join(" ")}
+          style={{ marginBottom: 16 }}
+        >
           <InfoCircleOutlined />
           <span>{t("systemAdmin.roles.drawer.builtinLocked")}</span>
         </div>
@@ -184,7 +209,10 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
           <Input disabled={locked} placeholder={t("systemAdmin.roles.drawer.namePlaceholder")} />
         </Form.Item>
         <Form.Item label={t("systemAdmin.roles.drawer.description")} name="description">
-          <Input disabled={locked} placeholder={t("systemAdmin.roles.drawer.descriptionPlaceholder")} />
+          <Input
+            disabled={locked}
+            placeholder={t("systemAdmin.roles.drawer.descriptionPlaceholder")}
+          />
         </Form.Item>
         <Form.Item
           label={
@@ -198,11 +226,7 @@ export function RoleFormDrawer({ onClose, onSaved, open, role }: RoleFormDrawerP
             </span>
           }
         >
-          <ResourceGrantEditor
-            disabled={permissionsReadOnly}
-            onChange={setGrants}
-            value={grants}
-          />
+          <ResourceGrantEditor disabled={permissionsReadOnly} onChange={setGrants} value={grants} />
         </Form.Item>
       </Form>
     </Drawer>

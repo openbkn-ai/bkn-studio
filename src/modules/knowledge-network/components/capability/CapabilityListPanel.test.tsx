@@ -42,10 +42,7 @@ vi.mock("@/modules/knowledge-network/components/capability/CapabilityMountModal"
   CapabilityMountModal: () => null,
 }));
 
-import {
-  CapabilityListPanel,
-  type CapabilitySectionKind,
-} from "./CapabilityListPanel";
+import { CapabilityListPanel, type CapabilitySectionKind } from "./CapabilityListPanel";
 
 const emptyData: CapabilityBindingListResult = {
   boxes: [],
@@ -107,15 +104,13 @@ function dataFor(kind: CapabilitySectionKind): CapabilityBindingListResult {
         boxName: kind === "skill" ? "" : "Demo box",
         branch: "main",
         capabilityId: "capability-1",
-        capabilityType:
-          kind === "skill" ? "skill" : kind === "mcp" ? "mcp_tool" : "function",
+        capabilityType: kind === "skill" ? "skill" : kind === "mcp" ? "mcp_tool" : "function",
         comment: "",
         createTime: "2026-09-11",
         creatorName: "Tester",
         description: "",
         id: "binding-1",
-        metadataType:
-          kind === "api" ? "openapi" : kind === "function" ? "function" : "",
+        metadataType: kind === "api" ? "openapi" : kind === "function" ? "function" : "",
         name: "Visible capability",
         sources: [],
         status: "enabled",
@@ -131,9 +126,7 @@ describe("CapabilityListPanel restricted empty state", () => {
   it("describes a non-modifiable empty section without mount instructions", () => {
     renderPanel("function");
 
-    expect(
-      screen.getByText("knowledgeNetwork.capabilityNoVisibleFunctions"),
-    ).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.capabilityNoVisibleFunctions")).not.toBeNull();
     expect(screen.queryByText("knowledgeNetwork.capabilityEmptyFunctions")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.capabilityMountFunctions")).toBeNull();
   });
@@ -202,10 +195,7 @@ describe("CapabilityListPanel restricted empty state", () => {
 
   it("does not expose an API detail link to a Function-only viewer", () => {
     // `tool:view` is derived for Function sets too, but this row points at an API toolbox.
-    mocks.permissions.current = [
-      "execution-factory:function:view",
-      "execution-factory:tool:view",
-    ];
+    mocks.permissions.current = ["execution-factory:function:view", "execution-factory:tool:view"];
 
     renderPanel("api", false, dataFor("api"));
 

@@ -6,10 +6,7 @@
  */
 
 import { baseConsoleNavigation } from "@/app/shell/navigation/base-navigation";
-import type {
-  ConsoleNavContribution,
-  ConsoleNavItem,
-} from "@/app/shell/navigation/types";
+import type { ConsoleNavContribution, ConsoleNavItem } from "@/app/shell/navigation/types";
 import { capabilityState } from "@/framework/entitlement/capability-state";
 import type { EntitlementView } from "@/framework/entitlement/types";
 import { hasPermissions } from "@/framework/permission/has-permissions";
@@ -169,9 +166,7 @@ type ConsoleNavTrailItem = {
 };
 
 function flattenItems(items: ConsoleNavItem[]): ConsoleNavItem[] {
-  return items.flatMap((item) =>
-    item.children ? [item, ...flattenItems(item.children)] : [item],
-  );
+  return items.flatMap((item) => (item.children ? [item, ...flattenItems(item.children)] : [item]));
 }
 
 const consoleNavItems = flattenItems(consoleNavigation);
@@ -209,9 +204,10 @@ function buildConsoleNavigation(
     ...baseItems.flatMap((item) => {
       const extraChildren = groupedItems.get(item.key) ?? [];
 
-      const baseItem = extraChildren.length === 0
-        ? item
-        : { ...item, children: [...extraChildren, ...(item.children ?? [])] };
+      const baseItem =
+        extraChildren.length === 0
+          ? item
+          : { ...item, children: [...extraChildren, ...(item.children ?? [])] };
 
       return [baseItem, ...(anchoredItems.get(item.key) ?? [])];
     }),

@@ -12,7 +12,10 @@ import { useSearchParams } from "react-router-dom";
 
 import { IndexBuildListScene } from "@/modules/data-catalog/scenes/IndexBuildListScene";
 
-import { DiscoverTaskListPanel, SemanticUnderstandingTaskListPanel } from "./TaskManagementTaskPanels";
+import {
+  DiscoverTaskListPanel,
+  SemanticUnderstandingTaskListPanel,
+} from "./TaskManagementTaskPanels";
 import styles from "./TaskManagementScene.module.css";
 
 type TaskManagementTab = "discover" | "index-build" | "semantic-understanding";
@@ -40,9 +43,7 @@ export function TaskManagementScene() {
     <section className={styles.page}>
       <div className={styles.pageIntro}>
         <h2 className={styles.pageIntroTitle}>{t("dataCatalog.indexBuildTitle")}</h2>
-        <p className={styles.pageIntroDescription}>
-          {t("dataCatalog.indexBuildDescription")}
-        </p>
+        <p className={styles.pageIntroDescription}>{t("dataCatalog.indexBuildDescription")}</p>
       </div>
 
       <Tabs

@@ -10,91 +10,91 @@ Backend: `bkn-foundry/adp/execution-factory/operator-integration`
 
 ## Navigation & Shell
 
-| ID | Item | Ref | Local | Status |
-|----|------|-----|-------|--------|
-| EF-NAV-001 | 执行单元管理 single entry (tabs inside) | OperatorList | `/execution-factory/units` | [x] |
-| EF-NAV-002 | 全部执行单元 catalog | PluginMarket | `/execution-factory/catalog` | [x] |
-| EF-NAV-003 | No standalone MCP/Skill sidebar | — | removed | [x] |
-| EF-NAV-004 | Legacy `/mcp` `/skills` redirect to units tab | — | ExecutionUnitTabRedirect | [x] |
+| ID         | Item                                          | Ref          | Local                        | Status |
+| ---------- | --------------------------------------------- | ------------ | ---------------------------- | ------ |
+| EF-NAV-001 | 执行单元管理 single entry (tabs inside)       | OperatorList | `/execution-factory/units`   | [x]    |
+| EF-NAV-002 | 全部执行单元 catalog                          | PluginMarket | `/execution-factory/catalog` | [x]    |
+| EF-NAV-003 | No standalone MCP/Skill sidebar               | —            | removed                      | [x]    |
+| EF-NAV-004 | Legacy `/mcp` `/skills` redirect to units tab | —            | ExecutionUnitTabRedirect     | [x]    |
 
 ---
 
 ## List Scene (OperatorList / PluginMarket)
 
-| ID | Item | Ref | Local | Status |
-|----|------|-----|-------|--------|
-| EF-LST-001 | Tabs: 工具集 / MCP 服务 / Skill 包 (+ 算子开发入口) | ✓ | ExecutionUnitListScene | [x] |
-| EF-LST-002 | Category chip filter (all resource tabs) | ✓ | category.service | [x] |
-| EF-LST-003 | Publish status filter (mgmt mode) | ✓ | Select | [x] |
-| EF-LST-004 | Keyword search + reload | ✓ | usePageState | [x] |
-| EF-LST-005 | Infinite scroll (page_size=20) | ✓ | IntersectionObserver | [x] |
-| EF-LST-006 | Card grid + metadata badges | ✓ | ExecutionUnitCard | [x] |
-| EF-LST-007 | CreateMenu primary + import | ✓ | CreateMenu | [x] |
-| EF-LST-008 | Catalog Install button | ✓ | InstallFromCatalogModal | [x] |
+| ID         | Item                                                | Ref | Local                   | Status |
+| ---------- | --------------------------------------------------- | --- | ----------------------- | ------ |
+| EF-LST-001 | Tabs: 工具集 / MCP 服务 / Skill 包 (+ 算子开发入口) | ✓   | ExecutionUnitListScene  | [x]    |
+| EF-LST-002 | Category chip filter (all resource tabs)            | ✓   | category.service        | [x]    |
+| EF-LST-003 | Publish status filter (mgmt mode)                   | ✓   | Select                  | [x]    |
+| EF-LST-004 | Keyword search + reload                             | ✓   | usePageState            | [x]    |
+| EF-LST-005 | Infinite scroll (page_size=20)                      | ✓   | IntersectionObserver    | [x]    |
+| EF-LST-006 | Card grid + metadata badges                         | ✓   | ExecutionUnitCard       | [x]    |
+| EF-LST-007 | CreateMenu primary + import                         | ✓   | CreateMenu              | [x]    |
+| EF-LST-008 | Catalog Install button                              | ✓   | InstallFromCatalogModal | [x]    |
 
 ---
 
 ## Card Menu Actions
 
-| ID | Tab | Action | API | Status |
-|----|-----|--------|-----|--------|
-| EF-MNU-001 | operator | 编辑 | navigate edit | [x] |
-| EF-MNU-002 | operator | 查看 | detail drawer | [x] |
-| EF-MNU-003 | operator | 导出 | `GET /impex/export/operator/{id}` | [x] |
-| EF-MNU-004 | operator | 发布/取消/下线/删除 | status + delete APIs | [x] |
-| EF-MNU-005 | toolbox | 编辑 (metadata) | toolbox form PUT | [x] |
-| EF-MNU-006 | toolbox | 导出 | `GET /impex/export/toolbox/{id}` | [x] |
-| EF-MNU-007 | toolbox | Card click → tools | tools scene | [x] |
-| EF-MNU-008 | mcp | 查看 | McpDetailDrawer | [x] |
-| EF-MNU-009 | mcp | 编辑 | `PUT /mcp/{id}` | [x] |
-| EF-MNU-010 | mcp | 导出 | `GET /impex/export/mcp/{id}` | [x] |
-| EF-MNU-011 | skill | 查看 | SkillDetailDrawer | [x] |
-| EF-MNU-012 | skill | 编辑 (metadata) | skill edit route | [x] |
-| EF-MNU-013 | skill | 下载 | `GET /skills/{id}/management/download` | [x] |
-| EF-MNU-014 | skill | 更新包 | `PUT /skills/{id}/package` | [x] |
-| EF-MNU-015 | all | Post-publish 授权 | componentsPermConfig | [~] 暂不实现 |
-| EF-MNU-016 | all | Per-action dynamic auth | postResourceOperation | [~] 暂不实现 |
+| ID         | Tab      | Action                  | API                                    | Status       |
+| ---------- | -------- | ----------------------- | -------------------------------------- | ------------ |
+| EF-MNU-001 | operator | 编辑                    | navigate edit                          | [x]          |
+| EF-MNU-002 | operator | 查看                    | detail drawer                          | [x]          |
+| EF-MNU-003 | operator | 导出                    | `GET /impex/export/operator/{id}`      | [x]          |
+| EF-MNU-004 | operator | 发布/取消/下线/删除     | status + delete APIs                   | [x]          |
+| EF-MNU-005 | toolbox  | 编辑 (metadata)         | toolbox form PUT                       | [x]          |
+| EF-MNU-006 | toolbox  | 导出                    | `GET /impex/export/toolbox/{id}`       | [x]          |
+| EF-MNU-007 | toolbox  | Card click → tools      | tools scene                            | [x]          |
+| EF-MNU-008 | mcp      | 查看                    | McpDetailDrawer                        | [x]          |
+| EF-MNU-009 | mcp      | 编辑                    | `PUT /mcp/{id}`                        | [x]          |
+| EF-MNU-010 | mcp      | 导出                    | `GET /impex/export/mcp/{id}`           | [x]          |
+| EF-MNU-011 | skill    | 查看                    | SkillDetailDrawer                      | [x]          |
+| EF-MNU-012 | skill    | 编辑 (metadata)         | skill edit route                       | [x]          |
+| EF-MNU-013 | skill    | 下载                    | `GET /skills/{id}/management/download` | [x]          |
+| EF-MNU-014 | skill    | 更新包                  | `PUT /skills/{id}/package`             | [x]          |
+| EF-MNU-015 | all      | Post-publish 授权       | componentsPermConfig                   | [~] 暂不实现 |
+| EF-MNU-016 | all      | Per-action dynamic auth | postResourceOperation                  | [~] 暂不实现 |
 
 ---
 
 ## Create / Import Flows
 
-| ID | Flow | Status |
-|----|------|--------|
-| EF-CRT-001 | Create operator modal | [x] |
-| EF-CRT-002 | Create toolbox modal → tools | [x] |
-| EF-CRT-003 | Create MCP drawer (custom + tool_imported) | [x] |
-| EF-CRT-004 | Import skill zip / skill.md | [x] |
-| EF-CRT-005 | ImportResourceModal (operator/toolbox/mcp impex) | [x] |
-| EF-CRT-006 | OpenAPI toolbox import distinct UX | [x] |
-| EF-CRT-007 | Import failure detail + template download | [x] |
-| EF-CRT-008 | Unified category on create (toolbox/mcp/skill/quick-api/import) | ✓ | CapabilityCategoryFields | [x] |
+| ID         | Flow                                                            | Status |
+| ---------- | --------------------------------------------------------------- | ------ |
+| EF-CRT-001 | Create operator modal                                           | [x]    |
+| EF-CRT-002 | Create toolbox modal → tools                                    | [x]    |
+| EF-CRT-003 | Create MCP drawer (custom + tool_imported)                      | [x]    |
+| EF-CRT-004 | Import skill zip / skill.md                                     | [x]    |
+| EF-CRT-005 | ImportResourceModal (operator/toolbox/mcp impex)                | [x]    |
+| EF-CRT-006 | OpenAPI toolbox import distinct UX                              | [x]    |
+| EF-CRT-007 | Import failure detail + template download                       | [x]    |
+| EF-CRT-008 | Unified category on create (toolbox/mcp/skill/quick-api/import) | ✓      | CapabilityCategoryFields | [x] |
 
 ---
 
 ## Detail / Edit Scenes
 
-| ID | Scene | Ref | Status |
-|----|-------|-----|--------|
-| EF-DTL-001 | Operator flow IDE / 编排 | OperatorFlowPanel | [~] 暂不实现 |
-| EF-DTL-002 | Operator run / logs | OperatorHistoryDrawer + debug | [x] |
-| EF-DTL-003 | Toolbox tools batch enable/disable/delete | ToolboxToolsScene | [x] |
-| EF-DTL-004 | Tool detail IDE route | ToolDetailScene | [x] |
-| EF-DTL-005 | MCP detail + proxy debug | McpDetailDrawer headers | [x] |
-| EF-DTL-006 | Skill edit metadata | SkillFormScene | [x] |
-| EF-DTL-007 | Skill history drawer | SkillHistoryDrawer | [x] |
+| ID         | Scene                                     | Ref                           | Status       |
+| ---------- | ----------------------------------------- | ----------------------------- | ------------ |
+| EF-DTL-001 | Operator flow IDE / 编排                  | OperatorFlowPanel             | [~] 暂不实现 |
+| EF-DTL-002 | Operator run / logs                       | OperatorHistoryDrawer + debug | [x]          |
+| EF-DTL-003 | Toolbox tools batch enable/disable/delete | ToolboxToolsScene             | [x]          |
+| EF-DTL-004 | Tool detail IDE route                     | ToolDetailScene               | [x]          |
+| EF-DTL-005 | MCP detail + proxy debug                  | McpDetailDrawer headers       | [x]          |
+| EF-DTL-006 | Skill edit metadata                       | SkillFormScene                | [x]          |
+| EF-DTL-007 | Skill history drawer                      | SkillHistoryDrawer            | [x]          |
 
 ---
 
 ## API Coverage (frontend services)
 
-| ID | Service | Missing / partial |
-|----|---------|-------------------|
-| EF-API-001 | impex.service | blob file download helper | [x] |
-| EF-API-002 | mcp.service | `updateMcp`, `getMcpDetail` | [x] |
-| EF-API-003 | skill.service | `downloadSkillPackage` | [x] |
-| EF-API-004 | operator.service | flow/run APIs | P1 |
-| EF-API-005 | permission | real perm config API | P2 |
+| ID         | Service          | Missing / partial           |
+| ---------- | ---------------- | --------------------------- |
+| EF-API-001 | impex.service    | blob file download helper   | [x] |
+| EF-API-002 | mcp.service      | `updateMcp`, `getMcpDetail` | [x] |
+| EF-API-003 | skill.service    | `downloadSkillPackage`      | [x] |
+| EF-API-004 | operator.service | flow/run APIs               | P1  |
+| EF-API-005 | permission       | real perm config API        | P2  |
 
 ---
 

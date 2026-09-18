@@ -33,8 +33,9 @@ describe("object-grant backend contract", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.grants?.filter((source) => source.operation === "view_detail"))
-      .toHaveLength(1);
+    expect(result[0]?.grants?.filter((source) => source.operation === "view_detail")).toHaveLength(
+      1,
+    );
   });
 
   it("replaces the mock professional-rule operation slice", async () => {
@@ -65,13 +66,15 @@ describe("object-grant backend contract", () => {
       accessor_id: "user-1",
       accessor_type: "role",
       denied_operations: ["modify"],
-      effective_decisions: [{
-        basis: "requires",
-        decision: "deny",
-        denied_requirement: "view_detail",
-        operation: "modify",
-        requires: ["view_detail"],
-      }],
+      effective_decisions: [
+        {
+          basis: "requires",
+          decision: "deny",
+          denied_requirement: "view_detail",
+          operation: "modify",
+          requires: ["view_detail"],
+        },
+      ],
       grants: [
         {
           active: true,
@@ -119,23 +122,27 @@ describe("object-grant backend contract", () => {
   it("treats a source without an active flag as active", () => {
     const result = mapObjectGrantEntry({
       accessor_id: "user-1",
-      grants: [{
-        accessor_id: "user-1",
-        authority_source: "admin_authz",
-        effect: "allow",
-        grant_id: "grant-without-active",
-        inherited: false,
-        operation: "view_detail",
-        policy_source: "professional_rule",
-      }],
+      grants: [
+        {
+          accessor_id: "user-1",
+          authority_source: "admin_authz",
+          effect: "allow",
+          grant_id: "grant-without-active",
+          inherited: false,
+          operation: "view_detail",
+          policy_source: "professional_rule",
+        },
+      ],
       operations: ["view_detail"],
       resource: { id: "catalog-1", type: "catalog" },
     });
 
-    expect(result.grants?.[0]).toEqual(expect.objectContaining({
-      active: true,
-      grantId: "grant-without-active",
-    }));
+    expect(result.grants?.[0]).toEqual(
+      expect.objectContaining({
+        active: true,
+        grantId: "grant-without-active",
+      }),
+    );
   });
 
   it("keeps grantee display fields returned by the object-scoped API", () => {

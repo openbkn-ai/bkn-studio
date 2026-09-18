@@ -34,9 +34,7 @@ type KnowledgeNetworkImportButtonProps = {
 type ImportPayload = Record<string, unknown>;
 type ImportSubmitAction = "create" | "import" | "overwrite";
 
-function isKnowledgeNetworkBindingPolicy(
-  value: unknown,
-): value is KnowledgeNetworkBindingPolicy {
+function isKnowledgeNetworkBindingPolicy(value: unknown): value is KnowledgeNetworkBindingPolicy {
   return value === "detach" || value === "preserve";
 }
 
@@ -47,8 +45,7 @@ export function KnowledgeNetworkImportButton({
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<{ identifier: string; name: string }>();
-  const [bindingPolicy, setBindingPolicy] =
-    useState<KnowledgeNetworkBindingPolicy>("preserve");
+  const [bindingPolicy, setBindingPolicy] = useState<KnowledgeNetworkBindingPolicy>("preserve");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const [submittingAction, setSubmittingAction] = useState<ImportSubmitAction | null>(null);
@@ -227,9 +224,7 @@ export function KnowledgeNetworkImportButton({
         {conflictMessage ? (
           <>
             <Alert description={conflictMessage} showIcon type="error" />
-            <Typography.Paragraph>
-              {t("knowledgeNetwork.importConflictTip")}
-            </Typography.Paragraph>
+            <Typography.Paragraph>{t("knowledgeNetwork.importConflictTip")}</Typography.Paragraph>
             <Form form={form} layout="vertical">
               <Form.Item
                 label={t("knowledgeNetwork.name")}

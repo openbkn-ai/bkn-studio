@@ -10,10 +10,7 @@ import { describe, expect, it } from "vitest";
 import { indexStateOf } from "@/modules/data-catalog/lib/index-state";
 import type { BuildTask } from "@/modules/data-catalog/types/data-catalog";
 
-function buildTask(
-  status: BuildTask["status"],
-  overrides: Partial<BuildTask> = {},
-): BuildTask {
+function buildTask(status: BuildTask["status"], overrides: Partial<BuildTask> = {}): BuildTask {
   return {
     primaryKeyFields: [],
     incrementalFields: [],

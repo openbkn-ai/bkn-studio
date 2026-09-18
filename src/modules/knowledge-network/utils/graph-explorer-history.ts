@@ -20,13 +20,21 @@ export type CanvasSnapshot = {
 export const UNDO_LIMIT = 30;
 
 /** Pushes a snapshot, dropping the oldest beyond the limit. Returns the new depth. */
-export function pushSnapshot(stack: CanvasSnapshot[], snapshot: CanvasSnapshot, limit = UNDO_LIMIT): number {
+export function pushSnapshot(
+  stack: CanvasSnapshot[],
+  snapshot: CanvasSnapshot,
+  limit = UNDO_LIMIT,
+): number {
   stack.push(snapshot);
   while (stack.length > limit) stack.shift();
   return stack.length;
 }
 
-export function takeSnapshot(nodes: Iterable<GNode>, edges: Iterable<GEdge>, positions: Record<string, NodePosition>): CanvasSnapshot {
+export function takeSnapshot(
+  nodes: Iterable<GNode>,
+  edges: Iterable<GEdge>,
+  positions: Record<string, NodePosition>,
+): CanvasSnapshot {
   const copied: Record<string, NodePosition> = {};
   for (const [id, position] of Object.entries(positions)) copied[id] = { ...position };
   return { nodes: [...nodes], edges: [...edges], positions: copied };
@@ -34,7 +42,17 @@ export function takeSnapshot(nodes: Iterable<GNode>, edges: Iterable<GEdge>, pos
 
 /* ============================ Call history ============================ */
 
-export type HistoryKind = "search" | "query" | "browse" | "locate" | "ids" | "expand" | "path" | "cypher" | "ai" | "explore";
+export type HistoryKind =
+  | "search"
+  | "query"
+  | "browse"
+  | "locate"
+  | "ids"
+  | "expand"
+  | "path"
+  | "cypher"
+  | "ai"
+  | "explore";
 
 export type HistoryEntry = {
   id: string;
@@ -51,7 +69,9 @@ export type HistoryEntry = {
   /** One-line result summary, e.g. "12 nodes · 4 edges". */
   summary: string;
   /** Data needed to run the same call again, when the entry supports it. */
-  rerun?: { kind: "expand"; id: string; direction: "forward" | "backward" | "bidirectional" } | { kind: "path" };
+  rerun?:
+    | { kind: "expand"; id: string; direction: "forward" | "backward" | "bidirectional" }
+    | { kind: "path" };
   /**
    * The subgraph this call produced, kept so it can be put on the canvas again later without
    * re-running the call — a result that was reviewed and dismissed, or one from before an undo.
@@ -71,7 +91,11 @@ export function newHistoryId(): string {
 }
 
 /** Adds an entry at the front, keeping the list bounded. */
-export function pushHistory(list: HistoryEntry[], entry: HistoryEntry, limit = HISTORY_LIMIT): HistoryEntry[] {
+export function pushHistory(
+  list: HistoryEntry[],
+  entry: HistoryEntry,
+  limit = HISTORY_LIMIT,
+): HistoryEntry[] {
   return [entry, ...list].slice(0, limit);
 }
 

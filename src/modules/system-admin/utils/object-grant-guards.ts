@@ -18,11 +18,7 @@ export const PUBLIC_ACCESSOR_ID = "00000000-0000-0000-0000-000000000000";
  */
 export function grantCreatorUserId(source: GrantRecord): string | undefined {
   const createdBy = source.createdBy?.trim();
-  if (
-    !createdBy ||
-    createdBy === source.authoritySource ||
-    createdBy.startsWith("system:")
-  ) {
+  if (!createdBy || createdBy === source.authoritySource || createdBy.startsWith("system:")) {
     return undefined;
   }
   return createdBy;
@@ -34,15 +30,19 @@ export function grantCreatorUserId(source: GrantRecord): string | undefined {
  * bkn-safe: direct role permissions always carry the protected role source.
  */
 export function isRoleGrantSubject(grant: ObjectGrant) {
-  return grant.accessorType === "role" ||
-    (grant.grants ?? []).some((source) => source.policySource === "role_permission");
+  return (
+    grant.accessorType === "role" ||
+    (grant.grants ?? []).some((source) => source.policySource === "role_permission")
+  );
 }
 
 /** Only real users may be resolved through the user-directory API. */
 export function isUserDirectorySubject(grant: ObjectGrant) {
-  return grant.accessorType !== "public" &&
+  return (
+    grant.accessorType !== "public" &&
     grant.accessorId !== PUBLIC_ACCESSOR_ID &&
-    !isRoleGrantSubject(grant);
+    !isRoleGrantSubject(grant)
+  );
 }
 
 /**
@@ -73,13 +73,14 @@ export function canManageGrantSource({
   isPlatformAuthzAdmin: boolean;
   source: GrantRecord;
 }) {
-  return isPlatformAuthzAdmin || (
-    Boolean(currentUserId) &&
-    source.createdBy === currentUserId &&
-    source.policySource === "professional_rule" &&
-    source.authoritySource === "owner_delegate" &&
-    source.effect === "allow" &&
-    source.operation !== "authorize"
+  return (
+    isPlatformAuthzAdmin ||
+    (Boolean(currentUserId) &&
+      source.createdBy === currentUserId &&
+      source.policySource === "professional_rule" &&
+      source.authoritySource === "owner_delegate" &&
+      source.effect === "allow" &&
+      source.operation !== "authorize")
   );
 }
 

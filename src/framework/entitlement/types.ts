@@ -12,12 +12,7 @@ import type { Edition } from "@/framework/entitlement/edition";
  * 社区能力照常全开,差别只在提示强度——license 不是「能不能开机」的开关。
  */
 export type LicenseState =
-  | "fallback_community"
-  | "grace"
-  | "invalid"
-  | "trial"
-  | "unlicensed"
-  | "valid";
+  "fallback_community" | "grace" | "invalid" | "trial" | "unlicensed" | "valid";
 
 /**
  * `GET /api/safe/v1/capabilities` 的前端视图。

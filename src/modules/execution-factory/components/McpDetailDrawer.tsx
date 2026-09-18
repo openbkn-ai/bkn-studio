@@ -25,7 +25,11 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { DetailMetaPanel } from "@/modules/execution-factory/components/DetailMetaPanel";
 import { ExecutionUnitDetailDrawerLayout } from "@/modules/execution-factory/components/execution-unit-detail/ExecutionUnitDetailDrawerLayout";
-import { getMcpDetail, getMcpMarket, listMcpTools } from "@/modules/execution-factory/services/mcp.service";
+import {
+  getMcpDetail,
+  getMcpMarket,
+  listMcpTools,
+} from "@/modules/execution-factory/services/mcp.service";
 import type { McpDetail, McpStatus } from "@/modules/execution-factory/types/mcp";
 import {
   formatOptionalTimestamp,
@@ -104,9 +108,7 @@ export function McpDetailDrawer({
       setToolCount(0);
 
       try {
-        const mcpRecord = marketMode
-          ? await getMcpMarket(mcpId)
-          : await getMcpDetail(mcpId);
+        const mcpRecord = marketMode ? await getMcpMarket(mcpId) : await getMcpDetail(mcpId);
         setRecord(mcpRecord);
 
         if (!marketMode) {

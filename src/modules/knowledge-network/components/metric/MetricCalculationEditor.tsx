@@ -39,12 +39,7 @@ import styles from "./MetricCalculationEditor.module.css";
 const HAVING_OPERATORS: MetricHavingOperator[] = [">", ">=", "<", "<=", "==", "!="];
 const EMPTY_FALLBACK_PROPERTIES: ObjectTypeDataProperty[] = [];
 
-const RANGE_POLICIES: MetricDefaultRangePolicy[] = [
-  "last_1h",
-  "last_24h",
-  "calendar_day",
-  "none",
-];
+const RANGE_POLICIES: MetricDefaultRangePolicy[] = ["last_1h", "last_24h", "calendar_day", "none"];
 
 type MetricCalculationEditorProps = {
   embedded?: boolean;
@@ -105,12 +100,11 @@ export function MetricCalculationEditor({
   const unit = Form.useWatch("unit", form) as MetricUnit | undefined;
   const groupBy = Form.useWatch(["calculationFormula", "groupBy"], form) as string[] | undefined;
   const analysisDimensions = Form.useWatch(["calculationFormula", "analysisDimensions"], form) as
-    | string[]
-    | undefined;
+    string[] | undefined;
   const canLoadDependencyProperties = objectTypes.some(
     (objectType) =>
-      objectType.id === objectTypeId
-      && hasKnowledgeNetworkRecordOperation(objectType, "view_detail"),
+      objectType.id === objectTypeId &&
+      hasKnowledgeNetworkRecordOperation(objectType, "view_detail"),
   );
 
   useEffect(() => {
@@ -221,10 +215,8 @@ export function MetricCalculationEditor({
 
     return getAvailableAggrOptionsForPropertyType(selectedProperty.type);
   }, [selectedProperty]);
-  const aggregationAggr = Form.useWatch(
-    ["calculationFormula", "aggregation", "aggr"],
-    form,
-  ) as MetricAggregationAggr | undefined;
+  const aggregationAggr = Form.useWatch(["calculationFormula", "aggregation", "aggr"], form) as
+    MetricAggregationAggr | undefined;
 
   useEffect(() => {
     if (!aggregationAggr || !selectedProperty) {
@@ -313,7 +305,9 @@ export function MetricCalculationEditor({
           <Form.Item
             label={t("knowledgeNetwork.metricAggregationAggr")}
             name={["calculationFormula", "aggregation", "aggr"]}
-            rules={[{ message: t("knowledgeNetwork.metricAggregationAggrRequired"), required: true }]}
+            rules={[
+              { message: t("knowledgeNetwork.metricAggregationAggrRequired"), required: true },
+            ]}
           >
             <Select
               disabled={!aggregationProperty}
@@ -366,10 +360,12 @@ export function MetricCalculationEditor({
               <Form.Item name={["calculationFormula", "orderBy", "direction"]} noStyle>
                 <Select
                   allowClear
-                  options={[
-                    { label: t("knowledgeNetwork.metricOrderAsc"), value: "asc" },
-                    { label: t("knowledgeNetwork.metricOrderDesc"), value: "desc" },
-                  ] satisfies Array<{ label: string; value: MetricOrderDirection }>}
+                  options={
+                    [
+                      { label: t("knowledgeNetwork.metricOrderAsc"), value: "asc" },
+                      { label: t("knowledgeNetwork.metricOrderDesc"), value: "desc" },
+                    ] satisfies Array<{ label: string; value: MetricOrderDirection }>
+                  }
                   placeholder={t("knowledgeNetwork.pleaseSelect")}
                 />
               </Form.Item>

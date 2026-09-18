@@ -113,9 +113,12 @@ export function ObjectTypeDetailLogicPropertyTrialInputModal({
                                 ? Promise.resolve()
                                 : Promise.reject(
                                     new Error(
-                                      t("knowledgeNetwork.objectTypeDetailLogicTrialInputRequired", {
-                                        name,
-                                      }),
+                                      t(
+                                        "knowledgeNetwork.objectTypeDetailLogicTrialInputRequired",
+                                        {
+                                          name,
+                                        },
+                                      ),
                                     ),
                                   ),
                           },
@@ -147,24 +150,30 @@ export function ObjectTypeDetailLogicPropertyTrialInputModal({
                                     ? Array.isArray(parsed)
                                     : Boolean(
                                         parsed &&
-                                          typeof parsed === "object" &&
-                                          !Array.isArray(parsed),
+                                        typeof parsed === "object" &&
+                                        !Array.isArray(parsed),
                                       );
                                 return valid
                                   ? Promise.resolve()
                                   : Promise.reject(
                                       new Error(
-                                        t("knowledgeNetwork.objectTypeDetailLogicTrialInputJsonInvalid", {
-                                          type,
-                                        }),
+                                        t(
+                                          "knowledgeNetwork.objectTypeDetailLogicTrialInputJsonInvalid",
+                                          {
+                                            type,
+                                          },
+                                        ),
                                       ),
                                     );
                               } catch {
                                 return Promise.reject(
                                   new Error(
-                                    t("knowledgeNetwork.objectTypeDetailLogicTrialInputJsonInvalid", {
-                                      type,
-                                    }),
+                                    t(
+                                      "knowledgeNetwork.objectTypeDetailLogicTrialInputJsonInvalid",
+                                      {
+                                        type,
+                                      },
+                                    ),
                                   ),
                                 );
                               }

@@ -178,15 +178,18 @@ export function LlmModelFormModal({
           }
           return;
         }
-        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
-          ? t("modelResources.models.duplicateConfigAlreadyDefault")
-          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
-            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
-            : "";
-        message.error(t("modelResources.models.duplicateConfigExists", {
-          name: existingModel.name,
-          permission: reasonMessage,
-        }));
+        const reasonMessage =
+          conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+            ? t("modelResources.models.duplicateConfigAlreadyDefault")
+            : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+              ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+              : "";
+        message.error(
+          t("modelResources.models.duplicateConfigExists", {
+            name: existingModel.name,
+            permission: reasonMessage,
+          }),
+        );
         return;
       }
       message.error(extractRequestErrorMessage(error));
@@ -248,7 +251,10 @@ export function LlmModelFormModal({
           name="modelSeries"
           rules={[{ required: true, message: t("modelResources.models.modal.required") }]}
         >
-          <Select options={modelSeriesOptions} placeholder={t("modelResources.models.modal.selectPlaceholder")} />
+          <Select
+            options={modelSeriesOptions}
+            placeholder={t("modelResources.models.modal.selectPlaceholder")}
+          />
         </Form.Item>
         <Form.Item
           label={t("modelResources.models.columns.modelType")}
@@ -359,7 +365,9 @@ export function LlmModelFormModal({
               <span>
                 {t("modelResources.models.modal.defaultModel")}
                 <Tooltip title={t("modelResources.models.modal.llmDefaultModelHint")}>
-                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
+                  <QuestionCircleOutlined
+                    style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }}
+                  />
                 </Tooltip>
               </span>
             }
@@ -394,7 +402,9 @@ export function LlmMonitorDrawer({
 }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<Awaited<ReturnType<typeof import("@/modules/model-resources/services/llm.service").getLlmModelMonitor>> | null>(null);
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof import("@/modules/model-resources/services/llm.service").getLlmModelMonitor>
+  > | null>(null);
 
   useEffect(() => {
     if (!open || !record) {
@@ -433,14 +443,18 @@ export function LlmMonitorDrawer({
       title={t("modelResources.models.monitor.title")}
       width={800}
     >
-      {loading ? <Spin /> : (
+      {loading ? (
+        <Spin />
+      ) : (
         sections.map((section) => {
           const points = data?.[section.key] ?? [];
 
           return (
             <div key={section.key} style={{ marginBottom: 24 }}>
               <h4 style={{ marginBottom: 4 }}>{section.title}</h4>
-              <p style={{ color: "var(--color-text-secondary)", marginBottom: 12 }}>{section.description}</p>
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: 12 }}>
+                {section.description}
+              </p>
               <div style={{ display: "grid", gap: 8 }}>
                 {points.length === 0 ? (
                   <span>--</span>

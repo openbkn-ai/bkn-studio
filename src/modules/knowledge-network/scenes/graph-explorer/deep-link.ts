@@ -6,7 +6,10 @@
  */
 
 import type { ExpandDirection } from "@/modules/knowledge-network/services/graph-explorer.service";
-import { LAYOUTS, type ExplorerLayout } from "@/modules/knowledge-network/utils/graph-explorer-cache";
+import {
+  LAYOUTS,
+  type ExplorerLayout,
+} from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 /**
  * Link contract of the explorer page, so a subgraph can be handed over as a URL:
@@ -51,12 +54,17 @@ const KEY_SEPARATOR = ",";
  * type is not in `objectTypeIds` are left alone in a plain `ids` list by the caller. Keys must
  * not contain a comma or a semicolon, the same constraint the plain list already carries.
  */
-export function packIds(ids: string[], objectTypeIds: string[]): { packed: string; plain: string[] } {
+export function packIds(
+  ids: string[],
+  objectTypeIds: string[],
+): { packed: string; plain: string[] } {
   const prefixes = [...objectTypeIds].sort((a, b) => b.length - a.length);
   const groups = new Map<string, string[]>();
   const plain: string[] = [];
   for (const id of ids) {
-    const prefix = prefixes.find((otId) => id.startsWith(`${otId}-`) && id.length > otId.length + 1);
+    const prefix = prefixes.find(
+      (otId) => id.startsWith(`${otId}-`) && id.length > otId.length + 1,
+    );
     const key = prefix ? id.slice(prefix.length + 1) : "";
     if (!prefix || key.includes(KEY_SEPARATOR) || key.includes(GROUP_SEPARATOR)) {
       plain.push(id);
@@ -64,7 +72,9 @@ export function packIds(ids: string[], objectTypeIds: string[]): { packed: strin
     }
     groups.set(prefix, [...(groups.get(prefix) ?? []), key]);
   }
-  const packed = [...groups].map(([otId, keys]) => `${otId}:${keys.join(KEY_SEPARATOR)}`).join(GROUP_SEPARATOR);
+  const packed = [...groups]
+    .map(([otId, keys]) => `${otId}:${keys.join(KEY_SEPARATOR)}`)
+    .join(GROUP_SEPARATOR);
   return { packed, plain };
 }
 
@@ -94,7 +104,7 @@ export function parseDeepLink(search: string): DeepLink | null {
   const ids = [...plain, ...unpackIds(params.get("g") ?? "")];
   const cypher = (params.get("cypher") ?? "").trim() || null;
   const expandRaw = (params.get("expand") ?? "").trim().toLowerCase();
-  const expand = expandRaw ? EXPAND_ALIASES[expandRaw] ?? null : null;
+  const expand = expandRaw ? (EXPAND_ALIASES[expandRaw] ?? null) : null;
   const layoutRaw = (params.get("layout") ?? "").trim().toLowerCase();
   const layout = (LAYOUTS as string[]).includes(layoutRaw) ? (layoutRaw as ExplorerLayout) : null;
   if (ids.length === 0 && !cypher) return null;

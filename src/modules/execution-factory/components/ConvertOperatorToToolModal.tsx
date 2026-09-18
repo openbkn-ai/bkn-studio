@@ -41,7 +41,11 @@ export function ConvertOperatorToToolModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const eligibleToolboxes = eligibleOperatorConversionTargets(record, toolboxes, runtimeConfig.currentUser.permissions);
+  const eligibleToolboxes = eligibleOperatorConversionTargets(
+    record,
+    toolboxes,
+    runtimeConfig.currentUser.permissions,
+  );
 
   useEffect(() => {
     if (!open || !record?.metadataType) {

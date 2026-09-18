@@ -68,17 +68,14 @@ export function createRuntimeConfig(runtimeInput: RuntimeInput = {}): RuntimeCon
     ...runtimeInput,
     locale,
     auth: {
-      tokenManager:
-        runtimeInput.auth?.tokenManager ?? defaultRuntimeConfig.auth.tokenManager,
+      tokenManager: runtimeInput.auth?.tokenManager ?? defaultRuntimeConfig.auth.tokenManager,
     },
     currentUser: {
       ...defaultRuntimeConfig.currentUser,
       ...runtimeInput.currentUser,
       permissions:
-        runtimeInput.currentUser?.permissions ??
-        defaultRuntimeConfig.currentUser.permissions,
-      roles:
-        runtimeInput.currentUser?.roles ?? defaultRuntimeConfig.currentUser.roles,
+        runtimeInput.currentUser?.permissions ?? defaultRuntimeConfig.currentUser.permissions,
+      roles: runtimeInput.currentUser?.roles ?? defaultRuntimeConfig.currentUser.roles,
     },
     router: {
       ...defaultRuntimeConfig.router,

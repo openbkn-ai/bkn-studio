@@ -74,7 +74,8 @@ describe("MCP client configuration", () => {
     const mcpUrl = "https://platform.example.com/api/agent-retrieval/v1/mcp";
     const options = { allowInsecureTls: true };
 
-    expect(createClaudeCodeMcpCommand(mcpUrl, apiKey, options)).toBe(`claude mcp add bkn-agent-retrieval \\
+    expect(createClaudeCodeMcpCommand(mcpUrl, apiKey, options))
+      .toBe(`claude mcp add bkn-agent-retrieval \\
   --scope user \\
   --env NODE_TLS_REJECT_UNAUTHORIZED=0 \\
   -- npx -y mcp-remote https://platform.example.com/api/agent-retrieval/v1/mcp/ \\
@@ -104,14 +105,16 @@ describe("MCP client configuration", () => {
   it("ignores the self-signed certificate option for HTTP", () => {
     const mcpUrl = "http://platform.example.com/api/agent-retrieval/v1/mcp";
 
-    expect(JSON.parse(createMcpRemoteJsonConfig(mcpUrl, apiKey, { allowInsecureTls: true }))).not.toHaveProperty(
-      "mcpServers.bkn-agent-retrieval.env",
-    );
+    expect(
+      JSON.parse(createMcpRemoteJsonConfig(mcpUrl, apiKey, { allowInsecureTls: true })),
+    ).not.toHaveProperty("mcpServers.bkn-agent-retrieval.env");
   });
 
   it("detects supported protocols and rejects unsupported URLs", () => {
     expect(getMcpConnectionProtocol("http://platform.example.com/mcp")).toBe("http");
     expect(getMcpConnectionProtocol("https://platform.example.com/mcp")).toBe("https");
-    expect(() => getMcpConnectionProtocol("ftp://platform.example.com/mcp")).toThrow("Unsupported MCP URL protocol");
+    expect(() => getMcpConnectionProtocol("ftp://platform.example.com/mcp")).toThrow(
+      "Unsupported MCP URL protocol",
+    );
   });
 });

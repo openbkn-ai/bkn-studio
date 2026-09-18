@@ -62,18 +62,13 @@ function cx(...parts: Array<string | false | undefined>) {
 
 type BuildTaskLaunchError = RequestErrorDetails;
 
-function formatEmbeddingModelDisplay(
-  modelId: string | null | undefined,
-  models: SmallModel[],
-) {
+function formatEmbeddingModelDisplay(modelId: string | null | undefined, models: SmallModel[]) {
   const rawModel = modelId?.trim();
   if (!rawModel) {
     return "-";
   }
 
-  const match = models.find(
-    (item) => item.modelId === rawModel || item.modelName === rawModel,
-  );
+  const match = models.find((item) => item.modelId === rawModel || item.modelName === rawModel);
   const name = match?.modelName || rawModel;
   return match?.embeddingDim ? `${name} - ${match.embeddingDim}d` : name;
 }
@@ -105,7 +100,10 @@ export function BuildTaskLaunchPanel({
   const hasResourceConfig = hasPersistedBuildFeatures(resource);
   const batchNeedsKeyFields =
     mode === "batch" && (primaryKeyFields.length === 0 || incrementalFields.length === 0);
-  const excludedFields = useMemo(() => excludedBuildSchemaFields(resource.schema), [resource.schema]);
+  const excludedFields = useMemo(
+    () => excludedBuildSchemaFields(resource.schema),
+    [resource.schema],
+  );
   const invalidConfiguredKeyFields = useMemo(
     () => [
       ...invalidKeyFields(resource.schema, primaryKeyFields, isPrimaryKeyField),
@@ -113,11 +111,12 @@ export function BuildTaskLaunchPanel({
     ],
     [incrementalFields, primaryKeyFields, resource.schema],
   );
-  const analyzerLabel = config.fulltextFields.length > 0 && config.fulltextAnalyzer
-    ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
-        defaultValue: config.fulltextAnalyzer,
-      })
-    : "-";
+  const analyzerLabel =
+    config.fulltextFields.length > 0 && config.fulltextAnalyzer
+      ? t(`dataCatalog.build.analyzers.${config.fulltextAnalyzer}`, {
+          defaultValue: config.fulltextAnalyzer,
+        })
+      : "-";
   const modelLabel =
     config.embeddingFields.length > 0
       ? formatEmbeddingModelDisplay(config.embeddingModel, models)
@@ -162,13 +161,16 @@ export function BuildTaskLaunchPanel({
     setExecuteType("full");
     setError(null);
     setActiveTaskLookup({ resourceId: resource.id, status: "loading", task: null });
-    void listBuildTaskPage({
-      direction: "desc",
-      limit: 1,
-      resourceId: resource.id,
-      sort: "create_time",
-      statuses: ["pending", "running", "stopping"],
-    }, { skipErrorToast: true })
+    void listBuildTaskPage(
+      {
+        direction: "desc",
+        limit: 1,
+        resourceId: resource.id,
+        sort: "create_time",
+        statuses: ["pending", "running", "stopping"],
+      },
+      { skipErrorToast: true },
+    )
       .then((result) => {
         if (current) {
           setActiveTaskLookup({
@@ -192,11 +194,12 @@ export function BuildTaskLaunchPanel({
   const existingActive = lookupCurrent ? activeTaskLookup.task : null;
   const taskStatusReady = lookupCurrent && activeTaskLookup.status === "ready";
   const actionsLocked = isActiveBuildTask(existingActive);
-  const streamingActive =
-    existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
+  const streamingActive = existingActive?.mode === "streaming" && isActiveBuildTask(existingActive);
   const controlsDisabled = disabled || !taskStatusReady || actionsLocked;
   const startDisabled =
-    controlsDisabled || !hasResourceConfig || batchNeedsKeyFields ||
+    controlsDisabled ||
+    !hasResourceConfig ||
+    batchNeedsKeyFields ||
     invalidConfiguredKeyFields.length > 0;
 
   const createTask = async () => {
@@ -225,7 +228,11 @@ export function BuildTaskLaunchPanel({
   const startBuild = () => {
     if (disabled || !taskStatusReady) return;
     if (invalidConfiguredKeyFields.length > 0) {
-      setError({ description: t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") }) });
+      setError({
+        description: t("dataCatalog.build.invalidKeyFields", {
+          fields: invalidConfiguredKeyFields.join(", "),
+        }),
+      });
       return;
     }
     if (!hasResourceConfig) {
@@ -247,14 +254,25 @@ export function BuildTaskLaunchPanel({
 
     void modal.confirm({
       cancelText: t("common.cancel"),
-      content: excludedFields.length > 0
-        ? t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
-          fields: excludedFields.map((field) => field.originalType ? `${field.name} (${field.originalType})` : field.name).join(", "),
-        })
-        : t("dataCatalog.build.startBuildConfirmContent"),
-      okText: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmOk") : t("dataCatalog.build.startBuild"),
+      content:
+        excludedFields.length > 0
+          ? t("dataCatalog.build.excludedSchemaFieldsConfirmContent", {
+              fields: excludedFields
+                .map((field) =>
+                  field.originalType ? `${field.name} (${field.originalType})` : field.name,
+                )
+                .join(", "),
+            })
+          : t("dataCatalog.build.startBuildConfirmContent"),
+      okText:
+        excludedFields.length > 0
+          ? t("dataCatalog.build.excludedSchemaFieldsConfirmOk")
+          : t("dataCatalog.build.startBuild"),
       onOk: createTask,
-      title: excludedFields.length > 0 ? t("dataCatalog.build.excludedSchemaFieldsConfirmTitle") : t("dataCatalog.build.startBuildConfirmTitle"),
+      title:
+        excludedFields.length > 0
+          ? t("dataCatalog.build.excludedSchemaFieldsConfirmTitle")
+          : t("dataCatalog.build.startBuildConfirmTitle"),
     });
   };
 
@@ -298,7 +316,9 @@ export function BuildTaskLaunchPanel({
 
       {excludedFields.length > 0 ? (
         <Alert
-          message={t("dataCatalog.build.excludedSchemaFieldsHint", { fields: excludedFields.map((field) => field.name).join(", ") })}
+          message={t("dataCatalog.build.excludedSchemaFieldsHint", {
+            fields: excludedFields.map((field) => field.name).join(", "),
+          })}
           showIcon
           type="warning"
         />
@@ -310,7 +330,9 @@ export function BuildTaskLaunchPanel({
               {t("dataCatalog.indexWorkspace.viewConfig")}
             </AppButton>
           }
-          message={t("dataCatalog.build.invalidKeyFields", { fields: invalidConfiguredKeyFields.join(", ") })}
+          message={t("dataCatalog.build.invalidKeyFields", {
+            fields: invalidConfiguredKeyFields.join(", "),
+          })}
           showIcon
           type="warning"
         />
@@ -323,7 +345,11 @@ export function BuildTaskLaunchPanel({
         <Alert message={t("dataCatalog.build.activeTaskLocked")} showIcon type="warning" />
       ) : null}
       {lookupCurrent && activeTaskLookup.status === "error" && !disabled ? (
-        <Alert message={t("dataCatalog.resourceWorkspace.taskStatusUnavailable")} showIcon type="warning" />
+        <Alert
+          message={t("dataCatalog.resourceWorkspace.taskStatusUnavailable")}
+          showIcon
+          type="warning"
+        />
       ) : null}
       {hasResourceConfig && batchNeedsKeyFields ? (
         <Alert
@@ -355,12 +381,7 @@ export function BuildTaskLaunchPanel({
       <div className={formStyles.launchModePanel}>
         <div className={formStyles.launchModeHead}>{t("dataCatalog.build.mode")}</div>
         <div className={formStyles.launchModeGrid}>
-          <div
-            className={cx(
-              formStyles.modeCard,
-              mode === "batch" && formStyles.modeCardActive,
-            )}
-          >
+          <div className={cx(formStyles.modeCard, mode === "batch" && formStyles.modeCardActive)}>
             <button
               className={formStyles.modeCardHeader}
               disabled={controlsDisabled}

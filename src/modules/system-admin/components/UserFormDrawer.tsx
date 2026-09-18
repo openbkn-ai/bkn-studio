@@ -65,7 +65,10 @@ type DeptTreeNode = {
   children?: DeptTreeNode[];
 };
 
-function buildDeptTreeData(departments: AdminDepartment[], parentId: string | null): DeptTreeNode[] {
+function buildDeptTreeData(
+  departments: AdminDepartment[],
+  parentId: string | null,
+): DeptTreeNode[] {
   return departments
     .filter((dept) => dept.parentId === parentId)
     .map((dept) => ({
@@ -97,13 +100,7 @@ function FormSection({
   );
 }
 
-export function UserFormDrawer({
-  departments,
-  onClose,
-  onSaved,
-  open,
-  user,
-}: UserFormDrawerProps) {
+export function UserFormDrawer({ departments, onClose, onSaved, open, user }: UserFormDrawerProps) {
   const { t, i18n } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<UserFormValues>();
@@ -275,7 +272,12 @@ export function UserFormDrawer({
             </div>
           ) : null}
 
-          <Form className={drawerStyles.formStack} form={form} layout="vertical" requiredMark={false}>
+          <Form
+            className={drawerStyles.formStack}
+            form={form}
+            layout="vertical"
+            requiredMark={false}
+          >
             <FormSection
               description={t("systemAdmin.users.drawer.sectionBasicDesc")}
               title={t("systemAdmin.users.drawer.sectionBasic")}

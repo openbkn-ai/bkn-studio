@@ -74,10 +74,7 @@ describe("buildSkillFileTree", () => {
   });
 
   it("collects expandable directory keys with optional depth limit", () => {
-    const tree = buildSkillFileTree([
-      { relPath: "a/b/c.txt" },
-      { relPath: "root.txt" },
-    ]);
+    const tree = buildSkillFileTree([{ relPath: "a/b/c.txt" }, { relPath: "root.txt" }]);
 
     expect(collectSkillFileTreeKeys(tree)).toEqual(["a/", "a/b/"]);
     expect(collectSkillFileTreeKeys(tree, { maxDepth: 1 })).toEqual(["a/"]);

@@ -20,14 +20,7 @@ const hashHeader = `# Copyright (c) 2026 OpenBKN\n# SPDX-License-Identifier: Lic
 
 const htmlHeader = `<!--\n  Copyright (c) 2026 OpenBKN\n  SPDX-License-Identifier: LicenseRef-OpenBKN\n  Licensed under the OpenBKN License, a modified Apache 2.0 with Additional\n  Conditions. See LICENSE for the full text.\n-->\n`;
 
-const roots = [
-  ".github",
-  "deploy",
-  "public",
-  "scripts",
-  "src",
-  "tests/e2e",
-];
+const roots = [".github", "deploy", "public", "scripts", "src", "tests/e2e"];
 
 const rootFiles = [
   "Dockerfile",
@@ -138,7 +131,12 @@ function addHeader(filePath, content) {
     return `${htmlHeader}${content}`;
   }
 
-  if (extension === ".sh" || extension === ".ps1" || extension === ".yaml" || extension === ".yml") {
+  if (
+    extension === ".sh" ||
+    extension === ".ps1" ||
+    extension === ".yaml" ||
+    extension === ".yml"
+  ) {
     if (content.startsWith("#!")) {
       return insertAfterFirstLine(content, hashHeader);
     }
@@ -179,7 +177,9 @@ if (missing.length > 0) {
   }
 
   if (!fix) {
-    console.error("\nRun `node scripts/check-license-headers.mjs --fix` to add headers automatically.");
+    console.error(
+      "\nRun `node scripts/check-license-headers.mjs --fix` to add headers automatically.",
+    );
     process.exit(1);
   }
 }

@@ -7,10 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  consoleNavigation,
-  filterNavByPermission,
-} from "@/app/shell/console-navigation";
+import { consoleNavigation, filterNavByPermission } from "@/app/shell/console-navigation";
 import { systemAdminPermissions } from "@/modules/system-admin/permissions";
 
 const keys = (items: { key: string }[]) => items.map((item) => item.key);
@@ -65,9 +62,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
   });
 
   it("仅持有 admin-audit:view → 系统管理只包含原有管理审计日志", () => {
-    const group = systemGroup(
-      filterNavByPermission(consoleNavigation, ["admin-audit:view"]),
-    );
+    const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-audit:view"]));
     expect(group).toBeDefined();
     expect(keys(group!.children ?? [])).toEqual(["log-management"]);
   });
@@ -139,11 +134,7 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
 
   it("可观测性设置仅对超级管理员显示", () => {
     const regular = filterNavByPermission(consoleNavigation, []);
-    const superAdmin = filterNavByPermission(
-      consoleNavigation,
-      [],
-      true,
-    );
+    const superAdmin = filterNavByPermission(consoleNavigation, [], true);
     const observabilityChildren = (items: ReturnType<typeof filterNavByPermission>) =>
       items.find((item) => item.key === "observability")?.children ?? [];
 

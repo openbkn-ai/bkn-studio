@@ -7,8 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-export const OSS_MOCK_HOST_URL =
-  process.env.E2E_OSS_MOCK_URL ?? "http://127.0.0.1:8080";
+export const OSS_MOCK_HOST_URL = process.env.E2E_OSS_MOCK_URL ?? "http://127.0.0.1:8080";
 export const OSS_MOCK_DOCKER_URL = "http://ef-oss-mock:8080";
 
 export function buildOfflineWeatherApiUrl() {

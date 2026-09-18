@@ -118,7 +118,9 @@ test.describe("Execution Factory — Version & status E2E flows", () => {
 
     const history = await listOperatorHistoryViaApi(request, operator.operatorId);
     expect(history.length).toBeGreaterThan(0);
-    expect(history.some((item: { version?: string }) => item.version === refreshed.version)).toBeTruthy();
+    expect(
+      history.some((item: { version?: string }) => item.version === refreshed.version),
+    ).toBeTruthy();
   });
 
   test("VER-02: operator edit and republish adds history entries", async ({ request }) => {
@@ -177,12 +179,7 @@ test.describe("Execution Factory — Version & status E2E flows", () => {
     await offlineToolboxViaApi(request, toolbox.boxId);
 
     const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("status_tool"));
-    const mcp = await createToolImportedMcpViaApi(
-      request,
-      buildMcpName("status"),
-      toolbox,
-      tool,
-    );
+    const mcp = await createToolImportedMcpViaApi(request, buildMcpName("status"), toolbox, tool);
     createdMcpIds.push(mcp.mcpId);
     await publishMcpViaApi(request, mcp.mcpId);
     await offlineMcpViaApi(request, mcp.mcpId);

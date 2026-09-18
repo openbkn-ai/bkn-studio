@@ -78,21 +78,21 @@ function mapCatalogToolsFromRecords(
     | undefined,
 ): ActionTypeCatalogTool[] {
   return (tools ?? []).reduce<ActionTypeCatalogTool[]>((result, tool) => {
-      const toolId = tool.toolId || tool.name;
-      const toolName = tool.name || tool.toolId;
-      if (!toolId || !toolName) {
-        return result;
-      }
-
-      result.push({
-        description: tool.description ?? tool.useRule,
-        parameters: [],
-        toolId,
-        toolName,
-      });
-
+    const toolId = tool.toolId || tool.name;
+    const toolName = tool.name || tool.toolId;
+    if (!toolId || !toolName) {
       return result;
-    }, []);
+    }
+
+    result.push({
+      description: tool.description ?? tool.useRule,
+      parameters: [],
+      toolId,
+      toolName,
+    });
+
+    return result;
+  }, []);
 }
 
 export type ActionTypeCatalogTool = {
@@ -164,7 +164,9 @@ function filterCatalogByKeyword(
       .map((box) => {
         const boxMatched = matches([box.boxName, box.description]);
         const tools = box.tools.filter((tool) =>
-          boxMatched ? true : matches([tool.toolName, tool.description, box.boxName, box.description]),
+          boxMatched
+            ? true
+            : matches([tool.toolName, tool.description, box.boxName, box.description]),
         );
         return boxMatched || tools.length > 0 ? { ...box, tools } : null;
       })
@@ -182,9 +184,7 @@ function filterCatalogByToolboxMetadataType(
 
   return {
     ...catalog,
-    toolBoxes: catalog.toolBoxes.filter(
-      (toolbox) => toolbox.metadataType === toolboxMetadataType,
-    ),
+    toolBoxes: catalog.toolBoxes.filter((toolbox) => toolbox.metadataType === toolboxMetadataType),
   };
 }
 
@@ -225,30 +225,29 @@ async function searchMarketToolBoxes(keyword: string): Promise<ActionTypeToolBox
     },
   );
 
-  return (response.data.data ?? [])
-    .reduce<ActionTypeToolBox[]>((result, box) => {
-      if (!box.box_id || !box.box_name) {
-        return result;
-      }
-
-      const tools = (box.tools ?? [])
-        .filter((tool) => tool.tool_id)
-        .map((tool) => ({
-          description: tool.description,
-          parameters: [],
-          toolId: tool.tool_id!,
-          toolName: tool.name ?? tool.tool_id!,
-        }));
-
-      result.push({
-        boxId: box.box_id,
-        boxName: box.box_name,
-        description: box.box_desc,
-        tools,
-      });
-
+  return (response.data.data ?? []).reduce<ActionTypeToolBox[]>((result, box) => {
+    if (!box.box_id || !box.box_name) {
       return result;
-    }, []);
+    }
+
+    const tools = (box.tools ?? [])
+      .filter((tool) => tool.tool_id)
+      .map((tool) => ({
+        description: tool.description,
+        parameters: [],
+        toolId: tool.tool_id!,
+        toolName: tool.name ?? tool.tool_id!,
+      }));
+
+    result.push({
+      boxId: box.box_id,
+      boxName: box.box_name,
+      description: box.box_desc,
+      tools,
+    });
+
+    return result;
+  }, []);
 }
 
 async function fetchAgentOperatorCatalog(
@@ -334,9 +333,7 @@ async function fetchAgentOperatorCatalog(
 }
 
 function getMockToolBoxTools(boxId: string) {
-  return (
-    MOCK_EXECUTION_FACTORY_CATALOG.toolBoxes.find((item) => item.boxId === boxId)?.tools ?? []
-  );
+  return MOCK_EXECUTION_FACTORY_CATALOG.toolBoxes.find((item) => item.boxId === boxId)?.tools ?? [];
 }
 
 function getMockMcpServerTools(mcpId: string) {
@@ -345,9 +342,7 @@ function getMockMcpServerTools(mcpId: string) {
   );
 }
 
-export async function loadActionTypeToolBoxTools(
-  boxId: string,
-): Promise<ActionTypeCatalogTool[]> {
+export async function loadActionTypeToolBoxTools(boxId: string): Promise<ActionTypeCatalogTool[]> {
   if (useMock) {
     return getMockToolBoxTools(boxId);
   }
@@ -511,8 +506,7 @@ async function fetchMcpToolInputSchema(
             .sort((left, right) => left.localeCompare(right))
             .map((childName) => {
               const child = property.properties?.[childName] as
-                | { description?: string; type?: string }
-                | undefined;
+                { description?: string; type?: string } | undefined;
 
               return {
                 name: childName,
@@ -609,13 +603,13 @@ export function needsActionTypeActionSourceDisplayResolution(
   if (actionSource.type === "mcp") {
     return Boolean(
       actionSource.mcpId &&
-        (!actionSource.mcpName || (actionSource.toolId && !actionSource.toolName)),
+      (!actionSource.mcpName || (actionSource.toolId && !actionSource.toolName)),
     );
   }
 
   return Boolean(
     actionSource.boxId &&
-      (!actionSource.boxName || (actionSource.toolId && !actionSource.toolName)),
+    (!actionSource.boxName || (actionSource.toolId && !actionSource.toolName)),
   );
 }
 
@@ -707,9 +701,7 @@ export async function resolveActionTypeActionSourceDisplay(
       } else {
         logServiceFallback(
           "resolveActionTypeActionSourceDisplay.tool.detail",
-          toolResult.status === "rejected"
-            ? toolResult.reason
-            : new Error("Tool detail is empty"),
+          toolResult.status === "rejected" ? toolResult.reason : new Error("Tool detail is empty"),
           `boxId=${actionSource.boxId} toolId=${actionSource.toolId ?? ""}`,
         );
       }

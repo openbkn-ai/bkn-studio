@@ -51,9 +51,6 @@ export function isCapabilityAvailable(
  * 只有「装了没买」才是。没装(换镜像才能解决)出升级引导会让客户买了证书发现还是用不了;
  * unknown 出升级引导会对着社区部署推销。两种都是把商务信息放错地方。
  */
-export function shouldOfferUpgrade(
-  capability: string,
-  snapshot: EntitlementView | null,
-): boolean {
+export function shouldOfferUpgrade(capability: string, snapshot: EntitlementView | null): boolean {
   return capabilityState(capability, snapshot) === "not-licensed";
 }

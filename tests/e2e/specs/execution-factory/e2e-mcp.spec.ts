@@ -86,12 +86,7 @@ test.describe("Execution Factory — MCP E2E flows", () => {
     createdBoxIds.push(toolbox.boxId);
     const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("mcp_pub_tool"));
 
-    const mcp = await createToolImportedMcpViaApi(
-      request,
-      buildMcpName("publish"),
-      toolbox,
-      tool,
-    );
+    const mcp = await createToolImportedMcpViaApi(request, buildMcpName("publish"), toolbox, tool);
     createdMcpIds.push(mcp.mcpId);
 
     await publishMcpViaApi(request, mcp.mcpId);
@@ -99,9 +94,7 @@ test.describe("Execution Factory — MCP E2E flows", () => {
     const market = await request.get(apiUrl("/mcp/market/list?page=1&page_size=20"));
     expect(market.ok()).toBeTruthy();
     const body = (await market.json()) as { data?: Array<{ mcp_id: string | number }> };
-    expect(
-      body.data?.some((item) => String(item.mcp_id) === mcp.mcpId),
-    ).toBeTruthy();
+    expect(body.data?.some((item) => String(item.mcp_id) === mcp.mcpId)).toBeTruthy();
   });
 
   test("MCP-03: impex export then import copy", async ({ request }) => {
@@ -109,12 +102,7 @@ test.describe("Execution Factory — MCP E2E flows", () => {
     createdBoxIds.push(toolbox.boxId);
     const tool = await createToolViaApi(request, toolbox.boxId, buildToolboxName("mcp_impex_tool"));
 
-    const mcp = await createToolImportedMcpViaApi(
-      request,
-      buildMcpName("impex"),
-      toolbox,
-      tool,
-    );
+    const mcp = await createToolImportedMcpViaApi(request, buildMcpName("impex"), toolbox, tool);
     createdMcpIds.push(mcp.mcpId);
 
     const exported = await exportMcpViaApi(request, mcp.mcpId);

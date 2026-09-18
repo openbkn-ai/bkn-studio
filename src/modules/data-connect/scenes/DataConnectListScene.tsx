@@ -30,12 +30,12 @@ import {
   setDataConnectRecordEnabled,
   testDataConnectRecord,
 } from "@/modules/data-connect/services/data-connect.service";
-import type { DataConnectConnectorType, DataConnectRecord } from "@/modules/data-connect/types/data-connect";
+import type {
+  DataConnectConnectorType,
+  DataConnectRecord,
+} from "@/modules/data-connect/types/data-connect";
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
-import {
-  DeleteImpactAlert,
-  useDangerDelete,
-} from "@/framework/safety/DangerDeleteModal";
+import { DeleteImpactAlert, useDangerDelete } from "@/framework/safety/DangerDeleteModal";
 import {
   previewCatalogDeletion,
   hasCatalogOperation,
@@ -89,12 +89,8 @@ function CatalogDeletionImpactDetails({
             health: impact.catalogHealthCheckSchedules,
           })}
         </li>
-        <li>
-          {t("dataConnect.dangerDelete.buildTasks", impact.buildTasks)}
-        </li>
-        <li>
-          {t("dataConnect.dangerDelete.discoverTasks", impact.discoverTasks)}
-        </li>
+        <li>{t("dataConnect.dangerDelete.buildTasks", impact.buildTasks)}</li>
+        <li>{t("dataConnect.dangerDelete.discoverTasks", impact.discoverTasks)}</li>
         <li>
           {t(
             "dataConnect.dangerDelete.semanticUnderstandingTasks",
@@ -123,7 +119,8 @@ export function DataConnectListScene({
   const [connectorTypes, setConnectorTypes] = useState<DataConnectConnectorType[]>([]);
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>();
   const [selectedEnabled, setSelectedEnabled] = useState<boolean>();
-  const [selectedHealthStatus, setSelectedHealthStatus] = useState<DataConnectRecord["healthStatus"]>();
+  const [selectedHealthStatus, setSelectedHealthStatus] =
+    useState<DataConnectRecord["healthStatus"]>();
   const [items, setItems] = useState<DataConnectRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -154,7 +151,14 @@ export function DataConnectListScene({
       enabled: selectedEnabled,
       healthStatus: selectedHealthStatus,
     }),
-    [debouncedKeyword, query.page, query.pageSize, selectedConnectorType, selectedEnabled, selectedHealthStatus],
+    [
+      debouncedKeyword,
+      query.page,
+      query.pageSize,
+      selectedConnectorType,
+      selectedEnabled,
+      selectedHealthStatus,
+    ],
   );
 
   const connectorTypeMap = useMemo(
@@ -203,193 +207,208 @@ export function DataConnectListScene({
     };
   }, [loadData, refreshVersion]);
 
-  const openDetail = useCallback((record: DataConnectRecord) => {
-    onOpenDetail?.(record.id);
-    setDetailRecordId(record.id);
-  }, [onOpenDetail]);
+  const openDetail = useCallback(
+    (record: DataConnectRecord) => {
+      onOpenDetail?.(record.id);
+      setDetailRecordId(record.id);
+    },
+    [onOpenDetail],
+  );
 
-  const openDiscovers = useCallback((record: DataConnectRecord) => {
-    if (onOpenDiscovers) {
-      onOpenDiscovers(record.id);
-      return;
-    }
-    void navigate(`/data-connect/${record.id}/discover`);
-  }, [navigate, onOpenDiscovers]);
-
-  const openEdit = useCallback((record: DataConnectRecord) => {
-    if (onEdit) {
-      onEdit(record.id);
-      return;
-    }
-    void navigate(`/data-connect/${record.id}/edit`);
-  }, [navigate, onEdit]);
-
-  const testConnection = useCallback((record: DataConnectRecord) => {
-    void (async () => {
-      try {
-        await testDataConnectRecord(record.id);
-        message.success(t("dataConnect.testConnectionSuccess"));
-      } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
-      } finally {
-        setRefreshVersion((version) => version + 1);
+  const openDiscovers = useCallback(
+    (record: DataConnectRecord) => {
+      if (onOpenDiscovers) {
+        onOpenDiscovers(record.id);
+        return;
       }
-    })();
-  }, [message, t]);
+      void navigate(`/data-connect/${record.id}/discover`);
+    },
+    [navigate, onOpenDiscovers],
+  );
 
-  const toggleEnabled = useCallback((record: DataConnectRecord) => {
-    const nextEnabled = !record.enabled;
-    void modal.confirm({
-      title: nextEnabled
-        ? t("dataConnect.enableConfirmTitle")
-        : t("dataConnect.disableConfirmTitle"),
-      content: nextEnabled
-        ? t("dataConnect.enableConfirmDescription", { name: record.name })
-        : t("dataConnect.disableConfirmDescription", { name: record.name }),
-      okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
-      cancelText: t("common.cancel"),
-      okButtonProps: nextEnabled ? undefined : { danger: true },
-      onOk: async () => {
+  const openEdit = useCallback(
+    (record: DataConnectRecord) => {
+      if (onEdit) {
+        onEdit(record.id);
+        return;
+      }
+      void navigate(`/data-connect/${record.id}/edit`);
+    },
+    [navigate, onEdit],
+  );
+
+  const testConnection = useCallback(
+    (record: DataConnectRecord) => {
+      void (async () => {
         try {
-          await setDataConnectRecordEnabled(record.id, nextEnabled);
-          message.success(t("common.success"));
-          await loadData();
+          await testDataConnectRecord(record.id);
+          message.success(t("dataConnect.testConnectionSuccess"));
         } catch (error) {
           void message.error(extractRequestErrorMessage(error));
-          throw error;
+        } finally {
+          setRefreshVersion((version) => version + 1);
         }
-      },
-    });
-  }, [loadData, message, modal, t]);
+      })();
+    },
+    [message, t],
+  );
 
-  const deleteRecord = useCallback((record: DataConnectRecord) => {
-    void (async () => {
-      let impact: CatalogDeletionImpact;
-      try {
-        impact = await previewCatalogDeletion(record.id);
-      } catch (error) {
-        void message.error(extractRequestErrorMessage(error));
-        return;
-      }
-
-      const details = <CatalogDeletionImpactDetails impact={impact} name={record.name} />;
-      if (!impact.canDelete) {
-        void modal.warning({
-          content: (
-            <DeleteImpactAlert
-              detail={details}
-              warning={t("dataConnect.dangerDelete.blockedWarning")}
-            />
-          ),
-          okText: t("common.confirm"),
-          title: t("dataConnect.dangerDelete.blockedTitle"),
-        });
-        return;
-      }
-
-      const highRisk = hasCascadeImpact(impact);
-      danger.open({
-        title: t("dataConnect.deleteConfirmTitle"),
-        targetName: record.name,
-        requireTypeName: highRisk,
-        impact: (
-          <DeleteImpactAlert
-            detail={
-              highRisk ? details : t("dataConnect.dangerDelete.catalogEmpty", { name: record.name })
-            }
-            warning={highRisk ? t("dataConnect.dangerDelete.impactWarning") : undefined}
-          />
-        ),
+  const toggleEnabled = useCallback(
+    (record: DataConnectRecord) => {
+      const nextEnabled = !record.enabled;
+      void modal.confirm({
+        title: nextEnabled
+          ? t("dataConnect.enableConfirmTitle")
+          : t("dataConnect.disableConfirmTitle"),
+        content: nextEnabled
+          ? t("dataConnect.enableConfirmDescription", { name: record.name })
+          : t("dataConnect.disableConfirmDescription", { name: record.name }),
+        okText: nextEnabled ? t("common.enabled") : t("common.disabled"),
+        cancelText: t("common.cancel"),
+        okButtonProps: nextEnabled ? undefined : { danger: true },
         onOk: async () => {
           try {
-            await deleteDataConnectRecord(record.id);
+            await setDataConnectRecordEnabled(record.id, nextEnabled);
+            message.success(t("common.success"));
+            await loadData();
           } catch (error) {
             void message.error(extractRequestErrorMessage(error));
             throw error;
           }
-          void message.success(t("common.success"));
-          await loadData();
         },
       });
-    })();
-  }, [danger, loadData, message, modal, t]);
+    },
+    [loadData, message, modal, t],
+  );
 
-  const buildActionMoreMenu = useCallback((record: DataConnectRecord): MenuProps => {
-    const items: NonNullable<MenuProps["items"]> = [];
+  const deleteRecord = useCallback(
+    (record: DataConnectRecord) => {
+      void (async () => {
+        let impact: CatalogDeletionImpact;
+        try {
+          impact = await previewCatalogDeletion(record.id);
+        } catch (error) {
+          void message.error(extractRequestErrorMessage(error));
+          return;
+        }
 
-    if (!isCatalogSummaryOnly(record)) {
-      items.push({
-        key: "detail",
-        label: t("common.detail"),
-      });
-    }
+        const details = <CatalogDeletionImpactDetails impact={impact} name={record.name} />;
+        if (!impact.canDelete) {
+          void modal.warning({
+            content: (
+              <DeleteImpactAlert
+                detail={details}
+                warning={t("dataConnect.dangerDelete.blockedWarning")}
+              />
+            ),
+            okText: t("common.confirm"),
+            title: t("dataConnect.dangerDelete.blockedTitle"),
+          });
+          return;
+        }
 
-    if (hasCatalogOperation(record, "task_manage")) {
-      items.push({
-        key: "discover",
-        label: t("dataConnect.discoverManage"),
-      });
-    }
-    if (hasCatalogOperation(record, "modify")) {
-      items.push({
-        key: "edit",
-        label: t("common.edit"),
-      });
-      items.push({
-        key: "test",
-        label: t("common.testConnection"),
-      });
-      items.push({
-        key: "toggle",
-        label: record.enabled ? t("common.disabled") : t("common.enabled"),
-      });
-    }
-    if (hasCatalogOperation(record, "delete")) {
-      items.push({
-        danger: true,
-        key: "delete",
-        label: t("common.delete"),
-      });
-    }
+        const highRisk = hasCascadeImpact(impact);
+        danger.open({
+          title: t("dataConnect.deleteConfirmTitle"),
+          targetName: record.name,
+          requireTypeName: highRisk,
+          impact: (
+            <DeleteImpactAlert
+              detail={
+                highRisk
+                  ? details
+                  : t("dataConnect.dangerDelete.catalogEmpty", { name: record.name })
+              }
+              warning={highRisk ? t("dataConnect.dangerDelete.impactWarning") : undefined}
+            />
+          ),
+          onOk: async () => {
+            try {
+              await deleteDataConnectRecord(record.id);
+            } catch (error) {
+              void message.error(extractRequestErrorMessage(error));
+              throw error;
+            }
+            void message.success(t("common.success"));
+            await loadData();
+          },
+        });
+      })();
+    },
+    [danger, loadData, message, modal, t],
+  );
 
-    return {
-      items,
-      onClick: ({ key, domEvent }) => {
-        domEvent.stopPropagation();
-        if (key === "detail") {
-          openDetail(record);
-          return;
-        }
-        if (key === "discover") {
-          openDiscovers(record);
-          return;
-        }
-        if (key === "edit") {
-          openEdit(record);
-          return;
-        }
-        if (key === "test") {
-          testConnection(record);
-          return;
-        }
-        if (key === "toggle") {
-          toggleEnabled(record);
-          return;
-        }
-        if (key === "delete") {
-          deleteRecord(record);
-        }
-      },
-    };
-  }, [
-    deleteRecord,
-    openDetail,
-    openDiscovers,
-    openEdit,
-    t,
-    testConnection,
-    toggleEnabled,
-  ]);
+  const buildActionMoreMenu = useCallback(
+    (record: DataConnectRecord): MenuProps => {
+      const items: NonNullable<MenuProps["items"]> = [];
+
+      if (!isCatalogSummaryOnly(record)) {
+        items.push({
+          key: "detail",
+          label: t("common.detail"),
+        });
+      }
+
+      if (hasCatalogOperation(record, "task_manage")) {
+        items.push({
+          key: "discover",
+          label: t("dataConnect.discoverManage"),
+        });
+      }
+      if (hasCatalogOperation(record, "modify")) {
+        items.push({
+          key: "edit",
+          label: t("common.edit"),
+        });
+        items.push({
+          key: "test",
+          label: t("common.testConnection"),
+        });
+        items.push({
+          key: "toggle",
+          label: record.enabled ? t("common.disabled") : t("common.enabled"),
+        });
+      }
+      if (hasCatalogOperation(record, "delete")) {
+        items.push({
+          danger: true,
+          key: "delete",
+          label: t("common.delete"),
+        });
+      }
+
+      return {
+        items,
+        onClick: ({ key, domEvent }) => {
+          domEvent.stopPropagation();
+          if (key === "detail") {
+            openDetail(record);
+            return;
+          }
+          if (key === "discover") {
+            openDiscovers(record);
+            return;
+          }
+          if (key === "edit") {
+            openEdit(record);
+            return;
+          }
+          if (key === "test") {
+            testConnection(record);
+            return;
+          }
+          if (key === "toggle") {
+            toggleEnabled(record);
+            return;
+          }
+          if (key === "delete") {
+            deleteRecord(record);
+          }
+        },
+      };
+    },
+    [deleteRecord, openDetail, openDiscovers, openEdit, t, testConnection, toggleEnabled],
+  );
 
   const columns: ColumnsType<DataConnectRecord> = [
     {
@@ -422,7 +441,9 @@ export function DataConnectListScene({
       dataIndex: "mode",
       title: t("common.mode"),
       width: 96,
-      render: (value: string) => <span className={styles.modeText}>{t(`dataConnect.modes.${value}`)}</span>,
+      render: (value: string) => (
+        <span className={styles.modeText}>{t(`dataConnect.modes.${value}`)}</span>
+      ),
     },
     {
       dataIndex: "status",
@@ -552,15 +573,19 @@ export function DataConnectListScene({
               <Select
                 className={styles.filterSelect}
                 onChange={(value) => {
-                  setSelectedHealthStatus(value ? value as DataConnectRecord["healthStatus"] : undefined);
+                  setSelectedHealthStatus(
+                    value ? (value as DataConnectRecord["healthStatus"]) : undefined,
+                  );
                   setPagination(1, pageState.pageSize);
                 }}
                 options={[
                   { label: t("dataConnect.categoryAll"), value: "" },
-                  ...(["healthy", "degraded", "unhealthy", "offline", "unchecked"] as const).map((value) => ({
-                    label: t(`dataConnect.healthStatuses.${value}`),
-                    value,
-                  })),
+                  ...(["healthy", "degraded", "unhealthy", "offline", "unchecked"] as const).map(
+                    (value) => ({
+                      label: t(`dataConnect.healthStatuses.${value}`),
+                      value,
+                    }),
+                  ),
                 ]}
                 value={selectedHealthStatus ?? ""}
               />

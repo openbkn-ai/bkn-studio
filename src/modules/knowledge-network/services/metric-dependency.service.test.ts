@@ -30,13 +30,12 @@ describe("metric dependency property candidates", () => {
         entries: [{ display_name: "Amount", name: "amount", type: "double" }],
       },
     });
-    const { getKnowledgeNetworkMetricDependencyProperties } = await import(
-      "@/modules/knowledge-network/services/metric.service"
-    );
+    const { getKnowledgeNetworkMetricDependencyProperties } =
+      await import("@/modules/knowledge-network/services/metric.service");
 
-    await expect(
-      getKnowledgeNetworkMetricDependencyProperties("kn-1", "orders"),
-    ).resolves.toEqual([{ comment: undefined, displayName: "Amount", name: "amount", type: "double" }]);
+    await expect(getKnowledgeNetworkMetricDependencyProperties("kn-1", "orders")).resolves.toEqual([
+      { comment: undefined, displayName: "Amount", name: "amount", type: "double" },
+    ]);
     expect(getMock).toHaveBeenCalledWith(
       "/bkn-backend/v1/knowledge-networks/kn-1/metrics/dependency-properties/orders",
     );

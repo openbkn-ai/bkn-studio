@@ -21,38 +21,42 @@ vi.mock("@/modules/execution-factory/services/function.service", () => ({
 }));
 
 vi.mock("@/modules/execution-factory/components/FunctionAiGenerateModal", () => ({
-  FunctionAiGenerateModal: ({ onApply, open }: {
+  FunctionAiGenerateModal: ({
+    onApply,
+    open,
+  }: {
     onApply?: (result: FunctionAiApplyResult) => void;
     open: boolean;
-  }) => open ? (
-    <>
-      <button
-        onClick={() => onApply?.({ type: "metadata", name: "ignored_name" })}
-        type="button"
-      >
-        apply-metadata
-      </button>
-      <button
-        onClick={() => onApply?.({ type: "code", code: "def generated(event):\n    return 1\n" })}
-        type="button"
-      >
-        apply-code
-      </button>
-    </>
-  ) : null,
+  }) =>
+    open ? (
+      <>
+        <button onClick={() => onApply?.({ type: "metadata", name: "ignored_name" })} type="button">
+          apply-metadata
+        </button>
+        <button
+          onClick={() => onApply?.({ type: "code", code: "def generated(event):\n    return 1\n" })}
+          type="button"
+        >
+          apply-code
+        </button>
+      </>
+    ) : null,
 }));
 
 const INITIAL_CODE = "def handler(event):\n    return event\n";
 
 describe("FunctionExecuteModal", () => {
   beforeAll(() => {
-    vi.stubGlobal("matchMedia", vi.fn(() => ({
-      addEventListener: vi.fn(),
-      addListener: vi.fn(),
-      matches: false,
-      removeEventListener: vi.fn(),
-      removeListener: vi.fn(),
-    })));
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(),
+        matches: false,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    );
   });
 
   afterEach(cleanup);
@@ -71,7 +75,14 @@ describe("FunctionExecuteModal", () => {
   });
 
   it("does not offer AI generation without the Function create grant", async () => {
-    render(<FunctionExecuteModal canGenerate={false} initialCode={INITIAL_CODE} onClose={vi.fn()} open />);
+    render(
+      <FunctionExecuteModal
+        canGenerate={false}
+        initialCode={INITIAL_CODE}
+        onClose={vi.fn()}
+        open
+      />,
+    );
 
     await waitFor(() => expect(screen.getByDisplayValue(/def handler/)).toBeTruthy());
     expect(screen.queryByText("executionFactory.functionAiGenerate")).toBeNull();

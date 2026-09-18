@@ -35,10 +35,7 @@ function getFallbackCategories(): OperatorCategoryOption[] {
 
 export async function listOperatorCategories(): Promise<OperatorCategoryOption[]> {
   try {
-    const response = await http.get<BackendCategoryItem[]>(
-      `${API_PREFIX}/operator/category`,
-      {},
-    );
+    const response = await http.get<BackendCategoryItem[]>(`${API_PREFIX}/operator/category`, {});
 
     const items = response.data ?? [];
 

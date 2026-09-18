@@ -81,9 +81,7 @@ export function RequireEdition({
   /** 专业档走紫,企业与行业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   const imageIssue = reason !== "buy";
-  const currentEditionName = t(
-    `common.entitlement.editions.${snapshot?.edition ?? "community"}`,
-  );
+  const currentEditionName = t(`common.entitlement.editions.${snapshot?.edition ?? "community"}`);
 
   return (
     <div className="console-upgrade-locked">

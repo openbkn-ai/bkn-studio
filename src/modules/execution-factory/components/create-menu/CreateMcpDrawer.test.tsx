@@ -90,9 +90,8 @@ vi.mock("@/modules/execution-factory/services/category.service", () => ({
 
 const { getMcpDetail, parseMcpSse, registerMcp, updateMcp } = vi.hoisted(() => ({
   getMcpDetail: vi.fn(),
-  parseMcpSse: vi.fn<
-    (input: { mode?: string; url: string }) => Promise<{ tools: Array<{ name: string }> }>
-  >(),
+  parseMcpSse:
+    vi.fn<(input: { mode?: string; url: string }) => Promise<{ tools: Array<{ name: string }> }>>(),
   registerMcp: vi.fn(() => Promise.resolve("mcp-1")),
   updateMcp: vi.fn(() => Promise.resolve()),
 }));

@@ -65,7 +65,10 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     expect(within(menu).queryByText("executionFactory.publish")).toBeNull();
     fireEvent.click(within(menu).getByText("executionFactory.offline"));
 
-    expect(onAction).toHaveBeenCalledWith("offline", expect.objectContaining({ status: "published" }));
+    expect(onAction).toHaveBeenCalledWith(
+      "offline",
+      expect.objectContaining({ status: "published" }),
+    );
     expect(onAction).not.toHaveBeenCalledWith("unpublish", expect.anything());
   });
 
@@ -83,7 +86,10 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
     fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
 
-    expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "offline" }));
+    expect(onAction).toHaveBeenCalledWith(
+      "publish",
+      expect.objectContaining({ status: "offline" }),
+    );
   });
 
   it("offers the same publish action for a never-published toolbox", () => {
@@ -100,7 +106,10 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
     fireEvent.click(within(screen.getByRole("menu")).getByText("executionFactory.publish"));
 
-    expect(onAction).toHaveBeenCalledWith("publish", expect.objectContaining({ status: "unpublish" }));
+    expect(onAction).toHaveBeenCalledWith(
+      "publish",
+      expect.objectContaining({ status: "unpublish" }),
+    );
   });
 
   it("only exposes configuration when the row has authorize", () => {
@@ -114,7 +123,9 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
-    expect(within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize")).toBeNull();
+    expect(
+      within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize"),
+    ).toBeNull();
 
     unmount();
     render(
@@ -126,7 +137,9 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
-    fireEvent.click(within(screen.getByRole("menu")).getByText("systemAdmin.objectGrants.authorize"));
+    fireEvent.click(
+      within(screen.getByRole("menu")).getByText("systemAdmin.objectGrants.authorize"),
+    );
 
     expect(onAction).toHaveBeenCalledWith(
       "authorize",
@@ -144,7 +157,9 @@ describe("ExecutionUnitCardMenu lifecycle actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "executionFactory.cardMenu.more" }));
-    expect(within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize")).toBeNull();
+    expect(
+      within(screen.getByRole("menu")).queryByText("systemAdmin.objectGrants.authorize"),
+    ).toBeNull();
   });
 });
 

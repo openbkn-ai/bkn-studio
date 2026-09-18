@@ -77,15 +77,7 @@ type BackendToolListResponse = {
 
 const API_PREFIX = "/agent-operator-integration/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
-const HTTP_METHODS = new Set([
-  "delete",
-  "get",
-  "head",
-  "options",
-  "patch",
-  "post",
-  "put",
-]);
+const HTTP_METHODS = new Set(["delete", "get", "head", "options", "patch", "post", "put"]);
 
 type MockOpenApiOperation = {
   description?: string;
@@ -135,15 +127,18 @@ function mapTool(item: BackendToolInfo): ToolRecord {
     status: (item.status ?? "disabled") as ToolStatus,
     metadataType: item.metadata_type as ToolRecord["metadataType"],
     useRule: item.use_rule,
-    serverUrl: typeof item.metadata === "object" && item.metadata && "server_url" in item.metadata
-      ? String((item.metadata as { server_url?: string }).server_url ?? "")
-      : undefined,
-    path: typeof item.metadata === "object" && item.metadata && "path" in item.metadata
-      ? String((item.metadata as { path?: string }).path ?? "")
-      : undefined,
-    method: typeof item.metadata === "object" && item.metadata && "method" in item.metadata
-      ? String((item.metadata as { method?: string }).method ?? "")
-      : undefined,
+    serverUrl:
+      typeof item.metadata === "object" && item.metadata && "server_url" in item.metadata
+        ? String((item.metadata as { server_url?: string }).server_url ?? "")
+        : undefined,
+    path:
+      typeof item.metadata === "object" && item.metadata && "path" in item.metadata
+        ? String((item.metadata as { path?: string }).path ?? "")
+        : undefined,
+    method:
+      typeof item.metadata === "object" && item.metadata && "method" in item.metadata
+        ? String((item.metadata as { method?: string }).method ?? "")
+        : undefined,
     // List endpoints also return metadata.api_spec, so input/output can be calculated without loading each detail.
     ioSpec: parseToolIoSpec(item.metadata as Parameters<typeof parseToolIoSpec>[0]),
     createTime: normalizeTimestamp(item.create_time),
@@ -214,8 +209,7 @@ function buildToolMutationBody(input: ToolCreateInput | ToolEditInput) {
       ? {
           ...input.functionInput,
           name:
-            input.functionInput.name ??
-            ("name" in input && input.name ? input.name : undefined),
+            input.functionInput.name ?? ("name" in input && input.name ? input.name : undefined),
           description:
             input.functionInput.description ??
             ("description" in input ? input.description : undefined),
@@ -278,9 +272,7 @@ function extractMockOpenApiOperations(openapiSpec?: string): MockOpenApiOperatio
         const summary =
           typeof operationRecord.summary === "string" ? operationRecord.summary : undefined;
         const description =
-          typeof operationRecord.description === "string"
-            ? operationRecord.description
-            : summary;
+          typeof operationRecord.description === "string" ? operationRecord.description : summary;
         const name =
           normalizeGeneratedCapabilityName(summary) ??
           normalizeGeneratedCapabilityName(`${method}_${path}`) ??
@@ -344,17 +336,11 @@ function filterMockTools(boxId: string, query: ToolListQuery) {
       return true;
     }
 
-    return (
-      item.name.toLowerCase().includes(keyword) ||
-      item.toolId.toLowerCase().includes(keyword)
-    );
+    return item.name.toLowerCase().includes(keyword) || item.toolId.toLowerCase().includes(keyword);
   });
 }
 
-export async function listTools(
-  boxId: string,
-  query: ToolListQuery,
-): Promise<ToolListResult> {
+export async function listTools(boxId: string, query: ToolListQuery): Promise<ToolListResult> {
   if (useMock) {
     const filtered = filterMockTools(boxId, query);
     const start = (query.page - 1) * query.pageSize;
@@ -471,7 +457,9 @@ function pickFirstNonEmpty(...candidates: Array<string | undefined>): string | u
   return undefined;
 }
 
-function readFailureDetail(value: string | CreateToolFailureDetail | undefined): string | undefined {
+function readFailureDetail(
+  value: string | CreateToolFailureDetail | undefined,
+): string | undefined {
   if (typeof value === "string") {
     return pickFirstNonEmpty(value);
   }
@@ -483,17 +471,10 @@ function readFailureDetail(value: string | CreateToolFailureDetail | undefined):
 
 /** Prefer `error_msg` (backend wire format), fall back to `error` for docs/compat. */
 export function extractCreateToolFailureMessage(item: CreateToolFailureItem): string {
-  return (
-    readFailureDetail(item.error_msg) ??
-    readFailureDetail(item.error) ??
-    "Unknown error"
-  );
+  return readFailureDetail(item.error_msg) ?? readFailureDetail(item.error) ?? "Unknown error";
 }
 
-export async function createTool(
-  boxId: string,
-  input: ToolCreateInput,
-): Promise<ToolCreateResult> {
+export async function createTool(boxId: string, input: ToolCreateInput): Promise<ToolCreateResult> {
   if (useMock) {
     const toolId = `tool_${Date.now()}`;
     const record = buildMockToolDetail(toolId, input);
@@ -511,8 +492,7 @@ export async function createTool(
     failures?: CreateToolFailureItem[];
     success_count?: number;
     success_ids?: string[];
-  }>(`${API_PREFIX}/tool-box/${boxId}/tool`, buildToolMutationBody(input), {
-  });
+  }>(`${API_PREFIX}/tool-box/${boxId}/tool`, buildToolMutationBody(input), {});
 
   return {
     successIds: response.data.success_ids ?? [],
@@ -626,17 +606,11 @@ export async function updateToolStatus(
 
 export async function deleteTools(boxId: string, toolIds: string[]): Promise<void> {
   if (useMock) {
-    mockToolsByBox[boxId] = getMockTools(boxId).filter(
-      (item) => !toolIds.includes(item.toolId),
-    );
+    mockToolsByBox[boxId] = getMockTools(boxId).filter((item) => !toolIds.includes(item.toolId));
     return;
   }
 
-  await http.post(
-    `${API_PREFIX}/tool-box/${boxId}/tools/batch-delete`,
-    { tool_ids: toolIds },
-    {},
-  );
+  await http.post(`${API_PREFIX}/tool-box/${boxId}/tools/batch-delete`, { tool_ids: toolIds }, {});
 }
 
 export async function debugTool(

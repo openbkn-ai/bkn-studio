@@ -130,12 +130,12 @@ function mapCapability(item: BackendCapability): CapabilityRecord {
     endpoint: item.endpoint,
     orchestration: item.orchestration
       ? {
-        enabled: Boolean(item.orchestration.enabled),
-        operatorId: item.orchestration.operator_id,
-        operatorName: item.orchestration.operator_name,
-        audit: mapAudit(item.orchestration.audit),
-      }
-    : undefined,
+          enabled: Boolean(item.orchestration.enabled),
+          operatorId: item.orchestration.operator_id,
+          operatorName: item.orchestration.operator_name,
+          audit: mapAudit(item.orchestration.audit),
+        }
+      : undefined,
     audit: mapAudit(item.audit),
     updateTime: item.update_time,
     toolId: item.tool_id,
@@ -377,8 +377,7 @@ export async function getOrchestrationDetail(capabilityId: string): Promise<Orch
     tool_id?: string;
     box_id?: string;
     audit?: BackendAudit;
-  }>(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`, {
-  });
+  }>(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration`, {});
 
   return {
     enabled: Boolean(response.data.enabled),
@@ -491,7 +490,10 @@ export async function downloadSkillPackage(
   triggerBrowserDownload(response.data, filename);
 }
 
-export async function updateSkillPackage(capabilityId: string, file: File): Promise<CapabilityRecord> {
+export async function updateSkillPackage(
+  capabilityId: string,
+  file: File,
+): Promise<CapabilityRecord> {
   const formData = new FormData();
   formData.append("file_type", "zip");
   formData.append("file", file);
@@ -510,8 +512,7 @@ export async function updateSkillPackage(capabilityId: string, file: File): Prom
 }
 
 export async function deleteCapability(capabilityId: string) {
-  await http.delete(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}`, {
-  });
+  await http.delete(`${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}`, {});
 }
 
 export async function registerMcpCapability(
@@ -677,7 +678,9 @@ export async function listCatalog(query?: {
   };
 }
 
-export async function installFromCatalog(input: InstallCatalogInput): Promise<InstallCatalogResult> {
+export async function installFromCatalog(
+  input: InstallCatalogInput,
+): Promise<InstallCatalogResult> {
   const response = await http.post<{
     component_type?: string;
     mode?: string;

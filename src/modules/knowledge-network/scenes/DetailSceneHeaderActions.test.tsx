@@ -108,9 +108,7 @@ vi.mock(
       <div data-loading={String(loading)} data-testid="detail-shell">
         <div data-testid="detail-title">{title}</div>
         <div data-testid="detail-header-actions">{actions}</div>
-        {mocks.searchParams.current ? (
-          <div data-testid="detail-content">{children}</div>
-        ) : null}
+        {mocks.searchParams.current ? <div data-testid="detail-content">{children}</div> : null}
       </div>
     ),
   }),
@@ -293,9 +291,7 @@ describe("knowledge network detail scene headers", () => {
 
     render(<ObjectTypeDetailScene />);
 
-    expect(
-      await screen.findByText("knowledgeNetwork.objectTypeProxyReadForbidden"),
-    ).not.toBeNull();
+    expect(await screen.findByText("knowledgeNetwork.objectTypeProxyReadForbidden")).not.toBeNull();
     expect(mocks.getObjectTypeSampleData).not.toHaveBeenCalled();
   });
 
@@ -335,9 +331,7 @@ describe("knowledge network detail scene headers", () => {
 
     render(<ObjectTypeDetailScene />);
 
-    expect(
-      await screen.findByText("knowledgeNetwork.objectTypeProxyReadUnknown"),
-    ).not.toBeNull();
+    expect(await screen.findByText("knowledgeNetwork.objectTypeProxyReadUnknown")).not.toBeNull();
     expect(screen.getByText("The selected data view cannot be queried")).not.toBeNull();
     expect(screen.queryByText("internal query plan")).toBeNull();
   });

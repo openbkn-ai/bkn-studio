@@ -20,11 +20,7 @@ export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
   }
 
   const metadata = catalog.metadata ?? {};
-  if (
-    metadata.builtin === true ||
-    metadata.built_in === true ||
-    metadata.system === true
-  ) {
+  if (metadata.builtin === true || metadata.built_in === true || metadata.system === true) {
     return true;
   }
 
@@ -34,11 +30,7 @@ export function isBuiltinLogicalCatalog(catalog: CatalogRecord) {
 
   // Known platform namespaces, matched by exact name or prefix.
   const name = catalog.name.trim().toLowerCase();
-  if (
-    name === "adp_bkn_catalog" ||
-    name.startsWith("adp_bkn_") ||
-    name.startsWith("openbkn_")
-  ) {
+  if (name === "adp_bkn_catalog" || name.startsWith("adp_bkn_") || name.startsWith("openbkn_")) {
     return true;
   }
 

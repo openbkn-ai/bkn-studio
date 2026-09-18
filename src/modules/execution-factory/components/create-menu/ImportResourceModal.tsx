@@ -15,8 +15,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-
-
 import { useAppServices } from "@/framework/context/use-app-services";
 
 import type { ExecutionUnitTab } from "@/modules/execution-factory/components/execution-unit/types";
@@ -49,16 +47,11 @@ import {
 
 import { extractRequestErrorDetail } from "@/modules/execution-factory/utils/request-error-detail";
 
-
-
 import styles from "./create-menu.module.css";
 
 type ImportKind = "openapi" | "adp";
 
-
-
 type ImportResourceModalProps = {
-
   activeTab: ExecutionUnitTab;
 
   initialKind?: ImportKind;
@@ -68,59 +61,35 @@ type ImportResourceModalProps = {
   onClose: () => void;
 
   onSuccess?: () => void;
-
 };
 
-
-
 type OpenApiFormValues = {
-
   category: string;
 
   name?: string;
 
   serviceUrl?: string;
-
 };
-
-
 
 type AdpFormValues = {
-
   mode: ImpexImportMode;
-
 };
 
-
-
 function tabToImpexType(activeTab: ExecutionUnitTab): ImpexComponentType | null {
-
   if (activeTab === "operator" || activeTab === "toolbox" || activeTab === "mcp") {
-
     return activeTab;
-
   }
 
-
-
   return null;
-
 }
 
-
-
 function readUploadFile(fileList: UploadFile[]) {
-
   const uploadFile = fileList[0]?.originFileObj;
 
   return uploadFile ?? null;
-
 }
 
-
-
 export function ImportResourceModal({
-
   activeTab,
 
   initialKind,
@@ -130,9 +99,7 @@ export function ImportResourceModal({
   onClose,
 
   onSuccess,
-
 }: ImportResourceModalProps) {
-
   const { t } = useTranslation();
 
   const { message } = useAppServices();
@@ -143,11 +110,7 @@ export function ImportResourceModal({
 
   const [importKind, setImportKind] = useState<ImportKind>("openapi");
 
-  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>(
-
-    [],
-
-  );
+  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
 
   const [openapiSpec, setOpenApiSpec] = useState("");
   const [openapiSource, setOpenApiSource] = useState<OpenApiSpecSource>({ kind: "paste" });
@@ -170,50 +133,31 @@ export function ImportResourceModal({
   const adpImportMode = Form.useWatch("mode", adpForm) ?? "create";
   const currentOpenApiName = Form.useWatch<OpenApiFormValues["name"]>("name", openApiForm);
 
-
-
   const importKindOptions = useMemo(
-
     () =>
-
       [
-
         supportsOpenApi
-
           ? { key: "openapi" as const, label: t("executionFactory.importKindOpenApi") }
-
           : null,
 
         { key: "adp" as const, label: t("executionFactory.importKindAdp") },
-
       ].filter(Boolean) as Array<{ key: ImportKind; label: string }>,
 
     [supportsOpenApi, t],
-
   );
 
-
-
   useEffect(() => {
-
     if (!open) {
-
       return;
-
     }
 
-
-
     void (async () => {
-
       const items = await listOperatorCategories();
 
       const options = items.map((item) => ({
-
         value: item.categoryType,
 
         label: item.name,
-
       }));
 
       setCategories(options);
@@ -283,41 +227,24 @@ export function ImportResourceModal({
     openApiForm.setFieldsValue(nextValues);
   }, [activeTab, currentOpenApiName, openApiForm, openapiSource, openapiSpec]);
 
-
-
   const handleSubmit = async () => {
-
     if (!impexType) {
-
       return;
-
     }
-
-
 
     setSubmitting(true);
 
     setErrorDetail(null);
 
-
-
     try {
-
       if (importKind === "openapi" && supportsOpenApi) {
-
         const values = await openApiForm.validateFields();
 
-
-
         if (!openapiSpec.trim()) {
-
           void message.info(t("executionFactory.importOpenApiFileRequired"));
 
           return;
-
         }
-
-
 
         const validation = validateOpenApiDocumentText(openapiSpec);
 
@@ -353,8 +280,7 @@ export function ImportResourceModal({
         const fallbackName =
           normalizeGeneratedCapabilityName(hints.title) || `import_${Date.now()}`;
 
-        const resolvedName =
-          normalizeGeneratedCapabilityName(values.name) || fallbackName;
+        const resolvedName = normalizeGeneratedCapabilityName(values.name) || fallbackName;
 
         if (activeTab === "operator") {
           // Operator registration keeps its own path; only rewrite servers here.
@@ -411,33 +337,19 @@ export function ImportResourceModal({
       onSuccess?.();
 
       onClose();
-
     } catch (caughtError) {
-
       setErrorDetail(extractRequestErrorDetail(caughtError));
-
     } finally {
-
       setSubmitting(false);
-
     }
-
   };
 
-
-
   if (!impexType) {
-
     return null;
-
   }
 
-
-
   return (
-
     <Modal
-
       confirmLoading={submitting}
 
       destroyOnClose
@@ -447,9 +359,7 @@ export function ImportResourceModal({
       onCancel={onClose}
 
       onOk={() => {
-
         void handleSubmit();
-
       }}
 
       open={open}
@@ -457,43 +367,30 @@ export function ImportResourceModal({
       title={t(`executionFactory.importResourceTitle.${activeTab}`)}
 
       width={760}
-
     >
-
       <Tabs
-
         activeKey={importKind}
 
         items={importKindOptions.map((item) => ({
-
           key: item.key,
 
           label: item.label,
 
           children:
-
             item.key === "openapi" ? (
-
               <Form form={openApiForm} layout="vertical">
-
                 <CapabilityBusinessIntro
-
                   messageKey={`executionFactory.businessIntro.impexOpenApi${activeTab === "operator" ? "Operator" : "Toolbox"}`}
-
                 />
 
                 <Form.Item
-
                   label={t("executionFactory.category")}
 
                   name="category"
 
                   rules={[{ required: true, message: t("common.required") }]}
-
                 >
-
                   <Select options={categories} />
-
                 </Form.Item>
 
                 {activeTab === "toolbox" ? (
@@ -526,49 +423,32 @@ export function ImportResourceModal({
                 >
                   <Input placeholder="https://api.example.com" />
                 </Form.Item>
-
               </Form>
-
             ) : (
-
               <Form form={adpForm} layout="vertical">
-
                 <CapabilityBusinessIntro
-
                   messageKey={`executionFactory.businessIntro.impexAdp${activeTab === "operator" ? "Operator" : activeTab === "mcp" ? "Mcp" : "Toolbox"}`}
-
                 />
 
                 <p className={styles.sectionIntro}>{t("executionFactory.importKindAdpHint")}</p>
 
                 <Form.Item label={t("executionFactory.importMode")} name="mode">
-
                   <Radio.Group>
-
                     <Radio value="create">{t("executionFactory.importModeCreate")}</Radio>
 
                     <Radio value="upsert">{t("executionFactory.importModeUpsert")}</Radio>
-
                   </Radio.Group>
-
                 </Form.Item>
 
                 <p className={styles.sectionIntro}>
-
                   {t(
-
                     adpImportMode === "upsert"
-
                       ? "executionFactory.importModeUpsertHint"
-
                       : "executionFactory.importModeCreateHint",
-
                   )}
-
                 </p>
 
                 <Upload.Dragger
-
                   accept=".adp,.json"
 
                   beforeUpload={() => false}
@@ -580,57 +460,34 @@ export function ImportResourceModal({
                   maxCount={1}
 
                   onChange={({ fileList }) => setAdpFileList(fileList)}
-
                 >
-
                   <p className="ant-upload-drag-icon">
-
                     <CloudUploadOutlined />
-
                   </p>
 
-                  <p className="ant-upload-text">
-
-                    {t("executionFactory.importAdpDraggerHint")}
-
-                  </p>
-
+                  <p className="ant-upload-text">{t("executionFactory.importAdpDraggerHint")}</p>
                 </Upload.Dragger>
-
               </Form>
-
             ),
-
         }))}
 
         onChange={(key) => setImportKind(key as ImportKind)}
-
       />
 
       {errorDetail ? (
-
         <Alert
-
           description={
-
             <div>
-
               {errorDetail.code ? <div>{errorDetail.code}</div> : null}
 
               {errorDetail.detail ? (
-
                 <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap" }}>
-
                   {JSON.stringify(errorDetail.detail, null, 2)}
-
                 </pre>
-
               ) : null}
 
               {errorDetail.solution ? <div>{errorDetail.solution}</div> : null}
-
             </div>
-
           }
 
           message={errorDetail.message}
@@ -640,7 +497,6 @@ export function ImportResourceModal({
           style={{ marginTop: 12 }}
 
           type="error"
-
         />
       ) : null}
     </Modal>

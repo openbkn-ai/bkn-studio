@@ -205,7 +205,7 @@ type BackendLogList = {
   data: BackendLogRecord[];
   next_cursor: string | null;
   partial: boolean;
-	pagination?: { page?: number; page_size?: number };
+  pagination?: { page?: number; page_size?: number };
   source_status: BackendSourceStatus[];
 };
 
@@ -214,8 +214,8 @@ export type LogListResult = {
   data: LogRecord[];
   nextCursor?: string;
   partial: boolean;
-	page?: number;
-	pageSize?: number;
+  page?: number;
+  pageSize?: number;
   sourceStatus: LogSourceStatus[];
 };
 
@@ -227,7 +227,7 @@ export type LogDetailResult = {
 };
 
 export async function listLogs(query: LogListQuery): Promise<LogListResult> {
-	const params = logQueryParams(query);
+  const params = logQueryParams(query);
 
   const response = await http.get<BackendLogList>(`${OBSERVABILITY_API_PREFIX}/logs`, {
     params,
@@ -242,8 +242,8 @@ export async function listLogs(query: LogListQuery): Promise<LogListResult> {
     data: response.data.data.map(mapLogRecord),
     ...(response.data.next_cursor ? { nextCursor: response.data.next_cursor } : {}),
     partial: response.data.partial,
-	page: response.data.pagination?.page ?? 1,
-	pageSize: response.data.pagination?.page_size ?? query.pageSize ?? query.limit ?? 50,
+    page: response.data.pagination?.page ?? 1,
+    pageSize: response.data.pagination?.page_size ?? query.pageSize ?? query.limit ?? 50,
     sourceStatus: response.data.source_status.map(mapSourceStatus),
   };
 }
@@ -265,16 +265,22 @@ export async function getLogDetail(logId: string): Promise<LogDetailResult> {
 }
 
 export async function listLogSources(): Promise<LogSourceStatus[]> {
-  const response = await http.get<{ data: BackendSourceStatus[] }>(`${OBSERVABILITY_API_PREFIX}/log-sources`, {
-    skipErrorToast: true,
-  });
+  const response = await http.get<{ data: BackendSourceStatus[] }>(
+    `${OBSERVABILITY_API_PREFIX}/log-sources`,
+    {
+      skipErrorToast: true,
+    },
+  );
   return response.data.data.map(mapSourceStatus);
 }
 
 export async function listLogPolicies(): Promise<LogPolicy[]> {
-  const response = await http.get<{ data: BackendLogPolicy[] }>(`${OBSERVABILITY_API_PREFIX}/log-policies`, {
-    skipErrorToast: true,
-  });
+  const response = await http.get<{ data: BackendLogPolicy[] }>(
+    `${OBSERVABILITY_API_PREFIX}/log-policies`,
+    {
+      skipErrorToast: true,
+    },
+  );
   return response.data.data.map((policy) => ({
     category: policy.category,
     legalHold: Boolean(policy.legal_hold),
@@ -314,25 +320,42 @@ export async function createArchive(kind: ArchiveKind): Promise<ArchiveJob> {
     range: { from?: string; to: string };
     status: ArchiveJob["status"];
   }>(`${OBSERVABILITY_API_PREFIX}/${resource}`, {}, { skipErrorToast: true });
-  return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
+  return {
+    candidateCount: response.data.candidate_count,
+    id: response.data.archive_job_id,
+    kind: response.data.archive_kind,
+    range: response.data.range,
+    status: response.data.status,
+  };
 }
 
 export async function listArchiveJobs(kind: ArchiveKind): Promise<ArchiveJob[]> {
   const resource = kind === "log" ? "log-archive-jobs" : "trace-archive-jobs";
-  const response = await http.get<Array<{
-    archive_job_id: string;
-    archive_kind: ArchiveKind;
-    candidate_count: number;
-    range: { from?: string; to: string };
-    status: ArchiveJob["status"];
-  }>>(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
-  return response.data.map((job) => ({ candidateCount: job.candidate_count, id: job.archive_job_id, kind: job.archive_kind, range: job.range, status: job.status }));
+  const response = await http.get<
+    Array<{
+      archive_job_id: string;
+      archive_kind: ArchiveKind;
+      candidate_count: number;
+      range: { from?: string; to: string };
+      status: ArchiveJob["status"];
+    }>
+  >(`${OBSERVABILITY_API_PREFIX}/${resource}`, { skipErrorToast: true });
+  return response.data.map((job) => ({
+    candidateCount: job.candidate_count,
+    id: job.archive_job_id,
+    kind: job.archive_kind,
+    range: job.range,
+    status: job.status,
+  }));
 }
 
 export type ArchiveDownload = { content: Blob; fileName?: string };
 
 export async function downloadArchive(id: string): Promise<ArchiveDownload> {
-  const response = await http.get<Blob>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download`, { responseType: "blob", skipErrorToast: true });
+  const response = await http.get<Blob>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/download`, {
+    responseType: "blob",
+    skipErrorToast: true,
+  });
   const disposition = response.headers?.["content-disposition"] as string | undefined;
   const fileName = disposition?.match(/filename="?([^";]+)"?/i)?.[1];
   return { content: response.data, ...(fileName ? { fileName } : {}) };
@@ -346,7 +369,13 @@ export async function retryArchiveCleanup(id: string): Promise<ArchiveJob> {
     range: { from?: string; to: string };
     status: ArchiveJob["status"];
   }>(`${OBSERVABILITY_API_PREFIX}/archive-jobs/${id}/retry-cleanup`, {}, { skipErrorToast: true });
-  return { candidateCount: response.data.candidate_count, id: response.data.archive_job_id, kind: response.data.archive_kind, range: response.data.range, status: response.data.status };
+  return {
+    candidateCount: response.data.candidate_count,
+    id: response.data.archive_job_id,
+    kind: response.data.archive_kind,
+    range: response.data.range,
+    status: response.data.status,
+  };
 }
 
 function mapLogRecord(record: BackendLogRecord): LogRecord {
@@ -358,19 +387,33 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
       type: record.actor_type ?? "user",
     },
     authMethod: record.auth_method,
-    ...(record.correlation.conversation_id ? { conversationId: record.correlation.conversation_id } : {}),
-    ...(record.credential_id ? {
-      credential: { id: record.credential_id, ...(record.credential_name ? { name: record.credential_name } : {}) },
-    } : {}),
+    ...(record.correlation.conversation_id
+      ? { conversationId: record.correlation.conversation_id }
+      : {}),
+    ...(record.credential_id
+      ? {
+          credential: {
+            id: record.credential_id,
+            ...(record.credential_name ? { name: record.credential_name } : {}),
+          },
+        }
+      : {}),
     eventId: record.event_id,
     eventName: record.event_name,
     eventTime: record.event_time,
-    ...(record.failure_code ? {
-      failure: { code: record.failure_code, ...(record.failure_message ? { message: record.failure_message } : {}) },
-    } : {}),
+    ...(record.failure_code
+      ? {
+          failure: {
+            code: record.failure_code,
+            ...(record.failure_message ? { message: record.failure_message } : {}),
+          },
+        }
+      : {}),
     facts: {
-      action: record.facts.action, targetId: record.facts.target_id,
-      targetNameSnapshot: record.facts.target_name_snapshot, targetType: record.facts.target_type,
+      action: record.facts.action,
+      targetId: record.facts.target_id,
+      targetNameSnapshot: record.facts.target_name_snapshot,
+      targetType: record.facts.target_type,
       ...(record.facts.business_context ? { businessContext: record.facts.business_context } : {}),
       ...(record.facts.client_ip ? { clientIp: record.facts.client_ip } : {}),
       ...(record.facts.detail ? { detail: record.facts.detail } : {}),
@@ -380,7 +423,9 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
       ...(record.facts.status_code !== undefined ? { statusCode: record.facts.status_code } : {}),
     },
     logCategory: record.log_category,
-    ...(record.correlation.interaction_id ? { interactionId: record.correlation.interaction_id } : {}),
+    ...(record.correlation.interaction_id
+      ? { interactionId: record.correlation.interaction_id }
+      : {}),
     businessModule: record.business_module,
     ...(record.correlation.operation_id ? { operationId: record.correlation.operation_id } : {}),
     outcome: record.outcome,
@@ -388,7 +433,11 @@ function mapLogRecord(record: BackendLogRecord): LogRecord {
     ...(record.correlation.request_id ? { requestId: record.correlation.request_id } : {}),
     sourceChannel: record.source_channel,
     sourceId: record.source_id,
-    target: { id: record.facts.target_id, name: record.facts.target_name_snapshot, type: record.facts.target_type },
+    target: {
+      id: record.facts.target_id,
+      name: record.facts.target_name_snapshot,
+      type: record.facts.target_type,
+    },
     ...(record.correlation.task_id ? { taskId: record.correlation.task_id } : {}),
     ...(record.correlation.trace_id ? { traceId: record.correlation.trace_id } : {}),
     attributes: record.attributes,

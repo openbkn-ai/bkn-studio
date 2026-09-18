@@ -20,14 +20,17 @@ export const systemAdminEnUS = {
       memberCount: "{{count}} people",
       organization: "Organization",
       organizationScope: "Organization scope",
-      organizationUnavailable: "No organization data is available. Showing the searchable user list instead.",
-      refineSearch: "This user list is large, so only the first {{count}} users are shown. Search by name or account to narrow the results.",
+      organizationUnavailable:
+        "No organization data is available. Showing the searchable user list instead.",
+      refineSearch:
+        "This user list is large, so only the first {{count}} users are shown. Search by name or account to narrow the results.",
       resultCount: "{{count}} users",
       resultRange: "Showing {{from}}–{{to}} of {{count}} users",
       searchAllUsers: "Search name or account",
       searchHint: "Search by name or account across departments",
       searchInlineHint: "Search name or account…",
-      searchWithinDepartment: "Search name or account in {{department}} and its child organizations",
+      searchWithinDepartment:
+        "Search name or account in {{department}} and its child organizations",
       searchResults: "Organization-wide results",
       searchingAll: "Searching the organization for “{{keyword}}”",
       selectedCount: "{{count}} selected",
@@ -35,9 +38,12 @@ export const systemAdminEnUS = {
     },
     resourceCatalog: {
       descriptions: {
-        operator: "Legacy operator grant. Operators are retired and not offered for new grants. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
-        tool_box: "Controls API toolsets only. Create adds a set; Modify changes its APIs; Execute runs them.",
-        function: "Controls function sets only. Create adds a set and allows AI function generation; Modify changes its functions; Execute runs them, including temporary code execution.",
+        operator:
+          "Legacy operator grant. Operators are retired and not offered for new grants. Function set creation, AI generation, and temporary code execution are governed by Function set grants.",
+        tool_box:
+          "Controls API toolsets only. Create adds a set; Modify changes its APIs; Execute runs them.",
+        function:
+          "Controls function sets only. Create adds a set and allows AI function generation; Modify changes its functions; Execute runs them, including temporary code execution.",
       },
       operations: {
         "*": "All operations",
@@ -98,204 +104,261 @@ export const systemAdminEnUS = {
         },
       },
       operationDescriptions: {
-        "agent": {
-          "use": "Use the data agent.",
-          "publish": "Publish the data agent so other users can use it.",
-          "unpublish": "Unpublish the data agent.",
-          "unpublish_other_user_agent": "Unpublish another user's data agent.",
-          "publish_to_be_skill_agent": "Publish the data agent as a skill.",
-          "publish_to_be_web_sdk_agent": "Publish the data agent as a Web SDK.",
-          "publish_to_be_api_agent": "Publish the data agent as an API.",
-          "publish_to_be_data_flow_agent": "Publish the data agent as a data flow.",
-          "create_system_agent": "Create a system data agent.",
-          "mgnt_built_in_agent": "Manage built-in data agents.",
-          "see_trajectory_analysis": "View data agent trajectory analysis.",
+        agent: {
+          use: "Use the data agent.",
+          publish: "Publish the data agent so other users can use it.",
+          unpublish: "Unpublish the data agent.",
+          unpublish_other_user_agent: "Unpublish another user's data agent.",
+          publish_to_be_skill_agent: "Publish the data agent as a skill.",
+          publish_to_be_web_sdk_agent: "Publish the data agent as a Web SDK.",
+          publish_to_be_api_agent: "Publish the data agent as an API.",
+          publish_to_be_data_flow_agent: "Publish the data agent as a data flow.",
+          create_system_agent: "Create a system data agent.",
+          mgnt_built_in_agent: "Manage built-in data agents.",
+          see_trajectory_analysis: "View data agent trajectory analysis.",
         },
-        "agent_tpl": {
-          "publish": "Publish the data agent template so other users can use it.",
-          "unpublish": "Unpublish the data agent template.",
-          "unpublish_other_user_agent_tpl": "Unpublish another user's data agent template.",
+        agent_tpl: {
+          publish: "Publish the data agent template so other users can use it.",
+          unpublish: "Unpublish the data agent template.",
+          unpublish_other_user_agent_tpl: "Unpublish another user's data agent template.",
         },
-        "catalog": {
-          "view_detail": "View the data catalog configuration and overview. When a data resource in the catalog is not explicitly granted view permission, access falls back to the data catalog view permission.",
-          "create": "Create a data catalog.",
-          "modify": "Modify the data catalog configuration and configure its health-check schedule; this does not include data resources in the catalog. Also requires the data catalog view permission.",
-          "delete": "Delete the data catalog. Also requires the data catalog view permission.",
-          "authorize": "Configure access permissions for the data catalog. Also requires the data catalog view permission.",
-          "task_manage": "View, create, cancel, and manage build tasks, discovery tasks, semantic-understanding tasks, and discovery schedules in the data catalog. Also requires the data catalog view permission.",
-          "resource_manage": "Manage data resources and their configuration in the data catalog. When a data resource in the catalog is not explicitly granted modify or delete permission, access falls back to the data catalog resource-management permission. Also requires the data catalog view permission.",
-          "query_data": "Query data in the data catalog’s resources, including datasets and physical tables. When a data resource in the catalog is not explicitly granted query permission, access falls back to the data catalog query permission.",
-          "data_write": "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission.",
+        catalog: {
+          view_detail:
+            "View the data catalog configuration and overview. When a data resource in the catalog is not explicitly granted view permission, access falls back to the data catalog view permission.",
+          create: "Create a data catalog.",
+          modify:
+            "Modify the data catalog configuration and configure its health-check schedule; this does not include data resources in the catalog. Also requires the data catalog view permission.",
+          delete: "Delete the data catalog. Also requires the data catalog view permission.",
+          authorize:
+            "Configure access permissions for the data catalog. Also requires the data catalog view permission.",
+          task_manage:
+            "View, create, cancel, and manage build tasks, discovery tasks, semantic-understanding tasks, and discovery schedules in the data catalog. Also requires the data catalog view permission.",
+          resource_manage:
+            "Manage data resources and their configuration in the data catalog. When a data resource in the catalog is not explicitly granted modify or delete permission, access falls back to the data catalog resource-management permission. Also requires the data catalog view permission.",
+          query_data:
+            "Query data in the data catalog’s resources, including datasets and physical tables. When a data resource in the catalog is not explicitly granted query permission, access falls back to the data catalog query permission.",
+          data_write:
+            "Write or delete dataset documents only; MariaDB/MySQL and other physical-table data is not supported. When a data resource in the catalog is not explicitly granted data-write permission, access falls back to the data catalog data-write permission.",
         },
-        "resource": {
-          "view_detail": "View the data resource configuration, schema, and content. When not explicitly granted, access falls back to the parent data catalog's view permission.",
-          "modify": "Modify the data resource configuration. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
-          "delete": "Delete the data resource. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
-          "query_data": "Query data in the data resource. When not explicitly granted, access falls back to the parent data catalog's query permission.",
-          "data_write": "Write or delete dataset documents only; physical-table data cannot be modified. When not explicitly granted, access falls back to the parent data catalog's data-write permission.",
+        resource: {
+          view_detail:
+            "View the data resource configuration, schema, and content. When not explicitly granted, access falls back to the parent data catalog's view permission.",
+          modify:
+            "Modify the data resource configuration. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
+          delete:
+            "Delete the data resource. When not explicitly granted, access falls back to the parent data catalog's resource-management permission.",
+          query_data:
+            "Query data in the data resource. When not explicitly granted, access falls back to the parent data catalog's query permission.",
+          data_write:
+            "Write or delete dataset documents only; physical-table data cannot be modified. When not explicitly granted, access falls back to the parent data catalog's data-write permission.",
         },
-        "connector_type": {
-          "view_detail": "View detailed configuration and content for the connector type.",
-          "create": "Create a connector type.",
-          "modify": "Modify the connector type configuration. Also requires the connector type view permission.",
-          "delete": "Delete the connector type. Also requires the connector type view permission.",
-          "authorize": "Configure access permissions for the connector type. Also requires the connector type view permission.",
+        connector_type: {
+          view_detail: "View detailed configuration and content for the connector type.",
+          create: "Create a connector type.",
+          modify:
+            "Modify the connector type configuration. Also requires the connector type view permission.",
+          delete: "Delete the connector type. Also requires the connector type view permission.",
+          authorize:
+            "Configure access permissions for the connector type. Also requires the connector type view permission.",
         },
-        "knowledge_network": {
-          "view_detail": "View detailed configuration and content for the knowledge network. When a concept group, object type, relation type, action type, metric, or risk type in the knowledge network is not explicitly granted view permission, access falls back to the knowledge network view permission.",
-          "create": "Create a knowledge network.",
-          "modify": "Modify the knowledge network configuration. When a concept group, object type, relation type, action type, metric, or risk type in the knowledge network is not explicitly granted modify or delete permission, access falls back to the knowledge network modify permission. Also requires the knowledge network view permission.",
-          "delete": "Delete the knowledge network. Also requires the knowledge network view permission.",
-          "query_data": "Query data in the knowledge network. When an object type, relation type, or metric in the knowledge network is not explicitly granted query permission, access falls back to the knowledge network query permission.",
-          "authorize": "Configure access permissions for the knowledge network. Also requires the knowledge network view permission.",
-          "execute": "Execute or invoke the knowledge network. When an action type in the knowledge network is not explicitly granted execute permission, access falls back to the knowledge network execute permission.",
+        knowledge_network: {
+          view_detail:
+            "View detailed configuration and content for the knowledge network. When a concept group, object type, relation type, action type, metric, or risk type in the knowledge network is not explicitly granted view permission, access falls back to the knowledge network view permission.",
+          create: "Create a knowledge network.",
+          modify:
+            "Modify the knowledge network configuration. When a concept group, object type, relation type, action type, metric, or risk type in the knowledge network is not explicitly granted modify or delete permission, access falls back to the knowledge network modify permission. Also requires the knowledge network view permission.",
+          delete:
+            "Delete the knowledge network. Also requires the knowledge network view permission.",
+          query_data:
+            "Query data in the knowledge network. When an object type, relation type, or metric in the knowledge network is not explicitly granted query permission, access falls back to the knowledge network query permission.",
+          authorize:
+            "Configure access permissions for the knowledge network. Also requires the knowledge network view permission.",
+          execute:
+            "Execute or invoke the knowledge network. When an action type in the knowledge network is not explicitly granted execute permission, access falls back to the knowledge network execute permission.",
         },
-        "concept_group": {
-          "view_detail": "View detailed configuration and content for the concept group. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "modify": "Modify the concept group configuration. Also requires the concept group view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the concept group. Also requires the concept group view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+        concept_group: {
+          view_detail:
+            "View detailed configuration and content for the concept group. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          modify:
+            "Modify the concept group configuration. Also requires the concept group view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the concept group. Also requires the concept group view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
         },
-        "object_type": {
-          "view_detail": "View detailed configuration and content for the object type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "query_data": "Query data in the object type. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
-          "modify": "Modify the object type configuration. Also requires the object type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the object type. Also requires the object type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+        object_type: {
+          view_detail:
+            "View detailed configuration and content for the object type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          query_data:
+            "Query data in the object type. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
+          modify:
+            "Modify the object type configuration. Also requires the object type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the object type. Also requires the object type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
         },
-        "relation_type": {
-          "view_detail": "View detailed configuration and content for the relation type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "query_data": "Query data in the relation type. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
-          "modify": "Modify the relation type configuration. Also requires the relation type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the relation type. Also requires the relation type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+        relation_type: {
+          view_detail:
+            "View detailed configuration and content for the relation type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          query_data:
+            "Query data in the relation type. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
+          modify:
+            "Modify the relation type configuration. Also requires the relation type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the relation type. Also requires the relation type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
         },
-        "action_type": {
-          "view_detail": "View detailed configuration and content for the action type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "modify": "Modify the action type configuration. Also requires the action type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the action type. Also requires the action type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "execute": "Execute or invoke the action type. When not explicitly granted, access falls back to the parent knowledge network's execute permission.",
+        action_type: {
+          view_detail:
+            "View detailed configuration and content for the action type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          modify:
+            "Modify the action type configuration. Also requires the action type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the action type. Also requires the action type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          execute:
+            "Execute or invoke the action type. When not explicitly granted, access falls back to the parent knowledge network's execute permission.",
         },
-        "metric": {
-          "view_detail": "View detailed configuration and content for the metric. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "query_data": "Query data in the metric. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
-          "modify": "Modify the metric configuration. Also requires the metric view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the metric. Also requires the metric view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+        metric: {
+          view_detail:
+            "View detailed configuration and content for the metric. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          query_data:
+            "Query data in the metric. When not explicitly granted, access falls back to the parent knowledge network's query permission.",
+          modify:
+            "Modify the metric configuration. Also requires the metric view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the metric. Also requires the metric view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
         },
-        "risk_type": {
-          "view_detail": "View detailed configuration and content for the risk type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
-          "modify": "Modify the risk type configuration. Also requires the risk type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
-          "delete": "Delete the risk type. Also requires the risk type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+        risk_type: {
+          view_detail:
+            "View detailed configuration and content for the risk type. When not explicitly granted, access falls back to the parent knowledge network's view permission.",
+          modify:
+            "Modify the risk type configuration. Also requires the risk type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
+          delete:
+            "Delete the risk type. Also requires the risk type view permission. When not explicitly granted, access falls back to the parent knowledge network's modify permission.",
         },
-        "function": {
-          "create": "Create a function set.",
-          "modify": "Modify the function set configuration. Also requires the function set view permission.",
-          "delete": "Delete the function set. Also requires the function set view permission.",
-          "view": "View the function set.",
-          "publish": "Publish the function set so other users can use it. Also requires the function set view permission.",
-          "unpublish": "Unpublish the function set. Also requires the function set view permission.",
-          "authorize": "Configure access permissions for the function set. Also requires the function set view permission.",
-          "public_access": "Configure public access to the function set.",
-          "execute": "Execute or invoke the function set.",
+        function: {
+          create: "Create a function set.",
+          modify:
+            "Modify the function set configuration. Also requires the function set view permission.",
+          delete: "Delete the function set. Also requires the function set view permission.",
+          view: "View the function set.",
+          publish:
+            "Publish the function set so other users can use it. Also requires the function set view permission.",
+          unpublish: "Unpublish the function set. Also requires the function set view permission.",
+          authorize:
+            "Configure access permissions for the function set. Also requires the function set view permission.",
+          public_access: "Configure public access to the function set.",
+          execute: "Execute or invoke the function set.",
         },
-        "tool_box": {
-          "create": "Create an API toolbox.",
-          "modify": "Modify the API toolbox configuration. Also requires the API toolbox view permission.",
-          "delete": "Delete the API toolbox. Also requires the API toolbox view permission.",
-          "view": "View the API toolbox.",
-          "publish": "Publish the API toolbox so other users can use it. Also requires the API toolbox view permission.",
-          "unpublish": "Unpublish the API toolbox. Also requires the API toolbox view permission.",
-          "authorize": "Configure access permissions for the API toolbox. Also requires the API toolbox view permission.",
-          "public_access": "Configure public access to the API toolbox.",
-          "execute": "Execute or invoke the API toolbox.",
+        tool_box: {
+          create: "Create an API toolbox.",
+          modify:
+            "Modify the API toolbox configuration. Also requires the API toolbox view permission.",
+          delete: "Delete the API toolbox. Also requires the API toolbox view permission.",
+          view: "View the API toolbox.",
+          publish:
+            "Publish the API toolbox so other users can use it. Also requires the API toolbox view permission.",
+          unpublish: "Unpublish the API toolbox. Also requires the API toolbox view permission.",
+          authorize:
+            "Configure access permissions for the API toolbox. Also requires the API toolbox view permission.",
+          public_access: "Configure public access to the API toolbox.",
+          execute: "Execute or invoke the API toolbox.",
         },
-        "mcp": {
-          "create": "Create a MCP server.",
-          "modify": "Modify the MCP server configuration. Also requires the MCP server view permission.",
-          "delete": "Delete the MCP server. Also requires the MCP server view permission.",
-          "view": "View the MCP server.",
-          "publish": "Publish the MCP server so other users can use it. Also requires the MCP server view permission.",
-          "unpublish": "Unpublish the MCP server. Also requires the MCP server view permission.",
-          "authorize": "Configure access permissions for the MCP server. Also requires the MCP server view permission.",
-          "public_access": "Configure public access to the MCP server.",
-          "execute": "Execute or invoke the MCP server.",
+        mcp: {
+          create: "Create a MCP server.",
+          modify:
+            "Modify the MCP server configuration. Also requires the MCP server view permission.",
+          delete: "Delete the MCP server. Also requires the MCP server view permission.",
+          view: "View the MCP server.",
+          publish:
+            "Publish the MCP server so other users can use it. Also requires the MCP server view permission.",
+          unpublish: "Unpublish the MCP server. Also requires the MCP server view permission.",
+          authorize:
+            "Configure access permissions for the MCP server. Also requires the MCP server view permission.",
+          public_access: "Configure public access to the MCP server.",
+          execute: "Execute or invoke the MCP server.",
         },
-        "operator": {
-          "create": "Create an operator.",
-          "modify": "Modify the operator configuration. Also requires the operator view permission.",
-          "delete": "Delete the operator. Also requires the operator view permission.",
-          "view": "View the operator.",
-          "publish": "Publish the operator so other users can use it. Also requires the operator view permission.",
-          "unpublish": "Unpublish the operator. Also requires the operator view permission.",
-          "authorize": "Configure access permissions for the operator. Also requires the operator view permission.",
-          "public_access": "Configure public access to the operator.",
-          "execute": "Execute or invoke the operator.",
+        operator: {
+          create: "Create an operator.",
+          modify: "Modify the operator configuration. Also requires the operator view permission.",
+          delete: "Delete the operator. Also requires the operator view permission.",
+          view: "View the operator.",
+          publish:
+            "Publish the operator so other users can use it. Also requires the operator view permission.",
+          unpublish: "Unpublish the operator. Also requires the operator view permission.",
+          authorize:
+            "Configure access permissions for the operator. Also requires the operator view permission.",
+          public_access: "Configure public access to the operator.",
+          execute: "Execute or invoke the operator.",
         },
-        "skill": {
-          "create": "Create a skill.",
-          "modify": "Modify the skill configuration. Also requires the skill view permission.",
-          "delete": "Delete the skill. Also requires the skill view permission.",
-          "view": "View the skill.",
-          "publish": "Publish the skill so other users can use it. Also requires the skill view permission.",
-          "unpublish": "Unpublish the skill. Also requires the skill view permission.",
-          "authorize": "Configure access permissions for the skill. Also requires the skill view permission.",
-          "public_access": "Configure public access to the skill.",
-          "execute": "Execute or invoke the skill.",
+        skill: {
+          create: "Create a skill.",
+          modify: "Modify the skill configuration. Also requires the skill view permission.",
+          delete: "Delete the skill. Also requires the skill view permission.",
+          view: "View the skill.",
+          publish:
+            "Publish the skill so other users can use it. Also requires the skill view permission.",
+          unpublish: "Unpublish the skill. Also requires the skill view permission.",
+          authorize:
+            "Configure access permissions for the skill. Also requires the skill view permission.",
+          public_access: "Configure public access to the skill.",
+          execute: "Execute or invoke the skill.",
         },
-        "small_model": {
-          "create": "Create a small model.",
-          "display": "View small model configuration and status.",
-          "modify": "Modify the small model configuration. Also requires the small model view permission.",
-          "delete": "Delete the small model. Also requires the small model view permission.",
-          "execute": "Execute or invoke the small model.",
+        small_model: {
+          create: "Create a small model.",
+          display: "View small model configuration and status.",
+          modify:
+            "Modify the small model configuration. Also requires the small model view permission.",
+          delete: "Delete the small model. Also requires the small model view permission.",
+          execute: "Execute or invoke the small model.",
         },
-        "large_model": {
-          "create": "Create a large model.",
-          "display": "View large model configuration and status.",
-          "modify": "Modify the large model configuration. Also requires the large model view permission.",
-          "delete": "Delete the large model. Also requires the large model view permission.",
-          "execute": "Execute or invoke the large model.",
+        large_model: {
+          create: "Create a large model.",
+          display: "View large model configuration and status.",
+          modify:
+            "Modify the large model configuration. Also requires the large model view permission.",
+          delete: "Delete the large model. Also requires the large model view permission.",
+          execute: "Execute or invoke the large model.",
         },
         "admin-user": {
-          "view": "View the system user list.",
-          "create": "Create a system user.",
-          "edit": "Edit system user information.",
-          "delete": "Delete a system user.",
-          "toggle": "Enable or disable a user account.",
+          view: "View the system user list.",
+          create: "Create a system user.",
+          edit: "Edit system user information.",
+          delete: "Delete a system user.",
+          toggle: "Enable or disable a user account.",
           "reset-password": "Reset a user password.",
         },
         "admin-dept": {
-          "view": "View the system department list.",
-          "create": "Create a system department.",
-          "edit": "Edit system department information.",
-          "delete": "Delete a system department.",
-          "members": "Manage department members.",
+          view: "View the system department list.",
+          create: "Create a system department.",
+          edit: "Edit system department information.",
+          delete: "Delete a system department.",
+          members: "Manage department members.",
         },
         "admin-role": {
-          "view": "View the system role list.",
-          "create": "Create a system role.",
-          "edit": "Edit system role information.",
-          "delete": "Delete a system role.",
-          "members": "Manage role members.",
-          "permissions": "Configure role permissions.",
+          view: "View the system role list.",
+          create: "Create a system role.",
+          edit: "Edit system role information.",
+          delete: "Delete a system role.",
+          members: "Manage role members.",
+          permissions: "Configure role permissions.",
         },
         "admin-authz": {
-          "view": "View system authorization records.",
-          "grant": "Grant access permissions.",
-          "revoke": "Revoke access permissions.",
+          view: "View system authorization records.",
+          grant: "Grant access permissions.",
+          revoke: "Revoke access permissions.",
         },
         "admin-audit": {
-          "view": "View system audit logs.",
+          view: "View system audit logs.",
         },
-        "safe_admin": {
-          "manage": "Manage bkn-safe management API configuration.",
+        safe_admin: {
+          manage: "Manage bkn-safe management API configuration.",
         },
         "admin-license": {
-          "view": "View product license information.",
-          "manage": "Manage product license configuration.",
+          view: "View product license information.",
+          manage: "Manage product license configuration.",
         },
         "admin-client": {
-          "manage": "Manage login client configuration.",
+          manage: "Manage login client configuration.",
         },
         "admin-apikey": {
-          "manage": "Manage global AppKeys.",
+          manage: "Manage global AppKeys.",
         },
       },
       resources: {
@@ -337,20 +400,27 @@ export const systemAdminEnUS = {
         security: "Security administrator",
         super_admin: "Super administrator",
         adminDescription: "System administrator for operations, users, and departments.",
-        auditDescription: "Audit administrator for audit logs, permission review, and admin behavior supervision.",
-        network_builderDescription: "Business network builder for data, knowledge, and execution factory assets.",
-        normal_userDescription: "Regular user for viewing, querying, executing, and invoking module capabilities.",
-        securityDescription: "Security administrator for roles, authorization, and account security.",
-        super_adminDescription: "Built-in hidden and controlled role with full platform permissions.",
+        auditDescription:
+          "Audit administrator for audit logs, permission review, and admin behavior supervision.",
+        network_builderDescription:
+          "Business network builder for data, knowledge, and execution factory assets.",
+        normal_userDescription:
+          "Regular user for viewing, querying, executing, and invoking module capabilities.",
+        securityDescription:
+          "Security administrator for roles, authorization, and account security.",
+        super_adminDescription:
+          "Built-in hidden and controlled role with full platform permissions.",
       },
     },
     grant: {
       scopeLabel: "Scope:",
       wholeType: "All resources",
       specificResources: "Specific resources",
-      specificResourcesUnavailable: "Selecting individual objects is not available for this resource type",
+      specificResourcesUnavailable:
+        "Selecting individual objects is not available for this resource type",
       pickResourceFirst: "Select a specific resource before configuring allowed operations",
-      allowOnlyHint: "Role grants configure allowed operations only; configure user-specific deny rules in Permission Management.",
+      allowOnlyHint:
+        "Role grants configure allowed operations only; configure user-specific deny rules in Permission Management.",
       allOps: "All operations",
       empty: "No grants yet",
       add: "Add grant",
@@ -358,11 +428,13 @@ export const systemAdminEnUS = {
       operationsPlaceholder: "Pick operations",
     },
     authorizationRegistry: {
-      loadFailed: "Unable to load the current authorization catalog. Permission changes are unavailable until it is retried.",
+      loadFailed:
+        "Unable to load the current authorization catalog. Permission changes are unavailable until it is retried.",
     },
     authorize: {
       title: "Authorize · {{name}}",
-      subtitle: "Grant this data connection to a role: pick a role and the operations to allow; use Revoke to undo.",
+      subtitle:
+        "Grant this data connection to a role: pick a role and the operations to allow; use Revoke to undo.",
       roleLabel: "Role",
       rolePlaceholder: "Pick a role",
       operations: "Operations",
@@ -378,7 +450,8 @@ export const systemAdminEnUS = {
     },
     objectGrants: {
       title: "Permission Management",
-      description: "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user.",
+      description:
+        "On top of role permissions, configure allowed operations on a specific object (catalog / model / function / toolbox, etc.) for a user.",
       create: "New Permission Rule",
       authorizedSubjects: "Authorized subjects",
       unresolvedObject: "Unresolved {{type}}",
@@ -401,14 +474,17 @@ export const systemAdminEnUS = {
       memberRoles: "Roles",
       memberSource: "Permission source",
       memberUserTitle: "Select user",
-      memberUserDescription: "Filter users by their organization and review their directly configured object grants. Departments are filters, not grant subjects.",
+      memberUserDescription:
+        "Filter users by their organization and review their directly configured object grants. Departments are filters, not grant subjects.",
       memberListTitle: "Users",
       memberListMeta: "{{count}} users",
       memberSearchPlaceholder: "Search name or account",
-      memberAccessHint: "These are this user's directly configured object-grant records. Role and parent-resource permissions are not listed separately; effective permissions are computed by the server.",
+      memberAccessHint:
+        "These are this user's directly configured object-grant records. Role and parent-resource permissions are not listed separately; effective permissions are computed by the server.",
       memberEmpty: "Select a user to review object grants",
       memberSuperAdminTitle: "All resources and operations",
-      memberSuperAdminDescription: "This user holds the global super_admin wildcard role. Its permission is *, so no object-grant records are queried or added.",
+      memberSuperAdminDescription:
+        "This user holds the global super_admin wildcard role. Its permission is *, so no object-grant records are queried or added.",
       memberEffectivePermissions: "Effective permissions",
       memberPermissionAllowCount: "{{count}} allowed",
       memberPermissionDenyCount: "{{count}} denied",
@@ -424,16 +500,17 @@ export const systemAdminEnUS = {
       granteeUser: "User",
       granteeDept: "Department",
       deptPrefix: "Dept",
-    granteeCount: "{{count}} subjects",
-    granteeCount_one: "{{count}} subject",
-    granteeCount_other: "{{count}} subjects",
-    objectCount: "{{count}} objects",
-    objectCount_one: "{{count}} object",
-    objectCount_other: "{{count}} objects",
+      granteeCount: "{{count}} subjects",
+      granteeCount_one: "{{count}} subject",
+      granteeCount_other: "{{count}} subjects",
+      objectCount: "{{count}} objects",
+      objectCount_one: "{{count}} object",
+      objectCount_other: "{{count}} objects",
       pickObjectFirst: "Pick an object first",
       pickGranteeFirst: "Pick a user first",
       pickerNext: "Next - Configure Permissions",
-      pickerHint: "A permission rule targets one object. Pick the object and subject first, then configure allowed operations in the drawer.",
+      pickerHint:
+        "A permission rule targets one object. Pick the object and subject first, then configure allowed operations in the drawer.",
       pickerObjectTypePlaceholder: "Pick an object type...",
       pickerObjectPlaceholder: "Pick an object to configure...",
       pickerNoResults: "No matching objects",
@@ -442,9 +519,10 @@ export const systemAdminEnUS = {
       pickerGranteePlaceholder: "Pick a subject (user)...",
       pickOpsFirst: "Pick at least one operation",
       createPageTitle: "New Object Permission",
-      createPageHint: "Configure user-level operations on an object and review the complete scope before submission.",
+      createPageHint:
+        "Configure user-level operations on an object and review the complete scope before submission.",
       createPagePickObject: "Pick an object",
-    createPagePickGrantee: "Pick one or more subjects",
+      createPagePickGrantee: "Pick one or more subjects",
       createPagePickOps: "Choose allowed operations",
       objectTypeGroups: {
         data: "Data assets",
@@ -455,7 +533,8 @@ export const systemAdminEnUS = {
         other: "Other resources",
       },
       createPageOpsPlaceholder: "Pick allowed operations...",
-      createPageGranteeHint: "Batch selection is supported. The same operation set will be applied to every subject.",
+      createPageGranteeHint:
+        "Batch selection is supported. The same operation set will be applied to every subject.",
       objectStepDescription: "Choose a resource type, then select the exact object to configure.",
       configurationSummary: "Configuration summary",
       configurationReady: "Ready",
@@ -474,19 +553,24 @@ export const systemAdminEnUS = {
       editionCommunity: "Community",
       editionProfessional: "Professional or above",
       modeCommunityTitle: "Full-package authorization",
-      modeCommunityDescription: "This edition configures top-level business objects with one full-access package; child resources, operations and deny rules stay hidden.",
+      modeCommunityDescription:
+        "This edition configures top-level business objects with one full-access package; child resources, operations and deny rules stay hidden.",
       modeFineTitle: "Fine-grained authorization",
-      modeFineDescription: "Allow and deny remain separate source records. Effective results, inheritance and prerequisites come from the server.",
+      modeFineDescription:
+        "Allow and deny remain separate source records. Effective results, inheritance and prerequisites come from the server.",
       authorizationModeHelp: "View the current authorization mode",
       fullBundleTitle: "Confirm the full business access package",
-      fullBundleDescription: "Community does not expand operation details that cannot be configured independently.",
+      fullBundleDescription:
+        "Community does not expand operation details that cannot be configured independently.",
       fullBundleName: "Full business access",
-      fullBundleScope: "Grants the complete set of business operations defined for this top-level object. Edition changes do not delete the configuration.",
+      fullBundleScope:
+        "Grants the complete set of business operations defined for this top-level object. Edition changes do not delete the configuration.",
       effectLabel: "Rule effect",
       effectAllow: "Allow",
       effectDeny: "Deny",
       effect: { allow: "Allow", deny: "Deny" },
-      requiredBySelection: "This operation is required by another selection and cannot be cleared yet",
+      requiredBySelection:
+        "This operation is required by another selection and cannot be cleared yet",
       requiredSelectionNotice:
         "{{dependents}} requires {{requirement}}, so {{requirement}} remains selected. Clear the dependent operation to unlock it.",
       historicalRequiredSelectionNotice:
@@ -524,7 +608,8 @@ export const systemAdminEnUS = {
       sourceCount_one: "{{count}} source",
       sourceCount_other: "{{count}} sources",
       sourceDrawerTitle: "{{name}} / Grant sources",
-      sourceDrawerDescription: "Deleting one source affects only that record, not other direct or inherited access.",
+      sourceDrawerDescription:
+        "Deleting one source affects only that record, not other direct or inherited access.",
       sourceRecordCount: "{{count}} original records",
       sourceRecordCount_one: "{{count}} original record",
       sourceRecordCount_other: "{{count}} original records",
@@ -537,21 +622,29 @@ export const systemAdminEnUS = {
       sourceEmpty: "No grant sources to display.",
       deleteGrant: "Delete grant",
       deleteGrantTitle: "Delete user grant",
-      deleteGrantConfirm: "This deletes {{count}} directly removable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
-      deleteGrantConfirm_one: "This deletes {{count}} directly removable source for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
-      deleteGrantConfirm_other: "This deletes {{count}} directly removable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+      deleteGrantConfirm:
+        "This deletes {{count}} directly removable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+      deleteGrantConfirm_one:
+        "This deletes {{count}} directly removable source for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
+      deleteGrantConfirm_other:
+        "This deletes {{count}} directly removable sources for {{name}}. Read-only access inherited from roles or derived by the system will remain. Continue?",
       deleteGrantUnavailable: "No directly removable grant source is available",
       deleteSourceTitle: "Delete grant source",
-      deleteSourceConfirm: "This deletes {{name}}'s {{effect}} / {{operation}} grant from {{source}} (grant ID: {{grantId}}). Other grant sources on this object remain unchanged.",
-      deleteRequiredSourceBlocked: "{{requirement}} is still required by {{dependents}}. Delete the dependent grants first.",
+      deleteSourceConfirm:
+        "This deletes {{name}}'s {{effect}} / {{operation}} grant from {{source}} (grant ID: {{grantId}}). Other grant sources on this object remain unchanged.",
+      deleteRequiredSourceBlocked:
+        "{{requirement}} is still required by {{dependents}}. Delete the dependent grants first.",
       sourceRecords: "Grant source records",
       revokeSource: "Revoke this source",
       revokeSourceTitle: "Revoke one grant source",
-      revokeSourceConfirm: "This revokes {{name}}'s {{effect}} / {{operation}} from {{source}} (grant_id={{grantId}}). Other sources on this object remain unchanged.",
+      revokeSourceConfirm:
+        "This revokes {{name}}'s {{effect}} / {{operation}} from {{source}} (grant_id={{grantId}}). Other sources on this object remain unchanged.",
       readOnlySource: "Read-only source",
-      legacySourceUnavailable: "This legacy response has no source records. The summary is visible, but it cannot be revoked safely.",
+      legacySourceUnavailable:
+        "This legacy response has no source records. The summary is visible, but it cannot be revoked safely.",
       enterpriseRulesTitle: "Enterprise object rules · read-only compatibility",
-      enterpriseRulesDescription: "Displays server activation state and runtime eligibility only. Dormant, experimental, invalid or downgraded rules never affect the final decision. Use the API or CLI to edit.",
+      enterpriseRulesDescription:
+        "Displays server activation state and runtime eligibility only. Dormant, experimental, invalid or downgraded rules never affect the final decision. Use the API or CLI to edit.",
       enterpriseRulesEmpty: "No Enterprise compatibility rules for this object",
       runtimeEligible: "Runtime active",
       runtimeInactive: "Runtime inactive",
@@ -605,13 +698,17 @@ export const systemAdminEnUS = {
       drawerEmpty: "No users configured yet",
       addGranteePlaceholder: "Pick a user to add...",
       removeGrantTitle: "Remove permission rule",
-      removeGrantConfirm: "Remove the permission rule for \"{{name}}\"?",
-      removeLastOpConfirm: "This subject will have no operations left and the permission rule will be removed. Continue?",
-      delegateLocked: "This grant contains protected access or public access and can only be changed or deleted by a platform administrator.",
-      protectedGrantNotice: "Some grants are protected by system policy and cannot be deleted. Hover over a lock icon for details.",
-      selfAuthorizeLocked: "This grant contains your own authorization-management access. Deletion is disabled because your current role cannot grant it back.",
+      removeGrantConfirm: 'Remove the permission rule for "{{name}}"?',
+      removeLastOpConfirm:
+        "This subject will have no operations left and the permission rule will be removed. Continue?",
+      delegateLocked:
+        "This grant contains protected access or public access and can only be changed or deleted by a platform administrator.",
+      protectedGrantNotice:
+        "Some grants are protected by system policy and cannot be deleted. Hover over a lock icon for details.",
+      selfAuthorizeLocked:
+        "This grant contains your own authorization-management access. Deletion is disabled because your current role cannot grant it back.",
       revokeTitle: "Revoke permissions",
-      revokeConfirm: "Revoke \"{{name}}\"'s permissions on \"{{object}}\"?",
+      revokeConfirm: 'Revoke "{{name}}"\'s permissions on "{{object}}"?',
       stats: {
         grants: "Permission rules",
         objects: "Objects",
@@ -635,7 +732,8 @@ export const systemAdminEnUS = {
       },
     },
     errors: {
-      deptNotEmpty: "Cannot delete: this department still has child departments or direct members. Remove them first.",
+      deptNotEmpty:
+        "Cannot delete: this department still has child departments or direct members. Remove them first.",
       deptNotFound: "Department not found or already deleted.",
       deptCodeDuplicate: "Department code is already in use.",
       deptEmailInvalid: "Invalid department contact email.",
@@ -660,14 +758,14 @@ export const systemAdminEnUS = {
       tabDepts: "Departments / Org",
       allUsersNode: "All users",
       allUsersScopeLabel: "All users",
-    allUsersScopeWithCount: "Scope: All users ({{count}} members)",
-    allUsersScopeWithCount_one: "Scope: All users ({{count}} member)",
-    allUsersScopeWithCount_other: "Scope: All users ({{count}} members)",
+      allUsersScopeWithCount: "Scope: All users ({{count}} members)",
+      allUsersScopeWithCount_one: "Scope: All users ({{count}} member)",
+      allUsersScopeWithCount_other: "Scope: All users ({{count}} members)",
       deptTreeTitle: "Organization",
       deptScopeLabel: "Scope: {{name}}",
-    deptScopeWithCount: "Scope: {{name}} ({{count}} members incl. sub-departments)",
-    deptScopeWithCount_one: "Scope: {{name}} ({{count}} member incl. sub-departments)",
-    deptScopeWithCount_other: "Scope: {{name}} ({{count}} members incl. sub-departments)",
+      deptScopeWithCount: "Scope: {{name}} ({{count}} members incl. sub-departments)",
+      deptScopeWithCount_one: "Scope: {{name}} ({{count}} member incl. sub-departments)",
+      deptScopeWithCount_other: "Scope: {{name}} ({{count}} members incl. sub-departments)",
       builtinLocked: "Built-in accounts cannot be disabled or deleted",
       createUser: "New User",
       createDept: "New Department",
@@ -679,7 +777,8 @@ export const systemAdminEnUS = {
       statusDisabled: "Disabled",
       deptFilterAll: "All departments",
       userToolbarHint: "Set an initial password when creating a user.",
-      deptToolbarHint: "Manage departments by hierarchy. Move out members and sub-departments before deleting one.",
+      deptToolbarHint:
+        "Manage departments by hierarchy. Move out members and sub-departments before deleting one.",
       builtin: "Built-in",
       rolesEmpty: "Not granted",
       nameListMore: "{{preview}} ({{count}} total)",
@@ -709,12 +808,15 @@ export const systemAdminEnUS = {
         viewAuditLogs: "View audit log",
       },
       deleteUserTitle: "Delete user",
-      deleteUserConfirm: "Delete user \"{{name}}\" ({{account}})? Its role bindings will be removed too.",
+      deleteUserConfirm:
+        'Delete user "{{name}}" ({{account}})? Its role bindings will be removed too.',
       disableUserTitle: "Disable user",
       disableUser: "Disable",
-      disableUserConfirm: "After disabling \"{{name}}\" ({{account}}) the account cannot sign in; role bindings are kept and restored on re-enable.",
+      disableUserConfirm:
+        'After disabling "{{name}}" ({{account}}) the account cannot sign in; role bindings are kept and restored on re-enable.',
       deleteDeptTitle: "Delete department",
-      deleteDeptConfirm: "Delete department \"{{name}}\"? (backend rejects if it has children or members)",
+      deleteDeptConfirm:
+        'Delete department "{{name}}"? (backend rejects if it has children or members)',
       toast: {
         userCreated: "User created",
         userSaved: "User saved",
@@ -735,10 +837,12 @@ export const systemAdminEnUS = {
         createTitle: "New User",
         editTitle: "Edit User · {{name}}",
         sectionBasic: "Basic information",
-        sectionBasicDesc: "Login name cannot be changed after creation; display name is shown in the UI.",
+        sectionBasicDesc:
+          "Login name cannot be changed after creation; display name is shown in the UI.",
         fieldGroupContact: "Contact",
         sectionOrganization: "Organization",
-        sectionOrganizationDesc: "A user may belong to multiple departments for scoping and filters.",
+        sectionOrganizationDesc:
+          "A user may belong to multiple departments for scoping and filters.",
         sectionRoles: "Roles & permissions",
         sectionRolesDesc: "Roles define which features and data the user can access.",
         account: "Login name",
@@ -758,15 +862,18 @@ export const systemAdminEnUS = {
         grantRoles: "Grant roles",
         businessRoles: "Business roles",
         systemRoles: "Three-admin roles",
-        roleExclusiveHint: "Three-admin roles separate system operations, security authorization, and audit oversight. Use business roles for business-building permissions.",
-        superAdminControlledHint: "This account holds the controlled super_admin role and already has full platform permissions; do not add business or three-admin roles here.",
+        roleExclusiveHint:
+          "Three-admin roles separate system operations, security authorization, and audit oversight. Use business roles for business-building permissions.",
+        superAdminControlledHint:
+          "This account holds the controlled super_admin role and already has full platform permissions; do not add business or three-admin roles here.",
         threeAdminConflictTitle: "Three-admin duty conflict",
-        threeAdminConflictDesc: "Current combination: {{roles}}. An account cannot hold multiple three-admin roles. Remove the conflicting role before saving.",
+        threeAdminConflictDesc:
+          "Current combination: {{roles}}. An account cannot hold multiple three-admin roles. Remove the conflicting role before saving.",
         rolesHint: "Pick the roles this user holds, which decide their permissions.",
         roleSearchPlaceholder: "Search by role name or description",
-    rolesSelected: "{{count}} roles selected",
-    rolesSelected_one: "{{count}} role selected",
-    rolesSelected_other: "{{count}} roles selected",
+        rolesSelected: "{{count}} roles selected",
+        rolesSelected_one: "{{count}} role selected",
+        rolesSelected_other: "{{count}} roles selected",
         controlledRoles: "Controlled roles",
         controlledRolesReadOnly: "Read-only retained",
         controlledRolesSelected: "{{count}} controlled",
@@ -801,14 +908,15 @@ export const systemAdminEnUS = {
         memberCountSubtreeHint: "Includes sub-departments (matches the user list scope)",
         deptSearchPlaceholder: "Search departments",
         searchEmpty: "No matching departments",
-        dragHint: "Drag onto another department to change its parent; drop in a gap to make it a sibling.",
+        dragHint:
+          "Drag onto another department to change its parent; drop in a gap to make it a sibling.",
         cycleError: "Cannot move a department under its own descendant.",
       },
       deptMembers: {
         title: "Members · {{name}}",
-    memberCount: "{{count}} members",
-    memberCount_one: "{{count}} member",
-    memberCount_other: "{{count}} members",
+        memberCount: "{{count}} members",
+        memberCount_one: "{{count}} member",
+        memberCount_other: "{{count}} members",
         addPlaceholder: "Select users to add (multiple allowed)…",
         memberSearchPlaceholder: "Search by name, account, email, phone, or role",
         add: "Add",
@@ -816,9 +924,9 @@ export const systemAdminEnUS = {
         remove: "Remove",
         added: "Added to department",
         removed: "Removed from department",
-    batchAdded: "Added {{count}} members",
-    batchAdded_one: "Added {{count}} member",
-    batchAdded_other: "Added {{count}} members",
+        batchAdded: "Added {{count}} members",
+        batchAdded_one: "Added {{count}} member",
+        batchAdded_other: "Added {{count}} members",
         note: "Direct members only; users in child departments are not listed here.",
       },
       reset: {
@@ -836,7 +944,8 @@ export const systemAdminEnUS = {
     },
     roles: {
       title: "Role Management",
-      description: "A role is a set of permissions deciding what its members can do on which resources; members currently must be users.",
+      description:
+        "A role is a set of permissions deciding what its members can do on which resources; members currently must be users.",
       create: "New Role",
       searchPlaceholder: "Search by role name or description",
       builtin: "Built-in",
@@ -855,10 +964,13 @@ export const systemAdminEnUS = {
         delete: "Delete",
       },
       deleteTitle: "Delete role",
-      deleteConfirm: "Delete role \"{{name}}\"?",
-    deleteConfirmWithMembers: "Delete role \"{{name}}\"? Bindings for its {{count}} members will be removed.",
-    deleteConfirmWithMembers_one: "Delete role \"{{name}}\"? Bindings for its {{count}} member will be removed.",
-    deleteConfirmWithMembers_other: "Delete role \"{{name}}\"? Bindings for its {{count}} members will be removed.",
+      deleteConfirm: 'Delete role "{{name}}"?',
+      deleteConfirmWithMembers:
+        'Delete role "{{name}}"? Bindings for its {{count}} members will be removed.',
+      deleteConfirmWithMembers_one:
+        'Delete role "{{name}}"? Bindings for its {{count}} member will be removed.',
+      deleteConfirmWithMembers_other:
+        'Delete role "{{name}}"? Bindings for its {{count}} members will be removed.',
       toast: {
         created: "Role created",
         saved: "Role saved",
@@ -875,9 +987,12 @@ export const systemAdminEnUS = {
         description: "Description",
         descriptionPlaceholder: "What is this role for?",
         permissions: "Permissions",
-        permissionsHint: "Choose all resources or a specific resource, then configure allowed operations",
-        permissionsReadOnly: "Read-only: configuring role permissions requires the role-permission point",
-        builtinLocked: "Built-in roles are read-only — name, description and permissions cannot be changed.",
+        permissionsHint:
+          "Choose all resources or a specific resource, then configure allowed operations",
+        permissionsReadOnly:
+          "Read-only: configuring role permissions requires the role-permission point",
+        builtinLocked:
+          "Built-in roles are read-only — name, description and permissions cannot be changed.",
       },
       membersModal: {
         title: "Members · {{name}}",
@@ -899,9 +1014,9 @@ export const systemAdminEnUS = {
       detail: {
         title: "Role Detail · {{name}}",
         updatedAt: "Created {{time}}",
-    grantCount: "{{count}} grants",
-    grantCount_one: "{{count}} grant",
-    grantCount_other: "{{count}} grants",
+        grantCount: "{{count}} grants",
+        grantCount_one: "{{count}} grant",
+        grantCount_other: "{{count}} grants",
         hasWildcard: "Contains wildcard",
         searchPlaceholder: "Search by type, resource id, or operation…",
         filteredCount: "Showing {{shown}} / {{total}}",
@@ -909,7 +1024,8 @@ export const systemAdminEnUS = {
     },
     license: {
       title: "License Management",
-      description: "View this cluster's license status, copy the device fingerprint, and import or activate a product license.",
+      description:
+        "View this cluster's license status, copy the device fingerprint, and import or activate a product license.",
       none: "None",
       permanent: "Permanent",
       unlimited: "Unlimited",
@@ -924,7 +1040,8 @@ export const systemAdminEnUS = {
       emptyFeatures: "No licensed features",
       emptyLimits: "No limits configured",
       deleteTitle: "Remove license",
-      deleteConfirm: "Removing the license returns the cluster to an unactivated state. Data is not affected. Continue?",
+      deleteConfirm:
+        "Removing the license returns the cluster to an unactivated state. Data is not affected. Continue?",
       sections: {
         currentStatus: "Current License Status",
         summary: "License Summary",
@@ -936,35 +1053,44 @@ export const systemAdminEnUS = {
         scope: "License Scope",
         scopeHint: "Capabilities and resource limits enabled by this license.",
         activationMode: "Activation Methods",
-        activationModeHint: "Use online activation when the environment can reach the issuer; use offline activation for isolated environments.",
+        activationModeHint:
+          "Use online activation when the environment can reach the issuer; use offline activation for isolated environments.",
         activation: "Offline Activation",
-        activationHint: "Copy the device fingerprint to the issuer portal and exchange it for a signed activation certificate. One authorization code can be activated only once.",
+        activationHint:
+          "Copy the device fingerprint to the issuer portal and exchange it for a signed activation certificate. One authorization code can be activated only once.",
         deviceFingerprint: "Copy Device Fingerprint",
-        deviceFingerprintHint: "The fingerprint starts with fp_ and is generated from salted hardware metadata. Raw hardware details never leave this machine.",
+        deviceFingerprintHint:
+          "The fingerprint starts with fp_ and is generated from salted hardware metadata. Raw hardware details never leave this machine.",
         onlineActivation: "Online Activation",
         onlineActivationTitle: "Connected Environment",
-        onlineActivationHint: "Apply for a .lic license file in the license portal, then paste it here to import and activate online.",
+        onlineActivationHint:
+          "Apply for a .lic license file in the license portal, then paste it here to import and activate online.",
         licensePortalLink: "Open license portal https://license.openbkn.ai/",
         onlineFlowImport: "Import license file",
         onlineFlowBind: "Let bkn-safe contact the issuer and bind",
         offlineActivationTitle: "Intranet / Offline Environment",
-        offlineSimpleHint: "Copy the device fingerprint from the status area above, exchange it in the license portal, then import the new .lic.",
+        offlineSimpleHint:
+          "Copy the device fingerprint from the status area above, exchange it in the license portal, then import the new .lic.",
         offlineFlowFingerprint: "Copy this instance's device fingerprint",
         offlineFlowExchange: "Exchange it for an activation certificate",
         offlineFlowImport: "Import the new .lic activation certificate",
         importLicense: "Import License File",
         importLicenseHint: "Paste the full .lic text. It is not written to local storage.",
         importActivationCertificate: "Import Activation Certificate",
-        importActivationCertificateHint: "Paste the new .lic activation certificate generated by the issuer portal. Importing it completes offline activation.",
+        importActivationCertificateHint:
+          "Paste the new .lic activation certificate generated by the issuer portal. Importing it completes offline activation.",
       },
       scenarios: {
         online: "Online Activation",
         onlineTitle: "Use this when this environment can reach the license issuer",
-        onlineDesc: "Paste the license file and complete import plus cluster binding in one action. bkn-safe contacts the issuer automatically.",
-        onlineActivateHint: "bkn-safe will use this cluster's fingerprint to request binding from the issuer.",
+        onlineDesc:
+          "Paste the license file and complete import plus cluster binding in one action. bkn-safe contacts the issuer automatically.",
+        onlineActivateHint:
+          "bkn-safe will use this cluster's fingerprint to request binding from the issuer.",
         offline: "Offline Activation",
         offlineTitle: "Use this for intranet, isolated, or issuer-unreachable environments",
-        offlineDesc: "Copy the device fingerprint to the issuer portal, exchange it for a new .lic activation certificate, then import it here.",
+        offlineDesc:
+          "Copy the device fingerprint to the issuer portal, exchange it for a new .lic activation certificate, then import it here.",
       },
       metrics: {
         edition: "Edition",
@@ -973,7 +1099,7 @@ export const systemAdminEnUS = {
         activationBound: "Bound",
         activationPending: "Pending",
         scope: "Licensed Scope",
-      scopeValue: "Features: {{features}} / limits: {{limits}}",
+        scopeValue: "Features: {{features}} / limits: {{limits}}",
       },
       fields: {
         state: "State",
@@ -1023,15 +1149,21 @@ export const systemAdminEnUS = {
         unlicensed:
           "No licence file has been imported. Community capabilities keep working; request a licence from the portal to unlock paid ones.",
         valid: "The cluster license is active.",
-        validUnbound: "A license has been imported but is not bound to this cluster. Complete offline activation for compliance; functionality is not affected.",
-      grace: "The license has expired. Grace period remaining (days): {{days}}. Renewal status: {{reason}}.",
-        fallback_community: "The commercial license has expired. The cluster is running the community capability set; data is preserved.",
-        invalid: "No valid license is available. Apply for a .lic license file in the license portal, or copy the device fingerprint to exchange for an offline activation certificate.",
-        renewError: "Automatic renewal failed: {{reason}}. The system will keep retrying; the current license is not downgraded.",
+        validUnbound:
+          "A license has been imported but is not bound to this cluster. Complete offline activation for compliance; functionality is not affected.",
+        grace:
+          "The license has expired. Grace period remaining (days): {{days}}. Renewal status: {{reason}}.",
+        fallback_community:
+          "The commercial license has expired. The cluster is running the community capability set; data is preserved.",
+        invalid:
+          "No valid license is available. Apply for a .lic license file in the license portal, or copy the device fingerprint to exchange for an offline activation certificate.",
+        renewError:
+          "Automatic renewal failed: {{reason}}. The system will keep retrying; the current license is not downgraded.",
       },
       placeholders: {
         license: "Paste the full license text, e.g. v1.xxx.yyy",
-        activationCertificate: "Paste the activation certificate .lic text from the issuer portal, e.g. v1.xxx.yyy",
+        activationCertificate:
+          "Paste the activation certificate .lic text from the issuer portal, e.g. v1.xxx.yyy",
       },
       validation: {
         licenseRequired: "Paste the license text first",
@@ -1043,20 +1175,26 @@ export const systemAdminEnUS = {
       },
       errors: {
         invalidLicense: "The license file is invalid. Check that it was pasted completely.",
-        boundToOtherCluster: "This license is already bound to another environment. Contact an administrator to unbind it in the issuer portal.",
-        activationConflict: "The license was imported but activation was rejected: {{error}}. Unbind it and retry activation.",
-        serverUnavailable: "The license server is unreachable. Retry later, or use offline activation.",
-        activationUnavailable: "Online activation is not configured for this deployment. Offline activation remains available.",
+        boundToOtherCluster:
+          "This license is already bound to another environment. Contact an administrator to unbind it in the issuer portal.",
+        activationConflict:
+          "The license was imported but activation was rejected: {{error}}. Unbind it and retry activation.",
+        serverUnavailable:
+          "The license server is unreachable. Retry later, or use offline activation.",
+        activationUnavailable:
+          "Online activation is not configured for this deployment. Offline activation remains available.",
         unknown: "{{error}}",
       },
     },
     audit: {
       title: "Audit Log",
-      description: "Records create / update / delete actions on users, departments, roles and more, newest first; read-only views are not recorded.",
+      description:
+        "Records create / update / delete actions on users, departments, roles and more, newest first; read-only views are not recorded.",
       resourceAll: "All resources",
       actorAll: "All actors",
       failedOnly: "Failures only",
-      failedOnlyHint: "Until the backend supports status filtering, this applies to the current page only.",
+      failedOnlyHint:
+        "Until the backend supports status filtering, this applies to the current page only.",
       clearFilters: "Clear filters",
       targetFilterActive: "Filtered by target ID: {{id}}",
       empty: "No audit entries",

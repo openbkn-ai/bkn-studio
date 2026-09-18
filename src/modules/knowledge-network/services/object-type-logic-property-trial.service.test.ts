@@ -39,9 +39,8 @@ describe("object-type-logic-property-trial.service", () => {
   });
 
   it("calls the direct ontology-query property endpoint", async () => {
-    const { getObjectTypeLogicPropertyValues } = await import(
-      "@/modules/knowledge-network/services/object-type-logic-property-trial.service"
-    );
+    const { getObjectTypeLogicPropertyValues } =
+      await import("@/modules/knowledge-network/services/object-type-logic-property-trial.service");
 
     const rows = await getObjectTypeLogicPropertyValues({
       instanceIdentities: [{ order_id: "1001" }],
@@ -70,9 +69,7 @@ describe("object-type-logic-property-trial.service", () => {
       headers: { "X-HTTP-Method-Override": "GET" },
       skipErrorToast: true,
     });
-    expect(rows).toEqual([
-      { instanceIdentity: { order_id: "1001" }, values: { discount: 42 } },
-    ]);
+    expect(rows).toEqual([{ instanceIdentity: { order_id: "1001" }, values: { discount: 42 } }]);
   });
 
   it("submits selected instances in one request and preserves returned row order", async () => {
@@ -82,9 +79,8 @@ describe("object-type-logic-property-trial.service", () => {
       },
     });
 
-    const { getObjectTypeLogicPropertyValues } = await import(
-      "@/modules/knowledge-network/services/object-type-logic-property-trial.service"
-    );
+    const { getObjectTypeLogicPropertyValues } =
+      await import("@/modules/knowledge-network/services/object-type-logic-property-trial.service");
 
     const rows = await getObjectTypeLogicPropertyValues({
       instanceIdentities: [{ order_id: "1002" }, { order_id: "1001" }],
@@ -101,9 +97,8 @@ describe("object-type-logic-property-trial.service", () => {
   });
 
   it("forwards explicit function inputs to the ontology-query property endpoint", async () => {
-    const { getObjectTypeLogicPropertyValues } = await import(
-      "@/modules/knowledge-network/services/object-type-logic-property-trial.service"
-    );
+    const { getObjectTypeLogicPropertyValues } =
+      await import("@/modules/knowledge-network/services/object-type-logic-property-trial.service");
 
     await getObjectTypeLogicPropertyValues({
       dynamicParams: { discount: { rate: 0.8 } },
@@ -123,9 +118,8 @@ describe("object-type-logic-property-trial.service", () => {
   it("rejects a response that cannot be mapped to every selected instance", async () => {
     postMock.mockResolvedValueOnce({ data: { datas: [] } });
 
-    const { getObjectTypeLogicPropertyValues } = await import(
-      "@/modules/knowledge-network/services/object-type-logic-property-trial.service"
-    );
+    const { getObjectTypeLogicPropertyValues } =
+      await import("@/modules/knowledge-network/services/object-type-logic-property-trial.service");
 
     await expect(
       getObjectTypeLogicPropertyValues({

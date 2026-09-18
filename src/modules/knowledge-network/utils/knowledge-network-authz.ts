@@ -14,8 +14,7 @@ export const knowledgeNetworkChildResourceTypes = [
   "risk_type",
 ] as const;
 
-export type KnowledgeNetworkChildResourceType =
-  (typeof knowledgeNetworkChildResourceTypes)[number];
+export type KnowledgeNetworkChildResourceType = (typeof knowledgeNetworkChildResourceTypes)[number];
 
 /** bkn-safe identifies every child resource by its parent KN and child ID. */
 export function knowledgeNetworkChildAuthorizationId(networkId: string, childId: string) {

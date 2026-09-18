@@ -30,17 +30,39 @@ describe("buildCondition", () => {
   ];
 
   it("ignores incomplete rows and returns null when nothing is left", () => {
-    expect(buildCondition([{ field: "", operator: "==", value: "x" }, { field: "name", operator: "==", value: "  " }], properties)).toBeNull();
+    expect(
+      buildCondition(
+        [
+          { field: "", operator: "==", value: "x" },
+          { field: "name", operator: "==", value: "  " },
+        ],
+        properties,
+      ),
+    ).toBeNull();
   });
 
   it("emits a single leaf for one row and coerces by property type", () => {
-    expect(buildCondition([{ field: "amount", operator: ">", value: " 12.5 " }], properties)).toEqual({ field: "amount", operation: ">", value: 12.5 });
-    expect(buildCondition([{ field: "active", operator: "==", value: "true" }], properties)).toEqual({ field: "active", operation: "==", value: true });
-    expect(buildCondition([{ field: "name", operator: "like", value: "华东" }], properties)).toEqual({ field: "name", operation: "like", value: "华东" });
+    expect(
+      buildCondition([{ field: "amount", operator: ">", value: " 12.5 " }], properties),
+    ).toEqual({ field: "amount", operation: ">", value: 12.5 });
+    expect(
+      buildCondition([{ field: "active", operator: "==", value: "true" }], properties),
+    ).toEqual({ field: "active", operation: "==", value: true });
+    expect(
+      buildCondition([{ field: "name", operator: "like", value: "华东" }], properties),
+    ).toEqual({ field: "name", operation: "like", value: "华东" });
   });
 
   it("splits in-lists on commas and wraps several rows in an and-group", () => {
-    expect(buildCondition([{ field: "amount", operator: "in", value: "1, 2,x" }, { field: "name", operator: "!=", value: "a" }], properties)).toEqual({
+    expect(
+      buildCondition(
+        [
+          { field: "amount", operator: "in", value: "1, 2,x" },
+          { field: "name", operator: "!=", value: "a" },
+        ],
+        properties,
+      ),
+    ).toEqual({
       operation: "and",
       sub_conditions: [
         { field: "amount", operation: "in", value: [1, 2, "x"] },

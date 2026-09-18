@@ -27,35 +27,34 @@ export async function ensureE2eRuntime(
   page: Page,
   options?: { capabilityUxV2?: boolean; marketCatalog?: boolean },
 ) {
-  await page.addInitScript((runtimeConfig) => {
-    window.__BKN_STUDIO_RUNTIME__ = {
-      ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
-      apiBaseUrl: runtimeConfig.baseUrl,
-      mode: "hosted",
-      features: {
-        ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
-        capabilityUxV2: runtimeConfig.capabilityUxV2,
-        marketCatalog: runtimeConfig.marketCatalog,
-      },
-    };
-  }, {
-    baseUrl: STUDIO_API_BASE_URL,
-    capabilityUxV2: options?.capabilityUxV2 ?? true,
-    // 市场入口产品上默认关(见 utils/market-catalog.ts),但 /catalog 的 spec
-    // 仍要覆盖 marketMode 代码路径,所以 e2e 里默认开。
-    marketCatalog: options?.marketCatalog ?? true,
-  });
+  await page.addInitScript(
+    (runtimeConfig) => {
+      window.__BKN_STUDIO_RUNTIME__ = {
+        ...(window.__BKN_STUDIO_RUNTIME__ ?? {}),
+        apiBaseUrl: runtimeConfig.baseUrl,
+        mode: "hosted",
+        features: {
+          ...(window.__BKN_STUDIO_RUNTIME__?.features ?? {}),
+          capabilityUxV2: runtimeConfig.capabilityUxV2,
+          marketCatalog: runtimeConfig.marketCatalog,
+        },
+      };
+    },
+    {
+      baseUrl: STUDIO_API_BASE_URL,
+      capabilityUxV2: options?.capabilityUxV2 ?? true,
+      // 市场入口产品上默认关(见 utils/market-catalog.ts),但 /catalog 的 spec
+      // 仍要覆盖 marketMode 代码路径,所以 e2e 里默认开。
+      marketCatalog: options?.marketCatalog ?? true,
+    },
+  );
 }
 
 export async function ensureLegacyE2eRuntime(page: Page) {
   await ensureE2eRuntime(page, { capabilityUxV2: false });
 }
 
-export async function gotoE2ePage(
-  page: Page,
-  url: string,
-  options?: { capabilityUxV2?: boolean },
-) {
+export async function gotoE2ePage(page: Page, url: string, options?: { capabilityUxV2?: boolean }) {
   await ensureE2eRuntime(page, { capabilityUxV2: options?.capabilityUxV2 ?? true });
   await page.goto(toStudioPath(url));
 }
@@ -261,7 +260,10 @@ export function primaryToolbar(page: Page) {
 }
 
 export async function clickPrimaryToolbarButton(page: Page, pattern: RegExp) {
-  const button = page.locator('[class*="toolbarActions"]').getByRole("button", { name: pattern }).first();
+  const button = page
+    .locator('[class*="toolbarActions"]')
+    .getByRole("button", { name: pattern })
+    .first();
   await expect(button).toBeVisible({ timeout: 30_000 });
   await button.click();
 }
@@ -277,7 +279,10 @@ export async function expectVisibleDrawer(page: Page) {
   return drawer;
 }
 
-export async function openAddCapabilityWizard(page: Page, tab: "toolbox" | "mcp" | "skill" = "toolbox") {
+export async function openAddCapabilityWizard(
+  page: Page,
+  tab: "toolbox" | "mcp" | "skill" = "toolbox",
+) {
   await gotoUnitsTab(page, tab);
   await clickPrimaryToolbarButton(page, /添加能力|Add Capability/i);
 
@@ -289,7 +294,8 @@ export async function openAddCapabilityWizard(page: Page, tab: "toolbox" | "mcp"
   await page.getByRole("menuitem", { name: menuItemPatterns[tab] }).click();
 
   const drawer = await expectVisibleDrawer(page);
-  const wizardTitle = /添加能力|Add Capability|添加 API|Add API|导入 OpenAPI|Import OpenAPI|添加 MCP 服务|Add MCP service|导入 Skill 包|Import skill pack/i;
+  const wizardTitle =
+    /添加能力|Add Capability|添加 API|Add API|导入 OpenAPI|Import OpenAPI|添加 MCP 服务|Add MCP service|导入 Skill 包|Import skill pack/i;
   await expect(page.getByRole("dialog").filter({ hasText: wizardTitle })).toBeVisible();
   return drawer;
 }
@@ -347,19 +353,14 @@ export async function selectOperatorCreateMode(
     await scope.getByText(/函数计算|Function/i).click();
   }
 
-  await scope
-    .getByRole("button", { name: /继续配置|Continue setup/i })
-    .click();
+  await scope.getByRole("button", { name: /继续配置|Continue setup/i }).click();
 
   await expect(page).toHaveURL(new RegExp(`metadataType=${mode}`));
   await expect(page.getByLabel(/算子名称|Operator Name/i)).toBeVisible();
 }
 
 /** 新建算子 → 向导选类型 → 选择 OpenAPI/函数计算 → 进入配置表单 */
-export async function openOperatorCreateForm(
-  page: Page,
-  mode: "openapi" | "function" = "openapi",
-) {
+export async function openOperatorCreateForm(page: Page, mode: "openapi" | "function" = "openapi") {
   const drawer = await openOperatorCreateWizardStep2(page);
   await selectOperatorCreateMode(page, mode, drawer);
 }
@@ -392,7 +393,11 @@ export async function expectFunctionDefinitionSections(
   expect(positions.outputs).toBeGreaterThan(positions.logic);
 }
 
-export async function fillOpenApiSpecPaste(page: Page, spec: string, scope?: import("@playwright/test").Locator) {
+export async function fillOpenApiSpecPaste(
+  page: Page,
+  spec: string,
+  scope?: import("@playwright/test").Locator,
+) {
   const root = scope ?? page;
   const pasteTab = root.getByRole("tab", { name: /粘贴|Paste/i });
   if (await pasteTab.isVisible().catch(() => false)) {
@@ -452,11 +457,7 @@ export async function openToolboxToolsPageFromCardMenu(page: Page, toolboxName: 
   await expect(page).toHaveURL(/\/execution-factory\/toolboxes\/[^/]+\/tools/);
 }
 
-export async function openCardMenu(
-  page: Page,
-  name: string,
-  menuItem: string | RegExp,
-) {
+export async function openCardMenu(page: Page, name: string, menuItem: string | RegExp) {
   const card = await searchExecutionUnitByName(page, name);
   await card.getByRole("button", { name: /更多操作|More/i }).click();
   const menu = page.getByRole("menu").last();
@@ -544,10 +545,7 @@ export async function openToolDebugModalFromToolsPage(page: Page) {
   return modal;
 }
 
-export async function openToolDebugModalFromToolList(
-  page: Page,
-  toolName: string,
-) {
+export async function openToolDebugModalFromToolList(page: Page, toolName: string) {
   const toolItem = page.locator('[class*="toolItem"]').filter({ hasText: toolName }).first();
   await toolItem.getByRole("button", { name: /调\s*试|^Debug$/i }).click();
   const modal = page.locator(".ant-modal").filter({ hasText: /调试工具|Debug Tool/i });
@@ -583,7 +581,11 @@ export async function debugToolFromToolsPage(
     await openToolDebugModalFromToolList(page, options.toolName);
   } else {
     if (options?.toolName) {
-      await page.locator('[class*="toolItem"]').filter({ hasText: options.toolName }).first().click();
+      await page
+        .locator('[class*="toolItem"]')
+        .filter({ hasText: options.toolName })
+        .first()
+        .click();
     }
     await openToolDebugModalFromToolsPage(page);
   }
@@ -603,10 +605,9 @@ export async function waitForCategoryFieldReady(
 
   await categoryCombobox.scrollIntoViewIfNeeded();
   await page
-    .waitForResponse(
-      (response) => response.url().includes("/operator/category") && response.ok(),
-      { timeout: 15_000 },
-    )
+    .waitForResponse((response) => response.url().includes("/operator/category") && response.ok(), {
+      timeout: 15_000,
+    })
     .catch(() => undefined);
 }
 
@@ -667,7 +668,9 @@ export async function fillAndSubmitQuickAddApi(
     timeout: 180_000,
   });
   if (await errorToast.isVisible().catch(() => false)) {
-    throw new Error(`Quick add API failed: ${(await errorToast.first().textContent()) ?? "unknown"}`);
+    throw new Error(
+      `Quick add API failed: ${(await errorToast.first().textContent()) ?? "unknown"}`,
+    );
   }
   await expectAppToast(page, /已添加到工具集|added to the toolset/i);
 
@@ -682,17 +685,15 @@ export async function fillAndSubmitQuickAddApi(
 }
 
 export async function expectOpenApiInputModes(page: Page) {
-  const tabs = page.getByRole("tablist").filter({ has: page.getByRole("tab", { name: /粘贴|Paste/i }) });
+  const tabs = page
+    .getByRole("tablist")
+    .filter({ has: page.getByRole("tab", { name: /粘贴|Paste/i }) });
   await expect(tabs.getByRole("tab", { name: /粘贴|Paste/i })).toBeVisible();
   await expect(tabs.getByRole("tab", { name: /上传文件|Upload/i })).toBeVisible();
   await expect(tabs.getByRole("tab", { name: /^URL$/i })).toBeVisible();
 }
 
-export async function fillFunctionOperatorForm(
-  page: Page,
-  operatorName: string,
-  code: string,
-) {
+export async function fillFunctionOperatorForm(page: Page, operatorName: string, code: string) {
   await page.getByLabel(/算子名称|Operator Name/i).fill(operatorName);
   await page.getByLabel(/描述|Description/i).fill("Playwright AT — function operator");
   const codeArea = page.locator("#function-logic textarea");
@@ -713,26 +714,18 @@ export async function expectAppToast(page: Page, pattern: RegExp | string) {
   await expect(toast.first()).toBeVisible({ timeout: 30_000 });
 }
 
-export async function waitForImpexExportResponse(
-  page: Page,
-  type: "operator" | "toolbox" | "mcp",
-) {
+export async function waitForImpexExportResponse(page: Page, type: "operator" | "toolbox" | "mcp") {
   return page.waitForResponse(
     (response) =>
-      response.request().method() === "GET" &&
-      response.url().includes(`impex/export/${type}`),
+      response.request().method() === "GET" && response.url().includes(`impex/export/${type}`),
     { timeout: 120_000 },
   );
 }
 
-export async function waitForImpexImportResponse(
-  page: Page,
-  type: "operator" | "toolbox" | "mcp",
-) {
+export async function waitForImpexImportResponse(page: Page, type: "operator" | "toolbox" | "mcp") {
   return page.waitForResponse(
     (response) =>
-      response.request().method() === "POST" &&
-      response.url().includes(`impex/import/${type}`),
+      response.request().method() === "POST" && response.url().includes(`impex/import/${type}`),
     { timeout: 120_000 },
   );
 }
@@ -800,7 +793,10 @@ export async function importToolboxOpenApiViaUi(
 
   await Promise.all([
     createResponsePromise,
-    page.getByRole("dialog").getByRole("button", { name: /开始导入|^Import$/i }).click(),
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: /开始导入|^Import$/i })
+      .click(),
   ]);
   const createResponse = await createResponsePromise;
   expect(createResponse.ok()).toBeTruthy();
@@ -877,10 +873,7 @@ export async function debugMcpToolFromDetailPage(
   });
 }
 
-export async function registerLocalMcpViaUi(
-  page: Page,
-  options: { name: string; sseUrl: string },
-) {
+export async function registerLocalMcpViaUi(page: Page, options: { name: string; sseUrl: string }) {
   const drawer = await openAddCapabilityWizard(page, "mcp");
   await drawer.getByLabel(/MCP 名称|MCP name|^Name$/i).fill(options.name);
   await drawer.getByLabel(/服务地址|Service URL/i).fill(options.sseUrl);

@@ -33,7 +33,8 @@ export const dataCatalogZhCN = {
       goConfigure: "配置索引",
       launchConfigTitle: "当前资源配置",
       editConfigLink: "去修改",
-      launchConfigSummary: "主键 {{primaryKey}} · 增量键 {{incremental}} · 向量 {{embedding}} · 全文 {{fulltext}} · 模型 {{model}} · 分词器 {{analyzer}}",
+      launchConfigSummary:
+        "主键 {{primaryKey}} · 增量键 {{incremental}} · 向量 {{embedding}} · 全文 {{fulltext}} · 模型 {{model}} · 分词器 {{analyzer}}",
       viewConfig: "配置索引",
       viewTasks: "索引任务",
       tasksUnavailableForDataset: "Dataset 资源暂不支持索引任务。",
@@ -46,7 +47,8 @@ export const dataCatalogZhCN = {
       tabPreview: "数据预览",
       tabIndex: "数据索引",
       tabSemanticUnderstanding: "语义理解",
-      taskStatusUnavailable: "暂时无法加载索引任务状态，资源详情仍可查看；需要查看最新状态时，请刷新页面。",
+      taskStatusUnavailable:
+        "暂时无法加载索引任务状态，资源详情仍可查看；需要查看最新状态时，请刷新页面。",
       indexStatusUnavailable: "暂无法确认",
       permissionRefreshHint: "如果权限已更新，请刷新页面后再试。",
       loadErrorRefreshHint: "请稍后刷新页面再试。",
@@ -54,22 +56,28 @@ export const dataCatalogZhCN = {
       discardChangesDescription: "切换 Tab 将丢失当前未保存的修改，且无法恢复。",
       discardChangesConfirm: "放弃并切换",
       discoveryFailedTitle: "资源最近一次探查失败",
-      discoveryFailedNoSchemaDescription: "当前没有可用的字段元数据，请重新执行探查后再预览、查询或构建索引。",
-      discoveryFailedStaleSchemaDescription: "仍可使用上一次成功探查的字段，但这些字段可能已经过期。",
+      discoveryFailedNoSchemaDescription:
+        "当前没有可用的字段元数据，请重新执行探查后再预览、查询或构建索引。",
+      discoveryFailedStaleSchemaDescription:
+        "仍可使用上一次成功探查的字段，但这些字段可能已经过期。",
       resourceMissingTitle: "资源已从源端消失",
-      resourceMissingDescription: "探查未在源端找到该资源，请恢复源端对象并重新探查后再查询或构建索引。",
+      resourceMissingDescription:
+        "探查未在源端找到该资源，请恢复源端对象并重新探查后再查询或构建索引。",
       resourceDisabledTitle: "资源已停用",
       resourceDisabledDescription: "当前资源处于停用状态，启用资源后才能预览、查询或构建索引。",
       resourceStaleTitle: "资源已失效",
-      resourceStaleDescription: "当前资源已失效，即使保留了字段元数据也不能继续预览、查询或构建索引。",
+      resourceStaleDescription:
+        "当前资源已失效，即使保留了字段元数据也不能继续预览、查询或构建索引。",
       metadataUnavailableTitle: "资源元数据尚未就绪",
-      metadataUnavailableDescription: "当前没有可用的字段元数据，请补充或刷新资源字段后再查询或构建索引。",
+      metadataUnavailableDescription:
+        "当前没有可用的字段元数据，请补充或刷新资源字段后再查询或构建索引。",
       statusMessageDetail: "状态详情：{{message}}",
       openDiscovery: "前往探查",
       refreshMetadata: "发起资源元数据探查",
       discoveryQueued: "资源元数据探查任务已创建。",
       refreshMetadataConfirmTitle: "发起资源元数据探查？",
-      refreshMetadataConfirmDescription: "将创建资源元数据探查任务。任务完成后，字段定义、资源状态和索引可用性可能发生变化。",
+      refreshMetadataConfirmDescription:
+        "将创建资源元数据探查任务。任务完成后，字段定义、资源状态和索引可用性可能发生变化。",
       refreshMetadataConfirm: "创建探查任务",
       enableConfirmTitle: "启用资源？",
       enableConfirmDescription: "启用后可继续预览、查询和构建该资源的索引。",
@@ -84,7 +92,7 @@ export const dataCatalogZhCN = {
       tabs: {
         indexBuild: "索引构建任务",
         discover: "探查任务",
-        semanticUnderstanding: "语义理解任务"
+        semanticUnderstanding: "语义理解任务",
       },
       columns: {
         task: "任务 ID",
@@ -95,20 +103,20 @@ export const dataCatalogZhCN = {
         scope: "任务范围",
         applyMode: "应用方式",
         confidence: "置信度",
-        applied: "应用状态"
+        applied: "应用状态",
       },
       scope: {
         catalog: "数据目录",
-        resource: "数据资源"
+        resource: "数据资源",
       },
       applyMode: {
         dryRun: "仅预览",
         fillEmpty: "填充空值",
-        force: "强制覆盖"
+        force: "强制覆盖",
       },
       applied: {
         applied: "已应用",
-        notApplied: "未应用"
+        notApplied: "未应用",
       },
       moreFilters: "更多筛选",
       moreFiltersWithCount: "更多筛选（{{count}}）",
@@ -118,7 +126,7 @@ export const dataCatalogZhCN = {
         running: "执行中",
         completed: "已完成",
         failed: "失败",
-        cancelled: "已取消"
+        cancelled: "已取消",
       },
       details: {
         taskInformation: "任务信息",
@@ -127,10 +135,10 @@ export const dataCatalogZhCN = {
         startTime: "开始时间",
         message: "执行信息",
         agentId: "Agent ID",
-        failureReason: "失败原因"
+        failureReason: "失败原因",
       },
       discover: {
-        empty: "暂无探查任务"
+        empty: "暂无探查任务",
       },
       semantic: {
         empty: "暂无语义理解任务",
@@ -141,7 +149,7 @@ export const dataCatalogZhCN = {
           execution: "执行与应用",
           quality: "质量与字段应用",
           payload: "输入与结果",
-          audit: "审计信息"
+          audit: "审计信息",
         },
         fields: {
           catalogId: "目录 ID",
@@ -158,33 +166,35 @@ export const dataCatalogZhCN = {
           warnings: "处理提示",
           field: "字段",
           updated: "已更新属性",
-          reason: "原因"
+          reason: "原因",
         },
         values: {
           effective: "有效",
           notEffective: "无有效更新",
-          fieldEffective: "{{effective}} / {{total}} 个字段"
+          fieldEffective: "{{effective}} / {{total}} 个字段",
         },
         fieldStatus: {
           updated: "已更新",
           partial: "部分更新",
           unchanged: "无变更",
-          skipped: "已跳过"
+          skipped: "已跳过",
         },
         warnings: {
-          sampleOmittedByPolicy: "字段 {{field}} 为{{type}}类型，样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
-          sampleOmittedByPolicyWithoutType: "字段 {{field}} 的样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
+          sampleOmittedByPolicy:
+            "字段 {{field}} 为{{type}}类型，样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
+          sampleOmittedByPolicyWithoutType:
+            "字段 {{field}} 的样本值已按安全规则省略。系统理解该字段时仅依据字段名称、类型及已有描述等元数据；如生成相关判断，其置信度可能低于有样本值时。",
           types: {
             binary: "二进制",
-            other: "其他"
-          }
+            other: "其他",
+          },
         },
         mock: {
           customerCatalog: "CRM 主数据",
           phoneInsufficientSamplesWarning: "字段 phone 的样本值不足，未生成语义建议。",
           insufficientSamples: "样本值不足",
-          customerSemanticSummary: "已为客户主数据补充字段语义。"
-        }
+          customerSemanticSummary: "已为客户主数据补充字段语义。",
+        },
       },
     },
     semanticWorkspace: {
@@ -210,9 +220,10 @@ export const dataCatalogZhCN = {
       includeSamplesPermissionHint: "包含样本数据需要查询该资源数据的权限。",
       sampleRows: "样本行数（1–20）",
       sampleRowsRequired: "请输入样本行数。",
-      sampleRowsInvalid: "请输入 1～20 的整数。"
+      sampleRowsInvalid: "请输入 1～20 的整数。",
     },
-    emptyDescription: "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
+    emptyDescription:
+      "在数据连接中新建并探查后，即可在此浏览资源并构建索引。若平台已有数据连接却看不到，说明尚未获得对应目录的授权。",
     backToCatalog: "返回数据目录",
     format: {
       daysAgo: "{{count}} 天前",
@@ -234,7 +245,8 @@ export const dataCatalogZhCN = {
         title: "任务进度标记写入失败",
         syncedMarkMessage: "同步游标内容超过任务表可保存长度，导致后端更新任务状态失败。",
         columnMessage: "字段 {{column}} 的内容超过数据库可保存长度，导致任务状态更新失败。",
-        syncedMarkSuggestion: "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
+        syncedMarkSuggestion:
+          "建议将任务表的 f_synced_mark 字段扩容，或缩短连接器返回的同步游标后重新构建。",
         columnSuggestion: "建议检查对应字段长度配置，扩容后重新构建。",
       },
       duplicateEntry: {
@@ -307,7 +319,8 @@ export const dataCatalogZhCN = {
       logicalNamePlaceholder: "例如 team_analytics",
       logicalDescriptionPlaceholder: "可选，说明该逻辑分组用途",
       deleteLogicalTitle: "删除逻辑分组",
-      deleteLogicalDescription: '确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。',
+      deleteLogicalDescription:
+        "确认删除逻辑分组「{{name}}」吗？将删除 {{resources}} 个资源，并取消 {{semanticTasks}} 个待执行语义理解任务。",
       deleteLogicalBlockedTitle: "当前无法删除逻辑分组",
       deleteLogicalBlockedDescription: "请先处理以下阻断项，然后重试：",
       deleteLogicalBlockers: {
@@ -370,7 +383,7 @@ export const dataCatalogZhCN = {
       localIndexStatuses: {
         available: "可用",
         stale: "已失效",
-        unavailable: "不可用"
+        unavailable: "不可用",
       },
       searchPlaceholder: "搜索资源名称",
       noMatch: "没有符合筛选条件的资源",
@@ -388,7 +401,7 @@ export const dataCatalogZhCN = {
       sourceObjectTypes: {
         materialized_view: "物化视图",
         table: "表",
-        view: "视图"
+        view: "视图",
       },
       sourcePrimaryKeys: "源端主键",
       sourceIdentifier: "源端标识",
@@ -400,7 +413,8 @@ export const dataCatalogZhCN = {
       sourceIdentifierPlaceholder: "如 crm_core.customers 或一段 SQL",
       sourceIdentifierHint: "数据源中的表名 / 视图定义；探查（discover）发现的资源会自动填写。",
       schemaDefinition: "Schema 定义",
-      schemaHint: "每行一个字段：名称 类型。留空时使用默认 schema（id / name / updated_at），后续可由探查补全。",
+      schemaHint:
+        "每行一个字段：名称 类型。留空时使用默认 schema（id / name / updated_at），后续可由探查补全。",
       fieldName: "字段名",
       fieldDisplayName: "业务名称",
       fieldDescription: "描述",
@@ -451,7 +465,7 @@ export const dataCatalogZhCN = {
     resourceStatuses: {
       active: "活跃",
       deprecated: "已废弃",
-      stale: "已失效"
+      stale: "已失效",
     },
     gate: {
       catalogDisabled: "所属连接「{{name}}」已停用,无法预览数据或构建索引。",
@@ -471,7 +485,8 @@ export const dataCatalogZhCN = {
       dataSourceIndex: "来源：本地索引",
       dataSourceOriginal: "来源：原始数据源",
       noQueryPermission: "没有查看数据的权限",
-      noQueryPermissionDescription: "你可以查看这张表的结构，但读取数据需要单独授权。请联系管理员为这张表或它所在的目录授予「查询」权限。",
+      noQueryPermissionDescription:
+        "你可以查看这张表的结构，但读取数据需要单独授权。请联系管理员为这张表或它所在的目录授予「查询」权限。",
       empty: "没有数据",
       metadataDiscoveryFailed: "资源元数据探查失败",
       metadataDiscoveryFailedDescription: "未探查到可用字段，暂时无法预览。请重新执行探查后再试。",
@@ -483,7 +498,8 @@ export const dataCatalogZhCN = {
       resourceDisabledDescription: "当前资源处于停用状态，启用后才能预览数据。",
       resourceStale: "资源已失效",
       resourceStaleDescription: "当前资源已失效，即使保留了字段元数据也不能预览数据。",
-      mockLongText: "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
+      mockLongText:
+        "\u8fd9\u662f\u7b2c {{row}} \u884c\u7684\u957f\u6587\u672c\u5185\u5bb9\uff0c\u7528\u4e8e\u9a8c\u8bc1\u622a\u65ad\u4e0e\u60ac\u505c\u5c55\u793a\u3002",
     },
     build: {
       submit: "开始构建",
@@ -497,14 +513,19 @@ export const dataCatalogZhCN = {
       editTitle: "配置索引",
       editSubmit: "开始构建",
       editConfirmTitle: "开始新的构建?",
-      editConfirmContent: "将按资源当前配置创建新的构建任务。新索引成功前仍以旧索引服务检索（若仍可用）。",
+      editConfirmContent:
+        "将按资源当前配置创建新的构建任务。新索引成功前仍以旧索引服务检索（若仍可用）。",
       editConfirmOk: "开始构建",
       edited: "已创建新的构建任务",
-      streamingActiveLocked: "流式任务仍在运行或监听中。请先暂停/停止当前任务，再修改配置或新建流式构建。",
-      streamingRecreateHint: "流式任务不支持原地改配置。请先保存资源配置，再到任务管理创建新的流式构建。",
-      activeTaskLocked: "该资源已有进行中的构建任务，整个配置页面已锁定。请先等待完成或停止当前任务，再修改配置或发起新构建。",
+      streamingActiveLocked:
+        "流式任务仍在运行或监听中。请先暂停/停止当前任务，再修改配置或新建流式构建。",
+      streamingRecreateHint:
+        "流式任务不支持原地改配置。请先保存资源配置，再到任务管理创建新的流式构建。",
+      activeTaskLocked:
+        "该资源已有进行中的构建任务，整个配置页面已锁定。请先等待完成或停止当前任务，再修改配置或发起新构建。",
       configConflict: "当前存在进行中的构建任务，无法修改索引配置。请先停止任务后再保存。",
-      startRejected: "无法启动该任务（配置可能已变更，或已有更新的成功构建）。请到「配置索引」保存最新配置后，再新建构建。",
+      startRejected:
+        "无法启动该任务（配置可能已变更，或已有更新的成功构建）。请到「配置索引」保存最新配置后，再新建构建。",
       created: "构建任务已创建:{{id}}",
       conflict: "该资源已有进行中的构建任务,需等待完成或先暂停监听。",
       resource: "数据资源",
@@ -516,9 +537,11 @@ export const dataCatalogZhCN = {
       streamingDescription: "持续增量同步、常驻监听；需指定增量键。",
       executeType: "执行方式",
       executeFull: "全量",
-      executeFullDescription: "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
+      executeFullDescription:
+        "从数据源重新同步全部数据并重建索引，适合首次构建或需要完整刷新时使用。",
       executeIncremental: "增量",
-      executeIncrementalDescription: "按增量键从上次进度继续同步，只处理新增或变化的数据，适合日常补建。",
+      executeIncrementalDescription:
+        "按增量键从上次进度继续同步，只处理新增或变化的数据，适合日常补建。",
       schemaLoading: "正在加载字段…",
       schemaEmpty: "该资源暂无字段，请先执行探查发现 schema。",
       fulltextTypeHint: "仅支持文本类字段",
@@ -526,8 +549,10 @@ export const dataCatalogZhCN = {
       keyFieldsHint: "标签从左到右的顺序决定组合键和增量游标的字段顺序。",
       primaryKeyFieldsPlaceholder: "选择主键",
       incrementalFieldsPlaceholder: "选择增量键",
-      primaryKeyFieldsHint: "选择能唯一标识一条源数据的字段；组合主键按标签顺序拼接。未包含在增量键中的主键会自动追加到内部批量游标。",
-      incrementalFieldsHint: "选择用于批量构建游标推进的字段；请自行保证按标签顺序可稳定排序。未包含的主键会自动追加到内部游标。",
+      primaryKeyFieldsHint:
+        "选择能唯一标识一条源数据的字段；组合主键按标签顺序拼接。未包含在增量键中的主键会自动追加到内部批量游标。",
+      incrementalFieldsHint:
+        "选择用于批量构建游标推进的字段；请自行保证按标签顺序可稳定排序。未包含的主键会自动追加到内部游标。",
       fieldFeatureConfig: "字段特征配置",
       fieldFeatureConfigHint: "为 string 和 text 字段配置关键字、全文检索和向量特征。",
       roleKeyword: "关键字特征",
@@ -539,12 +564,14 @@ export const dataCatalogZhCN = {
       fulltextFieldCount: "全文检索字段数",
       rolePrimaryKey: "主键",
       roleIncrementalKey: "增量键",
-      invalidKeyFields: "主键或增量键配置无效：{{fields}}。请选择存在于 schema 且类型受支持的字段。",
+      invalidKeyFields:
+        "主键或增量键配置无效：{{fields}}。请选择存在于 schema 且类型受支持的字段。",
       removeInvalidKeyFields: "移除无效字段",
       roleFulltext: "全文检索特征",
       excludedSchemaFieldsHint: "构建将排除不支持索引的字段：{{fields}}。",
       excludedSchemaFieldsConfirmTitle: "确认排除字段并创建构建任务？",
-      excludedSchemaFieldsConfirmContent: "以下 binary 或 other 字段不会参与源端查询或本地索引构建：{{fields}}。",
+      excludedSchemaFieldsConfirmContent:
+        "以下 binary 或 other 字段不会参与源端查询或本地索引构建：{{fields}}。",
       excludedSchemaFieldsConfirmOk: "排除并创建",
       startBuildConfirmTitle: "创建构建任务？",
       startBuildConfirmContent: "将创建构建任务并开始处理资源数据。",
@@ -553,7 +580,8 @@ export const dataCatalogZhCN = {
       fieldCount_other: "共 {{count}} 个字段",
       fulltextAnalyzer: "分词器",
       defaultKeywordIgnoreAbove: "默认关键字最大索引长度",
-      defaultKeywordIgnoreAboveHint: "范围为 1–8191；字段未单独填写时使用此值，超过该长度的内容无法进行关键字精确匹配。",
+      defaultKeywordIgnoreAboveHint:
+        "范围为 1–8191；字段未单独填写时使用此值，超过该长度的内容无法进行关键字精确匹配。",
       defaultKeywordIgnoreAboveInvalid: "默认关键字最大索引长度必须是 1–8191 之间的整数。",
       defaultFulltextAnalyzer: "默认分词器",
       defaultEmbeddingModel: "默认 Embedding 模型",
@@ -567,7 +595,8 @@ export const dataCatalogZhCN = {
       notConfigured: "未配置",
       resourceDefaultsTitle: "资源默认配置",
       resourceDefaultsHint: "特征未单独指定时使用默认值。",
-      fulltextAnalyzerOverrides: "字段级分词器覆盖默认值：{{overrides}}。请在字段特征配置中修改或选择“跟随默认”。",
+      fulltextAnalyzerOverrides:
+        "字段级分词器覆盖默认值：{{overrides}}。请在字段特征配置中修改或选择“跟随默认”。",
       fieldEmbeddingModel: "Embedding 模型",
       fieldFulltextAnalyzer: "分词器",
       keywordIgnoreAbove: "最大索引长度",
@@ -592,9 +621,11 @@ export const dataCatalogZhCN = {
       featureNotEnabled: "未启用",
       featureConfiguredCount: "已配置",
       removeFeatureType: "移除本类",
-      duplicateFeatureTypeUnsupported: "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
+      duplicateFeatureTypeUnsupported:
+        "每个字段的每类特征仅支持一组。请移除重复特征：{{features}}。",
       duplicateFeatureNames: "同一字段内的特征名称不能重复。请修改重复名称：{{features}}。",
-      featureNameMustBeRelative: "特征名称必须使用相对名称，不能重复包含字段名。请修改：{{features}}。",
+      featureNameMustBeRelative:
+        "特征名称必须使用相对名称，不能重复包含字段名。请修改：{{features}}。",
       featureSummaryEmpty: "未配置特征",
       featureUnsupported: "暂不支持",
       defaultEmbeddingModelHint: "实际可选项以当前环境已接入的 Embedding 模型为准。",
@@ -602,7 +633,8 @@ export const dataCatalogZhCN = {
       fulltextAnalyzerHint: "实际可选项以当前环境服务端返回为准。",
       fulltextAnalyzerEnglishHint: "standard 适用于英文/通用文本，english 用于英文词干分析。",
       fulltextChineseAnalyzerAvailableHint: "当前已启用可用于中文文本的分词器：{{analyzers}}。",
-      fulltextChineseAnalyzerUnavailableHint: "当前未启用 IK/HanLP 等中文分词器；standard 和 english 不提供中文分词能力，中文检索的召回和相关性可能受限。请联系管理员启用中文分词器。",
+      fulltextChineseAnalyzerUnavailableHint:
+        "当前未启用 IK/HanLP 等中文分词器；standard 和 english 不提供中文分词能力，中文检索的召回和相关性可能受限。请联系管理员启用中文分词器。",
       analyzerSelectionUnavailable: "分词器能力当前不可用。",
       analyzers: {
         standard: "standard · 英文/通用",
@@ -624,7 +656,8 @@ export const dataCatalogZhCN = {
       modelsLoading: "正在加载 embedding 模型列表…",
       modelsLoadError: "加载 embedding 模型失败：{{message}}",
       modelsLoadErrorFallback: "请稍后刷新页面；如仍失败，请检查模型管理服务。",
-      savedModelUnavailable: "已保存的 embedding 模型「{{model}}」不在当前环境注册表中，请重新选择已接入的模型。",
+      savedModelUnavailable:
+        "已保存的 embedding 模型「{{model}}」不在当前环境注册表中，请重新选择已接入的模型。",
       dimensions: "向量维度",
       dimensionsHint: "(随模型联动预览；实际维度由服务端在构建时写入)",
     },
@@ -639,7 +672,7 @@ export const dataCatalogZhCN = {
         status: "任务状态",
         task: "任务信息",
         execution: "执行信息",
-        audit: "审计信息"
+        audit: "审计信息",
       },
       rawError: "原始错误",
       modalTitle: "构建任务",
@@ -647,8 +680,7 @@ export const dataCatalogZhCN = {
       statusFilterPlaceholder: "全部状态",
       empty: "暂无索引任务",
       totalCount: "共 {{count}} 条",
-      emptyDescription:
-        "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
+      emptyDescription: "当前筛选条件下没有任务。请在数据目录的资源「数据索引」中配置并提交构建。",
       pauseListening: "暂停监听",
       resumeListening: "恢复监听",
       paused: "已暂停监听",
@@ -669,9 +701,11 @@ export const dataCatalogZhCN = {
       rerunResume: "从中断处继续构建",
       rerunReset: "从头开始重新构建",
       rebuildFullConfirmTitle: "确定全量重跑本任务?",
-      rebuildFullConfirmContent: "将对该构建任务执行 reset=true：忽略游标从头同步。若资源索引配置相对该任务已变更，启动可能被拒绝，需新建构建。",
+      rebuildFullConfirmContent:
+        "将对该构建任务执行 reset=true：忽略游标从头同步。若资源索引配置相对该任务已变更，启动可能被拒绝，需新建构建。",
       retried: "已重新提交构建任务:{{id}}",
-      startRejected: "无法启动该任务（配置可能已变或已有更新的成功构建）。请到资源「数据索引」保存配置并新建构建。",
+      startRejected:
+        "无法启动该任务（配置可能已变或已有更新的成功构建）。请到资源「数据索引」保存配置并新建构建。",
       deleteConfirmTitle: "删除构建任务 {{id}}?",
       deleteConfirmContent: "删除后任务记录不可恢复。",
       deleteConfirmContentActive: "任务仍在运行,将先停止再删除;删除后任务记录不可恢复。",

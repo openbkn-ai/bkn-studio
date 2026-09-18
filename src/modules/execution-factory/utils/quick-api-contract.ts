@@ -73,9 +73,9 @@ export function buildEffectiveQuickApiValues<T extends QuickApiContractFormValue
   };
 }
 
-export function resolveQuickApiFormContract<T extends QuickApiContractFormValues & { apiUrl?: string }>(
-  values: T,
-): T {
+export function resolveQuickApiFormContract<
+  T extends QuickApiContractFormValues & { apiUrl?: string },
+>(values: T): T {
   if (values.serverUrl?.trim() && values.path?.trim()) {
     return values;
   }

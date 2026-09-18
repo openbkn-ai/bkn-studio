@@ -54,7 +54,8 @@ const GROUP_DESCRIPTIONS: Record<string, string> = {
   skill: "Skill search and online dynamic tools",
   // run_code / run_shell. The server merged them onto the business tool surface,
   // so they arrive as ordinary tools with their own group rather than a mode switch.
-  execution: "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
+  execution:
+    "Run Python or a shell command in the sandbox, calling the tools above from inside the script",
   other: "Unclassified MCP capabilities",
 };
 
@@ -134,7 +135,11 @@ const LOCAL_TOOL_INDEX = new Map<string, { groupKey: string; name: string; order
   for (const tool of LOCAL_TOOLS) {
     const slot = slots.get(tool.groupKey) ?? 0;
     slots.set(tool.groupKey, slot + 1);
-    LOCAL_TOOL_INDEX.set(tool.id, { groupKey: tool.groupKey, name: tool.name, order: localOrder(tool.groupKey, slot) });
+    LOCAL_TOOL_INDEX.set(tool.id, {
+      groupKey: tool.groupKey,
+      name: tool.name,
+      order: localOrder(tool.groupKey, slot),
+    });
   }
 }
 
@@ -144,19 +149,34 @@ function guessLocal(toolId: string): { groupKey: string; name: string } {
   // Platform tools use the bkn_ prefix. Check it before keyword matching because
   // bkn_* contains "kn" and interaction contains "action".
   if (id.startsWith("bkn_")) return { groupKey: "lifecycle", name: "Session Lifecycle Tool" };
-  if (id.includes("interaction") || id.includes("conversation")) return { groupKey: "lifecycle", name: "Session Lifecycle Tool" };
-  if (id.includes("object") || id.includes("relation") || id.includes("schema") || id.includes("metric_type")) {
+  if (id.includes("interaction") || id.includes("conversation"))
+    return { groupKey: "lifecycle", name: "Session Lifecycle Tool" };
+  if (
+    id.includes("object") ||
+    id.includes("relation") ||
+    id.includes("schema") ||
+    id.includes("metric_type")
+  ) {
     return { groupKey: "model", name: "Knowledge Model Tool" };
   }
-  if (id.includes("resource") || id.includes("sql") || id.includes("catalog")) return { groupKey: "data", name: "Data Resource Tool" };
+  if (id.includes("resource") || id.includes("sql") || id.includes("catalog"))
+    return { groupKey: "data", name: "Data Resource Tool" };
   if (id.includes("skill")) return { groupKey: "skill", name: "Skills and Dynamic Tools" };
-  if (id.includes("action") || id.includes("logic") || id.includes("metric")) return { groupKey: "logic", name: "Logic and Action Tool" };
-  if (id.includes("instance") || id.includes("subgraph") || id.includes("query")) return { groupKey: "query", name: "Object Query Tool" };
-  if (id.includes("kn") || id.includes("network")) return { groupKey: "network", name: "Knowledge Network Tool" };
+  if (id.includes("action") || id.includes("logic") || id.includes("metric"))
+    return { groupKey: "logic", name: "Logic and Action Tool" };
+  if (id.includes("instance") || id.includes("subgraph") || id.includes("query"))
+    return { groupKey: "query", name: "Object Query Tool" };
+  if (id.includes("kn") || id.includes("network"))
+    return { groupKey: "network", name: "Knowledge Network Tool" };
   return { groupKey: "other", name: "MCP Capability" };
 }
 
-function localDisplayOf(toolId: string): { groupKey: string; groupLabel: string; name: string; order: number } {
+function localDisplayOf(toolId: string): {
+  groupKey: string;
+  groupLabel: string;
+  name: string;
+  order: number;
+} {
   const known = LOCAL_TOOL_INDEX.get(toolId);
   const fallback = known ?? { ...guessLocal(toolId), order: 0 };
   const groupKey = fallback.groupKey;
@@ -175,7 +195,7 @@ export function toolDisplayOf(toolId: string, tool?: McpToolDef | null): McpTool
   const groupKey = serverGroup ?? local.groupKey;
   return {
     groupKey,
-    groupLabel: serverGroup ? tool?.groupTitle ?? serverGroup : local.groupLabel,
+    groupLabel: serverGroup ? (tool?.groupTitle ?? serverGroup) : local.groupLabel,
     groupDescription: GROUP_DESCRIPTIONS[groupKey] ?? null,
     name: tool?.title ?? local.name,
     order: tool?.order ?? local.order,
@@ -187,7 +207,10 @@ export function toolDisplayOf(toolId: string, tool?: McpToolDef | null): McpTool
  * Groups by display metadata. Items sort by order inside each group; groups sort
  * by the smallest item order.
  */
-export function buildMcpToolGroups<T>(items: T[], displayOf: (item: T) => McpToolDisplay): Array<McpToolGroup<T>> {
+export function buildMcpToolGroups<T>(
+  items: T[],
+  displayOf: (item: T) => McpToolDisplay,
+): Array<McpToolGroup<T>> {
   const buckets = new Map<string, McpToolGroup<T>>();
   const serverLabeled = new Set<string>();
   for (const item of items) {
@@ -214,5 +237,7 @@ export function buildMcpToolGroups<T>(items: T[], displayOf: (item: T) => McpToo
   for (const group of groups) {
     group.items.sort((left, right) => left.display.order - right.display.order);
   }
-  return groups.sort((left, right) => (left.items[0]?.display.order ?? 0) - (right.items[0]?.display.order ?? 0));
+  return groups.sort(
+    (left, right) => (left.items[0]?.display.order ?? 0) - (right.items[0]?.display.order ?? 0),
+  );
 }

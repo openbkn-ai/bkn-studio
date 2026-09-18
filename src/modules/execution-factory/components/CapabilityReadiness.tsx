@@ -65,17 +65,13 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
               return (
                 <div
                   className={
-                    met
-                      ? styles.scoreRuleRow
-                      : `${styles.scoreRuleRow} ${styles.scoreRuleRowMuted}`
+                    met ? styles.scoreRuleRow : `${styles.scoreRuleRow} ${styles.scoreRuleRowMuted}`
                   }
                   key={dim.key}
                 >
                   <span>{`${skipped ? "—" : met ? "✓" : "○"} ${label}`}</span>
                   <span>
-                    {skipped
-                      ? t("executionFactory.agentReadiness.notApplicable")
-                      : dim.weight}
+                    {skipped ? t("executionFactory.agentReadiness.notApplicable") : dim.weight}
                   </span>
                 </div>
               );
@@ -96,7 +92,9 @@ export function CapabilityReadinessScore({ manifest }: CapabilityManifestProps) 
       {/* 百分数自己就说清了程度，进度条只是把同一个数再画一遍，还得占一段固定宽度。 */}
       <span
         className={
-          readiness.level === "low" ? `${styles.scoreValue} ${styles.scoreValueLow}` : styles.scoreValue
+          readiness.level === "low"
+            ? `${styles.scoreValue} ${styles.scoreValueLow}`
+            : styles.scoreValue
         }
       >
         {readiness.score}%

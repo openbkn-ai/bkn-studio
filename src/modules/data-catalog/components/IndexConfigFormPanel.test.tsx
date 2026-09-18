@@ -75,7 +75,11 @@ describe("IndexConfigFormPanel", () => {
     getCatalogResourceMock.mockReset().mockResolvedValue(resource);
     listBuildTaskPageMock.mockReset().mockResolvedValue({ items: [], total: 0 });
     updateCatalogResourceMock.mockReset();
-    loadAnalyzerCapabilitiesMock.mockResolvedValue({ errorMessage: null, options: ["standard"], state: "ready" });
+    loadAnalyzerCapabilitiesMock.mockResolvedValue({
+      errorMessage: null,
+      options: ["standard"],
+      state: "ready",
+    });
     loadEmbeddingModelOptionsMock.mockResolvedValue({
       errorMessage: null,
       options: [{ dimensions: 1024, id: "model-1", name: "Model 1" }],
@@ -151,13 +155,18 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
-      direction: "desc",
-      limit: 1,
-      resourceId: resource.id,
-      sort: "create_time",
-      statuses: ["pending", "running", "stopping"],
-    }, { skipErrorToast: true }));
+    await waitFor(() =>
+      expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+        {
+          direction: "desc",
+          limit: 1,
+          resourceId: resource.id,
+          sort: "create_time",
+          statuses: ["pending", "running", "stopping"],
+        },
+        { skipErrorToast: true },
+      ),
+    );
   });
 
   it("keeps configuration editing locked when task status cannot be loaded", async () => {
@@ -168,15 +177,22 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable")).toBeInTheDocument();
-    expect(listBuildTaskPageMock).toHaveBeenCalledWith({
-      direction: "desc",
-      limit: 1,
-      resourceId: resource.id,
-      sort: "create_time",
-      statuses: ["pending", "running", "stopping"],
-    }, { skipErrorToast: true });
-    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+    expect(
+      await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable"),
+    ).toBeInTheDocument();
+    expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+      {
+        direction: "desc",
+        limit: 1,
+        resourceId: resource.id,
+        sort: "create_time",
+        statuses: ["pending", "running", "stopping"],
+      },
+      { skipErrorToast: true },
+    );
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+    ).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
@@ -189,7 +205,9 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+    ).toBeDisabled();
   });
 
   it("checks task status before editing when task access becomes available", async () => {
@@ -199,9 +217,13 @@ describe("IndexConfigFormPanel", () => {
         <IndexConfigFormPanel active canViewTasks={false} resource={resource} />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByRole("button", {
-      name: "dataCatalog.build.saveIndexConfig",
-    })).toBeEnabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "dataCatalog.build.saveIndexConfig",
+        }),
+      ).toBeEnabled(),
+    );
 
     rerender(
       <MemoryRouter>
@@ -209,7 +231,9 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+    ).toBeDisabled();
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledTimes(1));
   });
 
@@ -222,9 +246,11 @@ describe("IndexConfigFormPanel", () => {
     );
 
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.saveIndexConfig",
-    }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.saveIndexConfig",
+      }),
+    );
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
   });
 
@@ -233,22 +259,16 @@ describe("IndexConfigFormPanel", () => {
     ["VegaBackend.BuildTask.HasRunningExecution", "dataCatalog.build.activeTaskLocked"],
     ["VegaBackend.Resource.UpdateConflict", "dataCatalog.build.configConflict"],
   ])("reports backend conflict %s with the appropriate message", async (code, expectedMessage) => {
-    const conflictError = new AxiosError(
-      "Build task running",
-      undefined,
-      undefined,
-      undefined,
-      {
-        config: { headers: new AxiosHeaders() },
-        data: {
-          description: "A build task is running",
-          error_code: code,
-        },
-        headers: new AxiosHeaders(),
-        status: 409,
-        statusText: "Conflict",
+    const conflictError = new AxiosError("Build task running", undefined, undefined, undefined, {
+      config: { headers: new AxiosHeaders() },
+      data: {
+        description: "A build task is running",
+        error_code: code,
       },
-    );
+      headers: new AxiosHeaders(),
+      status: 409,
+      statusText: "Conflict",
+    });
     updateCatalogResourceMock.mockRejectedValue(conflictError);
     render(
       <MemoryRouter>
@@ -256,23 +276,34 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.saveIndexConfig",
-    }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.saveIndexConfig",
+      }),
+    );
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(
-      [...document.querySelectorAll(".ant-alert")].map((node) => node.textContent),
-    ).toContain(expectedMessage));
-    expect(screen.queryByText(expectedMessage === "dataCatalog.build.configConflict"
-      ? "dataCatalog.build.activeTaskLocked"
-      : "dataCatalog.build.configConflict")).toBeNull();
+    await waitFor(() =>
+      expect(
+        [...document.querySelectorAll(".ant-alert")].map((node) => node.textContent),
+      ).toContain(expectedMessage),
+    );
+    expect(
+      screen.queryByText(
+        expectedMessage === "dataCatalog.build.configConflict"
+          ? "dataCatalog.build.activeTaskLocked"
+          : "dataCatalog.build.configConflict",
+      ),
+    ).toBeNull();
   });
 
   it("drops an in-flight task result when task_manage is revoked", async () => {
     let resolveTasks: ((value: { items: BuildTask[]; total: number }) => void) | null = null;
-    listBuildTaskPageMock.mockImplementation(() => new Promise((resolve) => {
-      resolveTasks = resolve;
-    }));
+    listBuildTaskPageMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTasks = resolve;
+        }),
+    );
     const { rerender } = render(
       <MemoryRouter>
         <IndexConfigFormPanel active canViewTasks resource={resource} />
@@ -287,26 +318,28 @@ describe("IndexConfigFormPanel", () => {
     );
     await act(async () => {
       resolveTasks?.({
-        items: [{
-          createTime: 1,
-          embeddingFields: [],
-          embeddingModel: "",
-          error: null,
-          finishTime: null,
-          fulltextAnalyzer: "",
-          fulltextFields: [],
-          id: "task-1",
-          incrementalFields: [],
-          lastProgressTime: null,
-          mode: "batch",
-          modelDimensions: 0,
-          primaryKeyFields: [],
-          resourceId: resource.id,
-          startTime: 1,
-          status: "running",
-          syncedCount: 0,
-          totalCount: 1,
-        } satisfies BuildTask],
+        items: [
+          {
+            createTime: 1,
+            embeddingFields: [],
+            embeddingModel: "",
+            error: null,
+            finishTime: null,
+            fulltextAnalyzer: "",
+            fulltextFields: [],
+            id: "task-1",
+            incrementalFields: [],
+            lastProgressTime: null,
+            mode: "batch",
+            modelDimensions: 0,
+            primaryKeyFields: [],
+            resourceId: resource.id,
+            startTime: 1,
+            status: "running",
+            syncedCount: 0,
+            totalCount: 1,
+          } satisfies BuildTask,
+        ],
         total: 1,
       });
       await Promise.resolve();
@@ -334,24 +367,28 @@ describe("IndexConfigFormPanel", () => {
 
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
-    expect(payload.schema[0]?.features).toContainEqual(expect.objectContaining({
-      config: { ignore_above: 256 },
-      featureType: "keyword",
-      name: "keyword",
-    }));
+    expect(payload.schema[0]?.features).toContainEqual(
+      expect.objectContaining({
+        config: { ignore_above: 256 },
+        featureType: "keyword",
+        name: "keyword",
+      }),
+    );
   });
 
   it("only allows renaming generated keyword and fulltext subfields", async () => {
     const configuredResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [
-          { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
-          { config: { analyzer: "standard" }, featureType: "fulltext", name: "search" },
-        ],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [
+            { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
+            { config: { analyzer: "standard" }, featureType: "fulltext", name: "search" },
+          ],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
 
     render(
@@ -361,13 +398,21 @@ describe("IndexConfigFormPanel", () => {
     );
 
     await waitFor(() => expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalled());
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.featureConfig",
-    }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.featureConfig",
+      }),
+    );
     await screen.findByRole("dialog");
-    const featureNameInputs = screen.getAllByPlaceholderText("dataCatalog.build.featureNamePlaceholder");
-    const keywordName = featureNameInputs.find((input) => input.getAttribute("value") === "keyword");
-    const fulltextName = featureNameInputs.find((input) => input.getAttribute("value") === "search");
+    const featureNameInputs = screen.getAllByPlaceholderText(
+      "dataCatalog.build.featureNamePlaceholder",
+    );
+    const keywordName = featureNameInputs.find(
+      (input) => input.getAttribute("value") === "keyword",
+    );
+    const fulltextName = featureNameInputs.find(
+      (input) => input.getAttribute("value") === "search",
+    );
     expect(keywordName?.hasAttribute("disabled")).toBe(true);
     expect(fulltextName?.hasAttribute("disabled")).toBe(false);
     fireEvent.mouseEnter(keywordName?.parentElement as HTMLElement);
@@ -377,14 +422,16 @@ describe("IndexConfigFormPanel", () => {
   it("rejects feature names qualified with their property name", async () => {
     const configuredResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [
-          { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
-          { config: { analyzer: "standard" }, featureType: "fulltext", name: "fulltext" },
-        ],
-        name: "title",
-        type: "text",
-      }],
+      schema: [
+        {
+          features: [
+            { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
+            { config: { analyzer: "standard" }, featureType: "fulltext", name: "fulltext" },
+          ],
+          name: "title",
+          type: "text",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(configuredResource);
 
@@ -394,14 +441,18 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.featureConfig",
-    }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.featureConfig",
+      }),
+    );
     const keywordName = await screen.findByDisplayValue("keyword");
     fireEvent.change(keywordName, { target: { value: "title.keyword" } });
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 
-    expect(screen.getAllByText("dataCatalog.build.featureNameMustBeRelative").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("dataCatalog.build.featureNameMustBeRelative").length,
+    ).toBeGreaterThan(0);
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
 
@@ -437,14 +488,16 @@ describe("IndexConfigFormPanel", () => {
           hideBuildControls
           resource={{
             ...resource,
-            schema: [{
-              features: [
-                { config: { embedding_model: "model-1" }, featureType: "vector" },
-                { config: { analyzer: "standard" }, featureType: "fulltext" },
-              ],
-              name: "title",
-              type: "string",
-            }],
+            schema: [
+              {
+                features: [
+                  { config: { embedding_model: "model-1" }, featureType: "vector" },
+                  { config: { analyzer: "standard" }, featureType: "fulltext" },
+                ],
+                name: "title",
+                type: "string",
+              },
+            ],
           }}
         />
       </MemoryRouter>,
@@ -477,9 +530,11 @@ describe("IndexConfigFormPanel", () => {
     expect(screen.queryByText("dataCatalog.build.roleIncrementalKey")).toBeNull();
     expect(screen.queryByText("dataCatalog.build.configCanBuild")).toBeNull();
 
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.saveIndexConfig",
-    }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.saveIndexConfig",
+      }),
+    );
 
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
     const [, payload] = updateCatalogResourceMock.mock.calls[0] as [string, ResourceUpdateInput];
@@ -496,29 +551,39 @@ describe("IndexConfigFormPanel", () => {
           resource={{
             ...resource,
             indexConfig: { primaryKeyFields: ["missing_field"] },
-            schema: [{
-              features: [{ config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" }],
-              name: "title",
-              type: "string",
-            }],
+            schema: [
+              {
+                features: [
+                  { config: { ignore_above: 256 }, featureType: "keyword", name: "keyword" },
+                ],
+                name: "title",
+                type: "string",
+              },
+            ],
           }}
         />
       </MemoryRouter>,
     );
 
-    expect(screen.queryByRole("button", {
-      name: "dataCatalog.build.saveIndexConfig",
-    })).toBeNull();
-    fireEvent.click(await screen.findByRole("button", {
-      name: "dataCatalog.build.featureConfig",
-    }));
+    expect(
+      screen.queryByRole("button", {
+        name: "dataCatalog.build.saveIndexConfig",
+      }),
+    ).toBeNull();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "dataCatalog.build.featureConfig",
+      }),
+    );
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     for (const input of screen.getAllByDisplayValue("256")) {
       expect(input).toBeDisabled();
     }
-    expect(screen.queryByRole("button", {
-      name: "dataCatalog.build.removeInvalidKeyFields",
-    })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "dataCatalog.build.removeInvalidKeyFields",
+      }),
+    ).toBeNull();
     expect(screen.queryByText("dataCatalog.build.activeTaskLocked")).toBeNull();
     expect(listBuildTaskPageMock).not.toHaveBeenCalled();
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
@@ -553,19 +618,25 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    const featureButtons = await screen.findAllByRole("button", { name: "dataCatalog.build.featureConfig" });
-    const titleRow = screen.getAllByRole("row").find((row) =>
-      row.querySelector("code")?.textContent === "title",
-    );
-    expect(Array.from(titleRow?.querySelectorAll("[data-feature-type]") ?? []).map((tag) =>
-      tag.getAttribute("data-feature-type"),
-    )).toEqual(["keyword", "fulltext", "embedding"]);
+    const featureButtons = await screen.findAllByRole("button", {
+      name: "dataCatalog.build.featureConfig",
+    });
+    const titleRow = screen
+      .getAllByRole("row")
+      .find((row) => row.querySelector("code")?.textContent === "title");
+    expect(
+      Array.from(titleRow?.querySelectorAll("[data-feature-type]") ?? []).map((tag) =>
+        tag.getAttribute("data-feature-type"),
+      ),
+    ).toEqual(["keyword", "fulltext", "embedding"]);
 
     fireEvent.click(featureButtons[1]);
     const featureDrawer = await screen.findByRole("dialog");
-    expect(Array.from(featureDrawer.querySelectorAll("[data-field-meta]")).map((item) =>
-      item.getAttribute("data-field-meta"),
-    )).toEqual([
+    expect(
+      Array.from(featureDrawer.querySelectorAll("[data-field-meta]")).map((item) =>
+        item.getAttribute("data-field-meta"),
+      ),
+    ).toEqual([
       "name",
       "display-name",
       "type",
@@ -575,16 +646,28 @@ describe("IndexConfigFormPanel", () => {
       "original-description",
     ]);
     expect(featureDrawer.querySelector('[data-field-meta="name"]')?.textContent).toContain("title");
-    expect(featureDrawer.querySelector('[data-field-meta="original-name"]')?.textContent).toContain("source_title");
-    expect(featureDrawer.querySelector('[data-field-meta="original-type"]')?.textContent).toContain("longtext");
-    expect(featureDrawer.querySelector('[data-field-meta="description"]')?.textContent).toContain("Searchable title");
-    expect(featureDrawer.querySelector('[data-field-meta="original-description"]')?.textContent).toContain("-");
-    expect(Array.from(featureDrawer.querySelectorAll("[data-feature-type]")).map((section) =>
-      section.getAttribute("data-feature-type"),
-    )).toEqual(["keyword", "fulltext", "embedding"]);
+    expect(featureDrawer.querySelector('[data-field-meta="original-name"]')?.textContent).toContain(
+      "source_title",
+    );
+    expect(featureDrawer.querySelector('[data-field-meta="original-type"]')?.textContent).toContain(
+      "longtext",
+    );
+    expect(featureDrawer.querySelector('[data-field-meta="description"]')?.textContent).toContain(
+      "Searchable title",
+    );
+    expect(
+      featureDrawer.querySelector('[data-field-meta="original-description"]')?.textContent,
+    ).toContain("-");
+    expect(
+      Array.from(featureDrawer.querySelectorAll("[data-feature-type]")).map((section) =>
+        section.getAttribute("data-feature-type"),
+      ),
+    ).toEqual(["keyword", "fulltext", "embedding"]);
     const nameInput = await screen.findByDisplayValue("keyword");
     const defaultLimitInput = screen.getByDisplayValue("256");
-    const fieldLimitInput = screen.getByPlaceholderText("dataCatalog.build.inheritDefaultWithValue");
+    const fieldLimitInput = screen.getByPlaceholderText(
+      "dataCatalog.build.inheritDefaultWithValue",
+    );
     expect(defaultLimitInput.getAttribute("min")).toBe("1");
     expect(defaultLimitInput.getAttribute("max")).toBe("8191");
     expect(fieldLimitInput.getAttribute("min")).toBe("1");
@@ -592,19 +675,25 @@ describe("IndexConfigFormPanel", () => {
 
     fireEvent.change(defaultLimitInput, { target: { value: "8192" } });
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
-    expect(screen.getAllByText("dataCatalog.build.defaultKeywordIgnoreAboveInvalid").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("dataCatalog.build.defaultKeywordIgnoreAboveInvalid").length,
+    ).toBeGreaterThan(0);
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
 
     fireEvent.change(defaultLimitInput, { target: { value: "512" } });
     fireEvent.change(fieldLimitInput, { target: { value: "8192" } });
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
-    expect(screen.getAllByText("dataCatalog.build.keywordIgnoreAboveInvalid").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("dataCatalog.build.keywordIgnoreAboveInvalid").length,
+    ).toBeGreaterThan(0);
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
 
     fireEvent.change(fieldLimitInput, { target: { value: "" } });
     fireEvent.change(nameInput, { target: { value: "exact" } });
 
-    expect(screen.getByTitle("dataCatalog.build.keywordRequiredHint").getAttribute("disabled")).not.toBeNull();
+    expect(
+      screen.getByTitle("dataCatalog.build.keywordRequiredHint").getAttribute("disabled"),
+    ).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 
     await waitFor(() => expect(updateCatalogResourceMock).toHaveBeenCalledTimes(1));
@@ -620,14 +709,16 @@ describe("IndexConfigFormPanel", () => {
   it("rejects duplicate physical feature names across feature types", async () => {
     const duplicateNameResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [
-          { featureType: "keyword", name: "search", config: { ignore_above: 256 } },
-          { featureType: "fulltext", name: "search", config: { analyzer: "standard" } },
-        ],
-        name: "title",
-        type: "text",
-      }],
+      schema: [
+        {
+          features: [
+            { featureType: "keyword", name: "search", config: { ignore_above: 256 } },
+            { featureType: "fulltext", name: "search", config: { analyzer: "standard" } },
+          ],
+          name: "title",
+          type: "text",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(duplicateNameResource);
 
@@ -637,9 +728,13 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
+    );
 
-    expect(screen.getAllByText("dataCatalog.build.duplicateFeatureNames").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("dataCatalog.build.duplicateFeatureNames").length).toBeGreaterThan(
+      0,
+    );
     expect(updateCatalogResourceMock).not.toHaveBeenCalled();
   });
 
@@ -647,11 +742,13 @@ describe("IndexConfigFormPanel", () => {
     const configuredResource: CatalogResource = {
       ...resource,
       indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
-      schema: [{
-        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     const semanticResource: CatalogResource = {
       ...configuredResource,
@@ -659,13 +756,15 @@ describe("IndexConfigFormPanel", () => {
       enabled: false,
       expectedUpdateTime: 200,
       name: "Monthly passes",
-      schema: [{
-        description: "Unique monthly pass identifier",
-        displayName: "Pass ID",
-        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          description: "Unique monthly pass identifier",
+          displayName: "Pass ID",
+          features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(semanticResource);
     updateCatalogResourceMock.mockResolvedValue(semanticResource);
@@ -681,28 +780,35 @@ describe("IndexConfigFormPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 
     await waitFor(() => {
-      expect(updateCatalogResourceMock).toHaveBeenCalledWith("resource-1", expect.objectContaining({
-        description: semanticResource.description,
-        enabled: false,
-        expectedUpdateTime: semanticResource.expectedUpdateTime,
-        name: semanticResource.name,
-        schema: [expect.objectContaining({
-          description: "Unique monthly pass identifier",
-          displayName: "Pass ID",
-          name: "title",
-        })],
-      }));
+      expect(updateCatalogResourceMock).toHaveBeenCalledWith(
+        "resource-1",
+        expect.objectContaining({
+          description: semanticResource.description,
+          enabled: false,
+          expectedUpdateTime: semanticResource.expectedUpdateTime,
+          name: semanticResource.name,
+          schema: [
+            expect.objectContaining({
+              description: "Unique monthly pass identifier",
+              displayName: "Pass ID",
+              name: "title",
+            }),
+          ],
+        }),
+      );
     });
   });
 
   it("explains the Chinese-search limitation when no Chinese analyzer is enabled", async () => {
     const fulltextResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(fulltextResource);
     loadAnalyzerCapabilitiesMock.mockResolvedValue({
@@ -724,11 +830,13 @@ describe("IndexConfigFormPanel", () => {
   it("recognizes other IK analyzers returned by the server", async () => {
     const fulltextResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { analyzer: "ik_smart" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { analyzer: "ik_smart" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(fulltextResource);
     loadAnalyzerCapabilitiesMock.mockResolvedValue({
@@ -744,7 +852,9 @@ describe("IndexConfigFormPanel", () => {
     );
 
     await screen.findByText("dataCatalog.build.fulltextChineseAnalyzerAvailableHint");
-    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
+    expect(
+      screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint"),
+    ).toBeNull();
   });
 
   it("does not show Chinese analyzer guidance for a resource without full-text fields", async () => {
@@ -760,16 +870,23 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByText("dataCatalog.build.analyzersLoading")).toBeNull(),
+    );
     fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
     await screen.findByText("dataCatalog.build.analyzers.english");
-    expect(screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint")).toBeNull();
+    expect(
+      screen.queryByText("dataCatalog.build.fulltextChineseAnalyzerUnavailableHint"),
+    ).toBeNull();
   });
 
   it("allows removing configured key fields that no longer exist in the schema", async () => {
     const staleKeyResource: CatalogResource = {
       ...resource,
-      indexConfig: { incrementalFields: ["removed_order_no"], primaryKeyFields: ["removed_order_no"] },
+      indexConfig: {
+        incrementalFields: ["removed_order_no"],
+        primaryKeyFields: ["removed_order_no"],
+      },
     };
     getCatalogResourceMock.mockResolvedValue(staleKeyResource);
 
@@ -794,11 +911,13 @@ describe("IndexConfigFormPanel", () => {
   it("does not mark a feature-only configuration as buildable", async () => {
     const featureOnlyResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(featureOnlyResource);
 
@@ -815,32 +934,39 @@ describe("IndexConfigFormPanel", () => {
     const configuredResource: CatalogResource = {
       ...resource,
       indexConfig: { incrementalFields: ["title"], primaryKeyFields: ["title"] },
-      schema: [{
-        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
-    listBuildTaskPageMock.mockResolvedValue({ items: [{
-      createTime: 1,
-      embeddingFields: [],
-      embeddingModel: "",
-      error: null,
-      finishTime: null,
-      fulltextAnalyzer: "standard",
-      fulltextFields: ["title"],
-      id: "running-task",
-      incrementalFields: [],
-      lastProgressTime: null,
-      mode: "batch",
-      modelDimensions: 0,
-      primaryKeyFields: [],
-      resourceId: configuredResource.id,
-      startTime: 1,
-      status: "running",
-      syncedCount: 0,
-      totalCount: 1,
-    } satisfies BuildTask], total: 1 });
+    listBuildTaskPageMock.mockResolvedValue({
+      items: [
+        {
+          createTime: 1,
+          embeddingFields: [],
+          embeddingModel: "",
+          error: null,
+          finishTime: null,
+          fulltextAnalyzer: "standard",
+          fulltextFields: ["title"],
+          id: "running-task",
+          incrementalFields: [],
+          lastProgressTime: null,
+          mode: "batch",
+          modelDimensions: 0,
+          primaryKeyFields: [],
+          resourceId: configuredResource.id,
+          startTime: 1,
+          status: "running",
+          syncedCount: 0,
+          totalCount: 1,
+        } satisfies BuildTask,
+      ],
+      total: 1,
+    });
 
     render(
       <MemoryRouter>
@@ -867,11 +993,13 @@ describe("IndexConfigFormPanel", () => {
   it("keeps a vector-only resource saveable when analyzer capabilities are unavailable", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(vectorResource);
     loadAnalyzerCapabilitiesMock.mockResolvedValue({
@@ -890,18 +1018,22 @@ describe("IndexConfigFormPanel", () => {
     expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }).getAttribute("disabled"),
+      screen
+        .getByRole("button", { name: "dataCatalog.build.saveIndexConfig" })
+        .getAttribute("disabled"),
     ).toBeNull();
   });
 
   it("asks for a page refresh without a retry button when analyzer loading fails", async () => {
     const fulltextResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { analyzer: "standard" }, featureType: "fulltext" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     getCatalogResourceMock.mockResolvedValue(fulltextResource);
     loadAnalyzerCapabilitiesMock.mockResolvedValueOnce({
@@ -918,18 +1050,24 @@ describe("IndexConfigFormPanel", () => {
 
     await screen.findAllByText("dataCatalog.build.analyzersLoadError");
     expect(loadAnalyzerCapabilitiesMock).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" })).toBeNull();
-    expect(screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).not.toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: "dataCatalog.build.retryLoadAnalyzers" }),
+    ).toBeNull();
+    expect(
+      screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint"),
+    ).not.toHaveLength(0);
   });
 
   it("asks for a page refresh without an action button when model loading fails", async () => {
     const vectorResource: CatalogResource = {
       ...resource,
-      schema: [{
-        features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
-        name: "title",
-        type: "string",
-      }],
+      schema: [
+        {
+          features: [{ config: { embedding_model: "model-1" }, featureType: "vector" }],
+          name: "title",
+          type: "string",
+        },
+      ],
     };
     loadEmbeddingModelOptionsMock.mockResolvedValue({
       errorMessage: "models unavailable",
@@ -946,7 +1084,9 @@ describe("IndexConfigFormPanel", () => {
     await waitFor(() => expect(loadEmbeddingModelOptionsMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadModels" })).toBeNull();
     expect(screen.queryByRole("button", { name: "dataCatalog.build.goConnectModel" })).toBeNull();
-    expect(screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).not.toHaveLength(0);
+    expect(
+      screen.getAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint"),
+    ).not.toHaveLength(0);
   });
 
   it("keeps the model management action when no embedding models are available", async () => {
@@ -963,8 +1103,12 @@ describe("IndexConfigFormPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.build.noModels")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "dataCatalog.build.goConnectModel" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "dataCatalog.build.goConnectModel" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "dataCatalog.build.retryLoadModels" })).toBeNull();
-    expect(screen.queryAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint")).toHaveLength(0);
+    expect(
+      screen.queryAllByText("dataCatalog.resourceWorkspace.loadErrorRefreshHint"),
+    ).toHaveLength(0);
   });
 });

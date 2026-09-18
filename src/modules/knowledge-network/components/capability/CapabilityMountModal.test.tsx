@@ -368,7 +368,9 @@ describe("CapabilityMountModal availability", () => {
     expand("dataset_function");
     await waitFor(() => expect(mocks.getToolbox).toHaveBeenCalledTimes(2));
     await waitFor(() =>
-      expect(treeNode("dataset_function").className).not.toContain("ant-tree-treenode-switcher-open"),
+      expect(treeNode("dataset_function").className).not.toContain(
+        "ant-tree-treenode-switcher-open",
+      ),
     );
 
     // Expanding again reads again, and this time it lands. The tree ignores expand clicks while its
@@ -415,6 +417,8 @@ describe("CapabilityMountModal MCP counts", () => {
     );
 
     await screen.findByText("Search Server");
-    expect(within(treeNode("Search Server")).queryByText(/capabilityPickerBoxToolCount/)).toBeNull();
+    expect(
+      within(treeNode("Search Server")).queryByText(/capabilityPickerBoxToolCount/),
+    ).toBeNull();
   });
 });

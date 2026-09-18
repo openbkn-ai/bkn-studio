@@ -29,13 +29,13 @@ describe("resource.service · previewCatalogResource", () => {
   });
 
   it("uses Vega paging and the GET method override", async () => {
-    postMock.mockResolvedValue({ data: { query_source: "local_index", entries: [{ id: "r-1" }], total_count: 42 } });
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
-    const { transformPrecisionSafeJSONResponse } = await import(
-      "@/framework/request/precision-safe-json"
-    );
+    postMock.mockResolvedValue({
+      data: { query_source: "local_index", entries: [{ id: "r-1" }], total_count: 42 },
+    });
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const { transformPrecisionSafeJSONResponse } =
+      await import("@/framework/request/precision-safe-json");
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 20 });
 
@@ -55,18 +55,16 @@ describe("resource.service · previewCatalogResource", () => {
   });
 
   it("preserves an unsafe int64 preview total", async () => {
-    postMock.mockImplementation((
-      _url: string,
-      _body: unknown,
-      config: { transformResponse?: (data: unknown) => unknown },
-    ) => Promise.resolve({
-      data: config.transformResponse?.(
-        '{"query_source":"source","entries":[],"total_count":9007199254740993}',
-      ),
-    }));
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
+    postMock.mockImplementation(
+      (_url: string, _body: unknown, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({
+          data: config.transformResponse?.(
+            '{"query_source":"source","entries":[],"total_count":9007199254740993}',
+          ),
+        }),
     );
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await previewCatalogResource("r-1", { limit: 10, offset: 0 });
 
@@ -75,9 +73,8 @@ describe("resource.service · previewCatalogResource", () => {
 
   it("requests Binary content only when the caller forces the original source", async () => {
     postMock.mockResolvedValue({ data: { query_source: "source", entries: [], total_count: 0 } });
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await previewCatalogResource("r-1", {
       binaryMode: "content",
@@ -95,9 +92,8 @@ describe("resource.service · previewCatalogResource", () => {
   it("varies mock Binary content between source rows", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await previewCatalogResource("res-customers", {
       binaryMode: "content",
@@ -119,9 +115,8 @@ describe("resource.service · previewCatalogResource", () => {
   it("returns unavailable Other values from a local-index mock preview", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await previewCatalogResource("res-customers", { limit: 1, offset: 0 });
 
@@ -132,9 +127,8 @@ describe("resource.service · previewCatalogResource", () => {
   it("returns representative Other values from an original-source mock preview", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
-    const { previewCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await previewCatalogResource("res-index-config-demo", {
       ignoreLocalIndex: true,
@@ -166,9 +160,8 @@ describe("resource.service · previewCatalogResource", () => {
     customer.localIndexName = undefined;
 
     try {
-      const { previewCatalogResource } = await import(
-        "@/modules/data-catalog/services/resource.service"
-      );
+      const { previewCatalogResource } =
+        await import("@/modules/data-catalog/services/resource.service");
       const result = await previewCatalogResource("res-customers", {
         binaryMode: "metadata",
         limit: 2,
@@ -176,7 +169,10 @@ describe("resource.service · previewCatalogResource", () => {
       });
 
       expect(result.querySource).toBe("source");
-      const binaryValue = result.rows[0]?.attachment_blob as { byte_length?: unknown; mode?: unknown };
+      const binaryValue = result.rows[0]?.attachment_blob as {
+        byte_length?: unknown;
+        mode?: unknown;
+      };
       expect(binaryValue).toMatchObject({
         mode: "metadata",
       });
@@ -202,9 +198,8 @@ describe("resource.service · listCatalogResourcePage", () => {
   it("omits detail-only schema and scale fields in mock list responses", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
-    const { listCatalogResourcePage } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { listCatalogResourcePage } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await listCatalogResourcePage({ limit: 1 });
 
@@ -239,9 +234,8 @@ describe("resource.service · listCatalogResourcePage", () => {
         total_count: 21,
       },
     });
-    const { listCatalogResourcePage } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { listCatalogResourcePage } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await listCatalogResourcePage({
       catalogId: "cat-1",
@@ -261,20 +255,22 @@ describe("resource.service · listCatalogResourcePage", () => {
       },
     });
     expect(result).toEqual({
-      items: [expect.objectContaining({
-        columnCount: null,
-        id: "res-1",
-        expectedUpdateTime: 123,
-        lastDiscoverStatus: "error",
-        localIndexName: "bkn_res-1",
-        localIndexStatus: "available",
-        operations: ["view_detail", "query_data"],
-        rowCount: null,
-        schemaName: "external_data",
-        status: "stale",
-        statusMessage: "discover metadata failed",
-        enabled: true,
-      })],
+      items: [
+        expect.objectContaining({
+          columnCount: null,
+          id: "res-1",
+          expectedUpdateTime: 123,
+          lastDiscoverStatus: "error",
+          localIndexName: "bkn_res-1",
+          localIndexStatus: "available",
+          operations: ["view_detail", "query_data"],
+          rowCount: null,
+          schemaName: "external_data",
+          status: "stale",
+          statusMessage: "discover metadata failed",
+          enabled: true,
+        }),
+      ],
       total: 21,
     });
     expect(result.items[0]?.updateTime).not.toBe("");
@@ -287,9 +283,8 @@ describe("resource.service · listCatalogResourcePage", () => {
         total_count: 1,
       },
     });
-    const { listCatalogResourcePage } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { listCatalogResourcePage } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const result = await listCatalogResourcePage({ catalogId: "cat-1", limit: 10, offset: 0 });
 
@@ -310,15 +305,16 @@ describe("resource.service · discovery and enabled actions", () => {
   });
 
   it("uses dedicated endpoints for resource metadata refresh and enablement", async () => {
-    postMock.mockResolvedValueOnce({ data: { id: "task-1" } }).mockResolvedValue({ data: undefined });
+    postMock
+      .mockResolvedValueOnce({ data: { id: "task-1" } })
+      .mockResolvedValue({ data: undefined });
     getMock.mockResolvedValue({
       data: {
         entries: [{ catalog_id: "cat-1", enabled: false, id: "res-1", name: "orders" }],
       },
     });
-    const { discoverCatalogResource, setCatalogResourceEnabled } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { discoverCatalogResource, setCatalogResourceEnabled } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await expect(discoverCatalogResource("res-1")).resolves.toEqual({ id: "task-1" });
     await setCatalogResourceEnabled("res-1", false);
@@ -370,9 +366,8 @@ describe("resource.service · getCatalogResources", () => {
         ],
       },
     });
-    const { getCatalogResources } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await expect(getCatalogResources(["res-1"])).resolves.toEqual([
       expect.objectContaining({
@@ -399,47 +394,44 @@ describe("resource.service · getCatalogResources", () => {
 
   it("preserves an unsafe int64 row count from detail responses", async () => {
     const rowCount = "9007199254740993";
-    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
-      Promise.resolve({
-        data: config.transformResponse?.(
-          `{"entries":[{"catalog_id":"cat-1","category":"table","id":"res-1","name":"orders","row_count":${rowCount}}]}`,
-        ),
-      }),
+    getMock.mockImplementation(
+      (_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({
+          data: config.transformResponse?.(
+            `{"entries":[{"catalog_id":"cat-1","category":"table","id":"res-1","name":"orders","row_count":${rowCount}}]}`,
+          ),
+        }),
     );
-    const { getCatalogResources } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
-    const { transformPrecisionSafeJSONResponse } = await import(
-      "@/framework/request/precision-safe-json"
-    );
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const { transformPrecisionSafeJSONResponse } =
+      await import("@/framework/request/precision-safe-json");
 
     const [resource] = await getCatalogResources(["res-1"]);
 
-    expect(getMock).toHaveBeenCalledWith(
-      "/vega-backend/v1/resources/res-1",
-      {
-        skipErrorToast: true,
-        transformResponse: transformPrecisionSafeJSONResponse,
-      },
-    );
+    expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/resources/res-1", {
+      skipErrorToast: true,
+      transformResponse: transformPrecisionSafeJSONResponse,
+    });
     expect(resource?.rowCount).toBe(rowCount);
   });
 
   it("keeps missing source index and foreign-key counts unknown", async () => {
     getMock.mockResolvedValue({
       data: {
-        entries: [{
-          catalog_id: "cat-1",
-          category: "index",
-          id: "res-1",
-          name: "orders",
-          source_metadata: { original_name: "orders-v1" },
-        }],
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "index",
+            id: "res-1",
+            name: "orders",
+            source_metadata: { original_name: "orders-v1" },
+          },
+        ],
       },
     });
-    const { getCatalogResources } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     const [resource] = await getCatalogResources(["res-1"]);
 
@@ -471,9 +463,8 @@ describe("resource.service · updateCatalogResource", () => {
         schema_definition: [],
       },
     });
-    const { updateCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { updateCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await updateCatalogResource("res-1", {
       catalogId: "cat-1",
@@ -548,9 +539,8 @@ describe("resource.service · updateCatalogResource", () => {
         schema_definition: [],
       },
     });
-    const { updateCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { updateCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await updateCatalogResource("res-1", {
       catalogId: "cat-1",
@@ -582,22 +572,16 @@ describe("resource.service · mock update boundaries", () => {
   });
 
   it("exposes canonical Vega operations on mock resources", async () => {
-    const { getCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { getCatalogResource } = await import("@/modules/data-catalog/services/resource.service");
 
     const resource = await getCatalogResource("res-orders");
 
-    expect(resource?.operations).toEqual([
-      "view_detail",
-      "query_data",
-    ]);
+    expect(resource?.operations).toEqual(["view_detail", "query_data"]);
   });
 
   it("returns an HTTP-shaped 404 for a missing resource", async () => {
-    const { updateCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { updateCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
 
     await expect(
       updateCatalogResource("missing-resource", {
@@ -619,9 +603,8 @@ describe("resource.service · mock update boundaries", () => {
   });
 
   it("rejects a stale resource version without changing the resource", async () => {
-    const { getCatalogResource, updateCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { getCatalogResource, updateCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
     const current = await getCatalogResource("res-orders");
     expect(current).not.toBeNull();
     if (!current) {
@@ -654,9 +637,8 @@ describe("resource.service · mock update boundaries", () => {
   });
 
   it("checks catalog and category while ignoring source identifier", async () => {
-    const { getCatalogResource, updateCatalogResource } = await import(
-      "@/modules/data-catalog/services/resource.service"
-    );
+    const { getCatalogResource, updateCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
     const current = await getCatalogResource("res-orders");
     expect(current).not.toBeNull();
     if (!current) {

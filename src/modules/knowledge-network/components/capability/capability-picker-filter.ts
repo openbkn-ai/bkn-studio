@@ -25,12 +25,7 @@ export type PickerContainer = { id: string; name: string; status?: string; toolC
  * so the picker refuses up front what the write would refuse afterwards.
  */
 export type PickerBlockReason =
-  | "boxUnpublished"
-  | "mounted"
-  | "noEnabledTools"
-  | "noTools"
-  | "notFound"
-  | "toolDisabled";
+  "boxUnpublished" | "mounted" | "noEnabledTools" | "noTools" | "notFound" | "toolDisabled";
 
 function isUnpublished(container: Pick<PickerContainer, "status">) {
   return container.status !== undefined && container.status !== "published";

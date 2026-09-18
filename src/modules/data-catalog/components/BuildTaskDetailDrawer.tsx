@@ -188,11 +188,27 @@ export function BuildTaskDetailDrawer({
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [open, taskId]);
 
   if (!task) {
-    return <Drawer className={styles.drawer} destroyOnClose loading={loading} onClose={onClose} open={open} styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }} title={`${t("dataCatalog.task.buildDetail")} · ${taskId}`} width={560}>{!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}{!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}</Drawer>;
+    return (
+      <Drawer
+        className={styles.drawer}
+        destroyOnClose
+        loading={loading}
+        onClose={onClose}
+        open={open}
+        styles={{ body: { padding: 16 }, header: { padding: "12px 16px" } }}
+        title={`${t("dataCatalog.task.buildDetail")} · ${taskId}`}
+        width={560}
+      >
+        {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
+        {!loading && !loadError ? <Empty description={t("common.notFound")} /> : null}
+      </Drawer>
+    );
   }
 
   const statusLabel = t(`dataCatalog.task.statuses.${buildTaskStatusLabelKey(task.status)}`);
@@ -223,21 +239,11 @@ export function BuildTaskDetailDrawer({
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
           <div className={styles.statusRow}>
-            <span
-              className={[
-                sharedStyles.tag,
-                sharedStyles.taskRunning,
-              ].join(" ")}
-            >
+            <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
               {t(`dataCatalog.modes.${task.mode}`)}
             </span>
             {executeTypeLabel ? (
-              <span
-                className={[
-                  sharedStyles.tag,
-                  sharedStyles.taskRunning,
-                ].join(" ")}
-              >
+              <span className={[sharedStyles.tag, sharedStyles.taskRunning].join(" ")}>
                 {executeTypeLabel}
               </span>
             ) : null}
@@ -266,9 +272,7 @@ export function BuildTaskDetailDrawer({
                 <b>{failureSummary.title}</b>
                 <span>{failureSummary.message}</span>
                 {failureSummary.suggestion ? (
-                  <span className={styles.failureSuggestion}>
-                    {failureSummary.suggestion}
-                  </span>
+                  <span className={styles.failureSuggestion}>{failureSummary.suggestion}</span>
                 ) : null}
                 <details className={styles.failureRaw}>
                   <summary>{t("dataCatalog.task.rawError")}</summary>
@@ -321,7 +325,10 @@ export function BuildTaskDetailDrawer({
               {renderFulltextAnalyzers(
                 task.fulltextAnalyzers ??
                   Object.fromEntries(
-                    task.fulltextFields.map((field) => [field, task.fulltextAnalyzer || "standard"]),
+                    task.fulltextFields.map((field) => [
+                      field,
+                      task.fulltextAnalyzer || "standard",
+                    ]),
                   ),
               )}
             </Descriptions.Item>

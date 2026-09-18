@@ -13,28 +13,40 @@ import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog
 
 type MockSelectOption = { label: string; options?: MockSelectOption[]; value?: string };
 
-vi.mock("@/modules/system-admin/services/authorization-registry.service", async (importOriginal) => {
-  const service = await importOriginal<typeof import("@/modules/system-admin/services/authorization-registry.service")>();
-  return {
-    ...service,
-    usesMockAuthorizationRegistry: false,
-    getAuthorizationRegistry: vi.fn(() => Promise.resolve(service.mockAuthorizationRegistry())),
-  };
-});
+vi.mock(
+  "@/modules/system-admin/services/authorization-registry.service",
+  async (importOriginal) => {
+    const service =
+      await importOriginal<
+        typeof import("@/modules/system-admin/services/authorization-registry.service")
+      >();
+    return {
+      ...service,
+      usesMockAuthorizationRegistry: false,
+      getAuthorizationRegistry: vi.fn(() => Promise.resolve(service.mockAuthorizationRegistry())),
+    };
+  },
+);
 
 vi.mock("antd", async (importOriginal) => ({
   ...(await importOriginal<typeof import("antd")>()),
   Select: ({ options }: { options?: MockSelectOption[] }) => (
     <div role="listbox">
-      {options?.map((option) => option.options ? (
-        <div aria-label={option.label} key={option.label} role="group">
-          {option.options.map((child) => (
-            <div key={child.value} role="option">{child.label}</div>
-          ))}
-        </div>
-      ) : (
-        <div key={option.value} role="option">{option.label}</div>
-      ))}
+      {options?.map((option) =>
+        option.options ? (
+          <div aria-label={option.label} key={option.label} role="group">
+            {option.options.map((child) => (
+              <div key={child.value} role="option">
+                {child.label}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div key={option.value} role="option">
+            {option.label}
+          </div>
+        ),
+      )}
     </div>
   ),
 }));
@@ -42,13 +54,16 @@ vi.mock("antd", async (importOriginal) => ({
 import { ResourceGrantEditor } from "./ResourceGrantEditor";
 
 beforeAll(() => {
-  vi.stubGlobal("matchMedia", vi.fn(() => ({
-    addEventListener: vi.fn(),
-    addListener: vi.fn(),
-    matches: false,
-    removeEventListener: vi.fn(),
-    removeListener: vi.fn(),
-  })));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  );
 });
 
 describe("ResourceGrantEditor resource choices", () => {
@@ -58,6 +73,8 @@ describe("ResourceGrantEditor resource choices", () => {
     const executionGroup = await screen.findByRole("group", {
       name: i18n.t("systemAdmin.objectGrants.objectTypeGroups.execution"),
     });
-    expect(within(executionGroup).getByRole("option", { name: resourceTypeLabel("function") })).toBeTruthy();
+    expect(
+      within(executionGroup).getByRole("option", { name: resourceTypeLabel("function") }),
+    ).toBeTruthy();
   });
 });

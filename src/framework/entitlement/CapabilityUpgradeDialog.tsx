@@ -51,9 +51,7 @@ export function CapabilityUpgradeDialog({
   /** 专业档走紫,企业与行业档走暖金——与版本页的卡片同源。 */
   const tierClass = minEdition === "professional" ? "" : "is-enterprise";
   /** 提示里说的是**客户手上这张证**的档位,不是这项能力的门槛——两者可能不同。 */
-  const currentEditionName = t(
-    `common.entitlement.editions.${snapshot?.edition ?? "community"}`,
-  );
+  const currentEditionName = t(`common.entitlement.editions.${snapshot?.edition ?? "community"}`);
 
   /*
     「证够了但镜像不含」是一种独立的处置:客户已经买了,该换的是镜像不是证书,这时候还
@@ -138,7 +136,6 @@ export function CapabilityUpgradeDialog({
           ))}
         </ul>
       ) : null}
-
     </Modal>
   );
 }

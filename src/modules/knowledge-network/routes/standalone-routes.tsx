@@ -128,11 +128,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.conceptGroupEditDescription",
       titleKey: "knowledgeNetwork.conceptGroupEditTitle",
     },
-    childModifyRoute(
-      <ConceptGroupEditPage />,
-      "conceptGroupId",
-      getKnowledgeNetworkConceptGroup,
-    ),
+    childModifyRoute(<ConceptGroupEditPage />, "conceptGroupId", getKnowledgeNetworkConceptGroup),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/concept-groups/:conceptGroupId/detail",
@@ -252,11 +248,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.objectTypeEditDescription",
       titleKey: "knowledgeNetwork.objectTypeEditTitle",
     },
-    childModifyRoute(
-      <ObjectTypeEditPage />,
-      "objectTypeId",
-      getKnowledgeNetworkObjectTypeDetail,
-    ),
+    childModifyRoute(<ObjectTypeEditPage />, "objectTypeId", getKnowledgeNetworkObjectTypeDetail),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/object-types/:objectTypeId/detail",
@@ -328,11 +320,7 @@ export const knowledgeNetworkStandaloneRoutes: RouteObject[] = [
       descriptionKey: "knowledgeNetwork.actionTypeEditDescription",
       titleKey: "knowledgeNetwork.actionTypeEditTitle",
     },
-    childModifyRoute(
-      <ActionTypeEditPage />,
-      "actionTypeId",
-      getKnowledgeNetworkActionTypeDetail,
-    ),
+    childModifyRoute(<ActionTypeEditPage />, "actionTypeId", getKnowledgeNetworkActionTypeDetail),
   ),
   createKnowledgeNetworkRoute(
     "/knowledge-network/workspace/:networkId/action-types/:actionTypeId/detail",

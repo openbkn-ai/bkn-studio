@@ -112,11 +112,7 @@ describe("registerOpenApiImport", () => {
     });
 
     expect(createToolbox).not.toHaveBeenCalled();
-    expect(importOpenApiTools).toHaveBeenCalledWith(
-      "box-existing",
-      expect.any(String),
-      undefined,
-    );
+    expect(importOpenApiTools).toHaveBeenCalledWith("box-existing", expect.any(String), undefined);
   });
 
   it("does not silently create a toolbox when existing mode has no box id", async () => {
@@ -164,11 +160,7 @@ describe("registerOpenApiImport", () => {
     expect(createArg).toBeDefined();
     expect(createArg).not.toHaveProperty("openapiSpec");
 
-    expect(importOpenApiTools).toHaveBeenCalledWith(
-      "box-1",
-      expect.any(String),
-      undefined,
-    );
+    expect(importOpenApiTools).toHaveBeenCalledWith("box-1", expect.any(String), undefined);
   });
 
   it("truncates generated toolbox descriptions before creating a toolbox", async () => {

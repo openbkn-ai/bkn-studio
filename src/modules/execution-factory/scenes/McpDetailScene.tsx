@@ -95,16 +95,12 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
   // Load all MCP tools at once because listMcpTools is unpaginated, then filter locally.
   const visibleTools = useMemo(() => {
     const keyword = railKeyword.trim().toLowerCase();
-    return keyword
-      ? tools.filter((item) => item.name.toLowerCase().includes(keyword))
-      : tools;
+    return keyword ? tools.filter((item) => item.name.toLowerCase().includes(keyword)) : tools;
   }, [railKeyword, tools]);
 
   const loadRecord = useCallback(async () => {
     try {
-      const nextRecord = catalogContext
-        ? await getMcpMarket(mcpId)
-        : await getMcpDetail(mcpId);
+      const nextRecord = catalogContext ? await getMcpMarket(mcpId) : await getMcpDetail(mcpId);
       setRecord(nextRecord);
     } catch {
       setRecord(null);
@@ -239,7 +235,6 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
     ];
   }, [record, t, toolCount]);
 
-
   const selectedToolManifest = useMemo(() => {
     if (!record || !selectedTool) {
       return null;
@@ -319,9 +314,13 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
       ) : null}
 
       {toolsLoadError && catalogContext ? (
-        <Alert message={t("executionFactory.mcpDetailCatalogToolsHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
+        <Alert
+          message={t("executionFactory.mcpDetailCatalogToolsHint")}
+          showIcon
+          style={{ marginBottom: 16 }}
+          type="warning"
+        />
       ) : null}
-
 
       {loading ? (
         <div className={styles.emptyWrap}>
@@ -332,9 +331,7 @@ export function McpDetailScene({ mcpId, onBack }: McpDetailSceneProps) {
           <Empty description={t("executionFactory.mcpToolsEmpty")} />
         </div>
       ) : (
-        <Layout
-          className={`${styles.layout} ${styles.layoutHeadAligned}`}
-        >
+        <Layout className={`${styles.layout} ${styles.layoutHeadAligned}`}>
           <Sider className={styles.sider} width={320}>
             <EntityListRail
               activeId={selectedTool?.name ?? null}

@@ -70,18 +70,19 @@ describe("DiscoverScheduleFormModal", () => {
       />,
     );
 
-    const cronInput = await screen.findByPlaceholderText(
-      "dataConnect.discoverCronExprPlaceholder",
-    );
+    const cronInput = await screen.findByPlaceholderText("dataConnect.discoverCronExprPlaceholder");
     fireEvent.change(cronInput, { target: { value: "*/30 * * * *" } });
     fireEvent.change(screen.getByLabelText(/dataConnect\.discoverScheduleName/), {
       target: { value: "Too frequent" },
     });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
-    await waitFor(() => {
-      expect(screen.getByText("dataConnect.discoverCronInvalid")).toBeTruthy();
-    }, { timeout: 3_000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText("dataConnect.discoverCronInvalid")).toBeTruthy();
+      },
+      { timeout: 3_000 },
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -98,10 +99,9 @@ describe("DiscoverScheduleFormModal", () => {
         submitting={false}
       />,
     );
-    fireEvent.change(
-      screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
-      { target: { value: "Invalid time range" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"), {
+      target: { value: "Invalid time range" },
+    });
     const startTimeInput = screen.getByLabelText("dataConnect.discoverStartTime");
     const endTimeInput = screen.getByLabelText("dataConnect.discoverEndTime");
     fireEvent.change(startTimeInput, { target: { value: "2026-08-20 10:00" } });
@@ -110,9 +110,12 @@ describe("DiscoverScheduleFormModal", () => {
     fireEvent.blur(endTimeInput);
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
-    await waitFor(() => {
-      expect(screen.getAllByText("dataConnect.discoverTimeRangeInvalid")).toHaveLength(2);
-    }, { timeout: 3_000 });
+    await waitFor(
+      () => {
+        expect(screen.getAllByText("dataConnect.discoverTimeRangeInvalid")).toHaveLength(2);
+      },
+      { timeout: 3_000 },
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -129,19 +132,20 @@ describe("DiscoverScheduleFormModal", () => {
         submitting={false}
       />,
     );
-    fireEvent.change(
-      screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"),
-      { target: { value: "Minute precision" } },
-    );
+    fireEvent.change(screen.getByPlaceholderText("dataConnect.discoverScheduleNamePlaceholder"), {
+      target: { value: "Minute precision" },
+    });
     fireEvent.change(screen.getByLabelText("dataConnect.discoverStartTime"), {
       target: { value: "2026-08-20 10:00:59" },
     });
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
-        startTime: Date.parse("2026-08-20T10:00:00"),
-      }));
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startTime: Date.parse("2026-08-20T10:00:00"),
+        }),
+      );
     });
   });
 });

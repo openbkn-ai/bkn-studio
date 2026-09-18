@@ -69,23 +69,27 @@ export const agentChatPart = {
     },
     errors: {
       modelBusy: "The model service is busy. Try again later.",
-      modelUnavailableSwitch: "The model service is busy. The upstream service suggests switching models temporarily.",
+      modelUnavailableSwitch:
+        "The model service is busy. The upstream service suggests switching models temporarily.",
       modelRateLimited: "The model service is rate limited. Try again later.",
       modelServerError: "The model service returned an internal error. Try again later.",
       modelReturnedError: "The model service returned an error",
       authExpired: "Your login session has expired. Refresh the page and sign in again.",
-      modelNotFound: "The model does not exist or is not online. Check the model configuration in Model Factory.",
+      modelNotFound:
+        "The model does not exist or is not online. Check the model configuration in Model Factory.",
       modelTemporaryUnavailable: "The model service is temporarily unavailable. Try again later.",
       requestFailedWithStatus: "Model service request failed (HTTP {{status}})",
       requestFailed: "Model service request failed",
-      unparseableResponse: "The model service returned a response that could not be parsed. Try again later or contact an administrator.",
+      unparseableResponse:
+        "The model service returned a response that could not be parsed. Try again later or contact an administrator.",
       connectionInterrupted: "The connection to the model service was interrupted. Try again.",
       chatFailed: "Chat execution failed",
     },
     report: {
       title: "Agent Chat Comparison Report · {{knLabel}}",
       generatedAt: "Generated at: {{generatedAt}}",
-      modelLine: "Left Base Data model: {{baseModel}}; right Business Knowledge Network model: {{knModel}}",
+      modelLine:
+        "Left Base Data model: {{baseModel}}; right Business Knowledge Network model: {{knModel}}",
       overview: "Session Overview",
       metricHeader: "Metric",
       baseHeader: "Base Data",
@@ -113,7 +117,8 @@ export const agentChatPart = {
       copySuccess: "Report Markdown copied",
       copyFailed: "Copy failed",
       downloadName: "comparison-report-{{knId}}-{{stamp}}.md",
-      emptyDialog: "Neither side has a conversation yet. Send a question with Both Sides first, then view the report.",
+      emptyDialog:
+        "Neither side has a conversation yet. Send a question with Both Sides first, then view the report.",
       overviewRounds: "Session overview ({{rounds}} rounds)",
       model: "Model",
       averagePerRound: "Average per round",
@@ -124,7 +129,8 @@ export const agentChatPart = {
       regenerateSummary: "Regenerate",
       generating: "Generating...",
       thinking: "Reviewer model is thinking...",
-      summaryHint: "Use the right-side model to review correctness, evidence, and efficiency across all rounds.",
+      summaryHint:
+        "Use the right-side model to review correctness, evidence, and efficiency across all rounds.",
     },
     managedTurns: {
       loadSummary: "Load knowledge network summary",
@@ -175,13 +181,34 @@ export const agentChatPart = {
         links: "How are the object types related?",
       },
       configFields: {
-        maxSteps: { label: "Tool Step Limit", hint: "Maximum tool steps per round to prevent runaway calls" },
-        keepToolResults: { label: "Retained Tool Results", hint: "Keep only the latest N full tool results between steps. 0 means no eviction" },
-        dataToolCap: { label: "Data Result Limit (chars)", hint: "Character limit for run_sql / query_* results. 0 means no truncation" },
-        schemaToolCap: { label: "Schema Result Limit (chars)", hint: "Character limit for get_kn_detail / search_schema and similar tools. 0 means no truncation" },
-        maxHistoryMessages: { label: "History Messages", hint: "Only keep the latest N messages across rounds" },
-        maxTurnChars: { label: "Per-Turn Text Limit (chars)", hint: "Maximum text length for each history message" },
-        maxOutputTokens: { label: "Max Output Tokens", hint: "Maximum output per step including reasoning. Increase for reasoning models such as deepseek. 0 means model default" },
+        maxSteps: {
+          label: "Tool Step Limit",
+          hint: "Maximum tool steps per round to prevent runaway calls",
+        },
+        keepToolResults: {
+          label: "Retained Tool Results",
+          hint: "Keep only the latest N full tool results between steps. 0 means no eviction",
+        },
+        dataToolCap: {
+          label: "Data Result Limit (chars)",
+          hint: "Character limit for run_sql / query_* results. 0 means no truncation",
+        },
+        schemaToolCap: {
+          label: "Schema Result Limit (chars)",
+          hint: "Character limit for get_kn_detail / search_schema and similar tools. 0 means no truncation",
+        },
+        maxHistoryMessages: {
+          label: "History Messages",
+          hint: "Only keep the latest N messages across rounds",
+        },
+        maxTurnChars: {
+          label: "Per-Turn Text Limit (chars)",
+          hint: "Maximum text length for each history message",
+        },
+        maxOutputTokens: {
+          label: "Max Output Tokens",
+          hint: "Maximum output per step including reasoning. Increase for reasoning models such as deepseek. 0 means model default",
+        },
       },
       reasoning: {
         live: "Thinking",
@@ -216,7 +243,8 @@ export const agentChatPart = {
         noModel: "No LLM is available. Configure a default model in Model Factory first.",
       },
       system: {
-        contextSection: "## Current Knowledge Network Summary (loaded automatically; call tools for full structure and instances as needed)\n{{context}}",
+        contextSection:
+          "## Current Knowledge Network Summary (loaded automatically; call tools for full structure and instances as needed)\n{{context}}",
         historyTruncated: "{{content}}\n...[history truncated]",
       },
       model: {
@@ -225,14 +253,16 @@ export const agentChatPart = {
       settings: {
         promptPlaceholder: "System prompt. After saving, it will be sent with the conversation.",
         toolScopeTitle: "Tool Scope",
-        toolScopeDescription: "Limit which tools this Agent side can call. Unselected tools are not sent to the model.",
+        toolScopeDescription:
+          "Limit which tools this Agent side can call. Unselected tools are not sent to the model.",
         resetDefault: "Reset Default",
         availableTools: "Available Tools",
         selectTool: "Select tools",
         loadingTools: "Loading tools",
         allTools: "All · {{count}}",
         selectedTools: "Selected {{count}}{{total}}",
-        loadedSummary: "Network summary loaded · {{objectTypes}} object types / {{relations}} relation types",
+        loadedSummary:
+          "Network summary loaded · {{objectTypes}} object types / {{relations}} relation types",
         configTitle: "Chat Settings",
         clearTitle: "Clear conversation",
         clear: "Clear",
@@ -245,17 +275,22 @@ export const agentChatPart = {
         promptTitle: "System Prompt",
         promptDescription: "Control the Agent identity, tool strategy, and response style.",
         paramsTitle: "Parameters",
-        paramsDescription: "Limit tool steps, retained history, and output size to keep answers focused and bounded.",
+        paramsDescription:
+          "Limit tool steps, retained history, and output size to keep answers focused and bounded.",
       },
       empty: {
         noLlmTitle: "No LLM Available",
-        noLlmDescription: "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
+        noLlmDescription:
+          "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
         goModelFactory: "Connect an LLM in Model Factory",
         start: "Start Validation",
-        baseIntro: "Ask in natural language. The Agent can only answer by directly querying tables with base data tools: list_resources, describe_resource, and run_sql. It does not use knowledge-network semantics.",
-        knIntro: "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
+        baseIntro:
+          "Ask in natural language. The Agent can only answer by directly querying tables with base data tools: list_resources, describe_resource, and run_sql. It does not use knowledge-network semantics.",
+        knIntro:
+          "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
         networkName: " ({{networkName}})",
-        summary: "The network summary has been loaded automatically ({{objectTypes}} object types / {{relations}} relation types), so you do not need to browse first.",
+        summary:
+          "The network summary has been loaded automatically ({{objectTypes}} object types / {{relations}} relation types), so you do not need to browse first.",
       },
       message: {
         user: "Me",

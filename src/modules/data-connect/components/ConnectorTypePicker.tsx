@@ -38,11 +38,7 @@ type ConnectorTypePickerProps = {
   options: DataConnectConnectorType[];
 };
 
-export function ConnectorTypePicker({
-  onChange,
-  value,
-  options,
-}: ConnectorTypePickerProps) {
+export function ConnectorTypePicker({ onChange, value, options }: ConnectorTypePickerProps) {
   const { t } = useTranslation();
   const [nameKeyword, setNameKeyword] = useState("");
   const [tag, setTag] = useState<string>();
@@ -50,9 +46,7 @@ export function ConnectorTypePicker({
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { loading, snapshot } = useEntitlementContext();
 
-  const familyOptions = getPrimaryDataSourceFamilies().filter(
-    (item) => item.key === "structured",
-  );
+  const familyOptions = getPrimaryDataSourceFamilies().filter((item) => item.key === "structured");
 
   const tagOptions = useMemo(
     () => getConnectorTypeTags(options, family).map((label) => ({ label, value: label })),

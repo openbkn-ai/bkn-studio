@@ -12,7 +12,10 @@ import {
   memoryConversationStore,
   withManagedTurn,
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
-import type { McpSession, McpToolCallResult } from "@/modules/knowledge-network/services/context-loader.service";
+import type {
+  McpSession,
+  McpToolCallResult,
+} from "@/modules/knowledge-network/services/context-loader.service";
 
 type Call = { name: string; args: Record<string, unknown> };
 
@@ -26,7 +29,8 @@ function fakeSession(overrides: Record<string, () => McpToolCallResult> = {}) {
       if (override) return Promise.resolve(override());
       if (name === "bkn_start_interaction") {
         interactionSeq += 1;
-        const conversationId = typeof args.conversation_id === "string" ? args.conversation_id : "conv_1";
+        const conversationId =
+          typeof args.conversation_id === "string" ? args.conversation_id : "conv_1";
         return Promise.resolve({
           ok: true,
           text: "started",
@@ -45,10 +49,20 @@ function fakeSession(overrides: Record<string, () => McpToolCallResult> = {}) {
           text: "finished",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: args.interaction_id, conversation_id: "conv_1", execution_status: "completed" },
+          structured: {
+            interaction_id: args.interaction_id,
+            conversation_id: "conv_1",
+            execution_status: "completed",
+          },
         });
       }
-      return Promise.resolve({ ok: true, text: "ok", latencyMs: 1, isError: false, structured: {} });
+      return Promise.resolve({
+        ok: true,
+        text: "ok",
+        latencyMs: 1,
+        isError: false,
+        structured: {},
+      });
     },
   };
   return { session, calls };
@@ -71,7 +85,12 @@ describe("createBknLifecycle", () => {
     });
     expect(calls[2]).toEqual({
       name: "bkn_start_interaction",
-      args: { agent_name: "bkn-studio", question: "second question", conversation_mode: "continue", conversation_id: "conv_1" },
+      args: {
+        agent_name: "bkn-studio",
+        question: "second question",
+        conversation_mode: "continue",
+        conversation_id: "conv_1",
+      },
     });
     expect(second?.conversationId).toBe(first?.conversationId);
   });
@@ -85,8 +104,14 @@ describe("createBknLifecycle", () => {
     await turn?.complete("answer");
 
     expect(calls).toEqual([
-      { name: "bkn_start_interaction", args: { agent_name: "bkn-studio", question: "question", conversation_mode: "new" } },
-      { name: "bkn_finish_interaction", args: { interaction_id: "int_1", outcome: "completed", answer: "answer" } },
+      {
+        name: "bkn_start_interaction",
+        args: { agent_name: "bkn-studio", question: "question", conversation_mode: "new" },
+      },
+      {
+        name: "bkn_finish_interaction",
+        args: { interaction_id: "int_1", outcome: "completed", answer: "answer" },
+      },
     ]);
   });
 
@@ -99,7 +124,9 @@ describe("createBknLifecycle", () => {
     const failed = await lifecycle.beginTurn("fail");
     await failed?.fail("model error");
 
-    expect(calls.filter((call) => call.name === "bkn_finish_interaction").map((call) => call.args)).toEqual([
+    expect(
+      calls.filter((call) => call.name === "bkn_finish_interaction").map((call) => call.args),
+    ).toEqual([
       { interaction_id: "int_1", outcome: "cancelled", reason: "user stopped" },
       { interaction_id: "int_2", outcome: "failed", reason: "model error" },
     ]);
@@ -148,7 +175,11 @@ describe("createBknLifecycle", () => {
           text: "started",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: "int_9", conversation_id: "conv_9", execution_status: "active" },
+          structured: {
+            interaction_id: "int_9",
+            conversation_id: "conv_9",
+            execution_status: "active",
+          },
         };
       },
     });
@@ -157,7 +188,10 @@ describe("createBknLifecycle", () => {
     await expect(lifecycle.beginTurn("before the upgrade")).resolves.toBeNull();
     const recovered = await lifecycle.beginTurn("after the upgrade");
 
-    expect(recovered?.nextContext()).toEqual({ conversation_id: "conv_9", interaction_id: "int_9" });
+    expect(recovered?.nextContext()).toEqual({
+      conversation_id: "conv_9",
+      interaction_id: "int_9",
+    });
     expect(lifecycle.unsupported()).toBe(false);
   });
 
@@ -172,7 +206,9 @@ describe("createBknLifecycle", () => {
             text: "conversation not found",
             latencyMs: 1,
             isError: true,
-            structured: { error: { code: "conversation_not_found", message: "conversation not found" } },
+            structured: {
+              error: { code: "conversation_not_found", message: "conversation not found" },
+            },
           };
         }
         return {
@@ -180,17 +216,35 @@ describe("createBknLifecycle", () => {
           text: "started",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: "int_2", conversation_id: "conv_2", execution_status: "active" },
+          structured: {
+            interaction_id: "int_2",
+            conversation_id: "conv_2",
+            execution_status: "active",
+          },
         };
       },
     });
     const store = { read: () => "stale_conv", write: vi.fn(), clear: vi.fn() };
     const lifecycle = createBknLifecycleOn(session, { conversationStore: store });
 
-    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({ conversationId: "conv_2", interactionId: "int_2" });
+    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({
+      conversationId: "conv_2",
+      interactionId: "int_2",
+    });
     expect(calls).toEqual([
-      { name: "bkn_start_interaction", args: { agent_name: "bkn-studio", question: "question", conversation_mode: "continue", conversation_id: "stale_conv" } },
-      { name: "bkn_start_interaction", args: { agent_name: "bkn-studio", question: "question", conversation_mode: "new" } },
+      {
+        name: "bkn_start_interaction",
+        args: {
+          agent_name: "bkn-studio",
+          question: "question",
+          conversation_mode: "continue",
+          conversation_id: "stale_conv",
+        },
+      },
+      {
+        name: "bkn_start_interaction",
+        args: { agent_name: "bkn-studio", question: "question", conversation_mode: "new" },
+      },
     ]);
     expect(store.clear).toHaveBeenCalledOnce();
     expect(store.write).toHaveBeenCalledWith("conv_2");
@@ -227,22 +281,49 @@ describe("createBknLifecycle", () => {
           text: "started",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: "int_9", conversation_id: "conv_live", execution_status: "active" },
+          structured: {
+            interaction_id: "int_9",
+            conversation_id: "conv_live",
+            execution_status: "active",
+          },
         };
       },
     });
     const store = { read: () => "conv_live", write: vi.fn(), clear: vi.fn() };
     const lifecycle = createBknLifecycleOn(session, { conversationStore: store });
 
-    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({ conversationId: "conv_live", interactionId: "int_9" });
+    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({
+      conversationId: "conv_live",
+      interactionId: "int_9",
+    });
     expect(calls).toEqual([
-      { name: "bkn_start_interaction", args: { agent_name: "bkn-studio", question: "question", conversation_mode: "continue", conversation_id: "conv_live" } },
+      {
+        name: "bkn_start_interaction",
+        args: {
+          agent_name: "bkn-studio",
+          question: "question",
+          conversation_mode: "continue",
+          conversation_id: "conv_live",
+        },
+      },
       {
         name: "bkn_finish_interaction",
         // Use cancelled rather than completed because that round did not answer fully and must not appear normal in Trace.
-        args: { interaction_id: "int_stuck", outcome: "cancelled", reason: "reclaimed by client: previous turn did not finish" },
+        args: {
+          interaction_id: "int_stuck",
+          outcome: "cancelled",
+          reason: "reclaimed by client: previous turn did not finish",
+        },
       },
-      { name: "bkn_start_interaction", args: { agent_name: "bkn-studio", question: "question", conversation_mode: "continue", conversation_id: "conv_live" } },
+      {
+        name: "bkn_start_interaction",
+        args: {
+          agent_name: "bkn-studio",
+          question: "question",
+          conversation_mode: "continue",
+          conversation_id: "conv_live",
+        },
+      },
     ]);
     // The session remains, so the user's conversation history stays connected in Trace.
     expect(store.clear).not.toHaveBeenCalled();
@@ -277,7 +358,11 @@ describe("createBknLifecycle", () => {
           text: "started",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: `int_${starts}`, conversation_id: `conv_${starts}`, execution_status: "active" },
+          structured: {
+            interaction_id: `int_${starts}`,
+            conversation_id: `conv_${starts}`,
+            execution_status: "active",
+          },
         };
       },
     });
@@ -285,12 +370,16 @@ describe("createBknLifecycle", () => {
 
     const first = await lifecycle.beginTurn("第一轮");
     await first?.complete("答复");
-    await expect(lifecycle.beginTurn("第二轮")).resolves.toMatchObject({ conversationId: "conv_3" });
+    await expect(lifecycle.beginTurn("第二轮")).resolves.toMatchObject({
+      conversationId: "conv_3",
+    });
 
     // Do not finish someone else's interaction; complete only this round's own interaction.
-    expect(calls.filter((call) => call.name === "bkn_finish_interaction").map((call) => call.args.interaction_id)).toEqual([
-      "int_1",
-    ]);
+    expect(
+      calls
+        .filter((call) => call.name === "bkn_finish_interaction")
+        .map((call) => call.args.interaction_id),
+    ).toEqual(["int_1"]);
   });
 
   it("回收失败时退回换新会话，不把用户卡死", async () => {
@@ -319,7 +408,11 @@ describe("createBknLifecycle", () => {
           text: "started",
           latencyMs: 1,
           isError: false,
-          structured: { interaction_id: "int_2", conversation_id: "conv_new", execution_status: "active" },
+          structured: {
+            interaction_id: "int_2",
+            conversation_id: "conv_new",
+            execution_status: "active",
+          },
         };
       },
       bkn_finish_interaction: () => ({
@@ -333,13 +426,19 @@ describe("createBknLifecycle", () => {
     const store = { read: () => "conv_stuck", write: vi.fn(), clear: vi.fn() };
     const lifecycle = createBknLifecycleOn(session, { conversationStore: store });
 
-    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({ conversationId: "conv_new" });
+    await expect(lifecycle.beginTurn("question")).resolves.toMatchObject({
+      conversationId: "conv_new",
+    });
     expect(calls.map((call) => call.name)).toEqual([
       "bkn_start_interaction",
       "bkn_finish_interaction",
       "bkn_start_interaction",
     ]);
-    expect(calls.at(-1)?.args).toEqual({ agent_name: "bkn-studio", question: "question", conversation_mode: "new" });
+    expect(calls.at(-1)?.args).toEqual({
+      agent_name: "bkn-studio",
+      question: "question",
+      conversation_mode: "new",
+    });
     expect(store.clear).toHaveBeenCalledOnce();
   });
 
@@ -366,7 +465,9 @@ describe("withManagedTurn", () => {
     const { session, calls } = fakeSession();
     const lifecycle = createBknLifecycleOn(session, options());
 
-    await expect(withManagedTurn(lifecycle, "load", () => Promise.reject(new Error("boom")))).rejects.toThrow("boom");
+    await expect(
+      withManagedTurn(lifecycle, "load", () => Promise.reject(new Error("boom"))),
+    ).rejects.toThrow("boom");
     expect(calls.at(-1)).toEqual({
       name: "bkn_finish_interaction",
       args: { interaction_id: "int_1", outcome: "failed", reason: "agent_error" },

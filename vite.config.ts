@@ -46,9 +46,7 @@ export default defineConfig(({ mode }) => {
     process.env.VITE_AGENT_OBSERVABILITY_TARGET?.trim() ||
     "";
   const safeProxyTarget =
-    env.VITE_SAFE_PROXY_TARGET?.trim() ||
-    process.env.VITE_SAFE_PROXY_TARGET?.trim() ||
-    "";
+    env.VITE_SAFE_PROXY_TARGET?.trim() || process.env.VITE_SAFE_PROXY_TARGET?.trim() || "";
   const useMock = env.VITE_USE_MOCK !== "false";
   const agentOperatorProxyTarget =
     process.env.VITE_PROXY_TARGET ?? (useMock ? "http://127.0.0.1:9000" : devProxyOrigin);
@@ -69,6 +67,15 @@ export default defineConfig(({ mode }) => {
       testTimeout: 10_000,
       env: {
         VITE_USE_MOCK: "true",
+      },
+      onConsoleLog(log, type) {
+        // Keep jsdom's native getComputedStyle behavior while hiding its repeated pseudo-element notice.
+        if (
+          type === "stderr" &&
+          log.includes("Not implemented: Window's getComputedStyle() method: with pseudo-elements")
+        ) {
+          return false;
+        }
       },
       setupFiles: ["./src/test/setup.ts"],
       exclude: [
@@ -216,8 +223,14 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(projectRoot, "./src"),
-        diagnostics_channel: path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
-        "node:diagnostics_channel": path.resolve(projectRoot, "./src/framework/compat/diagnostics-channel.browser.ts"),
+        diagnostics_channel: path.resolve(
+          projectRoot,
+          "./src/framework/compat/diagnostics-channel.browser.ts",
+        ),
+        "node:diagnostics_channel": path.resolve(
+          projectRoot,
+          "./src/framework/compat/diagnostics-channel.browser.ts",
+        ),
       },
     },
     build: {

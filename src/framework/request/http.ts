@@ -69,11 +69,9 @@ async function refreshAccessToken() {
   const runtimeConfig = getRuntimeConfig();
 
   if (!refreshPromise) {
-    refreshPromise = runtimeConfig.auth.tokenManager
-      .refreshAccessToken()
-      .finally(() => {
-        refreshPromise = null;
-      });
+    refreshPromise = runtimeConfig.auth.tokenManager.refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
   }
 
   return refreshPromise;
@@ -126,8 +124,6 @@ http.interceptors.response.use(
 
     notifyRequestError(error, config);
 
-    return Promise.reject(
-      error instanceof Error ? error : new Error("HTTP request failed."),
-    );
+    return Promise.reject(error instanceof Error ? error : new Error("HTTP request failed."));
   },
 );

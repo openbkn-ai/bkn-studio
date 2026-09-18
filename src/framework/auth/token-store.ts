@@ -31,11 +31,7 @@ export type AuthBroadcastMessage = { type: "logout" };
  * if Studio is served across sibling subdomains.
  */
 function cookieOptions(): string {
-  const parts = [
-    "path=/",
-    "SameSite=Lax",
-    `max-age=${TOKEN_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60}`,
-  ];
+  const parts = ["path=/", "SameSite=Lax", `max-age=${TOKEN_COOKIE_MAX_AGE_DAYS * 24 * 60 * 60}`];
   if (window.location.protocol === "https:") {
     parts.push("Secure");
   }

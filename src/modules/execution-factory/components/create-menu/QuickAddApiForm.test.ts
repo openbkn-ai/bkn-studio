@@ -15,9 +15,7 @@ import {
   resolveQuickApiFormContract,
 } from "@/modules/execution-factory/utils/quick-api-contract";
 
-function createValues(
-  overrides: Partial<QuickAddApiFormValues> = {},
-): QuickAddApiFormValues {
+function createValues(overrides: Partial<QuickAddApiFormValues> = {}): QuickAddApiFormValues {
   return {
     method: "POST",
     serverUrl: "https://edited.example.com",

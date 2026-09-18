@@ -13,6 +13,7 @@
 ### Task 1: 锁定分析详情的字号契约
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.test.tsx`
 - Test: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.test.tsx`
 
@@ -39,6 +40,7 @@ Expected: PASS。
 ### Task 2: 收敛分析详情 CSS
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css:10-11`
 
 **Step 1: Apply the approved scale**
@@ -57,6 +59,7 @@ Expected: build exits 0。
 ### Task 3: Visual verification and commit
 
 **Files:**
+
 - Verify: `src/modules/bkn-trace/business-provenance/BusinessProvenanceScene.module.css`
 
 **Step 1: Inspect localhost**

@@ -8,12 +8,16 @@
 import { APICallError, TypeValidationError } from "ai";
 import { describe, expect, it } from "vitest";
 
-import { normalizeAgentError, parseModelFactoryEnvelope } from "@/modules/knowledge-network/services/agent-error";
+import {
+  normalizeAgentError,
+  parseModelFactoryEnvelope,
+} from "@/modules/knowledge-network/services/agent-error";
 
 /** Real model-factory busy envelope where description/detail are JSON strings wrapping JSON; see bkn-foundry#620. */
 const busyEnvelope = {
   code: "ModelFactory.ModelController.Model.Error",
-  description: '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
+  description:
+    '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
   detail: '{"code":50508,"message":"System is too busy now. Please try again later.","data":null}',
   solution: "请检查配置信息",
   link: "",
@@ -44,13 +48,19 @@ describe("parseModelFactoryEnvelope", () => {
   it("解开 description 里再裹一层的上游 error，并保留字符串码", () => {
     expect(parseModelFactoryEnvelope(upstreamBusyEnvelope)).toEqual({
       code: "service_unavailable_error",
-      message: "Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.",
+      message:
+        "Service is too busy. We advise users to temporarily switch to alternative LLM API service providers.",
     });
   });
 
   it("不把外层的分类串当错误码", () => {
     // If description cannot be parsed, fall back only to the outer layer, which has no message and must not expose ModelFactory.* as a code.
-    expect(parseModelFactoryEnvelope({ code: "ModelFactory.ModelController.Model.Error", description: "not json" })).toBeNull();
+    expect(
+      parseModelFactoryEnvelope({
+        code: "ModelFactory.ModelController.Model.Error",
+        description: "not json",
+      }),
+    ).toBeNull();
   });
 
   it("同样认 OpenAI 兼容的 error 形态（网关修好后就是这个）", () => {
@@ -67,7 +77,10 @@ describe("parseModelFactoryEnvelope", () => {
 
 describe("normalizeAgentError", () => {
   it("TypeValidationError 裹着模型工厂忙态 → 中文短文案 + 可重试，原文进 detail", () => {
-    const error = new TypeValidationError({ value: busyEnvelope, cause: new Error("invalid_union") });
+    const error = new TypeValidationError({
+      value: busyEnvelope,
+      cause: new Error("invalid_union"),
+    });
 
     const normalized = normalizeAgentError(error);
 
@@ -80,17 +93,25 @@ describe("normalizeAgentError", () => {
   });
 
   it("上游透传的 service_unavailable_error 同样翻成人话且判可重试", () => {
-    const error = new TypeValidationError({ value: upstreamBusyEnvelope, cause: new Error("invalid_union") });
+    const error = new TypeValidationError({
+      value: upstreamBusyEnvelope,
+      cause: new Error("invalid_union"),
+    });
 
     const normalized = normalizeAgentError(error);
 
-    expect(normalized.message).toBe("模型服务繁忙，上游建议暂时改用其他模型（service_unavailable_error）");
+    expect(normalized.message).toBe(
+      "模型服务繁忙，上游建议暂时改用其他模型（service_unavailable_error）",
+    );
     expect(normalized.retryable).toBe(true);
     expect(normalized.message).not.toContain("Type validation failed");
   });
 
   it("解不出业务码的 TypeValidationError 也不把 zod 报错糊给用户", () => {
-    const error = new TypeValidationError({ value: { unexpected: true }, cause: new Error("invalid_union") });
+    const error = new TypeValidationError({
+      value: { unexpected: true },
+      cause: new Error("invalid_union"),
+    });
 
     const normalized = normalizeAgentError(error);
 
@@ -136,7 +157,11 @@ describe("normalizeAgentError", () => {
 
   it("error 帧以纯对象到达时按结构解，不退化成 [object Object]", () => {
     const normalized = normalizeAgentError({
-      error: { message: "Rate limit reached", type: "rate_limit_exceeded", code: "rate_limit_exceeded" },
+      error: {
+        message: "Rate limit reached",
+        type: "rate_limit_exceeded",
+        code: "rate_limit_exceeded",
+      },
     });
 
     expect(normalized.message).toBe("模型服务被限流，请稍后重试（rate_limit_exceeded）");

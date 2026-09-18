@@ -12,10 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  extractRequestErrorMessage,
-  isRequestForbidden,
-} from "@/framework/request/error-message";
+import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   resourceCountAsBigInt,
@@ -149,9 +146,7 @@ function formatOtherPreviewCell(
 function resolvePreviewColumnHead(field: ResourceSchemaField) {
   const technicalName = field.name;
   const businessName = field.displayName?.trim();
-  const hasDistinctBusinessName = Boolean(
-    businessName && businessName !== technicalName,
-  );
+  const hasDistinctBusinessName = Boolean(businessName && businessName !== technicalName);
 
   return {
     primary: hasDistinctBusinessName ? businessName! : technicalName,
@@ -185,10 +180,12 @@ export function ResourcePreviewPanel({
   const resourceStale = queryBlockReason === "stale";
   const previewUnavailable = queryBlockReason !== null;
   const canQueryData = hasCatalogResourceOperation(resource, "query_data");
-  const hasLocalIndex = resource.category === "table" &&
+  const hasLocalIndex =
+    resource.category === "table" &&
     resource.localIndexStatus === "available" &&
     Boolean(resource.localIndexName);
-  const hasBinaryField = resource.category === "table" &&
+  const hasBinaryField =
+    resource.category === "table" &&
     resource.schema.some((field) => field.type.trim().toLowerCase() === "binary");
   const queriesSource = !hasLocalIndex || ignoreLocalIndex;
 
@@ -200,7 +197,9 @@ export function ResourcePreviewPanel({
       setForbidden(false);
       try {
         const data = await previewCatalogResource(resource.id, {
-          ...(hasBinaryField && queriesSource ? { binaryMode: binaryContent ? "content" : "metadata" } : {}),
+          ...(hasBinaryField && queriesSource
+            ? { binaryMode: binaryContent ? "content" : "metadata" }
+            : {}),
           ...(ignoreLocalIndex ? { ignoreLocalIndex: true } : {}),
           limit: nextLimit,
           offset: nextOffset,
@@ -299,8 +298,8 @@ export function ResourcePreviewPanel({
   const backendTotal = result?.total ?? 0;
   const rows = result?.rows ?? [];
   const fetched = offset + rows.length;
-  const totalUnreliable = rows.length === pageSize &&
-    resourceCountAsBigInt(backendTotal) <= BigInt(fetched);
+  const totalUnreliable =
+    rows.length === pageSize && resourceCountAsBigInt(backendTotal) <= BigInt(fetched);
   const total = totalUnreliable
     ? resourceCountForPagination(backendTotal, resource.rowCount, fetched)
     : resourceCountForPagination(backendTotal, fetched);
@@ -391,9 +390,7 @@ export function ResourcePreviewPanel({
                             primaryLabel
                           )}
                           {head.secondary ? (
-                            <span className={styles.columnHeadSecondary}>
-                              {head.secondary}
-                            </span>
+                            <span className={styles.columnHeadSecondary}>{head.secondary}</span>
                           ) : null}
                           <span className={styles.columnHeadType}>{head.type}</span>
                         </div>
@@ -409,12 +406,14 @@ export function ResourcePreviewPanel({
                     {columns.map((field) => {
                       const value = row[field.name];
                       const isNull = value === null || value === undefined;
-                      const binaryDisplay = field.type.trim().toLowerCase() === "binary"
-                        ? formatBinaryPreviewCell(value, t)
-                        : undefined;
-                      const otherDisplay = field.type.trim().toLowerCase() === "other"
-                        ? formatOtherPreviewCell(value, t)
-                        : undefined;
+                      const binaryDisplay =
+                        field.type.trim().toLowerCase() === "binary"
+                          ? formatBinaryPreviewCell(value, t)
+                          : undefined;
+                      const otherDisplay =
+                        field.type.trim().toLowerCase() === "other"
+                          ? formatOtherPreviewCell(value, t)
+                          : undefined;
                       const textDisplay = isTextPreviewType(field.type)
                         ? formatTextPreviewCell(value)
                         : undefined;
@@ -476,7 +475,7 @@ export function ResourcePreviewPanel({
         />
       ) : null}
       <Modal
-        footer={(
+        footer={
           <Button
             aria-label={t("dataCatalog.preview.copyFullValue")}
             icon={<CopyOutlined />}
@@ -484,10 +483,12 @@ export function ResourcePreviewPanel({
           >
             {t("dataCatalog.preview.copyFullValue")}
           </Button>
-        )}
+        }
         onCancel={() => setFullValue(undefined)}
         open={Boolean(fullValue)}
-        title={fullValue ? t("dataCatalog.preview.fullValue", { field: fullValue.field }) : undefined}
+        title={
+          fullValue ? t("dataCatalog.preview.fullValue", { field: fullValue.field }) : undefined
+        }
         width={720}
       >
         <pre className={styles.fullPreviewValue}>{fullValue?.text}</pre>

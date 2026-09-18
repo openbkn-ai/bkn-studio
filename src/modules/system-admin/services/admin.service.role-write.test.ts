@@ -35,22 +35,37 @@ describe("admin.service · role writes", () => {
 
     await createRole({ name: "readers", description: "" }, options);
     await updateRole("role-1", { name: "writers", description: "" }, options);
-    await setRolePermission("role-1", true, {
-      resource: { type: "catalog", id: "*" },
-      operations: ["view_detail"],
-    }, options);
+    await setRolePermission(
+      "role-1",
+      true,
+      {
+        resource: { type: "catalog", id: "*" },
+        operations: ["view_detail"],
+      },
+      options,
+    );
 
-    expect(postMock).toHaveBeenCalledWith("/safe/v1/admin/roles", {
-      name: "readers",
-      description: "",
-    }, options);
-    expect(putMock).toHaveBeenCalledWith("/safe/v1/admin/roles/role-1", {
-      name: "writers",
-      description: "",
-    }, options);
-    expect(requestMock).toHaveBeenCalledWith(expect.objectContaining({
-      url: "/safe/v1/admin/roles/role-1/permissions",
-      skipErrorToast: true,
-    }));
+    expect(postMock).toHaveBeenCalledWith(
+      "/safe/v1/admin/roles",
+      {
+        name: "readers",
+        description: "",
+      },
+      options,
+    );
+    expect(putMock).toHaveBeenCalledWith(
+      "/safe/v1/admin/roles/role-1",
+      {
+        name: "writers",
+        description: "",
+      },
+      options,
+    );
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "/safe/v1/admin/roles/role-1/permissions",
+        skipErrorToast: true,
+      }),
+    );
   });
 });

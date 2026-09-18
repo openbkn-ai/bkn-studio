@@ -117,15 +117,11 @@ describe("WorkspaceOverviewSection clipboard fallback", () => {
     const copiedTexts = installHttpClipboardFallback(true);
     renderOverview();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "knowledgeNetwork.copyNetworkIdentifier" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.copyNetworkIdentifier" }));
 
     await waitFor(() => {
       expect(copiedTexts).toEqual(["ecommerce_ops_bkn"]);
-      expect(messageMock.success).toHaveBeenCalledWith(
-        "knowledgeNetwork.networkIdentifierCopied",
-      );
+      expect(messageMock.success).toHaveBeenCalledWith("knowledgeNetwork.networkIdentifierCopied");
     });
     expect(messageMock.error).not.toHaveBeenCalled();
   });
@@ -134,9 +130,7 @@ describe("WorkspaceOverviewSection clipboard fallback", () => {
     installHttpClipboardFallback(false);
     renderOverview();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "knowledgeNetwork.copyNetworkIdentifier" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.copyNetworkIdentifier" }));
 
     await waitFor(() => {
       expect(messageMock.error).toHaveBeenCalledWith(

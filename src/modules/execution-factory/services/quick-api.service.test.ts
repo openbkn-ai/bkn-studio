@@ -113,10 +113,7 @@ describe("registerQuickApi", () => {
     expect(listToolboxes).toHaveBeenCalledWith(
       expect.objectContaining({ keyword: "Quick API Box" }),
     );
-    expect(listTools).toHaveBeenCalledWith(
-      "box-1",
-      expect.objectContaining({ all: true }),
-    );
+    expect(listTools).toHaveBeenCalledWith("box-1", expect.objectContaining({ all: true }));
   });
 
   it("uses the selected existing toolbox without creating a new one", async () => {

@@ -68,9 +68,7 @@ export type ObjectTypeDataPropertyValidationResult =
 export function validateObjectTypeDataProperties(
   properties: ObjectTypeDataProperty[],
 ): ObjectTypeDataPropertyValidationResult {
-  const validProperties = properties.filter(
-    (item) => item.name.trim() && item.displayName.trim(),
-  );
+  const validProperties = properties.filter((item) => item.name.trim() && item.displayName.trim());
 
   if (validProperties.length === 0) {
     return { messageKey: "objectTypeDataPropertyRequired", valid: false };

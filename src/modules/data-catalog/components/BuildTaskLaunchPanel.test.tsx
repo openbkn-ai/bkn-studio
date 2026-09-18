@@ -10,10 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
-import {
-  BuildTaskLaunchPanel,
-  STREAMING_BUILD_ENTRY_ENABLED,
-} from "./BuildTaskLaunchPanel";
+import { BuildTaskLaunchPanel, STREAMING_BUILD_ENTRY_ENABLED } from "./BuildTaskLaunchPanel";
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -105,13 +102,18 @@ describe("BuildTaskLaunchPanel", () => {
       />,
     );
 
-    await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalledWith({
-      direction: "desc",
-      limit: 1,
-      resourceId: resource.id,
-      sort: "create_time",
-      statuses: ["pending", "running", "stopping"],
-    }, { skipErrorToast: true }));
+    await waitFor(() =>
+      expect(listBuildTaskPageMock).toHaveBeenCalledWith(
+        {
+          direction: "desc",
+          limit: 1,
+          resourceId: resource.id,
+          sort: "create_time",
+          statuses: ["pending", "running", "stopping"],
+        },
+        { skipErrorToast: true },
+      ),
+    );
   });
 
   it("keeps build controls disabled when active task status cannot be loaded", async () => {
@@ -127,7 +129,9 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     await waitFor(() => expect(listBuildTaskPageMock).toHaveBeenCalled());
-    expect(await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable")).toBeInTheDocument();
+    expect(
+      await screen.findByText("dataCatalog.resourceWorkspace.taskStatusUnavailable"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
     expect(modalConfirmMock).not.toHaveBeenCalled();
@@ -172,9 +176,13 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     expect(screen.queryByText("dataCatalog.build.needConfigFirst")).toBeNull();
-    await waitFor(() => expect(screen.getByRole("button", {
-      name: /dataCatalog\.build\.startBuild/,
-    })).not.toBeDisabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: /dataCatalog\.build\.startBuild/,
+        }),
+      ).not.toBeDisabled(),
+    );
   });
 
   it("does not treat editor defaults as persisted build features", () => {
@@ -196,9 +204,13 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     expect(screen.getByText("dataCatalog.build.needConfigFirst")).toBeTruthy();
-    expect(screen.getByRole("button", {
-      name: /dataCatalog\.build\.startBuild/,
-    }).hasAttribute("disabled")).toBe(true);
+    expect(
+      screen
+        .getByRole("button", {
+          name: /dataCatalog\.build\.startBuild/,
+        })
+        .hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("does not issue a second start request after task creation", async () => {
@@ -214,12 +226,18 @@ describe("BuildTaskLaunchPanel", () => {
       />,
     );
 
-    await waitFor(() => expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).not.toBeDisabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }),
+      ).not.toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
-    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: "dataCatalog.build.startBuildConfirmTitle",
-    }));
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.build.startBuildConfirmTitle",
+      }),
+    );
 
     await waitFor(() => {
       expect(createBuildTaskMock).toHaveBeenCalledWith({
@@ -258,12 +276,18 @@ describe("BuildTaskLaunchPanel", () => {
     );
 
     expect(await screen.findByText("dataCatalog.build.excludedSchemaFieldsHint")).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ })).not.toBeDisabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }),
+      ).not.toBeDisabled(),
+    );
     fireEvent.click(screen.getByRole("button", { name: /dataCatalog\.build\.startBuild/ }));
 
-    expect(modalConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
-      title: "dataCatalog.build.excludedSchemaFieldsConfirmTitle",
-    }));
+    expect(modalConfirmMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "dataCatalog.build.excludedSchemaFieldsConfirmTitle",
+      }),
+    );
     expect(createBuildTaskMock).not.toHaveBeenCalled();
 
     await modalConfirmMock.mock.calls[0][0].onOk();

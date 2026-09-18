@@ -120,18 +120,21 @@ export const subscriptionZhCN = {
       // 2026-12-31 前五折 ¥49,800/年(3 年起订),之后还有六折、八折两档,都带截止日期
       // ——正因为这套东西会随时间变,才不印在产品页上。
       community: {
-        audience: "面向开发者、技术团队和生态伙伴,免费构建和验证业务知识网络,适合 Demo 验证和 POC。",
+        audience:
+          "面向开发者、技术团队和生态伙伴,免费构建和验证业务知识网络,适合 Demo 验证和 POC。",
         price: "免费",
         unit: "自部署 · 无限期",
       },
       enterprise: {
-        audience: "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加企业对象细粒度权限和业务溯源。",
+        audience:
+          "面向以 OpenBKN 为企业 AI Agent 运行底座的组织,在专业版基础上增加企业对象细粒度权限和业务溯源。",
         price: "洽谈",
         unit: "按合同授权",
       },
       inheritsFrom: "{{edition}}全部能力",
       professional: {
-        audience: "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
+        audience:
+          "面向快速成长的 AI 原生团队,在社区版基础上增加自定义角色与权限、细粒度对象授权和高级数据连接。",
         price: "¥99,600",
         unit: "/ 年 · 标准价",
       },
@@ -144,7 +147,6 @@ export const subscriptionZhCN = {
     },
     contact: "完整能力对比、服务条款与优惠计划见版本说明;商务咨询 business@openbkn.ai。",
     title: "版本与订阅",
-    subtitle:
-      "BKN 的知识网络与数据能力在所有版本中完整开放;权限边界、审计与合规能力随版本递进。",
+    subtitle: "BKN 的知识网络与数据能力在所有版本中完整开放;权限边界、审计与合规能力随版本递进。",
   },
 } as const;

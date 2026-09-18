@@ -21,9 +21,11 @@ describe("resolveObjectTypeDisplayKeyLabel", () => {
 
   it("falls back to preview column title", () => {
     expect(
-      resolveObjectTypeDisplayKeyLabel("order_no", [], [
-        { dataIndex: "order_no", title: "Order No." },
-      ]),
+      resolveObjectTypeDisplayKeyLabel(
+        "order_no",
+        [],
+        [{ dataIndex: "order_no", title: "Order No." }],
+      ),
     ).toBe("Order No.");
   });
 

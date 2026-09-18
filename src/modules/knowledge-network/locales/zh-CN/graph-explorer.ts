@@ -35,7 +35,8 @@ export const graphExplorerPart = {
         failed: "失败：{{message}}",
       },
       prompt: {
-        intro: "你是知识网络图探索助手。用户面前是一张实例图画布。你通过工具查找实例、把它们画到画布上、展开邻居或运行 Cypher，最后用一两句话说明画布上新增了什么。",
+        intro:
+          "你是知识网络图探索助手。用户面前是一张实例图画布。你通过工具查找实例、把它们画到画布上、展开邻居或运行 Cypher，最后用一两句话说明画布上新增了什么。",
         rulesHeader: "规则：",
         rules: [
           "实例 ID 的形式是「对象类 id-主键值」；工具返回的 id 可以原样传给其他工具。",
@@ -72,7 +73,8 @@ export const graphExplorerPart = {
       aiEmpty: "模型没有给出可用的 MATCH 模式",
       aiModel: "模型",
       prompt: {
-        intro: "你是知识网络图查询助手。把用户的自然语言问题改写成一段 openCypher 的 MATCH 模式，只输出模式本身。",
+        intro:
+          "你是知识网络图查询助手。把用户的自然语言问题改写成一段 openCypher 的 MATCH 模式，只输出模式本身。",
         rulesHeader: "硬性规则：",
         rules: [
           "只写一条 MATCH … 与可选的 WHERE …；绝对不要写 RETURN、ORDER BY、SKIP、LIMIT，也不要解释。",
@@ -99,7 +101,8 @@ export const graphExplorerPart = {
       locatePlaceholder: "输入主键值；复合主键按顺序用逗号分隔",
       locateEmpty: "没有这个主键的实例",
       idsTitle: "按 ID 列表取子图",
-      idsPlaceholder: "每行一个 ID，或用逗号分隔。可以贴实例 ID（如 product-xxxx，即节点抽屉里的「实例 ID」），也可以在上面选了对象类后直接贴主键值。",
+      idsPlaceholder:
+        "每行一个 ID，或用逗号分隔。可以贴实例 ID（如 product-xxxx，即节点抽屉里的「实例 ID」），也可以在上面选了对象类后直接贴主键值。",
       idsRun: "展示子图",
       idsUnknown: "无法识别的 ID：{{list}}（既不是「对象类-主键」形式，也没有选对象类）",
       idsSkipped: "{{count}} 个 ID 不属于本网络，已跳过：{{list}}",
@@ -120,30 +123,38 @@ export const graphExplorerPart = {
       maxInstancesPerType: "每类实例数",
       maxInstancesPerTypeHelp: "每个命中对象类最多返回多少条实例。",
       maxObjectTypes: "对象类上限",
-      maxObjectTypesHelp: "先按 query 召回相关对象类，再对前 N 个做实例召回。是严格上限，但「限定对象类」里点名的不会被截掉。",
+      maxObjectTypesHelp:
+        "先按 query 召回相关对象类，再对前 N 个做实例召回。是严格上限，但「限定对象类」里点名的不会被截掉。",
       rrf: "召回融合（RRF）",
       rrfIntro:
         "语义搜索的实例召回同时走两路：向量（按语义、可跨语言）和全文（按词面命中）。两路各自排名后按 RRF 融合：score = Σ 1/(k + rank)，名次越靠前得分越高；可再选精排。默认参数已经是这套融合，这里只是让你调它。",
       enableRrf: "RRF 融合",
-      enableRrfHelp: "开：knn 与 match 分两条查询、按名次融合。关：退回单条 OR 查询，BM25 分数无上界会压过向量分，向量命中基本进不了候选，只作逃生门。",
+      enableRrfHelp:
+        "开：knn 与 match 分两条查询、按名次融合。关：退回单条 OR 查询，BM25 分数无上界会压过向量分，向量命中基本进不了候选，只作逃生门。",
       enableKnn: "向量召回",
-      enableKnnHelp: "是否发送向量条件。向量能跨语言、换说法召回，但每个 knn 子条件要把 query 向量化一次，是链路里唯一按次计费的部分。关掉只剩全文。",
+      enableKnnHelp:
+        "是否发送向量条件。向量能跨语言、换说法召回，但每个 knn 子条件要把 query 向量化一次，是链路里唯一按次计费的部分。关掉只剩全文。",
       rrfK: "RRF k",
-      rrfKHelp: "融合常数 k：score = Σ 1/(k + rank)。k 越大越平滑（各通道头部名次之间差距被压小）。60 是文献与工业界常用值，通常不用跨知识网络重调。",
+      rrfKHelp:
+        "融合常数 k：score = Σ 1/(k + rank)。k 越大越平滑（各通道头部名次之间差距被压小）。60 是文献与工业界常用值，通常不用跨知识网络重调。",
       knnWeight: "向量权重",
-      knnWeightHelp: "向量通道在融合里的权重（0~1），全文通道取 1 − 该值；只有两路比例有意义。1 = 只信向量，0 = 只信全文。中文短名、跨语言表达向量更可靠；编号/编码类字段全文更可靠。偏离 0.5 会整体压低没有向量字段的对象类，这是声明偏好后的正确结果，不是缺陷。",
+      knnWeightHelp:
+        "向量通道在融合里的权重（0~1），全文通道取 1 − 该值；只有两路比例有意义。1 = 只信向量，0 = 只信全文。中文短名、跨语言表达向量更可靠；编号/编码类字段全文更可靠。偏离 0.5 会整体压低没有向量字段的对象类，这是声明偏好后的正确结果，不是缺陷。",
       knnWeightValue: "向量 {{knn}} · 全文 {{text}}",
       initialCandidateCount: "初始候选数",
       initialCandidateCountHelp: "每路召回先取多少候选再融合。调大召回更全、更慢。",
       minDirectRelevance: "直接相关度下限",
-      minDirectRelevanceHelp: "低于该相关度的实例被过滤（0~1）。底层给了 _score 时以底层为准，这里只兜底。",
+      minDirectRelevanceHelp:
+        "低于该相关度的实例被过滤（0~1）。底层给了 _score 时以底层为准，这里只兜底。",
       rerankMode: "精排",
-      rerankModeHelp: "关：只用 RRF 名次。开：再调一次 cross-encoder 逐条判断 query 与实例的相关性并重排，能分辨「欠款」与「还款」这类融合分不出的差异，多 100~400ms，且要求部署里注册了精排小模型，模型不可用时自动退回融合序。影子：结果仍按融合序返回，但额外跑一次精排并记录两序差异，用于上线前取证。",
+      rerankModeHelp:
+        "关：只用 RRF 名次。开：再调一次 cross-encoder 逐条判断 query 与实例的相关性并重排，能分辨「欠款」与「还款」这类融合分不出的差异，多 100~400ms，且要求部署里注册了精排小模型，模型不可用时自动退回融合序。影子：结果仍按融合序返回，但额外跑一次精排并记录两序差异，用于上线前取证。",
       rerankOff: "关",
       rerankShadow: "影子",
       rerankOn: "开",
       viaKnSearch: "已启用自定义融合参数",
-      viaKnSearchHelp: "search_instance 内部就是这套两路融合，但它的请求体不接受这些参数；改动后页面改用可配置的 kn_search 接口下发 retrieval_config，返回的实例形态一致。",
+      viaKnSearchHelp:
+        "search_instance 内部就是这套两路融合，但它的请求体不接受这些参数；改动后页面改用可配置的 kn_search 接口下发 retrieval_config，返回的实例形态一致。",
     },
     condition: {
       objectType: "对象类",
@@ -172,7 +183,8 @@ export const graphExplorerPart = {
         error: "加载失败：{{message}}",
       },
       missingParams: "地址需要 kn 与 ids 参数，例如 graph-view.html?kn=<网络 id>&ids=<实例 id,…>",
-      missingToken: "没有可用的访问令牌：请在部署时配置 graph-view.config.js，或在地址上带 token 参数",
+      missingToken:
+        "没有可用的访问令牌：请在部署时配置 graph-view.config.js，或在地址上带 token 参数",
       unknownIds: "无法识别的 ID：{{list}}",
       missing: "有 {{count}} 个 ID 没查到实例",
       missing_one: "有 {{count}} 个 ID 没查到实例",
@@ -211,7 +223,8 @@ export const graphExplorerPart = {
       expandSidebar: "展开左栏",
       groupByConceptGroup: "按概念组分组",
       dragMode: "拖动",
-      dragModeHelp: "单点：只动被拖的节点（多选时整组一起动）。牵连：直接相邻的节点跟着走一半距离，隔一层的跟五分之一，固定的节点不动。",
+      dragModeHelp:
+        "单点：只动被拖的节点（多选时整组一起动）。牵连：直接相邻的节点跟着走一半距离，隔一层的跟五分之一，固定的节点不动。",
       dragSingle: "单点",
       dragLinked: "牵连",
       removeSelected: "移除所选",
@@ -245,7 +258,8 @@ export const graphExplorerPart = {
     toast: {
       noNeighbors: "该节点在此方向没有邻居",
       pathNotFound: "{{hops}} 跳内不连通",
-      pathNotFoundLimited: "起点侧只探到 {{a}} 跳、终点侧 {{b}} 跳，仍不连通（更远的查询被后端拒绝）",
+      pathNotFoundLimited:
+        "起点侧只探到 {{a}} 跳、终点侧 {{b}} 跳，仍不连通（更远的查询被后端拒绝）",
       expandSeedsCapped: "一次最多展开 {{limit}} 个节点，其余未展开",
       expandPartial: "{{count}} 个对象类的邻居取不到，已跳过：{{list}}",
       expandPartial_one: "{{count}} 个对象类的邻居取不到，已跳过：{{list}}",
@@ -258,7 +272,8 @@ export const graphExplorerPart = {
       pathFound: "找到 {{hops}} 跳路径",
       pathNeedBoth: "请先在右键菜单里指定起点和终点",
       limitReached: "画布节点已达 {{limit}} 个上限，请先移除部分节点",
-      limitTruncated: "画布最多 {{limit}} 个节点，本次有 {{dropped}} 个没放上去；移除一些节点后再展开可继续",
+      limitTruncated:
+        "画布最多 {{limit}} 个节点，本次有 {{dropped}} 个没放上去；移除一些节点后再展开可继续",
       missingPrimaryKey: "对象类「{{name}}」缺少主键，无法加入画布",
       cacheRestored: "已恢复上次画布",
       cacheSaveFailed: "本地存储空间不足，画布未能保存",

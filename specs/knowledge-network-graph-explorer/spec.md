@@ -36,7 +36,11 @@ Studio 目前只能以表格形式浏览知识网络实例（Data Browser），�
 `src/modules/knowledge-network/scenes/workspace/WorkspaceOverviewSection.tsx` 头部按钮组（现有「授权」「编辑」旁）增加「图探索」按钮：
 
 ```ts
-window.open(`/knowledge-network/workspace/${networkId}/graph-explorer`, "_blank", "noopener,noreferrer");
+window.open(
+  `/knowledge-network/workspace/${networkId}/graph-explorer`,
+  "_blank",
+  "noopener,noreferrer",
+);
 ```
 
 与 `src/app/shell/TopBar.tsx:157` 现有 `window.open` 写法一致。路径用 react-router 的 `useHref()` 生成，由它带上路由 basename，不手拼 `/studio`。
@@ -85,14 +89,14 @@ src/modules/knowledge-network/
 
 ### 6.2 工具与载荷
 
-| 场景 | 工具 | 关键参数 | 用到的返回 |
-| --- | --- | --- | --- |
-| 语义搜索 | `search_instance` | `kn_id, query, max_instances_per_type=20` | `nodes[]{object_type_id, object_type_name, instance_name, unique_identities, properties}`、`object_types[]`、`message` |
-| 对象类清单 | `get_kn_detail` | `kn_id, detail_level=summary` | 对象类 id / name（下拉） |
-| 对象类定义 | `get_object_types` | `kn_id, ids=[ot_id]` | `primary_keys`、`display_key`、`properties[]{name, type}` |
-| 条件查询 | `query_object_instance` | `kn_id, ot_id, condition, limit=50` | `datas[]`（含 `_instance_id / _instance_identity / _display`）、`total_count` |
-| 展开邻居 | `explore_subgraph` | `kn_id, source_object_type_id, direction, path_length=1, condition, limit=1` | `objects`、`isolated_objects`、`relation_paths` |
-| 查找路径 | `explore_subgraph` | 同上，`path_length=3, direction=bidirectional` | `relation_paths`（客户端筛选） |
+| 场景       | 工具                    | 关键参数                                                                     | 用到的返回                                                                                                             |
+| ---------- | ----------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 语义搜索   | `search_instance`       | `kn_id, query, max_instances_per_type=20`                                    | `nodes[]{object_type_id, object_type_name, instance_name, unique_identities, properties}`、`object_types[]`、`message` |
+| 对象类清单 | `get_kn_detail`         | `kn_id, detail_level=summary`                                                | 对象类 id / name（下拉）                                                                                               |
+| 对象类定义 | `get_object_types`      | `kn_id, ids=[ot_id]`                                                         | `primary_keys`、`display_key`、`properties[]{name, type}`                                                              |
+| 条件查询   | `query_object_instance` | `kn_id, ot_id, condition, limit=50`                                          | `datas[]`（含 `_instance_id / _instance_identity / _display`）、`total_count`                                          |
+| 展开邻居   | `explore_subgraph`      | `kn_id, source_object_type_id, direction, path_length=1, condition, limit=1` | `objects`、`isolated_objects`、`relation_paths`                                                                        |
+| 查找路径   | `explore_subgraph`      | 同上，`path_length=3, direction=bidirectional`                               | `relation_paths`（客户端筛选）                                                                                         |
 
 `direction` 取值对应关系：出边 = `forward`，入边 = `backward`，双向 = `bidirectional`。
 
@@ -108,15 +112,15 @@ src/modules/knowledge-network/
 
 ```ts
 type GNode = {
-  id: string;            // 见 6.4
+  id: string; // 见 6.4
   otId: string;
   otName: string;
-  identity: Record<string, unknown>;   // 主键 -> 值
-  display: string;                     // 见 6.5
-  props: Record<string, unknown>;      // 全部属性（含 _ 前缀系统字段）
+  identity: Record<string, unknown>; // 主键 -> 值
+  display: string; // 见 6.5
+  props: Record<string, unknown>; // 全部属性（含 _ 前缀系统字段）
 };
 type GEdge = {
-  id: string;            // `${source}|${relTypeId}|${target}`
+  id: string; // `${source}|${relTypeId}|${target}`
   source: string;
   target: string;
   relTypeId: string;
@@ -259,13 +263,13 @@ Tab「AI 探索」：用户用自然语言说要看什么，模型在一个受�
 
 ## 9. 错误处理
 
-| 情形 | 表现 |
-| --- | --- |
-| lifecycle 不可用（`feature_not_installed` / `trace_core_unavailable`） | 页面顶部 alert，搜索与展开按钮禁用；判定沿用 `lifecycle.unsupported()` |
-| 展开后只有 `isolated_objects` | toast「该节点在此方向没有邻居」；不视为错误 |
-| `explore_subgraph` / `search_instance` 返回业务错误 | toast 展示错误：Context Loader 的错误信封里 `details` 还嵌着下游信封，解出最内层的 `description` 与 `solution`（如「调用依赖服务异常：数据资源不存在（请检查数据资源ID）」），不吐原始 JSON；画布不变 |
-| 401 | 沿用 `createMcpSession` 现有 `auth.refresh()` 重试 |
-| 节点主键缺失导致无法构造 id | 该节点不加入画布，toast 说明对象类缺少主键 |
+| 情形                                                                   | 表现                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| lifecycle 不可用（`feature_not_installed` / `trace_core_unavailable`） | 页面顶部 alert，搜索与展开按钮禁用；判定沿用 `lifecycle.unsupported()`                                                                                                                                |
+| 展开后只有 `isolated_objects`                                          | toast「该节点在此方向没有邻居」；不视为错误                                                                                                                                                           |
+| `explore_subgraph` / `search_instance` 返回业务错误                    | toast 展示错误：Context Loader 的错误信封里 `details` 还嵌着下游信封，解出最内层的 `description` 与 `solution`（如「调用依赖服务异常：数据资源不存在（请检查数据资源ID）」），不吐原始 JSON；画布不变 |
+| 401                                                                    | 沿用 `createMcpSession` 现有 `auth.refresh()` 重试                                                                                                                                                    |
+| 节点主键缺失导致无法构造 id                                            | 该节点不加入画布，toast 说明对象类缺少主键                                                                                                                                                            |
 
 ## 10. 依赖
 

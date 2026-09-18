@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  getUser,
-  listDepartments,
-  listRoles,
-} from "@/modules/system-admin/services/admin.service";
+import { getUser, listDepartments, listRoles } from "@/modules/system-admin/services/admin.service";
 import { isRequestNotFound } from "@/framework/request/error-message";
 import type { AdminDepartment, AdminRole, AdminUser } from "@/modules/system-admin/types/admin";
 
@@ -67,9 +63,9 @@ export function primeUserLookupCache(users: AdminUser[]) {
   }
 }
 
-export async function getCachedDepartments(
-  options?: { skipErrorToast?: boolean },
-): Promise<AdminDepartment[]> {
+export async function getCachedDepartments(options?: {
+  skipErrorToast?: boolean;
+}): Promise<AdminDepartment[]> {
   if (isFresh(departmentsCache)) {
     return departmentsCache!.data;
   }
@@ -99,10 +95,13 @@ export async function getCachedUser(id: string): Promise<AdminUser | null> {
     return null;
   }
   const result = await lookupUser(id);
-  return result === "resolved" ? getCachedUserSync(id) ?? null : null;
+  return result === "resolved" ? (getCachedUserSync(id) ?? null) : null;
 }
 
-export async function hydrateUserLookup(ids: string[], options?: UserLookupOptions): Promise<string[]> {
+export async function hydrateUserLookup(
+  ids: string[],
+  options?: UserLookupOptions,
+): Promise<string[]> {
   const result = await hydrateUserLookupDetails(ids, options);
   return [...result.deleted, ...result.unavailable];
 }

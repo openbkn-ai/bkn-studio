@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  AppstoreOutlined,
-  BarChartOutlined,
-} from "@ant-design/icons";
+import { AppstoreOutlined, BarChartOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavContribution } from "@/app/shell/navigation/types";
 
@@ -20,10 +17,7 @@ export const modelResourcesNavigation: ConsoleNavContribution = {
       labelKey: "shell.items.modelManagement",
       icon: <AppstoreOutlined />,
       path: "/model-resources/models",
-      permission: [
-        "model-resources:large-model:view",
-        "model-resources:small-model:view",
-      ],
+      permission: ["model-resources:large-model:view", "model-resources:small-model:view"],
       permissionMode: "any",
     },
     {

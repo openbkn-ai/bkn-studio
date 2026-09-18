@@ -28,9 +28,12 @@ export function filterAccessibleExecutionUnitTabs(
   tabs: ExecutionUnitTab[],
   currentPermissions: readonly string[],
 ): ExecutionUnitTab[] {
-  return tabs.filter((tab) => tab === "toolbox"
-    ? currentPermissions.includes("execution-factory:toolbox:view") || currentPermissions.includes("execution-factory:function:view")
-    : currentPermissions.includes(executionFactoryViewPermissionByTab[tab]));
+  return tabs.filter((tab) =>
+    tab === "toolbox"
+      ? currentPermissions.includes("execution-factory:toolbox:view") ||
+        currentPermissions.includes("execution-factory:function:view")
+      : currentPermissions.includes(executionFactoryViewPermissionByTab[tab]),
+  );
 }
 
 /**
@@ -38,9 +41,7 @@ export function filterAccessibleExecutionUnitTabs(
  * mount without at least one readable resource type. Otherwise the scene has no resolvable tab
  * and would fall through to the Skill API with an undefined active tab.
  */
-export function canAccessExecutionUnitManagement(
-  currentPermissions: readonly string[],
-): boolean {
+export function canAccessExecutionUnitManagement(currentPermissions: readonly string[]): boolean {
   return executionFactoryViewPermissions.some((permission) =>
     currentPermissions.includes(permission),
   );
@@ -50,9 +51,12 @@ export type ToolboxView = "openapi" | "function";
 
 /** API toolboxes and Function sets are separate resources and must not share a list tab. */
 export function filterAccessibleToolboxViews(currentPermissions: readonly string[]): ToolboxView[] {
-  return ([
-    ["openapi", "execution-factory:toolbox:view"],
-    ["function", "execution-factory:function:view"],
-  ] as const).filter(([, permission]) => currentPermissions.includes(permission))
+  return (
+    [
+      ["openapi", "execution-factory:toolbox:view"],
+      ["function", "execution-factory:function:view"],
+    ] as const
+  )
+    .filter(([, permission]) => currentPermissions.includes(permission))
     .map(([view]) => view);
 }

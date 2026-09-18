@@ -24,7 +24,11 @@ export const executionFactoryLabRoutes: RouteObject[] = [
         titleKey: "executionFactoryLab.capabilitiesTitle",
       },
     },
-    element: <RequirePermission mode="any" permissions={executionFactoryLabModuleManifest.permissions}><CapabilityLabPage /></RequirePermission>,
+    element: (
+      <RequirePermission mode="any" permissions={executionFactoryLabModuleManifest.permissions}>
+        <CapabilityLabPage />
+      </RequirePermission>
+    ),
   },
   {
     path: "execution-factory-lab/catalog",
@@ -35,7 +39,11 @@ export const executionFactoryLabRoutes: RouteObject[] = [
         titleKey: "executionFactoryLab.catalogTitle",
       },
     },
-    element: <RequirePermission mode="any" permissions={executionFactoryLabModuleManifest.permissions}><CatalogLabPage /></RequirePermission>,
+    element: (
+      <RequirePermission mode="any" permissions={executionFactoryLabModuleManifest.permissions}>
+        <CatalogLabPage />
+      </RequirePermission>
+    ),
   },
   {
     path: "execution-factory-lab/sandbox-runtime",
@@ -46,7 +54,11 @@ export const executionFactoryLabRoutes: RouteObject[] = [
         titleKey: "executionFactoryLab.sandboxRuntimeTitle",
       },
     },
-    element: <RequirePermission permissions="execution-factory-lab:sandbox-runtime:view"><SandboxRuntimePage /></RequirePermission>,
+    element: (
+      <RequirePermission permissions="execution-factory-lab:sandbox-runtime:view">
+        <SandboxRuntimePage />
+      </RequirePermission>
+    ),
   },
 ];
 

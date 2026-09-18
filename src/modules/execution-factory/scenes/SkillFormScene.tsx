@@ -86,9 +86,7 @@ export function SkillFormScene({ onBack, onSubmitSuccess }: SkillFormSceneProps)
 
   return (
     <PermissionGate
-      fallback={
-        <Result status="403" subTitle={t("common.noPermission")} title="403" />
-      }
+      fallback={<Result status="403" subTitle={t("common.noPermission")} title="403" />}
       permissions="execution-factory:skill:create"
     >
       <CrudFormPage
@@ -101,9 +99,7 @@ export function SkillFormScene({ onBack, onSubmitSuccess }: SkillFormSceneProps)
             <Form.Item label={t("executionFactory.skillFileType")} name="fileType">
               <Radio.Group>
                 <Radio value="zip">{t("executionFactory.skillFileTypes.zip")}</Radio>
-                <Radio value="content">
-                  {t("executionFactory.skillFileTypes.content")}
-                </Radio>
+                <Radio value="content">{t("executionFactory.skillFileTypes.content")}</Radio>
               </Radio.Group>
             </Form.Item>
             {fileType === "zip" ? (

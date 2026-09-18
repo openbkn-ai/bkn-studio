@@ -186,7 +186,8 @@ test.describe("Execution Factory — Impex E2E flows", () => {
 
     await importMcpViaApi(request, payload, "create");
 
-    const newMcpId = (payload.mcp as { configs?: Array<{ mcp_id?: string }> })?.configs?.[0]?.mcp_id;
+    const newMcpId = (payload.mcp as { configs?: Array<{ mcp_id?: string }> })?.configs?.[0]
+      ?.mcp_id;
     expect(newMcpId).toBeTruthy();
     if (newMcpId) {
       createdMcpIds.push(String(newMcpId));

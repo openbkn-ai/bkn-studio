@@ -11,12 +11,20 @@ import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
 
 describe("splitMarkdownBlocks", () => {
   it("splits by blank lines and drops the blank line itself", () => {
-    expect(splitMarkdownBlocks("## Title\n\nBody one\n\nBody two")).toEqual(["## Title", "Body one", "Body two"]);
+    expect(splitMarkdownBlocks("## Title\n\nBody one\n\nBody two")).toEqual([
+      "## Title",
+      "Body one",
+      "Body two",
+    ]);
   });
 
   it("does not split blank lines inside fenced code blocks", () => {
     const text = "Intro\n\n```sql\nSELECT 1\n\nFROM t\n```\n\nOutro";
-    expect(splitMarkdownBlocks(text)).toEqual(["Intro", "```sql\nSELECT 1\n\nFROM t\n```", "Outro"]);
+    expect(splitMarkdownBlocks(text)).toEqual([
+      "Intro",
+      "```sql\nSELECT 1\n\nFROM t\n```",
+      "Outro",
+    ]);
   });
 
   it("does not split blank lines between loose-list items", () => {
@@ -26,7 +34,10 @@ describe("splitMarkdownBlocks", () => {
 
   it("keeps a table as one block", () => {
     const text = "| a | b |\n| --- | --- |\n| 1 | 2 |\n\nNext paragraph";
-    expect(splitMarkdownBlocks(text)).toEqual(["| a | b |\n| --- | --- |\n| 1 | 2 |", "Next paragraph"]);
+    expect(splitMarkdownBlocks(text)).toEqual([
+      "| a | b |\n| --- | --- |\n| 1 | 2 |",
+      "Next paragraph",
+    ]);
   });
 
   it("keeps completed blocks as the same string during streaming increments", () => {

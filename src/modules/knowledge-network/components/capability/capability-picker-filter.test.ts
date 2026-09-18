@@ -78,9 +78,7 @@ describe("containerBlockReason", () => {
   const box = { id: "b1", name: "dataset_function", status: "published", toolCount: 1 };
 
   it("refuses an unpublished toolset before its tools are read", () => {
-    expect(containerBlockReason({ ...box, status: "unpublish" }, undefined)).toBe(
-      "boxUnpublished",
-    );
+    expect(containerBlockReason({ ...box, status: "unpublish" }, undefined)).toBe("boxUnpublished");
   });
 
   it("leaves an unread toolset to its read, even one the catalogue listed as empty", () => {

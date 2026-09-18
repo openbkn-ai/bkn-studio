@@ -11,7 +11,11 @@ import { readAuditLogDrilldown } from "./audit-log-drilldown";
 
 describe("readAuditLogDrilldown", () => {
   it("normalizes legacy users target type without trusting its display label", () => {
-    expect(readAuditLogDrilldown(new URLSearchParams("target_id=user-a&target_type=users&target_name=Administrator"))).toEqual({
+    expect(
+      readAuditLogDrilldown(
+        new URLSearchParams("target_id=user-a&target_type=users&target_name=Administrator"),
+      ),
+    ).toEqual({
       apiResourceType: "user",
       displayType: "user",
       targetId: "user-a",
@@ -19,11 +23,13 @@ describe("readAuditLogDrilldown", () => {
   });
 
   it("uses the canonical user type", () => {
-    expect(readAuditLogDrilldown(new URLSearchParams("target_id=user-a&target_type=user"))).toEqual({
-      apiResourceType: "user",
-      displayType: "user",
-      targetId: "user-a",
-    });
+    expect(readAuditLogDrilldown(new URLSearchParams("target_id=user-a&target_type=user"))).toEqual(
+      {
+        apiResourceType: "user",
+        displayType: "user",
+        targetId: "user-a",
+      },
+    );
   });
 
   it("accepts old resource links and preserves unknown resource types", () => {

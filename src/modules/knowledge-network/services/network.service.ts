@@ -11,10 +11,7 @@ import {
 } from "@/framework/download/file-download";
 import { http } from "@/framework/request/http";
 import i18n from "@/app/locales/i18n";
-import {
-  unwrapSingleEntryResponse,
-  type SingleEntryResponse,
-} from "@/framework/request/normalize";
+import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework/request/normalize";
 import type {
   KnowledgeNetworkExportFormat,
   KnowledgeNetworkBindingPolicy,
@@ -29,10 +26,7 @@ import type {
   BackendListResponse,
   BackendObjectType,
 } from "@/modules/knowledge-network/services/mappers/backend-types";
-import {
-  mapKnowledgeNetwork,
-  mapRecentObject,
-} from "@/modules/knowledge-network/services/mappers";
+import { mapKnowledgeNetwork, mapRecentObject } from "@/modules/knowledge-network/services/mappers";
 import {
   toBackendKnowledgeNetworkCreatePayload,
   toBackendKnowledgeNetworkUpdatePayload,
@@ -154,11 +148,7 @@ export async function getKnowledgeNetwork(networkId: string) {
     const record = unwrapSingleEntryResponse(response.data);
     return record ? mapKnowledgeNetwork(record) : null;
   } catch (error) {
-    logServiceFallback(
-      "getKnowledgeNetwork",
-      error,
-      "retrying without include_statistics",
-    );
+    logServiceFallback("getKnowledgeNetwork", error, "retrying without include_statistics");
     const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
       `/bkn-backend/v1/knowledge-networks/${networkId}`,
       {},
@@ -252,9 +242,7 @@ export async function updateKnowledgeNetwork(
 
 export async function deleteKnowledgeNetwork(networkId: string) {
   if (useMock) {
-    replaceMockKnowledgeNetworks(
-      mockKnowledgeNetworks.filter((item) => item.id !== networkId),
-    );
+    replaceMockKnowledgeNetworks(mockKnowledgeNetworks.filter((item) => item.id !== networkId));
     delete mockRecentObjects[networkId];
     delete mockConceptGroups[networkId];
     delete mockObjectTypes[networkId];
@@ -366,10 +354,7 @@ export async function importKnowledgeNetwork(
       id: identifier,
       identifier: stringFromUnknown(payload.code, identifier),
       name: stringFromUnknown(payload.name, identifier),
-      description: stringFromUnknown(
-        payload.comment,
-        stringFromUnknown(payload.description),
-      ),
+      description: stringFromUnknown(payload.comment, stringFromUnknown(payload.description)),
       color: stringFromUnknown(payload.color, "#1677ff"),
       icon: stringFromUnknown(payload.icon, "deployment-unit"),
       operations: MOCK_KNOWLEDGE_NETWORK_OPERATIONS,
@@ -383,9 +368,7 @@ export async function importKnowledgeNetwork(
 
     if (exists && importMode === "overwrite") {
       replaceMockKnowledgeNetworks(
-        mockKnowledgeNetworks.map((item) =>
-          item.id === identifier ? nextRecord : item,
-        ),
+        mockKnowledgeNetworks.map((item) => (item.id === identifier ? nextRecord : item)),
       );
     } else {
       mockKnowledgeNetworks.unshift(nextRecord);

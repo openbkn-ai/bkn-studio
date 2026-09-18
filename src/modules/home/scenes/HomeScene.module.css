@@ -21,7 +21,13 @@
   padding: 28px 40px 24px;
   border-bottom: 1px solid var(--color-divider);
   background:
-    linear-gradient(90deg, var(--color-bg-surface) 0%, color-mix(in srgb, var(--color-bg-surface) 98%, transparent) 38%, color-mix(in srgb, var(--color-bg-surface) 84%, transparent) 68%, color-mix(in srgb, var(--color-bg-surface) 56%, transparent) 100%),
+    linear-gradient(
+      90deg,
+      var(--color-bg-surface) 0%,
+      color-mix(in srgb, var(--color-bg-surface) 98%, transparent) 38%,
+      color-mix(in srgb, var(--color-bg-surface) 84%, transparent) 68%,
+      color-mix(in srgb, var(--color-bg-surface) 56%, transparent) 100%
+    ),
     var(--color-bg-surface);
 }
 
@@ -41,7 +47,11 @@
   position: absolute;
   inset: auto 0 0;
   height: 92px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-surface) 0%, transparent) 0%, var(--color-bg-surface) 92%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-bg-surface) 0%, transparent) 0%,
+    var(--color-bg-surface) 92%
+  );
   content: "";
   pointer-events: none;
 }
@@ -120,7 +130,11 @@
   padding: 28px 40px 44px;
   overflow: hidden;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-surface) 76%, var(--color-primary-50)) 0%, color-mix(in srgb, var(--color-bg-surface) 96%, transparent) 260px),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-bg-surface) 76%, var(--color-primary-50)) 0%,
+      color-mix(in srgb, var(--color-bg-surface) 96%, transparent) 260px
+    ),
     var(--color-bg-surface);
 }
 
@@ -755,5 +769,4 @@
     grid-template-columns: 1fr;
     gap: 12px;
   }
-
 }

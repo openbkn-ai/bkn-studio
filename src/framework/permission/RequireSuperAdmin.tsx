@@ -19,5 +19,9 @@ type RequireSuperAdminProps = {
 export function RequireSuperAdmin({ children }: RequireSuperAdminProps) {
   const runtimeConfig = useRuntimeConfig();
 
-  return runtimeConfig.currentUser.isSuperAdmin ? <>{children}</> : <Navigate replace to={DEFAULT_APP_ENTRY_PATH} />;
+  return runtimeConfig.currentUser.isSuperAdmin ? (
+    <>{children}</>
+  ) : (
+    <Navigate replace to={DEFAULT_APP_ENTRY_PATH} />
+  );
 }

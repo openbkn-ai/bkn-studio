@@ -36,12 +36,7 @@ function formatTimestamp(value?: number) {
   return formatExecutionUnitTime(value);
 }
 
-export function SkillHistoryDrawer({
-  onClose,
-  onUpdated,
-  open,
-  skillId,
-}: SkillHistoryDrawerProps) {
+export function SkillHistoryDrawer({ onClose, onUpdated, open, skillId }: SkillHistoryDrawerProps) {
   const { t } = useTranslation();
   const { message, modal } = useAppServices();
   const [items, setItems] = useState<SkillHistoryRecord[]>([]);

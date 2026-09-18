@@ -13,6 +13,7 @@
 ### Task 1: Prove the Studio request contract
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/services/observability.service.test.ts`
 - Modify: `src/modules/bkn-trace/services/observability.service.ts`
 
@@ -27,6 +28,7 @@
 ### Task 2: Prove the backend operator predicate
 
 **Files:**
+
 - Modify: `bkn-trace/agent-observability/src/domain/service/logsvc/service_test.go`
 - Modify: `bkn-trace/agent-observability/src/domain/service/logsvc/service.go`
 - Modify: `bkn-trace/agent-observability/src/domain/valueobject/observabilityvo/log.go`
@@ -44,6 +46,7 @@
 ### Task 3: Simplify the Studio filters
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/scenes/ObservabilityLogsScene.tsx`
 - Modify: `src/modules/bkn-trace/scenes/ObservabilityWorkspaceScenes.test.tsx`
 - Modify: `src/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css`
@@ -59,6 +62,7 @@
 ### Task 4: Verify and submit
 
 **Files:**
+
 - Modify: `docs/plans/2026-08-22-audit-filter-layout-design.md`
 
 **Step 1:** Run the focused Studio and Go tests, then the required repository quality checks.

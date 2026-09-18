@@ -37,7 +37,16 @@ const ZOOM_MAX = 3;
 const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
 const GROUP_HULL_PAD = 28;
 // Group-boundary colors, assigned stably after sorting by group ID.
-const GROUP_COLORS = ["#2e68ff", "#7c4dff", "#00b8a3", "#f5a623", "#eb5757", "#11a0d8", "#9b51e0", "#2bb673"];
+const GROUP_COLORS = [
+  "#2e68ff",
+  "#7c4dff",
+  "#00b8a3",
+  "#f5a623",
+  "#eb5757",
+  "#11a0d8",
+  "#9b51e0",
+  "#2bb673",
+];
 
 type OntologyLayoutMode = "force" | "circle" | "group";
 
@@ -67,7 +76,11 @@ function circleLayout(ids: string[]): { id: string; x: number; y: number }[] {
   const n = Math.max(ids.length, 1);
   return ids.map((id, i) => {
     const a = (i / n) * 2 * Math.PI - Math.PI / 2;
-    return { id, x: clamp(cx + r * Math.cos(a), PREVIEW_LAYOUT_WIDTH), y: clamp(cy + r * Math.sin(a), PREVIEW_LAYOUT_HEIGHT) };
+    return {
+      id,
+      x: clamp(cx + r * Math.cos(a), PREVIEW_LAYOUT_WIDTH),
+      y: clamp(cy + r * Math.sin(a), PREVIEW_LAYOUT_HEIGHT),
+    };
   });
 }
 
@@ -99,8 +112,10 @@ function placeCluster(
   const cols = Math.max(1, Math.min(n, Math.round(Math.sqrt(n * aspect)) || 1));
   const rows = Math.ceil(n / cols);
   // Prefer NODE_SPACING; compress when space is limited but never below MIN_SPACING, where nodes touch.
-  const spacingX = cols > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availW / (cols - 1))) : 0;
-  const spacingY = rows > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availH / (rows - 1))) : 0;
+  const spacingX =
+    cols > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availW / (cols - 1))) : 0;
+  const spacingY =
+    rows > 1 ? Math.max(MIN_SPACING, Math.min(NODE_SPACING, availH / (rows - 1))) : 0;
   const startX = gcx - ((cols - 1) * spacingX) / 2;
   const startY = gcy - ((rows - 1) * spacingY) / 2;
   return gids.map((id, i) => ({
@@ -115,7 +130,10 @@ function placeCluster(
  * count, distributed across horizontal shelves and then gridded internally. Large groups get larger
  * cells without overlap, smaller groups avoid wasted space, and all remain within the fixed canvas.
  */
-function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string; x: number; y: number }[] {
+function groupLayout(
+  ids: string[],
+  groupOf: Map<string, string>,
+): { id: string; x: number; y: number }[] {
   const buckets = new Map<string, string[]>();
   ids.forEach((id) => {
     const g = groupOf.get(id) ?? "__ungrouped";
@@ -141,7 +159,10 @@ function groupLayout(ids: string[], groupOf: Map<string, string>): { id: string;
     1,
     Math.round(Math.sqrt(gn * (PREVIEW_LAYOUT_HEIGHT / PREVIEW_LAYOUT_WIDTH))) || 1,
   );
-  const shelves = Array.from({ length: shelfCount }, () => ({ groups: [] as string[][], nodes: 0 }));
+  const shelves = Array.from({ length: shelfCount }, () => ({
+    groups: [] as string[][],
+    nodes: 0,
+  }));
   // Place larger groups into the shelf with the fewest nodes to balance total row height.
   [...groups]
     .sort((a, b) => b.length - a.length)
@@ -188,7 +209,9 @@ export function OntologyGraphView({
         : mode === "group"
           ? groupLayout(ids, groupOf ?? new Map<string, string>())
           : computePreviewGraphLayout(graph);
-    const positionMap = new Map(layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]));
+    const positionMap = new Map(
+      layout.map((node) => [node.id, { id: node.id, x: node.x, y: node.y }]),
+    );
 
     const degree = new Map<string, number>();
     graph.nodes.forEach((node) => degree.set(node.id, 0));
@@ -206,7 +229,9 @@ export function OntologyGraphView({
     });
 
     const radius = new Map<string, number>();
-    graph.nodes.forEach((node) => radius.set(node.id, node.id === topId ? HUB_RADIUS : NODE_RADIUS));
+    graph.nodes.forEach((node) =>
+      radius.set(node.id, node.id === topId ? HUB_RADIUS : NODE_RADIUS),
+    );
 
     return { positions: positionMap, radiusById: radius, hubId: topId };
   }, [graph, mode, groupOf]);
@@ -225,13 +250,18 @@ export function OntologyGraphView({
   // Dragging lets users reposition nodes. Overrides in dragged take precedence over computed layout.
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragged, setDragged] = useState<Map<string, { x: number; y: number }>>(new Map());
-  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number; moved: boolean } | null>(
+    null,
+  );
 
   // Canvas zoom/pan is driven by viewBox; getScreenCTM reflects it automatically and drag math stays unchanged.
   const [view, setView] = useState(INITIAL_VIEW);
-  const panRef = useRef<
-    { startX: number; startY: number; view: typeof INITIAL_VIEW; moved: boolean } | null
-  >(null);
+  const panRef = useRef<{
+    startX: number;
+    startY: number;
+    view: typeof INITIAL_VIEW;
+    moved: boolean;
+  } | null>(null);
 
   // Clear manual positions when changing graph or arrangement; reset to the initial view when changing graph.
   useEffect(() => {
@@ -336,7 +366,7 @@ export function OntologyGraphView({
     const base = posOf(id);
     if (!p || !base) return;
     dragRef.current = { id, offsetX: p.x - base.x, offsetY: p.y - base.y, moved: false };
-    (event.currentTarget).setPointerCapture?.(event.pointerId);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
   // Pressing blank space begins panning; node onPointerDown already stops propagation.
@@ -387,40 +417,48 @@ export function OntologyGraphView({
   return (
     <div className={styles.wrap}>
       <div className={styles.toolbar}>
-      <Dropdown
-        trigger={["click"]}
-        menu={{
-          selectedKeys: [mode],
-          items: [
-            { key: "force", label: t("knowledgeNetwork.previewLayoutForce") },
-            { key: "circle", label: t("knowledgeNetwork.previewLayoutCircle") },
-            { key: "group", label: t("knowledgeNetwork.previewLayoutGroup") },
-          ],
-          onClick: ({ key }) => {
-            setMode(key as OntologyLayoutMode);
-            setDragged(new Map());
-          },
-        }}
-      >
-        <button type="button" className={styles.arrange} title={t("knowledgeNetwork.previewRearrange")}>
-          <RetweetOutlined />
-          {mode === "circle"
-            ? t("knowledgeNetwork.previewLayoutCircle")
-            : mode === "group"
-              ? t("knowledgeNetwork.previewLayoutGroup")
-              : t("knowledgeNetwork.previewLayoutForce")}
-          <DownOutlined className={styles.arrangeCaret} />
+        <Dropdown
+          trigger={["click"]}
+          menu={{
+            selectedKeys: [mode],
+            items: [
+              { key: "force", label: t("knowledgeNetwork.previewLayoutForce") },
+              { key: "circle", label: t("knowledgeNetwork.previewLayoutCircle") },
+              { key: "group", label: t("knowledgeNetwork.previewLayoutGroup") },
+            ],
+            onClick: ({ key }) => {
+              setMode(key as OntologyLayoutMode);
+              setDragged(new Map());
+            },
+          }}
+        >
+          <button
+            type="button"
+            className={styles.arrange}
+            title={t("knowledgeNetwork.previewRearrange")}
+          >
+            <RetweetOutlined />
+            {mode === "circle"
+              ? t("knowledgeNetwork.previewLayoutCircle")
+              : mode === "group"
+                ? t("knowledgeNetwork.previewLayoutGroup")
+                : t("knowledgeNetwork.previewLayoutForce")}
+            <DownOutlined className={styles.arrangeCaret} />
+          </button>
+        </Dropdown>
+        <button
+          type="button"
+          className={`${styles.edgeToggle} ${showEdgeLabels ? styles.edgeToggleOn : ""}`}
+          title={t(
+            showEdgeLabels
+              ? "knowledgeNetwork.previewHideEdgeLabels"
+              : "knowledgeNetwork.previewShowEdgeLabels",
+          )}
+          aria-pressed={showEdgeLabels}
+          onClick={() => setShowEdgeLabels((value) => !value)}
+        >
+          {showEdgeLabels ? <EyeOutlined /> : <EyeInvisibleOutlined />}
         </button>
-      </Dropdown>
-      <button
-        type="button"
-        className={`${styles.edgeToggle} ${showEdgeLabels ? styles.edgeToggleOn : ""}`}
-        title={t(showEdgeLabels ? "knowledgeNetwork.previewHideEdgeLabels" : "knowledgeNetwork.previewShowEdgeLabels")}
-        aria-pressed={showEdgeLabels}
-        onClick={() => setShowEdgeLabels((value) => !value)}
-      >
-        {showEdgeLabels ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-      </button>
       </div>
       <svg
         ref={svgRef}
@@ -434,138 +472,188 @@ export function OntologyGraphView({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
-      <defs>
-        <pattern id="kn-onto-grid" width="32" height="32" patternUnits="userSpaceOnUse">
-          <circle className={styles.gridDot} cx="1.2" cy="1.2" r="1.1" />
-        </pattern>
-        <marker id="kn-onto-arrow" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto">
-          <path className={styles.edgeArrow} d="M0,0 L8,4 L0,8 z" />
-        </marker>
-        <marker id="kn-onto-arrow-hi" markerWidth="11" markerHeight="11" refX="8" refY="4" orient="auto">
-          <path className={styles.edgeArrowActive} d="M0,0 L8,4 L0,8 z" />
-        </marker>
-      </defs>
+        <defs>
+          <pattern id="kn-onto-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+            <circle className={styles.gridDot} cx="1.2" cy="1.2" r="1.1" />
+          </pattern>
+          <marker
+            id="kn-onto-arrow"
+            markerWidth="11"
+            markerHeight="11"
+            refX="8"
+            refY="4"
+            orient="auto"
+          >
+            <path className={styles.edgeArrow} d="M0,0 L8,4 L0,8 z" />
+          </marker>
+          <marker
+            id="kn-onto-arrow-hi"
+            markerWidth="11"
+            markerHeight="11"
+            refX="8"
+            refY="4"
+            orient="auto"
+          >
+            <path className={styles.edgeArrowActive} d="M0,0 L8,4 L0,8 z" />
+          </marker>
+        </defs>
 
-      <rect width={PREVIEW_LAYOUT_WIDTH} height={PREVIEW_LAYOUT_HEIGHT} fill="url(#kn-onto-grid)" />
+        <rect
+          width={PREVIEW_LAYOUT_WIDTH}
+          height={PREVIEW_LAYOUT_HEIGHT}
+          fill="url(#kn-onto-grid)"
+        />
 
-      {groupHulls.length > 0 ? (
-        <g className={styles.groups}>
-          {groupHulls.map((hull) => (
-            <g key={hull.gid} style={{ "--gc": hull.color } as CSSProperties}>
-              <rect className={styles.groupHull} x={hull.x} y={hull.y} width={hull.w} height={hull.h} rx={22} />
-              {hull.name ? (
-                <text className={styles.groupLabel} x={hull.x + 16} y={hull.y + 24}>
-                  {hull.name}
-                </text>
-              ) : null}
-            </g>
-          ))}
-        </g>
-      ) : null}
-
-      <g className={styles.edges}>
-        {graph.edges.map((edge) => {
-          const a = posOf(edge.sourceId);
-          const b = posOf(edge.targetId);
-          if (!a || !b) {
-            return null;
-          }
-          const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
-          const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const len = Math.hypot(dx, dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          const sx = a.x + ux * ra;
-          const sy = a.y + uy * ra;
-          const ex = b.x - ux * (rb + 12);
-          const ey = b.y - uy * (rb + 12);
-          const mx = (sx + ex) / 2;
-          const my = (sy + ey) / 2;
-          const active = Boolean(selectedId) && (edge.sourceId === selectedId || edge.targetId === selectedId);
-          const dim = Boolean(selectedId) && !active;
-          const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
-          const labelWidth = label.length * 14 + 18;
-          return (
-            <g
-              key={edge.id}
-              className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
-            >
-              <line x1={sx} y1={sy} x2={ex} y2={ey} markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`} />
-              {showEdgeLabels || active ? (
-                <>
-                  <rect
-                    className={styles.edgeLabelBg}
-                    x={mx - labelWidth / 2}
-                    y={my - 13}
-                    width={labelWidth}
-                    height={24}
-                    rx={12}
-                  />
-                  <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
-                    {label}
+        {groupHulls.length > 0 ? (
+          <g className={styles.groups}>
+            {groupHulls.map((hull) => (
+              <g key={hull.gid} style={{ "--gc": hull.color } as CSSProperties}>
+                <rect
+                  className={styles.groupHull}
+                  x={hull.x}
+                  y={hull.y}
+                  width={hull.w}
+                  height={hull.h}
+                  rx={22}
+                />
+                {hull.name ? (
+                  <text className={styles.groupLabel} x={hull.x + 16} y={hull.y + 24}>
+                    {hull.name}
                   </text>
-                </>
-              ) : null}
-            </g>
-          );
-        })}
-      </g>
+                ) : null}
+              </g>
+            ))}
+          </g>
+        ) : null}
 
-      <g className={styles.nodes}>
-        {graph.nodes.map((node) => {
-          const position = posOf(node.id);
-          if (!position) {
-            return null;
-          }
-          const radius = radiusById.get(node.id) ?? NODE_RADIUS;
-          const isSelected = node.id === selectedId;
-          const isNeighbor = neighbors.has(node.id);
-          const dim = Boolean(selectedId) && !isSelected && !isNeighbor;
-          const nodeStyle = { "--nc": node.color || "#2e68ff" } as CSSProperties;
-          return (
-            <g
-              key={node.id}
-              className={[
-                styles.node,
-                isSelected ? styles.nodeSelected : "",
-                dim ? styles.nodeDim : "",
-                node.id === hubId ? styles.nodeHub : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={nodeStyle}
-              onPointerDown={(event) => onNodePointerDown(event, node.id)}
-            >
-              {isSelected ? (
-                <circle className={styles.nodeRing} cx={position.x} cy={position.y} r={radius + 7} />
-              ) : null}
-              <circle className={styles.nodeDisc} cx={position.x} cy={position.y} r={radius} />
-              <text className={styles.nodeName} x={position.x} y={position.y + 5} textAnchor="middle">
-                {truncate(node.name, radius === HUB_RADIUS ? 7 : 6)}
-              </text>
-              {indexedIds.has(node.id) ? (
-                <circle
-                  className={styles.nodeIndexDot}
-                  cx={position.x + radius - 10}
-                  cy={position.y - radius + 10}
-                  r={5}
+        <g className={styles.edges}>
+          {graph.edges.map((edge) => {
+            const a = posOf(edge.sourceId);
+            const b = posOf(edge.targetId);
+            if (!a || !b) {
+              return null;
+            }
+            const ra = radiusById.get(edge.sourceId) ?? NODE_RADIUS;
+            const rb = radiusById.get(edge.targetId) ?? NODE_RADIUS;
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            const sx = a.x + ux * ra;
+            const sy = a.y + uy * ra;
+            const ex = b.x - ux * (rb + 12);
+            const ey = b.y - uy * (rb + 12);
+            const mx = (sx + ex) / 2;
+            const my = (sy + ey) / 2;
+            const active =
+              Boolean(selectedId) && (edge.sourceId === selectedId || edge.targetId === selectedId);
+            const dim = Boolean(selectedId) && !active;
+            const label = edge.name || t("knowledgeNetwork.defaultEdgeName");
+            const labelWidth = label.length * 14 + 18;
+            return (
+              <g
+                key={edge.id}
+                className={`${styles.edge} ${active ? styles.edgeActive : ""} ${dim ? styles.edgeDim : ""}`}
+              >
+                <line
+                  x1={sx}
+                  y1={sy}
+                  x2={ex}
+                  y2={ey}
+                  markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
+                />
+                {showEdgeLabels || active ? (
+                  <>
+                    <rect
+                      className={styles.edgeLabelBg}
+                      x={mx - labelWidth / 2}
+                      y={my - 13}
+                      width={labelWidth}
+                      height={24}
+                      rx={12}
+                    />
+                    <text className={styles.edgeLabel} x={mx} y={my + 4} textAnchor="middle">
+                      {label}
+                    </text>
+                  </>
+                ) : null}
+              </g>
+            );
+          })}
+        </g>
+
+        <g className={styles.nodes}>
+          {graph.nodes.map((node) => {
+            const position = posOf(node.id);
+            if (!position) {
+              return null;
+            }
+            const radius = radiusById.get(node.id) ?? NODE_RADIUS;
+            const isSelected = node.id === selectedId;
+            const isNeighbor = neighbors.has(node.id);
+            const dim = Boolean(selectedId) && !isSelected && !isNeighbor;
+            const nodeStyle = { "--nc": node.color || "#2e68ff" } as CSSProperties;
+            return (
+              <g
+                key={node.id}
+                className={[
+                  styles.node,
+                  isSelected ? styles.nodeSelected : "",
+                  dim ? styles.nodeDim : "",
+                  node.id === hubId ? styles.nodeHub : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                style={nodeStyle}
+                onPointerDown={(event) => onNodePointerDown(event, node.id)}
+              >
+                {isSelected ? (
+                  <circle
+                    className={styles.nodeRing}
+                    cx={position.x}
+                    cy={position.y}
+                    r={radius + 7}
+                  />
+                ) : null}
+                <circle className={styles.nodeDisc} cx={position.x} cy={position.y} r={radius} />
+                <text
+                  className={styles.nodeName}
+                  x={position.x}
+                  y={position.y + 5}
+                  textAnchor="middle"
                 >
-                  <title>{t("knowledgeNetwork.previewIndexed")}</title>
-                </circle>
-              ) : null}
-            </g>
-          );
-        })}
-      </g>
+                  {truncate(node.name, radius === HUB_RADIUS ? 7 : 6)}
+                </text>
+                {indexedIds.has(node.id) ? (
+                  <circle
+                    className={styles.nodeIndexDot}
+                    cx={position.x + radius - 10}
+                    cy={position.y - radius + 10}
+                    r={5}
+                  >
+                    <title>{t("knowledgeNetwork.previewIndexed")}</title>
+                  </circle>
+                ) : null}
+              </g>
+            );
+          })}
+        </g>
       </svg>
       <span className={styles.zoomHint}>{t("knowledgeNetwork.previewZoomHint")}</span>
       <div className={styles.zoomCtl}>
-        <button type="button" onClick={() => zoomBy(1.25)} title={t("knowledgeNetwork.previewZoomIn")}>
+        <button
+          type="button"
+          onClick={() => zoomBy(1.25)}
+          title={t("knowledgeNetwork.previewZoomIn")}
+        >
           <ZoomInOutlined />
         </button>
-        <button type="button" onClick={() => zoomBy(0.8)} title={t("knowledgeNetwork.previewZoomOut")}>
+        <button
+          type="button"
+          onClick={() => zoomBy(0.8)}
+          title={t("knowledgeNetwork.previewZoomOut")}
+        >
           <ZoomOutOutlined />
         </button>
         <button type="button" onClick={resetView} title={t("knowledgeNetwork.previewFitView")}>

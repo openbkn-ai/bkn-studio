@@ -240,7 +240,7 @@ let mockTasks: DataConnectDiscoverTask[] = [
   },
 ];
 
-const wait = async <T,>(value: T) =>
+const wait = async <T>(value: T) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), 180);
   });
@@ -329,15 +329,15 @@ function mapTask(item: BackendDiscoverTask): DataConnectDiscoverTask {
     resourceName: item.resource_name,
     result: item.result
       ? {
-        catalogId: item.result.catalog_id ?? item.catalog_id,
-        failedCount: item.result.failed_count ?? 0,
-        message: item.result.message ?? "",
-        newCount: item.result.new_count ?? 0,
-        restoredCount: item.result.restored_count ?? 0,
-        staleCount: item.result.stale_count ?? 0,
-        unchangedCount: item.result.unchanged_count ?? 0,
-        updatedCount: item.result.updated_count ?? 0,
-      }
+          catalogId: item.result.catalog_id ?? item.catalog_id,
+          failedCount: item.result.failed_count ?? 0,
+          message: item.result.message ?? "",
+          newCount: item.result.new_count ?? 0,
+          restoredCount: item.result.restored_count ?? 0,
+          staleCount: item.result.stale_count ?? 0,
+          unchangedCount: item.result.unchanged_count ?? 0,
+          updatedCount: item.result.updated_count ?? 0,
+        }
       : undefined,
     message: item.message ?? "",
     startTime: item.start_time,
@@ -352,14 +352,14 @@ function toTaskSummary(task: DataConnectDiscoverTask): DataConnectDiscoverTaskSu
   const fullResult = task.result;
   const result = fullResult
     ? {
-      catalogId: fullResult.catalogId,
-      failedCount: fullResult.failedCount,
-      newCount: fullResult.newCount,
-      restoredCount: fullResult.restoredCount,
-      staleCount: fullResult.staleCount,
-      unchangedCount: fullResult.unchangedCount,
-      updatedCount: fullResult.updatedCount,
-    }
+        catalogId: fullResult.catalogId,
+        failedCount: fullResult.failedCount,
+        newCount: fullResult.newCount,
+        restoredCount: fullResult.restoredCount,
+        staleCount: fullResult.staleCount,
+        unchangedCount: fullResult.unchangedCount,
+        updatedCount: fullResult.updatedCount,
+      }
     : undefined;
 
   return {
@@ -394,11 +394,9 @@ function filterSchedules(
   const keyword = query.keyword.trim().toLowerCase();
 
   return items.filter((item) => {
-    const matchesKeyword =
-      keyword.length === 0 || item.name.toLowerCase().includes(keyword);
+    const matchesKeyword = keyword.length === 0 || item.name.toLowerCase().includes(keyword);
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
-    const matchesEnabled =
-      query.enabled === undefined || item.enabled === query.enabled;
+    const matchesEnabled = query.enabled === undefined || item.enabled === query.enabled;
 
     return matchesKeyword && matchesCatalog && matchesEnabled;
   });
@@ -407,13 +405,11 @@ function filterSchedules(
 function filterTasks(items: DataConnectDiscoverTask[], query: DataConnectDiscoverTaskListQuery) {
   const filtered = items.filter((item) => {
     const matchesCatalog = !query.catalogId || item.catalogId === query.catalogId;
-    const matchesSchedule =
-      !query.scheduleId || item.scheduleId === query.scheduleId;
+    const matchesSchedule = !query.scheduleId || item.scheduleId === query.scheduleId;
     const matchesResource = !query.resourceId || item.resourceId === query.resourceId;
     const matchesStatus = !query.statuses?.length || query.statuses.includes(item.status);
     const matchesStrategy = !query.strategy || item.strategy === query.strategy;
-    const matchesTriggerType =
-      !query.triggerType || item.triggerType === query.triggerType;
+    const matchesTriggerType = !query.triggerType || item.triggerType === query.triggerType;
 
     return (
       matchesCatalog &&
@@ -488,18 +484,12 @@ export async function getDataConnectDiscoverSchedule(id: string) {
   return mapSchedule(response.data);
 }
 
-export async function createDataConnectDiscoverSchedule(
-  input: DataConnectDiscoverSchedulePayload,
-) {
+export async function createDataConnectDiscoverSchedule(input: DataConnectDiscoverSchedulePayload) {
   if (useMock) {
     validateMockDiscoverCron(input.cronExpr);
     validateMockDiscoverTimeRange(input.startTime, input.endTime);
     const now = Date.now();
-    const nextRunValue = calculateNextHourlyCronRun(
-      input.cronExpr,
-      now,
-      input.startTime,
-    );
+    const nextRunValue = calculateNextHourlyCronRun(input.cronExpr, now, input.startTime);
     mockSchedules = [
       {
         id: crypto.randomUUID(),
@@ -576,27 +566,23 @@ export async function updateDataConnectDiscoverSchedule(
       );
     }
     const now = Date.now();
-    const nextRunValue = calculateNextHourlyCronRun(
-      input.cronExpr,
-      now,
-      input.startTime,
-    );
+    const nextRunValue = calculateNextHourlyCronRun(input.cronExpr, now, input.startTime);
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-          ...item,
-          name: input.name,
-          cronExpr: input.cronExpr,
-          startTime: formatTimestamp(input.startTime),
-          startTimeValue: input.startTime,
-          endTime: formatTimestamp(input.endTime),
-          endTimeValue: input.endTime,
-          strategy: input.strategy,
-          nextRun: formatTimestamp(nextRunValue),
-          nextRunValue,
-          expectedUpdateTime: now,
-          updateTime: formatTimestamp(now),
-        }
+            ...item,
+            name: input.name,
+            cronExpr: input.cronExpr,
+            startTime: formatTimestamp(input.startTime),
+            startTimeValue: input.startTime,
+            endTime: formatTimestamp(input.endTime),
+            endTimeValue: input.endTime,
+            strategy: input.strategy,
+            nextRun: formatTimestamp(nextRunValue),
+            nextRunValue,
+            expectedUpdateTime: now,
+            updateTime: formatTimestamp(now),
+          }
         : item,
     );
     await wait(undefined);
@@ -625,10 +611,7 @@ function validateMockDiscoverCron(cronExpr: string): void {
   }
 }
 
-function validateMockDiscoverTimeRange(
-  startTime?: number,
-  endTime?: number,
-): void {
+function validateMockDiscoverTimeRange(startTime?: number, endTime?: number): void {
   if (!isValidDiscoverScheduleTimeRange(startTime, endTime)) {
     throwMockRequestError(
       400,
@@ -638,10 +621,7 @@ function validateMockDiscoverTimeRange(
   }
 }
 
-export async function setDataConnectDiscoverScheduleEnabled(
-  id: string,
-  enabled: boolean,
-) {
+export async function setDataConnectDiscoverScheduleEnabled(id: string, enabled: boolean) {
   if (useMock) {
     const current = mockSchedules.find((item) => item.id === id);
     if (!current) {
@@ -653,31 +633,25 @@ export async function setDataConnectDiscoverScheduleEnabled(
     }
     const now = Date.now();
     const nextRunValue = enabled
-      ? calculateNextHourlyCronRun(
-        current.cronExpr,
-        now,
-        current.startTimeValue,
-      )
+      ? calculateNextHourlyCronRun(current.cronExpr, now, current.startTimeValue)
       : current.nextRunValue;
     mockSchedules = mockSchedules.map((item) =>
       item.id === id
         ? {
-          ...item,
-          enabled,
-          nextRun: formatTimestamp(nextRunValue),
-          nextRunValue,
-          expectedUpdateTime: now,
-          updateTime: formatTimestamp(now),
-        }
+            ...item,
+            enabled,
+            nextRun: formatTimestamp(nextRunValue),
+            nextRunValue,
+            expectedUpdateTime: now,
+            updateTime: formatTimestamp(now),
+          }
         : item,
     );
     await wait(undefined);
     return;
   }
 
-  await http.post(
-    `/vega-backend/v1/discover-schedules/${id}/${enabled ? "enable" : "disable"}`,
-  );
+  await http.post(`/vega-backend/v1/discover-schedules/${id}/${enabled ? "enable" : "disable"}`);
 }
 
 export async function deleteDataConnectDiscoverSchedule(id: string) {
@@ -739,9 +713,7 @@ export async function getDataConnectDiscoverTask(id: string) {
     return wait(mockTasks.find((item) => item.id === id) ?? null);
   }
 
-  const response = await http.get<BackendDiscoverTask>(
-    `/vega-backend/v1/discover-tasks/${id}`,
-  );
+  const response = await http.get<BackendDiscoverTask>(`/vega-backend/v1/discover-tasks/${id}`);
 
   return mapTask(response.data);
 }

@@ -83,8 +83,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function sanitizeSettings(raw: unknown): ExplorerSettings {
   const out: ExplorerSettings = { ...DEFAULT_SETTINGS, labelByOt: {}, colorByOt: {} };
   if (!isRecord(raw)) return out;
-  if (typeof raw.layout === "string" && (LAYOUTS as string[]).includes(raw.layout)) out.layout = raw.layout as ExplorerLayout;
-  if (typeof raw.shape === "string" && (SHAPES as string[]).includes(raw.shape)) out.shape = raw.shape as ExplorerShape;
+  if (typeof raw.layout === "string" && (LAYOUTS as string[]).includes(raw.layout))
+    out.layout = raw.layout as ExplorerLayout;
+  if (typeof raw.shape === "string" && (SHAPES as string[]).includes(raw.shape))
+    out.shape = raw.shape as ExplorerShape;
   if (isRecord(raw.labelByOt)) {
     for (const [key, value] of Object.entries(raw.labelByOt)) {
       if (typeof value === "string" && value) out.labelByOt[key] = value;
@@ -92,13 +94,15 @@ function sanitizeSettings(raw: unknown): ExplorerSettings {
   }
   if (isRecord(raw.colorByOt)) {
     for (const [key, value] of Object.entries(raw.colorByOt)) {
-      if (typeof value === "number" && Number.isInteger(value) && value >= 0) out.colorByOt[key] = value;
+      if (typeof value === "number" && Number.isInteger(value) && value >= 0)
+        out.colorByOt[key] = value;
     }
   }
   if (typeof raw.showNodeLabels === "boolean") out.showNodeLabels = raw.showNodeLabels;
   if (typeof raw.showEdgeLabels === "boolean") out.showEdgeLabels = raw.showEdgeLabels;
   if (typeof raw.sidebarCollapsed === "boolean") out.sidebarCollapsed = raw.sidebarCollapsed;
-  if (typeof raw.groupByConceptGroup === "boolean") out.groupByConceptGroup = raw.groupByConceptGroup;
+  if (typeof raw.groupByConceptGroup === "boolean")
+    out.groupByConceptGroup = raw.groupByConceptGroup;
   if (raw.dragMode === "single" || raw.dragMode === "linked") out.dragMode = raw.dragMode;
   return out;
 }
@@ -132,7 +136,8 @@ function sanitizePositions(raw: unknown): Record<string, NodePosition> {
   for (const [id, value] of Object.entries(raw)) {
     if (!isRecord(value) || typeof value.x !== "number" || typeof value.y !== "number") continue;
     if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) continue;
-    out[id] = value.fixed === true ? { x: value.x, y: value.y, fixed: true } : { x: value.x, y: value.y };
+    out[id] =
+      value.fixed === true ? { x: value.x, y: value.y, fixed: true } : { x: value.x, y: value.y };
   }
   return out;
 }
@@ -142,7 +147,10 @@ function sanitizePositions(raw: unknown): Record<string, NodePosition> {
  * null. A version mismatch keeps only the settings it can still recognise, because a
  * canvas written by another schema is worth less than a clean start.
  */
-export function readCache(knId: string, storage: CacheStorage | null = defaultStorage()): ExplorerSnapshot | null {
+export function readCache(
+  knId: string,
+  storage: CacheStorage | null = defaultStorage(),
+): ExplorerSnapshot | null {
   if (!storage) return null;
   let raw: string | null;
   try {
@@ -165,7 +173,9 @@ export function readCache(knId: string, storage: CacheStorage | null = defaultSt
   const nodes = Array.isArray(parsed.nodes) ? parsed.nodes.filter(isNode) : [];
   const nodeIds = new Set(nodes.map((node) => node.id));
   const edges = Array.isArray(parsed.edges)
-    ? parsed.edges.filter(isEdge).filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
+    ? parsed.edges
+        .filter(isEdge)
+        .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
     : [];
   const positions = sanitizePositions(parsed.positions);
   for (const id of Object.keys(positions)) {
@@ -195,7 +205,13 @@ export function writeCache(
     // Quota exceeded or serialisation failure: keep the settings.
   }
   try {
-    const settingsOnly: ExplorerSnapshot = { version: CACHE_VERSION, nodes: [], edges: [], positions: {}, settings: snapshot.settings };
+    const settingsOnly: ExplorerSnapshot = {
+      version: CACHE_VERSION,
+      nodes: [],
+      edges: [],
+      positions: {},
+      settings: snapshot.settings,
+    };
     storage.setItem(key, JSON.stringify(settingsOnly));
     return "settings-only";
   } catch {

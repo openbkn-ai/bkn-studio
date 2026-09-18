@@ -7,7 +7,10 @@
 
 import { parseDeepLink } from "@/modules/knowledge-network/scenes/graph-explorer/deep-link";
 import type { ExpandDirection } from "@/modules/knowledge-network/services/graph-explorer.service";
-import { layoutFromConfig, type ExplorerLayout } from "@/modules/knowledge-network/utils/graph-explorer-cache";
+import {
+  layoutFromConfig,
+  type ExplorerLayout,
+} from "@/modules/knowledge-network/utils/graph-explorer-cache";
 
 declare global {
   interface Window {

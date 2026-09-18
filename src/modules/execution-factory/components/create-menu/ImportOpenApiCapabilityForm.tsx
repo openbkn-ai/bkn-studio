@@ -116,21 +116,20 @@ export const ImportOpenApiCapabilityForm = forwardRef<
       return;
     }
 
-    const nextParseHint =
-      !analysis.serverUrl
-        ? t("executionFactory.importOpenApiMissingServerManual")
-        : resolvedServiceUrl?.ok && resolvedServiceUrl.source === "resolved-relative"
-          ? t("executionFactory.importOpenApiRelativeServerResolved", {
-              relativeUrl: analysis.serverUrl,
-              serviceUrl: resolvedServiceUrl.url,
+    const nextParseHint = !analysis.serverUrl
+      ? t("executionFactory.importOpenApiMissingServerManual")
+      : resolvedServiceUrl?.ok && resolvedServiceUrl.source === "resolved-relative"
+        ? t("executionFactory.importOpenApiRelativeServerResolved", {
+            relativeUrl: analysis.serverUrl,
+            serviceUrl: resolvedServiceUrl.url,
+          })
+        : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
+          ? t("executionFactory.importOpenApiRelativeServerManual", {
+              relativeUrl: resolvedServiceUrl.relativeUrl,
             })
-          : resolvedServiceUrl && !resolvedServiceUrl.ok && resolvedServiceUrl.relativeUrl
-            ? t("executionFactory.importOpenApiRelativeServerManual", {
-                relativeUrl: resolvedServiceUrl.relativeUrl,
-              })
-            : t("executionFactory.importOpenApiCapabilityParsed", {
-                count: analysis.operationCount,
-              });
+          : t("executionFactory.importOpenApiCapabilityParsed", {
+              count: analysis.operationCount,
+            });
 
     setParseHint(nextParseHint);
 
@@ -300,11 +299,7 @@ export const ImportOpenApiCapabilityForm = forwardRef<
                 <Input />
               </Form.Item>
 
-              <Form.Item
-                label={t("common.description")}
-                name="toolboxDescription"
-                preserve={false}
-              >
+              <Form.Item label={t("common.description")} name="toolboxDescription" preserve={false}>
                 <Input.TextArea rows={2} />
               </Form.Item>
               <CapabilityCategoryFields />

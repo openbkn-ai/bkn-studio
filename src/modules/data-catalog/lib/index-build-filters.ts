@@ -5,7 +5,11 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type { BuildMode, BuildTaskExecuteType, BuildTaskStatus } from "@/modules/data-catalog/types/data-catalog";
+import type {
+  BuildMode,
+  BuildTaskExecuteType,
+  BuildTaskStatus,
+} from "@/modules/data-catalog/types/data-catalog";
 
 const STATUS_SET = new Set<BuildTaskStatus>([
   "cancelled",
@@ -44,9 +48,8 @@ export function readIndexBuildListFilters(params: URLSearchParams): IndexBuildLi
   const rawMode = params.get("mode");
   const mode = rawMode === "batch" || rawMode === "streaming" ? rawMode : undefined;
   const rawExecuteType = params.get("execute_type");
-  const executeType = rawExecuteType === "full" || rawExecuteType === "incremental"
-    ? rawExecuteType
-    : undefined;
+  const executeType =
+    rawExecuteType === "full" || rawExecuteType === "incremental" ? rawExecuteType : undefined;
   const statuses = parseIndexBuildStatusParam(params.get("status"));
   return { executeType, mode, statuses };
 }
@@ -81,18 +84,10 @@ export type ResourceIndexView = "config" | "tasks";
 
 /** True when the URL explicitly names a data-index sub-tab. */
 export function isExplicitResourceIndexView(view: string | null): boolean {
-  return (
-    view === "config" ||
-    view === "tasks" ||
-    view === "configure" ||
-    view === "overview"
-  );
+  return view === "config" || view === "tasks" || view === "configure" || view === "overview";
 }
 
-export function readResourceIndexView(
-  tab: string | null,
-  view: string | null,
-): ResourceIndexView {
+export function readResourceIndexView(tab: string | null, view: string | null): ResourceIndexView {
   if (tab !== "index") {
     return "tasks";
   }

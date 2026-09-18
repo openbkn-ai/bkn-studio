@@ -145,10 +145,7 @@ function filterMockToolboxes(query: ToolboxListQuery) {
       return true;
     }
 
-    return (
-      item.name.toLowerCase().includes(keyword) ||
-      item.boxId.toLowerCase().includes(keyword)
-    );
+    return item.name.toLowerCase().includes(keyword) || item.boxId.toLowerCase().includes(keyword);
   });
 }
 
@@ -164,10 +161,7 @@ function buildMockListResult(query: ToolboxListQuery): ToolboxListResult {
   };
 }
 
-async function fetchToolboxList(
-  path: string,
-  query: ToolboxListQuery,
-): Promise<ToolboxListResult> {
+async function fetchToolboxList(path: string, query: ToolboxListQuery): Promise<ToolboxListResult> {
   const response = await http.get<BackendToolboxListResponse>(path, {
     params: {
       all: query.all || undefined,
@@ -192,9 +186,7 @@ async function fetchToolboxList(
   };
 }
 
-export async function listToolboxes(
-  query: ToolboxListQuery,
-): Promise<ToolboxListResult> {
+export async function listToolboxes(query: ToolboxListQuery): Promise<ToolboxListResult> {
   if (useMock) {
     return buildMockListResult(query);
   }
@@ -202,9 +194,7 @@ export async function listToolboxes(
   return fetchToolboxList(`${API_PREFIX}/tool-box/list`, query);
 }
 
-export async function listToolboxMarket(
-  query: ToolboxListQuery,
-): Promise<ToolboxListResult> {
+export async function listToolboxMarket(query: ToolboxListQuery): Promise<ToolboxListResult> {
   if (useMock) {
     return buildMockListResult({ ...query, status: "published" });
   }
@@ -214,9 +204,9 @@ export async function listToolboxMarket(
 
 export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
   if (useMock) {
-    const record = mockToolboxes.find(
-      (item) => item.boxId === boxId && item.status === "published",
-    ) ?? mockToolboxes.find((item) => item.boxId === boxId);
+    const record =
+      mockToolboxes.find((item) => item.boxId === boxId && item.status === "published") ??
+      mockToolboxes.find((item) => item.boxId === boxId);
 
     if (!record) {
       throw new Error("Market toolbox not found");
@@ -225,10 +215,9 @@ export async function getToolboxMarket(boxId: string): Promise<ToolboxRecord> {
     return record;
   }
 
-  const response = await http.get<BackendToolboxInfo>(
-    `${API_PREFIX}/tool-box/market/${boxId}`,
-    { skipErrorToast: true },
-  );
+  const response = await http.get<BackendToolboxInfo>(`${API_PREFIX}/tool-box/market/${boxId}`, {
+    skipErrorToast: true,
+  });
 
   return mapToolbox(response.data);
 }
@@ -247,17 +236,14 @@ export async function getToolbox(
     return record;
   }
 
-  const response = await http.get<BackendToolboxInfo>(
-    `${API_PREFIX}/tool-box/${boxId}`,
-    { skipErrorToast: options?.skipErrorToast },
-  );
+  const response = await http.get<BackendToolboxInfo>(`${API_PREFIX}/tool-box/${boxId}`, {
+    skipErrorToast: options?.skipErrorToast,
+  });
 
   return mapToolbox(response.data);
 }
 
-export async function createToolbox(
-  input: ToolboxMutationInput,
-): Promise<ToolboxRecord> {
+export async function createToolbox(input: ToolboxMutationInput): Promise<ToolboxRecord> {
   if (useMock) {
     const record: ToolboxRecord = {
       boxId: `tb_${Date.now()}`,
@@ -330,10 +316,7 @@ export async function updateToolbox(input: ToolboxEditInput): Promise<void> {
   );
 }
 
-export async function updateToolboxStatus(
-  boxId: string,
-  status: ToolboxStatus,
-): Promise<void> {
+export async function updateToolboxStatus(boxId: string, status: ToolboxStatus): Promise<void> {
   if (useMock) {
     mockToolboxes = mockToolboxes.map((item) =>
       item.boxId === boxId ? { ...item, status, updateTime: Date.now() } : item,
@@ -341,11 +324,7 @@ export async function updateToolboxStatus(
     return;
   }
 
-  await http.post(
-    `${API_PREFIX}/tool-box/${boxId}/status`,
-    { status },
-    {},
-  );
+  await http.post(`${API_PREFIX}/tool-box/${boxId}/status`, { status }, {});
 }
 
 export async function deleteToolbox(boxId: string): Promise<void> {
@@ -354,6 +333,5 @@ export async function deleteToolbox(boxId: string): Promise<void> {
     return;
   }
 
-  await http.delete(`${API_PREFIX}/tool-box/${boxId}`, {
-  });
+  await http.delete(`${API_PREFIX}/tool-box/${boxId}`, {});
 }

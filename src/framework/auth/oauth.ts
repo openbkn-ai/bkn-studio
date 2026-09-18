@@ -7,10 +7,7 @@
 import CryptoJS from "crypto-js";
 import { getAppCallbackPath, getAppHomePath } from "@/app/router/app-paths";
 import { getDevRefreshToken } from "@/framework/auth/dev-auth";
-import {
-  normalizeSupportedLocale,
-  resolveSupportedLocale,
-} from "@/framework/i18n/locale";
+import { normalizeSupportedLocale, resolveSupportedLocale } from "@/framework/i18n/locale";
 import { getRuntimeConfig } from "@/framework/runtime/config";
 import {
   clearStoredTokens,
@@ -113,16 +110,14 @@ function randomUrlSafeString() {
 export async function computeCodeChallenge(verifier: string) {
   // Secure context (HTTPS or localhost): use the Web Crypto API.
   if (window.crypto?.subtle) {
-    const digest = await window.crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(verifier),
-    );
+    const digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     return base64UrlEncode(new Uint8Array(digest));
   }
 
   // Insecure context (HTTP): use the crypto-js fallback.
   const hash = CryptoJS.SHA256(verifier);
-  return hash.toString(CryptoJS.enc.Base64)
+  return hash
+    .toString(CryptoJS.enc.Base64)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");

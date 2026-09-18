@@ -9,7 +9,10 @@ import { Alert, Spin } from "antd";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getAccessProfile, type TraceAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import {
+  getAccessProfile,
+  type TraceAccessProfile,
+} from "@/modules/bkn-trace/services/trace.service";
 
 type Props = {
   allow: (profile: TraceAccessProfile) => boolean;
@@ -24,13 +27,21 @@ export function ObservabilityCapabilityBoundary({ allow, children }: Props) {
   useEffect(() => {
     let active = true;
     getAccessProfile()
-      .then((value) => { if (active) setProfile(value); })
-      .catch(() => { if (active) setFailed(true); });
-    return () => { active = false; };
+      .then((value) => {
+        if (active) setProfile(value);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  if (failed) return <Alert message={t("bknTrace.errors.accessProfileFailed")} showIcon type="error" />;
+  if (failed)
+    return <Alert message={t("bknTrace.errors.accessProfileFailed")} showIcon type="error" />;
   if (!profile) return <Spin />;
-  if (!allow(profile)) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
+  if (!allow(profile))
+    return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   return children;
 }

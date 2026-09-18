@@ -108,7 +108,8 @@
   background: var(--color-error-text);
 }
 
-.resourceDeleteConfirmModal :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous:hover) {
+.resourceDeleteConfirmModal
+  :global(.ant-modal-confirm-btns .ant-btn-primary.ant-btn-dangerous:hover) {
   border-color: var(--color-error-border);
   background: var(--color-error-border);
 }

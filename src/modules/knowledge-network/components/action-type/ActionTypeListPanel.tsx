@@ -104,10 +104,7 @@ export function ActionTypeListPanel({
   );
 
   const hasActiveFilter = useMemo(
-    () =>
-      Boolean(keyword.trim()) ||
-      actionKindFilter !== "all" ||
-      objectTypeFilter !== "all",
+    () => Boolean(keyword.trim()) || actionKindFilter !== "all" || objectTypeFilter !== "all",
     [actionKindFilter, keyword, objectTypeFilter],
   );
 
@@ -120,8 +117,7 @@ export function ActionTypeListPanel({
         item.name.toLowerCase().includes(normalizedKeyword) ||
         item.id.toLowerCase().includes(normalizedKeyword) ||
         item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesActionKind =
-        actionKindFilter === "all" || item.actionKind === actionKindFilter;
+      const matchesActionKind = actionKindFilter === "all" || item.actionKind === actionKindFilter;
       const matchesObjectType =
         objectTypeFilter === "all" || item.objectTypeId === objectTypeFilter;
 
@@ -155,8 +151,7 @@ export function ActionTypeListPanel({
     () =>
       items.filter(
         (item) =>
-          selectedRowKeys.includes(item.id) &&
-          hasKnowledgeNetworkRecordOperation(item, "delete"),
+          selectedRowKeys.includes(item.id) && hasKnowledgeNetworkRecordOperation(item, "delete"),
       ),
     [items, selectedRowKeys],
   );
@@ -194,16 +189,12 @@ export function ActionTypeListPanel({
 
   const handleOperate = (key: string, record: KnowledgeNetworkActionTypeRecord) => {
     if (key === "view") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/action-types/${record.id}/detail`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/detail`);
       return;
     }
 
     if (key === "edit") {
-      void navigate(
-        `/knowledge-network/workspace/${networkId}/action-types/${record.id}/edit`,
-      );
+      void navigate(`/knowledge-network/workspace/${networkId}/action-types/${record.id}/edit`);
       return;
     }
 
@@ -241,7 +232,10 @@ export function ActionTypeListPanel({
           }}
           title={value}
         >
-          <span className={styles.objectIconSquare} style={{ backgroundColor: record.color || "#90c06b" }}>
+          <span
+            className={styles.objectIconSquare}
+            style={{ backgroundColor: record.color || "#90c06b" }}
+          >
             <ThunderboltOutlined />
           </span>
           <span className={styles.objectName}>{value}</span>
@@ -263,14 +257,16 @@ export function ActionTypeListPanel({
             ? [{ key: "execution", label: t("knowledgeNetwork.actionTypeExecutionEntry") }]
             : []),
           ...(canAuthorizeChildren && hasKnowledgeNetworkRecordOperation(record, "view_detail")
-            ? [{
-                key: "authorize",
-                label: (
-                  <KnowledgeNetworkAuthorizationActionLabel>
-                    {t("knowledgeNetwork.authorizeAction")}
-                  </KnowledgeNetworkAuthorizationActionLabel>
-                ),
-              }]
+            ? [
+                {
+                  key: "authorize",
+                  label: (
+                    <KnowledgeNetworkAuthorizationActionLabel>
+                      {t("knowledgeNetwork.authorizeAction")}
+                    </KnowledgeNetworkAuthorizationActionLabel>
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "delete")
             ? [{ key: "delete", danger: true, label: t("common.delete") }]
@@ -319,11 +315,7 @@ export function ActionTypeListPanel({
       title: t("common.tag"),
       width: 160,
       render: (value: string[]) =>
-        value.length > 0 ? (
-          <ResourceTagList tags={value} />
-        ) : (
-          t("knowledgeNetwork.noTags")
-        ),
+        value.length > 0 ? <ResourceTagList tags={value} /> : t("knowledgeNetwork.noTags"),
     },
     {
       dataIndex: "updaterName",
@@ -353,10 +345,7 @@ export function ActionTypeListPanel({
 
     if (!canModify) {
       return (
-        <Empty
-          className={styles.emptyPanel}
-          description={t("knowledgeNetwork.emptyActionTypes")}
-        />
+        <Empty className={styles.emptyPanel} description={t("knowledgeNetwork.emptyActionTypes")} />
       );
     }
 
@@ -384,166 +373,160 @@ export function ActionTypeListPanel({
   return (
     <>
       <section className={`${styles.page} ${styles.objectTypePage} ${styles.actionTypePage}`}>
-      <h2 className={styles.title}>{t("knowledgeNetwork.actionTypesTitle")}</h2>
+        <h2 className={styles.title}>{t("knowledgeNetwork.actionTypesTitle")}</h2>
 
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarLeft}>
-          {canModify || canDelete ? (
-            <>
-              {canModify ? (
-              <AppButton
-                className={styles.toolbarButton}
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
+        <div className={styles.toolbar}>
+          <div className={styles.toolbarLeft}>
+            {canModify || canDelete ? (
+              <>
+                {canModify ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      void navigate(
+                        `/knowledge-network/workspace/${networkId}/action-types/create`,
+                      );
+                    }}
+                    type="primary"
+                  >
+                    {t("common.create")}
+                  </AppButton>
+                ) : null}
+                {canDelete ? (
+                  <AppButton
+                    className={styles.toolbarButton}
+                    danger
+                    disabled={selectedRows.length === 0}
+                    icon={<DeleteOutlined />}
+                    onClick={() => confirmDelete(selectedRows)}
+                  >
+                    {t("common.delete")}
+                  </AppButton>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+          <div className={styles.toolbarRight}>
+            <Input
+              allowClear
+              className={styles.searchInput}
+              onChange={(event) => {
+                setKeyword(event.target.value);
+                setPage(1);
+              }}
+              placeholder={t("knowledgeNetwork.searchPlaceholder")}
+              prefix={<SearchOutlined className={styles.searchIcon} />}
+              value={keyword}
+            />
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeObject")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setObjectTypeFilter(value);
+                  setPage(1);
                 }}
-                type="primary"
-              >
-                {t("common.create")}
-              </AppButton>
-              ) : null}
-              {canDelete ? (
-              <AppButton
-                className={styles.toolbarButton}
-                danger
-                disabled={selectedRows.length === 0}
-                icon={<DeleteOutlined />}
-                onClick={() => confirmDelete(selectedRows)}
-              >
-                {t("common.delete")}
-              </AppButton>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className={styles.toolbarRight}>
-          <Input
-            allowClear
-            className={styles.searchInput}
-            onChange={(event) => {
-              setKeyword(event.target.value);
-              setPage(1);
-            }}
-            placeholder={t("knowledgeNetwork.searchPlaceholder")}
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            value={keyword}
-          />
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>
-              {t("knowledgeNetwork.actionTypeObject")}
-            </span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setObjectTypeFilter(value);
-                setPage(1);
+                optionFilterProp="label"
+                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
+                showSearch
+                value={objectTypeFilter}
+              />
+            </div>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeKind")}</span>
+              <Select
+                className={styles.filterSelect}
+                onChange={(value) => {
+                  setActionKindFilter(value);
+                  setPage(1);
+                }}
+                options={[
+                  { label: t("common.all"), value: "all" },
+                  ...buildActionTypeKindSelectOptions(t),
+                ]}
+                value={actionKindFilter}
+              />
+            </div>
+            <Dropdown
+              menu={{
+                items: [
+                  { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
+                  { key: "name", label: t("knowledgeNetwork.sortByName") },
+                ],
+                onClick: ({ key }) => {
+                  const nextSortBy = key as "name" | "updateTime";
+                  setSortDirection((current) =>
+                    nextSortBy === sortBy ? (current === "desc" ? "asc" : "desc") : "desc",
+                  );
+                  setSortBy(nextSortBy);
+                  setPage(1);
+                },
               }}
-              optionFilterProp="label"
-              options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-              showSearch
-              value={objectTypeFilter}
-            />
-          </div>
-          <div className={styles.filterGroup}>
-            <span className={styles.filterLabel}>
-              {t("knowledgeNetwork.actionTypeKind")}
-            </span>
-            <Select
-              className={styles.filterSelect}
-              onChange={(value) => {
-                setActionKindFilter(value);
-                setPage(1);
-              }}
-              options={[
-                { label: t("common.all"), value: "all" },
-                ...buildActionTypeKindSelectOptions(t),
-              ]}
-              value={actionKindFilter}
-            />
-          </div>
-          <Dropdown
-            menu={{
-              items: [
-                { key: "updateTime", label: t("knowledgeNetwork.sortByUpdateTime") },
-                { key: "name", label: t("knowledgeNetwork.sortByName") },
-              ],
-              onClick: ({ key }) => {
-                const nextSortBy = key as "name" | "updateTime";
-                setSortDirection((current) =>
-                  nextSortBy === sortBy
-                    ? current === "desc"
-                      ? "asc"
-                      : "desc"
-                    : "desc",
-                );
-                setSortBy(nextSortBy);
-                setPage(1);
-              },
-            }}
-            trigger={["click"]}
-          >
+              trigger={["click"]}
+            >
+              <button
+                aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+                className={styles.iconButton}
+                type="button"
+              >
+                <SortAscendingOutlined />
+              </button>
+            </Dropdown>
             <button
-              aria-label={t("knowledgeNetwork.sortByUpdateTime")}
+              aria-label={t("common.refresh")}
               className={styles.iconButton}
+              onClick={() => {
+                void onRefresh();
+              }}
               type="button"
             >
-              <SortAscendingOutlined />
+              <ReloadOutlined />
             </button>
-          </Dropdown>
-          <button
-            aria-label={t("common.refresh")}
-            className={styles.iconButton}
-            onClick={() => {
-              void onRefresh();
-            }}
-            type="button"
-          >
-            <ReloadOutlined />
-          </button>
+          </div>
         </div>
-      </div>
 
-      <div className={styles.tableCard}>
-        <Table<KnowledgeNetworkActionTypeRecord>
-          columns={columns}
-          dataSource={paginatedItems}
-          loading={loading}
-          locale={{ emptyText: renderEmptyContent() }}
-          pagination={false}
-          rowKey="id"
-          rowSelection={
-            canDelete
-              ? {
-                  selectedRowKeys,
-                  onChange: (nextSelectedRowKeys) => {
-                    setSelectedRowKeys(nextSelectedRowKeys.map(String));
-                  },
-                  getCheckboxProps: (record) => ({
-                    disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
-                  }),
-                }
-              : undefined
-          }
-          scroll={{ x: 1180 }}
-          size="middle"
-        />
-      </div>
-
-      {sortedItems.length > 0 ? (
-        <div className={styles.paginationBar}>
-          <TablePaginationBar
-            current={page}
-            onChange={(nextPage, nextPageSize) => {
-              setPage(nextPage);
-              setPageSize(nextPageSize);
-            }}
-            pageSize={pageSize}
-            showSizeChanger
-            showTotal={(total) => t("common.total", { total })}
-            total={sortedItems.length}
+        <div className={styles.tableCard}>
+          <Table<KnowledgeNetworkActionTypeRecord>
+            columns={columns}
+            dataSource={paginatedItems}
+            loading={loading}
+            locale={{ emptyText: renderEmptyContent() }}
+            pagination={false}
+            rowKey="id"
+            rowSelection={
+              canDelete
+                ? {
+                    selectedRowKeys,
+                    onChange: (nextSelectedRowKeys) => {
+                      setSelectedRowKeys(nextSelectedRowKeys.map(String));
+                    },
+                    getCheckboxProps: (record) => ({
+                      disabled: !hasKnowledgeNetworkRecordOperation(record, "delete"),
+                    }),
+                  }
+                : undefined
+            }
+            scroll={{ x: 1180 }}
+            size="middle"
           />
         </div>
-      ) : null}
+
+        {sortedItems.length > 0 ? (
+          <div className={styles.paginationBar}>
+            <TablePaginationBar
+              current={page}
+              onChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+              pageSize={pageSize}
+              showSizeChanger
+              showTotal={(total) => t("common.total", { total })}
+              total={sortedItems.length}
+            />
+          </div>
+        ) : null}
       </section>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

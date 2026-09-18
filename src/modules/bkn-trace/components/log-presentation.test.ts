@@ -7,7 +7,12 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { presentLogAction, presentLogActor, presentLogTarget, presentTargetType } from "@/modules/bkn-trace/components/log-presentation";
+import {
+  presentLogAction,
+  presentLogActor,
+  presentLogTarget,
+  presentTargetType,
+} from "@/modules/bkn-trace/components/log-presentation";
 import { bknTraceEnUS } from "@/modules/bkn-trace/locales/en-US";
 import { bknTraceZhCN } from "@/modules/bkn-trace/locales/zh-CN";
 import type { LogRecord } from "@/modules/bkn-trace/services/observability.service";
@@ -23,16 +28,18 @@ vi.mock("@/framework/runtime/config", () => ({
 
 const translate = (key: string) => key;
 
-const textValue = (value: unknown) => typeof value === "string" || typeof value === "number" ? String(value) : "";
+const textValue = (value: unknown) =>
+  typeof value === "string" || typeof value === "number" ? String(value) : "";
 
-const createLocaleTranslator = (locale: unknown) => (key: string, options?: Record<string, unknown>) => {
-  const translated = key.split(".").reduce<unknown>((value, segment) => {
-    if (!value || typeof value !== "object") return undefined;
-    return (value as Record<string, unknown>)[segment];
-  }, locale);
-  const template = textValue(translated) || textValue(options?.defaultValue) || key;
-  return template.replace(/{{(\w+)}}/g, (_match, name: string) => textValue(options?.[name]));
-};
+const createLocaleTranslator =
+  (locale: unknown) => (key: string, options?: Record<string, unknown>) => {
+    const translated = key.split(".").reduce<unknown>((value, segment) => {
+      if (!value || typeof value !== "object") return undefined;
+      return (value as Record<string, unknown>)[segment];
+    }, locale);
+    const template = textValue(translated) || textValue(options?.defaultValue) || key;
+    return template.replace(/{{(\w+)}}/g, (_match, name: string) => textValue(options?.[name]));
+  };
 
 const translateZhCN = createLocaleTranslator(bknTraceZhCN);
 const translateEnUS = createLocaleTranslator(bknTraceEnUS);
@@ -83,18 +90,21 @@ describe("log presentation", () => {
     ["add_members", "concept_group", "supply", "供应链概念", "向概念分组添加成员", "概念分组"],
     ["remove_members", "concept_group", "supply", "供应链概念", "从概念分组移除成员", "概念分组"],
     ["update", "action_schedule", "schedule-a", "每日补货检查", "更新行动计划", "行动计划"],
-  ])("presents a readable Phase 4B %s %s fact", (action, targetType, id, name, expectedAction, expectedType) => {
-    const record = {
-      action,
-      businessModule: "domain_knowledge_network",
-      eventName: "resource_config.changed",
-      target: { id, name, type: targetType },
-    } as LogRecord;
+  ])(
+    "presents a readable Phase 4B %s %s fact",
+    (action, targetType, id, name, expectedAction, expectedType) => {
+      const record = {
+        action,
+        businessModule: "domain_knowledge_network",
+        eventName: "resource_config.changed",
+        target: { id, name, type: targetType },
+      } as LogRecord;
 
-    expect(presentLogAction(record, translateZhCN)).toBe(expectedAction);
-    expect(presentTargetType(record, translateZhCN)).toBe(expectedType);
-    expect(presentLogTarget(record, translateZhCN)).toEqual({ primary: name, secondary: id });
-  });
+      expect(presentLogAction(record, translateZhCN)).toBe(expectedAction);
+      expect(presentTargetType(record, translateZhCN)).toBe(expectedType);
+      expect(presentLogTarget(record, translateZhCN)).toEqual({ primary: name, secondary: id });
+    },
+  );
 
   it("uses the real English locale for concept-group membership actions", () => {
     const record = {

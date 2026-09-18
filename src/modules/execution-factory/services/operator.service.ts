@@ -180,9 +180,7 @@ function serializeOperatorExecuteControl(control?: OperatorExecuteControl) {
   };
 }
 
-export function resolveOperatorDescription(
-  item: BackendOperatorDataInfo,
-): string | undefined {
+export function resolveOperatorDescription(item: BackendOperatorDataInfo): string | undefined {
   const metadataDescription = item.metadata?.description;
   if (typeof metadataDescription === "string" && metadataDescription.length > 0) {
     return metadataDescription;
@@ -280,8 +278,7 @@ function filterMockOperators(query: OperatorListQuery) {
     }
 
     return (
-      item.name.toLowerCase().includes(keyword) ||
-      item.operatorId.toLowerCase().includes(keyword)
+      item.name.toLowerCase().includes(keyword) || item.operatorId.toLowerCase().includes(keyword)
     );
   });
 }
@@ -324,9 +321,7 @@ async function fetchOperatorList(
   };
 }
 
-export async function listOperators(
-  query: OperatorListQuery,
-): Promise<OperatorListResult> {
+export async function listOperators(query: OperatorListQuery): Promise<OperatorListResult> {
   if (useMock) {
     return buildMockListResult(query);
   }
@@ -334,9 +329,7 @@ export async function listOperators(
   return fetchOperatorList(`${API_PREFIX}/operator/info/list`, query);
 }
 
-export async function listOperatorMarket(
-  query: OperatorListQuery,
-): Promise<OperatorListResult> {
+export async function listOperatorMarket(query: OperatorListQuery): Promise<OperatorListResult> {
   if (useMock) {
     return buildMockListResult({ ...query, status: "published" });
   }
@@ -406,9 +399,7 @@ export async function getOperatorDetail(operatorId: string): Promise<OperatorDet
   return enriched;
 }
 
-export async function registerOperator(
-  input: OperatorRegisterInput,
-): Promise<OperatorRecord> {
+export async function registerOperator(input: OperatorRegisterInput): Promise<OperatorRecord> {
   if (useMock) {
     const operatorId = `op_${Date.now()}`;
     const record: OperatorRecord = {
@@ -499,10 +490,7 @@ export async function updateOperatorStatus(
   );
 }
 
-export async function deleteOperator(
-  operatorId: string,
-  version: string,
-): Promise<void> {
+export async function deleteOperator(operatorId: string, version: string): Promise<void> {
   if (useMock) {
     mockOperators = mockOperators.filter((item) => item.operatorId !== operatorId);
     return;
@@ -513,9 +501,7 @@ export async function deleteOperator(
   });
 }
 
-export async function getOperatorMarket(
-  operatorId: string,
-): Promise<OperatorRecord> {
+export async function getOperatorMarket(operatorId: string): Promise<OperatorRecord> {
   if (useMock) {
     const record = mockOperators.find((item) => item.operatorId === operatorId);
 
@@ -534,9 +520,7 @@ export async function getOperatorMarket(
   return mapOperator(response.data);
 }
 
-export async function debugOperator(
-  input: OperatorDebugInput,
-): Promise<OperatorDebugResult> {
+export async function debugOperator(input: OperatorDebugInput): Promise<OperatorDebugResult> {
   if (useMock) {
     return {
       statusCode: 200,
@@ -575,9 +559,7 @@ export async function debugOperator(
   };
 }
 
-export async function listOperatorHistory(
-  operatorId: string,
-): Promise<OperatorHistoryRecord[]> {
+export async function listOperatorHistory(operatorId: string): Promise<OperatorHistoryRecord[]> {
   if (useMock) {
     const record = mockOperators.find((item) => item.operatorId === operatorId);
 

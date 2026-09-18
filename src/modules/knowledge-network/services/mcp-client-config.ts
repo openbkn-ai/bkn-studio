@@ -83,16 +83,16 @@ export function createClaudeCodeMcpCommand(
   options: McpClientConfigOptions = {},
 ): string {
   const protocol = getMcpConnectionProtocol(mcpUrl);
-  const lines = [
-    `claude mcp add ${MCP_SERVER_NAME} \\`,
-    "  --scope user \\",
-  ];
+  const lines = [`claude mcp add ${MCP_SERVER_NAME} \\`, "  --scope user \\"];
 
   if (protocol === "https" && options.allowInsecureTls) {
     lines.push(`  --env ${TLS_BYPASS_ENV} \\`);
   }
 
-  lines.push(`  -- npx -y mcp-remote ${withMcpTrailingSlash(mcpUrl)} \\`, "  --transport http-only \\");
+  lines.push(
+    `  -- npx -y mcp-remote ${withMcpTrailingSlash(mcpUrl)} \\`,
+    "  --transport http-only \\",
+  );
 
   if (protocol === "http") {
     lines.push("  --allow-http \\");

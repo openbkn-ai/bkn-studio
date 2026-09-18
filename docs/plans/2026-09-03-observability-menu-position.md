@@ -15,6 +15,7 @@ sufficient; a focused unit test protects the resulting top-level order.
 ### Task 1: Capture the required menu order
 
 **Files:**
+
 - Modify: `src/app/shell/console-navigation.test.ts`
 
 **Step 1: Write the failing test**
@@ -40,6 +41,7 @@ Model Resources, so the new assertion fails.
 ### Task 2: Move the navigation contribution
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/navigation.tsx`
 - Test: `src/app/shell/console-navigation.test.ts`
 
@@ -60,6 +62,7 @@ Expected: all focused navigation tests pass.
 ### Task 3: Verify and commit
 
 **Files:**
+
 - Modify: `docs/plans/2026-09-03-observability-menu-position-design.md`
 - Modify: `docs/plans/2026-09-03-observability-menu-position.md`
 - Modify: `src/app/shell/console-navigation.test.ts`

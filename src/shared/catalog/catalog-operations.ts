@@ -35,6 +35,7 @@ export function hasCatalogOperation(
 export function isCatalogSummaryOnly(
   catalog: Pick<CatalogRecord, "operations"> | null | undefined,
 ) {
-  return hasCatalogOperation(catalog, "view_summary")
-    && !hasCatalogOperation(catalog, "view_detail");
+  return (
+    hasCatalogOperation(catalog, "view_summary") && !hasCatalogOperation(catalog, "view_detail")
+  );
 }

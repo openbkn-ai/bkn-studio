@@ -18,9 +18,7 @@ export const bknTraceModuleManifest = {
       id: "bkn-trace.analysis",
       exportName: "TraceAnalysisScene",
       description: "Inspect one technical Trace with its spans and raw Operation call facts.",
-      inputs: [
-        { name: "traceId", required: false, type: "string" },
-      ],
+      inputs: [{ name: "traceId", required: false, type: "string" }],
     },
   ],
 } as const;

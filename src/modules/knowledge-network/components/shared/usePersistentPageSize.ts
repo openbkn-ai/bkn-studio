@@ -56,9 +56,8 @@ export function usePersistentPageSize(scope: string, fallback = 10) {
 
   const setPageSize = useCallback(
     (nextPageSize: number) => {
-      const normalizedPageSize = Number.isInteger(nextPageSize) && nextPageSize > 0
-        ? nextPageSize
-        : fallback;
+      const normalizedPageSize =
+        Number.isInteger(nextPageSize) && nextPageSize > 0 ? nextPageSize : fallback;
       const nextParams = new URLSearchParams(searchParams);
 
       setPageSizeState(normalizedPageSize);

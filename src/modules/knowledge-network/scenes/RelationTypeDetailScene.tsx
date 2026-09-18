@@ -47,12 +47,11 @@ export function RelationTypeDetailScene() {
   const listPath = `/knowledge-network/workspace/${networkId}/relation-types`;
   const detailPath = `/knowledge-network/workspace/${networkId}/relation-types/${relationTypeId}/detail`;
   const locationState = location.state as RelationTypeDetailLocationState | null;
-  const returnPath =
-    locationState?.knowledgeNetworkReturnTo?.startsWith(
-      `/knowledge-network/workspace/${networkId}/`,
-    )
-      ? locationState.knowledgeNetworkReturnTo
-      : listPath;
+  const returnPath = locationState?.knowledgeNetworkReturnTo?.startsWith(
+    `/knowledge-network/workspace/${networkId}/`,
+  )
+    ? locationState.knowledgeNetworkReturnTo
+    : listPath;
 
   const confirmDelete = () => {
     if (!detail) {
@@ -159,66 +158,63 @@ export function RelationTypeDetailScene() {
             record={detail}
           />
         }
-      onBack={() => {
-        void navigate(returnPath);
-      }}
-      subtitle={t("knowledgeNetwork.relationTypeDetailDescription")}
-      title={detail.name}
-    >
-      <div className={styles.page}>
-        <section className={styles.summaryCard}>
-          <div className={styles.summaryHead}>
-            <span
-              className={styles.objectIconSquare}
-              style={{ backgroundColor: detail.color }}
-            >
-              <ApartmentOutlined />
-            </span>
-            <div>
-              <h2 className={styles.summaryTitle}>{detail.name}</h2>
-              <p className={styles.summaryDescription}>
-                {detail.description || t("knowledgeNetwork.noDescription")}
-              </p>
+        onBack={() => {
+          void navigate(returnPath);
+        }}
+        subtitle={t("knowledgeNetwork.relationTypeDetailDescription")}
+        title={detail.name}
+      >
+        <div className={styles.page}>
+          <section className={styles.summaryCard}>
+            <div className={styles.summaryHead}>
+              <span className={styles.objectIconSquare} style={{ backgroundColor: detail.color }}>
+                <ApartmentOutlined />
+              </span>
+              <div>
+                <h2 className={styles.summaryTitle}>{detail.name}</h2>
+                <p className={styles.summaryDescription}>
+                  {detail.description || t("knowledgeNetwork.noDescription")}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className={styles.tagRow}>
-            {detail.tags.length > 0 ? (
-              detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-            ) : (
-              <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
-            )}
-          </div>
-          <div className={styles.metaRow}>
-            <span>ID: {detail.id}</span>
-            <span>
-              {t("knowledgeNetwork.relationTypeMappingMode")}:{" "}
-              {detail.mappingMode === "direct"
-                ? t("knowledgeNetwork.relationTypeDirectMapping")
-                : t("knowledgeNetwork.relationTypeResourceMapping")}
-            </span>
-            <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
-            <span>{detail.updateTime}</span>
-          </div>
-        </section>
+            <div className={styles.tagRow}>
+              {detail.tags.length > 0 ? (
+                detail.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
+              ) : (
+                <span className={styles.placeholder}>{t("knowledgeNetwork.noTags")}</span>
+              )}
+            </div>
+            <div className={styles.metaRow}>
+              <span>ID: {detail.id}</span>
+              <span>
+                {t("knowledgeNetwork.relationTypeMappingMode")}:{" "}
+                {detail.mappingMode === "direct"
+                  ? t("knowledgeNetwork.relationTypeDirectMapping")
+                  : t("knowledgeNetwork.relationTypeResourceMapping")}
+              </span>
+              <span>{t("knowledgeNetwork.updatedBy", { name: detail.updaterName })}</span>
+              <span>{detail.updateTime}</span>
+            </div>
+          </section>
 
-        <section className={styles.sectionCard}>
-          <h3>{t("knowledgeNetwork.relationTypeConfigSection")}</h3>
-          <RelationTypeMappingConfigTable
-            detail={detail}
-            networkId={networkId}
-            onOpenObjectType={(objectTypeId) => {
-              void navigate(
-                `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
-                {
-                  state: {
-                    knowledgeNetworkReturnTo: detailPath,
+          <section className={styles.sectionCard}>
+            <h3>{t("knowledgeNetwork.relationTypeConfigSection")}</h3>
+            <RelationTypeMappingConfigTable
+              detail={detail}
+              networkId={networkId}
+              onOpenObjectType={(objectTypeId) => {
+                void navigate(
+                  `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`,
+                  {
+                    state: {
+                      knowledgeNetworkReturnTo: detailPath,
+                    },
                   },
-                },
-              );
-            }}
-          />
-        </section>
-      </div>
+                );
+              }}
+            />
+          </section>
+        </div>
       </KnowledgeNetworkResourceConfigShell>
       <KnowledgeNetworkObjectAuthorizeDrawer
         networkId={networkId}

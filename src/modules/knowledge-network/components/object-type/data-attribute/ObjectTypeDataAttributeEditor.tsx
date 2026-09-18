@@ -38,15 +38,9 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
-import {
-  DEFAULT_RESOURCE_COLOR,
-} from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
-import {
-  renderResourceIcon,
-} from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
-import {
-  listObjectTypeResourceFields,
-} from "@/modules/knowledge-network/services/knowledge-network.service";
+import { DEFAULT_RESOURCE_COLOR } from "@/modules/knowledge-network/components/shared/ResourceColorSelect";
+import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import { listObjectTypeResourceFields } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   ObjectTypeDataProperty,
   ObjectTypeDataSource,
@@ -135,10 +129,7 @@ function countUnmappedSectionDividers(
   }
 
   return rows.reduce((count, row, index) => {
-    if (
-      row.section === "unmapped" &&
-      (index === 0 || rows[index - 1]?.section === "mapped")
-    ) {
+    if (row.section === "unmapped" && (index === 0 || rows[index - 1]?.section === "mapped")) {
       return count + 1;
     }
     return count;
@@ -297,14 +288,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   ObjectTypeDataAttributeEditorHandle,
   ObjectTypeDataAttributeEditorProps
 >(function ObjectTypeDataAttributeEditor(
-  {
-    basicValue,
-    dataProperties,
-    dataSource,
-    logicPropertyNames = [],
-    networkId,
-    onChange,
-  },
+  { basicValue, dataProperties, dataSource, logicPropertyNames = [], networkId, onChange },
   ref,
 ) {
   const { t } = useTranslation();
@@ -316,9 +300,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const [viewFields, setViewFields] = useState<ObjectTypeResourceField[]>([]);
   const [selectedViewId, setSelectedViewId] = useState(dataSource?.id ?? "");
-  const [pendingViewField, setPendingViewField] = useState<ObjectTypeResourceField | null>(
-    null,
-  );
+  const [pendingViewField, setPendingViewField] = useState<ObjectTypeResourceField | null>(null);
   const [hoveredConnection, setHoveredConnection] = useState<string | null>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [mappingFilter, setMappingFilter] = useState<MappingFilter>("all");
@@ -338,10 +320,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
   const [displayKeyPopoverOpen, setDisplayKeyPopoverOpen] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
-  const validProperties = useMemo(
-    () => normalizeProperties(dataProperties),
-    [dataProperties],
-  );
+  const validProperties = useMemo(() => normalizeProperties(dataProperties), [dataProperties]);
   const descriptionFillCandidates = useMemo(
     () => buildDescriptionFillCandidates(dataProperties, viewFields),
     [dataProperties, viewFields],
@@ -518,11 +497,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     validProperties.forEach((property) => {
       if (
         !property.mappedField ||
-        !isMappedPropertyConnectionVisible(
-          property,
-          visibleViewFieldNames,
-          visiblePropertyNames,
-        )
+        !isMappedPropertyConnectionVisible(property, visibleViewFieldNames, visiblePropertyNames)
       ) {
         return;
       }
@@ -539,26 +514,10 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       nextConnections.push({
         propertyName: property.name,
         viewFieldName: property.mappedField.name,
-        x1:
-          viewRect.left +
-          viewRect.width / 2 -
-          canvasRect.left +
-          canvas.scrollLeft,
-        y1:
-          viewRect.top +
-          viewRect.height / 2 -
-          canvasRect.top +
-          canvas.scrollTop,
-        x2:
-          propertyRect.left +
-          propertyRect.width / 2 -
-          canvasRect.left +
-          canvas.scrollLeft,
-        y2:
-          propertyRect.top +
-          propertyRect.height / 2 -
-          canvasRect.top +
-          canvas.scrollTop,
+        x1: viewRect.left + viewRect.width / 2 - canvasRect.left + canvas.scrollLeft,
+        y1: viewRect.top + viewRect.height / 2 - canvasRect.top + canvas.scrollTop,
+        x2: propertyRect.left + propertyRect.width / 2 - canvasRect.left + canvas.scrollLeft,
+        y2: propertyRect.top + propertyRect.height / 2 - canvasRect.top + canvas.scrollTop,
       });
     });
 
@@ -721,9 +680,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const handleViewFieldClick = (field: ObjectTypeResourceField, isMapped: boolean) => {
     if (isMapped) {
-      const mappedProperty = validProperties.find(
-        (item) => item.mappedField?.name === field.name,
-      );
+      const mappedProperty = validProperties.find((item) => item.mappedField?.name === field.name);
       if (mappedProperty?.mappedField) {
         selectConnection(field.name, mappedProperty.name);
       }
@@ -739,10 +696,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     const connectionId = property?.mappedField
       ? buildConnectionId(property.mappedField.name, property.name)
       : null;
-    if (
-      property?.mappedField &&
-      selectedConnectionId === connectionId
-    ) {
+    if (property?.mappedField && selectedConnectionId === connectionId) {
       clearSelectedConnection();
     }
     if (hoveredConnection === connectionId) {
@@ -789,8 +743,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     }
 
     const duplicated = validProperties.some(
-      (item) =>
-        item.name !== property.name && item.mappedField?.name === pendingViewField.name,
+      (item) => item.name !== property.name && item.mappedField?.name === pendingViewField.name,
     );
     if (duplicated) {
       void message.error(t("knowledgeNetwork.objectTypePropertyDuplicateMapping"));
@@ -871,7 +824,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
         return {
           ...property,
           incrementalKey: false,
-          mappedField: typeChanged ? undefined : property.mappedField ?? item.mappedField,
+          mappedField: typeChanged ? undefined : (property.mappedField ?? item.mappedField),
         };
       }),
     );
@@ -911,9 +864,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     }
 
     updateProperties(nextProperties);
-    void message.success(
-      t("knowledgeNetwork.objectTypeAutoLineSuccess", { count: addedCount }),
-    );
+    void message.success(t("knowledgeNetwork.objectTypeAutoLineSuccess", { count: addedCount }));
   };
 
   const handleDeleteProperty = (name: string) => {
@@ -990,9 +941,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       dataProperties.map((item) => ({
         ...item,
         primaryKey:
-          item.name === name
-            ? !item.primaryKey && canBePrimaryKey(item.type)
-            : item.primaryKey,
+          item.name === name ? !item.primaryKey && canBePrimaryKey(item.type) : item.primaryKey,
       })),
     );
   };
@@ -1002,8 +951,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
     updateProperties(
       dataProperties.map((item) => ({
         ...item,
-        displayKey:
-          item.name === name ? !item.displayKey && canBeDisplayKey(item.type) : false,
+        displayKey: item.name === name ? !item.displayKey && canBeDisplayKey(item.type) : false,
       })),
     );
   };
@@ -1128,14 +1076,8 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
 
   const showViewSearch = viewFields.length > 0 || fieldSearch.length > 0;
   const showDataSearch = dataProperties.length > 0 || propertySearch.length > 0;
-  const viewSectionDividerCount = countUnmappedSectionDividers(
-    filteredViewFields,
-    mappingFilter,
-  );
-  const dataSectionDividerCount = countUnmappedSectionDividers(
-    filteredProperties,
-    mappingFilter,
-  );
+  const viewSectionDividerCount = countUnmappedSectionDividers(filteredViewFields, mappingFilter);
+  const dataSectionDividerCount = countUnmappedSectionDividers(filteredProperties, mappingFilter);
   const viewPanelHeight =
     PANEL_HEADER_HEIGHT +
     (showViewSearch ? PANEL_SEARCH_HEIGHT : 0) +
@@ -1169,9 +1111,7 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
             }
             setAlertMessage("");
           }}
-          type={
-            alertMessage === t("knowledgeNetwork.objectTypeClickToConnect") ? "info" : "error"
-          }
+          type={alertMessage === t("knowledgeNetwork.objectTypeClickToConnect") ? "info" : "error"}
         />
       ) : null}
 
@@ -1212,7 +1152,9 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
           <span className={styles.infoDivider} />
           <div className={styles.infoItem}>
             <StarFilled className={styles.infoKeyIconTitle} />
-            <span className={styles.infoLabel}>{t("knowledgeNetwork.objectTypeDisplayKeyShort")}</span>
+            <span className={styles.infoLabel}>
+              {t("knowledgeNetwork.objectTypeDisplayKeyShort")}
+            </span>
             {renderInfoHint("knowledgeNetwork.objectTypeDisplayKeyTip")}
             <span className={styles.infoLabel}>:</span>
             <Popover
@@ -1247,381 +1189,395 @@ export const ObjectTypeDataAttributeEditor = forwardRef<
       </div>
 
       <div className={styles.canvasWrapper}>
-      <div
-        className={styles.canvas}
-        onMouseDown={(event) => {
-          if (event.button !== 0 || event.target !== event.currentTarget) {
-            return;
-          }
-          clearSelectedConnection();
-          setIsPanning(true);
-          panStartRef.current = {
-            x: event.clientX,
-            y: event.clientY,
-            panX: pan.x,
-            panY: pan.y,
-          };
-        }}
-        onMouseLeave={() => setIsPanning(false)}
-        onMouseMove={(event) => {
-          if (!isPanning) {
-            return;
-          }
-          setPan({
-            x: panStartRef.current.panX + event.clientX - panStartRef.current.x,
-            y: panStartRef.current.panY + event.clientY - panStartRef.current.y,
-          });
-        }}
-        onMouseUp={() => setIsPanning(false)}
-        ref={canvasRef}
-      >
-        <svg
-          className={styles.connectionLayer}
-          style={{ height: canvasStageHeight, width: CANVAS_STAGE_WIDTH }}
-        >
-          {connections.map((item) => {
-            const connectionId = buildConnectionId(item.viewFieldName, item.propertyName);
-            const midX = (item.x1 + item.x2) / 2;
-            const path = `M ${item.x1} ${item.y1} C ${midX} ${item.y1}, ${midX} ${item.y2}, ${item.x2} ${item.y2}`;
-            const isHovered = hoveredConnection === connectionId;
-            const isSelected = selectedConnectionId === connectionId;
-            const isDimmed = Boolean(selectedConnectionId) && !isSelected && !isHovered;
-            const className = [
-              styles.connectionLine,
-              isSelected ? styles.connectionLineSelected : "",
-              isHovered ? styles.connectionLineHover : "",
-              isDimmed ? styles.connectionLineDimmed : "",
-            ]
-              .filter(Boolean)
-              .join(" ");
-            return (
-              <path
-                className={className}
-                d={path}
-                key={connectionId}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  selectConnection(item.viewFieldName, item.propertyName);
-                }}
-                onMouseEnter={() => setHoveredConnection(connectionId)}
-                onMouseLeave={() => setHoveredConnection(null)}
-              />
-            );
-          })}
-        </svg>
-
         <div
-          className={styles.canvasViewport}
-          ref={viewportRef}
-          style={{
-            height: canvasStageHeight,
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            width: CANVAS_STAGE_WIDTH,
+          className={styles.canvas}
+          onMouseDown={(event) => {
+            if (event.button !== 0 || event.target !== event.currentTarget) {
+              return;
+            }
+            clearSelectedConnection();
+            setIsPanning(true);
+            panStartRef.current = {
+              x: event.clientX,
+              y: event.clientY,
+              panX: pan.x,
+              panY: pan.y,
+            };
           }}
+          onMouseLeave={() => setIsPanning(false)}
+          onMouseMove={(event) => {
+            if (!isPanning) {
+              return;
+            }
+            setPan({
+              x: panStartRef.current.panX + event.clientX - panStartRef.current.x,
+              y: panStartRef.current.panY + event.clientY - panStartRef.current.y,
+            });
+          }}
+          onMouseUp={() => setIsPanning(false)}
+          ref={canvasRef}
         >
-          <div
-            className={styles.panelNode}
-            style={{ left: VIEW_PANEL_POS.x, top: VIEW_PANEL_POS.y, width: PANEL_WIDTH }}
+          <svg
+            className={styles.connectionLayer}
+            style={{ height: canvasStageHeight, width: CANVAS_STAGE_WIDTH }}
           >
-            <div className={styles.panelHeader}>
-              <div className={styles.panelTitleBox}>
-                <span className={`${styles.panelIcon} ${styles.panelIconView}`}>
-                  <TableOutlined />
-                </span>
-                <span className={styles.panelTitle}>
-                  {selectedResource?.name ?? t("knowledgeNetwork.objectTypeResource")}
-                </span>
-                <span className={styles.panelCount}>{viewFields.length}</span>
+            {connections.map((item) => {
+              const connectionId = buildConnectionId(item.viewFieldName, item.propertyName);
+              const midX = (item.x1 + item.x2) / 2;
+              const path = `M ${item.x1} ${item.y1} C ${midX} ${item.y1}, ${midX} ${item.y2}, ${item.x2} ${item.y2}`;
+              const isHovered = hoveredConnection === connectionId;
+              const isSelected = selectedConnectionId === connectionId;
+              const isDimmed = Boolean(selectedConnectionId) && !isSelected && !isHovered;
+              const className = [
+                styles.connectionLine,
+                isSelected ? styles.connectionLineSelected : "",
+                isHovered ? styles.connectionLineHover : "",
+                isDimmed ? styles.connectionLineDimmed : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return (
+                <path
+                  className={className}
+                  d={path}
+                  key={connectionId}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    selectConnection(item.viewFieldName, item.propertyName);
+                  }}
+                  onMouseEnter={() => setHoveredConnection(connectionId)}
+                  onMouseLeave={() => setHoveredConnection(null)}
+                />
+              );
+            })}
+          </svg>
+
+          <div
+            className={styles.canvasViewport}
+            ref={viewportRef}
+            style={{
+              height: canvasStageHeight,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              width: CANVAS_STAGE_WIDTH,
+            }}
+          >
+            <div
+              className={styles.panelNode}
+              style={{ left: VIEW_PANEL_POS.x, top: VIEW_PANEL_POS.y, width: PANEL_WIDTH }}
+            >
+              <div className={styles.panelHeader}>
+                <div className={styles.panelTitleBox}>
+                  <span className={`${styles.panelIcon} ${styles.panelIconView}`}>
+                    <TableOutlined />
+                  </span>
+                  <span className={styles.panelTitle}>
+                    {selectedResource?.name ?? t("knowledgeNetwork.objectTypeResource")}
+                  </span>
+                  <span className={styles.panelCount}>{viewFields.length}</span>
+                </div>
+                <div className={styles.panelActions}>
+                  {viewFields.length > 0 ? (
+                    <>
+                      <Tooltip title={t("knowledgeNetwork.objectTypeSmartMatchingConnection")}>
+                        <NodeIndexOutlined
+                          className={styles.panelActionIcon}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleAutoLine();
+                          }}
+                        />
+                      </Tooltip>
+                      <Dropdown menu={viewPanelMenuConfig} trigger={["click"]}>
+                        <EllipsisOutlined className={styles.panelActionIcon} />
+                      </Dropdown>
+                    </>
+                  ) : (
+                    <PlusOutlined
+                      className={styles.panelActionIcon}
+                      onClick={() => setResourceModalOpen(true)}
+                    />
+                  )}
+                </div>
               </div>
-              <div className={styles.panelActions}>
-                {viewFields.length > 0 ? (
-                  <>
-                    <Tooltip title={t("knowledgeNetwork.objectTypeSmartMatchingConnection")}>
-                      <NodeIndexOutlined
-                        className={styles.panelActionIcon}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleAutoLine();
-                        }}
-                      />
-                    </Tooltip>
-                    <Dropdown menu={viewPanelMenuConfig} trigger={["click"]}>
-                      <EllipsisOutlined className={styles.panelActionIcon} />
-                    </Dropdown>
-                  </>
-                ) : (
-                  <PlusOutlined
-                    className={styles.panelActionIcon}
-                    onClick={() => setResourceModalOpen(true)}
+
+              {showViewSearch ? (
+                <div className={styles.panelSearch}>
+                  <Input
+                    allowClear
+                    onChange={(event) => setFieldSearch(event.target.value)}
+                    placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
+                    suffix={<SearchOutlined />}
+                    value={fieldSearch}
                   />
-                )}
-              </div>
-            </div>
+                </div>
+              ) : null}
 
-            {showViewSearch ? (
-              <div className={styles.panelSearch}>
-                <Input
-                  allowClear
-                  onChange={(event) => setFieldSearch(event.target.value)}
-                  placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
-                  suffix={<SearchOutlined />}
-                  value={fieldSearch}
-                />
-              </div>
-            ) : null}
-
-            {viewFields.length > 0 ? (
-              <div className={styles.panelContent}>
-                {filteredViewFields.length > 0 ? (
-                  filteredViewFields.map((row, index) => {
-                    const field = row.item;
-                    const isActive = pendingViewField?.name === field.name;
-                    const mappedProperty = validProperties.find(
-                      (item) => item.mappedField?.name === field.name,
-                    );
-                    const isMapped = Boolean(mappedProperty);
-                    const connectionId =
-                      mappedProperty && isMapped
-                        ? buildConnectionId(field.name, mappedProperty.name)
-                        : null;
-                    const isSelected =
-                      connectionId !== null && selectedConnectionId === connectionId;
-                    const isDimmed =
-                      Boolean(selectedConnectionId) && isMapped && !isSelected && !isActive;
-                    const showSectionDivider =
-                      mappingFilter === "all" &&
-                      row.section === "unmapped" &&
-                      (index === 0 || filteredViewFields[index - 1]?.section === "mapped");
-                    return (
-                      <div key={field.name}>
-                        {showSectionDivider ? (
-                          <div className={styles.panelSectionDivider}>
-                            {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
-                          </div>
-                        ) : null}
-                        <div
-                          className={[
-                            styles.panelItem,
-                            styles.panelItemView,
-                            isActive ? styles.panelItemHighlighted : "",
-                            isMapped ? styles.panelItemMapped : "",
-                            isSelected ? styles.panelItemSelected : "",
-                            isDimmed ? styles.panelItemDimmed : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => handleViewFieldClick(field, isMapped)}
-                        >
-                        <div className={styles.itemContent}>
-                          <FieldTypeIcon type={field.type} />
-                          <div>
-                            <div className={styles.itemName}>{field.displayName}</div>
-                            <div className={styles.itemTechName}>{field.name}</div>
+              {viewFields.length > 0 ? (
+                <div className={styles.panelContent}>
+                  {filteredViewFields.length > 0 ? (
+                    filteredViewFields.map((row, index) => {
+                      const field = row.item;
+                      const isActive = pendingViewField?.name === field.name;
+                      const mappedProperty = validProperties.find(
+                        (item) => item.mappedField?.name === field.name,
+                      );
+                      const isMapped = Boolean(mappedProperty);
+                      const connectionId =
+                        mappedProperty && isMapped
+                          ? buildConnectionId(field.name, mappedProperty.name)
+                          : null;
+                      const isSelected =
+                        connectionId !== null && selectedConnectionId === connectionId;
+                      const isDimmed =
+                        Boolean(selectedConnectionId) && isMapped && !isSelected && !isActive;
+                      const showSectionDivider =
+                        mappingFilter === "all" &&
+                        row.section === "unmapped" &&
+                        (index === 0 || filteredViewFields[index - 1]?.section === "mapped");
+                      return (
+                        <div key={field.name}>
+                          {showSectionDivider ? (
+                            <div className={styles.panelSectionDivider}>
+                              {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
+                            </div>
+                          ) : null}
+                          <div
+                            className={[
+                              styles.panelItem,
+                              styles.panelItemView,
+                              isActive ? styles.panelItemHighlighted : "",
+                              isMapped ? styles.panelItemMapped : "",
+                              isSelected ? styles.panelItemSelected : "",
+                              isDimmed ? styles.panelItemDimmed : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => handleViewFieldClick(field, isMapped)}
+                          >
+                            <div className={styles.itemContent}>
+                              <FieldTypeIcon type={field.type} />
+                              <div>
+                                <div className={styles.itemName}>{field.displayName}</div>
+                                <div className={styles.itemTechName}>{field.name}</div>
+                              </div>
+                            </div>
+                            <span
+                              className={`${styles.panelHandle} ${styles.panelHandleRight}`}
+                              ref={(node) => {
+                                viewHandleRefs.current[field.name] = node;
+                              }}
+                            />
                           </div>
                         </div>
-                        <span
-                          className={`${styles.panelHandle} ${styles.panelHandleRight}`}
-                          ref={(node) => {
-                            viewHandleRefs.current[field.name] = node;
-                          }}
-                        />
-                      </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className={styles.panelEmpty}>
-                    <Empty description={t("knowledgeNetwork.objectTypePropertySearchEmpty")} />
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          <div
-            className={styles.panelNode}
-            style={{ left: DATA_PANEL_POS.x, top: DATA_PANEL_POS.y, width: PANEL_WIDTH }}
-          >
-            <div className={styles.panelHeader}>
-              <div className={styles.panelTitleBox}>
-                <span
-                  className={styles.panelIcon}
-                  style={{ backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR, borderRadius: 4, color: "var(--color-text-inverse)", fontSize: 14, height: 20, width: 20 }}
-                >
-                  {renderResourceIcon(basicValue.icon)}
-                </span>
-                <span className={styles.panelTitle}>{basicValue.name}</span>
-                <span className={styles.panelCount}>{validProperties.length}</span>
-              </div>
-              <div className={styles.panelActions}>
-                <Dropdown menu={dataPanelAddMenuConfig} trigger={["click"]}>
-                  <PlusOutlined className={styles.panelActionIcon} />
-                </Dropdown>
-                <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
-                  <EllipsisOutlined className={styles.panelActionIcon} />
-                </Dropdown>
-              </div>
+                      );
+                    })
+                  ) : (
+                    <div className={styles.panelEmpty}>
+                      <Empty description={t("knowledgeNetwork.objectTypePropertySearchEmpty")} />
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
 
-            {showDataSearch ? (
-              <div className={styles.panelSearch}>
-                <Input
-                  allowClear
-                  onChange={(event) => setPropertySearch(event.target.value)}
-                  placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
-                  suffix={<SearchOutlined />}
-                  value={propertySearch}
-                />
+            <div
+              className={styles.panelNode}
+              style={{ left: DATA_PANEL_POS.x, top: DATA_PANEL_POS.y, width: PANEL_WIDTH }}
+            >
+              <div className={styles.panelHeader}>
+                <div className={styles.panelTitleBox}>
+                  <span
+                    className={styles.panelIcon}
+                    style={{
+                      backgroundColor: basicValue.color ?? DEFAULT_RESOURCE_COLOR,
+                      borderRadius: 4,
+                      color: "var(--color-text-inverse)",
+                      fontSize: 14,
+                      height: 20,
+                      width: 20,
+                    }}
+                  >
+                    {renderResourceIcon(basicValue.icon)}
+                  </span>
+                  <span className={styles.panelTitle}>{basicValue.name}</span>
+                  <span className={styles.panelCount}>{validProperties.length}</span>
+                </div>
+                <div className={styles.panelActions}>
+                  <Dropdown menu={dataPanelAddMenuConfig} trigger={["click"]}>
+                    <PlusOutlined className={styles.panelActionIcon} />
+                  </Dropdown>
+                  <Dropdown menu={dataPanelMoreMenuConfig} trigger={["click"]}>
+                    <EllipsisOutlined className={styles.panelActionIcon} />
+                  </Dropdown>
+                </div>
               </div>
-            ) : null}
 
-            {dataProperties.length > 0 ? (
-              <div className={styles.panelContent}>
-                {filteredProperties.length > 0 ? (
-                  filteredProperties.map((row, index) => {
-                    const property = row.item;
-                    const isMapped = Boolean(property.mappedField);
-                    const connectionId =
-                      property.mappedField && isMapped
-                        ? buildConnectionId(property.mappedField.name, property.name)
-                        : null;
-                    const isSelected =
-                      connectionId !== null && selectedConnectionId === connectionId;
-                    const isDimmed =
-                      Boolean(selectedConnectionId) && isMapped && !isSelected;
-                    const showSectionDivider =
-                      mappingFilter === "all" &&
-                      row.section === "unmapped" &&
-                      (index === 0 || filteredProperties[index - 1]?.section === "mapped");
-                    const hasInvalidName =
-                      Boolean(property.name) && !DATA_PROPERTY_NAME_PATTERN.test(property.name);
-                    return (
-                      <div key={property.name || property.displayName}>
-                        {showSectionDivider ? (
-                          <div className={styles.panelSectionDivider}>
-                            {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
-                          </div>
-                        ) : null}
-                        <div
-                          className={[
-                            styles.panelItem,
-                            isMapped ? styles.panelItemMapped : "",
-                            isSelected ? styles.panelItemSelected : "",
-                            isDimmed ? styles.panelItemDimmed : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => handlePropertyClick(property, isMapped)}
-                        >
-                        <span
-                          className={`${styles.panelHandle} ${styles.panelHandleLeft}`}
-                          ref={(node) => {
-                            if (property.name) {
-                              propertyHandleRefs.current[property.name] = node;
-                            }
-                          }}
-                        />
-                        <div className={styles.itemContent}>
-                          <FieldTypeIcon type={property.type} />
-                          <div>
-                            <div className={styles.itemName}>
-                              {property.displayName || property.name || "-"}
+              {showDataSearch ? (
+                <div className={styles.panelSearch}>
+                  <Input
+                    allowClear
+                    onChange={(event) => setPropertySearch(event.target.value)}
+                    placeholder={t("knowledgeNetwork.objectTypeSearchProperty")}
+                    suffix={<SearchOutlined />}
+                    value={propertySearch}
+                  />
+                </div>
+              ) : null}
+
+              {dataProperties.length > 0 ? (
+                <div className={styles.panelContent}>
+                  {filteredProperties.length > 0 ? (
+                    filteredProperties.map((row, index) => {
+                      const property = row.item;
+                      const isMapped = Boolean(property.mappedField);
+                      const connectionId =
+                        property.mappedField && isMapped
+                          ? buildConnectionId(property.mappedField.name, property.name)
+                          : null;
+                      const isSelected =
+                        connectionId !== null && selectedConnectionId === connectionId;
+                      const isDimmed = Boolean(selectedConnectionId) && isMapped && !isSelected;
+                      const showSectionDivider =
+                        mappingFilter === "all" &&
+                        row.section === "unmapped" &&
+                        (index === 0 || filteredProperties[index - 1]?.section === "mapped");
+                      const hasInvalidName =
+                        Boolean(property.name) && !DATA_PROPERTY_NAME_PATTERN.test(property.name);
+                      return (
+                        <div key={property.name || property.displayName}>
+                          {showSectionDivider ? (
+                            <div className={styles.panelSectionDivider}>
+                              {t("knowledgeNetwork.objectTypeMappingSectionUnmapped")}
                             </div>
-                            <div className={styles.itemTechName}>
-                              <span>{property.name || "-"}</span>
-                              {hasInvalidName ? (
-                                <Tooltip
-                                  title={t("knowledgeNetwork.objectTypeDataPropertyNamePattern")}
-                                >
-                                  <InfoCircleFilled className={styles.invalidNameIcon} />
+                          ) : null}
+                          <div
+                            className={[
+                              styles.panelItem,
+                              isMapped ? styles.panelItemMapped : "",
+                              isSelected ? styles.panelItemSelected : "",
+                              isDimmed ? styles.panelItemDimmed : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            onClick={() => handlePropertyClick(property, isMapped)}
+                          >
+                            <span
+                              className={`${styles.panelHandle} ${styles.panelHandleLeft}`}
+                              ref={(node) => {
+                                if (property.name) {
+                                  propertyHandleRefs.current[property.name] = node;
+                                }
+                              }}
+                            />
+                            <div className={styles.itemContent}>
+                              <FieldTypeIcon type={property.type} />
+                              <div>
+                                <div className={styles.itemName}>
+                                  {property.displayName || property.name || "-"}
+                                </div>
+                                <div className={styles.itemTechName}>
+                                  <span>{property.name || "-"}</span>
+                                  {hasInvalidName ? (
+                                    <Tooltip
+                                      title={t(
+                                        "knowledgeNetwork.objectTypeDataPropertyNamePattern",
+                                      )}
+                                    >
+                                      <InfoCircleFilled className={styles.invalidNameIcon} />
+                                    </Tooltip>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={styles.itemIcons}>
+                              <div className={styles.itemIconsStatus}>
+                                {property.displayKey ? (
+                                  <StarFilled className={styles.infoKeyIconTitle} />
+                                ) : null}
+                                {property.primaryKey ? (
+                                  <BookOutlined className={styles.infoKeyIconPrimary} />
+                                ) : null}
+                              </div>
+                              <div className={styles.itemIconsActions}>
+                                <Tooltip title={t("knowledgeNetwork.objectTypeEditDataProperty")}>
+                                  <EditOutlined
+                                    className={styles.rowActionIcon}
+                                    onClick={(event) => editPropertyFromRow(property, event)}
+                                  />
                                 </Tooltip>
-                              ) : null}
+                                {property.mappedField ? (
+                                  <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
+                                    <DisconnectOutlined
+                                      className={styles.rowActionIcon}
+                                      onClick={(event) =>
+                                        disconnectPropertyMapping(property.name, event)
+                                      }
+                                    />
+                                  </Tooltip>
+                                ) : null}
+                                {canBeDisplayKey(property.type) ? (
+                                  property.displayKey ? (
+                                    <Tooltip
+                                      title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}
+                                    >
+                                      <StarFilled
+                                        className={styles.rowActionIconActiveTitle}
+                                        onClick={(event) =>
+                                          togglePropertyDisplayKey(property.name, event)
+                                        }
+                                      />
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip
+                                      title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}
+                                    >
+                                      <StarOutlined
+                                        className={styles.rowActionIcon}
+                                        onClick={(event) =>
+                                          togglePropertyDisplayKey(property.name, event)
+                                        }
+                                      />
+                                    </Tooltip>
+                                  )
+                                ) : null}
+                                {canBePrimaryKey(property.type) ? (
+                                  <Tooltip title={t("knowledgeNetwork.objectTypePrimaryKey")}>
+                                    <BookOutlined
+                                      className={
+                                        property.primaryKey
+                                          ? styles.rowActionIconActivePrimary
+                                          : styles.rowActionIcon
+                                      }
+                                      onClick={(event) =>
+                                        togglePropertyPrimaryKey(property.name, event)
+                                      }
+                                    />
+                                  </Tooltip>
+                                ) : null}
+                                <Tooltip title={t("common.delete")}>
+                                  <DeleteOutlined
+                                    className={styles.rowActionIcon}
+                                    onClick={(event) =>
+                                      handleDeletePropertyFromRow(property.name, event)
+                                    }
+                                  />
+                                </Tooltip>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      <div className={styles.itemIcons}>
-                        <div className={styles.itemIconsStatus}>
-                          {property.displayKey ? (
-                            <StarFilled className={styles.infoKeyIconTitle} />
-                          ) : null}
-                          {property.primaryKey ? (
-                            <BookOutlined className={styles.infoKeyIconPrimary} />
-                          ) : null}
-                        </div>
-                        <div className={styles.itemIconsActions}>
-                          <Tooltip title={t("knowledgeNetwork.objectTypeEditDataProperty")}>
-                            <EditOutlined
-                              className={styles.rowActionIcon}
-                              onClick={(event) => editPropertyFromRow(property, event)}
-                            />
-                          </Tooltip>
-                          {property.mappedField ? (
-                            <Tooltip title={t("knowledgeNetwork.objectTypeClearMapping")}>
-                              <DisconnectOutlined
-                                className={styles.rowActionIcon}
-                                onClick={(event) =>
-                                  disconnectPropertyMapping(property.name, event)
-                                }
-                              />
-                            </Tooltip>
-                          ) : null}
-                          {canBeDisplayKey(property.type) ? (
-                            property.displayKey ? (
-                              <Tooltip title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}>
-                                <StarFilled
-                                  className={styles.rowActionIconActiveTitle}
-                                  onClick={(event) =>
-                                    togglePropertyDisplayKey(property.name, event)
-                                  }
-                                />
-                              </Tooltip>
-                            ) : (
-                              <Tooltip title={t("knowledgeNetwork.objectTypeDisplayKeyShort")}>
-                                <StarOutlined
-                                  className={styles.rowActionIcon}
-                                  onClick={(event) =>
-                                    togglePropertyDisplayKey(property.name, event)
-                                  }
-                                />
-                              </Tooltip>
-                            )
-                          ) : null}
-                          {canBePrimaryKey(property.type) ? (
-                            <Tooltip title={t("knowledgeNetwork.objectTypePrimaryKey")}>
-                              <BookOutlined
-                                className={
-                                  property.primaryKey
-                                    ? styles.rowActionIconActivePrimary
-                                    : styles.rowActionIcon
-                                }
-                                onClick={(event) => togglePropertyPrimaryKey(property.name, event)}
-                              />
-                            </Tooltip>
-                          ) : null}
-                          <Tooltip title={t("common.delete")}>
-                            <DeleteOutlined
-                              className={styles.rowActionIcon}
-                              onClick={(event) =>
-                                handleDeletePropertyFromRow(property.name, event)
-                              }
-                            />
-                          </Tooltip>
-                        </div>
-                      </div>
-                      </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className={styles.panelEmpty}>
-                    <Empty description={t("knowledgeNetwork.objectTypePropertySearchEmpty")} />
-                  </div>
-                )}
-              </div>
-            ) : null}
+                      );
+                    })
+                  ) : (
+                    <div className={styles.panelEmpty}>
+                      <Empty description={t("knowledgeNetwork.objectTypePropertySearchEmpty")} />
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
 
         <div className={styles.canvasControls}>
           <button

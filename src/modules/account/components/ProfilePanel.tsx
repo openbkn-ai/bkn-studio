@@ -27,7 +27,13 @@ function formatTime(value: string): string {
 }
 
 /** Profile: self-service editing for basic information through PUT /me, with read-only account details. */
-export function ProfilePanel({ profile, onSaved }: { profile: MyProfile; onSaved: (next: MyProfile) => void }) {
+export function ProfilePanel({
+  profile,
+  onSaved,
+}: {
+  profile: MyProfile;
+  onSaved: (next: MyProfile) => void;
+}) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [form] = Form.useForm<FormValues>();
@@ -75,7 +81,13 @@ export function ProfilePanel({ profile, onSaved }: { profile: MyProfile; onSaved
       <section className={styles.block}>
         <h3 className={styles.title}>{t("account.profile.basicTitle")}</h3>
         <p className={styles.hint}>{t("account.profile.basicHint")}</p>
-        <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => void onFinish(values)} className={styles.form}>
+        <Form
+          form={form}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={(values) => void onFinish(values)}
+          className={styles.form}
+        >
           <Form.Item
             name="name"
             label={t("account.profile.name")}

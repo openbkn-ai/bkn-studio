@@ -7,18 +7,11 @@
 
 import i18n from "@/app/locales/i18n";
 import { http } from "@/framework/request/http";
-import {
-  mockCatalogName,
-  mockResources,
-} from "@/modules/data-catalog/services/mock-db";
+import { mockCatalogName, mockResources } from "@/modules/data-catalog/services/mock-db";
 import { isValidSemanticUnderstandingSampleRows } from "@/modules/data-catalog/components/semantic-understanding-task-validation";
 
 export type SemanticUnderstandingTaskStatus =
-  | "cancelled"
-  | "failed"
-  | "pending"
-  | "running"
-  | "completed";
+  "cancelled" | "failed" | "pending" | "running" | "completed";
 
 export type SemanticUnderstandingTaskSummary = {
   agentId: string;
@@ -78,7 +71,9 @@ export type BackendSemanticUnderstandingTask = BackendSemanticUnderstandingTaskS
   result_json?: string;
 };
 
-export function mapSemanticUnderstandingTaskSummary(task: BackendSemanticUnderstandingTaskSummary): SemanticUnderstandingTaskSummary {
+export function mapSemanticUnderstandingTaskSummary(
+  task: BackendSemanticUnderstandingTaskSummary,
+): SemanticUnderstandingTaskSummary {
   return {
     id: task.id,
     scope: task.scope,
@@ -132,7 +127,9 @@ export function buildSemanticUnderstandingTaskListParams(
   };
 }
 
-export function mapSemanticUnderstandingTask(task: BackendSemanticUnderstandingTask): SemanticUnderstandingTask {
+export function mapSemanticUnderstandingTask(
+  task: BackendSemanticUnderstandingTask,
+): SemanticUnderstandingTask {
   return {
     ...mapSemanticUnderstandingTaskSummary(task),
     confidenceDetailJson: task.confidence_detail_json,
@@ -185,10 +182,12 @@ let mockTasks: SemanticUnderstandingTask[] = [
     startTime: mockNow - 1000 * 60 * 44,
     finishTime: mockNow - 1000 * 60 * 40,
     confidenceDetailJson: JSON.stringify({
-      warning_details: [{
-        code: "sample_omitted_by_policy",
-        params: { field_name: "attachment_blob", field_type: "binary" },
-      }],
+      warning_details: [
+        {
+          code: "sample_omitted_by_policy",
+          params: { field_name: "attachment_blob", field_type: "binary" },
+        },
+      ],
     }),
     applyDetailJson: JSON.stringify({
       field_details: [
@@ -321,9 +320,9 @@ export async function listSemanticUnderstandingTasks(
     );
     const timeOf = (task: SemanticUnderstandingTask) =>
       filters.sort === "start_time"
-        ? task.startTime ?? 0
+        ? (task.startTime ?? 0)
         : filters.sort === "finish_time"
-          ? task.finishTime ?? 0
+          ? (task.finishTime ?? 0)
           : task.createTime;
     const direction = filters.direction === "asc" ? 1 : -1;
     const sorted = [...filtered].sort((left, right) => (timeOf(left) - timeOf(right)) * direction);
@@ -333,14 +332,14 @@ export async function listSemanticUnderstandingTasks(
     };
   }
 
-  const response = await http.get<{ entries: BackendSemanticUnderstandingTaskSummary[]; total_count: number }>(
-    "/vega-backend/v1/semantic-understanding-tasks",
-    {
-      ...options,
-      params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window),
-      paramsSerializer: { indexes: null },
-    },
-  );
+  const response = await http.get<{
+    entries: BackendSemanticUnderstandingTaskSummary[];
+    total_count: number;
+  }>("/vega-backend/v1/semantic-understanding-tasks", {
+    ...options,
+    params: buildSemanticUnderstandingTaskListParams(1, window.limit, filters, window),
+    paramsSerializer: { indexes: null },
+  });
   return {
     items: response.data.entries.map(mapSemanticUnderstandingTaskSummary),
     total: response.data.total_count,
@@ -349,11 +348,15 @@ export async function listSemanticUnderstandingTasks(
 
 export async function getSemanticUnderstandingTask(id: string) {
   if (useMock) return mockTasks.find((task) => task.id === id) ?? null;
-  const response = await http.get<BackendSemanticUnderstandingTask>(`/vega-backend/v1/semantic-understanding-tasks/${id}`);
+  const response = await http.get<BackendSemanticUnderstandingTask>(
+    `/vega-backend/v1/semantic-understanding-tasks/${id}`,
+  );
   return response.data ? mapSemanticUnderstandingTask(response.data) : null;
 }
 
-export async function createResourceSemanticUnderstandingTask(payload: CreateSemanticUnderstandingTaskPayload) {
+export async function createResourceSemanticUnderstandingTask(
+  payload: CreateSemanticUnderstandingTaskPayload,
+) {
   if (useMock) {
     const resource = mockResources.find((item) => item.id === payload.resourceId);
     const now = Date.now();
@@ -375,7 +378,11 @@ export async function createResourceSemanticUnderstandingTask(payload: CreateSem
       startTime: now,
       finishTime: now,
       resultJson: JSON.stringify({
-        quality: { resource_effective: true, field_effective: 0, field_total: resource?.schema.length ?? 0 },
+        quality: {
+          resource_effective: true,
+          field_effective: 0,
+          field_total: resource?.schema.length ?? 0,
+        },
         summary: "Mock semantic-understanding task completed.",
       }),
     };
@@ -385,14 +392,17 @@ export async function createResourceSemanticUnderstandingTask(payload: CreateSem
   const includeSampleRows = payload.includeSampleRows ?? false;
   const sampleMaxRows = payload.sampleMaxRows ?? 10;
   if (includeSampleRows) assertValidSemanticSampleMaxRows(sampleMaxRows);
-  const response = await http.post<{ id: string }>("/vega-backend/v1/semantic-understanding-tasks", {
-    scope: "resource",
-    resource_id: payload.resourceId,
-    apply_mode: payload.applyMode,
-    confidence_threshold: payload.confidenceThreshold,
-    include_sample_rows: includeSampleRows,
-    sample_policy: includeSampleRows ? { masked: false, max_rows: sampleMaxRows } : undefined,
-  });
+  const response = await http.post<{ id: string }>(
+    "/vega-backend/v1/semantic-understanding-tasks",
+    {
+      scope: "resource",
+      resource_id: payload.resourceId,
+      apply_mode: payload.applyMode,
+      confidence_threshold: payload.confidenceThreshold,
+      include_sample_rows: includeSampleRows,
+      sample_policy: includeSampleRows ? { masked: false, max_rows: sampleMaxRows } : undefined,
+    },
+  );
   return response.data;
 }
 

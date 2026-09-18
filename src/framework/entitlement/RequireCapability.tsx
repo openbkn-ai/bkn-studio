@@ -10,10 +10,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import {
-  useCapability,
-  useEntitlementContext,
-} from "@/framework/entitlement/use-entitlement";
+import { useCapability, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 
 type RequireCapabilityProps = {
   capability: string;

@@ -83,7 +83,9 @@ export function SmallModelListPanel() {
         rule: sortRule,
       });
 
-      const permissionMap = await getSmallModelItemPermissions(result.items.map((item) => item.modelId));
+      const permissionMap = await getSmallModelItemPermissions(
+        result.items.map((item) => item.modelId),
+      );
       setItems(
         result.items.map((item) => ({
           ...item,
@@ -262,7 +264,6 @@ export function SmallModelListPanel() {
       handleUnsetDefault(record);
       return;
     }
-
   };
 
   const columns: ColumnsType<SmallModel> = [
@@ -285,9 +286,7 @@ export function SmallModelListPanel() {
           <span className={styles.modelNameText} title={record.modelName}>
             {record.modelName}
           </span>
-          {record.default ? (
-            <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag>
-          ) : null}
+          {record.default ? <Tag color="blue">{t("modelResources.models.defaultTag")}</Tag> : null}
         </div>
       ),
     },
@@ -301,7 +300,9 @@ export function SmallModelListPanel() {
         const menuItems = [
           { key: "view", label: t("modelResources.models.menus.view") },
           canModify(record) ? { key: "edit", label: t("modelResources.models.menus.edit") } : null,
-          canDelete(record) ? { key: "delete", label: t("modelResources.models.menus.delete") } : null,
+          canDelete(record)
+            ? { key: "delete", label: t("modelResources.models.menus.delete") }
+            : null,
           { key: "test", label: t("modelResources.models.menus.testConnection") },
           canSetDefault(record)
             ? { key: "setDefault", label: t("modelResources.models.menus.setAsDefault") }
@@ -410,15 +411,13 @@ export function SmallModelListPanel() {
 
   return (
     <div className={styles.panel}>
-        <ModelListToolbar
-          canCreate={canCreate}
-          deleteDisabled={
-            selectedRowKeys.length === 0 ||
-            !items
-              .filter((item) => selectedRowKeys.includes(item.modelId))
-              .every(canDelete)
-          }
-          showDelete
+      <ModelListToolbar
+        canCreate={canCreate}
+        deleteDisabled={
+          selectedRowKeys.length === 0 ||
+          !items.filter((item) => selectedRowKeys.includes(item.modelId)).every(canDelete)
+        }
+        showDelete
         modelType={modelType}
         modelTypeOptions={[
           { value: "all", label: t("modelResources.models.all") },
@@ -428,9 +427,7 @@ export function SmallModelListPanel() {
         onCreate={() => openForm("create")}
         onDelete={() =>
           handleDelete(
-            items.filter(
-              (item) => selectedRowKeys.includes(item.modelId) && canDelete(item),
-            ),
+            items.filter((item) => selectedRowKeys.includes(item.modelId) && canDelete(item)),
           )
         }
         onModelTypeChange={(value) => {

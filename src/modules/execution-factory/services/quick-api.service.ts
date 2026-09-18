@@ -20,10 +20,7 @@ import type { OperatorSyncPublishInput } from "@/modules/execution-factory/types
 
 import { validateOpenApiDocumentText } from "@/modules/execution-factory/utils/metadata-content";
 
-
-
 export type RegisterQuickApiInput = {
-
   openapiSpec: string;
 
   serviceUrl: string;
@@ -41,7 +38,6 @@ export type RegisterQuickApiInput = {
 
   toolName?: string;
   toolDescription?: string;
-
 };
 
 function resolveToolboxTarget(input: RegisterQuickApiInput) {
@@ -62,10 +58,7 @@ function resolveToolboxTarget(input: RegisterQuickApiInput) {
   return { mode, boxId: undefined, toolboxName };
 }
 
-
-
 export type RegisterQuickApiResult = {
-
   boxId: string;
 
   toolIds: string[];
@@ -73,7 +66,6 @@ export type RegisterQuickApiResult = {
   operatorId?: string;
 
   operatorIds?: string[];
-
 };
 
 const CONFIRM_ATTEMPTS = 3;
@@ -129,29 +121,19 @@ async function confirmQuickApiPersistence(input: {
   throw new Error("Tool creation was not persisted. Please retry saving.");
 }
 
-
-
 export async function registerQuickApi(
-
   input: RegisterQuickApiInput,
-
 ): Promise<RegisterQuickApiResult> {
-
   const validation = validateOpenApiDocumentText(input.openapiSpec);
 
   if (!validation.ok) {
-
     throw new Error(validation.reason);
-
   }
 
   const target = resolveToolboxTarget(input);
 
-
-
   if (input.operatorSync?.enabled) {
     const bundle = await registerOpenApiBundle({
-
       openapiSpec: input.openapiSpec,
 
       serviceUrl: input.serviceUrl,
@@ -165,10 +147,7 @@ export async function registerQuickApi(
       category: input.category,
 
       operatorSync: input.operatorSync,
-
     });
-
-
 
     await confirmQuickApiPersistence({
       boxId: bundle.boxId,
@@ -177,7 +156,6 @@ export async function registerQuickApi(
     });
 
     return {
-
       boxId: bundle.boxId,
 
       toolIds: bundle.toolIds,
@@ -185,20 +163,13 @@ export async function registerQuickApi(
       operatorId: bundle.operatorIds[0],
 
       operatorIds: bundle.operatorIds,
-
     };
-
   }
-
-
 
   let boxId = target.boxId;
 
-
-
   if (target.mode === "new") {
     const toolbox = await createToolbox({
-
       name: target.toolboxName,
 
       description: input.toolboxDescription,
@@ -208,21 +179,16 @@ export async function registerQuickApi(
       metadataType: "openapi",
 
       serviceUrl: input.serviceUrl,
-
     });
 
     boxId = toolbox.boxId;
-
   }
 
   if (!boxId) {
     throw new Error(executionFactoryServiceError("targetToolboxMissing"));
   }
 
-
-
   const result = await createTool(boxId, {
-
     metadataType: "openapi",
 
     name: input.toolName,
@@ -230,20 +196,13 @@ export async function registerQuickApi(
     description: input.toolDescription,
 
     openapiSpec: input.openapiSpec,
-
   });
 
-
-
   if (result.failureCount > 0 || result.successIds.length === 0) {
-
     const detail = result.failures[0]?.error ?? executionFactoryServiceError("toolCreateFailed");
 
     throw new Error(detail);
-
   }
-
-
 
   await confirmQuickApiPersistence({
     boxId,
@@ -252,13 +211,10 @@ export async function registerQuickApi(
   });
 
   return {
-
     boxId,
 
     toolIds: result.successIds,
-
   };
-
 }
 
 function executionFactoryServiceError(key: string) {

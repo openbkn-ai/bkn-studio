@@ -36,36 +36,48 @@ export const systemAdminModuleManifest = {
   requiresShell: true,
   supportsEmbedded: false,
   supportsReadOnly: false,
-  services: ["user-management/users", "user-management/departments", "authorization/roles", "authorization/role-members", "authorization/object-grants", "license-management/license"],
+  services: [
+    "user-management/users",
+    "user-management/departments",
+    "authorization/roles",
+    "authorization/role-members",
+    "authorization/object-grants",
+    "license-management/license",
+  ],
   scenes: [
     {
       id: "system-admin.users",
       exportName: "UserManagementScene",
-      description: "Manage platform users and the department (org) tree: create, edit, freeze, disable, reset password.",
+      description:
+        "Manage platform users and the department (org) tree: create, edit, freeze, disable, reset password.",
       inputs: [],
     },
     {
       id: "system-admin.roles",
       exportName: "RoleManagementScene",
-      description: "Manage authorization roles, their object-level resource grants, and user/department members.",
+      description:
+        "Manage authorization roles, their object-level resource grants, and user/department members.",
       inputs: [],
     },
     {
       id: "system-admin.object-authorization",
       exportName: "ObjectAuthorizationScene",
-      description: "Grant a specific object (data connection / Catalog, knowledge network, small model) directly to a user, on top of role permissions. Authorization is at the whole-object level (e.g. a whole Catalog, not individual resources). List-style with an overview page (all / by object / by member).",
+      description:
+        "Grant a specific object (data connection / Catalog, knowledge network, small model) directly to a user, on top of role permissions. Authorization is at the whole-object level (e.g. a whole Catalog, not individual resources). List-style with an overview page (all / by object / by member).",
       inputs: [],
     },
     {
       id: "system-admin.license",
       exportName: "LicenseManagementScene",
-      description: "Manage the product license for the current OpenBKN cluster: view state, copy the device fingerprint, import license or activation certificate text, activate online, and remove the license.",
+      description:
+        "Manage the product license for the current OpenBKN cluster: view state, copy the device fingerprint, import license or activation certificate text, activate online, and remove the license.",
       inputs: [],
     },
     {
       id: "system-admin.audit",
       exportName: "AuditLogScene",
-      description: "Browse the bkn-safe admin audit log: who changed what, with status and time filters.",
+      description:
+        "Browse the bkn-safe admin audit log: who changed what, with status and time filters.",
       inputs: [],
     },
   ],

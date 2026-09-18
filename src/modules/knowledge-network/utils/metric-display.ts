@@ -18,10 +18,12 @@ export function resolveMetricBoundObjectTypeName(
   emptyLabel = "--",
 ): string {
   if (metric.scopeType === "object_type") {
-    return metric.scopeName?.trim()
-      || objectTypes.find((item) => item.id === metric.scopeRef)?.name
-      || metric.scopeRef
-      || emptyLabel;
+    return (
+      metric.scopeName?.trim() ||
+      objectTypes.find((item) => item.id === metric.scopeRef)?.name ||
+      metric.scopeRef ||
+      emptyLabel
+    );
   }
 
   return metric.scopeRef || emptyLabel;

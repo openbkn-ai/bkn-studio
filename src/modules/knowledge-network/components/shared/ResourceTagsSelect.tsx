@@ -51,9 +51,11 @@ const TAG_INVALID_CHARACTERS = [
 ] as const;
 
 function hasInvalidTagCharacter(tag: string) {
-  return tag.split("").some((character) =>
-    TAG_INVALID_CHARACTERS.includes(character as (typeof TAG_INVALID_CHARACTERS)[number]),
-  );
+  return tag
+    .split("")
+    .some((character) =>
+      TAG_INVALID_CHARACTERS.includes(character as (typeof TAG_INVALID_CHARACTERS)[number]),
+    );
 }
 
 type ResourceTagsSelectProps = {
@@ -62,11 +64,7 @@ type ResourceTagsSelectProps = {
   value?: string[];
 };
 
-export function ResourceTagsSelect({
-  onChange,
-  placeholder,
-  value,
-}: ResourceTagsSelectProps) {
+export function ResourceTagsSelect({ onChange, placeholder, value }: ResourceTagsSelectProps) {
   const { t } = useTranslation();
   const [tagOptions, setTagOptions] = useState<string[]>([]);
 

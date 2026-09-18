@@ -59,9 +59,7 @@ export function getActionSourceDisplayName(actionSource?: ActionTypeActionSource
   return toolName || containerName;
 }
 
-export function getReadableActionSourceDisplayName(
-  actionSource?: ActionTypeActionSource,
-): string {
+export function getReadableActionSourceDisplayName(actionSource?: ActionTypeActionSource): string {
   if (!actionSource) {
     return "";
   }
@@ -71,9 +69,7 @@ export function getReadableActionSourceDisplayName(
   }
 
   const containerName =
-    actionSource.type === "mcp"
-      ? actionSource.mcpName?.trim()
-      : actionSource.boxName?.trim();
+    actionSource.type === "mcp" ? actionSource.mcpName?.trim() : actionSource.boxName?.trim();
   const toolName = actionSource.toolName?.trim();
 
   if (containerName && toolName) {
@@ -124,8 +120,7 @@ export function validateActionTypeExecutionConfig(
   value: ActionTypeExecutionConfig,
   options: ActionTypeExecutionValidationOptions = {},
 ): string | null {
-  const sourceLabel =
-    getActionSourceDisplayName(value.actionSource) || value.sourceName.trim();
+  const sourceLabel = getActionSourceDisplayName(value.actionSource) || value.sourceName.trim();
 
   if (!sourceLabel) {
     return ACTION_TYPE_EXECUTION_TOOL_REQUIRED_KEY;
@@ -160,8 +155,7 @@ export function normalizeActionTypeExecutionConfig(
         toolName: value.actionSource.toolName?.trim(),
       }
     : undefined;
-  const sourceName =
-    getActionSourceDisplayName(actionSource) || value.sourceName.trim();
+  const sourceName = getActionSourceDisplayName(actionSource) || value.sourceName.trim();
   const parameters = value.parameters
     .filter((item) => {
       if (!item.name.trim()) {

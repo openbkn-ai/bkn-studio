@@ -42,8 +42,7 @@ export function indexStateOf(
   const latest = sorted[0] ?? null;
   // Resource local_index_status is the source of truth for query availability. A task is only
   // retained here as optional display context for history and progress.
-  const effective =
-    localIndexStatus === "available" ? effectiveIndexOf(sorted) : null;
+  const effective = localIndexStatus === "available" ? effectiveIndexOf(sorted) : null;
 
   if (!latest) {
     return {
@@ -53,11 +52,7 @@ export function indexStateOf(
     };
   }
 
-  if (
-    latest.status === "running" ||
-    latest.status === "pending" ||
-    latest.status === "stopping"
-  ) {
+  if (latest.status === "running" || latest.status === "pending" || latest.status === "stopping") {
     return {
       key: localIndexStatus === "available" ? "rebuilding" : "building",
       latest,

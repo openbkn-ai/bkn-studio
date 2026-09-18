@@ -148,8 +148,7 @@ export async function createToolboxViaApi(
     box_category: "other_category",
     box_desc: "E2E toolbox",
     box_name: name,
-    box_svc_url:
-      options?.serviceUrl ?? "http://127.0.0.1:9000/api/agent-operator-integration",
+    box_svc_url: options?.serviceUrl ?? "http://127.0.0.1:9000/api/agent-operator-integration",
     metadata_type: metadataType,
   };
 
@@ -238,10 +237,7 @@ export async function debugToolViaApi(
   }>;
 }
 
-export async function publishToolboxViaApi(
-  request: APIRequestContext,
-  boxId: string,
-) {
+export async function publishToolboxViaApi(request: APIRequestContext, boxId: string) {
   const response = await request.post(`${API_PREFIX}/tool-box/${boxId}/status`, {
     headers: {
       ...defaultApiHeaders(),

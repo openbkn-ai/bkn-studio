@@ -32,12 +32,24 @@ vi.mock("antd", async (importOriginal) => {
   const actual = await importOriginal<typeof import("antd")>();
   return {
     ...actual,
-    Drawer: ({ children, footer, open, title }: {
+    Drawer: ({
+      children,
+      footer,
+      open,
+      title,
+    }: {
       children?: ReactNode;
       footer?: ReactNode;
       open?: boolean;
       title?: ReactNode;
-    }) => open ? <div><h1>{title}</h1>{children}{footer}</div> : null,
+    }) =>
+      open ? (
+        <div>
+          <h1>{title}</h1>
+          {children}
+          {footer}
+        </div>
+      ) : null,
   };
 });
 
@@ -152,9 +164,7 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
       />,
     );
 
-    expect(
-      screen.queryByText("knowledgeNetwork.objectTypeMaskRuleUnsupported"),
-    ).toBeNull();
+    expect(screen.queryByText("knowledgeNetwork.objectTypeMaskRuleUnsupported")).toBeNull();
 
     const ruleTypeLabel = await screen.findByText("knowledgeNetwork.objectTypeMaskRuleType");
     const ruleTypeSelect = ruleTypeLabel
@@ -217,9 +227,7 @@ describe("ObjectTypeDataAttributeFormDrawer modes", () => {
     fireEvent.click(await screen.findByRole("button", { name: "common.ok" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ maskRule: property.maskRule }),
-    );
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ maskRule: property.maskRule }));
     expect(mocks.messageError).toHaveBeenCalledWith("Save failed");
     expect(onClose).not.toHaveBeenCalled();
   });

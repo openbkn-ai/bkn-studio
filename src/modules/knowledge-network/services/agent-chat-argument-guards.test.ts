@@ -7,7 +7,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { buildAgentTools, DEFAULT_AGENT_CONFIG } from "@/modules/knowledge-network/services/agent-chat.service";
+import {
+  buildAgentTools,
+  DEFAULT_AGENT_CONFIG,
+} from "@/modules/knowledge-network/services/agent-chat.service";
 import type {
   McpSession,
   McpToolCallResult,
@@ -36,7 +39,8 @@ function managedTurn() {
 }
 
 function runTool(tool: unknown, input: unknown): Promise<string> {
-  const execute = (tool as { execute: (input: unknown, options: unknown) => Promise<string> }).execute;
+  const execute = (tool as { execute: (input: unknown, options: unknown) => Promise<string> })
+    .execute;
   return execute(input, { toolCallId: "call-1", messages: [] });
 }
 
@@ -89,7 +93,9 @@ describe("agent MCP argument guards", () => {
 
   it("blocks execute_action when target instances or dynamic params are missing", async () => {
     const session = stubSession();
-    await expect(runTool(buildTool("execute_action", session), { at_id: "at_1" })).rejects.toThrow("unsafe_action_call");
+    await expect(runTool(buildTool("execute_action", session), { at_id: "at_1" })).rejects.toThrow(
+      "unsafe_action_call",
+    );
 
     expect(session.callTool).not.toHaveBeenCalled();
   });

@@ -69,7 +69,8 @@ function processNestedProperties(
       return {
         name,
         key,
-        type: typeof resolvedProperty.type === "string" ? resolvedProperty.type : DEFAULT_PARAM_TYPE,
+        type:
+          typeof resolvedProperty.type === "string" ? resolvedProperty.type : DEFAULT_PARAM_TYPE,
         description:
           typeof resolvedProperty.description === "string" ? resolvedProperty.description : "",
         required: Array.isArray(required) ? required.includes(name) : false,
@@ -115,8 +116,7 @@ export function getInputParamsFromToolOpenAPISpec(apiSpec: unknown): ActionTypeT
         name,
         key: name,
         type: typeof schema?.type === "string" ? schema.type : DEFAULT_PARAM_TYPE,
-        description:
-          typeof resolvedParam.description === "string" ? resolvedParam.description : "",
+        description: typeof resolvedParam.description === "string" ? resolvedParam.description : "",
         required: Boolean(resolvedParam.required),
         source: capitalizeSource(
           typeof resolvedParam.in === "string" ? resolvedParam.in : undefined,

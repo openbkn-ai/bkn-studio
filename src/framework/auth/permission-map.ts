@@ -109,9 +109,7 @@ const MODEL_RESOURCE_PERMISSIONS: Record<string, string[]> = {
  */
 function safeGrantsCover(safeGrants: Set<string>, type: string, operation: string): boolean {
   return (
-    safeGrants.has(`${type}:${operation}`) ||
-    safeGrants.has(`${type}:*`) ||
-    safeGrants.has("*:*")
+    safeGrants.has(`${type}:${operation}`) || safeGrants.has(`${type}:*`) || safeGrants.has("*:*")
   );
 }
 

@@ -28,10 +28,7 @@ import {
   type CapabilityCreateMenuAction,
 } from "@/modules/execution-factory/utils/capability-create-menu";
 
-import {
-  AddCapabilityWizard,
-  type CreatedCapabilityPayload,
-} from "./AddCapabilityWizard";
+import { AddCapabilityWizard, type CreatedCapabilityPayload } from "./AddCapabilityWizard";
 import {
   CreateExecutionUnitWizard,
   type CreatedExecutionUnitPayload,
@@ -55,7 +52,9 @@ function getCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi
     case "operator":
       return "execution-factory:operator:create";
     case "toolbox":
-      return toolboxView === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create";
+      return toolboxView === "function"
+        ? "execution-factory:function:create"
+        : "execution-factory:toolbox:create";
     case "mcp":
       return "execution-factory:mcp:create";
     case "skill":
@@ -88,7 +87,10 @@ function getLegacyCreateLabel(activeTab: ExecutionUnitTab, t: (key: string) => s
   }
 }
 
-function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab, toolboxView?: "openapi" | "function") {
+function resolveCapabilityCreatePermission(
+  activeTab: ExecutionUnitTab,
+  toolboxView?: "openapi" | "function",
+) {
   if (activeTab === "skill") {
     return "execution-factory:skill:create";
   }
@@ -97,7 +99,9 @@ function resolveCapabilityCreatePermission(activeTab: ExecutionUnitTab, toolboxV
     return "execution-factory:mcp:create";
   }
 
-  return toolboxView === "function" ? "execution-factory:function:create" : "execution-factory:toolbox:create";
+  return toolboxView === "function"
+    ? "execution-factory:function:create"
+    : "execution-factory:toolbox:create";
 }
 
 export function CreateMenu({
@@ -116,7 +120,9 @@ export function CreateMenu({
   const capabilityUxV2 = isCapabilityUxV2();
   const [legacyWizardOpen, setLegacyWizardOpen] = useState(false);
   const [capabilityWizardOpen, setCapabilityWizardOpen] = useState(false);
-  const [capabilityInitialMode, setCapabilityInitialMode] = useState<CapabilityUxMode | undefined>();
+  const [capabilityInitialMode, setCapabilityInitialMode] = useState<
+    CapabilityUxMode | undefined
+  >();
   const [capabilityAllowedModes, setCapabilityAllowedModes] = useState<
     CapabilityUxMode[] | undefined
   >();
@@ -133,12 +139,19 @@ export function CreateMenu({
       : resolveCapabilityCreatePermission(activeTab, toolboxView)
     : getCreatePermission(activeTab, toolboxView);
   const importPermission = dedicatedMode ? null : getImportPermission(activeTab);
-  const canCreate = Boolean(permission && hasPermissions({ currentPermissions, requiredPermissions: permission }));
-  const capabilityCreateItems = useMemo(() => getCapabilityCreateMenuItems().filter(
-    (item) => item.action !== "import-adp"
-      && (!dedicatedMode || item.action === dedicatedMode)
-      && canCreateCapabilityMode(currentPermissions, item.action),
-  ), [currentPermissions, dedicatedMode]);
+  const canCreate = Boolean(
+    permission && hasPermissions({ currentPermissions, requiredPermissions: permission }),
+  );
+  const capabilityCreateItems = useMemo(
+    () =>
+      getCapabilityCreateMenuItems().filter(
+        (item) =>
+          item.action !== "import-adp" &&
+          (!dedicatedMode || item.action === dedicatedMode) &&
+          canCreateCapabilityMode(currentPermissions, item.action),
+      ),
+    [currentPermissions, dedicatedMode],
+  );
   // Shared management pages offer cross-resource creation; dedicated routes only expose their
   // own resource. Each visible entry enforces its own create grant.
   const canShowCapabilityCreateMenu = capabilityCreateItems.length > 0;
@@ -186,7 +199,9 @@ export function CreateMenu({
     return null;
   }
 
-  const handleResourceCreated = (payload: CreatedExecutionUnitPayload | CreatedCapabilityPayload) => {
+  const handleResourceCreated = (
+    payload: CreatedExecutionUnitPayload | CreatedCapabilityPayload,
+  ) => {
     onResourceCreated?.(payload);
   };
 
@@ -208,7 +223,11 @@ export function CreateMenu({
 
   const handleCapabilityAction = (action: CapabilityCreateMenuAction) => {
     if (action === "import-adp") {
-      if (!importPermission || !hasPermissions({ currentPermissions, requiredPermissions: importPermission })) return;
+      if (
+        !importPermission ||
+        !hasPermissions({ currentPermissions, requiredPermissions: importPermission })
+      )
+        return;
       setImportActiveTab(resolveCapabilityAdpImportTab(activeTab));
       setImportInitialKind("adp");
       setImportOpen(true);
@@ -233,47 +252,44 @@ export function CreateMenu({
     ),
   }));
 
-  const createButton = capabilityUxV2 && !useLegacyOperatorCreate ? (
-    <Dropdown
-      menu={{
-        items: capabilityMenuItems,
-        onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
-      }}
-      /* Menu items have a title and one-line description. Left alignment gives all four descriptions
+  const createButton =
+    capabilityUxV2 && !useLegacyOperatorCreate ? (
+      <Dropdown
+        menu={{
+          items: capabilityMenuItems,
+          onClick: ({ key }) => handleCapabilityAction(key as CapabilityCreateMenuAction),
+        }}
+        /* Menu items have a title and one-line description. Left alignment gives all four descriptions
          the same starting column; right alignment makes their left edges uneven across item widths. */
-      placement="bottomLeft"
-      trigger={["click"]}
-    >
-      <AppButton icon={<PlusOutlined />} type="primary">
-        {t("executionFactory.addCapabilityButton")}
-        <DownOutlined />
+        placement="bottomLeft"
+        trigger={["click"]}
+      >
+        <AppButton icon={<PlusOutlined />} type="primary">
+          {t("executionFactory.addCapabilityButton")}
+          <DownOutlined />
+        </AppButton>
+      </Dropdown>
+    ) : (
+      <AppButton
+        icon={<PlusOutlined />}
+        onClick={() => {
+          if (capabilityUxV2 && !useLegacyOperatorCreate) {
+            openCapabilityMode(
+              activeTab === "mcp" ? "mcp" : activeTab === "skill" ? "skill" : "quick-api",
+            );
+            return;
+          }
+          setLegacyWizardOpen(true);
+        }}
+        type="primary"
+      >
+        {useLegacyOperatorCreate
+          ? t("executionFactory.createOperatorButton")
+          : capabilityUxV2
+            ? t("executionFactory.addCapabilityButton")
+            : getLegacyCreateLabel(activeTab, t)}
       </AppButton>
-    </Dropdown>
-  ) : (
-    <AppButton
-      icon={<PlusOutlined />}
-      onClick={() => {
-        if (capabilityUxV2 && !useLegacyOperatorCreate) {
-          openCapabilityMode(
-            activeTab === "mcp"
-              ? "mcp"
-              : activeTab === "skill"
-                ? "skill"
-                : "quick-api",
-          );
-          return;
-        }
-        setLegacyWizardOpen(true);
-      }}
-      type="primary"
-    >
-      {useLegacyOperatorCreate
-        ? t("executionFactory.createOperatorButton")
-        : capabilityUxV2
-          ? t("executionFactory.addCapabilityButton")
-          : getLegacyCreateLabel(activeTab, t)}
-    </AppButton>
-  );
+    );
 
   return (
     <>

@@ -85,9 +85,7 @@ export function JsonResourceImportButton({
               >
                 {t("knowledgeNetwork.importIgnore")}
               </AppButton>
-              <AppButton onClick={() => modalContext.destroy()}>
-                {t("common.cancel")}
-              </AppButton>
+              <AppButton onClick={() => modalContext.destroy()}>{t("common.cancel")}</AppButton>
             </div>
           ),
         });
@@ -126,9 +124,7 @@ export function JsonResourceImportButton({
               >
                 {t("knowledgeNetwork.importIgnore")}
               </AppButton>
-              <AppButton onClick={() => modalContext.destroy()}>
-                {t("common.cancel")}
-              </AppButton>
+              <AppButton onClick={() => modalContext.destroy()}>{t("common.cancel")}</AppButton>
             </div>
           ),
         });

@@ -20,7 +20,8 @@ import {
 import styles from "./ExperienceScene.module.css";
 import { McpConnectionSecurity } from "./McpConnectionSecurity";
 
-const JSON_TOKEN_RE = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+const JSON_TOKEN_RE =
+  /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
 
 function JsonHighlight({ text }: { text: string }) {
   // Avoid token-by-token rendering for very large responses.
@@ -35,15 +36,35 @@ function JsonHighlight({ text }: { text: string }) {
     if (m[1] !== undefined) {
       if (m[2] !== undefined) {
         // A string followed by a colon is a JSON property key.
-        nodes.push(<span key={key++} className={styles.jKey}>{m[1]}</span>);
-        nodes.push(<span key={key++} className={styles.jPunct}>{m[2]}</span>);
+        nodes.push(
+          <span key={key++} className={styles.jKey}>
+            {m[1]}
+          </span>,
+        );
+        nodes.push(
+          <span key={key++} className={styles.jPunct}>
+            {m[2]}
+          </span>,
+        );
       } else {
-        nodes.push(<span key={key++} className={styles.jStr}>{m[1]}</span>);
+        nodes.push(
+          <span key={key++} className={styles.jStr}>
+            {m[1]}
+          </span>,
+        );
       }
     } else if (m[3] !== undefined) {
-      nodes.push(<span key={key++} className={styles.jKw}>{m[3]}</span>);
+      nodes.push(
+        <span key={key++} className={styles.jKw}>
+          {m[3]}
+        </span>,
+      );
     } else if (m[4] !== undefined) {
-      nodes.push(<span key={key++} className={styles.jNum}>{m[4]}</span>);
+      nodes.push(
+        <span key={key++} className={styles.jNum}>
+          {m[4]}
+        </span>,
+      );
     }
     last = JSON_TOKEN_RE.lastIndex;
   }
@@ -105,87 +126,117 @@ export function McpSetupModal({
   }, [protocol]);
 
   return (
-    <Modal open={open} onCancel={onClose} footer={null} width={680} title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.title")}>
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={680}
+      title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.title")}
+    >
       <div className={styles.guideRoot}>
-      <p className={styles.guideNote}>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalPrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalClient")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}<b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalSuffix")}
-        <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
-          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
-        </button>
-      </p>
-      <p className={styles.guideNote}>
-        <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceTitle")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferencePrefix")}<b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.sessionToken")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}<b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}<code>Authorization: Bearer</code>
-        {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
-      </p>
-      <McpConnectionSecurity
-        protocol={protocol}
-        allowInsecureTls={allowInsecureTls}
-        onAllowInsecureTlsChange={setAllowInsecureTls}
-      />
-      <Tabs
-        defaultActiveKey="claude"
-        items={[
-          {
-            key: "claude",
-            label: "Claude Code",
-            children: (
-              <>
+        <p className={styles.guideNote}>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalPrefix")}
+          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalClient")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalMiddle")}
+          <b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.externalSuffix")}
+          <button type="button" className={styles.guideLink} onClick={onManageApiKey}>
+            {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.issueApiKey")}
+          </button>
+        </p>
+        <p className={styles.guideNote}>
+          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceTitle")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferencePrefix")}
+          <b>{t("knowledgeNetwork.contextLoaderPanel.mcpSetup.sessionToken")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceMiddle")}
+          <b>{t("knowledgeNetwork.contextLoaderPanel.common.apiKey")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceSuffix")}
+          <code>Authorization: Bearer</code>
+          {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.authDifferenceEnd")}
+        </p>
+        <McpConnectionSecurity
+          protocol={protocol}
+          allowInsecureTls={allowInsecureTls}
+          onAllowInsecureTlsChange={setAllowInsecureTls}
+        />
+        <Tabs
+          defaultActiveKey="claude"
+          items={[
+            {
+              key: "claude",
+              label: "Claude Code",
+              children: (
+                <>
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cliTitle")}
+                    code={claudeCli}
+                    onCopy={() =>
+                      copy(
+                        claudeCli,
+                        t("knowledgeNetwork.contextLoaderPanel.mcpSetup.commandCopied"),
+                      )
+                    }
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                  />
+                  <CodeBlock
+                    title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.projectConfigTitle")}
+                    code={jsonConfig}
+                    json
+                    onCopy={() =>
+                      copy(
+                        jsonConfig,
+                        t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"),
+                      )
+                    }
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                  />
+                </>
+              ),
+            },
+            {
+              key: "cursor",
+              label: "Cursor",
+              children: (
+                <>
+                  <p className={styles.guideNote}>
+                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintPrefix")}
+                    <code>~/.cursor/mcp.json</code>
+                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintMiddle")}
+                    <code>.cursor/mcp.json</code>
+                    {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintSuffix")}
+                  </p>
+                  <CodeBlock
+                    title="~/.cursor/mcp.json"
+                    code={jsonConfig}
+                    json
+                    onCopy={() =>
+                      copy(
+                        jsonConfig,
+                        t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"),
+                      )
+                    }
+                    copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
+                  />
+                </>
+              ),
+            },
+            {
+              key: "generic",
+              label: t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericTab"),
+              children: (
                 <CodeBlock
-                  title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cliTitle")}
-                  code={claudeCli}
-                  onCopy={() => copy(claudeCli, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.commandCopied"))}
-                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-                />
-                <CodeBlock
-                  title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.projectConfigTitle")}
+                  title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericConfigTitle")}
                   code={jsonConfig}
                   json
-                  onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
+                  onCopy={() =>
+                    copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))
+                  }
                   copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
                 />
-              </>
-            ),
-          },
-          {
-            key: "cursor",
-            label: "Cursor",
-            children: (
-              <>
-                <p className={styles.guideNote}>
-                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintPrefix")}<code>~/.cursor/mcp.json</code>
-                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintMiddle")}<code>.cursor/mcp.json</code>
-                  {t("knowledgeNetwork.contextLoaderPanel.mcpSetup.cursorHintSuffix")}
-                </p>
-                <CodeBlock
-                  title="~/.cursor/mcp.json"
-                  code={jsonConfig}
-                  json
-                  onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
-                  copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-                />
-              </>
-            ),
-          },
-          {
-            key: "generic",
-            label: t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericTab"),
-            children: (
-              <CodeBlock
-                title={t("knowledgeNetwork.contextLoaderPanel.mcpSetup.genericConfigTitle")}
-                code={jsonConfig}
-                json
-                onCopy={() => copy(jsonConfig, t("knowledgeNetwork.contextLoaderPanel.mcpSetup.configCopied"))}
-                copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-              />
-            ),
-          },
-        ]}
-      />
+              ),
+            },
+          ]}
+        />
       </div>
     </Modal>
   );
@@ -240,12 +291,21 @@ export function ToolDiscoveryModal({
 }) {
   const { t } = useTranslation();
   return (
-    <Modal open={open} onCancel={onClose} footer={null} width={720} title={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.title")}>
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width={720}
+      title={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.title")}
+    >
       <div className={styles.guideRoot}>
         <p className={styles.guideNote}>
-          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionPrefix")}<code>tools/list</code>
-          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionMiddle")}<code>inputSchema</code> / <code>outputSchema</code>
-          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionSuffix")}<b>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.realtimeList")}</b>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionPrefix")}
+          <code>tools/list</code>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionMiddle")}
+          <code>inputSchema</code> / <code>outputSchema</code>
+          {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionSuffix")}
+          <b>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.realtimeList")}</b>
           {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.descriptionEnd")}
           <button type="button" className={styles.guideLink} onClick={onReload}>
             {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.reload")}
@@ -266,7 +326,11 @@ export function ToolDiscoveryModal({
         ) : tools ? (
           <>
             <div className={styles.driftRow}>
-              <span className={styles.driftStat}>{t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.onlineCount", { count: tools.length })}</span>
+              <span className={styles.driftStat}>
+                {t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.onlineCount", {
+                  count: tools.length,
+                })}
+              </span>
             </div>
             <div className={styles.toolList}>
               {tools.map((tool) => (
@@ -275,15 +339,22 @@ export function ToolDiscoveryModal({
                     <span className={styles.toolName}>{tool.name}</span>
                     {/* title / grouping come from server _meta; old servers omit them, so no local mapping is added here. */}
                     {tool.title ? <span className={styles.toolTitle}>{tool.title}</span> : null}
-                    {tool.groupTitle ? <span className={styles.toolGroupTag}>{tool.groupTitle}</span> : null}
-                    {tool.description ? <span className={styles.toolDesc}>{tool.description}</span> : null}
+                    {tool.groupTitle ? (
+                      <span className={styles.toolGroupTag}>{tool.groupTitle}</span>
+                    ) : null}
+                    {tool.description ? (
+                      <span className={styles.toolDesc}>{tool.description}</span>
+                    ) : null}
                   </summary>
                   <SchemaPre
                     title="inputSchema"
                     value={tool.inputSchema}
                     copy={copy}
                     copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-                    copiedLabel={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied", { title: "inputSchema" })}
+                    copiedLabel={t(
+                      "knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied",
+                      { title: "inputSchema" },
+                    )}
                   />
                   {tool.outputSchema !== undefined ? (
                     <SchemaPre
@@ -291,7 +362,10 @@ export function ToolDiscoveryModal({
                       value={tool.outputSchema}
                       copy={copy}
                       copyLabel={t("knowledgeNetwork.contextLoaderPanel.common.copy")}
-                      copiedLabel={t("knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied", { title: "outputSchema" })}
+                      copiedLabel={t(
+                        "knowledgeNetwork.contextLoaderPanel.toolDiscovery.schemaCopied",
+                        { title: "outputSchema" },
+                      )}
                     />
                   ) : null}
                 </details>

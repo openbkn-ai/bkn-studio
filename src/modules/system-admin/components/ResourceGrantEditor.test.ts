@@ -12,9 +12,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const registryMocks = vi.hoisted(() => ({
   catalog: undefined as undefined | { resourceTypes: Array<{ id: string }> },
   catalogLoading: true,
-  operationsForType: vi.fn<(type: string) => Array<{ description?: string; key: string; label: string; requires: string[] }>>(
-    () => [],
-  ),
+  operationsForType: vi.fn<
+    (
+      type: string,
+    ) => Array<{ description?: string; key: string; label: string; requires: string[] }>
+  >(() => []),
   resourceTypeOptions: vi.fn<() => Array<{ label: string; value: string }>>(() => []),
   retryAuthorizationRegistry: vi.fn(),
 }));
@@ -88,14 +90,18 @@ describe("ResourceGrantEditor operation changes", () => {
   it("removes the entire grant after its last operation is removed", () => {
     const singleOperationGrant = { ...catalogGrant, operations: ["query"] };
 
-    expect(removeOperationFromGrant([singleOperationGrant], singleOperationGrant, "query")).toEqual([]);
+    expect(removeOperationFromGrant([singleOperationGrant], singleOperationGrant, "query")).toEqual(
+      [],
+    );
   });
 
   it("locks existing grants until the authorization registry is ready", () => {
-    const { container } = render(createElement(ResourceGrantEditor, {
-      onChange: vi.fn(),
-      value: [catalogGrant],
-    }));
+    const { container } = render(
+      createElement(ResourceGrantEditor, {
+        onChange: vi.fn(),
+        value: [catalogGrant],
+      }),
+    );
 
     expect(container.querySelector(".ant-tag-close-icon")).toBeNull();
     expect(container.querySelector(".ant-btn-dangerous")).toBeNull();
@@ -105,12 +111,16 @@ describe("ResourceGrantEditor operation changes", () => {
     registryMocks.catalog = { resourceTypes: [{ id: "resource" }] };
     registryMocks.catalogLoading = false;
     registryMocks.operationsForType.mockImplementation(() => []);
-    registryMocks.resourceTypeOptions.mockReturnValue([{ label: "Data resource", value: "resource" }]);
+    registryMocks.resourceTypeOptions.mockReturnValue([
+      { label: "Data resource", value: "resource" },
+    ]);
 
-    const { container } = render(createElement(ResourceGrantEditor, {
-      onChange: vi.fn(),
-      value: [catalogGrant],
-    }));
+    const { container } = render(
+      createElement(ResourceGrantEditor, {
+        onChange: vi.fn(),
+        value: [catalogGrant],
+      }),
+    );
 
     expect(container.querySelector(".ant-tag-close-icon")).toBeNull();
     expect(container.querySelector(".ant-btn-dangerous")).toBeNull();
@@ -119,14 +129,28 @@ describe("ResourceGrantEditor operation changes", () => {
   function mockCatalogOperations() {
     registryMocks.catalog = { resourceTypes: [{ id: "catalog" }] };
     registryMocks.catalogLoading = false;
-    registryMocks.operationsForType.mockImplementation((type) => type === "catalog"
-      ? [
-        { description: "View the data catalog details.", key: "view_detail", label: "View details", requires: [] },
-        { description: "Create a data catalog.", key: "create", label: "Create", requires: [] },
-        { description: "Modify a data catalog.", key: "modify", label: "Modify", requires: ["view_detail"] },
-      ]
-      : []);
-    registryMocks.resourceTypeOptions.mockReturnValue([{ label: "Data catalog", value: "catalog" }]);
+    registryMocks.operationsForType.mockImplementation((type) =>
+      type === "catalog"
+        ? [
+            {
+              description: "View the data catalog details.",
+              key: "view_detail",
+              label: "View details",
+              requires: [],
+            },
+            { description: "Create a data catalog.", key: "create", label: "Create", requires: [] },
+            {
+              description: "Modify a data catalog.",
+              key: "modify",
+              label: "Modify",
+              requires: ["view_detail"],
+            },
+          ]
+        : [],
+    );
+    registryMocks.resourceTypeOptions.mockReturnValue([
+      { label: "Data catalog", value: "catalog" },
+    ]);
   }
 
   it("uses the card-based operation picker for role grants", () => {
@@ -159,13 +183,16 @@ describe("ResourceGrantEditor operation changes", () => {
       operations: ["view_detail"],
     };
 
-    expect(availableOperationsForGrant(specificGrant, registryMocks.operationsForType("catalog")))
-      .toEqual([{
+    expect(
+      availableOperationsForGrant(specificGrant, registryMocks.operationsForType("catalog")),
+    ).toEqual([
+      {
         description: "Modify a data catalog.",
         key: "modify",
         label: "Modify",
         requires: ["view_detail"],
-      }]);
+      },
+    ]);
   });
 
   it("shows an operation description and locks an existing prerequisite while a selected operation depends on it", async () => {
@@ -175,10 +202,12 @@ describe("ResourceGrantEditor operation changes", () => {
       operations: ["view_detail", "modify"],
     };
 
-    const { container } = render(createElement(ResourceGrantEditor, {
-      onChange: vi.fn(),
-      value: [dependentGrant],
-    }));
+    const { container } = render(
+      createElement(ResourceGrantEditor, {
+        onChange: vi.fn(),
+        value: [dependentGrant],
+      }),
+    );
 
     const viewDetails = screen.getByText("查看").closest(".ant-tag");
     const modify = screen.getByText("修改").closest(".ant-tag");

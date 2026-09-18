@@ -13,6 +13,7 @@
 ### Task 1: Define the menu-order contract
 
 **Files:**
+
 - Modify: `src/app/shell/console-navigation.test.ts`
 
 **Step 1: Write the failing test**
@@ -33,6 +34,7 @@ Expected: FAIL because `observability` currently follows the system-management g
 ### Task 2: Anchor the existing navigation contribution
 
 **Files:**
+
 - Modify: `src/app/shell/console-navigation.tsx`
 - Modify: `src/app/shell/navigation/types.ts`
 - Modify: `src/modules/bkn-trace/navigation.tsx`
@@ -51,6 +53,7 @@ Expected: PASS, including existing permission-filter tests.
 ### Task 3: Verify the affected frontend quality gates
 
 **Files:**
+
 - Verify: `src/app/shell/console-navigation.tsx`
 - Verify: `src/app/shell/console-navigation.test.ts`
 

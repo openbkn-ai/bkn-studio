@@ -10,9 +10,7 @@ import type { KnowledgeNetworkMutationPayload } from "@/modules/knowledge-networ
 export const DEFAULT_KNOWLEDGE_NETWORK_BRANCH = "main";
 export const DEFAULT_KNOWLEDGE_NETWORK_ICON = "icon-dip-graph";
 
-export function toBackendKnowledgeNetworkCreatePayload(
-  input: KnowledgeNetworkMutationPayload,
-) {
+export function toBackendKnowledgeNetworkCreatePayload(input: KnowledgeNetworkMutationPayload) {
   return {
     branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
     color: input.color,
@@ -24,9 +22,7 @@ export function toBackendKnowledgeNetworkCreatePayload(
   };
 }
 
-export function toBackendKnowledgeNetworkUpdatePayload(
-  input: KnowledgeNetworkMutationPayload,
-) {
+export function toBackendKnowledgeNetworkUpdatePayload(input: KnowledgeNetworkMutationPayload) {
   return {
     branch: DEFAULT_KNOWLEDGE_NETWORK_BRANCH,
     color: input.color,

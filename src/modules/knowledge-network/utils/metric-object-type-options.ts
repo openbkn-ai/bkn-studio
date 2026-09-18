@@ -20,7 +20,9 @@ export function filterMetricObjectTypeOptions(
   );
 }
 
-export function createFallbackObjectTypeOption(objectTypeId: string): KnowledgeNetworkObjectTypeRecord {
+export function createFallbackObjectTypeOption(
+  objectTypeId: string,
+): KnowledgeNetworkObjectTypeRecord {
   return {
     color: "#2f54eb",
     conceptGroupIds: [],

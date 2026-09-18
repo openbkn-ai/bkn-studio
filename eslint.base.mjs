@@ -22,10 +22,7 @@ export const reactPluginConfig = {
   },
   rules: {
     ...reactHooks.configs.recommended.rules,
-    "react-refresh/only-export-components": [
-      "warn",
-      { allowConstantExport: true },
-    ],
+    "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
   },
 };
 
@@ -33,9 +30,7 @@ export function createTypeScriptConfig({ typeChecked }) {
   return {
     extends: [
       js.configs.recommended,
-      ...(typeChecked
-        ? tseslint.configs.recommendedTypeChecked
-        : tseslint.configs.recommended),
+      ...(typeChecked ? tseslint.configs.recommendedTypeChecked : tseslint.configs.recommended),
     ],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {

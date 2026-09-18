@@ -366,10 +366,7 @@ test.describe("Execution Factory Lab — UI lifecycle", () => {
     await closeCapabilityDetail(page);
   });
 
-  test("LAB-UI-14: install HTTP capability from catalog market", async ({
-    page,
-    request,
-  }) => {
+  test("LAB-UI-14: install HTTP capability from catalog market", async ({ page, request }) => {
     const toolboxName = buildToolboxName("cat_ui");
     const toolbox = await createToolboxViaApi(request, toolboxName);
     createdBoxIds.add(toolbox.boxId);
@@ -405,7 +402,9 @@ test.describe("Execution Factory Lab — UI lifecycle", () => {
 
     await openCapabilityDetail(page, skillName);
     await expect(
-      capabilityDetailDrawer(page).locator(".ant-descriptions").getByText("Skill content import test"),
+      capabilityDetailDrawer(page)
+        .locator(".ant-descriptions")
+        .getByText("Skill content import test"),
     ).toBeVisible();
     await closeCapabilityDetail(page);
 

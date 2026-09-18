@@ -66,7 +66,10 @@ import {
 } from "@/modules/execution-factory/utils/toolbox-publish-preflight";
 import { listOperatorCategories } from "@/modules/execution-factory/services/category.service";
 import type { McpRecord, McpStatus } from "@/modules/execution-factory/types/mcp";
-import type { OperatorRecord, PublicOperatorStatus } from "@/modules/execution-factory/types/operator";
+import type {
+  OperatorRecord,
+  PublicOperatorStatus,
+} from "@/modules/execution-factory/types/operator";
 import type { SkillRecord, SkillStatus } from "@/modules/execution-factory/types/skill";
 import type { ToolboxRecord, ToolboxStatus } from "@/modules/execution-factory/types/toolbox";
 import {
@@ -331,9 +334,10 @@ export function ExecutionUnitListScene({
       : accessibleTabs;
   }, [accessibleTabs, runtimeConfig.currentUser.permissions]);
   const accessibleToolboxViews = useMemo(
-    () => marketMode
-      ? (["openapi", "function"] as const)
-      : filterAccessibleToolboxViews(runtimeConfig.currentUser.permissions ?? []),
+    () =>
+      marketMode
+        ? (["openapi", "function"] as const)
+        : filterAccessibleToolboxViews(runtimeConfig.currentUser.permissions ?? []),
     [marketMode, runtimeConfig.currentUser.permissions],
   );
   const [activeTab, setActiveTab] = useState<ExecutionUnitTab>(() =>
@@ -357,9 +361,7 @@ export function ExecutionUnitListScene({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const [installedResourceIdsError, setInstalledResourceIdsError] = useState<string | null>(
-    null,
-  );
+  const [installedResourceIdsError, setInstalledResourceIdsError] = useState<string | null>(null);
   const [, setPendingActionKey] = useState<string | null>(null);
   const [detailOperatorId, setDetailOperatorId] = useState<string | null>(null);
   const [detailBoxId, setDetailBoxId] = useState<string | null>(null);
@@ -381,7 +383,9 @@ export function ExecutionUnitListScene({
   const [installedResourceIdsReady, setInstalledResourceIdsReady] = useState(!marketMode);
   const installedSyncAbortRef = useRef<AbortController | null>(null);
   const installedSyncManualRef = useRef(false);
-  const [publishedPermTarget, setPublishedPermTarget] = useState<ObjectAuthorizationTarget | null>(null);
+  const [publishedPermTarget, setPublishedPermTarget] = useState<ObjectAuthorizationTarget | null>(
+    null,
+  );
   const [editMcpId, setEditMcpId] = useState<string | null>(null);
   const [updateSkillPackageTarget, setUpdateSkillPackageTarget] = useState<{
     id: string;
@@ -519,61 +523,64 @@ export function ExecutionUnitListScene({
     openDetail(activeTab, detailId);
   }, [activeTab, marketMode, openDetail, searchParams, setSearchParams]);
 
-  const reloadInstalledResourceIds = useCallback(async (options?: { manual?: boolean }) => {
-    if (!marketMode) {
-      setInstalledResourceIds(new Set());
-      setInstalledResourceIdsReady(true);
-      setInstalledResourceIdsError(null);
-      return;
-    }
-
-    installedSyncAbortRef.current?.abort();
-    const controller = new AbortController();
-    installedSyncAbortRef.current = controller;
-
-    const manual = options?.manual ?? false;
-    if (manual) {
-      installedSyncManualRef.current = true;
-      invalidateLocalResourceIdsCache(activeTab);
-    }
-
-    setInstalledResourceIdsReady(false);
-    if (manual) {
-      setInstalledResourceIdsError(null);
-    }
-
-    try {
-      const ids = await collectLocalResourceIds(activeTab, {
-        signal: controller.signal,
-        singlePage: true,
-        useCache: !manual,
-      });
-
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      setInstalledResourceIds(ids);
-      setInstalledResourceIdsError(null);
-    } catch (error) {
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      setInstalledResourceIds(new Set());
-      if (manual || installedSyncManualRef.current) {
-        setInstalledResourceIdsError(extractRequestErrorMessage(error));
-      }
-    } finally {
-      if (installedSyncAbortRef.current === controller) {
-        installedSyncAbortRef.current = null;
-      }
-
-      if (!controller.signal.aborted) {
+  const reloadInstalledResourceIds = useCallback(
+    async (options?: { manual?: boolean }) => {
+      if (!marketMode) {
+        setInstalledResourceIds(new Set());
         setInstalledResourceIdsReady(true);
+        setInstalledResourceIdsError(null);
+        return;
       }
-    }
-  }, [activeTab, marketMode]);
+
+      installedSyncAbortRef.current?.abort();
+      const controller = new AbortController();
+      installedSyncAbortRef.current = controller;
+
+      const manual = options?.manual ?? false;
+      if (manual) {
+        installedSyncManualRef.current = true;
+        invalidateLocalResourceIdsCache(activeTab);
+      }
+
+      setInstalledResourceIdsReady(false);
+      if (manual) {
+        setInstalledResourceIdsError(null);
+      }
+
+      try {
+        const ids = await collectLocalResourceIds(activeTab, {
+          signal: controller.signal,
+          singlePage: true,
+          useCache: !manual,
+        });
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setInstalledResourceIds(ids);
+        setInstalledResourceIdsError(null);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setInstalledResourceIds(new Set());
+        if (manual || installedSyncManualRef.current) {
+          setInstalledResourceIdsError(extractRequestErrorMessage(error));
+        }
+      } finally {
+        if (installedSyncAbortRef.current === controller) {
+          installedSyncAbortRef.current = null;
+        }
+
+        if (!controller.signal.aborted) {
+          setInstalledResourceIdsReady(true);
+        }
+      }
+    },
+    [activeTab, marketMode],
+  );
 
   useEffect(() => {
     return () => {
@@ -690,9 +697,7 @@ export function ExecutionUnitListScene({
 
       if (activeTab === "mcp") {
         const tabQuery = query as Parameters<typeof listMcps>[0];
-        const result = marketMode
-          ? await listMcpMarket(tabQuery)
-          : await listMcps(tabQuery);
+        const result = marketMode ? await listMcpMarket(tabQuery) : await listMcps(tabQuery);
         return {
           items: result.items.map((item) => mapMcp(item, auditUserDirectory)),
           total: result.total,
@@ -700,9 +705,7 @@ export function ExecutionUnitListScene({
       }
 
       const tabQuery = query as Parameters<typeof listSkills>[0];
-      const result = marketMode
-        ? await listSkillMarket(tabQuery)
-        : await listSkills(tabQuery);
+      const result = marketMode ? await listSkillMarket(tabQuery) : await listSkills(tabQuery);
       return {
         items: result.items.map((item) => mapSkill(item, auditUserDirectory)),
         total: result.total,
@@ -793,9 +796,7 @@ export function ExecutionUnitListScene({
             label: (
               <span className={styles.tabLabel}>
                 {t(getExecutionUnitTabLabelKey(tab))}
-                {count === undefined ? null : (
-                  <span className={styles.tabLabelCount}>{count}</span>
-                )}
+                {count === undefined ? null : <span className={styles.tabLabelCount}>{count}</span>}
               </span>
             ),
           };
@@ -809,7 +810,11 @@ export function ExecutionUnitListScene({
             key: view === "function" ? functionTabKey : openapiTabKey,
             label: (
               <span className={styles.tabLabel}>
-                {t(view === "function" ? "executionFactory.functionToolboxTab" : "executionFactory.openapiToolboxTab")}
+                {t(
+                  view === "function"
+                    ? "executionFactory.functionToolboxTab"
+                    : "executionFactory.openapiToolboxTab",
+                )}
                 {tabCounts[view] === undefined ? null : (
                   <span className={styles.tabLabelCount}>{tabCounts[view]}</span>
                 )}
@@ -817,7 +822,15 @@ export function ExecutionUnitListScene({
             ),
           }));
         }),
-    [accessibleToolboxViews, activeTab, functionTabKey, openapiTabKey, resolvableTabs, t, tabCounts],
+    [
+      accessibleToolboxViews,
+      activeTab,
+      functionTabKey,
+      openapiTabKey,
+      resolvableTabs,
+      t,
+      tabCounts,
+    ],
   );
 
   const statusOptions = useMemo(() => {
@@ -829,17 +842,10 @@ export function ExecutionUnitListScene({
     ];
 
     if (activeTab === "operator") {
-      return [
-        ...base,
-        { value: "editing", label: t("executionFactory.statuses.editing") },
-      ];
+      return [...base, { value: "editing", label: t("executionFactory.statuses.editing") }];
     }
 
-    if (
-      activeTab === "toolbox" ||
-      activeTab === "mcp" ||
-      activeTab === "skill"
-    ) {
+    if (activeTab === "toolbox" || activeTab === "mcp" || activeTab === "skill") {
       return base.filter((item) => item.value !== "editing");
     }
 
@@ -864,11 +870,12 @@ export function ExecutionUnitListScene({
         setDetailOperatorId(id);
         return;
       }
-      const destination = tab === "toolbox"
-        ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
-        : tab === "mcp"
-          ? `/execution-factory/mcp/${id}`
-          : `/execution-factory/skills/${id}`;
+      const destination =
+        tab === "toolbox"
+          ? `/execution-factory/toolboxes/${id}/tools${toolId ? `?toolId=${toolId}` : "?create=1"}`
+          : tab === "mcp"
+            ? `/execution-factory/mcp/${id}`
+            : `/execution-factory/skills/${id}`;
 
       void (async () => {
         try {
@@ -979,7 +986,11 @@ export function ExecutionUnitListScene({
         });
       };
 
-      const runDelete = (titleKey: string, descriptionKey: string, onConfirm: () => Promise<void>) => {
+      const runDelete = (
+        titleKey: string,
+        descriptionKey: string,
+        onConfirm: () => Promise<void>,
+      ) => {
         void modal.confirm({
           title: t(titleKey),
           content: t(descriptionKey, { name: item.name }),
@@ -1310,14 +1321,14 @@ export function ExecutionUnitListScene({
     () =>
       Boolean(
         detailOperatorId ||
-          detailBoxId ||
-          detailMcpId ||
-          detailSkillId ||
-          installTarget ||
-          skillInstallTarget ||
-          publishedPermTarget ||
-          editMcpId ||
-          updateSkillPackageTarget,
+        detailBoxId ||
+        detailMcpId ||
+        detailSkillId ||
+        installTarget ||
+        skillInstallTarget ||
+        publishedPermTarget ||
+        editMcpId ||
+        updateSkillPackageTarget,
       ),
     [
       detailBoxId,
@@ -1389,7 +1400,10 @@ export function ExecutionUnitListScene({
             {installedResourceIdsError ? (
               <Alert
                 action={
-                  <AppButton onClick={() => void reloadInstalledResourceIds({ manual: true })} type="link">
+                  <AppButton
+                    onClick={() => void reloadInstalledResourceIds({ manual: true })}
+                    type="link"
+                  >
                     {t("common.retry")}
                   </AppButton>
                 }
@@ -1415,9 +1429,7 @@ export function ExecutionUnitListScene({
           onChange={(key) => {
             const isFunctionView = key === functionTabKey;
             const isOpenapiView = key === openapiTabKey;
-            const nextTab = (isFunctionView || isOpenapiView
-              ? "toolbox"
-              : key) as ExecutionUnitTab;
+            const nextTab = (isFunctionView || isOpenapiView ? "toolbox" : key) as ExecutionUnitTab;
             const nextParams = new URLSearchParams(searchParams);
 
             if (isFunctionView || isOpenapiView) {

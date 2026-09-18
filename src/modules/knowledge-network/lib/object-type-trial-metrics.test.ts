@@ -7,9 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  filterInstanceTrialLogicProperties,
-} from "@/modules/knowledge-network/lib/object-type-trial-metrics";
+import { filterInstanceTrialLogicProperties } from "@/modules/knowledge-network/lib/object-type-trial-metrics";
 import {
   buildInstanceIdentityFromSampleRow,
   matchesSampleRowKeyword,
@@ -40,10 +38,7 @@ describe("object-type trial helpers", () => {
 
   it("builds instance identity from primary keys only", () => {
     expect(
-      buildInstanceIdentityFromSampleRow(
-        { order_id: 1001, order_no: "NO-1" },
-        ["order_id"],
-      ),
+      buildInstanceIdentityFromSampleRow({ order_id: 1001, order_no: "NO-1" }, ["order_id"]),
     ).toEqual({
       order_id: 1001,
     });

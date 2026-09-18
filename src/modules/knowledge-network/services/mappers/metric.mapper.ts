@@ -22,7 +22,8 @@ import { formatTimestamp } from "@/modules/knowledge-network/services/shared/run
 import { resolveAccountDisplayName } from "@/modules/knowledge-network/services/mappers/account-info";
 import { promoteLegacyActionCondition } from "@/modules/knowledge-network/utils/action-type-condition";
 
-type BackendAnalysisDimension = { display_name?: string; name?: string; property?: string } | string;
+type BackendAnalysisDimension =
+  { display_name?: string; name?: string; property?: string } | string;
 
 function mapAnalysisDimensionName(item: BackendAnalysisDimension): string {
   if (typeof item === "string") {
@@ -109,7 +110,7 @@ function mapCalculationFormula(
     analysisDimensions: mapAnalysisDimensions(value?.analysis_dimensions),
     condition: mapMetricConditionFromBackend(value?.condition),
     groupBy: (value?.group_by ?? [])
-      .map((item) => (typeof item === "string" ? item : item.property ?? ""))
+      .map((item) => (typeof item === "string" ? item : (item.property ?? "")))
       .filter(Boolean),
     having: value?.having
       ? {
@@ -129,15 +130,14 @@ function mapCalculationFormula(
   };
 }
 
-function mapTimeDimension(
-  value: BackendMetric["time_dimension"],
-): MetricTimeDimension | undefined {
+function mapTimeDimension(value: BackendMetric["time_dimension"]): MetricTimeDimension | undefined {
   if (!value?.property) {
     return undefined;
   }
 
   return {
-    defaultRangePolicy: (value.default_range_policy ?? "last_24h") as MetricTimeDimension["defaultRangePolicy"],
+    defaultRangePolicy: (value.default_range_policy ??
+      "last_24h") as MetricTimeDimension["defaultRangePolicy"],
     property: value.property,
   };
 }

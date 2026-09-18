@@ -101,7 +101,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.createTitle",
       },
     },
-    element: withRouteLoading(<UnitFormPage mode="create" />, ["execution-factory:operator:create"]),
+    element: withRouteLoading(<UnitFormPage mode="create" />, [
+      "execution-factory:operator:create",
+    ]),
   },
   {
     path: "execution-factory/units/:operatorId/edit",
@@ -139,7 +141,10 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxEditTitle",
       },
     },
-    element: withRouteLoading(<ToolboxFormPage mode="edit" />, ["execution-factory:toolbox:edit", "execution-factory:function:edit"]),
+    element: withRouteLoading(<ToolboxFormPage mode="edit" />, [
+      "execution-factory:toolbox:edit",
+      "execution-factory:function:edit",
+    ]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools",
@@ -150,7 +155,10 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.toolboxToolsPageTitle",
       },
     },
-    element: withRouteLoading(<ToolboxToolsPage />, ["execution-factory:toolbox:view", "execution-factory:function:view"]),
+    element: withRouteLoading(<ToolboxToolsPage />, [
+      "execution-factory:toolbox:view",
+      "execution-factory:function:view",
+    ]),
   },
   {
     path: "execution-factory/toolboxes/:boxId/tools/:toolId/edit",
@@ -172,10 +180,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpListTitle",
       },
     },
-    element: withRouteLoading(
-      <ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp" />,
-      ["execution-factory:mcp:view"],
-    ),
+    element: withRouteLoading(<ExecutionUnitTabRedirect activeTab="mcp" migrationFrom="mcp" />, [
+      "execution-factory:mcp:view",
+    ]),
   },
   {
     path: "execution-factory/mcp/new",
@@ -186,10 +193,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.mcpCreateTitle",
       },
     },
-    element: withRouteLoading(
-      <ExecutionUnitCreatePage activeTab="mcp" />,
-      ["execution-factory:mcp:create"],
-    ),
+    element: withRouteLoading(<ExecutionUnitCreatePage activeTab="mcp" />, [
+      "execution-factory:mcp:create",
+    ]),
   },
   {
     path: "execution-factory/mcp/:mcpId",
@@ -225,10 +231,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.skillCreateTitle",
       },
     },
-    element: withRouteLoading(
-      <ExecutionUnitCreatePage activeTab="skill" />,
-      ["execution-factory:skill:create"],
-    ),
+    element: withRouteLoading(<ExecutionUnitCreatePage activeTab="skill" />, [
+      "execution-factory:skill:create",
+    ]),
   },
   {
     path: "execution-factory/skills/:skillId/edit",
@@ -272,10 +277,9 @@ export const executionFactoryRoutes: RouteObject[] = [
         titleKey: "executionFactory.sandboxRuntimeTitle",
       },
     },
-    element: withRouteLoading(
-      <SandboxRuntimePage />,
-      ["execution-factory-lab:sandbox-runtime:view"],
-    ),
+    element: withRouteLoading(<SandboxRuntimePage />, [
+      "execution-factory-lab:sandbox-runtime:view",
+    ]),
   },
 ];
 

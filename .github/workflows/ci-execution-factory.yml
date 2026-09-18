@@ -12,15 +12,15 @@ name: ci-execution-factory
 on:
   pull_request:
   push:
-    branches: ['**']
+    branches: ["**"]
     paths:
-      - 'src/modules/execution-factory/**'
-      - 'tests/execution-factory/**'
-      - 'specs/execution-factory/**'
-      - 'vite.config.ts'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/ci-execution-factory.yml'
+      - "src/modules/execution-factory/**"
+      - "tests/execution-factory/**"
+      - "specs/execution-factory/**"
+      - "vite.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/ci-execution-factory.yml"
 
 jobs:
   vitest-l1:

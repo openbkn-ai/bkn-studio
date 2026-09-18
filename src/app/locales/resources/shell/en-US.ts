@@ -46,8 +46,10 @@ export const shellEnUS = {
       executionUnitManagement: "Execution Units",
       allExecutionUnits: "All Execution Units",
       executionFactorySandboxRuntime: "Sandbox Runtime",
-      executionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and skills on this platform",
-      allExecutionUnitsTooltip: "Browse the market catalog and introduce resources to this platform",
+      executionUnitManagementTooltip:
+        "Manage operators, toolboxes, MCP servers, and skills on this platform",
+      allExecutionUnitsTooltip:
+        "Browse the market catalog and introduce resources to this platform",
       modelResources: "Model Management",
       quotaManagement: "Quota Management",
       modelStatistics: "Model Statistics",

@@ -44,10 +44,7 @@ export function McpToolDebugModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<McpToolDebugResult | null>(null);
 
-  const generatedBody = useMemo(
-    () => buildDefaultDebugBody({ inputSchema }),
-    [inputSchema],
-  );
+  const generatedBody = useMemo(() => buildDefaultDebugBody({ inputSchema }), [inputSchema]);
 
   useEffect(() => {
     if (!open) {
@@ -101,7 +98,9 @@ export function McpToolDebugModal({
       title={t("executionFactory.mcpToolDebugTitle", { tool: toolName })}
       width="min(1040px, 92vw)"
     >
-      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t("executionFactory.debugSampleHint")}
+      </Typography.Paragraph>
       <Form form={form} layout="vertical">
         <Form.Item label={t("executionFactory.debugRequestBody")} name="argumentsPayload">
           <JsonEditor height={180} />

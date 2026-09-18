@@ -11,12 +11,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
 
-const {
-  getRecordMock,
-  getScheduleMock,
-  messageErrorMock,
-  updateScheduleMock,
-} = vi.hoisted(() => ({
+const { getRecordMock, getScheduleMock, messageErrorMock, updateScheduleMock } = vi.hoisted(() => ({
   getRecordMock: vi.fn(),
   getScheduleMock: vi.fn(),
   messageErrorMock: vi.fn(),
@@ -59,11 +54,12 @@ vi.mock("@/modules/data-connect/components/HealthCheckScheduleFormModal", () => 
     onSubmit: (input: { mode: "disabled" }) => Promise<void>;
     open: boolean;
     schedule: { expectedUpdateTime: number };
-  }) => open ? (
-    <button onClick={() => void onSubmit({ mode: "disabled" })} type="button">
-      submit schedule {schedule.expectedUpdateTime}
-    </button>
-  ) : null,
+  }) =>
+    open ? (
+      <button onClick={() => void onSubmit({ mode: "disabled" })} type="button">
+        submit schedule {schedule.expectedUpdateTime}
+      </button>
+    ) : null,
 }));
 
 const record = {
@@ -104,9 +100,14 @@ const schedule = (expectedUpdateTime: number) => ({
 describe("DataConnectDetailDrawer", () => {
   beforeAll(() => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(), addListener: vi.fn(), dispatchEvent: vi.fn(),
-      matches: false, media: query, onchange: null,
-      removeEventListener: vi.fn(), removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches: false,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
     }));
   });
 
@@ -115,9 +116,7 @@ describe("DataConnectDetailDrawer", () => {
     getScheduleMock.mockReset();
     updateScheduleMock.mockReset();
     getRecordMock.mockResolvedValue(record);
-    getScheduleMock
-      .mockResolvedValueOnce(schedule(100))
-      .mockResolvedValue(schedule(200));
+    getScheduleMock.mockResolvedValueOnce(schedule(100)).mockResolvedValue(schedule(200));
     updateScheduleMock
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } })
       .mockResolvedValue(schedule(300));
@@ -127,12 +126,7 @@ describe("DataConnectDetailDrawer", () => {
     getRecordMock.mockResolvedValue({ ...record, operations: ["view_detail"] });
 
     render(
-      <DataConnectDetailDrawer
-        connectorTypes={[]}
-        onClose={vi.fn()}
-        open
-        recordId="catalog-1"
-      />,
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
     );
 
     await screen.findByText("Orders");
@@ -141,12 +135,7 @@ describe("DataConnectDetailDrawer", () => {
 
   it("refreshes the schedule version after a conflict before retrying", async () => {
     render(
-      <DataConnectDetailDrawer
-        connectorTypes={[]}
-        onClose={vi.fn()}
-        open
-        recordId="catalog-1"
-      />,
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
@@ -156,12 +145,7 @@ describe("DataConnectDetailDrawer", () => {
     fireEvent.click(screen.getByRole("button", { name: "submit schedule 200" }));
 
     await waitFor(() => {
-      expect(updateScheduleMock).toHaveBeenNthCalledWith(
-        2,
-        "catalog-1",
-        { mode: "disabled" },
-        200,
-      );
+      expect(updateScheduleMock).toHaveBeenNthCalledWith(2, "catalog-1", { mode: "disabled" }, 200);
     });
     expect(getScheduleMock).toHaveBeenCalledTimes(2);
   });
@@ -172,9 +156,10 @@ describe("DataConnectDetailDrawer", () => {
       .mockReset()
       .mockResolvedValueOnce(schedule(100))
       .mockImplementationOnce(
-        () => new Promise((resolve) => {
-          resolveConflictRefresh = resolve;
-        }),
+        () =>
+          new Promise((resolve) => {
+            resolveConflictRefresh = resolve;
+          }),
       )
       .mockResolvedValueOnce({ ...schedule(300), catalogId: "catalog-2" });
     updateScheduleMock
@@ -182,12 +167,7 @@ describe("DataConnectDetailDrawer", () => {
       .mockRejectedValueOnce({ isAxiosError: true, response: { status: 409 } });
 
     const { rerender } = render(
-      <DataConnectDetailDrawer
-        connectorTypes={[]}
-        onClose={vi.fn()}
-        open
-        recordId="catalog-1"
-      />,
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-1" />,
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "common.edit" }));
@@ -195,16 +175,9 @@ describe("DataConnectDetailDrawer", () => {
     await waitFor(() => expect(getScheduleMock).toHaveBeenCalledTimes(2));
 
     rerender(
-      <DataConnectDetailDrawer
-        connectorTypes={[]}
-        onClose={vi.fn()}
-        open
-        recordId="catalog-2"
-      />,
+      <DataConnectDetailDrawer connectorTypes={[]} onClose={vi.fn()} open recordId="catalog-2" />,
     );
-    expect(
-      await screen.findByRole("button", { name: "submit schedule 300" }),
-    ).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "submit schedule 300" })).toBeTruthy();
 
     act(() => {
       resolveConflictRefresh(schedule(200));
@@ -253,8 +226,9 @@ describe("DataConnectDetailDrawer", () => {
     expect(screen.getByText("dataConnect.sensitiveValueHidden")).toBeTruthy();
     const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
     expect(configSection).not.toBeNull();
-    const values = [...configSection!.querySelectorAll('[class*="configItem"]')]
-      .map((item) => item.textContent);
+    const values = [...configSection!.querySelectorAll('[class*="configItem"]')].map(
+      (item) => item.textContent,
+    );
     expect(values).toEqual([
       expect.stringContaining("db.example.com"),
       expect.stringContaining("5432"),

@@ -203,9 +203,11 @@ export const executionFactoryLabEnUS = {
     skillReplaceSuccess: "SKILL package replaced",
     republishSuccess: "Version republished",
     importOpenApiBatchTitle: "OpenAPI import complete",
-    importOpenApiBatchHint: "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
+    importOpenApiBatchHint:
+      "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
     importOpenApiBatchHint_one: "Imported {{count}} capability. It is opened in the editor.",
-    importOpenApiBatchHint_other: "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
+    importOpenApiBatchHint_other:
+      "Imported {{count}} capabilities. The first one is opened; others are highlighted in the list.",
     importOpenApiEmpty: "No capabilities were imported from this OpenAPI document.",
     stepDraft: "Draft",
     stepDebug: "Debug",
@@ -251,7 +253,8 @@ export const executionFactoryLabEnUS = {
     destructiveRepublishImpact: "Version {{version}} will become the active published release.",
     destructiveRepublishImpactPublished:
       "Callers using the current release may see different behavior after rollback.",
-    destructiveSkillReplaceImpact: "The SKILL package will be replaced in place; file contents will change.",
+    destructiveSkillReplaceImpact:
+      "The SKILL package will be replaced in place; file contents will change.",
     destructiveSkillReplaceImpactPublished:
       "Agents and workflows using this SKILL may behave differently after the upgrade.",
     destructiveImpactOrchestration:
@@ -271,8 +274,7 @@ export const executionFactoryLabEnUS = {
     operationDescTitle: "Operation notes",
     operationDescPublish:
       "Publish makes the current capability available to workflows, agents, and integrations.",
-    operationDescOffline:
-      "Unpublishing rejects new calls until the capability is published again.",
+    operationDescOffline: "Unpublishing rejects new calls until the capability is published again.",
     operationDescEdit:
       "Editing changes the capability metadata or implementation draft; publish again if callers should use the new behavior.",
     operationDescVersion:

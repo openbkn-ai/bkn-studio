@@ -35,7 +35,8 @@ export const graphExplorerPart = {
         failed: "failed: {{message}}",
       },
       prompt: {
-        intro: "You are a knowledge-network graph exploration assistant. The user is looking at a canvas of instances. You find instances with tools, draw them on the canvas, expand their neighbours or run Cypher, and finish with one or two sentences on what the canvas gained.",
+        intro:
+          "You are a knowledge-network graph exploration assistant. The user is looking at a canvas of instances. You find instances with tools, draw them on the canvas, expand their neighbours or run Cypher, and finish with one or two sentences on what the canvas gained.",
         rulesHeader: "Rules:",
         rules: [
           "Instance ids look like `<object type id>-<primary key>`; ids returned by a tool can be passed to other tools as they are.",
@@ -63,16 +64,19 @@ export const graphExplorerPart = {
       parseReturn: "Leave out RETURN / ORDER BY / SKIP / LIMIT; the page completes them",
       parseNoNodes: "No node pattern found, e.g. (k:knowledge)",
       parseUnlabeled: "Variable {{variable}} has no label; write ({{variable}}:ObjectType)",
-      unknownLabel: "Object type \"{{label}}\" does not exist",
-      unknownRelation: "Relation type \"{{relation}}\" does not exist",
-      aiPlaceholder: "Describe the relationship in one sentence, e.g. which blocks does 问界M7 cite",
+      unknownLabel: 'Object type "{{label}}" does not exist',
+      unknownRelation: 'Relation type "{{relation}}" does not exist',
+      aiPlaceholder:
+        "Describe the relationship in one sentence, e.g. which blocks does 问界M7 cite",
       aiGenerate: "Generate with AI",
-      aiHint: "The default LLM writes a MATCH pattern from this network's object and relation types; edit it before running if needed.",
+      aiHint:
+        "The default LLM writes a MATCH pattern from this network's object and relation types; edit it before running if needed.",
       aiNoModel: "No LLM is available in the model factory",
       aiEmpty: "The model did not produce a usable MATCH pattern",
       aiModel: "Model",
       prompt: {
-        intro: "You are a knowledge-network graph query assistant. Rewrite the user's question as one openCypher MATCH pattern and output the pattern only.",
+        intro:
+          "You are a knowledge-network graph query assistant. Rewrite the user's question as one openCypher MATCH pattern and output the pattern only.",
         rulesHeader: "Hard rules:",
         rules: [
           "Write only one MATCH … and an optional WHERE …; never write RETURN, ORDER BY, SKIP or LIMIT, and do not explain.",
@@ -99,9 +103,11 @@ export const graphExplorerPart = {
       locatePlaceholder: "Primary key value; composite keys comma-separated in order",
       locateEmpty: "No instance with that primary key",
       idsTitle: "Subgraph from an ID list",
-      idsPlaceholder: "One ID per line or comma-separated. Paste instance IDs (e.g. product-xxxx, the \"Instance ID\" in the node drawer), or select an object type above and paste raw primary-key values.",
+      idsPlaceholder:
+        'One ID per line or comma-separated. Paste instance IDs (e.g. product-xxxx, the "Instance ID" in the node drawer), or select an object type above and paste raw primary-key values.',
       idsRun: "Show subgraph",
-      idsUnknown: "Unrecognised IDs: {{list}} (not in object-type-key form and no object type selected)",
+      idsUnknown:
+        "Unrecognised IDs: {{list}} (not in object-type-key form and no object type selected)",
       idsSkipped: "{{count}} ids are not from this network and were skipped: {{list}}",
       idsSkipped_one: "{{count}} id is not from this network and was skipped: {{list}}",
       idsSkipped_other: "{{count}} ids are not from this network and were skipped: {{list}}",
@@ -120,30 +126,39 @@ export const graphExplorerPart = {
       maxInstancesPerType: "Instances per type",
       maxInstancesPerTypeHelp: "How many instances each matched object type may return.",
       maxObjectTypes: "Object type cap",
-      maxObjectTypesHelp: "Object types are recalled for the query first; only the top N get instance recall. A strict cap, except that pinned object types are never cut.",
+      maxObjectTypesHelp:
+        "Object types are recalled for the query first; only the top N get instance recall. A strict cap, except that pinned object types are never cut.",
       rrf: "Recall fusion (RRF)",
       rrfIntro:
         "Semantic search recalls instances through two channels at once: vector (by meaning, across languages) and full text (by matching words). Each channel ranks its hits, then the ranks are fused by RRF: score = Σ 1/(k + rank), so earlier ranks score higher; reranking is optional. The defaults already use this fusion; these controls let you tune it.",
       enableRrf: "RRF fusion",
-      enableRrfHelp: "On: knn and match run as two queries fused by rank. Off: one OR query where unbounded BM25 scores swamp vector scores, so vector hits rarely make the candidate set. Escape hatch only.",
+      enableRrfHelp:
+        "On: knn and match run as two queries fused by rank. Off: one OR query where unbounded BM25 scores swamp vector scores, so vector hits rarely make the candidate set. Escape hatch only.",
       enableKnn: "Vector recall",
-      enableKnnHelp: "Whether vector conditions are sent. Vectors recall across languages and phrasings, but each knn condition embeds the query once — the only pay-per-call step. Off leaves full text only.",
+      enableKnnHelp:
+        "Whether vector conditions are sent. Vectors recall across languages and phrasings, but each knn condition embeds the query once — the only pay-per-call step. Off leaves full text only.",
       rrfK: "RRF k",
-      rrfKHelp: "Fusion constant: score = Σ 1/(k + rank). Larger k is smoother (gaps between top ranks shrink). 60 is the common value in literature and industry and rarely needs retuning.",
+      rrfKHelp:
+        "Fusion constant: score = Σ 1/(k + rank). Larger k is smoother (gaps between top ranks shrink). 60 is the common value in literature and industry and rarely needs retuning.",
       knnWeight: "Vector weight",
-      knnWeightHelp: "Weight of the vector channel in the fusion (0–1); full text takes 1 − value. 1 trusts vectors only, 0 trusts full text only. Vectors suit short Chinese names and cross-lingual phrasing; full text suits codes and numbers. Moving off 0.5 lowers object types without vector fields as a whole — the declared preference, not a defect.",
+      knnWeightHelp:
+        "Weight of the vector channel in the fusion (0–1); full text takes 1 − value. 1 trusts vectors only, 0 trusts full text only. Vectors suit short Chinese names and cross-lingual phrasing; full text suits codes and numbers. Moving off 0.5 lowers object types without vector fields as a whole — the declared preference, not a defect.",
       knnWeightValue: "vector {{knn}} · text {{text}}",
       initialCandidateCount: "Initial candidates",
-      initialCandidateCountHelp: "Candidates taken per channel before fusion. Higher recalls more and is slower.",
+      initialCandidateCountHelp:
+        "Candidates taken per channel before fusion. Higher recalls more and is slower.",
       minDirectRelevance: "Min direct relevance",
-      minDirectRelevanceHelp: "Instances below this relevance (0–1) are dropped. When the store provides _score it wins; this is the fallback.",
+      minDirectRelevanceHelp:
+        "Instances below this relevance (0–1) are dropped. When the store provides _score it wins; this is the fallback.",
       rerankMode: "Rerank",
-      rerankModeHelp: "Off: RRF rank only. On: one extra cross-encoder pass judges query–instance relevance and reorders; it tells apart cases fusion cannot, costs 100–400 ms and needs a registered reranker (falls back silently). Shadow: returns the fused order but runs the reranker and records the difference, for evidence before switching on.",
+      rerankModeHelp:
+        "Off: RRF rank only. On: one extra cross-encoder pass judges query–instance relevance and reorders; it tells apart cases fusion cannot, costs 100–400 ms and needs a registered reranker (falls back silently). Shadow: returns the fused order but runs the reranker and records the difference, for evidence before switching on.",
       rerankOff: "Off",
       rerankShadow: "Shadow",
       rerankOn: "On",
       viaKnSearch: "Custom fusion parameters active",
-      viaKnSearchHelp: "search_instance runs this same two-channel fusion but does not accept these parameters in its request; once changed, the page sends them as retrieval_config through the configurable kn_search endpoint. The returned instances have the same shape.",
+      viaKnSearchHelp:
+        "search_instance runs this same two-channel fusion but does not accept these parameters in its request; once changed, the page sends them as retrieval_config through the configurable kn_search endpoint. The returned instances have the same shape.",
     },
     condition: {
       objectType: "Object type",
@@ -171,8 +186,10 @@ export const graphExplorerPart = {
         ready: "{{nodes}} nodes · {{edges}} edges",
         error: "Load failed: {{message}}",
       },
-      missingParams: "The address needs kn and ids, e.g. graph-view.html?kn=<network id>&ids=<instance id,…>",
-      missingToken: "No access token: configure graph-view.config.js at deploy time, or add a token query parameter",
+      missingParams:
+        "The address needs kn and ids, e.g. graph-view.html?kn=<network id>&ids=<instance id,…>",
+      missingToken:
+        "No access token: configure graph-view.config.js at deploy time, or add a token query parameter",
       unknownIds: "Unrecognised ids: {{list}}",
       missing: "{{count}} ids have no instance",
       missing_one: "{{count}} id has no instance",
@@ -211,11 +228,13 @@ export const graphExplorerPart = {
       expandSidebar: "Expand sidebar",
       groupByConceptGroup: "Group by concept group",
       dragMode: "Drag",
-      dragModeHelp: "Single: only the dragged node moves (a selection moves together). Linked: direct neighbours follow half the distance, second-ring nodes a fifth; pinned nodes stay.",
+      dragModeHelp:
+        "Single: only the dragged node moves (a selection moves together). Linked: direct neighbours follow half the distance, second-ring nodes a fifth; pinned nodes stay.",
       dragSingle: "Single",
       dragLinked: "Linked",
       removeSelected: "Remove selected",
-      removeSelectedHelp: "Shift+click or Shift+drag to select several nodes, then remove them (Delete key does the same).",
+      removeSelectedHelp:
+        "Shift+click or Shift+drag to select several nodes, then remove them (Delete key does the same).",
       fit: "Fit view",
       clear: "Clear canvas",
       clearCache: "Clear cache",
@@ -245,11 +264,15 @@ export const graphExplorerPart = {
     toast: {
       noNeighbors: "This node has no neighbours in that direction",
       pathNotFound: "Not connected within {{hops}} hops",
-      pathNotFoundLimited: "Explored only {{a}} hops from the start and {{b}} from the end, still not connected (wider queries were refused by the backend)",
+      pathNotFoundLimited:
+        "Explored only {{a}} hops from the start and {{b}} from the end, still not connected (wider queries were refused by the backend)",
       expandSeedsCapped: "At most {{limit}} nodes are expanded at once; the rest were skipped",
-      expandPartial: "{{count}} object types have no reachable neighbours and were skipped: {{list}}",
-      expandPartial_one: "{{count}} object type has no reachable neighbours and was skipped: {{list}}",
-      expandPartial_other: "{{count}} object types have no reachable neighbours and were skipped: {{list}}",
+      expandPartial:
+        "{{count}} object types have no reachable neighbours and were skipped: {{list}}",
+      expandPartial_one:
+        "{{count}} object type has no reachable neighbours and was skipped: {{list}}",
+      expandPartial_other:
+        "{{count}} object types have no reachable neighbours and were skipped: {{list}}",
       linkCopied: "Link copied ({{count}} nodes)",
       linkCopied_one: "Link copied ({{count}} node)",
       linkCopied_other: "Link copied ({{count}} nodes)",
@@ -258,8 +281,10 @@ export const graphExplorerPart = {
       pathFound: "Found a {{hops}}-hop path",
       pathNeedBoth: "Set both a start and an end node from the context menu first",
       limitReached: "The canvas has reached the limit of {{limit}} nodes; remove some first",
-      limitTruncated: "The canvas holds at most {{limit}} nodes; {{dropped}} from this batch were left out. Remove some nodes and expand again to continue",
-      missingPrimaryKey: "Object type \"{{name}}\" has no primary key; it cannot be added to the canvas",
+      limitTruncated:
+        "The canvas holds at most {{limit}} nodes; {{dropped}} from this batch were left out. Remove some nodes and expand again to continue",
+      missingPrimaryKey:
+        'Object type "{{name}}" has no primary key; it cannot be added to the canvas',
       cacheRestored: "Restored the previous canvas",
       cacheSaveFailed: "Local storage is full; the canvas was not saved",
       cacheCleared: "Local cache cleared",
@@ -310,6 +335,7 @@ export const graphExplorerPart = {
     restore: {
       clear: "Clear",
     },
-    emptyCanvas: "Search for instances on the left and add them to the canvas, or right-click a node to expand its neighbours",
+    emptyCanvas:
+      "Search for instances on the left and add them to the canvas, or right-click a node to expand its neighbours",
   },
 } as const;

@@ -162,10 +162,7 @@ export function QuickApiContractEditor() {
                     label={t("executionFactory.quickApiSchemaJson")}
                     name="requestBodySchemaText"
                   >
-                    <Input.TextArea
-                      placeholder='{"type":"object","properties":{}}'
-                      rows={5}
-                    />
+                    <Input.TextArea placeholder='{"type":"object","properties":{}}' rows={5} />
                   </Form.Item>
                 ),
               },

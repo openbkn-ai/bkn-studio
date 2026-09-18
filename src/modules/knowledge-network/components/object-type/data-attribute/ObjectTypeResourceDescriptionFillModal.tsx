@@ -60,10 +60,7 @@ export function ObjectTypeResourceDescriptionFillModal({
     candidate.status === "fillable" || candidate.status === "updatable";
 
   const renderStatus = (status: ObjectTypeDescriptionFillStatus) => {
-    const config: Record<
-      ObjectTypeDescriptionFillStatus,
-      { color?: string; label: string }
-    > = {
+    const config: Record<ObjectTypeDescriptionFillStatus, { color?: string; label: string }> = {
       fillable: {
         color: "blue",
         label: t("knowledgeNetwork.objectTypeDescriptionFillStatusFillable"),
@@ -161,9 +158,7 @@ export function ObjectTypeResourceDescriptionFillModal({
       />
 
       <div className={styles.summary}>
-        <span>
-          {t("knowledgeNetwork.objectTypeDescriptionFillSummary", summary)}
-        </span>
+        <span>{t("knowledgeNetwork.objectTypeDescriptionFillSummary", summary)}</span>
       </div>
 
       <Table<ObjectTypeDescriptionFillCandidate>

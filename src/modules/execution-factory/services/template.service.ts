@@ -12,13 +12,12 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
 export async function getPythonCodeTemplate(): Promise<string> {
   if (useMock) {
-    return "def handler(event):\n    \"\"\"Handle incoming event payload.\"\"\"\n    return event\n";
+    return 'def handler(event):\n    """Handle incoming event payload."""\n    return event\n';
   }
 
   const response = await http.get<{
     code_template?: string;
-  }>(`${API_PREFIX}/template/python`, {
-  });
+  }>(`${API_PREFIX}/template/python`, {});
 
   return response.data.code_template ?? "";
 }

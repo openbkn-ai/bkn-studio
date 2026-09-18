@@ -67,10 +67,7 @@ describe("capability-binding.service", () => {
       name: "计算交期",
       status: "missing",
     });
-    const [path, config] = getMock.mock.calls[0] as [
-      string,
-      { params: Record<string, unknown> },
-    ];
+    const [path, config] = getMock.mock.calls[0] as [string, { params: Record<string, unknown> }];
     expect(path).toBe("/bkn-backend/v1/knowledge-networks/kn-1/capabilities");
     expect(config.params).toMatchObject({ branch: "main", type: "function" });
   });
@@ -89,11 +86,7 @@ describe("capability-binding.service", () => {
 
     const result = await listKnowledgeNetworkCapabilities("kn-1", { type: "function" });
 
-    expect(result.entries.map((entry) => entry.metadataType)).toEqual([
-      "openapi",
-      "function",
-      "",
-    ]);
+    expect(result.entries.map((entry) => entry.metadataType)).toEqual(["openapi", "function", ""]);
   });
 
   it("treats a response without metadata_available as metadata being present", async () => {
@@ -138,9 +131,7 @@ describe("capability-binding.service", () => {
             box_id: "box-1",
             capability_id: "tool-1",
             name: "采购单风险跟进",
-            sources: [
-              { kind: "action_type", refs: [{ id: "at-1", name: "测试" }] },
-            ],
+            sources: [{ kind: "action_type", refs: [{ id: "at-1", name: "测试" }] }],
           },
         ],
         total_count: 1,

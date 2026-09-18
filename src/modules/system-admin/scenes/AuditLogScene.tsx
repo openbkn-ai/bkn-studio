@@ -30,15 +30,8 @@ import {
   listCachedUsers,
   primeUserLookupCache,
 } from "@/modules/system-admin/utils/audit-lookup-cache";
-import {
-  listAuditLogs,
-  listUsersPage,
-} from "@/modules/system-admin/services/admin.service";
-import type {
-  AdminDepartment,
-  AdminRole,
-  AuditLog,
-} from "@/modules/system-admin/types/admin";
+import { listAuditLogs, listUsersPage } from "@/modules/system-admin/services/admin.service";
+import type { AdminDepartment, AdminRole, AuditLog } from "@/modules/system-admin/types/admin";
 import {
   applyAuditLogFilters,
   readAuditLogFilters,
@@ -210,10 +203,7 @@ export function AuditLogScene() {
         if (current.some((item) => item.value === user.id)) {
           return current;
         }
-        return [
-          { label: userOptionLabel(user.name, user.account), value: user.id },
-          ...current,
-        ];
+        return [{ label: userOptionLabel(user.name, user.account), value: user.id }, ...current];
       });
       setLookupRevision((value) => value + 1);
     });
@@ -238,10 +228,7 @@ export function AuditLogScene() {
           value: user.id,
         }));
         const selectedUser = urlFilters.actorId ? getCachedUserSync(urlFilters.actorId) : undefined;
-        if (
-          selectedUser &&
-          !options.some((item) => item.value === selectedUser.id)
-        ) {
+        if (selectedUser && !options.some((item) => item.value === selectedUser.id)) {
           options.unshift({
             label: userOptionLabel(selectedUser.name, selectedUser.account),
             value: selectedUser.id,
@@ -302,7 +289,9 @@ export function AuditLogScene() {
             <Tooltip title={`${log.method} ${label}`}>
               <span className={styles.auditActionChip}>
                 <Tag className={styles.roleTag}>{log.method}</Tag>
-                <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>{label}</span>
+                <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
+                  {label}
+                </span>
               </span>
             </Tooltip>
           );
@@ -317,7 +306,9 @@ export function AuditLogScene() {
           const displayName = getTargetLabel(log);
           if (!log.targetId) {
             return displayName ? (
-              <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>{displayName}</span>
+              <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
+                {displayName}
+              </span>
             ) : (
               <span className={styles.mutedText}>—</span>
             );
@@ -325,7 +316,9 @@ export function AuditLogScene() {
           if (displayName) {
             return (
               <Tooltip title={log.targetId}>
-                <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>{displayName}</span>
+                <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
+                  {displayName}
+                </span>
               </Tooltip>
             );
           }
@@ -350,7 +343,9 @@ export function AuditLogScene() {
                 <span className={[styles.modeText, layoutStyles.ellipsisCell].join(" ")}>
                   {userName(value)}
                 </span>
-                {actor?.builtin ? <Tag className={styles.roleTag}>{t("systemAdmin.users.builtin")}</Tag> : null}
+                {actor?.builtin ? (
+                  <Tag className={styles.roleTag}>{t("systemAdmin.users.builtin")}</Tag>
+                ) : null}
               </span>
             </Tooltip>
           );
@@ -387,7 +382,9 @@ export function AuditLogScene() {
         width: 128,
         render: (value: string) => (
           <Tooltip title={value || undefined}>
-            <span className={[styles.subText, layoutStyles.ellipsisCell].join(" ")}>{value || "—"}</span>
+            <span className={[styles.subText, layoutStyles.ellipsisCell].join(" ")}>
+              {value || "—"}
+            </span>
           </Tooltip>
         ),
       },
@@ -429,7 +426,9 @@ export function AuditLogScene() {
           <aside className={[layoutStyles.deptPanel, layoutStyles.auditFilterPanel].join(" ")}>
             <div className={layoutStyles.deptPanelHead}>
               <h2 className={layoutStyles.deptPanelTitle}>{t("systemAdmin.audit.title")}</h2>
-              <span className={layoutStyles.auditDescription}>{t("systemAdmin.audit.description")}</span>
+              <span className={layoutStyles.auditDescription}>
+                {t("systemAdmin.audit.description")}
+              </span>
             </div>
             <Select
               allowClear
@@ -500,7 +499,11 @@ export function AuditLogScene() {
               <div className={layoutStyles.userPanelToolbar}>
                 <div className={layoutStyles.userPanelLeading}>
                   <div className={styles.toolbarActions}>
-                    <AppButton icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+                    <AppButton
+                      icon={<ReloadOutlined />}
+                      loading={loading}
+                      onClick={() => void load()}
+                    >
                       {t("common.refresh")}
                     </AppButton>
                   </div>
@@ -517,7 +520,10 @@ export function AuditLogScene() {
               />
             ) : null}
 
-            <div className={[layoutStyles.tableSection, layoutStyles.auditTableSection].join(" ")} ref={tableSectionRef}>
+            <div
+              className={[layoutStyles.tableSection, layoutStyles.auditTableSection].join(" ")}
+              ref={tableSectionRef}
+            >
               {loadError ? (
                 <Alert
                   action={

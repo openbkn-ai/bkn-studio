@@ -135,12 +135,7 @@ test.describe("Execution Factory — Version & catalog UI E2E flows", () => {
     createdOperators.push(operator);
     await publishOperatorViaApi(request, operator);
 
-    await updateOperatorViaApi(
-      request,
-      operator,
-      operator.name,
-      `Updated at ${Date.now()}`,
-    );
+    await updateOperatorViaApi(request, operator, operator.name, `Updated at ${Date.now()}`);
     await publishOperatorViaApi(request, operator);
 
     const history = await listOperatorHistoryViaApi(request, operator.operatorId);

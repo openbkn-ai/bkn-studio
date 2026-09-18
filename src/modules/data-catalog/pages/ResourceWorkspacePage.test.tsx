@@ -10,7 +10,11 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/data-catalog/scenes/ResourceWorkspaceScene", () => ({
-  ResourceWorkspaceScene: ({ onTabChange, resourceId, tab }: {
+  ResourceWorkspaceScene: ({
+    onTabChange,
+    resourceId,
+    tab,
+  }: {
     onTabChange: (tab: "detail" | "index" | "preview" | "semantic-understanding") => void;
     resourceId: string;
     tab: string;
@@ -18,8 +22,12 @@ vi.mock("@/modules/data-catalog/scenes/ResourceWorkspaceScene", () => ({
     <div>
       <output data-testid="resource-id">{resourceId}</output>
       <output data-testid="active-tab">{tab}</output>
-      <button onClick={() => onTabChange("detail")} type="button">detail</button>
-      <button onClick={() => onTabChange("preview")} type="button">preview</button>
+      <button onClick={() => onTabChange("detail")} type="button">
+        detail
+      </button>
+      <button onClick={() => onTabChange("preview")} type="button">
+        preview
+      </button>
     </div>
   ),
 }));
@@ -37,16 +45,19 @@ describe("ResourceWorkspacePage", () => {
       <MemoryRouter initialEntries={["/data-catalog/resource/resource-1"]}>
         <Routes>
           <Route
-            element={<><ResourceWorkspacePage /><LocationState /></>}
+            element={
+              <>
+                <ResourceWorkspacePage />
+                <LocationState />
+              </>
+            }
             path="/data-catalog/resource/:resourceId"
           />
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(
-      "/data-catalog/resource/resource-1?tab=detail",
-    )).toBeTruthy();
+    expect(await screen.findByText("/data-catalog/resource/resource-1?tab=detail")).toBeTruthy();
     expect(screen.getByTestId("active-tab").textContent).toBe("detail");
 
     fireEvent.click(screen.getByRole("button", { name: "preview" }));

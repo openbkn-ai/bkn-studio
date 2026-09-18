@@ -16,6 +16,8 @@ describe("formatDiscoverTaskTime", () => {
   });
 
   it("formats a populated task timestamp", () => {
-    expect(formatDiscoverTaskTime(new Date(2026, 5, 3, 11, 42, 20).getTime())).toBe("2026-06-03 11:42:20");
+    expect(formatDiscoverTaskTime(new Date(2026, 5, 3, 11, 42, 20).getTime())).toBe(
+      "2026-06-03 11:42:20",
+    );
   });
 });

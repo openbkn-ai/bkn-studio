@@ -51,19 +51,13 @@ describe("build-task-guards", () => {
 
   it("detects start rejection HTTP statuses", () => {
     const make = (status: number) =>
-      new axios.AxiosError(
-        "rejected",
-        undefined,
-        undefined,
-        undefined,
-        {
-          status,
-          statusText: "x",
-          headers: {},
-          config: {} as never,
-          data: {},
-        },
-      );
+      new axios.AxiosError("rejected", undefined, undefined, undefined, {
+        status,
+        statusText: "x",
+        headers: {},
+        config: {} as never,
+        data: {},
+      });
 
     expect(isBuildStartRejected(make(400))).toBe(true);
     expect(isBuildStartRejected(make(409))).toBe(true);

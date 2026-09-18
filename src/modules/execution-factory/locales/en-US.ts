@@ -78,8 +78,7 @@ export const executionFactoryEnUS = {
         "Batch-import OpenAPI paths into this toolset. Each path becomes a tool you can enable, debug, and publish with the set.",
       impexOpenApiOperator:
         "Upload OpenAPI to register an operator. Use for migration or when you need full operator metadata from a spec file.",
-      impexOpenApiToolbox:
-        "Upload OpenAPI to create a toolbox and import all tools in one step.",
+      impexOpenApiToolbox: "Upload OpenAPI to create a toolbox and import all tools in one step.",
       impexAdpOperator:
         "Upload a backup file you downloaded earlier via Export on the list. Restores the operator and its settings—for recovery or migration from another environment.",
       impexAdpToolbox:
@@ -99,8 +98,10 @@ export const executionFactoryEnUS = {
     operatorSyncDirectPublish: "Publish operator immediately after registration",
     quickApiCreateWithOperatorSuccess: "API added to toolset and operator registered",
     importOpenApiCapabilityWithOperatorSuccess: "Imported {{count}} tools and registered operator",
-    importOpenApiCapabilityWithOperatorSuccess_one: "Imported {{count}} tool and registered operator",
-    importOpenApiCapabilityWithOperatorSuccess_other: "Imported {{count}} tools and registered operator",
+    importOpenApiCapabilityWithOperatorSuccess_one:
+      "Imported {{count}} tool and registered operator",
+    importOpenApiCapabilityWithOperatorSuccess_other:
+      "Imported {{count}} tools and registered operator",
     addCapabilityButton: "Add Capability",
     capabilityCreateMenu: {
       addHttpApi: "Add HTTP API",
@@ -130,12 +131,13 @@ export const executionFactoryEnUS = {
     importOpenApiCapabilitySuccess_other: "Imported {{count}} tools successfully",
     importOpenApiCapabilityPartial: "Imported: {{success}}; failed: {{failed}}",
     importOpenApiCapabilityParsed: "Detected {{count}} endpoints. Confirm the toolset and import.",
-    importOpenApiCapabilityParsed_one: "Detected {{count}} endpoint. Confirm the toolset and import.",
-    importOpenApiCapabilityParsed_other: "Detected {{count}} endpoints. Confirm the toolset and import.",
+    importOpenApiCapabilityParsed_one:
+      "Detected {{count}} endpoint. Confirm the toolset and import.",
+    importOpenApiCapabilityParsed_other:
+      "Detected {{count}} endpoints. Confirm the toolset and import.",
     importOpenApiRelativeServerResolved:
       "Detected relative OpenAPI server {{relativeUrl}} and resolved it to {{serviceUrl}}.",
-    importOpenApiServiceUrlRequired:
-      "Please enter a full HTTP(S) service URL before importing.",
+    importOpenApiServiceUrlRequired: "Please enter a full HTTP(S) service URL before importing.",
     importOpenApiRelativeServerManual:
       "This OpenAPI document uses a relative server URL {{relativeUrl}}. Enter the full service URL before importing.",
     importOpenApiMissingServerManual:
@@ -171,13 +173,11 @@ export const executionFactoryEnUS = {
       "Create a function toolset first, then add each function tool inside it.",
     developerOperatorEntry: "Operator dev: OpenAPI / function registration",
     advancedOperatorEntry: "Function Development",
-    advancedOperatorBanner:
-      "Function list and debug. Register, debug, and publish functions here.",
+    advancedOperatorBanner: "Function list and debug. Register, debug, and publish functions here.",
     quickApiTabCurl: "Paste cURL",
     quickApiTabForm: "Simple form",
     quickApiCurlLabel: "cURL command",
-    quickApiCurlPlaceholder:
-      "curl 'https://example.com/api/v1/resource?city=Boston'",
+    quickApiCurlPlaceholder: "curl 'https://example.com/api/v1/resource?city=Boston'",
     quickApiParseAction: "Detect API details",
     quickApiUrlLabel: "Full API URL",
     quickApiServerUrl: "Service base URL",
@@ -194,8 +194,10 @@ export const executionFactoryEnUS = {
     quickApiParsedParams_other: "Detected {{count}} request parameters. You can edit them below.",
     quickApiBuildFailed: "Could not build an API definition from the input.",
     quickApiContractParameters: "Before detection, add Query, Path, Header, or Cookie parameters.",
-    quickApiContractRequestBody: "Before detection, add a request example; its schema is inferred automatically.",
-    quickApiContractResponses: "Before detection, specify response formats and examples; schemas are inferred automatically.",
+    quickApiContractRequestBody:
+      "Before detection, add a request example; its schema is inferred automatically.",
+    quickApiContractResponses:
+      "Before detection, specify response formats and examples; schemas are inferred automatically.",
     quickApiAddParameter: "Add request parameter",
     quickApiAddResponse: "Add response",
     quickApiEnableRequestBody: "This endpoint has a request body",
@@ -240,7 +242,8 @@ export const executionFactoryEnUS = {
     createWizardTitle: "Create execution unit",
     createWizardStepType: "Choose type",
     createWizardStepDetails: "Enter details",
-    createWizardTypeHint: "Choose the execution unit type to create. The current tab is pre-selected.",
+    createWizardTypeHint:
+      "Choose the execution unit type to create. The current tab is pre-selected.",
     createWizardContinueConfigure: "Continue setup",
     createWizardTypeDesc: {
       mcp: "Register an MCP server for agents to call via the MCP protocol.",
@@ -424,11 +427,9 @@ export const executionFactoryEnUS = {
       more: "More actions",
     },
     operatorStatusChangeConfirmTitle: "Update operator status",
-    operatorStatusChangeConfirmDescription:
-      'Change the status of "{{name}}" to "{{status}}"?',
+    operatorStatusChangeConfirmDescription: 'Change the status of "{{name}}" to "{{status}}"?',
     operatorDeleteConfirmTitle: "Delete operator",
-    operatorDeleteConfirmDescription:
-      'Delete "{{name}}"? This action cannot be undone.',
+    operatorDeleteConfirmDescription: 'Delete "{{name}}"? This action cannot be undone.',
     releaseUser: "Released By",
     releaseTime: "Released At",
     operatorsTab: "Function Development",
@@ -482,8 +483,7 @@ export const executionFactoryEnUS = {
     viewMcpDetail: "View MCP Detail",
     viewSkillDetail: "View SKILL Detail",
     toolboxToolsEnterEdit: "Edit Tools",
-    toolboxToolsViewHint:
-      "Review each tool's inputs and outputs and run debug.",
+    toolboxToolsViewHint: "Review each tool's inputs and outputs and run debug.",
     toolboxToolsTitle: "{{name}} Tools",
     toolboxToolsPageTitle: "Toolbox Tools",
     toolboxToolsDescription: "Manage tools inside the selected toolbox.",
@@ -543,14 +543,14 @@ export const executionFactoryEnUS = {
     importModeCreate: "Create new",
     importModeCreateHint: "Use only when this resource does not exist on this platform yet.",
     importModeUpsert: "Create or update",
-    importModeUpsertHint: "Use when the resource already exists on this platform to overwrite or update it.",
+    importModeUpsertHint:
+      "Use when the resource already exists on this platform to overwrite or update it.",
     installError: {
       generic: "Operation failed. Please try again or contact your administrator.",
       alreadyExistsHint:
         "This resource is already on this platform. Choose Sync, or open Capability Management to use it directly.",
       alreadyExists: {
-        toolbox:
-          "This toolbox is already on this platform and cannot be introduced again as new.",
+        toolbox: "This toolbox is already on this platform and cannot be introduced again as new.",
         operator:
           "This operator is already on this platform and cannot be introduced again as new.",
         mcp: "This MCP is already on this platform and cannot be introduced again as new.",
@@ -561,7 +561,8 @@ export const executionFactoryEnUS = {
     importSuccess: "Imported successfully",
     importKindOpenApi: "OpenAPI",
     importKindAdp: "Backup file",
-    importKindAdpHint: "Pairs with Export on the list—upload the file you downloaded (.adp / .json)",
+    importKindAdpHint:
+      "Pairs with Export on the list—upload the file you downloaded (.adp / .json)",
     importOpenApiFileRequired: "Please upload an OpenAPI spec file",
     importAdpFileRequired: "Please upload a backup file (.adp or .json)",
     importOpenApiDraggerHint: "Click or drag an OpenAPI JSON/YAML file here",
@@ -603,7 +604,8 @@ export const executionFactoryEnUS = {
     runLogError: "Error",
     runLogResponse: "Response",
     ioPanelEmpty: "No input/output definition available",
-    ioPanelEmptyHint: "If the document has no parameter or response examples, you can still click Debug to send a trial request.",
+    ioPanelEmptyHint:
+      "If the document has no parameter or response examples, you can still click Debug to send a trial request.",
     ioParameters: "Parameters",
     ioHeaders: "Headers",
     ioRequestBody: "Request body",
@@ -625,7 +627,8 @@ export const executionFactoryEnUS = {
     globalParameterRequired: "Required",
     globalParameterValue: "Value (JSON)",
     toolDetailTitle: "Tool configuration",
-    toolDetailDescription: "Edit tool information, interface configuration, usage rules, and debug settings.",
+    toolDetailDescription:
+      "Edit tool information, interface configuration, usage rules, and debug settings.",
     httpToolLifecycleSummaryTitle: "Capability information",
     httpToolLifecycleSummaryDesc:
       "Keep the business name, description, and usage rules clear for people and agents.",
@@ -638,7 +641,8 @@ export const executionFactoryEnUS = {
     toolDebugWorkbenchTitle: "Debug validation",
     toolDebugWorkbenchDesc:
       "Run the current tool in place, review the response, then continue editing without losing context.",
-    toolDebugWorkbenchEmpty: "Run debug to see status, duration, response body, and error details here.",
+    toolDebugWorkbenchEmpty:
+      "Run debug to see status, duration, response body, and error details here.",
     openToolIde: "Edit configuration",
     importResourceTitle: {
       operator: "Import Operator",
@@ -737,14 +741,16 @@ export const executionFactoryEnUS = {
     skillDetailEnterEdit: "Edit SKILL",
     skillDetailViewHint:
       "Review SKILL content and package files. Users with edit permission can click Edit SKILL to update metadata or replace the package.",
-    skillDetailEditHint: "Edit mode allows updating metadata, downloading the package, or viewing release history.",
+    skillDetailEditHint:
+      "Edit mode allows updating metadata, downloading the package, or viewing release history.",
     skillDetailCatalogContentHint:
       "Full content in catalog mode is available after introducing it to this platform. If already introduced, open it from unit management.",
     skillFileCountLabel: "{{count}} files",
     skillFileCountLabel_one: "{{count}} file",
     skillFileCountLabel_other: "{{count}} files",
     skillFilePreviewTitle: "File Preview",
-    skillFilePreviewBinaryHint: "This file is binary and cannot be previewed inline. Use the link below to download it.",
+    skillFilePreviewBinaryHint:
+      "This file is binary and cannot be previewed inline. Use the link below to download it.",
     skillFilePreviewDownloadLink: "Open download link",
     skillFilePreviewSelectHint: "Select a file on the left to preview its contents.",
     skillFilePreviewRendered: "Preview",
@@ -791,7 +797,8 @@ export const executionFactoryEnUS = {
     skillEditDescription: "Update SKILL metadata or replace the SKILL package.",
     skillEditMetadataTab: "Metadata",
     skillEditPackageTab: "Package",
-    skillEditPackageHint: "Package updates apply to draft state and re-parse SKILL.md when uploading zip.",
+    skillEditPackageHint:
+      "Package updates apply to draft state and re-parse SKILL.md when uploading zip.",
     skillSource: "Source",
     skillHistoryTitle: "Release History",
     skillHistoryEmpty: "No release history records.",
@@ -890,7 +897,8 @@ export const executionFactoryEnUS = {
     workbenchNameHint: "Unique within the toolbox",
     workbenchDescriptionHint: "Agents decide when to call it from this text — be specific",
     workbenchDescriptionPlaceholder: "What this function does and what it returns, in one sentence",
-    workbenchAddDescription: "+ Add a description — agents use it to decide when to call this function",
+    workbenchAddDescription:
+      "+ Add a description — agents use it to decide when to call this function",
     workbenchParamsTab: "Parameters",
     workbenchParamsViewForm: "Form",
     workbenchParamsViewJson: "JSON",
@@ -939,15 +947,16 @@ export const executionFactoryEnUS = {
       emptyToolbox: "The toolbox has no tools, so agents gain no callable capability",
       toolMissingName: "Tool #{{index}} has no name",
       toolMissingDescription:
-        "\"{{name}}\" has no description; agents pick tools by description and will skip it",
-      toolMissingHandler: "\"{{name}}\" has no handler entry point in its code",
+        '"{{name}}" has no description; agents pick tools by description and will skip it',
+      toolMissingHandler: '"{{name}}" has no handler entry point in its code',
       allToolsDisabled: "Every tool is disabled, so nothing is callable after publishing",
     },
     formSectionBasic: "Basic Info",
     formSectionPublish: "Publish Options",
     quickPublishHint:
       "Fill the minimum required fields and save a draft first. Enable publish-on-register for quick POC demos.",
-    directPublishHint: "Best for POC environments. Production workflows should publish manually after review.",
+    directPublishHint:
+      "Best for POC environments. Production workflows should publish manually after review.",
     openapiImportHint:
       "Paste JSON or YAML, upload a file, or fetch an OpenAPI document from a URL. For a single operator, keep only one endpoint.",
     openapiOperatorHint:
@@ -955,7 +964,8 @@ export const executionFactoryEnUS = {
     openapiToolboxHint:
       "Paste JSON or YAML, upload a file, or fetch from a URL. After parsing, expand each endpoint to review inputs, request body, and response examples.",
     openapiInputPastePlaceholder: "Paste a standard OpenAPI JSON or YAML document",
-    openapiOperationsIoPreviewHint: "Expand an endpoint to review parameters, request body, and response examples.",
+    openapiOperationsIoPreviewHint:
+      "Expand an endpoint to review parameters, request body, and response examples.",
     openapiOperationIoSummary:
       "URL/Header parameters: {{paramCount}} · responses: {{responseCount}}",
     openapiOperationIoSummaryWithBody:
@@ -970,12 +980,9 @@ export const executionFactoryEnUS = {
     openapiUrlRequired: "Enter an OpenAPI document URL",
     openapiUrlFetchFailed: "Unable to fetch the OpenAPI document. Check the URL or network.",
     openapiValidationOk: "OpenAPI document validated successfully",
-    openapiValidationOkWithCount:
-      "OpenAPI document validated. Detected {{count}} endpoints.",
-    openapiValidationOkWithCount_one:
-      "OpenAPI document validated. Detected {{count}} endpoint.",
-    openapiValidationOkWithCount_other:
-      "OpenAPI document validated. Detected {{count}} endpoints.",
+    openapiValidationOkWithCount: "OpenAPI document validated. Detected {{count}} endpoints.",
+    openapiValidationOkWithCount_one: "OpenAPI document validated. Detected {{count}} endpoint.",
+    openapiValidationOkWithCount_other: "OpenAPI document validated. Detected {{count}} endpoints.",
     openapiPreviewServer: "Server URL",
     openapiPreviewServerUnset: "Not set (will use the form Service URL)",
     openapiPreviewVersion: "Spec version",
@@ -1055,7 +1062,9 @@ export const executionFactoryEnUS = {
     sandboxRuntimeTitle: "Sandbox Runtime Management",
     sandboxRuntimeDescription:
       "Observe sandbox health, session pool pressure, dependency installation, and task sessions used by callable capabilities.",
-    navExecutionUnitManagementTooltip: "Manage operators, toolboxes, MCP servers, and SKILLs on this platform.",
-    navAllExecutionUnitsTooltip: "Browse the market catalog and introduce resources to this platform.",
+    navExecutionUnitManagementTooltip:
+      "Manage operators, toolboxes, MCP servers, and SKILLs on this platform.",
+    navAllExecutionUnitsTooltip:
+      "Browse the market catalog and introduce resources to this platform.",
   },
 } as const;

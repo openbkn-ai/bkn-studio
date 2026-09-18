@@ -15,12 +15,8 @@ import { MetricDataQueryPanel } from "@/modules/knowledge-network/components/met
 import type { RelationTypePropertyOption } from "@/modules/knowledge-network/components/relation-type/RelationTypePropertySelect";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import type { MetricDataQuerySceneProps } from "@/modules/knowledge-network/contracts/scenes";
-import {
-  getKnowledgeNetworkMetric,
-} from "@/modules/knowledge-network/services/knowledge-network.service";
-import type {
-  KnowledgeNetworkMetricRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import { getKnowledgeNetworkMetric } from "@/modules/knowledge-network/services/knowledge-network.service";
+import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
 import { toPublishedMetricPropertyOptions } from "@/modules/knowledge-network/utils/metric-property-display";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 

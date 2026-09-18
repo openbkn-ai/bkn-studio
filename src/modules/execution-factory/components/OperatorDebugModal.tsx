@@ -119,7 +119,9 @@ export function OperatorDebugModal({
           {record.name} ({record.operatorId} @ {record.version})
         </Typography.Paragraph>
       ) : null}
-      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t("executionFactory.debugSampleHint")}
+      </Typography.Paragraph>
       <Form form={form} layout="vertical">
         <HttpDebugRequestFields
           ioSpec={endpoint?.ioSpec}

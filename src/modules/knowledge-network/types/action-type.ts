@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type KnowledgeNetworkActionTypeKind =
-  | "create"
-  | "update"
-  | "delete"
-  | "notify";
+export type KnowledgeNetworkActionTypeKind = "create" | "update" | "delete" | "notify";
 
 export type ActionTypeConditionOperation =
   | "and"
@@ -106,11 +102,7 @@ export type KnowledgeNetworkActionTypeMutationPayload = {
 };
 
 export type ActionTypeExecutionStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  "pending" | "running" | "completed" | "failed" | "cancelled";
 
 export type ActionTypeExecutionLog = {
   actionTypeId: string;

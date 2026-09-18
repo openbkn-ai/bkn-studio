@@ -42,31 +42,37 @@ describe("audit user lookup", () => {
   it("distinguishes deleted users from temporary lookup failures", async () => {
     getUser.mockImplementation((id: string) => {
       if (id === "u-deleted") {
-        return Promise.reject(Object.assign(new Error("user not found"), {
-          isAxiosError: true,
-          response: { status: 404 },
-        }));
+        return Promise.reject(
+          Object.assign(new Error("user not found"), {
+            isAxiosError: true,
+            response: { status: 404 },
+          }),
+        );
       }
-      return Promise.reject(Object.assign(new Error("directory unavailable"), {
-        isAxiosError: true,
-        response: { status: 503 },
-      }));
+      return Promise.reject(
+        Object.assign(new Error("directory unavailable"), {
+          isAxiosError: true,
+          response: { status: 503 },
+        }),
+      );
     });
 
-    await expect(hydrateUserLookupDetails(["u-deleted", "u-unavailable"]))
-      .resolves.toEqual({
-        deleted: ["u-deleted"],
-        unavailable: ["u-unavailable"],
-      });
+    await expect(hydrateUserLookupDetails(["u-deleted", "u-unavailable"])).resolves.toEqual({
+      deleted: ["u-deleted"],
+      unavailable: ["u-unavailable"],
+    });
     expect(isDeletedUserSync("u-deleted")).toBe(true);
     expect(isDeletedUserSync("u-unavailable")).toBe(false);
   });
 
   it("limits concurrent directory lookups while resolving every distinct user", async () => {
     const resolvers: Array<() => void> = [];
-    getUser.mockImplementation((id: string) => new Promise((resolve) => {
-      resolvers.push(() => resolve({ id }));
-    }));
+    getUser.mockImplementation(
+      (id: string) =>
+        new Promise((resolve) => {
+          resolvers.push(() => resolve({ id }));
+        }),
+    );
     const ids = Array.from(
       { length: MAX_CONCURRENT_USER_LOOKUPS + 2 },
       (_value, index) => `u-limit-${index}`,
@@ -94,9 +100,12 @@ describe("audit user lookup", () => {
 
   it("drops queued lookups when their page is no longer interested", async () => {
     const resolvers: Array<() => void> = [];
-    getUser.mockImplementation((id: string) => new Promise((resolve) => {
-      resolvers.push(() => resolve({ id }));
-    }));
+    getUser.mockImplementation(
+      (id: string) =>
+        new Promise((resolve) => {
+          resolvers.push(() => resolve({ id }));
+        }),
+    );
     const controller = new AbortController();
     const ids = Array.from(
       { length: MAX_CONCURRENT_USER_LOOKUPS + 1 },

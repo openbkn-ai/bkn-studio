@@ -52,9 +52,7 @@ function getResponseErrorCode(error: unknown): string | undefined {
   return typeof code === "string" && code.trim() ? code : undefined;
 }
 
-export function classifyObjectTypeProxyReadFailure(
-  error: unknown,
-): ObjectTypeProxyReadFailure {
+export function classifyObjectTypeProxyReadFailure(error: unknown): ObjectTypeProxyReadFailure {
   const errorDetails = extractRequestErrorDetails(error);
   const extractedCode = errorDetails.code;
   const code = extractedCode ?? getResponseErrorCode(error);
@@ -75,9 +73,7 @@ export function classifyObjectTypeProxyReadFailure(
   return { code, description: errorDetails.description, kind: "unknown" };
 }
 
-export function getObjectTypeProxyReadFailureTranslationKeys(
-  failure: ObjectTypeProxyReadFailure,
-) {
+export function getObjectTypeProxyReadFailureTranslationKeys(failure: ObjectTypeProxyReadFailure) {
   const suffixByKind: Record<ObjectTypeProxyReadFailureKind, string> = {
     "binding-invalid": "BindingInvalid",
     "caller-forbidden": "Forbidden",

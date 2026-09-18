@@ -21,10 +21,7 @@ import { HttpToolLifecyclePanel } from "@/modules/execution-factory/components/H
 import { OpenApiDefinitionFields } from "@/modules/execution-factory/components/OpenApiDefinitionFields";
 import { ToolDebugPanel } from "@/modules/execution-factory/components/ToolDebugPanel";
 import { ToolIoPanel } from "@/modules/execution-factory/components/ToolIoPanel";
-import {
-  getToolDetail,
-  updateTool,
-} from "@/modules/execution-factory/services/tool.service";
+import { getToolDetail, updateTool } from "@/modules/execution-factory/services/tool.service";
 import type {
   ToolGlobalParameter,
   ToolIoSpec,
@@ -174,30 +171,30 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
   };
 
   const functionInput =
+    metadataType === "function" ? { inputs: functionInputs, outputs: functionOutputs } : undefined;
+  const editPermission =
     metadataType === "function"
-      ? { inputs: functionInputs, outputs: functionOutputs }
-      : undefined;
-  const editPermission = metadataType === "function"
-    ? "execution-factory:function:edit"
-    : "execution-factory:toolbox:edit";
-  const debugPermission = metadataType === "function"
-    ? "execution-factory:function:debug"
-    : "execution-factory:toolbox:debug";
+      ? "execution-factory:function:edit"
+      : "execution-factory:toolbox:edit";
+  const debugPermission =
+    metadataType === "function"
+      ? "execution-factory:function:debug"
+      : "execution-factory:toolbox:debug";
 
   return (
     <CrudFormPage
-        description={t("executionFactory.toolDetailDescription")}
-        onBack={handleBack}
-        title={t("executionFactory.toolDetailTitle")}
-      >
-        {loading ? <Spin /> : null}
-        {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
-        {!loading && !loadError ? (
-          <PermissionGate
-            fallback={<Alert message={t("common.noPermission")} showIcon type="warning" />}
-            permissions={editPermission}
-          >
-            <div className={styles.formSurfaceWide}>
+      description={t("executionFactory.toolDetailDescription")}
+      onBack={handleBack}
+      title={t("executionFactory.toolDetailTitle")}
+    >
+      {loading ? <Spin /> : null}
+      {!loading && loadError ? <Alert message={loadError} showIcon type="error" /> : null}
+      {!loading && !loadError ? (
+        <PermissionGate
+          fallback={<Alert message={t("common.noPermission")} showIcon type="warning" />}
+          permissions={editPermission}
+        >
+          <div className={styles.formSurfaceWide}>
             <Form form={form} layout="vertical">
               <HttpToolLifecyclePanel
                 advancedConfig={
@@ -286,9 +283,9 @@ export function ToolDetailScene({ boxId, onBack, toolId }: ToolDetailSceneProps)
                 {t("common.save")}
               </AppButton>
             </div>
-            </div>
-          </PermissionGate>
-        ) : null}
+          </div>
+        </PermissionGate>
+      ) : null}
     </CrudFormPage>
   );
 }

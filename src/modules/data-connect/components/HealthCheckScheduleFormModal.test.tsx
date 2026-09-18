@@ -44,13 +44,13 @@ describe("HealthCheckScheduleFormModal", () => {
         onSubmit={onSubmit}
         open
         schedule={{
-        catalogId: "catalog-1",
-        cronExpr: "0 * * * *",
-        expectedUpdateTime: 123,
-        lastRun: "-",
-        mode: "enabled",
-        nextRun: "-",
-        updateTime: "2026-08-19 10:00:00",
+          catalogId: "catalog-1",
+          cronExpr: "0 * * * *",
+          expectedUpdateTime: 123,
+          lastRun: "-",
+          mode: "enabled",
+          nextRun: "-",
+          updateTime: "2026-08-19 10:00:00",
         }}
       />,
     );
@@ -82,13 +82,13 @@ describe("HealthCheckScheduleFormModal", () => {
         onSubmit={onSubmit}
         open
         schedule={{
-        catalogId: "catalog-1",
-        cronExpr: "0 * * * *",
-        expectedUpdateTime: 123,
-        lastRun: "-",
-        mode: "enabled",
-        nextRun: "-",
-        updateTime: "2026-08-19 10:00:00",
+          catalogId: "catalog-1",
+          cronExpr: "0 * * * *",
+          expectedUpdateTime: 123,
+          lastRun: "-",
+          mode: "enabled",
+          nextRun: "-",
+          updateTime: "2026-08-19 10:00:00",
         }}
       />,
     );
@@ -100,9 +100,7 @@ describe("HealthCheckScheduleFormModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("dataConnect.healthCheckSchedule.cronInvalid"),
-      ).toBeTruthy();
+      expect(screen.getByText("dataConnect.healthCheckSchedule.cronInvalid")).toBeTruthy();
     });
     expect(onSubmit).not.toHaveBeenCalled();
   });

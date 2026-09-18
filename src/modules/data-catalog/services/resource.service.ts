@@ -113,9 +113,7 @@ function mapFeatureFromBackend(feature: BackendFieldFeature): ResourceFieldFeatu
   };
 }
 
-function mapIndexConfigToBackend(
-  config?: ResourceIndexConfig,
-): BackendIndexConfig | undefined {
+function mapIndexConfigToBackend(config?: ResourceIndexConfig): BackendIndexConfig | undefined {
   if (!config) {
     return undefined;
   }
@@ -201,8 +199,7 @@ function mapSchemaField(field: BackendSchemaField): ResourceSchemaField {
     attributes: field.attributes,
     name,
     type: field.type ?? field.original_type ?? "string",
-    displayName:
-      displayName && displayName !== name ? displayName : undefined,
+    displayName: displayName && displayName !== name ? displayName : undefined,
     description: description || undefined,
     features: features.length > 0 ? features : undefined,
     originalDescription: field.original_description,
@@ -260,7 +257,7 @@ type ListResponse<T> = {
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const RESOURCE_LIST_PAGE_SIZE = 500;
 
-const wait = async <T,>(value: T, delay = 180) =>
+const wait = async <T>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), delay);
   });
@@ -335,7 +332,9 @@ function mapSourceMetadata(
   };
 }
 
-function mapResource(item: BackendResourceSummary & Partial<BackendResourceDetailFields>): CatalogResource {
+function mapResource(
+  item: BackendResourceSummary & Partial<BackendResourceDetailFields>,
+): CatalogResource {
   return {
     id: item.id,
     catalogId: item.catalog_id,
@@ -430,9 +429,7 @@ export async function listCatalogResourcePage(
   };
 }
 
-export async function countCatalogResources(
-  query: ResourceListQuery = {},
-): Promise<number> {
+export async function countCatalogResources(query: ResourceListQuery = {}): Promise<number> {
   return (await listCatalogResourcePage({ ...query, limit: 1, offset: 0 })).total;
 }
 
@@ -534,18 +531,11 @@ export async function createCatalogResource(input: ResourceCreateInput) {
   );
 }
 
-export async function updateCatalogResource(
-  id: string,
-  input: ResourceUpdateInput,
-) {
+export async function updateCatalogResource(id: string, input: ResourceUpdateInput) {
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
     if (index < 0) {
-      throwMockRequestError(
-        404,
-        "VegaBackend.Resource.NotFound",
-        "Resource not found.",
-      );
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "Resource not found.");
     }
 
     const current = mockResources[index];
@@ -663,12 +653,9 @@ export async function setCatalogResourceEnabled(id: string, enabled: boolean) {
 const PREVIEW_CELL_POOL: Record<string, (row: number) => unknown> = {
   bigint: (row) => 100000 + row * 7,
   decimal: (row) => ((row * 137) % 9000) + Math.round(row * 0.37 * 100) / 100,
-  datetime: (row) =>
-    formatMockTimestamp(Date.now() - row * 3_600_000).slice(0, 16),
+  datetime: (row) => formatMockTimestamp(Date.now() - row * 3_600_000).slice(0, 16),
   text: (row) =>
-    row % 7 === 0
-      ? null
-      : i18n.t("dataCatalog.preview.mockLongText", { row: row + 1 }),
+    row % 7 === 0 ? null : i18n.t("dataCatalog.preview.mockLongText", { row: row + 1 }),
   varchar: (row) => `value_${row + 1}`,
 };
 function mockCell(field: ResourceSchemaField, row: number) {
@@ -734,10 +721,7 @@ function mockOtherContent(field: ResourceSchemaField, row: number) {
 }
 
 function mockBinaryContent(row: number, byteLength: number) {
-  const bytes = Array.from(
-    { length: byteLength },
-    (_, index) => (row + index) % 256,
-  );
+  const bytes = Array.from({ length: byteLength }, (_, index) => (row + index) % 256);
   return btoa(String.fromCharCode(...bytes));
 }
 
@@ -753,22 +737,29 @@ export async function previewCatalogResource(
 
     const total = resourceCountForPagination(resource.rowCount);
     const count = Math.max(0, Math.min(query.limit, total - query.offset));
-    const usesLocalIndex = !query.ignoreLocalIndex &&
+    const usesLocalIndex =
+      !query.ignoreLocalIndex &&
       resource.category === "table" &&
       resource.localIndexStatus === "available" &&
       Boolean(resource.localIndexName);
     const rows = Array.from({ length: count }, (_, index) => {
       const rowIndex = query.offset + index;
       return Object.fromEntries(
-        resource.schema.map((field) => [field.name, mockPreviewCell(field, rowIndex, query, usesLocalIndex)]),
+        resource.schema.map((field) => [
+          field.name,
+          mockPreviewCell(field, rowIndex, query, usesLocalIndex),
+        ]),
       );
     });
 
-    return wait({
-      querySource: usesLocalIndex ? "local_index" : "source",
-      rows,
-      total,
-    }, 260);
+    return wait(
+      {
+        querySource: usesLocalIndex ? "local_index" : "source",
+        rows,
+        total,
+      },
+      260,
+    );
   }
 
   // POST /resources/:id/data with X-HTTP-Method-Override: GET performs the data query.
@@ -824,9 +815,7 @@ export function isCatalogDiscovering(catalogId: string) {
   return mockDiscoveringCatalogs.has(catalogId);
 }
 
-export async function listCatalogDiscovers(
-  catalogId: string,
-): Promise<CatalogDiscoverRecord[]> {
+export async function listCatalogDiscovers(catalogId: string): Promise<CatalogDiscoverRecord[]> {
   if (useMock) {
     return wait([...(mockDiscoverRecords.get(catalogId) ?? [])]);
   }

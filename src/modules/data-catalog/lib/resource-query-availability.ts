@@ -7,11 +7,7 @@
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
 
-export type ResourceQueryBlockReason =
-  | "disabled"
-  | "metadata_unavailable"
-  | "missing"
-  | "stale";
+export type ResourceQueryBlockReason = "disabled" | "metadata_unavailable" | "missing" | "stale";
 
 export function resourceQueryBlockReason(
   resource: CatalogResource,

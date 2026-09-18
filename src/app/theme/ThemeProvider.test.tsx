@@ -39,7 +39,10 @@ function installMatchMedia(initiallyDark: boolean) {
     dispatchEvent: () => true,
   } as unknown as MediaQueryList;
 
-  vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => mediaQuery),
+  );
 
   return {
     changeTheme(nextIsDark: boolean) {
@@ -64,7 +67,10 @@ function installLegacyMatchMedia(initiallyDark: boolean) {
     dispatchEvent: () => true,
   } as unknown as MediaQueryList;
 
-  vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => mediaQuery),
+  );
 
   return {
     changeTheme(nextIsDark: boolean) {

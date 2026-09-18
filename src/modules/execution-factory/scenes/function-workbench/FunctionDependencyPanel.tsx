@@ -98,14 +98,16 @@ export function FunctionDependencyPanel({
             size="small"
             value={item.version}
           />
-          {readOnly ? null : <button
-            aria-label={t("common.delete")}
-            className={styles.depRemove}
-            onClick={() => onChange(value.filter((_, at) => at !== index))}
-            type="button"
-          >
-            <CloseOutlined />
-          </button>}
+          {readOnly ? null : (
+            <button
+              aria-label={t("common.delete")}
+              className={styles.depRemove}
+              onClick={() => onChange(value.filter((_, at) => at !== index))}
+              type="button"
+            >
+              <CloseOutlined />
+            </button>
+          )}
         </div>
       ))}
       <div className={styles.depAdd}>
@@ -122,7 +124,13 @@ export function FunctionDependencyPanel({
           size="small"
           value={draftName}
         />
-        <AppButton disabled={readOnly} icon={<PlusOutlined />} loading={adding} onClick={() => void handleAdd()} size="small">
+        <AppButton
+          disabled={readOnly}
+          icon={<PlusOutlined />}
+          loading={adding}
+          onClick={() => void handleAdd()}
+          size="small"
+        >
           {t("common.add")}
         </AppButton>
       </div>

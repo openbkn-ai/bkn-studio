@@ -61,9 +61,7 @@ export function isMetricTimePropertyType(type?: string) {
   return METRIC_TIME_PROPERTY_TYPES.has(normalizePropertyType(type));
 }
 
-export function getAvailableAggrOptionsForPropertyType(
-  type?: string,
-): MetricAggregationAggr[] {
+export function getAvailableAggrOptionsForPropertyType(type?: string): MetricAggregationAggr[] {
   const normalized = normalizePropertyType(type);
   if (!normalized) {
     return METRIC_ALL_AGGR_OPTIONS;

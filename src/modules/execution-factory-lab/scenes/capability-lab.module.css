@@ -87,7 +87,9 @@
   padding: 14px 16px;
   background: var(--color-bg-surface);
   cursor: default;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .card:hover {

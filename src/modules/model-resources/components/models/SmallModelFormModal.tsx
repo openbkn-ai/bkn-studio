@@ -162,9 +162,7 @@ export function SmallModelFormModal({
       }
 
       const result =
-        modalMode === "edit"
-          ? await updateSmallModel(payload)
-          : await createSmallModel(payload);
+        modalMode === "edit" ? await updateSmallModel(payload) : await createSmallModel(payload);
 
       if (result.status !== "ok") {
         throw new Error(t("modelResources.models.saveFailed"));
@@ -203,15 +201,18 @@ export function SmallModelFormModal({
           }
           return;
         }
-        const reasonMessage = conflict.defaultSwitchReason === "ALREADY_DEFAULT"
-          ? t("modelResources.models.duplicateConfigAlreadyDefault")
-          : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
-            ? t("modelResources.models.duplicateConfigNoDefaultPermission")
-            : "";
-        message.error(t("modelResources.models.duplicateConfigExists", {
-          name: existingModel.name,
-          permission: reasonMessage,
-        }));
+        const reasonMessage =
+          conflict.defaultSwitchReason === "ALREADY_DEFAULT"
+            ? t("modelResources.models.duplicateConfigAlreadyDefault")
+            : conflict.defaultSwitchReason === "NO_MODIFY_PERMISSION"
+              ? t("modelResources.models.duplicateConfigNoDefaultPermission")
+              : "";
+        message.error(
+          t("modelResources.models.duplicateConfigExists", {
+            name: existingModel.name,
+            permission: reasonMessage,
+          }),
+        );
         return;
       }
       message.error(extractRequestErrorMessage(error));
@@ -275,7 +276,11 @@ export function SmallModelFormModal({
         >
           <Select options={modelTypeOptions} />
         </Form.Item>
-        <Form.Item label={t("modelResources.models.modal.adaptationFile")} name="adapter" valuePropName="checked">
+        <Form.Item
+          label={t("modelResources.models.modal.adaptationFile")}
+          name="adapter"
+          valuePropName="checked"
+        >
           <Switch />
         </Form.Item>
         {!adapterEnabled ? (
@@ -353,7 +358,10 @@ export function SmallModelFormModal({
             >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
-            <Form.Item label={t("modelResources.models.modal.maxNumberOfDocuments")} name="maxDocuments">
+            <Form.Item
+              label={t("modelResources.models.modal.maxNumberOfDocuments")}
+              name="maxDocuments"
+            >
               <InputNumber controls={false} min={1} style={{ width: "100%" }} />
             </Form.Item>
             <Form.Item label={t("modelResources.models.modal.maxNumberOfTokens")} name="maxTokens">
@@ -367,7 +375,9 @@ export function SmallModelFormModal({
               <span>
                 {t("modelResources.models.modal.defaultModel")}
                 <Tooltip title={t("modelResources.models.modal.smallDefaultModelHint")}>
-                  <QuestionCircleOutlined style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }} />
+                  <QuestionCircleOutlined
+                    style={{ color: "var(--color-text-tertiary)", marginLeft: 6 }}
+                  />
                 </Tooltip>
               </span>
             }

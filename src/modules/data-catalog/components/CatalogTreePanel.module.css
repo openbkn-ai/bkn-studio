@@ -77,7 +77,9 @@
   color: var(--color-primary-700);
 }
 
-.catalogTree :global(.ant-tree-treenode:has(.groupNodeTitle)) :global(.ant-tree-node-content-wrapper) {
+.catalogTree
+  :global(.ant-tree-treenode:has(.groupNodeTitle))
+  :global(.ant-tree-node-content-wrapper) {
   min-height: 30px;
   margin-left: 2px;
   padding-left: 6px !important;
@@ -85,14 +87,18 @@
   padding-bottom: 4px !important;
 }
 
-.catalogTree :global(.ant-tree-treenode:has(.scopeGroupTitle)) :global(.ant-tree-node-content-wrapper) {
+.catalogTree
+  :global(.ant-tree-treenode:has(.scopeGroupTitle))
+  :global(.ant-tree-node-content-wrapper) {
   min-height: 30px;
   margin-left: 10px;
   padding-top: 5px !important;
   padding-bottom: 5px !important;
 }
 
-.catalogTree :global(.ant-tree-treenode:has(.scopeLeafTitle)) :global(.ant-tree-node-content-wrapper) {
+.catalogTree
+  :global(.ant-tree-treenode:has(.scopeLeafTitle))
+  :global(.ant-tree-node-content-wrapper) {
   min-height: 28px;
   margin-left: 16px;
   padding-top: 4px !important;
@@ -116,14 +122,18 @@
   color: var(--color-text-muted);
 }
 
-.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper) {
+.catalogTree
+  :global(.ant-tree-treenode:has(.rootNodeTitle))
+  :global(.ant-tree-node-content-wrapper) {
   min-height: 34px;
   margin-left: 0;
   padding: 8px 2px 8px 0 !important;
   background: transparent !important;
 }
 
-.catalogTree :global(.ant-tree-treenode:has(.rootNodeTitle)) :global(.ant-tree-node-content-wrapper:hover) {
+.catalogTree
+  :global(.ant-tree-treenode:has(.rootNodeTitle))
+  :global(.ant-tree-node-content-wrapper:hover) {
   background: transparent !important;
 }
 

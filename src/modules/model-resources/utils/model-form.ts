@@ -6,7 +6,10 @@
  */
 
 import type { LlmModel, LlmSavePayload } from "@/modules/model-resources/types/llm";
-import type { SmallModel, SmallModelSavePayload } from "@/modules/model-resources/types/small-model";
+import type {
+  SmallModel,
+  SmallModelSavePayload,
+} from "@/modules/model-resources/types/small-model";
 
 export type LlmFormValues = {
   modelName: string;
@@ -58,10 +61,7 @@ export function llmModelToFormValues(record: LlmModel): LlmFormValues {
   };
 }
 
-export function buildLlmSavePayload(
-  values: LlmFormValues,
-  source?: LlmModel,
-): LlmSavePayload {
+export function buildLlmSavePayload(values: LlmFormValues, source?: LlmModel): LlmSavePayload {
   const modelParameters =
     typeof values.modelParameters === "number" &&
     Number.isInteger(values.modelParameters) &&
@@ -121,7 +121,8 @@ export function buildSmallModelSavePayload(
   values: SmallModelFormValues,
   source?: SmallModel,
 ): SmallModelSavePayload {
-  const apiKeyChanged = values.auth === "auth" ? values.apiKey !== source?.modelConfig?.apiKey : false;
+  const apiKeyChanged =
+    values.auth === "auth" ? values.apiKey !== source?.modelConfig?.apiKey : false;
 
   if (values.adapter) {
     return {

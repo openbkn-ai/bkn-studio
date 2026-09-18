@@ -84,18 +84,14 @@ describe("property-authorization", () => {
 
   it("summarizes changes from inherited access using the actual base ceiling", () => {
     expect(
-      summarizePropertyGrantChanges(
-        "schema",
-        new Map(),
-        new Map([["email", "schema"]]),
-      ),
+      summarizePropertyGrantChanges("schema", new Map(), new Map([["email", "schema"]])),
     ).toEqual({ full: 0, inherited: 0, lowered: 0, raised: 0, total: 1 });
-    expect(
-      summarizePropertyGrantChanges(
-        "full",
-        new Map(),
-        new Map([["email", "none"]]),
-      ),
-    ).toEqual({ full: 0, inherited: 0, lowered: 1, raised: 0, total: 1 });
+    expect(summarizePropertyGrantChanges("full", new Map(), new Map([["email", "none"]]))).toEqual({
+      full: 0,
+      inherited: 0,
+      lowered: 1,
+      raised: 0,
+      total: 1,
+    });
   });
 });

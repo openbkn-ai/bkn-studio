@@ -21,7 +21,12 @@ import {
 
 const opById = (id: string) => CONTEXT_LOADER_OPS.find((o) => o.id === id)!;
 
-const ot = (id: string, fields: string[], resourceId?: string, relatedMetrics?: KnObjectType["related_metrics"]): KnObjectType => ({
+const ot = (
+  id: string,
+  fields: string[],
+  resourceId?: string,
+  relatedMetrics?: KnObjectType["related_metrics"],
+): KnObjectType => ({
   id,
   name: id,
   data_source: resourceId ? { id: resourceId } : null,
@@ -150,12 +155,23 @@ describe("buildTestData", () => {
       [],
       [{ id: "plays_for", name: "效力于", sourceId: "player", targetId: "team" }],
     );
-    const fill = buildTestData(opById("query_instance_subgraph"), "rest", "kn_demo", dg, null, null);
+    const fill = buildTestData(
+      opById("query_instance_subgraph"),
+      "rest",
+      "kn_demo",
+      dg,
+      null,
+      null,
+    );
     const body = JSON.parse(fill.body);
     expect(body.relation_type_paths[0]).toEqual({
       object_types: [{ id: "player" }, { id: "team" }],
       relation_types: [
-        { relation_type_id: "plays_for", source_object_type_id: "player", target_object_type_id: "team" },
+        {
+          relation_type_id: "plays_for",
+          source_object_type_id: "player",
+          target_object_type_id: "team",
+        },
       ],
       limit: 10,
     });
@@ -183,14 +199,34 @@ describe("buildTestData", () => {
       { id: "m_gmv", name: "GMV", time_dimension: "created_at" },
       { id: "m_order_count", name: "订单数" },
     ]);
-    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
+    const fill = buildTestData(
+      opById("query_metric"),
+      "mcp",
+      "kn_demo",
+      detail([metricOt]),
+      metricOt,
+      null,
+    );
     expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo", metric_id: "m_order_count" });
   });
 
   it("query_metric uses an instant query when the metric has a time dimension", () => {
-    const metricOt = ot("orders", ["status"], undefined, [{ id: "m_gmv", name: "GMV", time_dimension: "created_at" }]);
-    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
-    expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo", metric_id: "m_gmv", time: { instant: true } });
+    const metricOt = ot("orders", ["status"], undefined, [
+      { id: "m_gmv", name: "GMV", time_dimension: "created_at" },
+    ]);
+    const fill = buildTestData(
+      opById("query_metric"),
+      "mcp",
+      "kn_demo",
+      detail([metricOt]),
+      metricOt,
+      null,
+    );
+    expect(JSON.parse(fill.body)).toEqual({
+      kn_id: "kn_demo",
+      metric_id: "m_gmv",
+      time: { instant: true },
+    });
   });
 
   it("query_metric skips related metrics without an id", () => {
@@ -198,13 +234,27 @@ describe("buildTestData", () => {
       { id: "", name: "invalid" },
       { id: "m_order_count", name: "订单数" },
     ]);
-    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
+    const fill = buildTestData(
+      opById("query_metric"),
+      "mcp",
+      "kn_demo",
+      detail([metricOt]),
+      metricOt,
+      null,
+    );
     expect(JSON.parse(fill.body)).toEqual({ kn_id: "kn_demo", metric_id: "m_order_count" });
   });
 
   it("query_metric does not generate a request when no related metric has an id", () => {
     const metricOt = ot("orders", ["status"], undefined, [{ id: "", name: "invalid" }]);
-    const fill = buildTestData(opById("query_metric"), "mcp", "kn_demo", detail([metricOt]), metricOt, null);
+    const fill = buildTestData(
+      opById("query_metric"),
+      "mcp",
+      "kn_demo",
+      detail([metricOt]),
+      metricOt,
+      null,
+    );
     expect(fill.note).toContain("No metrics found in object-type details");
     expect(JSON.parse(fill.body).metric_id).toBe("your_metric_id");
   });

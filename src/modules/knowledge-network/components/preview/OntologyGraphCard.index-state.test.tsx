@@ -8,15 +8,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-const {
-  getCatalogResources,
-  getKnowledgeNetworkConceptGroup,
-  listKnowledgeNetworkConceptGroups,
-} = vi.hoisted(() => ({
-  getCatalogResources: vi.fn(),
-  getKnowledgeNetworkConceptGroup: vi.fn(),
-  listKnowledgeNetworkConceptGroups: vi.fn(),
-}));
+const { getCatalogResources, getKnowledgeNetworkConceptGroup, listKnowledgeNetworkConceptGroups } =
+  vi.hoisted(() => ({
+    getCatalogResources: vi.fn(),
+    getKnowledgeNetworkConceptGroup: vi.fn(),
+    listKnowledgeNetworkConceptGroups: vi.fn(),
+  }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),

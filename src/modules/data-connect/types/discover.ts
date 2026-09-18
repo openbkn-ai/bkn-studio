@@ -5,24 +5,14 @@
  * Conditions. See LICENSE for the full text.
  */
 
-export type DataConnectDiscoverStrategy =
-  | "cleanup_only"
-  | "create_only"
-  | "full_sync";
+export type DataConnectDiscoverStrategy = "cleanup_only" | "create_only" | "full_sync";
 
 export type DataConnectDiscoverTaskStatus =
-  | "cancelled"
-  | "completed"
-  | "failed"
-  | "pending"
-  | "running";
+  "cancelled" | "completed" | "failed" | "pending" | "running";
 
 export type DataConnectDiscoverTaskTriggerType = "manual" | "scheduled";
 export type DataConnectDiscoverTaskSort =
-  | "create_time"
-  | "start_time"
-  | "finish_time"
-  | "last_progress_time";
+  "create_time" | "start_time" | "finish_time" | "last_progress_time";
 
 export type DataConnectDiscoverSchedule = {
   catalogId: string;
@@ -72,10 +62,7 @@ export type DataConnectDiscoverTask = {
   triggerType: DataConnectDiscoverTaskTriggerType;
 };
 
-export type DataConnectDiscoverTaskSummary = Omit<
-  DataConnectDiscoverTask,
-  "message" | "result"
-> & {
+export type DataConnectDiscoverTaskSummary = Omit<DataConnectDiscoverTask, "message" | "result"> & {
   result?: DataConnectDiscoverTaskResultSummary;
 };
 
@@ -90,10 +77,7 @@ export type DataConnectDiscoverResult = {
   updatedCount: number;
 };
 
-export type DataConnectDiscoverTaskResultSummary = Omit<
-  DataConnectDiscoverResult,
-  "message"
->;
+export type DataConnectDiscoverTaskResultSummary = Omit<DataConnectDiscoverResult, "message">;
 
 export type DataConnectDiscoverScheduleListQuery = {
   catalogId?: string;
@@ -139,7 +123,6 @@ export type DataConnectDiscoverSchedulePayload = {
   strategy: DataConnectDiscoverStrategy;
 };
 
-export type DataConnectDiscoverScheduleUpdatePayload =
-  DataConnectDiscoverSchedulePayload & {
-    expectedUpdateTime: number;
-  };
+export type DataConnectDiscoverScheduleUpdatePayload = DataConnectDiscoverSchedulePayload & {
+  expectedUpdateTime: number;
+};

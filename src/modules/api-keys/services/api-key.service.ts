@@ -6,11 +6,7 @@
  */
 
 import { http } from "@/framework/request/http";
-import type {
-  ApiKey,
-  IssueApiKeyPayload,
-  IssuedApiKey,
-} from "@/modules/api-keys/types/api-key";
+import type { ApiKey, IssueApiKeyPayload, IssuedApiKey } from "@/modules/api-keys/types/api-key";
 
 const API_PREFIX = "/safe/v1/me/api-keys";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -95,7 +91,7 @@ export async function issueApiKey(payload: IssueApiKeyPayload): Promise<IssuedAp
       key: plain,
       masked: maskFromPlaintext(plain),
       enabled: true,
-      expires_at: payload.neverExpire ? null : payload.expiresAt ?? oneYearLater(),
+      expires_at: payload.neverExpire ? null : (payload.expiresAt ?? oneYearLater()),
       last_used_at: null,
       created_at: created,
     };

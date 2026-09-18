@@ -78,24 +78,27 @@ describe("metric-property-display", () => {
 
   it("maps metric analysis dimensions to semantic fields", () => {
     expect(
-      mapMetricAnalysisDimensionFields(["qty", "status"], [
-        {
-          displayKey: false,
-          displayName: "数量",
-          incrementalKey: false,
-          name: "qty",
-          primaryKey: false,
-          type: "integer",
-        },
-        {
-          displayKey: false,
-          displayName: "状态",
-          incrementalKey: false,
-          name: "status",
-          primaryKey: false,
-          type: "string",
-        },
-      ]),
+      mapMetricAnalysisDimensionFields(
+        ["qty", "status"],
+        [
+          {
+            displayKey: false,
+            displayName: "数量",
+            incrementalKey: false,
+            name: "qty",
+            primaryKey: false,
+            type: "integer",
+          },
+          {
+            displayKey: false,
+            displayName: "状态",
+            incrementalKey: false,
+            name: "status",
+            primaryKey: false,
+            type: "string",
+          },
+        ],
+      ),
     ).toEqual([
       { displayName: "数量", name: "qty", type: "integer" },
       { displayName: "状态", name: "status", type: "string" },

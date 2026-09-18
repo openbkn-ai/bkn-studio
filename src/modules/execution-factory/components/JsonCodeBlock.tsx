@@ -35,7 +35,7 @@ function highlight(json: string): ReactNode[] {
 
     const token = match[0];
     let className = styles.number;
-    if (token.startsWith("\"")) {
+    if (token.startsWith('"')) {
       className = match[2] ? styles.key : styles.string;
     } else if (token === "true" || token === "false") {
       className = styles.boolean;

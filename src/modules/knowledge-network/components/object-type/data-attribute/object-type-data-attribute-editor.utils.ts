@@ -11,11 +11,7 @@ import type {
   ObjectTypeResourceField,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-import {
-  canBeDisplayKey,
-  canBePrimaryKey,
-  DATA_PROPERTY_COMMENT_MAX_LENGTH,
-} from "./constants";
+import { canBeDisplayKey, canBePrimaryKey, DATA_PROPERTY_COMMENT_MAX_LENGTH } from "./constants";
 
 export type MappingFilter = "all" | "mapped" | "unmapped";
 
@@ -41,11 +37,7 @@ export type ConnectionPoint = {
 };
 
 export type ObjectTypeDescriptionFillStatus =
-  | "fillable"
-  | "missing"
-  | "same"
-  | "tooLong"
-  | "updatable";
+  "fillable" | "missing" | "same" | "tooLong" | "updatable";
 
 export type ObjectTypeDescriptionFillCandidate = {
   currentComment: string;
@@ -61,20 +53,13 @@ export function buildConnectionId(viewFieldName: string, propertyName: string) {
   return `${viewFieldName}::${propertyName}`;
 }
 
-function matchesMappingKeyword(
-  displayName: string,
-  name: string,
-  keyword: string,
-) {
+function matchesMappingKeyword(displayName: string, name: string, keyword: string) {
   const normalized = keyword.trim().toLowerCase();
   if (!normalized) {
     return true;
   }
 
-  return (
-    displayName.toLowerCase().includes(normalized) ||
-    name.toLowerCase().includes(normalized)
-  );
+  return displayName.toLowerCase().includes(normalized) || name.toLowerCase().includes(normalized);
 }
 
 export function buildMappingAlignedLayout(
@@ -191,11 +176,7 @@ export function filterPropertyRows(
       ? mappedFieldByPropertyName.get(property.name)
       : undefined;
     const partnerMatches = mappedField
-      ? matchesMappingKeyword(
-          mappedField.displayName,
-          mappedField.name,
-          normalizedFieldKeyword,
-        )
+      ? matchesMappingKeyword(mappedField.displayName, mappedField.name, normalizedFieldKeyword)
       : false;
 
     if (normalizedPropertyKeyword && normalizedFieldKeyword) {
@@ -246,8 +227,7 @@ export function buildDescriptionFillCandidates(
         propertyDisplayName: property.displayName,
         propertyName: property.name,
         sourceComment,
-        sourceFieldDisplayName:
-          resourceField?.displayName ?? property.mappedField.displayName,
+        sourceFieldDisplayName: resourceField?.displayName ?? property.mappedField.displayName,
         sourceFieldName: property.mappedField.name,
         status,
       },
@@ -330,9 +310,7 @@ function areMappedFieldsEqual(
     return !left && !right;
   }
   return (
-    left.displayName === right.displayName &&
-    left.name === right.name &&
-    left.type === right.type
+    left.displayName === right.displayName && left.name === right.name && left.type === right.type
   );
 }
 
@@ -359,10 +337,7 @@ export function areDataPropertiesEqual(
   });
 }
 
-export function areDataSourcesEqual(
-  left?: ObjectTypeDataSource,
-  right?: ObjectTypeDataSource,
-) {
+export function areDataSourcesEqual(left?: ObjectTypeDataSource, right?: ObjectTypeDataSource) {
   if (left === right) {
     return true;
   }
@@ -370,9 +345,7 @@ export function areDataSourcesEqual(
     return !left && !right;
   }
   return (
-    left.dataSourceId === right.dataSourceId &&
-    left.id === right.id &&
-    left.name === right.name
+    left.dataSourceId === right.dataSourceId && left.id === right.id && left.name === right.name
   );
 }
 

@@ -20,9 +20,7 @@ export type ReturnToState = {
   returnTo?: string;
 };
 
-export function buildReturnToState(
-  location: Pick<Location, "pathname" | "search">,
-): ReturnToState {
+export function buildReturnToState(location: Pick<Location, "pathname" | "search">): ReturnToState {
   return { returnTo: `${location.pathname}${location.search}` };
 }
 

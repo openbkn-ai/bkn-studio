@@ -50,14 +50,20 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   updateKnowledgeNetworkConceptGroup,
 }));
 
-vi.mock("@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell", () => ({
-  KnowledgeNetworkResourceConfigShell: ({ actions, children }: PropsWithChildren<{ actions?: ReactNode }>) => (
-    <div>
-      {actions}
-      {children}
-    </div>
-  ),
-}));
+vi.mock(
+  "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell",
+  () => ({
+    KnowledgeNetworkResourceConfigShell: ({
+      actions,
+      children,
+    }: PropsWithChildren<{ actions?: ReactNode }>) => (
+      <div>
+        {actions}
+        {children}
+      </div>
+    ),
+  }),
+);
 
 vi.mock("@/modules/knowledge-network/components/shared/ResourceColorSelect", () => ({
   DEFAULT_RESOURCE_COLOR: "#1677ff",
@@ -93,35 +99,40 @@ describe("ConceptGroupFormScene resource authorization regression", () => {
   it.each([
     { memberCount: 0, name: "Empty group" },
     { memberCount: 1, name: "Group with members" },
-  ])("saves basic information for a group with $memberCount members without reading resource details", async ({ memberCount, name }) => {
-    getKnowledgeNetworkConceptGroup.mockResolvedValue({
-      actionTypes: [],
-      color: "#1677ff",
-      description: "Original description",
-      id: "group-1",
-      name,
-      objectTypes: memberCount === 0 ? [] : [{ id: "object-1", name: "Customer", tags: [] }],
-      relationTypes: [],
-      tags: ["existing"],
-    });
-    getCatalogResources.mockRejectedValue(new Error("403 resource detail denied"));
-    updateKnowledgeNetworkConceptGroup.mockResolvedValue(null);
-
-    render(<ConceptGroupFormScene mode="edit" />);
-
-    const descriptionInput = await screen.findByDisplayValue("Original description");
-    fireEvent.change(descriptionInput, { target: { value: "Updated description" } });
-    fireEvent.click(screen.getByRole("button", { name: "common.save" }));
-
-    await waitFor(() => {
-      expect(updateKnowledgeNetworkConceptGroup).toHaveBeenCalledWith("network-1", "group-1", {
+  ])(
+    "saves basic information for a group with $memberCount members without reading resource details",
+    async ({ memberCount, name }) => {
+      getKnowledgeNetworkConceptGroup.mockResolvedValue({
+        actionTypes: [],
         color: "#1677ff",
-        description: "Updated description",
+        description: "Original description",
+        id: "group-1",
         name,
+        objectTypes: memberCount === 0 ? [] : [{ id: "object-1", name: "Customer", tags: [] }],
+        relationTypes: [],
         tags: ["existing"],
       });
-    });
-    expect(navigate).toHaveBeenCalledWith("/knowledge-network/workspace/network-1/concept-groups");
-    expect(getCatalogResources).not.toHaveBeenCalled();
-  });
+      getCatalogResources.mockRejectedValue(new Error("403 resource detail denied"));
+      updateKnowledgeNetworkConceptGroup.mockResolvedValue(null);
+
+      render(<ConceptGroupFormScene mode="edit" />);
+
+      const descriptionInput = await screen.findByDisplayValue("Original description");
+      fireEvent.change(descriptionInput, { target: { value: "Updated description" } });
+      fireEvent.click(screen.getByRole("button", { name: "common.save" }));
+
+      await waitFor(() => {
+        expect(updateKnowledgeNetworkConceptGroup).toHaveBeenCalledWith("network-1", "group-1", {
+          color: "#1677ff",
+          description: "Updated description",
+          name,
+          tags: ["existing"],
+        });
+      });
+      expect(navigate).toHaveBeenCalledWith(
+        "/knowledge-network/workspace/network-1/concept-groups",
+      );
+      expect(getCatalogResources).not.toHaveBeenCalled();
+    },
+  );
 });

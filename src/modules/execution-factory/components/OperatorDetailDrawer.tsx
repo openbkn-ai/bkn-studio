@@ -163,9 +163,7 @@ export function OperatorDetailDrawer({
         onClose={onClose}
         open={open}
         title={
-          marketMode
-            ? t("executionFactory.marketDetailTitle")
-            : t("executionFactory.detailTitle")
+          marketMode ? t("executionFactory.marketDetailTitle") : t("executionFactory.detailTitle")
         }
       >
         {record ? (
@@ -174,9 +172,7 @@ export function OperatorDetailDrawer({
               <div className={styles.summaryHeader}>
                 <div>
                   <h2 className={styles.summaryTitle}>{record.name}</h2>
-                  <p className={styles.summaryDescription}>
-                    {record.description || "-"}
-                  </p>
+                  <p className={styles.summaryDescription}>{record.description || "-"}</p>
                 </div>
                 <div className={styles.summaryStatus}>
                   <Tag style={statusStyleMap[record.status]}>
@@ -185,9 +181,7 @@ export function OperatorDetailDrawer({
                   {record.metadataType ? (
                     <Tag>{t(`executionFactory.metadataTypes.${record.metadataType}`)}</Tag>
                   ) : null}
-                  {record.isInternal ? (
-                    <Tag>{t("executionFactory.internalTag")}</Tag>
-                  ) : null}
+                  {record.isInternal ? <Tag>{t("executionFactory.internalTag")}</Tag> : null}
                 </div>
               </div>
             </section>
@@ -285,10 +279,7 @@ export function OperatorDetailDrawer({
             {!marketMode ? (
               <section className={styles.sectionCard}>
                 <h3 className={styles.sectionTitle}>{t("executionFactory.runLogTitle")}</h3>
-                <OperatorRunLogPanel
-                  operatorId={record.operatorId}
-                  sessionLogs={sessionLogs}
-                />
+                <OperatorRunLogPanel operatorId={record.operatorId} sessionLogs={sessionLogs} />
               </section>
             ) : null}
           </div>

@@ -5,10 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type {
-  ToolIoParameter,
-  ToolIoSpec,
-} from "@/modules/execution-factory/types/tool";
+import type { ToolIoParameter, ToolIoSpec } from "@/modules/execution-factory/types/tool";
 import { resolveOpenApiLocalRefs } from "@/modules/execution-factory/utils/openapi-operation-io";
 
 export { buildDefaultDebugBody } from "@/modules/execution-factory/utils/generate-sample-json";
@@ -51,12 +48,7 @@ type ApiSpecMetadata = {
   summary?: string;
 };
 
-const PREFERRED_MEDIA_TYPES = [
-  "application/json",
-  "application/problem+json",
-  "text/json",
-  "*/*",
-];
+const PREFERRED_MEDIA_TYPES = ["application/json", "application/problem+json", "text/json", "*/*"];
 
 function pickPreferredContentEntry(
   content?: Record<string, ApiSpecMediaContent>,
@@ -72,7 +64,9 @@ function pickPreferredContentEntry(
     }
   }
 
-  const jsonLikeKey = Object.keys(content).find((key) => /json/i.test(key) || key.endsWith("+json"));
+  const jsonLikeKey = Object.keys(content).find(
+    (key) => /json/i.test(key) || key.endsWith("+json"),
+  );
   if (jsonLikeKey) {
     return content[jsonLikeKey];
   }
@@ -183,8 +177,7 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
     });
 
   const requestBody = resolveOpenApiLocalRefs(apiSpec.request_body, document) as
-    | NonNullable<ApiSpecMetadata["api_spec"]>["request_body"]
-    | undefined;
+    NonNullable<ApiSpecMetadata["api_spec"]>["request_body"] | undefined;
   const requestContent = pickPreferredContentEntry(requestBody?.content);
   const requestBodySchema = resolveOpenApiLocalRefs(requestContent?.schema, document);
   const requestBodyExample = pickContentExample(requestContent);
@@ -201,9 +194,7 @@ export function parseToolIoSpec(metadata?: ApiSpecMetadata): ToolIoSpec | undefi
     const content = pickPreferredContentEntry(resolvedResponse.content);
     responses[statusCode] = {
       description:
-        typeof resolvedResponse.description === "string"
-          ? resolvedResponse.description
-          : undefined,
+        typeof resolvedResponse.description === "string" ? resolvedResponse.description : undefined,
       example: pickContentExample(content),
       schema: resolveOpenApiLocalRefs(content?.schema, document),
     };

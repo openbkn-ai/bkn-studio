@@ -26,11 +26,7 @@ function getServerTheme(): ResolvedTheme {
 
 export function ThemeProvider({ children }: PropsWithChildren) {
   const [themePreference, setThemePreference] = useState(getStoredThemePreference);
-  const systemTheme = useSyncExternalStore(
-    subscribeToSystemTheme,
-    getSystemTheme,
-    getServerTheme,
-  );
+  const systemTheme = useSyncExternalStore(subscribeToSystemTheme, getSystemTheme, getServerTheme);
   const resolvedTheme = resolveTheme(themePreference, systemTheme);
   const toggleTheme = useCallback(() => {
     setThemePreference((currentPreference) => {

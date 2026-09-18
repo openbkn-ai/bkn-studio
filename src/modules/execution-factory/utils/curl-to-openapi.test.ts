@@ -20,9 +20,7 @@ function parseJson<T>(value: string): T {
 
 describe("curl-to-openapi", () => {
   it("parses a simple curl command", () => {
-    const result = parseCurlCommand(
-      "curl 'https://uapis.cn/api/v1/misc/weather?city=北京'",
-    );
+    const result = parseCurlCommand("curl 'https://uapis.cn/api/v1/misc/weather?city=北京'");
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -97,7 +95,8 @@ describe("curl-to-openapi", () => {
   });
 
   it("turns curl headers into header parameters except content type", () => {
-    const result = parseCurlCommand(`curl -X GET "https://httpbin.org/get?customerId=1001&region=CN" \
+    const result =
+      parseCurlCommand(`curl -X GET "https://httpbin.org/get?customerId=1001&region=CN" \
   -H "accept: application/json" \
   -H "x-demo-source: openbkn-manual"`);
 
@@ -183,9 +182,9 @@ describe("curl-to-openapi", () => {
   });
 
   it("returns specific errors for common malformed curl input", () => {
-    expect(parseCurlCommand(`curl -H "Content-Type application/json" https://api.example.com`).ok).toBe(
-      false,
-    );
+    expect(
+      parseCurlCommand(`curl -H "Content-Type application/json" https://api.example.com`).ok,
+    ).toBe(false);
 
     const invalidJson = parseCurlCommand(
       `curl https://api.example.com/login -H "Content-Type: application/json" -d '{"username":'`,

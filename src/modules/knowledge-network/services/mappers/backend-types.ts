@@ -5,9 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import type {
-  KnowledgeNetworkMetricRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { KnowledgeNetworkMetricRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 export type BackendAccountInfo = {
   id?: string | null;
@@ -15,14 +13,7 @@ export type BackendAccountInfo = {
 };
 
 export type BackendActionTypeEnum =
-  | "ADD"
-  | "UPDATE"
-  | "DELETE"
-  | "NOTIFY"
-  | "add"
-  | "modify"
-  | "delete"
-  | "notify";
+  "ADD" | "UPDATE" | "DELETE" | "NOTIFY" | "add" | "modify" | "delete" | "notify";
 
 export type BackendKnowledgeNetwork = {
   code?: string;

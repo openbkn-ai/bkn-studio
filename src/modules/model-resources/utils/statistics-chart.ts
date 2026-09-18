@@ -20,7 +20,9 @@ export function parseStatisticsNumber(value: unknown): number {
   return 0;
 }
 
-export function unwrapStatisticsRecord<T extends Record<string, unknown>>(value: unknown): T | null {
+export function unwrapStatisticsRecord<T extends Record<string, unknown>>(
+  value: unknown,
+): T | null {
   let candidate = value;
 
   if (Array.isArray(candidate)) {

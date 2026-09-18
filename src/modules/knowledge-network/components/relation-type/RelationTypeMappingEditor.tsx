@@ -11,10 +11,7 @@ import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-netwo
 
 import { RelationTypeResourceMappingRules } from "./RelationTypeResourceMappingRules";
 import { RelationTypeDirectMappingRules } from "./RelationTypeDirectMappingRules";
-import {
-  resetMappingRulesForMode,
-  type RelationTypeMappingFormValues,
-} from "./mapping-utils";
+import { resetMappingRulesForMode, type RelationTypeMappingFormValues } from "./mapping-utils";
 import { RelationTypeMappingShell } from "./RelationTypeMappingShell";
 
 export type { RelationTypeMappingFormValues } from "./mapping-utils";
@@ -52,7 +49,9 @@ export function RelationTypeMappingEditor({
     });
   };
 
-  const handleMappingRulesChange = (mappingRules: RelationTypeMappingFormValues["mappingRules"]) => {
+  const handleMappingRulesChange = (
+    mappingRules: RelationTypeMappingFormValues["mappingRules"],
+  ) => {
     onChange({
       ...value,
       mappingRules,

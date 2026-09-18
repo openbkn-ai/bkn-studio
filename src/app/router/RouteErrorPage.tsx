@@ -34,8 +34,7 @@ export function RouteErrorPage() {
   const { t } = useTranslation();
   const status = getRouteErrorStatus(error);
   const detail = getRouteErrorMessage(error);
-  const title =
-    status === 404 ? t("common.pageNotFound") : t("common.unexpectedError");
+  const title = status === 404 ? t("common.pageNotFound") : t("common.unexpectedError");
 
   return (
     <div className="status-page">

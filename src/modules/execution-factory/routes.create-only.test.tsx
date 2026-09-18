@@ -31,18 +31,26 @@ vi.mock("react-i18next", async (importOriginal) => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 vi.mock("@/modules/execution-factory/components/create-menu/AddCapabilityWizard", () => ({
-  AddCapabilityWizard: ({ initialMode, onCreated, open }: {
+  AddCapabilityWizard: ({
+    initialMode,
+    onCreated,
+    open,
+  }: {
     initialMode?: "mcp" | "skill";
     onCreated?: (payload: { tab: "mcp" | "skill"; id: string }) => void;
     open: boolean;
-  }) => open ? (
-    <>
-      <output data-testid="create-wizard">{initialMode}</output>
-      <button onClick={() => initialMode && onCreated?.({ tab: initialMode, id: "new-id" })} type="button">
-        complete
-      </button>
-    </>
-  ) : null,
+  }) =>
+    open ? (
+      <>
+        <output data-testid="create-wizard">{initialMode}</output>
+        <button
+          onClick={() => initialMode && onCreated?.({ tab: initialMode, id: "new-id" })}
+          type="button"
+        >
+          complete
+        </button>
+      </>
+    ) : null,
 }));
 vi.mock("@/modules/execution-factory/components/create-menu/CreateExecutionUnitWizard", () => ({
   CreateExecutionUnitWizard: () => null,
@@ -59,22 +67,33 @@ vi.mock("@/modules/execution-factory/pages/SkillDetailPage", () => ({
 
 function CreateRoute() {
   const location = useLocation();
-  const route = useRoutes(executionFactoryRoutes.filter((item) => [
-    "execution-factory/mcp/new",
-    "execution-factory/skills/new",
-    "execution-factory/mcp/:mcpId",
-    "execution-factory/skills/:skillId",
-  ].includes(item.path ?? "")));
-  return <>{route}<output data-testid="current-path">{location.pathname}</output></>;
+  const route = useRoutes(
+    executionFactoryRoutes.filter((item) =>
+      [
+        "execution-factory/mcp/new",
+        "execution-factory/skills/new",
+        "execution-factory/mcp/:mcpId",
+        "execution-factory/skills/:skillId",
+      ].includes(item.path ?? ""),
+    ),
+  );
+  return (
+    <>
+      {route}
+      <output data-testid="current-path">{location.pathname}</output>
+    </>
+  );
 }
 
 describe("execution factory create-only routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     services.runtimeConfig.currentUser.permissions = [];
-    services.refreshCurrentUser.mockImplementation(() => Promise.resolve({
-      permissions: ["execution-factory:mcp:view", "execution-factory:skill:view"],
-    }));
+    services.refreshCurrentUser.mockImplementation(() =>
+      Promise.resolve({
+        permissions: ["execution-factory:mcp:view", "execution-factory:skill:view"],
+      }),
+    );
   });
 
   it.each([
@@ -84,17 +103,27 @@ describe("execution factory create-only routes", () => {
     services.runtimeConfig.currentUser.permissions = [grant];
     await import("@/modules/execution-factory/pages/ExecutionUnitCreatePage");
 
-    render(<MemoryRouter initialEntries={[path]}><CreateRoute /></MemoryRouter>);
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <CreateRoute />
+      </MemoryRouter>,
+    );
 
-    expect((await screen.findByTestId("create-wizard", {}, { timeout: 5000 })).textContent).toBe(kind);
+    expect((await screen.findByTestId("create-wizard", {}, { timeout: 5000 })).textContent).toBe(
+      kind,
+    );
     expect(screen.queryByText("common.noPermission")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "complete" }));
-    await waitFor(() => expect(screen.getByTestId("current-path").textContent).toBe(
-      `/execution-factory/${kind === "mcp" ? "mcp" : "skills"}/new-id`,
-    ));
+    await waitFor(() =>
+      expect(screen.getByTestId("current-path").textContent).toBe(
+        `/execution-factory/${kind === "mcp" ? "mcp" : "skills"}/new-id`,
+      ),
+    );
     expect(await screen.findByText(`${kind} detail`)).toBeTruthy();
     expect(services.refreshCurrentUser).toHaveBeenCalledOnce();
-    expect(services.runtimeConfig.currentUser.permissions).toContain(`execution-factory:${kind}:view`);
+    expect(services.runtimeConfig.currentUser.permissions).toContain(
+      `execution-factory:${kind}:view`,
+    );
   });
 });

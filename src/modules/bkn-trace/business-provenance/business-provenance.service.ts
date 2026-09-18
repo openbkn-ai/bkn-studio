@@ -59,7 +59,12 @@ export type BusinessProvenanceInteractionListItem = {
   durationMs?: number;
 };
 
-export type BusinessProvenancePage<T> = { entries: T[]; total: number; page?: number; pageSize?: number };
+export type BusinessProvenancePage<T> = {
+  entries: T[];
+  total: number;
+  page?: number;
+  pageSize?: number;
+};
 
 export type BusinessProvenanceAnalysisHistory = {
   analysisId: string;
@@ -79,9 +84,21 @@ export type OperationResolution = {
   toolName?: string;
   knowledgeNetworkId?: string;
   status?: "resolved" | "ambiguous" | "unresolved" | "not_evaluable";
-	callStatus?: string; protocol?: string; startedAt?: string; finishedAt?: string; durationMs?: number;
-	input?: unknown; output?: unknown; error?: unknown;
-  query?: { sql?: string; resourceIds?: string[]; resources?: Array<{ id: string; name?: string; objectId?: string; objectName?: string }>; conditions?: unknown; resultCount?: number };
+  callStatus?: string;
+  protocol?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
+  input?: unknown;
+  output?: unknown;
+  error?: unknown;
+  query?: {
+    sql?: string;
+    resourceIds?: string[];
+    resources?: Array<{ id: string; name?: string; objectId?: string; objectName?: string }>;
+    conditions?: unknown;
+    resultCount?: number;
+  };
   objects?: Array<{ id: string; name?: string }>;
   elements: Array<{ kind: string; id: string; name?: string; parentId?: string; field?: string }>;
   missingFacts: string[];
@@ -100,9 +117,19 @@ export type BusinessProvenanceInteraction = {
   interactionQuestion?: string;
   interactionResult?: string;
   operations: OperationResolution[];
-  conversationContext: Array<{ knowledgeNetworkId: string; sourceInteractionId: string; sourceOperationId: string }>;
+  conversationContext: Array<{
+    knowledgeNetworkId: string;
+    sourceInteractionId: string;
+    sourceOperationId: string;
+  }>;
   derivedFacts: BusinessProvenanceDerivedFact[];
-  contextRelations: Array<{ knowledgeNetworkId: string; id: string; name?: string; sourceObjectId: string; targetObjectId: string }>;
+  contextRelations: Array<{
+    knowledgeNetworkId: string;
+    id: string;
+    name?: string;
+    sourceObjectId: string;
+    targetObjectId: string;
+  }>;
 };
 
 type BackendConversation = {
@@ -120,69 +147,191 @@ type BackendConversation = {
 export async function getBusinessProvenanceConversations(
   query: BusinessProvenanceQuery = {},
 ): Promise<BusinessProvenancePage<BusinessProvenanceConversation>> {
-  const response = await http.get<{ entries?: BackendConversation[]; total?: number; page?: number; page_size?: number }>(
-    `${EE_PROVENANCE_PREFIX}/conversations`,
-    { params: provenanceParams(query), skipErrorToast: true },
-  );
+  const response = await http.get<{
+    entries?: BackendConversation[];
+    total?: number;
+    page?: number;
+    page_size?: number;
+  }>(`${EE_PROVENANCE_PREFIX}/conversations`, {
+    params: provenanceParams(query),
+    skipErrorToast: true,
+  });
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
-      conversationId: entry.conversation_id ?? "", agentName: entry.agent_name,
-      questionPreview: entry.question_preview, resultPreview: entry.result_preview,
-      startedAt: entry.started_at, status: entry.status, interactionCount: entry.interaction_count,
-      durationMs: entry.duration_ms, evidenceCompleteness: entry.evidence_completeness,
+      conversationId: entry.conversation_id ?? "",
+      agentName: entry.agent_name,
+      questionPreview: entry.question_preview,
+      resultPreview: entry.result_preview,
+      startedAt: entry.started_at,
+      status: entry.status,
+      interactionCount: entry.interaction_count,
+      durationMs: entry.duration_ms,
+      evidenceCompleteness: entry.evidence_completeness,
     })),
-    total: response.data.total ?? 0, page: response.data.page, pageSize: response.data.page_size,
+    total: response.data.total ?? 0,
+    page: response.data.page,
+    pageSize: response.data.page_size,
   };
 }
 
 export async function getBusinessProvenanceInteractions(
   query: BusinessProvenanceQuery,
 ): Promise<BusinessProvenancePage<BusinessProvenanceInteractionListItem>> {
-  const response = await http.get<{ entries?: Array<{
-    interaction_id?: string; conversation_id?: string; round_number?: number; question_preview?: string; result_preview?: string;
-    started_at?: string; status?: string; duration_ms?: number;
-  }>; total?: number; page?: number; page_size?: number }>(
-    `${EE_PROVENANCE_PREFIX}/interactions`,
-    { params: provenanceParams(query) },
-  );
+  const response = await http.get<{
+    entries?: Array<{
+      interaction_id?: string;
+      conversation_id?: string;
+      round_number?: number;
+      question_preview?: string;
+      result_preview?: string;
+      started_at?: string;
+      status?: string;
+      duration_ms?: number;
+    }>;
+    total?: number;
+    page?: number;
+    page_size?: number;
+  }>(`${EE_PROVENANCE_PREFIX}/interactions`, { params: provenanceParams(query) });
   return {
     entries: (response.data.entries ?? []).map((entry) => ({
-      interactionId: entry.interaction_id ?? "", conversationId: entry.conversation_id, roundNumber: entry.round_number,
-      questionPreview: entry.question_preview, resultPreview: entry.result_preview,
-      startedAt: entry.started_at, status: entry.status, durationMs: entry.duration_ms,
+      interactionId: entry.interaction_id ?? "",
+      conversationId: entry.conversation_id,
+      roundNumber: entry.round_number,
+      questionPreview: entry.question_preview,
+      resultPreview: entry.result_preview,
+      startedAt: entry.started_at,
+      status: entry.status,
+      durationMs: entry.duration_ms,
     })),
-    total: response.data.total ?? 0, page: response.data.page, pageSize: response.data.page_size,
+    total: response.data.total ?? 0,
+    page: response.data.page,
+    pageSize: response.data.page_size,
   };
 }
 
-export async function getBusinessProvenanceInteraction(interactionId: string): Promise<BusinessProvenanceInteraction> {
+export async function getBusinessProvenanceInteraction(
+  interactionId: string,
+): Promise<BusinessProvenanceInteraction> {
   const response = await http.get<{
     time_rail?: TimeRailItem[];
     interaction_id?: string;
     interaction_question?: string;
     interaction_result?: string;
-    conversation_context?: Array<{ knowledge_network_id?: string; source_interaction_id?: string; source_operation_id?: string }>;
-    derived_facts?: Array<{ rule?: string; source_operation_id?: string; operation_id?: string; element_id?: string }>;
-    context_relations?: Array<{ knowledge_network_id?: string; id?: string; name?: string; source_object_id?: string; target_object_id?: string }>;
-    operations?: Array<{
-      operation_id?: string; attempt?: number; tool_name?: string; knowledge_network_id?: string;
-      status?: OperationResolution["status"]; call_status?: string; protocol?: string; started_at?: string; finished_at?: string; duration_ms?: number; input?: unknown; output?: unknown; error?: unknown; query?: { sql?: string; resource_ids?: string[]; resources?: Array<{ id?: string; name?: string; object_id?: string; object_name?: string }>; conditions?: unknown; result_count?: number }; objects?: Array<{ id?: string; name?: string }>; elements?: Array<{ kind?: string; id?: string; name?: string; parent_id?: string; field?: string }>; missing_facts?: string[];
+    conversation_context?: Array<{
+      knowledge_network_id?: string;
+      source_interaction_id?: string;
+      source_operation_id?: string;
     }>;
-  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, { skipErrorToast: true });
+    derived_facts?: Array<{
+      rule?: string;
+      source_operation_id?: string;
+      operation_id?: string;
+      element_id?: string;
+    }>;
+    context_relations?: Array<{
+      knowledge_network_id?: string;
+      id?: string;
+      name?: string;
+      source_object_id?: string;
+      target_object_id?: string;
+    }>;
+    operations?: Array<{
+      operation_id?: string;
+      attempt?: number;
+      tool_name?: string;
+      knowledge_network_id?: string;
+      status?: OperationResolution["status"];
+      call_status?: string;
+      protocol?: string;
+      started_at?: string;
+      finished_at?: string;
+      duration_ms?: number;
+      input?: unknown;
+      output?: unknown;
+      error?: unknown;
+      query?: {
+        sql?: string;
+        resource_ids?: string[];
+        resources?: Array<{ id?: string; name?: string; object_id?: string; object_name?: string }>;
+        conditions?: unknown;
+        result_count?: number;
+      };
+      objects?: Array<{ id?: string; name?: string }>;
+      elements?: Array<{
+        kind?: string;
+        id?: string;
+        name?: string;
+        parent_id?: string;
+        field?: string;
+      }>;
+      missing_facts?: string[];
+    }>;
+  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}`, {
+    skipErrorToast: true,
+  });
   return {
     timeRail: response.data.time_rail,
     interactionId: response.data.interaction_id ?? interactionId,
     interactionQuestion: response.data.interaction_question,
     interactionResult: response.data.interaction_result,
-    conversationContext: (response.data.conversation_context ?? []).map((context) => ({ knowledgeNetworkId: context.knowledge_network_id ?? "", sourceInteractionId: context.source_interaction_id ?? "", sourceOperationId: context.source_operation_id ?? "" })),
-    derivedFacts: (response.data.derived_facts ?? []).map((fact) => ({ rule: fact.rule ?? "", sourceOperationId: fact.source_operation_id ?? "", operationId: fact.operation_id ?? "", elementId: fact.element_id ?? "" })),
-    contextRelations: (response.data.context_relations ?? []).map((relation) => ({ knowledgeNetworkId: relation.knowledge_network_id ?? "", id: relation.id ?? "", name: relation.name, sourceObjectId: relation.source_object_id ?? "", targetObjectId: relation.target_object_id ?? "" })),
+    conversationContext: (response.data.conversation_context ?? []).map((context) => ({
+      knowledgeNetworkId: context.knowledge_network_id ?? "",
+      sourceInteractionId: context.source_interaction_id ?? "",
+      sourceOperationId: context.source_operation_id ?? "",
+    })),
+    derivedFacts: (response.data.derived_facts ?? []).map((fact) => ({
+      rule: fact.rule ?? "",
+      sourceOperationId: fact.source_operation_id ?? "",
+      operationId: fact.operation_id ?? "",
+      elementId: fact.element_id ?? "",
+    })),
+    contextRelations: (response.data.context_relations ?? []).map((relation) => ({
+      knowledgeNetworkId: relation.knowledge_network_id ?? "",
+      id: relation.id ?? "",
+      name: relation.name,
+      sourceObjectId: relation.source_object_id ?? "",
+      targetObjectId: relation.target_object_id ?? "",
+    })),
     operations: (response.data.operations ?? []).map((operation) => ({
-      operationId: operation.operation_id ?? "", attempt: operation.attempt, toolName: operation.tool_name,
-      knowledgeNetworkId: operation.knowledge_network_id, status: operation.status,
-      callStatus: operation.call_status, protocol: operation.protocol, startedAt: operation.started_at, finishedAt: operation.finished_at, durationMs: operation.duration_ms, input: operation.input, output: operation.output, error: operation.error, query: operation.query ? { sql: operation.query.sql, resourceIds: operation.query.resource_ids, resources: operation.query.resources?.map((resource) => ({ id: resource.id ?? "", name: resource.name, objectId: resource.object_id, objectName: resource.object_name })), conditions: operation.query.conditions, resultCount: operation.query.result_count } : undefined,
-      objects: (operation.objects ?? []).map((object) => ({ id: object.id ?? "", name: object.name })),
-      elements: (operation.elements ?? []).map((element) => ({ kind: element.kind ?? "", id: element.id ?? "", name: element.name, parentId: element.parent_id, field: element.field })), missingFacts: operation.missing_facts ?? [],
+      operationId: operation.operation_id ?? "",
+      attempt: operation.attempt,
+      toolName: operation.tool_name,
+      knowledgeNetworkId: operation.knowledge_network_id,
+      status: operation.status,
+      callStatus: operation.call_status,
+      protocol: operation.protocol,
+      startedAt: operation.started_at,
+      finishedAt: operation.finished_at,
+      durationMs: operation.duration_ms,
+      input: operation.input,
+      output: operation.output,
+      error: operation.error,
+      query: operation.query
+        ? {
+            sql: operation.query.sql,
+            resourceIds: operation.query.resource_ids,
+            resources: operation.query.resources?.map((resource) => ({
+              id: resource.id ?? "",
+              name: resource.name,
+              objectId: resource.object_id,
+              objectName: resource.object_name,
+            })),
+            conditions: operation.query.conditions,
+            resultCount: operation.query.result_count,
+          }
+        : undefined,
+      objects: (operation.objects ?? []).map((object) => ({
+        id: object.id ?? "",
+        name: object.name,
+      })),
+      elements: (operation.elements ?? []).map((element) => ({
+        kind: element.kind ?? "",
+        id: element.id ?? "",
+        name: element.name,
+        parentId: element.parent_id,
+        field: element.field,
+      })),
+      missingFacts: operation.missing_facts ?? [],
     })),
   };
 }
@@ -203,19 +352,20 @@ export async function streamBusinessProvenanceAnalysis(
   onToken?: (text: string) => void,
 ): Promise<Record<string, unknown>> {
   const runtime = getRuntimeConfig();
-  const request = async (token: string | null) => fetch(
-    `${runtime.apiBaseUrl}${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "text/event-stream",
-        "Content-Type": "application/json",
-        "Accept-Language": runtime.locale,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  const request = async (token: string | null) =>
+    fetch(
+      `${runtime.apiBaseUrl}${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "text/event-stream",
+          "Content-Type": "application/json",
+          "Accept-Language": runtime.locale,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ markdown }),
       },
-      body: JSON.stringify({ markdown }),
-    },
-  );
+    );
   let response = await request(runtime.auth.tokenManager.getAccessToken());
   if (response.status === 401) {
     response = await request(await runtime.auth.tokenManager.refreshAccessToken());
@@ -224,7 +374,10 @@ export async function streamBusinessProvenanceAnalysis(
     throw await analysisFetchError(response);
   }
   if (!response.body) {
-    throw new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.streamMissing"), "analysis_invalid_result");
+    throw new BusinessProvenanceAnalysisError(
+      i18n.t("bknTrace.businessProvenance.workspace.agent.streamMissing"),
+      "analysis_invalid_result",
+    );
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -238,11 +391,14 @@ export async function streamBusinessProvenanceAnalysis(
     for (const frame of frames) {
       const event = parseSSEFrame(frame);
       if (!event) continue;
-      if (event.name === "token" && typeof event.data.content === "string") onToken?.(event.data.content);
+      if (event.name === "token" && typeof event.data.content === "string")
+        onToken?.(event.data.content);
       if (event.name === "structured" && isRecord(event.data.content)) result = event.data.content;
       if (event.name === "error") {
         throw new BusinessProvenanceAnalysisError(
-          typeof event.data.message === "string" ? event.data.message : i18n.t("bknTrace.businessProvenance.workspace.agent.failed"),
+          typeof event.data.message === "string"
+            ? event.data.message
+            : i18n.t("bknTrace.businessProvenance.workspace.agent.failed"),
           typeof event.data.code === "string" ? event.data.code : "analysis_agent_failed",
         );
       }
@@ -250,21 +406,40 @@ export async function streamBusinessProvenanceAnalysis(
     if (done) break;
   }
   if (!result) {
-    throw new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.resultMissing"), "analysis_empty_result");
+    throw new BusinessProvenanceAnalysisError(
+      i18n.t("bknTrace.businessProvenance.workspace.agent.resultMissing"),
+      "analysis_empty_result",
+    );
   }
   return result;
 }
 
-export async function getBusinessProvenanceAnalysisHistory(interactionId: string): Promise<BusinessProvenanceAnalysisHistory[]> {
-  const response = await http.get<{ entries?: Array<{
-    analysis_id?: string; interaction_id?: string; agent_id?: string; status?: string;
-    result?: Record<string, unknown>; failure_code?: string; failure_message?: string; started_at?: string; finished_at?: string;
-  }> }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`);
+export async function getBusinessProvenanceAnalysisHistory(
+  interactionId: string,
+): Promise<BusinessProvenanceAnalysisHistory[]> {
+  const response = await http.get<{
+    entries?: Array<{
+      analysis_id?: string;
+      interaction_id?: string;
+      agent_id?: string;
+      status?: string;
+      result?: Record<string, unknown>;
+      failure_code?: string;
+      failure_message?: string;
+      started_at?: string;
+      finished_at?: string;
+    }>;
+  }>(`${EE_PROVENANCE_PREFIX}/interactions/${encodeURIComponent(interactionId)}/analysis`);
   return (response.data.entries ?? []).map((entry) => ({
-    analysisId: entry.analysis_id ?? "", interactionId: entry.interaction_id ?? interactionId,
-    agentId: entry.agent_id ?? "", status: entry.status === "completed" || entry.status === "failed" ? entry.status : "running",
-    result: entry.result, failureCode: entry.failure_code, failureMessage: entry.failure_message,
-    startedAt: entry.started_at ?? "", finishedAt: entry.finished_at,
+    analysisId: entry.analysis_id ?? "",
+    interactionId: entry.interaction_id ?? interactionId,
+    agentId: entry.agent_id ?? "",
+    status: entry.status === "completed" || entry.status === "failed" ? entry.status : "running",
+    result: entry.result,
+    failureCode: entry.failure_code,
+    failureMessage: entry.failure_message,
+    startedAt: entry.started_at ?? "",
+    finishedAt: entry.finished_at,
   }));
 }
 
@@ -290,10 +465,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function analysisFetchError(response: Response): Promise<BusinessProvenanceAnalysisError> {
   try {
-    const payload = await response.json() as { error?: { code?: string; message?: string; status_code?: number } };
-    return new BusinessProvenanceAnalysisError(payload.error?.message || i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", { status: response.status }), payload.error?.code, payload.error?.status_code ?? response.status);
+    const payload = (await response.json()) as {
+      error?: { code?: string; message?: string; status_code?: number };
+    };
+    return new BusinessProvenanceAnalysisError(
+      payload.error?.message ||
+        i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", {
+          status: response.status,
+        }),
+      payload.error?.code,
+      payload.error?.status_code ?? response.status,
+    );
   } catch {
-    return new BusinessProvenanceAnalysisError(i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", { status: response.status }), "analysis_transport", response.status);
+    return new BusinessProvenanceAnalysisError(
+      i18n.t("bknTrace.businessProvenance.workspace.agent.httpFailure", {
+        status: response.status,
+      }),
+      "analysis_transport",
+      response.status,
+    );
   }
 }
 

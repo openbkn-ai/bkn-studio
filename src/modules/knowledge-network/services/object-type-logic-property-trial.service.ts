@@ -58,9 +58,7 @@ function normalizeLogicPropertyTrialRows(
 
     return {
       instanceIdentity,
-      values: Object.fromEntries(
-        propertyNames.map((name) => [name, record[name] ?? null]),
-      ),
+      values: Object.fromEntries(propertyNames.map((name) => [name, record[name] ?? null])),
     };
   });
 }

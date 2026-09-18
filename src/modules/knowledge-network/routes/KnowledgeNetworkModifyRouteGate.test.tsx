@@ -46,13 +46,9 @@ function createRecord(operations?: string[]): KnowledgeNetworkRecord {
   };
 }
 
-function renderGate(
-  initialEntry = "/knowledge-network/workspace/network-1/object-types/create",
-) {
+function renderGate(initialEntry = "/knowledge-network/workspace/network-1/object-types/create") {
   return render(
-    <MemoryRouter
-      initialEntries={[initialEntry]}
-    >
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route
           element={

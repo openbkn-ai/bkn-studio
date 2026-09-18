@@ -24,9 +24,7 @@ export function formatRowCount(value: number, locale = i18n.language) {
   if (!Number.isFinite(value) || value <= 0) {
     return "-";
   }
-  const compactUnit = locale.startsWith("zh")
-    ? compactChineseRowUnit(value)
-    : null;
+  const compactUnit = locale.startsWith("zh") ? compactChineseRowUnit(value) : null;
   if (compactUnit) {
     return i18n.t(`dataCatalog.format.${compactUnit.key}`, {
       count: compactUnit.value,

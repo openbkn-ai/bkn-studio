@@ -40,9 +40,8 @@ describe("data-connect.service · test connection", () => {
 
   it("filters connector types to enabled implementations available in the backend", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { listDataConnectConnectorTypes } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await listDataConnectConnectorTypes();
 
@@ -60,16 +59,17 @@ describe("data-connect.service · test connection", () => {
 
   it("passes data-connection pagination and filters through to Vega", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 23 });
-    const { listDataConnectRecords } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectRecords } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
-    await expect(listDataConnectRecords({
-      connectorType: "postgresql",
-      keyword: "orders",
-      page: 2,
-      pageSize: 10,
-    })).resolves.toEqual({ items: [], total: 23 });
+    await expect(
+      listDataConnectRecords({
+        connectorType: "postgresql",
+        keyword: "orders",
+        page: 2,
+        pageSize: 10,
+      }),
+    ).resolves.toEqual({ items: [], total: 23 });
 
     expect(listCatalogsMock).toHaveBeenCalledWith({
       connectorType: "postgresql",
@@ -82,26 +82,20 @@ describe("data-connect.service · test connection", () => {
 
   it("passes the caller's error-toast preference to the catalog list", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
-    const { listDataConnectRecords } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectRecords } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
-    await listDataConnectRecords(
-      { keyword: "", page: 1, pageSize: 10 },
-      { skipErrorToast: true },
-    );
+    await listDataConnectRecords({ keyword: "", page: 1, pageSize: 10 }, { skipErrorToast: true });
 
-    expect(listCatalogsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "physical" }),
-      { skipErrorToast: true },
-    );
+    expect(listCatalogsMock).toHaveBeenCalledWith(expect.objectContaining({ type: "physical" }), {
+      skipErrorToast: true,
+    });
   });
 
   it("passes status and health filters through to the catalog list", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 0 });
-    const { listDataConnectRecords } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectRecords } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await listDataConnectRecords({
       enabled: false,
@@ -146,9 +140,8 @@ describe("data-connect.service · test connection", () => {
         total_count: 1,
       },
     });
-    const { listDataConnectConnectorTypes } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await expect(listDataConnectConnectorTypes()).resolves.toEqual([
       {
@@ -183,9 +176,8 @@ describe("data-connect.service · test connection", () => {
         type: "postgresql",
       },
     });
-    const { getDataConnectConnectorType } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { getDataConnectConnectorType } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await expect(getDataConnectConnectorType("postgresql")).resolves.toMatchObject({
       fieldConfig: { host: { encrypted: false, required: true, type: "string" } },
@@ -197,9 +189,8 @@ describe("data-connect.service · test connection", () => {
   it("covers every built-in connector field from the Vega initialization data", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
-    const { listDataConnectConnectorTypes } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     const connectorTypes = await listDataConnectConnectorTypes();
     const fieldsByType = new Map(
@@ -207,22 +198,56 @@ describe("data-connect.service · test connection", () => {
     );
 
     expect(Object.keys(fieldsByType.get("mariadb") ?? {})).toEqual([
-      "host", "port", "username", "password", "databases", "options",
+      "host",
+      "port",
+      "username",
+      "password",
+      "databases",
+      "options",
     ]);
     expect(Object.keys(fieldsByType.get("mysql") ?? {})).toEqual([
-      "host", "port", "username", "password", "databases", "options",
+      "host",
+      "port",
+      "username",
+      "password",
+      "databases",
+      "options",
     ]);
     expect(Object.keys(fieldsByType.get("postgresql") ?? {})).toEqual([
-      "host", "port", "username", "password", "database", "schemas", "options",
+      "host",
+      "port",
+      "username",
+      "password",
+      "database",
+      "schemas",
+      "options",
     ]);
     expect(Object.keys(fieldsByType.get("sqlserver") ?? {})).toEqual([
-      "host", "port", "username", "password", "database", "schemas", "options",
+      "host",
+      "port",
+      "username",
+      "password",
+      "database",
+      "schemas",
+      "options",
     ]);
     expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
-      "host", "port", "username", "password", "index_pattern",
+      "host",
+      "port",
+      "username",
+      "password",
+      "index_pattern",
     ]);
     expect(Object.keys(fieldsByType.get("anyshare") ?? {})).toEqual([
-      "protocol", "host", "port", "auth_type", "token", "app_id", "app_secret", "doc_lib_type", "paths",
+      "protocol",
+      "host",
+      "port",
+      "auth_type",
+      "token",
+      "app_id",
+      "app_secret",
+      "doc_lib_type",
+      "paths",
     ]);
     expect(fieldsByType.get("anyshare")?.app_secret).toMatchObject({
       encrypted: true,
@@ -232,9 +257,8 @@ describe("data-connect.service · test connection", () => {
   });
 
   it("recognizes only the backend connection-test failure code", async () => {
-    const { isDataConnectConnectionTestFailure } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { isDataConnectConnectionTestFailure } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     expect(
       isDataConnectConnectionTestFailure(
@@ -242,8 +266,7 @@ describe("data-connect.service · test connection", () => {
           config: { headers: new axios.AxiosHeaders() },
           data: {
             description: "Connection test failed.",
-            error_code:
-              "VegaBackend.Catalog.InternalError.TestConnectionFailed",
+            error_code: "VegaBackend.Catalog.InternalError.TestConnectionFailed",
           },
           headers: {},
           status: 400,
@@ -272,13 +295,10 @@ describe("data-connect.service · test connection", () => {
       message: "Connection refused.",
       success: false,
     });
-    const { testDataConnectRecord } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { testDataConnectRecord } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
-    await expect(testDataConnectRecord("catalog-1")).rejects.toThrow(
-      "Connection refused.",
-    );
+    await expect(testDataConnectRecord("catalog-1")).rejects.toThrow("Connection refused.");
   });
 
   it("rejects a preflight business failure with the backend details", async () => {
@@ -286,9 +306,8 @@ describe("data-connect.service · test connection", () => {
       message: "dial tcp db.example.com:3306: i/o timeout",
       success: false,
     });
-    const { testDataConnectConfig } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { testDataConnectConfig } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await expect(
       testDataConnectConfig({
@@ -303,9 +322,8 @@ describe("data-connect.service · test connection", () => {
       message: "  ",
       success: false,
     });
-    const { testDataConnectConfig } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { testDataConnectConfig } =
+      await import("@/modules/data-connect/services/data-connect.service");
 
     await expect(
       testDataConnectConfig({
@@ -320,9 +338,8 @@ describe("data-connect.service · test connection", () => {
       message: "Connection test succeeded.",
       success: true,
     });
-    const { testDataConnectConfig } = await import(
-      "@/modules/data-connect/services/data-connect.service"
-    );
+    const { testDataConnectConfig } =
+      await import("@/modules/data-connect/services/data-connect.service");
     const input = {
       connectorConfig: { host: "db.example.com" },
       connectorType: "postgresql",

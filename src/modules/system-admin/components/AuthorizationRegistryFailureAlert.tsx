@@ -26,7 +26,11 @@ export function AuthorizationRegistryFailureAlert({
   }
   return (
     <Alert
-      action={<AppButton onClick={onRetry} type="link">{t("common.retry")}</AppButton>}
+      action={
+        <AppButton onClick={onRetry} type="link">
+          {t("common.retry")}
+        </AppButton>
+      }
       message={t("systemAdmin.authorizationRegistry.loadFailed")}
       showIcon
       type="error"

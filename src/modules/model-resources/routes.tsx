@@ -78,10 +78,7 @@ export const modelResourcesRoutes: RouteObject[] = [
         titleKey: "modelResources.statistics.title",
       },
     },
-    element: withRouteLoading(
-      "model-resources:statistics:view",
-      <ModelStatisticsPage />,
-    ),
+    element: withRouteLoading("model-resources:statistics:view", <ModelStatisticsPage />),
   },
 ];
 

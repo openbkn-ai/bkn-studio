@@ -20,15 +20,7 @@ type StatisticsSummaryProps = {
   overview: ModelStatisticsOverview;
 };
 
-function KpiCard({
-  label,
-  unit,
-  value,
-}: {
-  label: string;
-  unit?: string;
-  value: string | number;
-}) {
+function KpiCard({ label, unit, value }: { label: string; unit?: string; value: string | number }) {
   return (
     <div className={styles.kpiCard}>
       <p className={styles.kpiLabel}>{label}</p>
@@ -131,7 +123,9 @@ export function StatisticsSummary({ overview }: StatisticsSummaryProps) {
               </p>
             </div>
             <div>
-              <p className={styles.tokenMetricLabel}>{t("modelResources.statistics.filters.unit")}</p>
+              <p className={styles.tokenMetricLabel}>
+                {t("modelResources.statistics.filters.unit")}
+              </p>
               <Select
                 onChange={(nextUnit: TokenUnit) => setUnit(nextUnit)}
                 options={[

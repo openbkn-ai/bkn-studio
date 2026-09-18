@@ -100,9 +100,12 @@ function capToolResult(text: string, toolName: string, cfg: AgentConfig): string
  */
 export function formatToolResultLimits(cfg: AgentConfig): string {
   const parts: string[] = [];
-  if (cfg.dataToolCap > 0) parts.push(`data tools such as run_sql and query_*: about ${cfg.dataToolCap} characters`);
+  if (cfg.dataToolCap > 0)
+    parts.push(`data tools such as run_sql and query_*: about ${cfg.dataToolCap} characters`);
   if (cfg.schemaToolCap > 0) {
-    parts.push(`schema/discovery tools such as search_schema, describe_resource, and list_resources: about ${cfg.schemaToolCap} characters`);
+    parts.push(
+      `schema/discovery tools such as search_schema, describe_resource, and list_resources: about ${cfg.schemaToolCap} characters`,
+    );
   }
   if (!parts.length) return "";
   return (
@@ -117,8 +120,10 @@ const TOOL_HINTS: Record<string, string> = {
     " Important: use SQL for aggregation/counting/sorting/grouping with LIMIT, select only necessary columns, and avoid SELECT * or full table scans. Large results will be truncated.",
   query_object_instance:
     " Important: use precise filters, a small limit, and properties for necessary fields only. Large results will be truncated.",
-  query_instance_subgraph: " Important: use the smallest practical limit. Large results will be truncated.",
-  list_resources: " Important: filter by catalog_id/type and use small paged limits. Large results will be truncated.",
+  query_instance_subgraph:
+    " Important: use the smallest practical limit. Large results will be truncated.",
+  list_resources:
+    " Important: filter by catalog_id/type and use small paged limits. Large results will be truncated.",
   search_schema:
     " Recommendation: use a precise query and keep max_concepts at or below 10 by default. Large results will be truncated. schema_brief defaults to true; pass schema_brief=false only when full field definitions are needed.",
   get_action_info:
@@ -161,7 +166,8 @@ export function effectiveToolArgs(
  */
 function stripBknContextSchema(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = schema.properties;
-  if (!properties || typeof properties !== "object" || !("bkn_context" in properties)) return schema;
+  if (!properties || typeof properties !== "object" || !("bkn_context" in properties))
+    return schema;
   const nextProperties = { ...(properties as Record<string, unknown>) };
   delete nextProperties.bkn_context;
   const next: Record<string, unknown> = { ...schema, properties: nextProperties };
@@ -210,7 +216,9 @@ export function guardAgentToolArgs(name: string, args: Record<string, unknown>):
   }
 
   if (name === "execute_action") {
-    const hasDynamicParams = Object.prototype.hasOwnProperty.call(args, "dynamic_params") && isPlainObject(args.dynamic_params);
+    const hasDynamicParams =
+      Object.prototype.hasOwnProperty.call(args, "dynamic_params") &&
+      isPlainObject(args.dynamic_params);
     const missing = [
       ...(typeof args.at_id === "string" && args.at_id.trim() ? [] : ["at_id"]),
       ...(isNonEmptyArray(args._instance_identities) ? [] : ["_instance_identities"]),
@@ -275,7 +283,12 @@ export type AgentChunk =
 /** Wraps any error as an error chunk. */
 function errorChunk(error: unknown): Extract<AgentChunk, { type: "error" }> {
   const normalized: NormalizedAgentError = normalizeAgentError(error);
-  return { type: "error", error: normalized.message, detail: normalized.detail, retryable: normalized.retryable };
+  return {
+    type: "error",
+    error: normalized.message,
+    detail: normalized.detail,
+    retryable: normalized.retryable,
+  };
 }
 
 /**
@@ -295,7 +308,10 @@ export function sanitizeLifecycleError(text: string): string {
   let code = "";
   try {
     const parsed: unknown = JSON.parse(text);
-    const error = parsed && typeof parsed === "object" ? (parsed as { error?: { code?: unknown } }).error : undefined;
+    const error =
+      parsed && typeof parsed === "object"
+        ? (parsed as { error?: { code?: unknown } }).error
+        : undefined;
     if (error && typeof error.code === "string") code = error.code;
   } catch {
     return text;
@@ -404,11 +420,14 @@ export function buildAgentTools(
       description:
         (def.description ?? def.name) +
         (TOOL_HINTS[def.name] ?? "") +
-        (scopedList ? " Results are scoped to data tables bound to the current knowledge network by default." : ""),
+        (scopedList
+          ? " Results are scoped to data tables bound to the current knowledge network by default."
+          : ""),
       inputSchema: jsonSchema(schema),
       execute: async (input: unknown): Promise<string> => {
         const bknContext = turn?.nextContext();
-        if (scopedList && scopeSet) return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
+        if (scopedList && scopeSet)
+          return listResourcesScoped(call, input, knId, scopeSet, cfg, bknContext);
         const args = effectiveToolArgs(def.name, input, knId, bknContext);
         const guardError = guardAgentToolArgs(def.name, args);
         if (guardError) throw new Error(guardError);
@@ -448,7 +467,9 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
       : { type: "object", properties: {} };
   if (def.name === "bkn_start_interaction") {
     return tool({
-      description: describe("Studio already opened this turn; calling it returns current interaction IDs instead of opening another turn."),
+      description: describe(
+        "Studio already opened this turn; calling it returns current interaction IDs instead of opening another turn.",
+      ),
       inputSchema: jsonSchema(backendSchema),
       // Accept arguments such as question, but do not use them to open another turn.
       execute: (): Promise<string> =>
@@ -457,19 +478,23 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
   }
   if (def.name === "bkn_finish_interaction") {
     return tool({
-      description: describe("Call it after the answer is done. Studio persists the interaction only after the complete streamed answer has arrived."),
+      description: describe(
+        "Call it after the answer is done. Studio persists the interaction only after the complete streamed answer has arrived.",
+      ),
       inputSchema: jsonSchema(backendSchema),
       execute: (input: unknown): Promise<string> => {
         const raw = textOf(input, "outcome");
         const outcome = MODEL_FINISH_OUTCOMES[raw];
         // Some backend outcomes, such as handed_off, have no client action here.
         if (!outcome) {
-          return Promise.resolve(JSON.stringify({
-            error: {
-              code: "unsupported_outcome",
-              message: `Studio-managed interactions only support completed / failed / cancelled; received ${raw || "empty value"}.`,
-            },
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              error: {
+                code: "unsupported_outcome",
+                message: `Studio-managed interactions only support completed / failed / cancelled; received ${raw || "empty value"}.`,
+              },
+            }),
+          );
         }
         turn.declareFinish?.(outcome);
         // A model can call this tool before it emits its final answer and may use
@@ -477,11 +502,13 @@ function managedLifecycleTool(def: McpToolDef, turn: AgentTurnScope) {
         // makes that shorthand the immutable recorded answer. Acknowledge the
         // model's lifecycle call, but let ChatPane finish the managed turn in its
         // finally block with the complete text accumulated from the stream.
-        return Promise.resolve(JSON.stringify({
-          ...turn.nextContext(),
-          execution_status: outcome === "canceled" ? "canceled" : outcome,
-          persistence: "deferred_until_stream_complete",
-        }));
+        return Promise.resolve(
+          JSON.stringify({
+            ...turn.nextContext(),
+            execution_status: outcome === "canceled" ? "canceled" : outcome,
+            persistence: "deferred_until_stream_complete",
+          }),
+        );
       },
     });
   }
@@ -510,9 +537,15 @@ async function listResourcesScoped(
   try {
     const parsed = JSON.parse(text) as { entries?: Array<{ resource_id?: string }> };
     const entries = Array.isArray(parsed.entries)
-      ? parsed.entries.filter((e) => typeof e.resource_id === "string" && scopeSet.has(e.resource_id))
+      ? parsed.entries.filter(
+          (e) => typeof e.resource_id === "string" && scopeSet.has(e.resource_id),
+        )
       : [];
-    return capToolResult(JSON.stringify({ entries, total_count: entries.length }), "list_resources", cfg);
+    return capToolResult(
+      JSON.stringify({ entries, total_count: entries.length }),
+      "list_resources",
+      cfg,
+    );
   } catch {
     // If the format is unexpected, for example TOON, return the original result.
     return capToolResult(text, "list_resources", cfg);
@@ -574,7 +607,11 @@ function isRetryableFetchError(error: unknown): boolean {
  * - normalizes assistant `content: null` and strips replayed reasoning_content.
  */
 export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
-  const run = (input: RequestInfo | URL, init: RequestInit | undefined, token: string): Promise<Response> => {
+  const run = (
+    input: RequestInfo | URL,
+    init: RequestInit | undefined,
+    token: string,
+  ): Promise<Response> => {
     let body = init?.body;
     if (typeof body === "string") {
       try {
@@ -595,7 +632,10 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return fetch(input, { ...init, headers, body });
   };
-  const runWithAuthRetry = async (input: RequestInfo | URL, init: RequestInit | undefined): Promise<Response> => {
+  const runWithAuthRetry = async (
+    input: RequestInfo | URL,
+    init: RequestInit | undefined,
+  ): Promise<Response> => {
     let response = await run(input, init, provider.getToken());
     if (response.status === 401) {
       const fresh = await provider.refresh().catch(() => null);
@@ -607,7 +647,7 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
     return response;
   };
 
-  return (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const signal = init?.signal;
     let response: Response | null = null;
     let failure: unknown = null;
@@ -633,11 +673,15 @@ export function makeAuthedFetch(provider: AgentTokenProvider): typeof fetch {
 
     if (!response) throw failure;
     return response;
-  });
+  };
 }
 
 /** Creates a Model Factory OpenAI-compatible model with authenticated fetch. */
-export function createChatModel(env: ContextLoaderEnv, modelName: string, tokenProvider: AgentTokenProvider) {
+export function createChatModel(
+  env: ContextLoaderEnv,
+  modelName: string,
+  tokenProvider: AgentTokenProvider,
+) {
   const baseURL = `${env.base.replace(/\/+$/, "")}${MODEL_API_PATH}`;
   const provider = createOpenAICompatible({
     name: "mf-model-api",
@@ -700,7 +744,10 @@ export type LeakFilterOptions = {
   expectAnswerTag?: boolean;
 };
 
-export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: LeakFilterOptions = {}) {
+export function createLeakFilter(
+  onChunk: (chunk: AgentChunk) => void,
+  options: LeakFilterOptions = {},
+) {
   const expectAnswerTag = options.expectAnswerTag ?? false;
   let buf = "";
   let mode: "normal" | "think" | "fn" = "normal";
@@ -739,7 +786,9 @@ export function createLeakFilter(onChunk: (chunk: AgentChunk) => void, options: 
   };
   const reportLeakedCall = (raw: string) => {
     const name =
-      /<function=([\w.-]+)/.exec(raw)?.[1] ?? /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ?? "unknown_tool";
+      /<function=([\w.-]+)/.exec(raw)?.[1] ??
+      /"name"\s*:\s*"([\w.-]+)"/.exec(raw)?.[1] ??
+      "unknown_tool";
     const id = `leaked-${++fnSeq}`;
     onChunk({ type: "tool-call", id, name, args: { leakedRawOutput: raw.slice(0, 2000) } });
     onChunk({ type: "tool-error", id, error: LEAK_ERROR_MSG });
@@ -859,7 +908,10 @@ export async function runAgentChat(params: {
   onChunk: (chunk: AgentChunk) => void;
 }): Promise<void> {
   const { env, modelName, system, history, tools, config, tokenProvider, signal, onChunk } = params;
-  const messages: ModelMessage[] = history.map((turn) => ({ role: turn.role, content: turn.content }));
+  const messages: ModelMessage[] = history.map((turn) => ({
+    role: turn.role,
+    content: turn.content,
+  }));
 
   try {
     const result = streamText({
@@ -872,7 +924,9 @@ export async function runAgentChat(params: {
       maxRetries: 0,
       ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
       // Evict older tool results before each step to avoid context growth.
-      prepareStep: ({ messages: stepMessages }) => ({ messages: evictOldToolResults(stepMessages, config.keepToolResults) }),
+      prepareStep: ({ messages: stepMessages }) => ({
+        messages: evictOldToolResults(stepMessages, config.keepToolResults),
+      }),
       abortSignal: signal,
     });
 
@@ -882,10 +936,13 @@ export async function runAgentChat(params: {
     // Enable tag routing only when the prompt contains the <answer> contract.
     const expectAnswerTag = system.includes(ANSWER_OPEN);
     // Filter leaked template markers; only true answer text counts as gotText.
-    const leakFilter = createLeakFilter((chunk) => {
-      if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
-      onChunk(chunk);
-    }, { expectAnswerTag });
+    const leakFilter = createLeakFilter(
+      (chunk) => {
+        if (chunk.type === "text" && chunk.delta.trim()) gotText = true;
+        onChunk(chunk);
+      },
+      { expectAnswerTag },
+    );
     for await (const part of result.fullStream) {
       switch (part.type) {
         case "text-delta":
@@ -895,13 +952,19 @@ export async function runAgentChat(params: {
           if (part.text) onChunk({ type: "reasoning", delta: part.text });
           break;
         case "tool-call":
-          onChunk({ type: "tool-call", id: part.toolCallId, name: part.toolName, args: part.input });
+          onChunk({
+            type: "tool-call",
+            id: part.toolCallId,
+            name: part.toolName,
+            args: part.input,
+          });
           break;
         case "tool-result":
           onChunk({
             type: "tool-result",
             id: part.toolCallId,
-            result: typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2),
+            result:
+              typeof part.output === "string" ? part.output : JSON.stringify(part.output, null, 2),
           });
           break;
         case "tool-error": {
@@ -910,7 +973,9 @@ export async function runAgentChat(params: {
             type: "tool-error",
             id: part.toolCallId,
             // Tool cards are collapsed, so include both the message and raw details.
-            error: normalized.detail ? `${normalized.message}\n\n${normalized.detail}` : normalized.message,
+            error: normalized.detail
+              ? `${normalized.message}\n\n${normalized.detail}`
+              : normalized.message,
           });
           break;
         }
@@ -942,7 +1007,9 @@ export async function runAgentChat(params: {
         system:
           system +
           "\n\nTool-call limit reached or finalization required. Based on the information already obtained, answer directly in the current conversation language without calling more tools. " +
-          (expectAnswerTag ? `Wrap the final answer entirely between ${ANSWER_OPEN} and ${"</answer>"}.` : "") +
+          (expectAnswerTag
+            ? `Wrap the final answer entirely between ${ANSWER_OPEN} and ${"</answer>"}.`
+            : "") +
           "）",
         messages: [...messages, ...(resp.messages as ModelMessage[])],
         ...(config.maxOutputTokens > 0 ? { maxOutputTokens: config.maxOutputTokens } : {}),
@@ -952,7 +1019,8 @@ export async function runAgentChat(params: {
       const finalFilter = createLeakFilter(onChunk, { expectAnswerTag });
       for await (const part of finalResult.fullStream) {
         if (part.type === "text-delta" && part.text) finalFilter.feed(part.text);
-        else if (part.type === "reasoning-delta" && part.text) onChunk({ type: "reasoning", delta: part.text });
+        else if (part.type === "reasoning-delta" && part.text)
+          onChunk({ type: "reasoning", delta: part.text });
         else if (part.type === "finish") {
           const u = part.totalUsage;
           onChunk({

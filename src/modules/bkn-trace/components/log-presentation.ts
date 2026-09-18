@@ -17,7 +17,8 @@ export function isAgentConversationCreated(record: LogRecord) {
 }
 
 export function presentLogAction(record: LogRecord, t: Translate) {
-  if (isAgentConversationCreated(record)) return t("bknTrace.logs.auditActions.startAgentConversation");
+  if (isAgentConversationCreated(record))
+    return t("bknTrace.logs.auditActions.startAgentConversation");
   if (record.logCategory === "access.user") {
     const key = `bknTrace.logs.accessActions.${record.action}`;
     const label = t(key, { defaultValue: "" });
@@ -31,10 +32,14 @@ export function presentLogAction(record: LogRecord, t: Translate) {
   }
   if (record.businessModule === "domain_knowledge_network") {
     const actionKey = `bknTrace.logs.domainAuditActions.${record.action}`;
-    const target = t(`bknTrace.logs.targetTypes.${record.target.type}`, { defaultValue: record.target.type });
+    const target = t(`bknTrace.logs.targetTypes.${record.target.type}`, {
+      defaultValue: record.target.type,
+    });
     const action = t(actionKey, { defaultValue: "", target });
     if (!action || action === actionKey) {
-      const fallback = t(`bknTrace.logs.auditActions.${record.action}`, { defaultValue: record.action });
+      const fallback = t(`bknTrace.logs.auditActions.${record.action}`, {
+        defaultValue: record.action,
+      });
       return `${fallback} ${target}`;
     }
     if (record.action === "add_members" || record.action === "remove_members") return action;
@@ -68,15 +73,17 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
   };
 }
 
-export function presentLogActor(record: LogRecord, t: Translate, userDirectory?: Map<string, string>): LogText {
+export function presentLogActor(
+  record: LogRecord,
+  t: Translate,
+  userDirectory?: Map<string, string>,
+): LogText {
   const name = record.actor.name.trim();
   const id = record.actor.id.trim();
   const directoryName = userDirectory?.get(id)?.trim();
   const currentUser = getRuntimeConfig().currentUser;
   const currentUserName = currentUser.id === id ? currentUser.name?.trim() : "";
-  const primary = name && name !== id
-    ? name
-    : directoryName || currentUserName || id || "-";
+  const primary = name && name !== id ? name : directoryName || currentUserName || id || "-";
   return { primary, secondary: presentAuthMethod(record.authMethod, t) };
 }
 
@@ -90,12 +97,17 @@ export function presentTargetType(record: LogRecord, t: Translate) {
 }
 
 function conversationAgentName(record: LogRecord) {
-  const attributeName = typeof record.attributes.agent_name === "string"
-    ? record.attributes.agent_name.trim()
-    : "";
+  const attributeName =
+    typeof record.attributes.agent_name === "string" ? record.attributes.agent_name.trim() : "";
   if (attributeName) return attributeName;
   const projectedName = record.target.name.trim();
-  if (!projectedName || projectedName === record.target.id || projectedName.startsWith("mcp:") || projectedName === "Agent business conversation") return "";
+  if (
+    !projectedName ||
+    projectedName === record.target.id ||
+    projectedName.startsWith("mcp:") ||
+    projectedName === "Agent business conversation"
+  )
+    return "";
   return projectedName;
 }
 

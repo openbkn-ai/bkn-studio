@@ -14,10 +14,7 @@ import { createAppRouter } from "@/app/router/create-router";
 import { ThemeProvider } from "@/app/theme/ThemeProvider";
 import { AuthGate } from "@/framework/auth/AuthGate";
 import { EntitlementProvider } from "@/framework/entitlement/EntitlementProvider";
-import {
-  persistLocale,
-  resolveAuthenticatedStandaloneLocale,
-} from "@/framework/i18n/locale";
+import { persistLocale, resolveAuthenticatedStandaloneLocale } from "@/framework/i18n/locale";
 import { setRuntimeConfig } from "@/framework/runtime/config";
 import type { RuntimeConfig, RuntimeUser, SupportedLocale } from "@/framework/runtime/types";
 import { AntdProviders } from "@/framework/ui/AntdProviders";

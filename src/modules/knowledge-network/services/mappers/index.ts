@@ -96,9 +96,7 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
     icon: item.icon,
     tags: item.tags ?? [],
     conceptGroupIds: (item.concept_groups ?? []).map((group) => group.id),
-    conceptGroupNames: (item.concept_groups ?? []).map(
-      (group) => group.name ?? group.id,
-    ),
+    conceptGroupNames: (item.concept_groups ?? []).map((group) => group.name ?? group.id),
     dataSource: item.data_source
       ? {
           id: item.data_source.id,
@@ -127,9 +125,7 @@ export function mapDataProperty(
     displayKey: name === meta.displayKey,
     displayName,
     incrementalKey: false,
-    maskRule: item.mask_rule
-      ? mapMaskRuleFromBackend(item.mask_rule)
-      : undefined,
+    maskRule: item.mask_rule ? mapMaskRuleFromBackend(item.mask_rule) : undefined,
     mappedField: item.mapped_field
       ? {
           displayName: item.mapped_field.display_name ?? item.mapped_field.name ?? "",
@@ -266,7 +262,9 @@ export function toBackendDataProperty(property: ObjectTypeDataProperty): Backend
   };
 }
 
-export function toBackendLogicParameter(parameter: ObjectTypeLogicParameter): BackendLogicParameter {
+export function toBackendLogicParameter(
+  parameter: ObjectTypeLogicParameter,
+): BackendLogicParameter {
   return {
     description: parameter.description,
     id: parameter.id,
@@ -371,14 +369,12 @@ export function mapConceptGroupRelatedItem(item: BackendObjectType): ConceptGrou
   };
 }
 
-function mapConceptGroupResourceRef(
-  value?: {
-    color?: string;
-    icon?: string;
-    id?: string;
-    name?: string;
-  },
-): ConceptGroupRelatedResourceRef | undefined {
+function mapConceptGroupResourceRef(value?: {
+  color?: string;
+  icon?: string;
+  id?: string;
+  name?: string;
+}): ConceptGroupRelatedResourceRef | undefined {
   if (!value?.id || !value.name) {
     return undefined;
   }
@@ -443,9 +439,7 @@ export function mapConceptGroupDetail(item: BackendConceptGroup): ConceptGroupDe
 
 export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRelationTypeRecord {
   const mappingMode =
-    item.mapping_mode === "indirect" || item.type === "indirect"
-      ? "resource"
-      : "direct";
+    item.mapping_mode === "indirect" || item.type === "indirect" ? "resource" : "direct";
 
   return {
     id: item.id,
@@ -454,18 +448,10 @@ export function mapRelationType(item: BackendRelationType): KnowledgeNetworkRela
     description: item.comment ?? "",
     color: item.color?.trim() || "#7c3aed",
     mappingMode,
-    sourceObjectTypeId:
-      item.source_object_type_id ?? item.source_object_type?.id ?? "",
-    sourceObjectTypeName:
-      item.source_object_type?.name ??
-      item.source_object_type_id ??
-      "-",
-    targetObjectTypeId:
-      item.target_object_type_id ?? item.target_object_type?.id ?? "",
-    targetObjectTypeName:
-      item.target_object_type?.name ??
-      item.target_object_type_id ??
-      "-",
+    sourceObjectTypeId: item.source_object_type_id ?? item.source_object_type?.id ?? "",
+    sourceObjectTypeName: item.source_object_type?.name ?? item.source_object_type_id ?? "-",
+    targetObjectTypeId: item.target_object_type_id ?? item.target_object_type?.id ?? "",
+    targetObjectTypeName: item.target_object_type?.name ?? item.target_object_type_id ?? "-",
     tags: item.tags ?? [],
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
@@ -520,7 +506,6 @@ export function mapActionType(item: BackendActionType): KnowledgeNetworkActionTy
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
   };
 }
-
 
 export {
   mapCapabilityBinding,

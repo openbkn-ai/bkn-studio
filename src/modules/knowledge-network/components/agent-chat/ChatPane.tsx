@@ -39,7 +39,22 @@ import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
 
 import type { LlmModel } from "@/modules/model-resources/types/llm";
-import { DEFAULT_AGENT_CONFIG, buildAgentTools, effectiveToolArgs, formatOutputContract, formatToolResultLimits, guardAgentToolArgs, isTakenOverLifecycleTool, promptFromPersisted, promptToPersist, runAgentChat, type AgentChatTurn, type AgentChunk, type AgentConfig, type AgentTokenProvider } from "@/modules/knowledge-network/services/agent-chat.service";
+import {
+  DEFAULT_AGENT_CONFIG,
+  buildAgentTools,
+  effectiveToolArgs,
+  formatOutputContract,
+  formatToolResultLimits,
+  guardAgentToolArgs,
+  isTakenOverLifecycleTool,
+  promptFromPersisted,
+  promptToPersist,
+  runAgentChat,
+  type AgentChatTurn,
+  type AgentChunk,
+  type AgentConfig,
+  type AgentTokenProvider,
+} from "@/modules/knowledge-network/services/agent-chat.service";
 import {
   normalizeAgentError,
   type NormalizedAgentError,
@@ -55,7 +70,10 @@ import {
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import { buildMcpToolGroups, toolDisplayOf } from "@/modules/knowledge-network/services/mcp-tool-display";
+import {
+  buildMcpToolGroups,
+  toolDisplayOf,
+} from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./AgentChat.module.css";
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
@@ -79,7 +97,8 @@ export const DEFAULT_BASE_PROMPT =
   "Query efficiently: push aggregation, sorting, and counting into SQL, use LIMIT and precise filters, and select only necessary fields.";
 
 /** Evidence wording for the knowledge-network profile. */
-export const KN_EVIDENCE_HINT = "which tool was called, what filter conditions were used, or the key SQL points";
+export const KN_EVIDENCE_HINT =
+  "which tool was called, what filter conditions were used, or the key SQL points";
 /** Evidence wording for the base-data profile. */
 export const BASE_EVIDENCE_HINT = "which tables were used and the key SQL points";
 
@@ -183,7 +202,12 @@ type ChatMessage = {
 
 type SessionStats = { tokens: number; ms: number };
 
-type Persisted = { messages: ChatMessage[]; model: string; systemPrompt: string; stats?: SessionStats };
+type Persisted = {
+  messages: ChatMessage[];
+  model: string;
+  systemPrompt: string;
+  stats?: SessionStats;
+};
 
 function appendTextPart(parts: MessagePart[] | undefined, delta: string): MessagePart[] {
   const next = [...(parts ?? [])];
@@ -225,7 +249,9 @@ export function fmtDuration(ms: number): string {
 
 /** Message-history key; solo keeps the legacy key, compare panes use suffixes. */
 function msgsLsKey(knId: string, paneKey: PaneKey): string {
-  return paneKey === "solo" ? `bkn-studio:agentchat:${knId}` : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
+  return paneKey === "solo"
+    ? `bkn-studio:agentchat:${knId}`
+    : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
 }
 
 /**
@@ -259,7 +285,9 @@ function configLsKey(paneKey: PaneKey): string {
 function loadConfig(paneKey: PaneKey): AgentConfig {
   try {
     const raw = localStorage.getItem(configLsKey(paneKey));
-    return raw ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) } : { ...DEFAULT_AGENT_CONFIG };
+    return raw
+      ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) }
+      : { ...DEFAULT_AGENT_CONFIG };
   } catch {
     return { ...DEFAULT_AGENT_CONFIG };
   }
@@ -310,7 +338,13 @@ const MarkdownBlock = memo(function MarkdownBlock({ text }: { text: string }) {
  * Markdown rendering with GFM. Streaming renders by block and completes the
  * active tail to avoid reparsing the entire body on every token.
  */
-export const MarkdownView = memo(function MarkdownView({ text, streaming = false }: { text: string; streaming?: boolean }) {
+export const MarkdownView = memo(function MarkdownView({
+  text,
+  streaming = false,
+}: {
+  text: string;
+  streaming?: boolean;
+}) {
   const blocks = useMemo(() => {
     // Non-streaming text is complete, so parse the whole body to preserve constructs
     // that can span blocks, such as reference links and footnotes.
@@ -337,7 +371,11 @@ function ReasoningBlock({ text, live }: { text: string; live: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={styles.reasoning}>
-      <button type="button" className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`} onClick={() => setOpen((v) => !v)}>
+      <button
+        type="button"
+        className={`${styles.reasoningHead} ${live ? styles.reasoningLive : ""}`}
+        onClick={() => setOpen((v) => !v)}
+      >
         <span>
           {live
             ? t("knowledgeNetwork.agentChat.chatPane.reasoning.live")
@@ -370,15 +408,18 @@ function ToolCallCard({
   t: ReturnType<typeof useTranslation>["t"];
 }) {
   const statusDot =
-    call.status === "running" ? styles.dotRunning : call.status === "error" ? styles.dotError : styles.dotOk;
-  const statusText =
-    call.clientBlocked
-      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlocked")
-      : call.status === "running"
-        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
-        : call.status === "error"
-          ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
-          : `200 - ${call.latencyMs ?? "-"}ms`;
+    call.status === "running"
+      ? styles.dotRunning
+      : call.status === "error"
+        ? styles.dotError
+        : styles.dotOk;
+  const statusText = call.clientBlocked
+    ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlocked")
+    : call.status === "running"
+      ? t("knowledgeNetwork.agentChat.chatPane.toolCall.running")
+      : call.status === "error"
+        ? t("knowledgeNetwork.agentChat.chatPane.toolCall.failed")
+        : `200 - ${call.latencyMs ?? "-"}ms`;
   const requestLabel = call.clientBlocked
     ? t("knowledgeNetwork.agentChat.chatPane.toolCall.clientBlockedRequest", { name: call.name })
     : t("knowledgeNetwork.agentChat.chatPane.toolCall.request", { name: call.name });
@@ -409,7 +450,9 @@ function ToolCallCard({
                   ? t("knowledgeNetwork.agentChat.chatPane.toolCall.error")
                   : t("knowledgeNetwork.agentChat.chatPane.toolCall.response")}
             </div>
-            <pre className={styles.callPre}>{call.status === "error" ? call.error : call.result ?? "-"}</pre>
+            <pre className={styles.callPre}>
+              {call.status === "error" ? call.error : (call.result ?? "-")}
+            </pre>
           </div>
         </div>
       ) : null}
@@ -427,7 +470,13 @@ function ToolCallCard({
  * card a user just expanded to read the request would silently close. For the same
  * reason the group opens by default when a card inside it is already expanded.
  */
-function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<typeof useTranslation>["t"] }) {
+function ToolCallSegment({
+  calls,
+  t,
+}: {
+  calls: ToolCallView[];
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
   const [openCalls, setOpenCalls] = useState<Record<string, boolean>>({});
   const [groupOpen, setGroupOpen] = useState<boolean | null>(null);
   const toggleCall = (id: string) => setOpenCalls((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -435,7 +484,12 @@ function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<ty
   if (calls.length === 1) {
     return (
       <div className={styles.calls}>
-        <ToolCallCard call={calls[0]} open={!!openCalls[calls[0].id]} onToggle={() => toggleCall(calls[0].id)} t={t} />
+        <ToolCallCard
+          call={calls[0]}
+          open={!!openCalls[calls[0].id]}
+          onToggle={() => toggleCall(calls[0].id)}
+          t={t}
+        />
       </div>
     );
   }
@@ -467,7 +521,13 @@ function ToolCallSegment({ calls, t }: { calls: ToolCallView[]; t: ReturnType<ty
       {open ? (
         <div className={styles.groupBody}>
           {calls.map((call) => (
-            <ToolCallCard key={call.id} call={call} open={!!openCalls[call.id]} onToggle={() => toggleCall(call.id)} t={t} />
+            <ToolCallCard
+              key={call.id}
+              call={call}
+              open={!!openCalls[call.id]}
+              onToggle={() => toggleCall(call.id)}
+              t={t}
+            />
           ))}
         </div>
       ) : null}
@@ -500,7 +560,8 @@ function ErrorBlock({
         ) : null}
         {err.detail ? (
           <button type="button" className={styles.errBtn} onClick={() => setOpen((v) => !v)}>
-            {t("knowledgeNetwork.agentChat.chatPane.error.detail")} {open ? <DownOutlined /> : <RightOutlined />}
+            {t("knowledgeNetwork.agentChat.chatPane.error.detail")}{" "}
+            {open ? <DownOutlined /> : <RightOutlined />}
           </button>
         ) : null}
       </div>
@@ -579,8 +640,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
   const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
   // Tool selection is a hard allowlist; null means all tools.
-  const [toolSelection, setToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
-  const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() => loadToolSelection(profile));
+  const [toolSelection, setToolSelection] = useState<string[] | null>(() =>
+    loadToolSelection(profile),
+  );
+  const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() =>
+    loadToolSelection(profile),
+  );
   // Cumulative session tokens and elapsed time.
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
@@ -611,12 +676,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setBusy(false);
   }, [knId, profile.paneKey]);
 
-  const setDraftConfigField = useCallback(
-    (key: keyof AgentConfig, value: number) => {
-      setDraftConfig((prev) => ({ ...prev, [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key] }));
-    },
-    [],
-  );
+  const setDraftConfigField = useCallback((key: keyof AgentConfig, value: number) => {
+    setDraftConfig((prev) => ({
+      ...prev,
+      [key]: Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : prev[key],
+    }));
+  }, []);
   const openSettings = useCallback(() => {
     setDraftModel(model);
     setDraftSystemPrompt(systemPrompt);
@@ -643,15 +708,31 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       }
       localStorage.setItem(
         msgsLsKey(knId, profile.paneKey),
-        JSON.stringify({ messages, model: draftModel,
-          systemPrompt: promptToPersist(draftSystemPrompt, profile.defaultPrompt), stats } satisfies Persisted),
+        JSON.stringify({
+          messages,
+          model: draftModel,
+          systemPrompt: promptToPersist(draftSystemPrompt, profile.defaultPrompt),
+          stats,
+        } satisfies Persisted),
       );
     } catch {
       /* Ignore unavailable localStorage. */
     }
     setSettingsOpen(false);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.settingsSaved"));
-  }, [draftConfig, draftModel, draftSystemPrompt, draftToolSelection, knId, message, messages, profile.defaultPrompt, profile.paneKey, stats, t]);
+  }, [
+    draftConfig,
+    draftModel,
+    draftSystemPrompt,
+    draftToolSelection,
+    knId,
+    message,
+    messages,
+    profile.defaultPrompt,
+    profile.paneKey,
+    stats,
+    t,
+  ]);
   const resetDraftSystemPrompt = useCallback(() => {
     setDraftSystemPrompt(profile.defaultPrompt);
     message.success(t("knowledgeNetwork.agentChat.chatPane.messages.promptReset"));
@@ -697,8 +778,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       try {
         localStorage.setItem(
           msgsLsKey(knId, profile.paneKey),
-          JSON.stringify({ messages: msgs, model,
-            systemPrompt: promptToPersist(systemPrompt, profile.defaultPrompt), stats: statsSnapshot } satisfies Persisted),
+          JSON.stringify({
+            messages: msgs,
+            model,
+            systemPrompt: promptToPersist(systemPrompt, profile.defaultPrompt),
+            stats: statsSnapshot,
+          } satisfies Persisted),
         );
       } catch {
         /* Ignore unavailable localStorage. */
@@ -738,7 +823,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     (chunk: AgentChunk) => {
       switch (chunk.type) {
         case "text":
-          updateAssistant((m) => ({ ...m, content: m.content + chunk.delta, parts: appendTextPart(m.parts, chunk.delta) }));
+          updateAssistant((m) => ({
+            ...m,
+            content: m.content + chunk.delta,
+            parts: appendTextPart(m.parts, chunk.delta),
+          }));
           break;
         case "reasoning":
           // Reasoning stays one merged block above the turn. Splitting it per step made the
@@ -761,7 +850,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                   // Show the effective business request, including injected defaults and bkn_context,
                   // rather than raw model input. Taken-over lifecycle tools do not call session.callTool
                   // for a turn, so retain their original arguments instead of displaying a fictitious request.
-                  args: clientBlocked || (turnContextRef.current && isTakenOverLifecycleTool(chunk.name)) ? chunk.args : effectiveArgs,
+                  args:
+                    clientBlocked ||
+                    (turnContextRef.current && isTakenOverLifecycleTool(chunk.name))
+                      ? chunk.args
+                      : effectiveArgs,
                   status: "running" as const,
                   clientBlocked,
                   startedAt: performance.now(),
@@ -775,7 +868,12 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             ...m,
             toolCalls: (m.toolCalls ?? []).map((tc) =>
               tc.id === chunk.id
-                ? { ...tc, status: "done", result: chunk.result, latencyMs: Math.round(performance.now() - tc.startedAt) }
+                ? {
+                    ...tc,
+                    status: "done",
+                    result: chunk.result,
+                    latencyMs: Math.round(performance.now() - tc.startedAt),
+                  }
                 : tc,
             ),
           }));
@@ -895,14 +993,24 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         const allTools = await getTools();
         // Lifecycle tools stay visible here; buildAgentTools handles takeover.
         const modelVisibleTools = allTools.filter(
-          (toolDef) => profile.paneKey !== "base" || !profile.defaultToolNames || profile.defaultToolNames.includes(toolDef.name),
+          (toolDef) =>
+            profile.paneKey !== "base" ||
+            !profile.defaultToolNames ||
+            profile.defaultToolNames.includes(toolDef.name),
         );
         // Hard allowlist: only selected tools are sent to the model; null means all.
-        const activeTools = toolSelection ? modelVisibleTools.filter((t) => toolSelection.includes(t.name)) : modelVisibleTools;
+        const activeTools = toolSelection
+          ? modelVisibleTools.filter((t) => toolSelection.includes(t.name))
+          : modelVisibleTools;
         const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
           resourceScope,
           session: lifecycle.session,
-          turn: turn && { ...turn, declareFinish: (declared) => { declaredOutcome = declared; } },
+          turn: turn && {
+            ...turn,
+            declareFinish: (declared) => {
+              declaredOutcome = declared;
+            },
+          },
         });
 
         await runAgentChat({
@@ -930,15 +1038,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
           outcome = "failed";
-          updateAssistant((m) => ({ ...m, errored: true, errors: [...(m.errors ?? []), normalizeAgentError(error)] }));
+          updateAssistant((m) => ({
+            ...m,
+            errored: true,
+            errors: [...(m.errors ?? []), normalizeAgentError(error)],
+          }));
         }
       } finally {
         // Finish before setBusy(false) because one conversation allows one active interaction.
         // Stop returns normally, so use aborted state rather than outcome alone.
-        const finalOutcome: TurnOutcome = roundFailed && outcome === "completed" ? "failed" : outcome;
+        const finalOutcome: TurnOutcome =
+          roundFailed && outcome === "completed" ? "failed" : outcome;
         const recordedOutcome: TurnOutcome = controller.signal.aborted
           ? "canceled"
-          : finalOutcome === "completed" ? (declaredOutcome ?? finalOutcome) : finalOutcome;
+          : finalOutcome === "completed"
+            ? (declaredOutcome ?? finalOutcome)
+            : finalOutcome;
         if (turn) {
           await turn.finish(recordedOutcome, answer).catch(() => undefined);
         }
@@ -949,14 +1064,35 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           const elapsed = performance.now() - startedAt;
           // Record turn elapsed time on the final assistant message and cumulative stats.
           setMessages((cur) =>
-            cur.map((m, i) => (i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m)),
+            cur.map((m, i) =>
+              i === cur.length - 1 && m.role === "assistant" ? { ...m, ms: elapsed } : m,
+            ),
           );
           setStats((s) => ({ ...s, ms: s.ms + elapsed }));
           setBusy(false); // Triggers the persist-on-completion effect below.
         }
       }
     },
-    [busy, model, messages, env, knId, composedSystem, config, toolSelection, getTools, tokenProvider, modelTokenProvider, resourceScope, lifecycle, handleChunk, updateAssistant, message, profile, t],
+    [
+      busy,
+      model,
+      messages,
+      env,
+      knId,
+      composedSystem,
+      config,
+      toolSelection,
+      getTools,
+      tokenProvider,
+      modelTokenProvider,
+      resourceScope,
+      lifecycle,
+      handleChunk,
+      updateAssistant,
+      message,
+      profile,
+      t,
+    ],
   );
 
   const stop = useCallback(() => {
@@ -970,7 +1106,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     for (const m of messages) {
       if (m.role === "user") {
         // Default empty covers a user turn without a corresponding assistant answer.
-        current = { question: m.content, answer: null, tokens: null, ms: null, toolCalls: [], outcome: "empty" };
+        current = {
+          question: m.content,
+          answer: null,
+          tokens: null,
+          ms: null,
+          toolCalls: [],
+          outcome: "empty",
+        };
         rounds.push(current);
       } else if (m.role === "assistant" && current) {
         current.answer = m.content || null;
@@ -978,7 +1121,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         current.ms = m.ms ?? null;
         current.toolCalls = (m.toolCalls ?? []).map((tc) => ({ name: tc.name, status: tc.status }));
         const hasAnswer = !!m.content && m.content.trim().length > 0;
-        current.outcome = m.stopped ? "stopped" : m.errored ? "error" : hasAnswer ? "answered" : "empty";
+        current.outcome = m.stopped
+          ? "stopped"
+          : m.errored
+            ? "error"
+            : hasAnswer
+              ? "answered"
+              : "empty";
         current = null;
       }
     }
@@ -999,7 +1148,13 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   useImperativeHandle(
     ref,
-    () => ({ send: (text: string) => void send(text), stop, openSettings, clear: clearChat, getSnapshot }),
+    () => ({
+      send: (text: string) => void send(text),
+      stop,
+      openSettings,
+      clear: clearChat,
+      getSnapshot,
+    }),
     [send, stop, openSettings, clearChat, getSnapshot],
   );
 
@@ -1015,28 +1170,31 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
   // Tool set visible to the model. Lifecycle tools remain visible and are taken over later.
   const agentToolDefs = useMemo(() => {
-    if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames) return toolDefs ?? null;
+    if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames)
+      return toolDefs ?? null;
     const baseToolNames = new Set(profile.defaultToolNames);
     return toolDefs.filter((toolDef) => baseToolNames.has(toolDef.name));
   }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
   // Same grouping as the MCP sidebar: server title/_meta first, local fallback for old servers.
   const toolOptions = useMemo(() => {
     if (!agentToolDefs) return [];
-    return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map((group) => ({
-      label: group.label,
-      title: group.label,
-      options: group.items.map(({ item, display }) => ({
-        value: item.name,
-        title: `${display.name} - ${item.name}`,
-        searchText: `${display.name} ${item.name}`,
-        label: (
-          <span className={styles.toolOption}>
-            <span className={styles.toolOptionName}>{display.name}</span>
-            <span className={styles.toolOptionId}>{item.name}</span>
-          </span>
-        ),
-      })),
-    }));
+    return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map(
+      (group) => ({
+        label: group.label,
+        title: group.label,
+        options: group.items.map(({ item, display }) => ({
+          value: item.name,
+          title: `${display.name} - ${item.name}`,
+          searchText: `${display.name} ${item.name}`,
+          label: (
+            <span className={styles.toolOption}>
+              <span className={styles.toolOptionName}>{display.name}</span>
+              <span className={styles.toolOptionId}>{item.name}</span>
+            </span>
+          ),
+        })),
+      }),
+    );
   }, [agentToolDefs]);
   // Selector value: null (all) shows all currently known tool names.
   const draftToolValue = useMemo(
@@ -1094,13 +1252,17 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
           <button
             type="button"
             className={styles.linkBtn}
-            onClick={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
+            onClick={() =>
+              setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)
+            }
           >
             {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
           </button>
         </div>
         <div className={styles.configCard}>
-          <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.availableTools")}</div>
+          <div className={styles.configFieldLabel}>
+            {t("knowledgeNetwork.agentChat.chatPane.settings.availableTools")}
+          </div>
           <Select
             size="small"
             mode="multiple"
@@ -1112,7 +1274,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             showSearch
             filterOption={(input, option) => {
               const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
-              return typeof searchText === "string" && searchText.toLowerCase().includes(input.trim().toLowerCase());
+              return (
+                typeof searchText === "string" &&
+                searchText.toLowerCase().includes(input.trim().toLowerCase())
+              );
             }}
             placeholder={
               toolDefs
@@ -1124,14 +1289,18 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             maxTagCount={0}
             maxTagPlaceholder={() =>
               draftToolSelection === null
-                ? t("knowledgeNetwork.agentChat.chatPane.settings.allTools", { count: draftToolValue.length })
+                ? t("knowledgeNetwork.agentChat.chatPane.settings.allTools", {
+                    count: draftToolValue.length,
+                  })
                 : t("knowledgeNetwork.agentChat.chatPane.settings.selectedTools", {
                     count: draftToolValue.length,
                     total: agentToolDefs ? ` / ${agentToolDefs.length}` : "",
                   })
             }
             allowClear
-            onClear={() => setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)}
+            onClear={() =>
+              setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)
+            }
             popupMatchSelectWidth={false}
           />
         </div>
@@ -1140,39 +1309,46 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
 
   return (
     <div className={styles.paneRoot}>
-      {showToolbar ? <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
-        <div className={styles.barLeft}>
-          {profile.title ? (
-            <span
-              className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
-              title={
-                profile.injectKnContext && knSummary
-                  ? t("knowledgeNetwork.agentChat.chatPane.settings.loadedSummary", {
-                      objectTypes: knSummary.objectTypes,
-                      relations: knSummary.relations,
-                    })
-                  : undefined
-              }
+      {showToolbar ? (
+        <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
+          <div className={styles.barLeft}>
+            {profile.title ? (
+              <span
+                className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
+                title={
+                  profile.injectKnContext && knSummary
+                    ? t("knowledgeNetwork.agentChat.chatPane.settings.loadedSummary", {
+                        objectTypes: knSummary.objectTypes,
+                        relations: knSummary.relations,
+                      })
+                    : undefined
+                }
+              >
+                {profile.title}
+              </span>
+            ) : null}
+          </div>
+          <div className={styles.barActions}>
+            <button
+              type="button"
+              className={styles.barBtn}
+              onClick={settingsOpen ? cancelSettings : openSettings}
             >
-              {profile.title}
-            </span>
-          ) : null}
+              <SettingOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}{" "}
+              {settingsOpen ? <DownOutlined /> : <RightOutlined />}
+            </button>
+            <button
+              type="button"
+              className={styles.barBtn}
+              onClick={clearChat}
+              disabled={busy || empty}
+              title={t("knowledgeNetwork.agentChat.chatPane.settings.clearTitle")}
+            >
+              <ClearOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.clear")}
+            </button>
+          </div>
         </div>
-        <div className={styles.barActions}>
-          <button type="button" className={styles.barBtn} onClick={settingsOpen ? cancelSettings : openSettings}>
-            <SettingOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")} {settingsOpen ? <DownOutlined /> : <RightOutlined />}
-          </button>
-          <button
-            type="button"
-            className={styles.barBtn}
-            onClick={clearChat}
-            disabled={busy || empty}
-            title={t("knowledgeNetwork.agentChat.chatPane.settings.clearTitle")}
-          >
-            <ClearOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.clear")}
-          </button>
-        </div>
-      </div> : null}
+      ) : null}
       <Drawer
         title={t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}
         placement="right"
@@ -1200,13 +1376,15 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             </div>
           </div>
           <div className={styles.configCard}>
-            <div className={styles.configFieldLabel}>{t("knowledgeNetwork.agentChat.chatPane.settings.modelLabel")}</div>
-              <Select
-                size="small"
-                className={styles.modelSelect}
-                popupClassName={styles.paneMenu}
-                value={draftModel || undefined}
-                onChange={setDraftModel}
+            <div className={styles.configFieldLabel}>
+              {t("knowledgeNetwork.agentChat.chatPane.settings.modelLabel")}
+            </div>
+            <Select
+              size="small"
+              className={styles.modelSelect}
+              popupClassName={styles.paneMenu}
+              value={draftModel || undefined}
+              onChange={setDraftModel}
               options={modelOptions}
               placeholder={t("knowledgeNetwork.agentChat.chatPane.settings.selectModel")}
               disabled={busy}
@@ -1218,7 +1396,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
-              <h3><ThunderboltFilled /> {t("knowledgeNetwork.agentChat.chatPane.settings.promptTitle")}</h3>
+              <h3>
+                <ThunderboltFilled />{" "}
+                {t("knowledgeNetwork.agentChat.chatPane.settings.promptTitle")}
+              </h3>
               <p>{t("knowledgeNetwork.agentChat.chatPane.settings.promptDescription")}</p>
             </div>
             <button type="button" className={styles.linkBtn} onClick={resetDraftSystemPrompt}>
@@ -1250,8 +1431,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             <h3>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmTitle")}</h3>
             <p>{t("knowledgeNetwork.agentChat.chatPane.empty.noLlmDescription")}</p>
             <div className={styles.sugs}>
-              <button type="button" className={styles.sug} onClick={() => void navigate("/model-resources/models")}>
-                <span className={styles.sugText}>{t("knowledgeNetwork.agentChat.chatPane.empty.goModelFactory")}</span>
+              <button
+                type="button"
+                className={styles.sug}
+                onClick={() => void navigate("/model-resources/models")}
+              >
+                <span className={styles.sugText}>
+                  {t("knowledgeNetwork.agentChat.chatPane.empty.goModelFactory")}
+                </span>
                 <RightOutlined className={styles.sugArrow} />
               </button>
             </div>
@@ -1263,22 +1450,20 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             </div>
             <h3>{profile.emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
             <p>
-              {profile.paneKey === "base" ? (
-                t("knowledgeNetwork.agentChat.chatPane.empty.baseIntro")
-              ) : (
-                t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
-                  knId,
-                  networkName: networkName
-                    ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
-                    : "",
-                  summary: knSummary
-                    ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
-                        objectTypes: knSummary.objectTypes,
-                        relations: knSummary.relations,
-                      })
-                    : "",
-                })
-              )}
+              {profile.paneKey === "base"
+                ? t("knowledgeNetwork.agentChat.chatPane.empty.baseIntro")
+                : t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
+                    knId,
+                    networkName: networkName
+                      ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
+                      : "",
+                    summary: knSummary
+                      ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
+                          objectTypes: knSummary.objectTypes,
+                          relations: knSummary.relations,
+                        })
+                      : "",
+                  })}
             </p>
             <div className={styles.sugs}>
               {sugList.map((s) => (
@@ -1299,12 +1484,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             {messages.map((m, i) => {
               const isLast = i === lastIdx;
               // Assistant turns render by segment order; user turns are plain text.
-              const renderParts = m.role === "assistant" ? m.parts ?? legacyParts(m) : [];
+              const renderParts = m.role === "assistant" ? (m.parts ?? legacyParts(m)) : [];
               const callById = new Map((m.toolCalls ?? []).map((tc) => [tc.id, tc]));
               return (
-                <div key={i} className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}>
+                <div
+                  key={i}
+                  className={`${styles.msg} ${m.role === "user" ? styles.msgUser : styles.msgBot}`}
+                >
                   <div className={styles.avatar}>
-                    {m.role === "user" ? t("knowledgeNetwork.agentChat.chatPane.message.user") : <ThunderboltFilled />}
+                    {m.role === "user" ? (
+                      t("knowledgeNetwork.agentChat.chatPane.message.user")
+                    ) : (
+                      <ThunderboltFilled />
+                    )}
                   </div>
                   <div className={styles.bubble}>
                     <div className={styles.who}>
@@ -1312,7 +1504,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         ? t("knowledgeNetwork.agentChat.chatPane.message.user")
                         : t("knowledgeNetwork.agentChat.chatPane.message.agent")}
                     </div>
-                    {m.reasoning ? <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} /> : null}
+                    {m.reasoning ? (
+                      <ReasoningBlock text={m.reasoning} live={busy && isLast && !m.content} />
+                    ) : null}
                     {m.role === "user" ? (
                       <div className={styles.txt}>{m.content}</div>
                     ) : (
@@ -1320,7 +1514,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         part.kind === "tools" ? (
                           <ToolCallSegment
                             key={pi}
-                            calls={part.ids.map((id) => callById.get(id)).filter((call): call is ToolCallView => !!call)}
+                            calls={part.ids
+                              .map((id) => callById.get(id))
+                              .filter((call): call is ToolCallView => !!call)}
                             t={t}
                           />
                         ) : (
@@ -1333,7 +1529,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                         ),
                       )
                     )}
-                    {m.role === "assistant" && renderParts.length === 0 && busy && isLast && !m.reasoning ? (
+                    {m.role === "assistant" &&
+                    renderParts.length === 0 &&
+                    busy &&
+                    isLast &&
+                    !m.reasoning ? (
                       <div className={styles.typing}>
                         <i />
                         <i />
@@ -1350,7 +1550,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                             // Retry reruns the failed turn in place instead of appending a duplicate user bubble.
                             onRetry={
                               e.retryable && !busy && isLast && messages[i - 1]?.role === "user"
-                                ? () => void send(messages[i - 1].content, { replaceLastRound: true })
+                                ? () =>
+                                    void send(messages[i - 1].content, { replaceLastRound: true })
                                 : undefined
                             }
                           />
@@ -1360,7 +1561,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
                     {m.role === "assistant" ? (
                       busy && isLast ? (
                         <div className={styles.msgMeta}>
-                          - ~{fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))} tokens
+                          - ~
+                          {fmtTokens(estimateTokens((m.reasoning?.length ?? 0) + m.content.length))}{" "}
+                          tokens
                         </div>
                       ) : m.tokens || m.ms ? (
                         <div className={styles.msgMeta}>

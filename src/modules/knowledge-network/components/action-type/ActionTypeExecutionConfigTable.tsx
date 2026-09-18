@@ -84,9 +84,9 @@ export function ActionTypeExecutionConfigTable({
   const [resolvedActionSource, setResolvedActionSource] = useState<
     ActionTypeActionSource | undefined
   >(detail.executionConfig.actionSource);
-  const [parameterSchemaMap, setParameterSchemaMap] = useState<
-    Record<string, ParameterSchemaInfo>
-  >({});
+  const [parameterSchemaMap, setParameterSchemaMap] = useState<Record<string, ParameterSchemaInfo>>(
+    {},
+  );
   const [actionSourceResolutionFailed, setActionSourceResolutionFailed] = useState(false);
   const [isResolvingActionSource, setIsResolvingActionSource] = useState(false);
 
@@ -135,9 +135,7 @@ export function ActionTypeExecutionConfigTable({
         const resolved = await resolveActionTypeActionSourceDisplayWithTimeout(actionSource);
         if (!cancelled) {
           setResolvedActionSource(resolved);
-          setActionSourceResolutionFailed(
-            needsActionTypeActionSourceDisplayResolution(resolved),
-          );
+          setActionSourceResolutionFailed(needsActionTypeActionSourceDisplayResolution(resolved));
         }
       } catch {
         if (!cancelled) {
@@ -208,23 +206,20 @@ export function ActionTypeExecutionConfigTable({
     {
       dataIndex: "type",
       key: "type",
-      render: (value: string | undefined) =>
-        value || t("knowledgeNetwork.actionTypeEmptyValue"),
+      render: (value: string | undefined) => value || t("knowledgeNetwork.actionTypeEmptyValue"),
       title: t("knowledgeNetwork.actionTypeExecutionParameterType"),
       width: 120,
     },
     {
       dataIndex: "source",
       key: "source",
-      render: (value: string | undefined) =>
-        value || t("knowledgeNetwork.actionTypeEmptyValue"),
+      render: (value: string | undefined) => value || t("knowledgeNetwork.actionTypeEmptyValue"),
       title: t("knowledgeNetwork.actionTypeExecutionParameterSource"),
       width: 120,
     },
     {
       key: "valueFrom",
-      render: (_value, record) =>
-        t(getParameterValueFromKey(record.valueFrom ?? "input")),
+      render: (_value, record) => t(getParameterValueFromKey(record.valueFrom ?? "input")),
       title: t("knowledgeNetwork.actionTypeExecutionParameterValueSource"),
       width: 140,
     },
@@ -255,9 +250,10 @@ export function ActionTypeExecutionConfigTable({
   const sourceUnavailable =
     actionSourceResolutionFailed &&
     needsActionTypeActionSourceDisplayResolution(resolvedActionSource);
-  const sourceLabel = isResolvingActionSource || sourceUnavailable
-    ? ""
-    : getReadableActionSourceDisplayName(resolvedActionSource);
+  const sourceLabel =
+    isResolvingActionSource || sourceUnavailable
+      ? ""
+      : getReadableActionSourceDisplayName(resolvedActionSource);
 
   return (
     <div className={styles.root}>

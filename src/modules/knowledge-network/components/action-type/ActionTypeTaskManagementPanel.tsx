@@ -60,7 +60,13 @@ function formatDuration(durationMs: number) {
   return `${(durationMs / 1000).toFixed(1)}s`;
 }
 
-function RunResultSummary({ failedCount, successCount }: { failedCount: number; successCount: number }) {
+function RunResultSummary({
+  failedCount,
+  successCount,
+}: {
+  failedCount: number;
+  successCount: number;
+}) {
   return (
     <div className={styles.resultSummary}>
       <span>
@@ -295,7 +301,9 @@ export function ActionTypeTaskManagementPanel({
   }, [currentLog?.results, embeddedResultsOnly, resultPage, resultPageSize, resultStatus]);
 
   const shownResultRows = embeddedResults ? embeddedResults.rows : resultRows;
-  const shownResultTotal = embeddedResults ? embeddedResults.total : Math.min(resultTotal, RESULT_WINDOW);
+  const shownResultTotal = embeddedResults
+    ? embeddedResults.total
+    : Math.min(resultTotal, RESULT_WINDOW);
 
   // Say so when only part of the results can be browsed: past the endpoint's window, or, without
   // the endpoint, beyond the first page the detail response embeds.
@@ -543,7 +551,8 @@ export function ActionTypeTaskManagementPanel({
                 {
                   dataIndex: "status",
                   key: "status",
-                  render: (value: ActionTypeExecutionLogResultStatus) => getResultStatusLabel(value),
+                  render: (value: ActionTypeExecutionLogResultStatus) =>
+                    getResultStatusLabel(value),
                   title: t("knowledgeNetwork.actionTypeExecutionRunStatus"),
                 },
                 {
@@ -574,7 +583,9 @@ export function ActionTypeTaskManagementPanel({
                 showSizeChanger: true,
                 total: shownResultTotal,
               }}
-              rowKey={(record) => `${record.displayName ?? "row"}-${shownResultRows.indexOf(record)}`}
+              rowKey={(record) =>
+                `${record.displayName ?? "row"}-${shownResultRows.indexOf(record)}`
+              }
               size="small"
             />
           </div>

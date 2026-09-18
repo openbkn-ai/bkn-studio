@@ -11,8 +11,16 @@ import { parseViewParams } from "./params";
 
 describe("parseViewParams", () => {
   it("reads the network, ids, expansion and layout from the query", () => {
-    const params = parseViewParams("?kn=worldcup&ids=squads-1,squads-10&expand=in&layout=radial&token=abc");
-    expect(params).toEqual({ kn: "worldcup", ids: ["squads-1", "squads-10"], expand: "backward", layout: "radial", token: "abc" });
+    const params = parseViewParams(
+      "?kn=worldcup&ids=squads-1,squads-10&expand=in&layout=radial&token=abc",
+    );
+    expect(params).toEqual({
+      kn: "worldcup",
+      ids: ["squads-1", "squads-10"],
+      expand: "backward",
+      layout: "radial",
+      token: "abc",
+    });
   });
 
   it("falls back to force layout and no expansion, and reports missing ids as empty", () => {

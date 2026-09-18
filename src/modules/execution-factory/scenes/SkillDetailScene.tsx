@@ -121,9 +121,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
     setPreviewError(null);
 
     try {
-      const nextRecord = catalogContext
-        ? await getSkillMarket(skillId)
-        : await getSkill(skillId);
+      const nextRecord = catalogContext ? await getSkillMarket(skillId) : await getSkill(skillId);
       setRecord(nextRecord);
 
       if (!catalogContext) {
@@ -308,26 +306,30 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
             <DetailBasicInfoButton items={basicInfoItems} />
             {!catalogContext ? (
               <>
-            <PermissionGate permissions="execution-factory:skill:view">
-              <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
-                {t("executionFactory.skillHistoryTitle")}
-              </AppButton>
-            </PermissionGate>
-            <PermissionGate permissions="execution-factory:skill:edit">
-              <AppButton
-                onClick={() => {
-                  void navigate(`/execution-factory/skills/${skillId}/edit`);
-                }}
-                type="primary"
-              >
-                {t("executionFactory.cardMenu.edit")}
-              </AppButton>
-            </PermissionGate>
-            <PermissionGate permissions="execution-factory:skill:view">
-              <AppButton icon={<DownloadOutlined />} loading={downloading} onClick={() => void handleDownload()}>
-                {t("executionFactory.cardMenu.download")}
-              </AppButton>
-            </PermissionGate>
+                <PermissionGate permissions="execution-factory:skill:view">
+                  <AppButton icon={<HistoryOutlined />} onClick={() => setHistoryOpen(true)}>
+                    {t("executionFactory.skillHistoryTitle")}
+                  </AppButton>
+                </PermissionGate>
+                <PermissionGate permissions="execution-factory:skill:edit">
+                  <AppButton
+                    onClick={() => {
+                      void navigate(`/execution-factory/skills/${skillId}/edit`);
+                    }}
+                    type="primary"
+                  >
+                    {t("executionFactory.cardMenu.edit")}
+                  </AppButton>
+                </PermissionGate>
+                <PermissionGate permissions="execution-factory:skill:view">
+                  <AppButton
+                    icon={<DownloadOutlined />}
+                    loading={downloading}
+                    onClick={() => void handleDownload()}
+                  >
+                    {t("executionFactory.cardMenu.download")}
+                  </AppButton>
+                </PermissionGate>
               </>
             ) : null}
           </div>
@@ -352,7 +354,12 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
       ) : null}
 
       {catalogContext && !content ? (
-        <Alert message={t("executionFactory.skillDetailCatalogContentHint")} showIcon style={{ marginBottom: 16 }} type="warning" />
+        <Alert
+          message={t("executionFactory.skillDetailCatalogContentHint")}
+          showIcon
+          style={{ marginBottom: 16 }}
+          type="warning"
+        />
       ) : null}
 
       {loading ? (

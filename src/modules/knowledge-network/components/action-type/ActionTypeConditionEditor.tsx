@@ -46,10 +46,7 @@ function createConditionGroup(objectTypeId?: string): ActionTypeCondition {
   return {
     objectTypeId,
     operation: "and",
-    subConditions: [
-      createEmptyConditionRow(objectTypeId),
-      createEmptyConditionRow(objectTypeId),
-    ],
+    subConditions: [createEmptyConditionRow(objectTypeId), createEmptyConditionRow(objectTypeId)],
     valueFrom: "const",
   };
 }
@@ -61,9 +58,9 @@ function isLogicCondition(condition: ActionTypeCondition) {
 function hasConditionContent(condition: ActionTypeCondition): boolean {
   return Boolean(
     condition.field ||
-      condition.operation ||
-      condition.value !== undefined ||
-      condition.subConditions?.some(hasConditionContent),
+    condition.operation ||
+    condition.value !== undefined ||
+    condition.subConditions?.some(hasConditionContent),
   );
 }
 
@@ -370,20 +367,13 @@ export function ActionTypeConditionEditor({
   const isLogicGroup = isLogicCondition(rootCondition);
   const conditionRows = isLogicGroup
     ? (rootCondition.subConditions ?? [])
-    : [
-        { ...rootCondition, subConditions: undefined },
-        ...(rootCondition.subConditions ?? []),
-      ];
-  const rows = conditionRows.length > 0
-    ? conditionRows
-    : [createEmptyConditionRow(boundObjectTypeId)];
+    : [{ ...rootCondition, subConditions: undefined }, ...(rootCondition.subConditions ?? [])];
+  const rows =
+    conditionRows.length > 0 ? conditionRows : [createEmptyConditionRow(boundObjectTypeId)];
   const groupOperation: Extract<ActionTypeConditionOperation, "and" | "or"> =
     rootCondition.operation === "or" ? "or" : "and";
 
-  const updateRows = (
-    nextRows: ActionTypeCondition[],
-    nextGroupOperation = groupOperation,
-  ) => {
+  const updateRows = (nextRows: ActionTypeCondition[], nextGroupOperation = groupOperation) => {
     const normalizedRows = nextRows.map((item) => ({
       ...item,
       objectTypeId: item.objectTypeId || boundObjectTypeId,

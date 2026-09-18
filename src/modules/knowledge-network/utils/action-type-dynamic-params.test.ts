@@ -39,7 +39,7 @@ describe("action type dynamic params", () => {
       buildActionTypeDynamicParams(parameters, {
         city: "Shanghai",
         enabled: false,
-        "filter.tags": "[\"priority\", \"active\"]",
+        "filter.tags": '["priority", "active"]',
         limit: 10,
       }),
     ).toEqual({

@@ -9,9 +9,7 @@ import type { ResourceRowCount } from "@/modules/data-catalog/types/data-catalog
 
 const MAX_SAFE_ROW_COUNT = BigInt(Number.MAX_SAFE_INTEGER);
 
-export function resourceCountAsBigInt(
-  value: ResourceRowCount | null | undefined,
-): bigint {
+export function resourceCountAsBigInt(value: ResourceRowCount | null | undefined): bigint {
   if (typeof value === "number") {
     if (!Number.isFinite(value) || value <= 0) {
       return 0n;
@@ -29,13 +27,10 @@ export function resourceCountAsBigInt(
 export function resourceCountForPagination(
   ...values: Array<ResourceRowCount | null | undefined>
 ): number {
-  const maximum = values.reduce(
-    (current, value) => {
-      const count = resourceCountAsBigInt(value);
-      return count > current ? count : current;
-    },
-    0n,
-  );
+  const maximum = values.reduce((current, value) => {
+    const count = resourceCountAsBigInt(value);
+    return count > current ? count : current;
+  }, 0n);
 
   return Number(maximum > MAX_SAFE_ROW_COUNT ? MAX_SAFE_ROW_COUNT : maximum);
 }

@@ -24,9 +24,7 @@ export type ParsedQuickApi = {
   summary: string;
 };
 
-export type ParseCurlResult =
-  | { ok: true; value: ParsedQuickApi }
-  | { ok: false; reason: string };
+export type ParseCurlResult = { ok: true; value: ParsedQuickApi } | { ok: false; reason: string };
 
 function curlError(key: string) {
   return i18n.t(`executionFactoryLab.curlErrors.${key}`);

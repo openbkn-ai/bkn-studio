@@ -9,14 +9,10 @@ import i18n from "@/app/locales/i18n";
 import type { AdminRole } from "@/modules/system-admin/types/admin";
 
 export type BuiltinRoleKey =
-  | "super_admin"
-  | "admin"
-  | "security"
-  | "audit"
-  | "network_builder"
-  | "normal_user";
+  "super_admin" | "admin" | "security" | "audit" | "network_builder" | "normal_user";
 
-export type RoleDutyCategory = "super-admin" | "three-admin" | "business" | "normal-user" | "custom";
+export type RoleDutyCategory =
+  "super-admin" | "three-admin" | "business" | "normal-user" | "custom";
 
 type RoleMeta = {
   category: RoleDutyCategory;
@@ -115,10 +111,8 @@ export function hasThreeAdminConflict(roles: RoleClassification[]): boolean {
 }
 
 export function threeAdminConflictLabels(roles: RoleClassification[]): string[] {
-  return roles
-    .filter(isThreeAdminRole)
-    .map((role) => {
-      const builtinKey = resolveBuiltinRoleKey(role);
-      return builtinKey ? builtinRoleLabel(builtinKey) : role.name;
-    });
+  return roles.filter(isThreeAdminRole).map((role) => {
+    const builtinKey = resolveBuiltinRoleKey(role);
+    return builtinKey ? builtinRoleLabel(builtinKey) : role.name;
+  });
 }

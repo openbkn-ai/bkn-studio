@@ -16,10 +16,9 @@ import {
 describe("metric-display", () => {
   it("resolves bound object type name from object types", () => {
     expect(
-      resolveMetricBoundObjectTypeName(
-        { scopeRef: "ot-1", scopeType: "object_type" },
-        [{ id: "ot-1", name: "订单" } as never],
-      ),
+      resolveMetricBoundObjectTypeName({ scopeRef: "ot-1", scopeType: "object_type" }, [
+        { id: "ot-1", name: "订单" } as never,
+      ]),
     ).toBe("订单");
   });
 
@@ -28,8 +27,8 @@ describe("metric-display", () => {
       key.endsWith(".KB") ? "KB" : (options?.defaultValue ?? key);
 
     expect(formatMetricUnitLabel("KB", t)).toBe("KB");
-    expect(formatMetricUnitTypeLabel("numUnit", (key) => (key.endsWith(".numUnit") ? "数值单位" : key))).toBe(
-      "数值单位",
-    );
+    expect(
+      formatMetricUnitTypeLabel("numUnit", (key) => (key.endsWith(".numUnit") ? "数值单位" : key)),
+    ).toBe("数值单位");
   });
 });

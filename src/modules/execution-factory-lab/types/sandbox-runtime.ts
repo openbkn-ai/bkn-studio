@@ -9,12 +9,7 @@ type UnknownSandboxStatus = string & {};
 
 export type SandboxHealthStatus = "healthy" | "degraded" | "unhealthy" | UnknownSandboxStatus;
 export type SandboxSessionStatus =
-  | "creating"
-  | "running"
-  | "idle"
-  | "failed"
-  | "terminated"
-  | UnknownSandboxStatus;
+  "creating" | "running" | "idle" | "failed" | "terminated" | UnknownSandboxStatus;
 
 export type SandboxRuntimeHealth = {
   status: SandboxHealthStatus;
@@ -97,4 +92,3 @@ export type SandboxSessionQuery = {
   runtime?: string;
   abnormalOnly?: boolean;
 };
-

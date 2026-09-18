@@ -45,7 +45,12 @@ import {
   upsertObjectGrantForObject,
 } from "@/modules/system-admin/services/authz.service";
 import type { AdminDepartment } from "@/modules/system-admin/types/admin";
-import type { EffectiveDecision, EnterpriseObjectGrant, GrantRecord, ObjectGrant } from "@/modules/system-admin/types/authz";
+import type {
+  EffectiveDecision,
+  EnterpriseObjectGrant,
+  GrantRecord,
+  ObjectGrant,
+} from "@/modules/system-admin/types/authz";
 import {
   getCachedDepartments,
   getCachedUserSync,
@@ -68,9 +73,7 @@ import {
   isDelegateProtectedGrant,
   isSelfAuthorizeLockout,
 } from "@/modules/system-admin/utils/object-grant-guards";
-import {
-  resourceTypeLabel,
-} from "@/modules/system-admin/utils/resource-catalog";
+import { resourceTypeLabel } from "@/modules/system-admin/utils/resource-catalog";
 import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-authorization-registry";
 
 import styles from "@/modules/system-admin/scenes/admin.module.css";
@@ -124,12 +127,8 @@ export function ObjectAuthorizeDrawer({
 }: ObjectAuthorizeDrawerProps) {
   const { t } = useTranslation();
   const { message, modal, runtimeConfig } = useAppServices();
-  const {
-    catalogError,
-    catalogLoading,
-    operationsForType,
-    retryAuthorizationRegistry,
-  } = useAuthorizationRegistry();
+  const { catalogError, catalogLoading, operationsForType, retryAuthorizationRegistry } =
+    useAuthorizationRegistry();
   const fineGrainedState = useCapability(CAPABILITIES.PERM_FINE_GRAINED);
   const fineGrained = fineGrainedState === "available";
   const enterpriseAvailable = useCapability(CAPABILITIES.PERM_OBJECT_LEVEL) === "available";
@@ -178,7 +177,8 @@ export function ObjectAuthorizeDrawer({
     () =>
       operationsForType(objType).filter(
         (op) =>
-          !HIDDEN_INSTANCE_OPS.has(op.key) && (op.key !== "authorize" || !objectAuthorized || isAdminGrantor),
+          !HIDDEN_INSTANCE_OPS.has(op.key) &&
+          (op.key !== "authorize" || !objectAuthorized || isAdminGrantor),
       ),
     [isAdminGrantor, objType, objectAuthorized, operationsForType],
   );
@@ -251,39 +251,48 @@ export function ObjectAuthorizeDrawer({
     setLookupRevision((revision) => revision + 1);
   }, []);
 
-  const loadRemote = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    try {
-      const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
-      if (signal?.aborted) {
-        return;
-      }
-      // Prime first: these accounts are the only source of names an owner has.
-      primeUserLookupCache(accounts);
-      setGrants(grantList);
-      setUnresolvedLookupIds(new Set());
-      // Grant rows are usable before user-directory enrichment finishes. Keep
-      // the drawer interactive and fill creator labels in the background.
-      void syncLookup(grantList.flatMap((grant) => [
-        ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
-        ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
-      ]), signal);
-      if (enterpriseAvailable) {
-        const enterpriseGrants = await listEnterpriseObjectGrants({ resourceId: objId, resourceType: objType });
-        if (!signal?.aborted) {
-          setEnterpriseGrants(enterpriseGrants);
+  const loadRemote = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      try {
+        const { accounts, grants: grantList } = await listObjectGrantsForObject(objType, objId);
+        if (signal?.aborted) {
+          return;
         }
-      } else {
-        setEnterpriseGrants([]);
+        // Prime first: these accounts are the only source of names an owner has.
+        primeUserLookupCache(accounts);
+        setGrants(grantList);
+        setUnresolvedLookupIds(new Set());
+        // Grant rows are usable before user-directory enrichment finishes. Keep
+        // the drawer interactive and fill creator labels in the background.
+        void syncLookup(
+          grantList.flatMap((grant) => [
+            ...(isUserDirectorySubject(grant) ? [grant.accessorId] : []),
+            ...(grant.grants ?? []).flatMap((source) => grantCreatorUserId(source) ?? []),
+          ]),
+          signal,
+        );
+        if (enterpriseAvailable) {
+          const enterpriseGrants = await listEnterpriseObjectGrants({
+            resourceId: objId,
+            resourceType: objType,
+          });
+          if (!signal?.aborted) {
+            setEnterpriseGrants(enterpriseGrants);
+          }
+        } else {
+          setEnterpriseGrants([]);
+        }
+      } catch (error) {
+        void message.error(extractRequestErrorMessage(error));
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      void message.error(extractRequestErrorMessage(error));
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [enterpriseAvailable, message, objId, objType, syncLookup]);
+    },
+    [enterpriseAvailable, message, objId, objType, syncLookup],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -333,7 +342,12 @@ export function ObjectAuthorizeDrawer({
         return { id, name: dept.name, sub: undefined, type: "department" as const };
       }
       if (pendingLookupIds.has(id)) {
-        return { id, loading: true, name: t("systemAdmin.objectGrants.granteeLoading"), type: "user" as const };
+        return {
+          id,
+          loading: true,
+          name: t("systemAdmin.objectGrants.granteeLoading"),
+          type: "user" as const,
+        };
       }
       if (isDeletedUserSync(id)) {
         return {
@@ -390,9 +404,7 @@ export function ObjectAuthorizeDrawer({
       return {
         eraseLocked: delegateLocked,
         sourceWriteLocked: delegateLocked,
-        reason: delegateLocked
-            ? t("systemAdmin.objectGrants.delegateLocked")
-            : undefined,
+        reason: delegateLocked ? t("systemAdmin.objectGrants.delegateLocked") : undefined,
         selfAuthorizeLocked,
       };
     },
@@ -400,14 +412,16 @@ export function ObjectAuthorizeDrawer({
   );
 
   const visibleGrants = useMemo(
-    () => fineGrained
-      ? grants
-      : grants.filter(
-          (grant) => grant.bundle === FULL_BUSINESS_ACCESS ||
-            (grant.grants ?? []).some(
-              (source) => source.active && source.policySource === "community_bundle",
-            ),
-        ),
+    () =>
+      fineGrained
+        ? grants
+        : grants.filter(
+            (grant) =>
+              grant.bundle === FULL_BUSINESS_ACCESS ||
+              (grant.grants ?? []).some(
+                (source) => source.active && source.policySource === "community_bundle",
+              ),
+          ),
     [fineGrained, grants],
   );
 
@@ -466,10 +480,19 @@ export function ObjectAuthorizeDrawer({
         return false;
       }
       const protection = grantProtection(grant);
-      return source.active && !source.inherited && source.policySource !== "role_permission" &&
-        canManageGrantSource({ currentUserId, isPlatformAuthzAdmin: isPlatformAuthzRevoker, source }) &&
-        Boolean(source.grantId) && !protection.sourceWriteLocked &&
-        !(protection.selfAuthorizeLocked && source.operation === "authorize");
+      return (
+        source.active &&
+        !source.inherited &&
+        source.policySource !== "role_permission" &&
+        canManageGrantSource({
+          currentUserId,
+          isPlatformAuthzAdmin: isPlatformAuthzRevoker,
+          source,
+        }) &&
+        Boolean(source.grantId) &&
+        !protection.sourceWriteLocked &&
+        !(protection.selfAuthorizeLocked && source.operation === "authorize")
+      );
     });
 
   const dependentOperationsForGrant = (grant: ObjectGrant | undefined, source: GrantRecord) => {
@@ -487,9 +510,11 @@ export function ObjectAuthorizeDrawer({
       return [];
     }
     const allowedOperations = new Set(
-      grant ? decisionsForGrant(grant)
-        .filter((decision) => decision.decision === "allow")
-        .map((decision) => decision.operation) : [],
+      grant
+        ? decisionsForGrant(grant)
+            .filter((decision) => decision.decision === "allow")
+            .map((decision) => decision.operation)
+        : [],
     );
     return ops.filter(
       (operation) =>
@@ -539,7 +564,11 @@ export function ObjectAuthorizeDrawer({
   const handleRevokeSource = (grant: ObjectGrant | undefined, source: GrantRecord) => {
     if (
       !grant ||
-      !canManageGrantSource({ currentUserId, isPlatformAuthzAdmin: isPlatformAuthzRevoker, source }) ||
+      !canManageGrantSource({
+        currentUserId,
+        isPlatformAuthzAdmin: isPlatformAuthzRevoker,
+        source,
+      }) ||
       dependentOperationsForGrant(grant, source).length
     ) {
       return;
@@ -582,7 +611,15 @@ export function ObjectAuthorizeDrawer({
         return (
           <div className={styles.authzSubjectCell}>
             <span className={styles.authzAvatar}>
-              {grantee.type === "department" ? <AppstoreOutlined /> : grantee.type === "role" ? <TeamOutlined /> : grantee.type === "public" ? <GlobalOutlined /> : <UserOutlined />}
+              {grantee.type === "department" ? (
+                <AppstoreOutlined />
+              ) : grantee.type === "role" ? (
+                <TeamOutlined />
+              ) : grantee.type === "public" ? (
+                <GlobalOutlined />
+              ) : (
+                <UserOutlined />
+              )}
             </span>
             <span>
               <strong>{grantee.name}</strong>
@@ -611,78 +648,85 @@ export function ObjectAuthorizeDrawer({
       width: 210,
     },
     ...(fineGrained
-      ? [{
-          key: "effectivePermissions",
-          render: (_value: unknown, grant: ObjectGrant) => {
-            const decisions = new Map(
-              decisionsForGrant(grant).map((decision) => [decision.operation, decision]),
-            );
-            const effectiveOperations = ops.flatMap((operation) => {
-              const decision = decisions.get(operation.key);
-              return decision ? [{ decision, operation }] : [];
-            });
-            return effectiveOperations.length ? (
-              <div className={styles.authzPermissionSummary}>
-                {effectiveOperations.map(({ decision, operation }) => {
-                  const decisionLabel = t(
-                    decision.decision === "allow"
-                      ? "systemAdmin.objectGrants.permissionAllowed"
-                      : "systemAdmin.objectGrants.permissionDenied",
-                  );
-                  return (
-                    <Tooltip
-                      key={operation.key}
-                      title={`${operation.description ?? operation.key} · ${decisionLabel} · ${t(`systemAdmin.objectGrants.basis.${decision.basis}`)}`}
-                    >
-                      <span
-                        aria-label={`${operation.label}: ${decisionLabel}`}
-                        className={[
-                          styles.authzPermissionChip,
-                          styles[`authzPermissionChip_${decision.decision}`],
-                        ].join(" ")}
+      ? [
+          {
+            key: "effectivePermissions",
+            render: (_value: unknown, grant: ObjectGrant) => {
+              const decisions = new Map(
+                decisionsForGrant(grant).map((decision) => [decision.operation, decision]),
+              );
+              const effectiveOperations = ops.flatMap((operation) => {
+                const decision = decisions.get(operation.key);
+                return decision ? [{ decision, operation }] : [];
+              });
+              return effectiveOperations.length ? (
+                <div className={styles.authzPermissionSummary}>
+                  {effectiveOperations.map(({ decision, operation }) => {
+                    const decisionLabel = t(
+                      decision.decision === "allow"
+                        ? "systemAdmin.objectGrants.permissionAllowed"
+                        : "systemAdmin.objectGrants.permissionDenied",
+                    );
+                    return (
+                      <Tooltip
+                        key={operation.key}
+                        title={`${operation.description ?? operation.key} · ${decisionLabel} · ${t(`systemAdmin.objectGrants.basis.${decision.basis}`)}`}
                       >
-                        {decision.decision === "allow"
-                          ? <CheckCircleOutlined />
-                          : <CloseCircleOutlined />}
-                        <span>{operation.label}</span>
-                      </span>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            ) : (
-              <span className={styles.authzMutedMark}>
-                {t("systemAdmin.objectGrants.permissionNotGranted")}
-              </span>
-            );
+                        <span
+                          aria-label={`${operation.label}: ${decisionLabel}`}
+                          className={[
+                            styles.authzPermissionChip,
+                            styles[`authzPermissionChip_${decision.decision}`],
+                          ].join(" ")}
+                        >
+                          {decision.decision === "allow" ? (
+                            <CheckCircleOutlined />
+                          ) : (
+                            <CloseCircleOutlined />
+                          )}
+                          <span>{operation.label}</span>
+                        </span>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className={styles.authzMutedMark}>
+                  {t("systemAdmin.objectGrants.permissionNotGranted")}
+                </span>
+              );
+            },
+            title: t("systemAdmin.objectGrants.effectivePermissions"),
           },
-          title: t("systemAdmin.objectGrants.effectivePermissions"),
-        }]
-      : [{
-          key: "bundle",
-          render: () => (
-            <div className={styles.authzPermissionSummary}>
-              <span
-                className={[
-                  styles.authzPermissionChip,
-                  styles.authzPermissionChip_allow,
-                ].join(" ")}
-              >
-                <CheckCircleOutlined />
-                <span>{t("systemAdmin.objectGrants.fullBundleName")}</span>
-              </span>
-            </div>
-          ),
-          title: t("systemAdmin.objectGrants.effectivePermissions"),
-        }]),
+        ]
+      : [
+          {
+            key: "bundle",
+            render: () => (
+              <div className={styles.authzPermissionSummary}>
+                <span
+                  className={[styles.authzPermissionChip, styles.authzPermissionChip_allow].join(
+                    " ",
+                  )}
+                >
+                  <CheckCircleOutlined />
+                  <span>{t("systemAdmin.objectGrants.fullBundleName")}</span>
+                </span>
+              </div>
+            ),
+            title: t("systemAdmin.objectGrants.effectivePermissions"),
+          },
+        ]),
     {
       key: "sources",
       render: (_value, grant) => {
         const activeSources = (grant.grants ?? []).filter((source) => source.active);
         const sourceLabels = [
-          ...new Set(activeSources.map((source) =>
-            t(`systemAdmin.objectGrants.source.${source.policySource}`),
-          )),
+          ...new Set(
+            activeSources.map((source) =>
+              t(`systemAdmin.objectGrants.source.${source.policySource}`),
+            ),
+          ),
         ];
         return activeSources.length ? (
           <AppButton
@@ -691,7 +735,9 @@ export function ObjectAuthorizeDrawer({
             size="small"
             type="link"
           >
-            <strong>{t("systemAdmin.objectGrants.sourceCount", { count: activeSources.length })}</strong>
+            <strong>
+              {t("systemAdmin.objectGrants.sourceCount", { count: activeSources.length })}
+            </strong>
             <small>{sourceLabels.join(" / ")}</small>
           </AppButton>
         ) : (
@@ -705,8 +751,8 @@ export function ObjectAuthorizeDrawer({
       key: "actions",
       render: (_value, grant) => {
         const protection = grantProtection(grant);
-        const deleteDisabled = busy || !canRevoke || protection.eraseLocked ||
-          !revocableSourcesForGrant(grant).length;
+        const deleteDisabled =
+          busy || !canRevoke || protection.eraseLocked || !revocableSourcesForGrant(grant).length;
         return (
           <div className={styles.authzRowActions}>
             <AppButton
@@ -718,9 +764,11 @@ export function ObjectAuthorizeDrawer({
             </AppButton>
             <span aria-hidden className={styles.authzActionDivider} />
             <Tooltip
-              title={deleteDisabled
-                ? protection.reason ?? t("systemAdmin.objectGrants.deleteGrantUnavailable")
-                : undefined}
+              title={
+                deleteDisabled
+                  ? (protection.reason ?? t("systemAdmin.objectGrants.deleteGrantUnavailable"))
+                  : undefined
+              }
             >
               <span>
                 <AppButton
@@ -747,8 +795,9 @@ export function ObjectAuthorizeDrawer({
     {
       key: "operation",
       render: (_value, source) => {
-        const operation = ops.find((candidateOperation) =>
-          candidateOperation.key === source.operation);
+        const operation = ops.find(
+          (candidateOperation) => candidateOperation.key === source.operation,
+        );
         return (
           <Tooltip title={operation?.description ?? source.operation}>
             <div className={styles.authzSourceOperationCell}>
@@ -814,22 +863,28 @@ export function ObjectAuthorizeDrawer({
       align: "right",
       key: "actions",
       render: (_value, source) => {
-        const operation = ops.find((candidateOperation) =>
-          candidateOperation.key === source.operation);
-        const revocable = canRevoke && revocableSourcesForGrant(sourceGrant)
-          .some((candidateSource) => candidateSource.grantId === source.grantId);
+        const operation = ops.find(
+          (candidateOperation) => candidateOperation.key === source.operation,
+        );
+        const revocable =
+          canRevoke &&
+          revocableSourcesForGrant(sourceGrant).some(
+            (candidateSource) => candidateSource.grantId === source.grantId,
+          );
         const blockingDependents = dependentOperationsForGrant(sourceGrant, source);
         const deletionBlocked = blockingDependents.length > 0;
         return revocable ? (
           <Tooltip
-            title={deletionBlocked
-              ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
-                  dependents: blockingDependents
-                    .map((candidateOperation) => candidateOperation.label)
-                    .join("、"),
-                  requirement: operation?.label ?? source.operation,
-                })
-              : undefined}
+            title={
+              deletionBlocked
+                ? t("systemAdmin.objectGrants.deleteRequiredSourceBlocked", {
+                    dependents: blockingDependents
+                      .map((candidateOperation) => candidateOperation.label)
+                      .join("、"),
+                    requirement: operation?.label ?? source.operation,
+                  })
+                : undefined
+            }
           >
             <span>
               <AppButton
@@ -869,7 +924,9 @@ export function ObjectAuthorizeDrawer({
         })}
       </span>
     </div>
-  ) : t("systemAdmin.objectGrants.drawerTitle", { name: objName });
+  ) : (
+    t("systemAdmin.objectGrants.drawerTitle", { name: objName })
+  );
 
   const sourceDetails = sourceGrant ? (
     <div className={styles.authzSourceView}>
@@ -964,7 +1021,9 @@ export function ObjectAuthorizeDrawer({
                 {fineGrained ? (
                   <div className={styles.authzGrantFieldActions}>
                     <AppButton
-                      disabled={catalogLoading || !ops.length || candidateOperations.length === ops.length}
+                      disabled={
+                        catalogLoading || !ops.length || candidateOperations.length === ops.length
+                      }
                       onClick={selectAllCandidateOperations}
                       size="small"
                       type="link"
@@ -998,9 +1057,11 @@ export function ObjectAuthorizeDrawer({
                         <button
                           aria-label={`${operation.label} (${operation.key})`}
                           aria-pressed={selected}
-                          className={selected
-                            ? styles.authzGrantOperationSelected
-                            : styles.authzGrantOperation}
+                          className={
+                            selected
+                              ? styles.authzGrantOperationSelected
+                              : styles.authzGrantOperation
+                          }
                           onClick={() => toggleCandidateOperation(operation.key)}
                           disabled={catalogLoading}
                           type="button"
@@ -1026,11 +1087,16 @@ export function ObjectAuthorizeDrawer({
                       <button
                         aria-label={`${t("systemAdmin.objectGrants.fullBundleName")} (${FULL_BUSINESS_ACCESS})`}
                         aria-pressed={candidateOperations.includes(FULL_BUSINESS_ACCESS)}
-                        className={candidateOperations.includes(FULL_BUSINESS_ACCESS)
-                          ? styles.authzGrantOperationSelected
-                          : styles.authzGrantOperation}
-                        onClick={() => setCandidateOperations((current) =>
-                          current.includes(FULL_BUSINESS_ACCESS) ? [] : [FULL_BUSINESS_ACCESS])}
+                        className={
+                          candidateOperations.includes(FULL_BUSINESS_ACCESS)
+                            ? styles.authzGrantOperationSelected
+                            : styles.authzGrantOperation
+                        }
+                        onClick={() =>
+                          setCandidateOperations((current) =>
+                            current.includes(FULL_BUSINESS_ACCESS) ? [] : [FULL_BUSINESS_ACCESS],
+                          )
+                        }
                         type="button"
                       >
                         {t("systemAdmin.objectGrants.fullBundleName")}
@@ -1048,9 +1114,11 @@ export function ObjectAuthorizeDrawer({
                 {!candidate
                   ? t("systemAdmin.objectGrants.grantNeedsUser")
                   : !candidateOperations.length
-                    ? t(fineGrained
-                      ? "systemAdmin.objectGrants.grantNeedsOperation"
-                      : "systemAdmin.objectGrants.grantNeedsBundle")
+                    ? t(
+                        fineGrained
+                          ? "systemAdmin.objectGrants.grantNeedsOperation"
+                          : "systemAdmin.objectGrants.grantNeedsBundle",
+                      )
                     : fineGrained
                       ? t("systemAdmin.objectGrants.grantReady", {
                           count: candidateOperations.length,
@@ -1090,7 +1158,9 @@ export function ObjectAuthorizeDrawer({
         <header className={styles.authzGrantMatrixHead}>
           <div>
             <strong>{t("systemAdmin.objectGrants.grantDetails")}</strong>
-            <span>{t("systemAdmin.objectGrants.grantUserCount", { count: visibleGrants.length })}</span>
+            <span>
+              {t("systemAdmin.objectGrants.grantUserCount", { count: visibleGrants.length })}
+            </span>
           </div>
           {!canManageGrants ? <span>{t("systemAdmin.objectGrants.drawerReadOnly")}</span> : null}
         </header>
@@ -1141,7 +1211,9 @@ export function ObjectAuthorizeDrawer({
                   </Tag>
                   <span className={styles.sourceOperation}>{rule.operation}</span>
                   <span>{rule.classification}</span>
-                  <span>{t(`systemAdmin.objectGrants.enterpriseState.${rule.activationState}`)}</span>
+                  <span>
+                    {t(`systemAdmin.objectGrants.enterpriseState.${rule.activationState}`)}
+                  </span>
                   <code>{rule.ruleId}</code>
                   <span className={styles.sourceReadOnly}>
                     {rule.runtimeEligible
@@ -1157,23 +1229,26 @@ export function ObjectAuthorizeDrawer({
     </>
   );
 
-  const content = fineGrainedState === "unknown" ? (
-    <RequireEdition
-      capability={CAPABILITIES.PERM_FINE_GRAINED}
-      minEdition="professional"
-      mountLockedContent={false}
-    >
-      {grantOverview}
-    </RequireEdition>
-  ) : !fineGrained && !isCommunityObjectGrantType(objType) ? (
-    <RequireEdition
-      capability={CAPABILITIES.PERM_FINE_GRAINED}
-      minEdition="professional"
-      mountLockedContent={false}
-    >
-      {grantOverview}
-    </RequireEdition>
-  ) : sourceDetails ?? grantOverview;
+  const content =
+    fineGrainedState === "unknown" ? (
+      <RequireEdition
+        capability={CAPABILITIES.PERM_FINE_GRAINED}
+        minEdition="professional"
+        mountLockedContent={false}
+      >
+        {grantOverview}
+      </RequireEdition>
+    ) : !fineGrained && !isCommunityObjectGrantType(objType) ? (
+      <RequireEdition
+        capability={CAPABILITIES.PERM_FINE_GRAINED}
+        minEdition="professional"
+        mountLockedContent={false}
+      >
+        {grantOverview}
+      </RequireEdition>
+    ) : (
+      (sourceDetails ?? grantOverview)
+    );
 
   return (
     <Drawer
@@ -1184,7 +1259,10 @@ export function ObjectAuthorizeDrawer({
       title={drawerTitle}
       width="min(920px, calc(100vw - 24px))"
     >
-      <AuthorizationRegistryFailureAlert error={catalogError} onRetry={retryAuthorizationRegistry} />
+      <AuthorizationRegistryFailureAlert
+        error={catalogError}
+        onRetry={retryAuthorizationRegistry}
+      />
       {content}
     </Drawer>
   );

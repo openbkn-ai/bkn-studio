@@ -100,10 +100,7 @@ export function WorkspaceOverviewSection({
         width: 360,
         render: (_value: string, record) => (
           <div className={styles.objectTitleBox}>
-            <span
-              className={styles.objectIconSquare}
-              style={{ backgroundColor: record.color }}
-            >
+            <span className={styles.objectIconSquare} style={{ backgroundColor: record.color }}>
               {renderResourceIcon(record.icon)}
             </span>
             <span>{record.name}</span>
@@ -166,153 +163,136 @@ export function WorkspaceOverviewSection({
   return (
     <div className={styles.overviewBox}>
       <Spin spinning={detailLoading}>
-      <div className={styles.overviewHeaderCard}>
-        <div className={styles.overviewHeaderTitle}>
-          <div className={styles.overviewHeaderTitleLeft}>
-            <span
-              className={styles.overviewHeaderIcon}
-              style={{ color: detail?.color ?? "#126ee3" }}
-            >
-              <DeploymentUnitOutlined />
-            </span>
-            <div className={styles.overviewHeaderName}>{detail?.name}</div>
-          </div>
-          <div className={styles.overviewHeaderTitleRight}>
-            {detail && canAuthorize ? (
-              <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
-                {t("knowledgeNetwork.authorizeAction")}
-              </AppButton>
-            ) : null}
-            {canModify ? (
-              <AppButton icon={<EditOutlined />} onClick={onEdit}>
-                {t("common.edit")}
-              </AppButton>
-            ) : null}
-          </div>
-        </div>
-        <div className={styles.overviewHeaderComment}>
-          {detail?.description ? (
-            <MarkdownText text={detail.description} />
-          ) : (
-            t("knowledgeNetwork.noComment")
-          )}
-        </div>
-        <div className={styles.overviewHeaderFooter}>
-          <UserOutlined />
-          <span className={styles.overviewHeaderFooterLabel}>
-            {t("knowledgeNetwork.modifier")}:
-          </span>
-          <span className={styles.overviewHeaderFooterValue}>
-            {detail?.creatorName || detail?.updaterName || "--"}
-          </span>
-          <ClockCircleOutlined />
-          <span className={styles.overviewHeaderFooterLabel}>
-            {t("common.updateTime")}:
-          </span>
-          <span>{detail?.updateTime || "--"}</span>
-          <span className={styles.overviewHeaderFooterId}>
-            <span className={styles.overviewHeaderFooterLabel}>{t("common.id")}:</span>
-            <code>{networkIdentifier || "--"}</code>
-            <Tooltip title={t("knowledgeNetwork.copyNetworkIdentifier")}>
-              <button
-                aria-label={t("knowledgeNetwork.copyNetworkIdentifier")}
-                className={styles.overviewHeaderFooterCopy}
-                disabled={!networkIdentifier}
-                onClick={copyNetworkIdentifier}
-                type="button"
+        <div className={styles.overviewHeaderCard}>
+          <div className={styles.overviewHeaderTitle}>
+            <div className={styles.overviewHeaderTitleLeft}>
+              <span
+                className={styles.overviewHeaderIcon}
+                style={{ color: detail?.color ?? "#126ee3" }}
               >
-                <CopyOutlined />
-              </button>
-            </Tooltip>
-          </span>
-        </div>
-      </div>
-
-      <div className={styles.overviewStatRow}>
-        <div className={styles.overviewStatCard}>
-          <dl className={styles.overviewStatDefinition}>
-            <dt
-              className={styles.overviewStatIcon}
-              style={{ backgroundColor: "#126ee3" }}
-            >
-              <DatabaseOutlined />
-            </dt>
-            <dd>
-              <p>{t("knowledgeNetwork.objectTypes")}</p>
-              <p>{formatOverviewCount(detail?.statistics.objectTypesTotal)}</p>
-            </dd>
-          </dl>
-          {canModify ? (
-            <AppButton
-              className={styles.overviewStatAction}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/object-types/create`,
-                );
-              }}
-              type="link"
-            >
-              {t("knowledgeNetwork.createObjectTypeEntry")}
-            </AppButton>
-          ) : null}
-        </div>
-
-        <div className={styles.overviewStatCard}>
-          <dl className={styles.overviewStatDefinition}>
-            <dt
-              className={styles.overviewStatIcon}
-              style={{ backgroundColor: "#08979c" }}
-            >
-              <ApiOutlined />
-            </dt>
-            <dd>
-              <p>{t("knowledgeNetwork.relationTypes")}</p>
-              <p>{formatOverviewCount(detail?.statistics.relationTypesTotal)}</p>
-            </dd>
-          </dl>
-          {canModify ? (
-            <AppButton
-              className={styles.overviewStatAction}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/relation-types/create`,
-                );
-              }}
-              type="link"
-            >
-              {t("knowledgeNetwork.createRelationTypeEntry")}
-            </AppButton>
-          ) : null}
+                <DeploymentUnitOutlined />
+              </span>
+              <div className={styles.overviewHeaderName}>{detail?.name}</div>
+            </div>
+            <div className={styles.overviewHeaderTitleRight}>
+              {detail && canAuthorize ? (
+                <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
+                  {t("knowledgeNetwork.authorizeAction")}
+                </AppButton>
+              ) : null}
+              {canModify ? (
+                <AppButton icon={<EditOutlined />} onClick={onEdit}>
+                  {t("common.edit")}
+                </AppButton>
+              ) : null}
+            </div>
+          </div>
+          <div className={styles.overviewHeaderComment}>
+            {detail?.description ? (
+              <MarkdownText text={detail.description} />
+            ) : (
+              t("knowledgeNetwork.noComment")
+            )}
+          </div>
+          <div className={styles.overviewHeaderFooter}>
+            <UserOutlined />
+            <span className={styles.overviewHeaderFooterLabel}>
+              {t("knowledgeNetwork.modifier")}:
+            </span>
+            <span className={styles.overviewHeaderFooterValue}>
+              {detail?.creatorName || detail?.updaterName || "--"}
+            </span>
+            <ClockCircleOutlined />
+            <span className={styles.overviewHeaderFooterLabel}>{t("common.updateTime")}:</span>
+            <span>{detail?.updateTime || "--"}</span>
+            <span className={styles.overviewHeaderFooterId}>
+              <span className={styles.overviewHeaderFooterLabel}>{t("common.id")}:</span>
+              <code>{networkIdentifier || "--"}</code>
+              <Tooltip title={t("knowledgeNetwork.copyNetworkIdentifier")}>
+                <button
+                  aria-label={t("knowledgeNetwork.copyNetworkIdentifier")}
+                  className={styles.overviewHeaderFooterCopy}
+                  disabled={!networkIdentifier}
+                  onClick={copyNetworkIdentifier}
+                  type="button"
+                >
+                  <CopyOutlined />
+                </button>
+              </Tooltip>
+            </span>
+          </div>
         </div>
 
-        <div className={styles.overviewStatCard}>
-          <dl className={styles.overviewStatDefinition}>
-            <dt
-              className={styles.overviewStatIcon}
-              style={{ backgroundColor: "#90c06b" }}
-            >
-              <ThunderboltOutlined />
-            </dt>
-            <dd>
-              <p>{t("knowledgeNetwork.actionTypes")}</p>
-              <p>{formatOverviewCount(detail?.statistics.actionTypesTotal)}</p>
-            </dd>
-          </dl>
-          {canModify ? (
-            <AppButton
-              className={styles.overviewStatAction}
-              onClick={() => {
-                void navigate(
-                  `/knowledge-network/workspace/${networkId}/action-types/create`,
-                );
-              }}
-              type="link"
-            >
-              {t("knowledgeNetwork.createActionTypeEntry")}
-            </AppButton>
-          ) : null}
+        <div className={styles.overviewStatRow}>
+          <div className={styles.overviewStatCard}>
+            <dl className={styles.overviewStatDefinition}>
+              <dt className={styles.overviewStatIcon} style={{ backgroundColor: "#126ee3" }}>
+                <DatabaseOutlined />
+              </dt>
+              <dd>
+                <p>{t("knowledgeNetwork.objectTypes")}</p>
+                <p>{formatOverviewCount(detail?.statistics.objectTypesTotal)}</p>
+              </dd>
+            </dl>
+            {canModify ? (
+              <AppButton
+                className={styles.overviewStatAction}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/object-types/create`);
+                }}
+                type="link"
+              >
+                {t("knowledgeNetwork.createObjectTypeEntry")}
+              </AppButton>
+            ) : null}
+          </div>
+
+          <div className={styles.overviewStatCard}>
+            <dl className={styles.overviewStatDefinition}>
+              <dt className={styles.overviewStatIcon} style={{ backgroundColor: "#08979c" }}>
+                <ApiOutlined />
+              </dt>
+              <dd>
+                <p>{t("knowledgeNetwork.relationTypes")}</p>
+                <p>{formatOverviewCount(detail?.statistics.relationTypesTotal)}</p>
+              </dd>
+            </dl>
+            {canModify ? (
+              <AppButton
+                className={styles.overviewStatAction}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/relation-types/create`);
+                }}
+                type="link"
+              >
+                {t("knowledgeNetwork.createRelationTypeEntry")}
+              </AppButton>
+            ) : null}
+          </div>
+
+          <div className={styles.overviewStatCard}>
+            <dl className={styles.overviewStatDefinition}>
+              <dt className={styles.overviewStatIcon} style={{ backgroundColor: "#90c06b" }}>
+                <ThunderboltOutlined />
+              </dt>
+              <dd>
+                <p>{t("knowledgeNetwork.actionTypes")}</p>
+                <p>{formatOverviewCount(detail?.statistics.actionTypesTotal)}</p>
+              </dd>
+            </dl>
+            {canModify ? (
+              <AppButton
+                className={styles.overviewStatAction}
+                onClick={() => {
+                  void navigate(`/knowledge-network/workspace/${networkId}/action-types/create`);
+                }}
+                type="link"
+              >
+                {t("knowledgeNetwork.createActionTypeEntry")}
+              </AppButton>
+            ) : null}
+          </div>
         </div>
-      </div>
       </Spin>
 
       <div className={styles.overviewGraphSection}>

@@ -28,18 +28,31 @@ describe("execution-unit list operation mapping", () => {
     getMock
       .mockResolvedValueOnce({
         data: {
-          data: [{ name: "Operator", operator_id: "operator-1", operations: ["authorize"], version: "1" }],
+          data: [
+            {
+              name: "Operator",
+              operator_id: "operator-1",
+              operations: ["authorize"],
+              version: "1",
+            },
+          ],
           total: 1,
         },
       })
       .mockResolvedValueOnce({
-        data: { data: [{ box_id: "toolbox-1", box_name: "Toolbox", operations: ["authorize"] }], total: 1 },
+        data: {
+          data: [{ box_id: "toolbox-1", box_name: "Toolbox", operations: ["authorize"] }],
+          total: 1,
+        },
       })
       .mockResolvedValueOnce({
         data: { data: [{ mcp_id: "mcp-1", name: "MCP", operations: ["authorize"] }], total: 1 },
       })
       .mockResolvedValueOnce({
-        data: { data: [{ skill_id: "skill-1", name: "Skill", operations: ["authorize"] }], total: 1 },
+        data: {
+          data: [{ skill_id: "skill-1", name: "Skill", operations: ["authorize"] }],
+          total: 1,
+        },
       });
 
     const [{ listOperators }, { listToolboxes }, { listMcps }, { listSkills }] = await Promise.all([

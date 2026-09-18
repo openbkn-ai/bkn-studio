@@ -139,16 +139,26 @@ vi.mock("@/framework/ui/common/AppButton", () => ({
     loading?: boolean;
     onClick?: () => void;
   }) => (
-    <button data-loading={loading ? "true" : "false"} disabled={disabled} onClick={onClick} type="button">
+    <button
+      data-loading={loading ? "true" : "false"}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
       {children}
     </button>
   ),
 }));
 
-vi.mock("@/modules/knowledge-network/services/knowledge-network.service", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/modules/knowledge-network/services/knowledge-network.service")>()),
-  importKnowledgeNetwork: mocks.importKnowledgeNetwork,
-}));
+vi.mock(
+  "@/modules/knowledge-network/services/knowledge-network.service",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("@/modules/knowledge-network/services/knowledge-network.service")
+    >()),
+    importKnowledgeNetwork: mocks.importKnowledgeNetwork,
+  }),
+);
 
 import { KnowledgeNetworkImportButton } from "./KnowledgeNetworkImportButton";
 
@@ -188,9 +198,7 @@ describe("KnowledgeNetworkImportButton", () => {
       within(dialog).getByText("knowledgeNetwork.importBindingPolicyDescription"),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByDisplayValue("detach"));
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }));
 
     await screen.findByText("Knowledge network ID already exists.");
 
@@ -212,9 +220,7 @@ describe("KnowledgeNetworkImportButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "upload-file" }));
 
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "knowledgeNetwork.importButton" }));
     await screen.findByText("Knowledge network ID already exists.");
 
     let resolveRequest: (() => void) | undefined;
@@ -228,10 +234,9 @@ describe("KnowledgeNetworkImportButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "knowledgeNetwork.importOverwrite" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "knowledgeNetwork.importOverwrite" })).toHaveAttribute(
-        "data-loading",
-        "true",
-      );
+      expect(
+        screen.getByRole("button", { name: "knowledgeNetwork.importOverwrite" }),
+      ).toHaveAttribute("data-loading", "true");
     });
     expect(screen.getByRole("button", { name: "common.create" })).toHaveAttribute(
       "data-loading",

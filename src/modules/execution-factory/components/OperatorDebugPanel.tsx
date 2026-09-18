@@ -99,7 +99,9 @@ export function OperatorDebugPanel({
 
   return (
     <div>
-      <Typography.Paragraph type="secondary">{t("executionFactory.debugSampleHint")}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t("executionFactory.debugSampleHint")}
+      </Typography.Paragraph>
       <Form form={form} layout="vertical">
         <HttpDebugRequestFields
           ioSpec={endpoint?.ioSpec}
@@ -115,9 +117,7 @@ export function OperatorDebugPanel({
       {result ? (
         <div style={{ marginTop: 16 }}>
           <Typography.Title level={5}>{t("executionFactory.debugResultTitle")}</Typography.Title>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{JSON.stringify(result, null, 2)}</pre>
         </div>
       ) : null}
     </div>

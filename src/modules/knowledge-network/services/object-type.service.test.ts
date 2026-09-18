@@ -33,15 +33,14 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       name: "采购订单",
       total_count: 1,
     });
-    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
-      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    getMock.mockImplementation(
+      (_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
     );
-    const { getObjectTypeSampleData } = await import(
-      "@/modules/knowledge-network/services/object-type.service"
-    );
-    const { transformPrecisionSafeJSONResponse } = await import(
-      "@/framework/request/precision-safe-json"
-    );
+    const { getObjectTypeSampleData } =
+      await import("@/modules/knowledge-network/services/object-type.service");
+    const { transformPrecisionSafeJSONResponse } =
+      await import("@/framework/request/precision-safe-json");
 
     const result = await getObjectTypeSampleData("kn-1", "purchase_order");
 
@@ -73,12 +72,12 @@ describe("object-type.service · getObjectTypeSampleData", () => {
   it("preserves unsafe integers from the raw sample-data response", async () => {
     const rawResponse =
       '{"columns":[{"data_index":"order_id"}],"entries":[{"order_id":110101199001152345,"signed":-9223372036854775808,"unsigned":18446744073709551615}],"total_count":1}';
-    getMock.mockImplementation((_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
-      Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
+    getMock.mockImplementation(
+      (_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({ data: config.transformResponse?.(rawResponse) }),
     );
-    const { getObjectTypeSampleData } = await import(
-      "@/modules/knowledge-network/services/object-type.service"
-    );
+    const { getObjectTypeSampleData } =
+      await import("@/modules/knowledge-network/services/object-type.service");
 
     await expect(getObjectTypeSampleData("kn-1", "purchase_order")).resolves.toMatchObject({
       rows: [
@@ -105,9 +104,8 @@ describe("object-type.service · getObjectTypeSampleData", () => {
           total_count: 101,
         },
       });
-    const { listKnowledgeNetworkObjectTypes } = await import(
-      "@/modules/knowledge-network/services/object-type.service"
-    );
+    const { listKnowledgeNetworkObjectTypes } =
+      await import("@/modules/knowledge-network/services/object-type.service");
 
     const result = await listKnowledgeNetworkObjectTypes("kn-1", {
       allPages: true,
@@ -147,9 +145,8 @@ describe("object-type.service · validateKnowledgeNetworkObjectType", () => {
   it("validates the mapped object type before mutation", async () => {
     getMock.mockResolvedValue({ data: { entries: [] } });
     postMock.mockResolvedValue({ data: undefined });
-    const { validateKnowledgeNetworkObjectType } = await import(
-      "@/modules/knowledge-network/services/object-type.service"
-    );
+    const { validateKnowledgeNetworkObjectType } =
+      await import("@/modules/knowledge-network/services/object-type.service");
 
     await validateKnowledgeNetworkObjectType("kn-1", {
       color: "#1677ff",

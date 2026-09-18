@@ -60,8 +60,7 @@ export const commonEnUS = {
     unexpectedError: "Something went wrong",
     reload: "Reload",
     requestFailed: "Request failed. Please try again later.",
-    routeErrorDescription:
-      "The page failed to load or render. Please try again in a moment.",
+    routeErrorDescription: "The page failed to load or render. Please try again in a moment.",
     retry: "Retry",
     description: "Description",
     category: "Category",
@@ -75,8 +74,7 @@ export const commonEnUS = {
     },
     testConnection: "Test Connection",
     dangerDelete: {
-      typeNameToConfirm:
-        'This is a high-risk action. Type "{{name}}" to confirm deletion.',
+      typeNameToConfirm: 'This is a high-risk action. Type "{{name}}" to confirm deletion.',
     },
     entitlement: {
       imageMissingTitle: "{{edition}} licence — capability not present in this deployment",

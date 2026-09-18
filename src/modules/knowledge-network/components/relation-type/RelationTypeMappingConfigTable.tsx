@@ -47,10 +47,7 @@ type RelationTypeMappingConfigTableProps = {
   onOpenObjectType?: (objectTypeId: string) => void;
 };
 
-function resolvePropertyMeta(
-  objectTypeDetail: ObjectTypeDetail | null,
-  propertyName?: string,
-) {
+function resolvePropertyMeta(objectTypeDetail: ObjectTypeDetail | null, propertyName?: string) {
   if (!propertyName) {
     return null;
   }
@@ -135,7 +132,9 @@ function PropertyNameCell({ name }: { name?: string }) {
   const { t } = useTranslation();
 
   if (!name) {
-    return <span className={styles.emptyValue}>{t("knowledgeNetwork.relationTypeEmptyValue")}</span>;
+    return (
+      <span className={styles.emptyValue}>{t("knowledgeNetwork.relationTypeEmptyValue")}</span>
+    );
   }
 
   return (
@@ -335,8 +334,7 @@ export function RelationTypeMappingConfigTable({
       width: 400,
       render: (_value: string | undefined, row) => {
         if (row.rowType === "object") {
-          const label =
-            detail.backingDataSourceName || detail.backingDataSourceId || emptyLabel;
+          const label = detail.backingDataSourceName || detail.backingDataSourceId || emptyLabel;
           return <PropertyNameCell name={label === emptyLabel ? undefined : label} />;
         }
 
@@ -349,9 +347,7 @@ export function RelationTypeMappingConfigTable({
               <PropertyNameCell name={row.resourceSourceName} />
             </div>
             <div className={styles.resourceField}>
-              <span
-                className={`${styles.resourceFieldLabel} ${styles.resourceFieldLabelTarget}`}
-              >
+              <span className={`${styles.resourceFieldLabel} ${styles.resourceFieldLabelTarget}`}>
                 {t("knowledgeNetwork.relationTypeResourceTargetPropertyLabel")}
               </span>
               <PropertyNameCell name={row.resourceTargetName} />

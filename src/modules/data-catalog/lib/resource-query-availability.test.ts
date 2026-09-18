@@ -28,11 +28,13 @@ const resource: CatalogResource = {
 
 describe("resourceQueryBlockReason", () => {
   it("gives disabled state precedence over a missing discovery result", () => {
-    expect(resourceQueryBlockReason({
-      ...resource,
-      enabled: false,
-      lastDiscoverStatus: "missing",
-    })).toBe("disabled");
+    expect(
+      resourceQueryBlockReason({
+        ...resource,
+        enabled: false,
+        lastDiscoverStatus: "missing",
+      }),
+    ).toBe("disabled");
   });
 
   it("blocks a missing resource even when its previous fields remain", () => {
@@ -52,7 +54,9 @@ describe("resourceQueryBlockReason", () => {
   });
 
   it("does not treat an omitted list field count as an empty schema", () => {
-    expect(resourceQueryBlockReason({ ...resource, columnCount: null, schema: [] }, null)).toBeNull();
+    expect(
+      resourceQueryBlockReason({ ...resource, columnCount: null, schema: [] }, null),
+    ).toBeNull();
   });
 
   it("blocks a stale resource even when its previous fields remain", () => {
@@ -60,11 +64,13 @@ describe("resourceQueryBlockReason", () => {
   });
 
   it("gives stale lifecycle status precedence over a missing discovery result", () => {
-    expect(resourceQueryBlockReason({
-      ...resource,
-      lastDiscoverStatus: "missing",
-      status: "stale",
-    })).toBe("stale");
+    expect(
+      resourceQueryBlockReason({
+        ...resource,
+        lastDiscoverStatus: "missing",
+        status: "stale",
+      }),
+    ).toBe("stale");
   });
 
   it("allows deprecated resources while metadata remains available", () => {

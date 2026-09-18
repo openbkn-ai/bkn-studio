@@ -50,8 +50,12 @@ export function OntologyGraphCard({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const controlled = objectTypesProp !== undefined && relationTypesProp !== undefined;
-  const [fetchedObjectTypes, setFetchedObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [fetchedRelationTypes, setFetchedRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
+  const [fetchedObjectTypes, setFetchedObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>(
+    [],
+  );
+  const [fetchedRelationTypes, setFetchedRelationTypes] = useState<
+    KnowledgeNetworkRelationTypeRecord[]
+  >([]);
   const [loading, setLoading] = useState(!controlled);
 
   useEffect(() => {

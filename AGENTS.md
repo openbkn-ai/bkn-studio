@@ -5,14 +5,14 @@ Read this first, then load the relevant project documents below. Before working 
 
 ## Read before doing anything
 
-| Topic | File |
-| --- | --- |
-| Contribution guide (branches, commits, style) | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Architecture & module boundaries | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Development conventions | [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) |
-| Agent composition conventions | [AGENT_COMPOSITION_CHARTER.md](AGENT_COMPOSITION_CHARTER.md) |
-| Issue templates (bug / feature / task) | [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/) |
-| Pull request template | [.github/pull_request_template.md](.github/pull_request_template.md) |
+| Topic                                         | File                                                                 |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| Contribution guide (branches, commits, style) | [CONTRIBUTING.md](CONTRIBUTING.md)                                   |
+| Architecture & module boundaries              | [ARCHITECTURE.md](ARCHITECTURE.md)                                   |
+| Development conventions                       | [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)                         |
+| Agent composition conventions                 | [AGENT_COMPOSITION_CHARTER.md](AGENT_COMPOSITION_CHARTER.md)         |
+| Issue templates (bug / feature / task)        | [.github/ISSUE_TEMPLATE/](.github/ISSUE_TEMPLATE/)                   |
+| Pull request template                         | [.github/pull_request_template.md](.github/pull_request_template.md) |
 
 ## Hard rules for Agents
 
@@ -23,7 +23,7 @@ Read this first, then load the relevant project documents below. Before working 
 - **Verification handoff**: After implementing a change, report relevant edge cases and any remaining test-coverage gaps along with the commands run.
 - **Issue / PR templates**: Before creating an Issue, select the matching template under [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) and preserve its structure when filling in all applicable sections. Before creating or updating a PR, read and fully complete [`.github/pull_request_template.md`](.github/pull_request_template.md). Do not delete required sections; mark non-applicable items explicitly with a brief reason.
 - **Only pick up Issues labeled `agent-ready`** (acceptance criteria complete + independently doable) that are unassigned. Self-assign to lock.
-- **Acceptance criteria**: a human approves them (label `ac-approved`) before an Issue becomes `agent-ready`. You may *draft* them for human approval.
+- **Acceptance criteria**: a human approves them (label `ac-approved`) before an Issue becomes `agent-ready`. You may _draft_ them for human approval.
 - **Risky operations** (deploy, delete/modify data, schema migration, prod config, secrets/permissions, major dependency bumps, cross-service breaking changes): do **not** execute. Post the three-part confirmation (what / blast radius / rollback), apply label `awaiting-confirmation`, and wait for an Owner to apply `owner-confirmed`.
 - **You may never**: merge a PR, bypass or skip CI, or act without the confirmation above. Merging is human-only. Do not approve PRs yourself either — the sole exception is the automated review workflow ([`automation-claude-review.yml`](.github/workflows/automation-claude-review.yml)), which may submit an approving or change-requesting review as a signal; its approval never merges and never replaces the human merge decision.
 - **Open PRs with `Closes #<issue>`** and write back progress as Issue/PR comments. Label your PRs `by-agent`.
@@ -37,10 +37,12 @@ Read this first, then load the relevant project documents below. Before working 
 
 ## Mandatory local pre-commit checks
 
-Before **every** commit, run the following local quality checks. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
+Before **every** commit, run the repository formatter first, review its changes, and then run the following local quality checks. Formatting is mandatory for every commit; do not rely on `format:check` or remote CI to discover files that still need formatting. Remote CI runs the repository-wide suite; the local Vitest command must target only test files directly affected by the change. Do not commit if any command fails or emits warnings where CI requires zero warnings:
 
 ```bash
+pnpm run format
 node scripts/check-license-headers.mjs
+pnpm run format:check
 pnpm exec eslint . --config eslint.config.typechecked.js --max-warnings 0
 pnpm exec vitest --run --maxWorkers=50% path/to/affected.test.tsx
 pnpm exec tsc -b --pretty false

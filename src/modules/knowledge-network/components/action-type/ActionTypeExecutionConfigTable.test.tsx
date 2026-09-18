@@ -171,9 +171,7 @@ describe("ActionTypeExecutionConfigTable", () => {
       />,
     );
 
-    expect(
-      screen.getByText("knowledgeNetwork.actionTypeExecutionParameterEmpty"),
-    ).toBeTruthy();
+    expect(screen.getByText("knowledgeNetwork.actionTypeExecutionParameterEmpty")).toBeTruthy();
   });
 
   it("does not expose source ids without toolbox access", () => {
@@ -189,9 +187,7 @@ describe("ActionTypeExecutionConfigTable", () => {
 
     expect(resolveActionTypeActionSourceDisplayWithTimeout).not.toHaveBeenCalled();
     expect(resolveActionTypeToolInputSchema).not.toHaveBeenCalled();
-    expect(
-      screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length).toBeGreaterThan(0);
     expect(screen.queryByText(/box-1|tool-1/)).toBeNull();
   });
 });

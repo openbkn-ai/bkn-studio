@@ -95,12 +95,17 @@ export function RoleDetailDrawer({
       if (grantQuery) {
         const typeLabel = resourceTypeLabel(grant.resource.type);
         const opsLabel = grant.operations
-          .map((op) => (op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)))
+          .map((op) =>
+            op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op),
+          )
           .join(" ");
-        const scopeName = grant.resource.id === WILDCARD
-          ? t("systemAdmin.grant.wholeType")
-          : resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))?.name ?? grant.resource.id;
-        const haystack = `${grant.resource.type} ${typeLabel} ${scopeName} ${grant.resource.id} ${opsLabel}`.toLowerCase();
+        const scopeName =
+          grant.resource.id === WILDCARD
+            ? t("systemAdmin.grant.wholeType")
+            : (resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))
+                ?.name ?? grant.resource.id);
+        const haystack =
+          `${grant.resource.type} ${typeLabel} ${scopeName} ${grant.resource.id} ${opsLabel}`.toLowerCase();
         if (!haystack.includes(grantQuery)) {
           return;
         }
@@ -176,7 +181,9 @@ export function RoleDetailDrawer({
         <section className={styles.sectionCard}>
           <h3 className={styles.sectionTitle}>{t("systemAdmin.roles.columns.permissions")}</h3>
           {role.permissions.length === 0 ? (
-            <p className={styles.muted} style={{ margin: 0 }}>{t("systemAdmin.grant.empty")}</p>
+            <p className={styles.muted} style={{ margin: 0 }}>
+              {t("systemAdmin.grant.empty")}
+            </p>
           ) : (
             <>
               <div className={styles.permissionToolbar}>
@@ -204,19 +211,26 @@ export function RoleDetailDrawer({
                     </div>
                     <div className={styles.grantList}>
                       {grants.map((grant) => (
-                        <div className={styles.grantItem} key={`${grant.resource.type}:${grant.resource.id}`}>
+                        <div
+                          className={styles.grantItem}
+                          key={`${grant.resource.type}:${grant.resource.id}`}
+                        >
                           <span
                             className={[appStyles.slugChip, styles.grantResource].join(" ")}
                             title={grant.resource.id === WILDCARD ? undefined : grant.resource.id}
                           >
                             {grant.resource.id === WILDCARD
                               ? t("systemAdmin.grant.wholeType")
-                              : resourceNames.get(resourceGrantNameKey(grant.resource.type, grant.resource.id))?.name ?? grant.resource.id}
+                              : (resourceNames.get(
+                                  resourceGrantNameKey(grant.resource.type, grant.resource.id),
+                                )?.name ?? grant.resource.id)}
                           </span>
                           <div className={styles.grantOps}>
                             {grant.operations.map((op) => (
                               <Tag className={appStyles.permChip} key={op}>
-                                {op === "*" ? t("systemAdmin.grant.allOps") : operationLabel(grant.resource.type, op)}
+                                {op === "*"
+                                  ? t("systemAdmin.grant.allOps")
+                                  : operationLabel(grant.resource.type, op)}
                               </Tag>
                             ))}
                           </div>

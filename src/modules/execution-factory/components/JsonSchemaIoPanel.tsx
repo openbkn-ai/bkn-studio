@@ -45,7 +45,8 @@ function extractSchemaProperties(schema: unknown): SchemaPropertyRow[] {
   );
 
   return Object.entries(properties as Record<string, unknown>).map(([name, definition]) => {
-    const def = definition && typeof definition === "object" ? (definition as Record<string, unknown>) : {};
+    const def =
+      definition && typeof definition === "object" ? (definition as Record<string, unknown>) : {};
     const typeValue = def.type;
     const type =
       typeof typeValue === "string"
@@ -67,10 +68,7 @@ function extractSchemaProperties(schema: unknown): SchemaPropertyRow[] {
 export function JsonSchemaIoPanel({ outputSchema, schema }: JsonSchemaIoPanelProps) {
   const { t } = useTranslation();
   const properties = useMemo(() => extractSchemaProperties(schema), [schema]);
-  const outputProperties = useMemo(
-    () => extractSchemaProperties(outputSchema),
-    [outputSchema],
-  );
+  const outputProperties = useMemo(() => extractSchemaProperties(outputSchema), [outputSchema]);
   const hasSchema = Boolean(schema);
 
   if (!hasSchema) {
@@ -123,9 +121,7 @@ export function JsonSchemaIoPanel({ outputSchema, schema }: JsonSchemaIoPanelPro
       {/* 面板叫「输入输出」，输出这半边此前从不渲染。MCP 的 outputSchema 是可选的，
           多数服务不给，那就明说没声明，而不是留白让人以为工具没有返回。 */}
       <section style={{ marginTop: 16 }}>
-        <h4 className={styles.sectionTitle}>
-          {t("executionFactory.mcpToolOutputSchemaTitle")}
-        </h4>
+        <h4 className={styles.sectionTitle}>{t("executionFactory.mcpToolOutputSchemaTitle")}</h4>
         {outputSchema ? (
           <>
             {outputProperties.length > 0 ? propertyTable(outputProperties) : null}
@@ -134,9 +130,7 @@ export function JsonSchemaIoPanel({ outputSchema, schema }: JsonSchemaIoPanelPro
             </div>
           </>
         ) : (
-          <p className={styles.emptyHint}>
-            {t("executionFactory.mcpToolOutputSchemaUndeclared")}
-          </p>
+          <p className={styles.emptyHint}>{t("executionFactory.mcpToolOutputSchemaUndeclared")}</p>
         )}
       </section>
     </div>

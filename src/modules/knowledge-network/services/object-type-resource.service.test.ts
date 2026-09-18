@@ -29,16 +29,21 @@ describe("object-type-resource.service", () => {
   it("uses Vega paging for the object-type resource preview", async () => {
     getMock.mockResolvedValue({
       data: {
-        entries: [{ id: "r-1", name: "orders", operations: ["query_data"], schema_definition: [{ name: "id" }] }],
+        entries: [
+          {
+            id: "r-1",
+            name: "orders",
+            operations: ["query_data"],
+            schema_definition: [{ name: "id" }],
+          },
+        ],
       },
     });
     postMock.mockResolvedValue({ data: { entries: [{ id: 1 }], total_count: 1 } });
-    const { getObjectTypeResourcePreview } = await import(
-      "@/modules/knowledge-network/services/object-type-resource.service"
-    );
-    const { transformPrecisionSafeJSONResponse } = await import(
-      "@/framework/request/precision-safe-json"
-    );
+    const { getObjectTypeResourcePreview } =
+      await import("@/modules/knowledge-network/services/object-type-resource.service");
+    const { transformPrecisionSafeJSONResponse } =
+      await import("@/framework/request/precision-safe-json");
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
 
@@ -60,12 +65,18 @@ describe("object-type-resource.service", () => {
   it("does not request preview rows when resource operations omit query_data", async () => {
     getMock.mockResolvedValue({
       data: {
-        entries: [{ id: "r-1", name: "orders", operations: ["view_detail"], schema_definition: [{ name: "id" }] }],
+        entries: [
+          {
+            id: "r-1",
+            name: "orders",
+            operations: ["view_detail"],
+            schema_definition: [{ name: "id" }],
+          },
+        ],
       },
     });
-    const { getObjectTypeResourcePreview } = await import(
-      "@/modules/knowledge-network/services/object-type-resource.service"
-    );
+    const { getObjectTypeResourcePreview } =
+      await import("@/modules/knowledge-network/services/object-type-resource.service");
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
 
@@ -80,9 +91,8 @@ describe("object-type-resource.service", () => {
       },
     });
     postMock.mockResolvedValue({ data: { entries: [{ id: 1 }], total_count: 1 } });
-    const { getObjectTypeResourcePreview } = await import(
-      "@/modules/knowledge-network/services/object-type-resource.service"
-    );
+    const { getObjectTypeResourcePreview } =
+      await import("@/modules/knowledge-network/services/object-type-resource.service");
 
     const result = await getObjectTypeResourcePreview("kn-1", "r-1");
 
@@ -92,9 +102,8 @@ describe("object-type-resource.service", () => {
 
   it("preserves resource search name casing for backend requests", async () => {
     getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
-    const { queryObjectTypeResources } = await import(
-      "@/modules/knowledge-network/services/object-type-resource.service"
-    );
+    const { queryObjectTypeResources } =
+      await import("@/modules/knowledge-network/services/object-type-resource.service");
 
     await queryObjectTypeResources("kn-1", {
       dataSourceId: "catalog-1",

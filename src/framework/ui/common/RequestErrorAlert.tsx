@@ -90,8 +90,12 @@ export function RequestErrorAlert({
                 {t("common.error.details", { value: error.details })}
               </pre>
             ) : null}
-            {error.solution ? <div>{t("common.error.solution", { value: error.solution })}</div> : null}
-            {error.errorLink ? <div>{t("common.error.link", { value: error.errorLink })}</div> : null}
+            {error.solution ? (
+              <div>{t("common.error.solution", { value: error.solution })}</div>
+            ) : null}
+            {error.errorLink ? (
+              <div>{t("common.error.link", { value: error.errorLink })}</div>
+            ) : null}
           </div>
         ) : undefined
       }

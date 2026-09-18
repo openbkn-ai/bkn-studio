@@ -53,7 +53,8 @@ afterAll(() => {
 
 describe("ObjectTypePropertyTable", () => {
   it("shows property descriptions with a consistent empty value and ellipsis styling", () => {
-    const longDescription = "A long property description that should stay inside the fixed table column.";
+    const longDescription =
+      "A long property description that should stay inside the fixed table column.";
 
     render(
       <ObjectTypePropertyTable
@@ -72,6 +73,8 @@ describe("ObjectTypePropertyTable", () => {
 
     const emptyDescriptionRow = screen.getByText("customer_id").closest("tr");
     expect(emptyDescriptionRow).not.toBeNull();
-    expect(within(emptyDescriptionRow as HTMLTableRowElement).getAllByText("—").length).toBeGreaterThan(0);
+    expect(
+      within(emptyDescriptionRow as HTMLTableRowElement).getAllByText("—").length,
+    ).toBeGreaterThan(0);
   });
 });

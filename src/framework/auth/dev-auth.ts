@@ -39,9 +39,7 @@ export function getDevAccessToken() {
   }
 
   const envAccessToken = readEnvAccessToken();
-  const failedEnvAccessToken = window.sessionStorage
-    .getItem(FAILED_ENV_ACCESS_TOKEN_KEY)
-    ?.trim();
+  const failedEnvAccessToken = window.sessionStorage.getItem(FAILED_ENV_ACCESS_TOKEN_KEY)?.trim();
 
   if (envAccessToken && envAccessToken === failedEnvAccessToken) {
     return "";
@@ -82,9 +80,7 @@ export function seedDevTokensFromEnv() {
     return;
   }
 
-  const failedEnvAccessToken = window.sessionStorage
-    .getItem(FAILED_ENV_ACCESS_TOKEN_KEY)
-    ?.trim();
+  const failedEnvAccessToken = window.sessionStorage.getItem(FAILED_ENV_ACCESS_TOKEN_KEY)?.trim();
   if (accessToken === failedEnvAccessToken) {
     return;
   }

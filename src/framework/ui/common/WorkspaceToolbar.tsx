@@ -13,11 +13,7 @@ type WorkspaceToolbarProps = {
   meta?: ReactNode;
 };
 
-export function WorkspaceToolbar({
-  actions,
-  filters,
-  meta,
-}: WorkspaceToolbarProps) {
+export function WorkspaceToolbar({ actions, filters, meta }: WorkspaceToolbarProps) {
   return (
     <div className="workspace-toolbar">
       <div className="workspace-toolbar-main">

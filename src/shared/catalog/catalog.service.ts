@@ -10,10 +10,7 @@ import {
   throwMockRequestError,
   validateMockExpectedUpdateTime,
 } from "@/framework/request/mock-error";
-import {
-  calculateNextHourlyCronRun,
-  isHourlyCron,
-} from "@/shared/hourly-cron";
+import { calculateNextHourlyCronRun, isHourlyCron } from "@/shared/hourly-cron";
 import {
   findMockCatalog,
   getMockCatalogs,
@@ -86,7 +83,7 @@ type BackendCatalogDeletionImpact = {
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const mockHealthCheckSchedules = new Map<string, CatalogHealthCheckSchedule>();
 
-const wait = async <T,>(value: T, delay = 180) =>
+const wait = async <T>(value: T, delay = 180) =>
   new Promise<T>((resolve) => {
     window.setTimeout(() => resolve(value), delay);
   });
@@ -115,9 +112,10 @@ function sortMockCatalogs(catalogs: CatalogRecord[], query: CatalogListQuery) {
   return [...catalogs].sort((left, right) => {
     const leftValue = catalogSortValue(left, sort);
     const rightValue = catalogSortValue(right, sort);
-    const comparison = typeof leftValue === "string" && typeof rightValue === "string"
-      ? leftValue.localeCompare(rightValue)
-      : Number(leftValue) - Number(rightValue);
+    const comparison =
+      typeof leftValue === "string" && typeof rightValue === "string"
+        ? leftValue.localeCompare(rightValue)
+        : Number(leftValue) - Number(rightValue);
     return direction === "asc" ? comparison : -comparison;
   });
 }
@@ -137,20 +135,23 @@ export async function listCatalogs(
     });
   }
 
-  const response = await http.get<ListResponse<BackendCatalogSummary>>("/vega-backend/v1/catalogs", {
-    ...options,
-    params: {
-      connector_type: query.connectorType || undefined,
-      direction: query.direction ?? "desc",
-      enabled: query.enabled,
-      health_check_status: query.healthStatus || undefined,
-      limit: query.pageSize,
-      name: query.keyword.trim() || undefined,
-      offset: (query.page - 1) * query.pageSize,
-      sort: query.sort ?? "update_time",
-      type: query.type === "all" ? undefined : query.type,
+  const response = await http.get<ListResponse<BackendCatalogSummary>>(
+    "/vega-backend/v1/catalogs",
+    {
+      ...options,
+      params: {
+        connector_type: query.connectorType || undefined,
+        direction: query.direction ?? "desc",
+        enabled: query.enabled,
+        health_check_status: query.healthStatus || undefined,
+        limit: query.pageSize,
+        name: query.keyword.trim() || undefined,
+        offset: (query.page - 1) * query.pageSize,
+        sort: query.sort ?? "update_time",
+        type: query.type === "all" ? undefined : query.type,
+      },
     },
-  });
+  );
 
   const mapped = response.data.entries.map(mapBackendCatalogSummary);
   const filtered = filterCatalogs(mapped, query);
@@ -160,7 +161,9 @@ export async function listCatalogs(
   };
 }
 
-export async function listCatalogConnectorTypeStats(keyword = ""): Promise<CatalogConnectorTypeStat[]> {
+export async function listCatalogConnectorTypeStats(
+  keyword = "",
+): Promise<CatalogConnectorTypeStat[]> {
   if (useMock) {
     const counts = new Map<string, number>();
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -171,14 +174,16 @@ export async function listCatalogConnectorTypeStats(keyword = ""): Promise<Catal
       const key = `${catalog.type}:${catalog.connectorType}`;
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    return wait([...counts.entries()].map(([key, catalogCount]) => {
-      const [catalogType, connectorType] = key.split(":", 2);
-      return {
-        catalogType: catalogType as CatalogConnectorTypeStat["catalogType"],
-        connectorType,
-        catalogCount,
-      };
-    }));
+    return wait(
+      [...counts.entries()].map(([key, catalogCount]) => {
+        const [catalogType, connectorType] = key.split(":", 2);
+        return {
+          catalogType: catalogType as CatalogConnectorTypeStat["catalogType"],
+          connectorType,
+          catalogCount,
+        };
+      }),
+    );
   }
 
   const response = await http.get<{ entries: BackendCatalogConnectorTypeStat[] }>(
@@ -266,11 +271,7 @@ export async function previewCatalogDeletion(id: string): Promise<CatalogDeletio
 export async function setCatalogEnabled(id: string, enabled: boolean) {
   if (useMock) {
     if (!findMockCatalog(id)) {
-      throwMockRequestError(
-        404,
-        "VegaBackend.Catalog.NotFound",
-        "Catalog not found.",
-      );
+      throwMockRequestError(404, "VegaBackend.Catalog.NotFound", "Catalog not found.");
     }
     const now = Date.now();
     updateMockCatalog(id, (record) => ({
@@ -356,11 +357,7 @@ export async function updateCatalog(
     validateMockExpectedUpdateTime(input.expectedUpdateTime);
     const current = findMockCatalog(id);
     if (!current) {
-      throwMockRequestError(
-        404,
-        "VegaBackend.Catalog.NotFound",
-        "Catalog not found.",
-      );
+      throwMockRequestError(404, "VegaBackend.Catalog.NotFound", "Catalog not found.");
     }
     if (current.connectorType !== input.connectorType) {
       throwMockRequestError(
@@ -419,26 +416,27 @@ export async function updateCatalog(
   );
 }
 
-export async function createPhysicalCatalog(input: {
-  connectorConfig: Record<string, unknown>;
-  connectorType: string;
-  description: string;
-  enabled: boolean;
-  name: string;
-  tags: string[];
-  healthCheckSchedule?: CatalogHealthCheckScheduleInput;
-  category?: string;
-  mode?: string;
-},
-options: CatalogMutationOptions = {},
+export async function createPhysicalCatalog(
+  input: {
+    connectorConfig: Record<string, unknown>;
+    connectorType: string;
+    description: string;
+    enabled: boolean;
+    name: string;
+    tags: string[];
+    healthCheckSchedule?: CatalogHealthCheckScheduleInput;
+    category?: string;
+    mode?: string;
+  },
+  options: CatalogMutationOptions = {},
 ): Promise<string> {
   if (useMock) {
     const id = crypto.randomUUID();
     const now = Date.now();
-    mockHealthCheckSchedules.set(id, buildMockHealthCheckSchedule(
+    mockHealthCheckSchedules.set(
       id,
-      input.healthCheckSchedule ?? { mode: "inherit" },
-    ));
+      buildMockHealthCheckSchedule(id, input.healthCheckSchedule ?? { mode: "inherit" }),
+    );
     prependMockCatalog({
       id,
       builtin: false,
@@ -513,9 +511,7 @@ export async function testCatalogConnectionConfig(
   return response.data;
 }
 
-export async function testCatalogConnection(
-  id: string,
-): Promise<CatalogConnectionTestResult> {
+export async function testCatalogConnection(id: string): Promise<CatalogConnectionTestResult> {
   if (useMock) {
     return wait({
       message: "Connection test succeeded.",
@@ -570,11 +566,7 @@ export async function updateCatalogHealthCheckSchedule(
         "Health check schedule has been updated. Reload it and try again.",
       );
     }
-    const schedule = buildMockHealthCheckSchedule(
-      catalogId,
-      input,
-      current,
-    );
+    const schedule = buildMockHealthCheckSchedule(catalogId, input, current);
     mockHealthCheckSchedules.set(catalogId, schedule);
     return wait(schedule);
   }
@@ -640,14 +632,14 @@ function buildMockHealthCheckSchedule(
     catalogId,
     cronExpr:
       input.mode === "enabled"
-        ? input.cronExpr?.trim() ?? ""
+        ? (input.cronExpr?.trim() ?? "")
         : input.mode === "disabled"
-          ? previous?.cronExpr ?? ""
+          ? (previous?.cronExpr ?? "")
           : "",
     lastRun: previous?.lastRun ?? null,
     mode: input.mode,
     expectedUpdateTime: now,
-    nextRun: input.mode === "disabled" ? null : nextRunValue ?? null,
+    nextRun: input.mode === "disabled" ? null : (nextRunValue ?? null),
     updateTime: now,
   };
 }

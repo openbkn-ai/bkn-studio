@@ -17,11 +17,9 @@ export const dataConnectZhCN = {
     editDescription: "更新当前数据连接配置，连接器类型保持不变。",
     searchPlaceholder: "搜索名称/描述",
     connectorTypeFilterPlaceholder: "按连接器类型筛选",
-    toolbarHint:
-      "当前模块已接入 Vega 后端的 catalogs 和 connector-types，表单流已经打通。",
+    toolbarHint: "当前模块已接入 Vega 后端的 catalogs 和 connector-types，表单流已经打通。",
     empty: "暂无数据连接",
-    emptyDescription:
-      "当前还没有可展示的数据连接记录，可以直接新建第一条连接实例。",
+    emptyDescription: "当前还没有可展示的数据连接记录，可以直接新建第一条连接实例。",
     moreActions: "更多操作",
     detailTitle: "连接详情",
     name: "连接名称",
@@ -66,8 +64,7 @@ export const dataConnectZhCN = {
     connectorTypeStep: "连接器类型",
     configStep: "连接配置",
     connectorTypeStepTitle: "选择连接器类型",
-    connectorTypeStepDescription:
-      "先选择与目标数据源匹配的后端连接器类型。",
+    connectorTypeStepDescription: "先选择与目标数据源匹配的后端连接器类型。",
     connectorTypeNameSearchPlaceholder: "按连接器名称搜索",
     connectorTypeTagFilterPlaceholder: "按标签筛选",
     connectorTypeEmpty: "当前筛选条件下没有可选连接器类型。",
@@ -96,16 +93,14 @@ export const dataConnectZhCN = {
     tagLengthLimit: "单个标签不能超过 {{count}} 个字符。",
     tagLengthLimit_one: "单个标签不能超过 {{count}} 个字符。",
     tagLengthLimit_other: "单个标签不能超过 {{count}} 个字符。",
-    tagInvalidCharacters:
-      '标签不能包含 / : ? \\ " < > | 等特殊字符。',
+    tagInvalidCharacters: '标签不能包含 / : ? \\ " < > | 等特殊字符。',
     tagRequired: "标签不能为空。",
     deleteConfirmTitle: "删除数据连接",
-    deleteConfirmDescription: '确认删除“{{name}}”吗？该操作不可撤销。',
+    deleteConfirmDescription: "确认删除“{{name}}”吗？该操作不可撤销。",
     enableConfirmTitle: "启用数据连接",
-    enableConfirmDescription: '确认启用“{{name}}”吗？',
+    enableConfirmDescription: "确认启用“{{name}}”吗？",
     disableConfirmTitle: "停用数据连接",
-    disableConfirmDescription:
-      '确认停用“{{name}}”吗？停用后该连接将不可用于探查与数据访问。',
+    disableConfirmDescription: "确认停用“{{name}}”吗？停用后该连接将不可用于探查与数据访问。",
     dangerDelete: {
       blockedTitle: "当前无法删除数据连接",
       blockedWarning: "请先处理受保护资源或等待运行中的任务结束，然后重新预检。",
@@ -129,10 +124,10 @@ export const dataConnectZhCN = {
       "探查计划对应 Vega 后端 discover-schedules，近期探查记录对应 discover-tasks。",
     discoverCurrentConnection: "当前连接",
     discoverScheduleEnableConfirmTitle: "启用探查计划",
-    discoverScheduleEnableConfirmDescription: '确认启用探查计划“{{name}}”吗？',
+    discoverScheduleEnableConfirmDescription: "确认启用探查计划“{{name}}”吗？",
     discoverScheduleDisableConfirmTitle: "停用探查计划",
     discoverScheduleDisableConfirmDescription:
-      '确认停用探查计划“{{name}}”吗？停用后将不再按计划自动探查。',
+      "确认停用探查计划“{{name}}”吗？停用后将不再按计划自动探查。",
     backToConnections: "返回数据连接",
     discoverCreate: "新建探查计划",
     discoverRunNow: "立即探查",
@@ -141,8 +136,7 @@ export const dataConnectZhCN = {
     discoverTabSchedules: "探查计划",
     discoverTabTasks: "探查任务",
     discoverRunNowConfirmTitle: "立即探查",
-    discoverRunNowConfirmDescription:
-      '将为连接“{{name}}”创建一条手动探查任务，请选择探查策略。',
+    discoverRunNowConfirmDescription: "将为连接“{{name}}”创建一条手动探查任务，请选择探查策略。",
     discoverStrategyHints: {
       full_sync: "同步全部资源，包含新增发现与失效清理。",
       create_only: "只发现新增资源，不清理已有资源。",
@@ -150,11 +144,10 @@ export const dataConnectZhCN = {
     },
     discoverRunScheduleConfirmTitle: "立即执行",
     discoverRunScheduleConfirmDescription:
-      '确认立即执行计划“{{name}}”吗？将按该计划的探查策略创建一条任务。',
+      "确认立即执行计划“{{name}}”吗？将按该计划的探查策略创建一条任务。",
     discoverCreateTitle: "新建探查计划",
     discoverEditTitle: "编辑探查计划",
-    discoverEditHint:
-      "编辑时不允许更改数据连接，启用/停用请在列表中切换。",
+    discoverEditHint: "编辑时不允许更改数据连接，启用/停用请在列表中切换。",
     discoverSearchPlaceholder: "搜索计划名称",
     discoverCatalog: "数据连接",
     discoverCatalogFilterPlaceholder: "按数据连接筛选",
@@ -185,19 +178,18 @@ export const dataConnectZhCN = {
     discoverLastProgressTime: "进度更新时间",
     discoverScheduleTableTitle: "探查计划",
     discoverTaskTableTitle: "近期探查任务",
-    discoverSelectedSchedule: '当前已按计划“{{name}}”进行筛选',
+    discoverSelectedSchedule: "当前已按计划“{{name}}”进行筛选",
     discoverClearSelection: "清除筛选",
     discoverScheduleEmpty: "暂无探查计划",
-    discoverScheduleEmptyDescription:
-      "先为数据连接创建探查计划，后续再在这里查看探查记录。",
+    discoverScheduleEmptyDescription: "先为数据连接创建探查计划，后续再在这里查看探查记录。",
     discoverTaskEmpty: "暂无探查任务",
     discoverTaskEmptyDescription: "当前筛选条件下还没有执行记录。",
     discoverTaskEmptyByScheduleDescription:
       "该计划暂无关联任务。立即探查或立即执行产生的任务为手动触发，不会归属到计划下，可清除筛选查看全部任务。",
     discoverDeleteConfirmTitle: "删除探查计划",
-    discoverDeleteConfirmDescription: '确认删除探查计划“{{name}}”吗？',
+    discoverDeleteConfirmDescription: "确认删除探查计划“{{name}}”吗？",
     discoverTaskDeleteConfirmTitle: "删除探查任务",
-    discoverTaskDeleteConfirmDescription: '确认删除探查任务“{{id}}”吗？',
+    discoverTaskDeleteConfirmDescription: "确认删除探查任务“{{id}}”吗？",
     discoverTriggerSuccess: "探查任务已创建。",
     discoverTaskDetailTitle: "探查任务详情",
     discoverTaskExecution: "执行信息",
@@ -239,16 +231,21 @@ export const dataConnectZhCN = {
       scheduled: "定时",
     },
     discoverMock: {
-      cleanupTimeout: "\u8fde\u63a5\u8d85\u65f6\uff0c\u6e05\u7406\u4efb\u52a1\u672a\u80fd\u5b8c\u6210\u3002",
+      cleanupTimeout:
+        "\u8fde\u63a5\u8d85\u65f6\uff0c\u6e05\u7406\u4efb\u52a1\u672a\u80fd\u5b8c\u6210\u3002",
       customerSyncSchedule: "\u5ba2\u6237\u4e3b\u6570\u636e\u6bcf\u65e5\u540c\u6b65",
       financeCleanupSchedule: "\u8d22\u52a1\u6570\u4ed3\u6e05\u7406\u4efb\u52a1",
       knowledgeIndexSchedule: "\u77e5\u8bc6\u7d22\u5f15\u589e\u91cf\u63a2\u67e5",
-      manualTaskCreated: "\u624b\u52a8\u63a2\u67e5\u4efb\u52a1\u5df2\u521b\u5efa\uff0c\u7b49\u5f85\u6267\u884c\u3002",
+      manualTaskCreated:
+        "\u624b\u52a8\u63a2\u67e5\u4efb\u52a1\u5df2\u521b\u5efa\uff0c\u7b49\u5f85\u6267\u884c\u3002",
       pullingIndexChanges: "\u6b63\u5728\u62c9\u53d6\u7d22\u5f15\u589e\u91cf\u53d8\u66f4\u3002",
       syncCancelled: "\u540c\u6b65\u5df2\u53d6\u6d88\u3002",
-      syncCompleted: "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
-      syncCompleted_one: "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
-      syncCompleted_other: "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
+      syncCompleted:
+        "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
+      syncCompleted_one:
+        "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
+      syncCompleted_other:
+        "\u540c\u6b65\u5b8c\u6210\uff0c\u5171\u5904\u7406 {{count}} \u5f20\u8868\u3002",
     },
     connectorTypeResultCount: "共 {{count}} 个",
     connectorTypeResultCount_one: "共 {{count}} 个",

@@ -17,56 +17,219 @@ const view: EvidenceChainView = {
   question: "物料 M-1 有多少库存，它被哪些产品使用？",
   answer: "库存 906，使用产品为 P-1、P-2。",
   claims: [
-    { id: "claim-stock", label: "库存为 906", value: "906", status: "located", supportStatus: "supported", nodeIds: ["evidence-stock"] },
-    { id: "claim-product", label: "产品 P-1、P-2 使用该物料", status: "located", supportStatus: "supported", nodeIds: ["evidence-product"] },
+    {
+      id: "claim-stock",
+      label: "库存为 906",
+      value: "906",
+      status: "located",
+      supportStatus: "supported",
+      nodeIds: ["evidence-stock"],
+    },
+    {
+      id: "claim-product",
+      label: "产品 P-1、P-2 使用该物料",
+      status: "located",
+      supportStatus: "supported",
+      nodeIds: ["evidence-product"],
+    },
   ],
   evidence: { nodes: [], edges: [] },
   execution: { nodes: [], edges: [] },
   generationStatus: "ready",
   questionPairs: [
-    { id: "pair-stock", question: "物料 M-1 有多少库存？", answer: "906", summary: "库存", status: "supported", claimIds: ["claim-stock"] },
-    { id: "pair-product", question: "物料 M-1 被哪些产品使用？", answer: "P-1、P-2", summary: "反查产品", status: "supported", claimIds: ["claim-product"] },
+    {
+      id: "pair-stock",
+      question: "物料 M-1 有多少库存？",
+      answer: "906",
+      summary: "库存",
+      status: "supported",
+      claimIds: ["claim-stock"],
+    },
+    {
+      id: "pair-product",
+      question: "物料 M-1 被哪些产品使用？",
+      answer: "P-1、P-2",
+      summary: "反查产品",
+      status: "supported",
+      claimIds: ["claim-product"],
+    },
   ],
   selectedPairGraphs: {
     "pair-stock": {
-      claims: [{ id: "claim-stock", label: "库存为 906", value: "906", status: "located", supportStatus: "supported", nodeIds: ["evidence-stock"] }],
-      evidenceNodes: [{ id: "evidence-stock", label: "库存汇总结果", kind: "result", value: "906" }],
-      businessFunctions: [{
-        id: "function-stock", displayName: "汇总物料可用库存", capabilityKind: "sql_query", businessPurpose: "按仓库汇总指定物料的可用库存",
-        businessInputs: [{ name: "物料编码", value: "M-1", sourceKind: "question" }], logicSummary: "过滤可用库存并按仓库求和",
-        businessOutputs: [{ summary: "可用库存 906", evidenceRefs: ["evidence-stock"], adoptedRowRefs: ["row:1"] }], operationIds: ["op-sql"], supportsClaimIds: ["claim-stock"],
-        schemaRefs: [], technicalExecution: { interfaceNames: ["run_sql"], inputPayloadRef: "artifact:sql-input", outputPayloadRef: "artifact:sql-output", completeness: "complete" }, validationStatus: "valid",
-      }],
-      executionSteps: [{ id: "step-sql", operationId: "op-sql", attempt: 1, businessRole: "汇总库存", interfaceName: "run_sql", status: "completed", timeRailItemId: "time:op-sql:1" }],
+      claims: [
+        {
+          id: "claim-stock",
+          label: "库存为 906",
+          value: "906",
+          status: "located",
+          supportStatus: "supported",
+          nodeIds: ["evidence-stock"],
+        },
+      ],
+      evidenceNodes: [
+        { id: "evidence-stock", label: "库存汇总结果", kind: "result", value: "906" },
+      ],
+      businessFunctions: [
+        {
+          id: "function-stock",
+          displayName: "汇总物料可用库存",
+          capabilityKind: "sql_query",
+          businessPurpose: "按仓库汇总指定物料的可用库存",
+          businessInputs: [{ name: "物料编码", value: "M-1", sourceKind: "question" }],
+          logicSummary: "过滤可用库存并按仓库求和",
+          businessOutputs: [
+            {
+              summary: "可用库存 906",
+              evidenceRefs: ["evidence-stock"],
+              adoptedRowRefs: ["row:1"],
+            },
+          ],
+          operationIds: ["op-sql"],
+          supportsClaimIds: ["claim-stock"],
+          schemaRefs: [],
+          technicalExecution: {
+            interfaceNames: ["run_sql"],
+            inputPayloadRef: "artifact:sql-input",
+            outputPayloadRef: "artifact:sql-output",
+            completeness: "complete",
+          },
+          validationStatus: "valid",
+        },
+      ],
+      executionSteps: [
+        {
+          id: "step-sql",
+          operationId: "op-sql",
+          attempt: 1,
+          businessRole: "汇总库存",
+          interfaceName: "run_sql",
+          status: "completed",
+          timeRailItemId: "time:op-sql:1",
+        },
+      ],
       schemaNodes: [],
       edges: [
-        { edgeId: "step-function", kind: "implements", fromId: "step-sql", toId: "function-stock", operationIds: ["op-sql"], validationStatus: "verified" },
-        { edgeId: "function-claim", kind: "supports", fromId: "function-stock", toId: "claim-stock", operationIds: ["op-sql"], validationStatus: "verified" },
-        { edgeId: "evidence-claim", kind: "supports", fromId: "evidence-stock", toId: "claim-stock", operationIds: ["op-sql"], validationStatus: "verified" },
+        {
+          edgeId: "step-function",
+          kind: "implements",
+          fromId: "step-sql",
+          toId: "function-stock",
+          operationIds: ["op-sql"],
+          validationStatus: "verified",
+        },
+        {
+          edgeId: "function-claim",
+          kind: "supports",
+          fromId: "function-stock",
+          toId: "claim-stock",
+          operationIds: ["op-sql"],
+          validationStatus: "verified",
+        },
+        {
+          edgeId: "evidence-claim",
+          kind: "supports",
+          fromId: "evidence-stock",
+          toId: "claim-stock",
+          operationIds: ["op-sql"],
+          validationStatus: "verified",
+        },
       ],
     },
     "pair-product": {
-      claims: [{ id: "claim-product", label: "产品 P-1、P-2 使用该物料", status: "located", supportStatus: "supported", nodeIds: ["evidence-product"] }],
-      evidenceNodes: [{ id: "evidence-product", label: "产品实例", kind: "result", value: "P-1、P-2" }],
-      businessFunctions: [{
-        id: "function-product", displayName: "通过物料反查产品", capabilityKind: "agent_composed_process", businessPurpose: "从物料经 BOM 找到产品",
-        businessInputs: [{ name: "物料编码", value: "M-1", sourceKind: "question" }], logicSummary: "物料 → BOM → 产品",
-        businessOutputs: [{ summary: "产品 P-1、P-2", evidenceRefs: ["evidence-product"], adoptedRowRefs: [] }], operationIds: ["op-bom", "op-product"], supportsClaimIds: ["claim-product"],
-        schemaRefs: [], technicalExecution: { interfaceNames: ["query_object_instance"], completeness: "complete" }, validationStatus: "valid",
-      }],
+      claims: [
+        {
+          id: "claim-product",
+          label: "产品 P-1、P-2 使用该物料",
+          status: "located",
+          supportStatus: "supported",
+          nodeIds: ["evidence-product"],
+        },
+      ],
+      evidenceNodes: [
+        { id: "evidence-product", label: "产品实例", kind: "result", value: "P-1、P-2" },
+      ],
+      businessFunctions: [
+        {
+          id: "function-product",
+          displayName: "通过物料反查产品",
+          capabilityKind: "agent_composed_process",
+          businessPurpose: "从物料经 BOM 找到产品",
+          businessInputs: [{ name: "物料编码", value: "M-1", sourceKind: "question" }],
+          logicSummary: "物料 → BOM → 产品",
+          businessOutputs: [
+            { summary: "产品 P-1、P-2", evidenceRefs: ["evidence-product"], adoptedRowRefs: [] },
+          ],
+          operationIds: ["op-bom", "op-product"],
+          supportsClaimIds: ["claim-product"],
+          schemaRefs: [],
+          technicalExecution: {
+            interfaceNames: ["query_object_instance"],
+            completeness: "complete",
+          },
+          validationStatus: "valid",
+        },
+      ],
       executionSteps: [
-        { id: "step-bom", operationId: "op-bom", attempt: 1, businessRole: "查询 BOM", interfaceName: "query_object_instance", status: "completed", timeRailItemId: "time:op-bom:1" },
-        { id: "step-product", operationId: "op-product", attempt: 1, businessRole: "查询产品", interfaceName: "query_object_instance", status: "completed", timeRailItemId: "time:op-product:1" },
+        {
+          id: "step-bom",
+          operationId: "op-bom",
+          attempt: 1,
+          businessRole: "查询 BOM",
+          interfaceName: "query_object_instance",
+          status: "completed",
+          timeRailItemId: "time:op-bom:1",
+        },
+        {
+          id: "step-product",
+          operationId: "op-product",
+          attempt: 1,
+          businessRole: "查询产品",
+          interfaceName: "query_object_instance",
+          status: "completed",
+          timeRailItemId: "time:op-product:1",
+        },
       ],
       schemaNodes: [],
-      edges: [{ edgeId: "product-claim", kind: "supports", fromId: "function-product", toId: "claim-product", operationIds: ["op-bom", "op-product"], validationStatus: "verified" }],
+      edges: [
+        {
+          edgeId: "product-claim",
+          kind: "supports",
+          fromId: "function-product",
+          toId: "claim-product",
+          operationIds: ["op-bom", "op-product"],
+          validationStatus: "verified",
+        },
+      ],
     },
   },
-  timeRail: [{
-    id: "time:op-sql:1", order: 1, operation_id: "op-sql", attempt: 1, interface_name: "run_sql", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:00Z",
-    input: { mode: "inline", media_type: "application/json", byte_length: 120, inline: { query: "SELECT SUM(available_qty) FROM inventory_view WHERE material_code = :material_code", params: { material_code: "M-1" } } },
-    output: { mode: "inline", media_type: "application/json", byte_length: 18, inline: { total: 906 } },
-  }],
+  timeRail: [
+    {
+      id: "time:op-sql:1",
+      order: 1,
+      operation_id: "op-sql",
+      attempt: 1,
+      interface_name: "run_sql",
+      protocol: "mcp",
+      status: "completed",
+      started_at: "2026-09-16T08:00:00Z",
+      input: {
+        mode: "inline",
+        media_type: "application/json",
+        byte_length: 120,
+        inline: {
+          query:
+            "SELECT SUM(available_qty) FROM inventory_view WHERE material_code = :material_code",
+          params: { material_code: "M-1" },
+        },
+      },
+      output: {
+        mode: "inline",
+        media_type: "application/json",
+        byte_length: 18,
+        inline: { total: 906 },
+      },
+    },
+  ],
 };
 
 describe("BusinessProvenance016", () => {
@@ -123,25 +286,54 @@ describe("BusinessProvenance016", () => {
       ...view.selectedPairGraphs!["pair-stock"],
       claims,
       edges: [
-        ...view.selectedPairGraphs!["pair-stock"].edges.filter(edge => !edge.toId.startsWith("claim")),
-        ...claims.map((claim, index) => ({ edgeId: `support-${index}`, kind: "supports", fromId: "function-stock", toId: claim.id, operationIds: ["op-sql"], validationStatus: "verified" as const })),
+        ...view.selectedPairGraphs!["pair-stock"].edges.filter(
+          (edge) => !edge.toId.startsWith("claim"),
+        ),
+        ...claims.map((claim, index) => ({
+          edgeId: `support-${index}`,
+          kind: "supports",
+          fromId: "function-stock",
+          toId: claim.id,
+          operationIds: ["op-sql"],
+          validationStatus: "verified" as const,
+        })),
       ],
     };
-    render(<BusinessProvenance016 view={{ ...view, claims, questionPairs: [{ ...view.questionPairs![0], claimIds: claims.map(claim => claim.id) }], selectedPairGraphs: { ...view.selectedPairGraphs, "pair-stock": graph } }} />);
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          claims,
+          questionPairs: [{ ...view.questionPairs![0], claimIds: claims.map((claim) => claim.id) }],
+          selectedPairGraphs: { ...view.selectedPairGraphs, "pair-stock": graph },
+        }}
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "图谱模式" }));
     expect(screen.getByRole("button", { name: "回答结论：结论 1" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "回答结论：结论 18" })).toBeNull();
-    fireEvent.change(screen.getByRole("combobox", { name: "选择回答结论" }), { target: { value: "claim-18" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "选择回答结论" }), {
+      target: { value: "claim-18" },
+    });
     expect(screen.getByRole("button", { name: "回答结论：结论 18" })).toBeTruthy();
   });
 
   it("renders the answer as Markdown and keeps a long answer collapsed until requested", () => {
     const markdownView: EvidenceChainView = {
       ...view,
-      questionPairs: [{ ...view.questionPairs![0], answer: "共 **2** 项。\n\n| 球员 | 进球 |\n|---|---:|\n| Messi | 7 |\n| Zidane | 3 |" }],
+      questionPairs: [
+        {
+          ...view.questionPairs![0],
+          answer: "共 **2** 项。\n\n| 球员 | 进球 |\n|---|---:|\n| Messi | 7 |\n| Zidane | 3 |",
+        },
+      ],
     };
     render(<BusinessProvenance016 view={markdownView} />);
-    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "共 2 项。")).toBeTruthy();
+    expect(
+      screen.getByText(
+        (_, element) => element?.tagName === "P" && element.textContent === "共 2 项。",
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole("columnheader", { name: "球员" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "查看完整回答" }));
     expect(screen.getByRole("columnheader", { name: "球员" })).toBeTruthy();
@@ -159,7 +351,7 @@ describe("BusinessProvenance016", () => {
     const memberView: EvidenceChainView = {
       ...view,
       claims,
-      questionPairs: [{ ...view.questionPairs![0], claimIds: claims.map(item => item.id) }],
+      questionPairs: [{ ...view.questionPairs![0], claimIds: claims.map((item) => item.id) }],
       selectedPairGraphs: {
         ...view.selectedPairGraphs,
         "pair-stock": { ...view.selectedPairGraphs!["pair-stock"], claims },
@@ -185,22 +377,90 @@ describe("BusinessProvenance016", () => {
       ...view,
       timeRail: [
         {
-          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "invoke_function", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:00Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { tool_id: "material_where_used" } },
+          id: "time:outer:1",
+          order: 1,
+          operation_id: "op-outer",
+          attempt: 1,
+          interface_name: "invoke_function",
+          protocol: "mcp",
+          status: "completed",
+          started_at: "2026-09-16T08:00:00Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 10,
+            inline: { tool_id: "material_where_used" },
+          },
         },
         {
-          id: "time:function:1", order: 2, operation_id: "op-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 100, inline: { function_name: "物料反查产品", function_description: "查询使用指定物料的产品", arguments: { material_code: "M-1" } } },
-          output: { mode: "inline", media_type: "application/json", byte_length: 60, inline: { result: { affected_product_count: 2, products: ["P-1", "P-2"] }, exit_code: 0 } },
-          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+          id: "time:function:1",
+          order: 2,
+          operation_id: "op-function",
+          parent_operation_id: "op-outer",
+          attempt: 1,
+          interface_name: "material_where_used",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:01Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 100,
+            inline: {
+              function_name: "物料反查产品",
+              function_description: "查询使用指定物料的产品",
+              arguments: { material_code: "M-1" },
+            },
+          },
+          output: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 60,
+            inline: {
+              result: { affected_product_count: 2, products: ["P-1", "P-2"] },
+              exit_code: 0,
+            },
+          },
+          capability: {
+            manifest_id: "managed",
+            manifest_version: "1",
+            evidence_contract: "managed_function_execution/v1",
+            resolution: "matched",
+          },
         },
         {
-          id: "time:query:1", order: 3, operation_id: "op-query", parent_operation_id: "op-function", attempt: 1, interface_name: "query_object_instance", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:02Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { ot_id: "material" } },
+          id: "time:query:1",
+          order: 3,
+          operation_id: "op-query",
+          parent_operation_id: "op-function",
+          attempt: 1,
+          interface_name: "query_object_instance",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:02Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { ot_id: "material" },
+          },
         },
         {
-          id: "time:sql:1", order: 4, operation_id: "op-sql-child", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { sql: "select ..." } },
+          id: "time:sql:1",
+          order: 4,
+          operation_id: "op-sql-child",
+          parent_operation_id: "op-function",
+          attempt: 1,
+          interface_name: "run_sql",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:03Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { sql: "select ..." },
+          },
         },
       ],
     };
@@ -213,7 +473,9 @@ describe("BusinessProvenance016", () => {
     expect(screen.queryByRole("heading", { name: "execute_tool" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "展开内部执行（3）" }));
     expect(screen.getAllByRole("button", { name: /invoke_function/ }).length).toBeGreaterThan(1);
-    expect(screen.getByRole("button", { name: /查询业务对象.*query_object_instance/ })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /查询业务对象.*query_object_instance/ }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: /查询业务数据.*run_sql/ })).toBeTruthy();
   });
 
@@ -222,19 +484,71 @@ describe("BusinessProvenance016", () => {
       ...view,
       timeRail: [
         {
-          id: "time:function:mixed", order: 1, operation_id: "op-function-mixed", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } },
-          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+          id: "time:function:mixed",
+          order: 1,
+          operation_id: "op-function-mixed",
+          attempt: 1,
+          interface_name: "material_where_used",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:01Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 80,
+            inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } },
+          },
+          capability: {
+            manifest_id: "managed",
+            manifest_version: "1",
+            evidence_contract: "managed_function_execution/v1",
+            resolution: "matched",
+          },
         },
         {
-          id: "time:query:failed", order: 2, operation_id: "op-query-failed", parent_operation_id: "op-function-mixed", attempt: 1, interface_name: "query_object_instance", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:02Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { ot_id: "material" } },
-          error: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { code: "query_failed" } },
+          id: "time:query:failed",
+          order: 2,
+          operation_id: "op-query-failed",
+          parent_operation_id: "op-function-mixed",
+          attempt: 1,
+          interface_name: "query_object_instance",
+          protocol: "internal",
+          status: "failed",
+          started_at: "2026-09-16T08:00:02Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { ot_id: "material" },
+          },
+          error: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { code: "query_failed" },
+          },
         },
         {
-          id: "time:sql:ok", order: 3, operation_id: "op-sql-ok", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { sql: "select ..." } },
-          output: { mode: "inline", media_type: "application/json", byte_length: 16, inline: { total: 906 } },
+          id: "time:sql:ok",
+          order: 3,
+          operation_id: "op-sql-ok",
+          attempt: 1,
+          interface_name: "run_sql",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:03Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { sql: "select ..." },
+          },
+          output: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 16,
+            inline: { total: 906 },
+          },
         },
       ],
     };
@@ -244,21 +558,87 @@ describe("BusinessProvenance016", () => {
     expect(screen.getByRole("button", { name: "失败 1" })).toBeTruthy();
     expect(screen.getAllByText("失败").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "失败 1" }));
-    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("物料反查产品");
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent(
+      "物料反查产品",
+    );
     fireEvent.click(screen.getByRole("button", { name: "成功 1" }));
-    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("查询业务数据");
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent(
+      "查询业务数据",
+    );
     expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("成功");
   });
 
   it("keeps managed function retry attempts in separate timeline groups", () => {
-    const functionInput = { mode: "inline" as const, media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } };
-    const capability = { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" };
-    render(<BusinessProvenance016 view={{ ...view, timeRail: [
-      { id: "time:function:1", order: 1, operation_id: "op-function", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:01Z", input: functionInput, capability },
-      { id: "time:child:1", order: 2, operation_id: "op-child-1", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:02Z", input: functionInput },
-      { id: "time:function:2", order: 3, operation_id: "op-function", attempt: 2, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z", input: functionInput, capability },
-      { id: "time:child:2", order: 4, operation_id: "op-child-2", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:04Z", input: functionInput },
-    ] }} panel="timeline" />);
+    const functionInput = {
+      mode: "inline" as const,
+      media_type: "application/json",
+      byte_length: 80,
+      inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } },
+    };
+    const capability = {
+      manifest_id: "managed",
+      manifest_version: "1",
+      evidence_contract: "managed_function_execution/v1",
+      resolution: "matched",
+    };
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          timeRail: [
+            {
+              id: "time:function:1",
+              order: 1,
+              operation_id: "op-function",
+              attempt: 1,
+              interface_name: "material_where_used",
+              protocol: "internal",
+              status: "failed",
+              started_at: "2026-09-16T08:00:01Z",
+              input: functionInput,
+              capability,
+            },
+            {
+              id: "time:child:1",
+              order: 2,
+              operation_id: "op-child-1",
+              parent_operation_id: "op-function",
+              attempt: 1,
+              interface_name: "run_sql",
+              protocol: "internal",
+              status: "failed",
+              started_at: "2026-09-16T08:00:02Z",
+              input: functionInput,
+            },
+            {
+              id: "time:function:2",
+              order: 3,
+              operation_id: "op-function",
+              attempt: 2,
+              interface_name: "material_where_used",
+              protocol: "internal",
+              status: "completed",
+              started_at: "2026-09-16T08:00:03Z",
+              input: functionInput,
+              capability,
+            },
+            {
+              id: "time:child:2",
+              order: 4,
+              operation_id: "op-child-2",
+              parent_operation_id: "op-function",
+              attempt: 1,
+              interface_name: "run_sql",
+              protocol: "internal",
+              status: "completed",
+              started_at: "2026-09-16T08:00:04Z",
+              input: functionInput,
+            },
+          ],
+        }}
+        panel="timeline"
+      />,
+    );
 
     expect(screen.getByRole("button", { name: "全部 2" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "成功 1" })).toBeTruthy();
@@ -266,13 +646,64 @@ describe("BusinessProvenance016", () => {
   });
 
   it("keeps a same-time child inside a single-attempt managed function", () => {
-    const functionInput = { mode: "inline" as const, media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } };
-    const capability = { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" };
-    render(<BusinessProvenance016 view={{ ...view, timeRail: [
-      { id: "time:child:1", order: 1, operation_id: "op-a-child", parent_operation_id: "op-z-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput },
-      { id: "time:function:1", order: 2, operation_id: "op-z-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput, capability },
-      { id: "time:outer:1", order: 3, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput },
-    ] }} panel="timeline" />);
+    const functionInput = {
+      mode: "inline" as const,
+      media_type: "application/json",
+      byte_length: 80,
+      inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } },
+    };
+    const capability = {
+      manifest_id: "managed",
+      manifest_version: "1",
+      evidence_contract: "managed_function_execution/v1",
+      resolution: "matched",
+    };
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          timeRail: [
+            {
+              id: "time:child:1",
+              order: 1,
+              operation_id: "op-a-child",
+              parent_operation_id: "op-z-function",
+              attempt: 1,
+              interface_name: "run_sql",
+              protocol: "internal",
+              status: "completed",
+              started_at: "2026-09-16T08:00:01Z",
+              input: functionInput,
+            },
+            {
+              id: "time:function:1",
+              order: 2,
+              operation_id: "op-z-function",
+              parent_operation_id: "op-outer",
+              attempt: 1,
+              interface_name: "material_where_used",
+              protocol: "internal",
+              status: "completed",
+              started_at: "2026-09-16T08:00:01Z",
+              input: functionInput,
+              capability,
+            },
+            {
+              id: "time:outer:1",
+              order: 3,
+              operation_id: "op-outer",
+              attempt: 1,
+              interface_name: "execute_tool",
+              protocol: "mcp",
+              status: "completed",
+              started_at: "2026-09-16T08:00:01Z",
+              input: functionInput,
+            },
+          ],
+        }}
+        panel="timeline"
+      />,
+    );
 
     expect(screen.getByRole("button", { name: "全部 1" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "物料反查产品" })).toBeTruthy();
@@ -288,14 +719,34 @@ describe("BusinessProvenance016", () => {
         ...view.selectedPairGraphs,
         "pair-stock": {
           ...view.selectedPairGraphs!["pair-stock"],
-          businessFunctions: [{
-            id: "function:managed", displayName: "要X套净需求与齐套", capabilityKind: "registered_bkn_function",
-            businessPurpose: "核对齐套", businessInputs: [{ name: "material_code", value: "M-1" }], logicSummary: "读取 BOM 与库存",
-            businessOutputs: [{ summary: '{"result":{"affected_product_count":2,"products":["P-1","P-2"]},"exit_code":0}', evidenceRefs: [], adoptedRowRefs: [] }],
-            operationIds: ["op-function"], supportsClaimIds: [], schemaRefs: [],
-            technicalExecution: { interfaceNames: ["execute_tool"], inputPayloadRef: "", outputPayloadRef: "", completeness: "complete" },
-            validationStatus: "verified",
-          }],
+          businessFunctions: [
+            {
+              id: "function:managed",
+              displayName: "要X套净需求与齐套",
+              capabilityKind: "registered_bkn_function",
+              businessPurpose: "核对齐套",
+              businessInputs: [{ name: "material_code", value: "M-1" }],
+              logicSummary: "读取 BOM 与库存",
+              businessOutputs: [
+                {
+                  summary:
+                    '{"result":{"affected_product_count":2,"products":["P-1","P-2"]},"exit_code":0}',
+                  evidenceRefs: [],
+                  adoptedRowRefs: [],
+                },
+              ],
+              operationIds: ["op-function"],
+              supportsClaimIds: [],
+              schemaRefs: [],
+              technicalExecution: {
+                interfaceNames: ["execute_tool"],
+                inputPayloadRef: "",
+                outputPayloadRef: "",
+                completeness: "complete",
+              },
+              validationStatus: "verified",
+            },
+          ],
         },
       },
     };
@@ -309,15 +760,55 @@ describe("BusinessProvenance016", () => {
       ...view,
       timeRail: [
         {
-          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "failed", started_at: "2026-09-16T08:00:00Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { tool_id: "material_where_used" } },
-          error: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { code: "wrapper_failed" } },
+          id: "time:outer:1",
+          order: 1,
+          operation_id: "op-outer",
+          attempt: 1,
+          interface_name: "execute_tool",
+          protocol: "mcp",
+          status: "failed",
+          started_at: "2026-09-16T08:00:00Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 10,
+            inline: { tool_id: "material_where_used" },
+          },
+          error: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { code: "wrapper_failed" },
+          },
         },
         {
-          id: "time:function:1", order: 2, operation_id: "op-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
-          input: { mode: "inline", media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } },
-          output: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { result: { count: 1 } } },
-          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+          id: "time:function:1",
+          order: 2,
+          operation_id: "op-function",
+          parent_operation_id: "op-outer",
+          attempt: 1,
+          interface_name: "material_where_used",
+          protocol: "internal",
+          status: "completed",
+          started_at: "2026-09-16T08:00:01Z",
+          input: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 80,
+            inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } },
+          },
+          output: {
+            mode: "inline",
+            media_type: "application/json",
+            byte_length: 20,
+            inline: { result: { count: 1 } },
+          },
+          capability: {
+            manifest_id: "managed",
+            manifest_version: "1",
+            evidence_contract: "managed_function_execution/v1",
+            resolution: "matched",
+          },
         },
       ],
     };
@@ -327,14 +818,38 @@ describe("BusinessProvenance016", () => {
     expect(screen.getByRole("button", { name: "成功 0" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "展开内部执行（1）" }));
     fireEvent.click(screen.getByText("调用业务函数").closest("button")!);
-    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("wrapper_failed");
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent(
+      "wrapper_failed",
+    );
   });
 
   it("does not count an in-progress call as completed", () => {
-    render(<BusinessProvenance016 view={{ ...view, timeRail: [{
-      id: "time:running:1", order: 1, operation_id: "op-running", attempt: 1, interface_name: "run_sql", protocol: "mcp", status: "running", started_at: "2026-09-16T08:00:00Z",
-      input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { sql: "select 1" } },
-    }] }} panel="timeline" />);
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          timeRail: [
+            {
+              id: "time:running:1",
+              order: 1,
+              operation_id: "op-running",
+              attempt: 1,
+              interface_name: "run_sql",
+              protocol: "mcp",
+              status: "running",
+              started_at: "2026-09-16T08:00:00Z",
+              input: {
+                mode: "inline",
+                media_type: "application/json",
+                byte_length: 10,
+                inline: { sql: "select 1" },
+              },
+            },
+          ],
+        }}
+        panel="timeline"
+      />,
+    );
     expect(screen.getByRole("button", { name: "成功 0" })).toBeTruthy();
     expect(screen.getAllByText("进行中").length).toBeGreaterThan(0);
   });
@@ -344,20 +859,48 @@ describe("BusinessProvenance016", () => {
     const enter = screen.getByRole("button", { name: "全屏查看" });
     expect(enter).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(enter);
-    expect(screen.getByRole("button", { name: "退出全屏" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "退出全屏" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("keeps question cards visible when attribution has not produced a graph", () => {
-    render(<BusinessProvenance016 view={{ ...view, generationStatus: "analysis_pending", selectedPairGraphs: {} }} evidenceOnly />);
+    render(
+      <BusinessProvenance016
+        view={{ ...view, generationStatus: "analysis_pending", selectedPairGraphs: {} }}
+        evidenceOnly
+      />,
+    );
     expect(screen.getByRole("button", { name: /库存，证据成立/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /反查产品，证据成立/ })).toBeTruthy();
     expect(screen.getByText("本轮已保留问答记录，但尚未形成可展示的归因图。")).toBeTruthy();
   });
 
   it("uses one selected conclusion in both reading and graph modes", () => {
-    const secondClaim = { id: "claim-stock-2", label: "生产可用库存为 0", value: "0", status: "located" as const, supportStatus: "partial" as const, nodeIds: ["evidence-stock"] };
-    const graph = { ...view.selectedPairGraphs!["pair-stock"], claims: [...view.selectedPairGraphs!["pair-stock"].claims, secondClaim] };
-    render(<BusinessProvenance016 view={{ ...view, claims: [...view.claims, secondClaim], questionPairs: [{ ...view.questionPairs![0], claimIds: ["claim-stock", secondClaim.id] }], selectedPairGraphs: { "pair-stock": graph } }} evidenceOnly />);
+    const secondClaim = {
+      id: "claim-stock-2",
+      label: "生产可用库存为 0",
+      value: "0",
+      status: "located" as const,
+      supportStatus: "partial" as const,
+      nodeIds: ["evidence-stock"],
+    };
+    const graph = {
+      ...view.selectedPairGraphs!["pair-stock"],
+      claims: [...view.selectedPairGraphs!["pair-stock"].claims, secondClaim],
+    };
+    render(
+      <BusinessProvenance016
+        view={{
+          ...view,
+          claims: [...view.claims, secondClaim],
+          questionPairs: [{ ...view.questionPairs![0], claimIds: ["claim-stock", secondClaim.id] }],
+          selectedPairGraphs: { "pair-stock": graph },
+        }}
+        evidenceOnly
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "查看回答结论：生产可用库存为 0" }));
     fireEvent.click(screen.getByRole("button", { name: "图谱模式" }));
     expect(screen.getByRole("combobox", { name: "选择回答结论" })).toHaveValue(secondClaim.id);

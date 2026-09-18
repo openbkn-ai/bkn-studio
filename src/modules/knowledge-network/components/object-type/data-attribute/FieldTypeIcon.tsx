@@ -5,11 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import {
-  ClockCircleOutlined,
-  FieldBinaryOutlined,
-  NumberOutlined,
-} from "@ant-design/icons";
+import { ClockCircleOutlined, FieldBinaryOutlined, NumberOutlined } from "@ant-design/icons";
 
 import { DATA_PROPERTY_TYPES } from "./constants";
 import styles from "./FieldTypeIcon.module.css";

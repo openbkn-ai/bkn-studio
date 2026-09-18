@@ -109,10 +109,7 @@ export function ObjectTypeDetailMetricTrialPanel({
     [objectTypeId, objectTypeName],
   );
 
-  const propertyOptions = useMemo(
-    () => toMetricPropertyOptions(dataProperties),
-    [dataProperties],
-  );
+  const propertyOptions = useMemo(() => toMetricPropertyOptions(dataProperties), [dataProperties]);
 
   if (loading) {
     return (

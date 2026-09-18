@@ -64,7 +64,9 @@ function renderPanel(overrides: Partial<SearchPanelProps>) {
 }
 
 function pickObjectType(name: string) {
-  const selector = document.querySelector('[data-testid="graph-explorer-browse-ot"] .ant-select-selector');
+  const selector = document.querySelector(
+    '[data-testid="graph-explorer-browse-ot"] .ant-select-selector',
+  );
   expect(selector).toBeTruthy();
   fireEvent.mouseDown(selector!);
   const options = screen.getAllByText(name);

@@ -119,11 +119,7 @@ export function CatalogLabListScene() {
     <PermissionGate
       fallback={
         <section className={styles.page}>
-          <Alert
-            message={t("executionFactoryLab.permissionDeniedHint")}
-            showIcon
-            type="warning"
-          />
+          <Alert message={t("executionFactoryLab.permissionDeniedHint")} showIcon type="warning" />
         </section>
       }
       permissions={executionFactoryLabPermissions.catalogView}

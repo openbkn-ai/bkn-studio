@@ -7,7 +7,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { businessRequestExample, schemaDocumentation, schemaFields, splitInputSchemaFields } from "./mcp-schema-doc";
+import {
+  businessRequestExample,
+  schemaDocumentation,
+  schemaFields,
+  splitInputSchemaFields,
+} from "./mcp-schema-doc";
 
 const searchSchemaInput = {
   type: "object",
@@ -33,10 +38,26 @@ describe("MCP schema documentation", () => {
   it("keeps business parameters ahead of the injected Trace context", () => {
     const { businessFields, traceFields } = splitInputSchemaFields(searchSchemaInput);
 
-    expect(businessFields.map((field) => field.path)).toEqual(["kn_id", "query", "schema_brief", "search_scope", "search_scope.concept_groups"]);
-    expect(traceFields.map((field) => field.path)).toEqual(["bkn_context", "bkn_context.conversation_id", "bkn_context.interaction_id"]);
-    expect(businessFields.find((field) => field.path === "kn_id")).toMatchObject({ required: true, type: "string" });
-    expect(traceFields.find((field) => field.path === "bkn_context")).toMatchObject({ required: true, description: "Managed lifecycle context" });
+    expect(businessFields.map((field) => field.path)).toEqual([
+      "kn_id",
+      "query",
+      "schema_brief",
+      "search_scope",
+      "search_scope.concept_groups",
+    ]);
+    expect(traceFields.map((field) => field.path)).toEqual([
+      "bkn_context",
+      "bkn_context.conversation_id",
+      "bkn_context.interaction_id",
+    ]);
+    expect(businessFields.find((field) => field.path === "kn_id")).toMatchObject({
+      required: true,
+      type: "string",
+    });
+    expect(traceFields.find((field) => field.path === "bkn_context")).toMatchObject({
+      required: true,
+      description: "Managed lifecycle context",
+    });
   });
 
   it("keeps useful output paths when array items contain documented fields", () => {
@@ -47,20 +68,32 @@ describe("MCP schema documentation", () => {
           type: "array",
           items: {
             type: "object",
-            properties: { concept_id: { type: "string" }, data_source: { type: "object", additionalProperties: true } },
+            properties: {
+              concept_id: { type: "string" },
+              data_source: { type: "object", additionalProperties: true },
+            },
           },
         },
       },
     });
 
-    expect(fields.map((field) => field.path)).toEqual(["object_types", "object_types[].concept_id", "object_types[].data_source"]);
-    expect(fields.find((field) => field.path === "object_types[].data_source")?.allowsAdditionalProperties).toBe(true);
+    expect(fields.map((field) => field.path)).toEqual([
+      "object_types",
+      "object_types[].concept_id",
+      "object_types[].data_source",
+    ]);
+    expect(
+      fields.find((field) => field.path === "object_types[].data_source")
+        ?.allowsAdditionalProperties,
+    ).toBe(true);
   });
 
   it("does not present bkn_context as a user-supplied request value", () => {
-    expect(businessRequestExample('{"kn_id":"kn_demo","query":"orders","bkn_context":{"conversation_id":"c_1"}}')).toBe(
-      '{\n  "kn_id": "kn_demo",\n  "query": "orders"\n}',
-    );
+    expect(
+      businessRequestExample(
+        '{"kn_id":"kn_demo","query":"orders","bkn_context":{"conversation_id":"c_1"}}',
+      ),
+    ).toBe('{\n  "kn_id": "kn_demo",\n  "query": "orders"\n}');
   });
 
   it("does not fabricate an empty request example when the editor contains invalid JSON", () => {
@@ -94,7 +127,12 @@ describe("MCP schema documentation", () => {
       },
     });
 
-    expect(documentation.fields.map((field) => field.path)).toEqual(["level_0", "level_0.level_1", "level_0.level_1.level_2", "level_0.level_1.level_2.level_3"]);
+    expect(documentation.fields.map((field) => field.path)).toEqual([
+      "level_0",
+      "level_0.level_1",
+      "level_0.level_1.level_2",
+      "level_0.level_1.level_2.level_3",
+    ]);
     expect(documentation.truncated).toBe(true);
   });
 });

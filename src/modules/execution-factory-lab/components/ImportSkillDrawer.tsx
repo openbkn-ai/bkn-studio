@@ -78,7 +78,9 @@ export function ImportSkillDrawer({ open, onClose, onImported }: ImportSkillDraw
         value={mode}
       >
         <Radio.Button value="zip">{t("executionFactoryLab.importSkillModeZip")}</Radio.Button>
-        <Radio.Button value="content">{t("executionFactoryLab.importSkillModeContent")}</Radio.Button>
+        <Radio.Button value="content">
+          {t("executionFactoryLab.importSkillModeContent")}
+        </Radio.Button>
       </Radio.Group>
       <div style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 8 }}>{t("executionFactoryLab.categoryLabel")}</div>

@@ -80,7 +80,10 @@ export const dataCatalogRoutes: RouteObject[] = [
         titleKey: "dataCatalog.resourceDetailTitle",
       },
     },
-    element: withRouteLoading(["catalog:view_detail", "resource:view_detail"], <ResourceWorkspacePage />),
+    element: withRouteLoading(
+      ["catalog:view_detail", "resource:view_detail"],
+      <ResourceWorkspacePage />,
+    ),
   },
   {
     path: "task-management",

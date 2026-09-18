@@ -16,7 +16,9 @@ const detail = (): KnDetail => ({
   comment: "供应链业务知识网络",
   concept_groups: [{ id: "group-1", name: "采购" }],
   object_types: [{ id: "order", name: "采购订单" }],
-  relation_types: [{ id: "order-supplier", name: "订单关联供应商", sourceId: "order", targetId: "supplier" }],
+  relation_types: [
+    { id: "order-supplier", name: "订单关联供应商", sourceId: "order", targetId: "supplier" },
+  ],
 });
 
 describe("recommendationFingerprint", () => {

@@ -12,7 +12,10 @@ import type {
   PropertyAccessSelection,
   PropertyGrantEntry,
 } from "@/modules/knowledge-network/types/knowledge-network";
-import { isMaskRuleValid, maskRuleKindsForPropertyType } from "@/modules/knowledge-network/utils/mask-rule";
+import {
+  isMaskRuleValid,
+  maskRuleKindsForPropertyType,
+} from "@/modules/knowledge-network/utils/mask-rule";
 
 const LEVEL_ORDER: Record<PropertyAccessLevel, number> = {
   none: 0,

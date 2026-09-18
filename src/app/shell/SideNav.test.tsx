@@ -12,9 +12,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 
 describe("shouldAlwaysShowEditionBadge", () => {
   it("lets a known capability hide its paid badge once the entitlement is available", () => {
-    expect(
-      shouldAlwaysShowEditionBadge({ paidCapability: CAPABILITIES.RBAC_BASIC }),
-    ).toBe(false);
+    expect(shouldAlwaysShowEditionBadge({ paidCapability: CAPABILITIES.RBAC_BASIC })).toBe(false);
   });
 
   it("keeps a static product badge when no capability state is available", () => {
@@ -22,8 +20,8 @@ describe("shouldAlwaysShowEditionBadge", () => {
   });
 
   it("keeps the badge for capabilities that are not reported by bkn-safe", () => {
-    expect(
-      shouldAlwaysShowEditionBadge({ paidCapability: CAPABILITIES.BUSINESS_PROVENANCE }),
-    ).toBe(true);
+    expect(shouldAlwaysShowEditionBadge({ paidCapability: CAPABILITIES.BUSINESS_PROVENANCE })).toBe(
+      true,
+    );
   });
 });

@@ -9,10 +9,12 @@ export const MIN_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS = 1;
 export const MAX_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS = 20;
 
 export function isValidSemanticUnderstandingSampleRows(value: unknown): value is number {
-  return typeof value === "number" &&
+  return (
+    typeof value === "number" &&
     Number.isInteger(value) &&
     value >= MIN_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS &&
-    value <= MAX_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS;
+    value <= MAX_SEMANTIC_UNDERSTANDING_SAMPLE_ROWS
+  );
 }
 
 export function parseSemanticUnderstandingSampleRowsInput(value: string): number | undefined {

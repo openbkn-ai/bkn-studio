@@ -79,7 +79,10 @@ export function lifecycleEnv(base: string, knId: string): ContextLoaderEnv {
   return { base, token: "", knId };
 }
 
-export function localConversationStore(storageKey: string, legacyStorageKey?: string): ConversationStore {
+export function localConversationStore(
+  storageKey: string,
+  legacyStorageKey?: string,
+): ConversationStore {
   let legacyCleared = false;
   const clearLegacy = () => {
     if (legacyCleared || !legacyStorageKey) return;
@@ -135,7 +138,13 @@ export class BknLifecycleError extends Error {
   /** `interaction_in_progress` includes the stuck interaction id, enough for beginTurn reclamation. */
   readonly currentInteractionId: string;
 
-  constructor(tool: string, code: string, message: string, requiredAction: string, currentInteractionId = "") {
+  constructor(
+    tool: string,
+    code: string,
+    message: string,
+    requiredAction: string,
+    currentInteractionId = "",
+  ) {
     super(message || `${tool} failed (${code || "unknown error"})`);
     this.name = "BknLifecycleError";
     this.code = code;
@@ -157,8 +166,13 @@ function isToolMissing(rpcError: { code?: number; message?: string } | undefined
   return message.includes("tool not found") || message.includes("unknown tool");
 }
 
-function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: string): BknLifecycleError {
-  const envelope = structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
+function lifecycleErrorOf(
+  tool: string,
+  structured: unknown,
+  fallbackText: string,
+): BknLifecycleError {
+  const envelope =
+    structured && typeof structured === "object" ? (structured as Record<string, unknown>) : {};
   const error = (envelope.error ?? {}) as LifecycleErrorPayload;
   const code = typeof error.code === "string" ? error.code : "";
   const fallback = fallbackText || `${tool} call failed`;
@@ -174,10 +188,14 @@ function lifecycleErrorOf(tool: string, structured: unknown, fallbackText: strin
 }
 
 /** Shown only when reclamation also fails; normally beginTurn handles this. */
-const STUCK_INTERACTION_HINT = "The current conversation still has an unfinished interaction and automatic recovery failed. Clear the chat and retry.";
+const STUCK_INTERACTION_HINT =
+  "The current conversation still has an unfinished interaction and automatic recovery failed. Clear the chat and retry.";
 
 function shouldStartNewConversation(error: unknown): boolean {
-  return error instanceof BknLifecycleError && (error.code === "conversation_not_found" || error.code === "interaction_in_progress");
+  return (
+    error instanceof BknLifecycleError &&
+    (error.code === "conversation_not_found" || error.code === "interaction_in_progress")
+  );
 }
 
 /**
@@ -188,8 +206,10 @@ function shouldStartNewConversation(error: unknown): boolean {
  * are marked cancelled because they did not complete normally.
  */
 async function reclaimStuckInteraction(session: McpSession, error: unknown): Promise<boolean> {
-  if (!(error instanceof BknLifecycleError) || error.code !== "interaction_in_progress") return false;
-  if (error.requiredAction !== "bkn_finish_interaction" || !error.currentInteractionId) return false;
+  if (!(error instanceof BknLifecycleError) || error.code !== "interaction_in_progress")
+    return false;
+  if (error.requiredAction !== "bkn_finish_interaction" || !error.currentInteractionId)
+    return false;
   try {
     await callLifecycleTool(session, "bkn_finish_interaction", {
       interaction_id: error.currentInteractionId,
@@ -214,7 +234,12 @@ async function callLifecycleTool(
   }
   if (result.isError || !result.ok) throw lifecycleErrorOf(tool, result.structured, result.text);
   if (!result.structured || typeof result.structured !== "object") {
-    throw new BknLifecycleError(tool, "lifecycle_malformed", `${tool} did not return structured content`, "");
+    throw new BknLifecycleError(
+      tool,
+      "lifecycle_malformed",
+      `${tool} did not return structured content`,
+      "",
+    );
   }
   return result.structured as Record<string, unknown>;
 }
@@ -232,7 +257,10 @@ export function createBknLifecycle(
   return createBknLifecycleOn(createMcpSession(env, auth), options);
 }
 
-export function createBknLifecycleOn(session: McpSession, options: BknLifecycleOptions): BknLifecycle {
+export function createBknLifecycleOn(
+  session: McpSession,
+  options: BknLifecycleOptions,
+): BknLifecycle {
   const { conversationStore, agentName = "bkn-studio" } = options;
   let conversationId = conversationStore.read();
   // Whether the previous turn lacked lifecycle support; report only, not a short circuit.
@@ -292,7 +320,12 @@ export function createBknLifecycleOn(session: McpSession, options: BknLifecycleO
         const startedConversationId = stringField(state, "conversation_id");
         const interactionId = stringField(state, "interaction_id");
         if (!startedConversationId || !interactionId) {
-          throw new BknLifecycleError("bkn_start_interaction", "lifecycle_malformed", "bkn_start_interaction did not return conversation or interaction ID", "");
+          throw new BknLifecycleError(
+            "bkn_start_interaction",
+            "lifecycle_malformed",
+            "bkn_start_interaction did not return conversation or interaction ID",
+            "",
+          );
         }
         conversationId = startedConversationId;
         conversationStore.write(startedConversationId);

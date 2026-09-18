@@ -31,7 +31,10 @@ export function Bad() {
       <Modal okText="Save changes" cancelText="Discard changes" />
       <p>复制失败</p>
       <p>{url}</p>
-      <p>{mediaType}{blockMarkerLabel}</p>
+      <p>
+        {mediaType}
+        {blockMarkerLabel}
+      </p>
     </>
   );
 }

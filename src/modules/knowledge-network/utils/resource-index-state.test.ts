@@ -7,9 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  formatKnowledgeNetworkObjectTypeIndexStateLabel,
-} from "@/modules/knowledge-network/utils/resource-index-state";
+import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
 
 describe("formatKnowledgeNetworkObjectTypeIndexStateLabel", () => {
   it("uses the knowledge-network authorized index summary", () => {

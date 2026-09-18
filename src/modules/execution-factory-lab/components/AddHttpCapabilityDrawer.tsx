@@ -92,11 +92,7 @@ export function AddHttpCapabilityDrawer({
       title={t("executionFactoryLab.addDrawerTitle")}
       width={560}
       extra={
-        <AppButton
-          loading={submitting}
-          onClick={() => form.submit()}
-          type="primary"
-        >
+        <AppButton loading={submitting} onClick={() => form.submit()} type="primary">
           {t("executionFactoryLab.submitAdd")}
         </AppButton>
       }
@@ -107,11 +103,7 @@ export function AddHttpCapabilityDrawer({
 
       {error ? <Alert message={error} showIcon style={{ marginBottom: 12 }} type="error" /> : null}
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={(values) => void handleSubmit(values)}
-      >
+      <Form form={form} layout="vertical" onFinish={(values) => void handleSubmit(values)}>
         <Form.Item
           label={t("executionFactoryLab.curlLabel")}
           name="curlText"

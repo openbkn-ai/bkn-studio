@@ -63,10 +63,7 @@ export function HealthCheckScheduleFormModal({
           .validateFields()
           .then((values) =>
             onSubmit({
-              cronExpr:
-                values.mode === "enabled"
-                  ? values.cronExpr?.trim()
-                  : undefined,
+              cronExpr: values.mode === "enabled" ? values.cronExpr?.trim() : undefined,
               mode: values.mode,
             }),
           )
@@ -83,12 +80,10 @@ export function HealthCheckScheduleFormModal({
           rules={[{ message: t("common.required"), required: true }]}
         >
           <Select
-            options={(["inherit", "enabled", "disabled"] as const).map(
-              (value) => ({
-                label: t(`dataConnect.healthCheckSchedule.modes.${value}`),
-                value,
-              }),
-            )}
+            options={(["inherit", "enabled", "disabled"] as const).map((value) => ({
+              label: t(`dataConnect.healthCheckSchedule.modes.${value}`),
+              value,
+            }))}
           />
         </Form.Item>
         {mode === "enabled" ? (
@@ -111,11 +106,7 @@ export function HealthCheckScheduleFormModal({
               },
             ]}
           >
-            <Input
-              placeholder={t(
-                "dataConnect.healthCheckSchedule.cronPlaceholder",
-              )}
-            />
+            <Input placeholder={t("dataConnect.healthCheckSchedule.cronPlaceholder")} />
           </Form.Item>
         ) : null}
       </Form>

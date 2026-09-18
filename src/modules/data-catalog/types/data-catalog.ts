@@ -8,12 +8,7 @@
 export type ResourceCategory = "dataset" | "logicview" | "table";
 
 export type ResourceDiscoverStatus =
-  | "error"
-  | "missing"
-  | "new"
-  | "restored"
-  | "unchanged"
-  | "updated";
+  "error" | "missing" | "new" | "restored" | "unchanged" | "updated";
 
 export type ResourceStatus = "active" | "deprecated" | "stale";
 
@@ -155,13 +150,7 @@ export type BuildMode = "batch" | "streaming";
 export type BuildTaskExecuteType = "full" | "incremental";
 
 export type BuildTaskStatus =
-  | "cancelled"
-  | "completed"
-  | "failed"
-  | "pending"
-  | "running"
-  | "stopping"
-  | "stopped";
+  "cancelled" | "completed" | "failed" | "pending" | "running" | "stopping" | "stopped";
 
 export type BuildTaskCreator = {
   id: string;
@@ -219,11 +208,7 @@ export type BuildTask = {
 };
 
 /** Server-side sort dimension for the build-task list API. */
-export type BuildTaskSort =
-  | "create_time"
-  | "start_time"
-  | "finish_time"
-  | "last_progress_time";
+export type BuildTaskSort = "create_time" | "start_time" | "finish_time" | "last_progress_time";
 
 export type BuildTaskPageQuery = {
   catalogId?: string;
@@ -290,14 +275,7 @@ export type CatalogDiscoverRecord = {
 };
 
 export type IndexStateKey =
-  | "building"
-  | "built"
-  | "failed"
-  | "failed-stale"
-  | "listening"
-  | "none"
-  | "paused"
-  | "rebuilding";
+  "building" | "built" | "failed" | "failed-stale" | "listening" | "none" | "paused" | "rebuilding";
 
 export type IndexState = {
   effective: BuildTask | null;

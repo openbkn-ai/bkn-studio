@@ -6,12 +6,28 @@
  */
 
 const MONTH_ALIASES: Readonly<Record<string, number>> = {
-  APR: 4, AUG: 8, DEC: 12, FEB: 2, JAN: 1, JUL: 7,
-  JUN: 6, MAR: 3, MAY: 5, NOV: 11, OCT: 10, SEP: 9,
+  APR: 4,
+  AUG: 8,
+  DEC: 12,
+  FEB: 2,
+  JAN: 1,
+  JUL: 7,
+  JUN: 6,
+  MAR: 3,
+  MAY: 5,
+  NOV: 11,
+  OCT: 10,
+  SEP: 9,
 };
 
 const WEEKDAY_ALIASES: Readonly<Record<string, number>> = {
-  FRI: 5, MON: 1, SAT: 6, SUN: 0, THU: 4, TUE: 2, WED: 3,
+  FRI: 5,
+  MON: 1,
+  SAT: 6,
+  SUN: 0,
+  THU: 4,
+  TUE: 2,
+  WED: 3,
 };
 
 const DESCRIPTOR_CRON: Readonly<Record<string, string>> = {
@@ -74,18 +90,14 @@ function parseEveryDuration(value: string): number | null {
     if (unitNs === undefined) return null;
     const [whole = "0", fraction = ""] = amount.split(".");
     const wholeNs = BigInt(whole || "0") * unitNs;
-    const fractionNs = fraction
-      ? BigInt(fraction) * unitNs / (10n ** BigInt(fraction.length))
-      : 0n;
+    const fractionNs = fraction ? (BigInt(fraction) * unitNs) / 10n ** BigInt(fraction.length) : 0n;
     total += wholeNs + fractionNs;
     if (total > GO_MAX_INT) return null;
     consumed += match[0].length;
   }
   if (consumed !== duration.length) return null;
-  const truncated = total / ONE_SECOND_NS * ONE_SECOND_NS;
-  return truncated >= ONE_HOUR_NS
-    ? Number(truncated / ONE_SECOND_NS) * 1_000
-    : null;
+  const truncated = (total / ONE_SECOND_NS) * ONE_SECOND_NS;
+  return truncated >= ONE_HOUR_NS ? Number(truncated / ONE_SECOND_NS) * 1_000 : null;
 }
 
 function parseCronInteger(value: string): number | null {
@@ -111,18 +123,12 @@ function parseCronField(
     const rangeParts = range.split("-");
     if (rangeParts.length > 2) return null;
     const [startText, explicitEndText] =
-      range === "*" || range === "?"
-        ? [String(min), String(max)]
-        : rangeParts;
+      range === "*" || range === "?" ? [String(min), String(max)] : rangeParts;
     if (!startText || explicitEndText === "") return null;
     const start = aliases?.[startText.toUpperCase()] ?? parseCronInteger(startText);
-    const endText =
-      explicitEndText ?? (stepText === undefined ? startText : String(max));
+    const endText = explicitEndText ?? (stepText === undefined ? startText : String(max));
     const end = aliases?.[endText.toUpperCase()] ?? parseCronInteger(endText);
-    if (
-      start === null || end === null ||
-      start < min || end > max || start > end
-    ) return null;
+    if (start === null || end === null || start < min || end > max || start > end) return null;
     for (let item = start; item <= end; item += step) values.add(item);
   }
   return values;
@@ -178,10 +184,7 @@ export function isHourlyCron(value: unknown): value is string {
   if (typeof value !== "string") return false;
   const spec = parseCronSpec(value);
   if (!spec) return false;
-  return (
-    parseEveryDuration(spec.expression) !== null ||
-    parseHourlyCronFields(value) !== null
-  );
+  return parseEveryDuration(spec.expression) !== null || parseHourlyCronFields(value) !== null;
 }
 
 type CronCalendarDate = {
@@ -250,8 +253,11 @@ function candidateTimes(
     .filter((candidate) => {
       const parts = calendarDateAt(candidate, timeZone);
       return (
-        parts.year === year && parts.month === month && parts.day === day &&
-        parts.hour === hour && parts.minute === minute
+        parts.year === year &&
+        parts.month === month &&
+        parts.day === day &&
+        parts.hour === hour &&
+        parts.minute === minute
       );
     })
     .sort((left, right) => left - right);
@@ -271,17 +277,12 @@ export function calculateNextHourlyCronRun(
   }
   const fields = parseHourlyCronFields(cronExpr);
   if (!fields) return undefined;
-  const {
-    days, dayWildcard, hours, minutes, months, timeZone,
-    weekdays, weekdayWildcard,
-  } = fields;
+  const { days, dayWildcard, hours, minutes, months, timeZone, weekdays, weekdayWildcard } = fields;
   const minute = minutes.values().next().value;
   if (minute === undefined) return undefined;
   const sortedHours = [...hours].sort((left, right) => left - right);
   const initialDate = calendarDateAt(from, timeZone);
-  const calendarDay = new Date(Date.UTC(
-    initialDate.year, initialDate.month - 1, initialDate.day,
-  ));
+  const calendarDay = new Date(Date.UTC(initialDate.year, initialDate.month - 1, initialDate.day));
   const yearLimit = initialDate.year + 5;
   while (calendarDay.getUTCFullYear() <= yearLimit) {
     const year = calendarDay.getUTCFullYear();
@@ -289,14 +290,11 @@ export function calculateNextHourlyCronRun(
     const day = calendarDay.getUTCDate();
     const dayMatches = days.has(day);
     const weekdayMatches = weekdays.has(calendarDay.getUTCDay());
-    const calendarDayMatches = dayWildcard || weekdayWildcard
-      ? dayMatches && weekdayMatches
-      : dayMatches || weekdayMatches;
+    const calendarDayMatches =
+      dayWildcard || weekdayWildcard ? dayMatches && weekdayMatches : dayMatches || weekdayMatches;
     if (months.has(month) && calendarDayMatches) {
       for (const hour of sortedHours) {
-        for (const candidate of candidateTimes(
-          year, month, day, hour, minute, timeZone,
-        )) {
+        for (const candidate of candidateTimes(year, month, day, hour, minute, timeZone)) {
           if (candidate > from) return candidate;
         }
       }

@@ -15,8 +15,7 @@ export const dataConnectEnUS = {
     loadErrorRefreshHint: "Please refresh the page and try again later.",
     createTitle: "Create Data Connection",
     editTitle: "Edit Data Connection",
-    createDescription:
-      "Select a connector type first, then complete the connection configuration.",
+    createDescription: "Select a connector type first, then complete the connection configuration.",
     editDescription:
       "Update the current data connection configuration. Connector type remains unchanged.",
     searchPlaceholder: "Search name/description",
@@ -118,7 +117,7 @@ export const dataConnectEnUS = {
       blockedTitle: "Data connection cannot be deleted",
       blockedWarning:
         "Resolve protected resources or wait for running tasks to finish, then run the preflight again.",
-      catalogImpact: "Deleting connection \"{{name}}\" has the following impact:",
+      catalogImpact: 'Deleting connection "{{name}}" has the following impact:',
       resources: "Resources: {{count}} ({{protected}} protected)",
       resources_one: "Resource: {{count}} ({{protected}} protected)",
       resources_other: "Resources: {{count}} ({{protected}} protected)",
@@ -130,7 +129,7 @@ export const dataConnectEnUS = {
       impactWarning:
         "Resources and schedules will be deleted, and pending tasks will be cancelled. Task history and indexes are not deleted by this operation.",
       catalogEmpty:
-        "Connection \"{{name}}\" has no cascading objects. Deletion still cannot be undone.",
+        'Connection "{{name}}" has no cascading objects. Deletion still cannot be undone.',
     },
     discoverManage: "Discover",
     discoverTitle: "Discover Management",
@@ -202,8 +201,7 @@ export const dataConnectEnUS = {
     discoverScheduleEmptyDescription:
       "Create the first discover plan for a data connection and then review task history here.",
     discoverTaskEmpty: "No discover tasks",
-    discoverTaskEmptyDescription:
-      "No recent discover tasks match the current filters yet.",
+    discoverTaskEmptyDescription: "No recent discover tasks match the current filters yet.",
     discoverTaskEmptyByScheduleDescription:
       "No tasks are linked to this schedule. Manual discovery and run-now actions are not attached to a schedule. Clear the filter to see all tasks.",
     discoverDeleteConfirmTitle: "Delete discover plan",
@@ -306,8 +304,7 @@ export const dataConnectEnUS = {
         },
         topic: {
           label: "Message topic",
-          description:
-            "Connect message streams or topic channels for continuously updated data.",
+          description: "Connect message streams or topic channels for continuously updated data.",
         },
       },
       types: {
@@ -397,7 +394,8 @@ export const dataConnectEnUS = {
         project: "For example: demo_project",
         schema: "For example: public",
         schema_list: "For example: public, ods",
-        schemas: "Leave empty to discover all accessible schemas, or enter each name and press Enter",
+        schemas:
+          "Leave empty to discover all accessible schemas, or enter each name and press Enter",
         secret: "Enter secret",
         secret_key: "Enter secret",
         server: "For example: db.example.internal",

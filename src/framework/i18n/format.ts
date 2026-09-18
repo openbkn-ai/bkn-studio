@@ -44,7 +44,9 @@ export function formatDateTime(
   }
 
   const { locale = getRuntimeConfig().locale, ...dateTimeOptions } = options;
-  const defaultStyleOptions: Intl.DateTimeFormatOptions = hasExplicitDateTimeComponentOptions(dateTimeOptions)
+  const defaultStyleOptions: Intl.DateTimeFormatOptions = hasExplicitDateTimeComponentOptions(
+    dateTimeOptions,
+  )
     ? {}
     : {
         dateStyle: "medium",

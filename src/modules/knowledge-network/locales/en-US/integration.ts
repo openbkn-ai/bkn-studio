@@ -27,9 +27,12 @@ export const integrationPart = {
         "Use this for local terminals, CI/CD, and agents with shell access. The CLI uses the same platform capabilities without requiring custom API protocol handling.",
       steps: {
         install: "Install @openbkn/bkn-sdk globally to get the openbkn command.",
-        token: "Issue an API Key in Account Center and use BKN_TOKEN to sign in to the target OpenBKN environment.",
-        context: "Use context commands to search knowledge models, query instances, or discover MCP tools.",
-        skill: "After installing the OpenBKN Skill for an agent, use natural language to choose the corresponding command.",
+        token:
+          "Issue an API Key in Account Center and use BKN_TOKEN to sign in to the target OpenBKN environment.",
+        context:
+          "Use context commands to search knowledge models, query instances, or discover MCP tools.",
+        skill:
+          "After installing the OpenBKN Skill for an agent, use natural language to choose the corresponding command.",
       },
       note: "API Keys currently power Context Loader commands. Issue one in Account Center and inject it into the terminal through BKN_TOKEN.",
       title: "CLI Examples",
@@ -79,7 +82,8 @@ openbkn help all`,
         "Use this for Node.js server-side projects. The SDK wraps authentication, MCP sessions, JSON-RPC calls, and response parsing so services do not need to maintain raw HTTP protocol details.",
       steps: {
         install: "Install @openbkn/bkn-sdk.",
-        token: "Issue an API Key in Account Center and configure BKN_BASE_URL and BKN_TOKEN on the server.",
+        token:
+          "Issue an API Key in Account Center and configure BKN_BASE_URL and BKN_TOKEN on the server.",
         client: "Create a client and call knowledge network capabilities through bkn.context.",
         tools: "Query object instances as needed, or discover and call dynamic MCP tools.",
       },

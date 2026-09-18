@@ -17,21 +17,12 @@
 export type GrantEffect = "allow" | "deny";
 
 export type GrantPolicySource =
-  | "community_bundle"
-  | "professional_rule"
-  | "legacy"
-  | "system_derived"
-  | "role_permission";
+  "community_bundle" | "professional_rule" | "legacy" | "system_derived" | "role_permission";
 
 export type GrantAuthoritySource = "admin_authz" | "owner_delegate" | "system" | "migration";
 
 export type EffectiveDecisionBasis =
-  | "direct"
-  | "inherited"
-  | "bundle"
-  | "wildcard"
-  | "default"
-  | "requires";
+  "direct" | "inherited" | "bundle" | "wildcard" | "default" | "requires";
 
 export type GrantRecord = {
   active: boolean;

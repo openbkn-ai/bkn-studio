@@ -13,6 +13,7 @@
 ### Task 1: Prove the locked rendering policy can suppress child mounting
 
 **Files:**
+
 - Modify: `src/framework/entitlement/RequireEdition.test.tsx`
 - Modify: `src/framework/entitlement/RequireEdition.tsx`
 
@@ -21,7 +22,11 @@
 Add a Community/trial entitlement test rendering:
 
 ```tsx
-<RequireEdition capability={CAPABILITIES.BUSINESS_PROVENANCE} minEdition="enterprise" mountLockedContent={false}>
+<RequireEdition
+  capability={CAPABILITIES.BUSINESS_PROVENANCE}
+  minEdition="enterprise"
+  mountLockedContent={false}
+>
   <p>protected</p>
 </RequireEdition>
 ```
@@ -39,7 +44,13 @@ Expected: FAIL because the locked path still renders the child.
 Add `mountLockedContent?: boolean` to `RequireEditionProps`, defaulting to `true`. In the locked result, render the inert preview wrapper only when it is true:
 
 ```tsx
-{mountLockedContent ? <div aria-hidden className="console-upgrade-locked-content" inert>{children}</div> : null}
+{
+  mountLockedContent ? (
+    <div aria-hidden className="console-upgrade-locked-content" inert>
+      {children}
+    </div>
+  ) : null;
+}
 ```
 
 **Step 4: Run test to verify it passes**
@@ -51,6 +62,7 @@ Expected: PASS; existing preview tests remain unchanged.
 ### Task 2: Apply the non-mount policy to Business Provenance only
 
 **Files:**
+
 - Modify: `src/modules/bkn-trace/routes.tsx`
 - Test: `src/modules/bkn-trace/routes.test.tsx` (or the focused route test closest to this route)
 

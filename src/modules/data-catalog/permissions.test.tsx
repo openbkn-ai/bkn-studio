@@ -78,9 +78,8 @@ describe("data-catalog permission points", () => {
 
   it("navigation entries ask only for points the manifest declares", () => {
     for (const item of dataCatalogNavigation.items) {
-      const permissions = typeof item.permission === "string"
-        ? [item.permission]
-        : (item.permission ?? []);
+      const permissions =
+        typeof item.permission === "string" ? [item.permission] : (item.permission ?? []);
       for (const permission of permissions) {
         expect(dataCatalogModuleManifest.permissions, `nav ${item.key}`).toContain(permission);
       }
@@ -114,7 +113,9 @@ describe("data-catalog permission points", () => {
   });
 
   it("the task-management menu entry and list route stay visible without task management", () => {
-    const navigationItem = dataCatalogNavigation.items.find((item) => item.path === "/task-management");
+    const navigationItem = dataCatalogNavigation.items.find(
+      (item) => item.path === "/task-management",
+    );
 
     expect(navigationItem?.permission).toBeUndefined();
     expect(guardPermissionsOf("task-management")).toEqual([]);

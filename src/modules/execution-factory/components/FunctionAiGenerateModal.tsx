@@ -123,7 +123,6 @@ export function FunctionAiGenerateModal({
       code: initialCode,
       type: "python_function_generator",
     });
-
   }, [form, initialCode, open]);
 
   const handleGenerate = async () => {

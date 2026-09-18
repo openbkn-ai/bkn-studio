@@ -29,13 +29,7 @@ describe("ensureKnowledgeNetworkChildOperations", () => {
     expect(getMock).not.toHaveBeenCalled();
   });
 
-  it.each([
-    "concept-groups",
-    "object-types",
-    "relation-types",
-    "action-types",
-    "metrics",
-  ] as const)(
+  it.each(["concept-groups", "object-types", "relation-types", "action-types", "metrics"] as const)(
     "loads effective operations from the %s list when detail omits them",
     async (collection) => {
       getMock.mockResolvedValue({

@@ -46,9 +46,9 @@
 
 ## 3. 风险与对策
 
-| 风险 | 对策 |
-|---|---|
-| `search_instance` 节点无 `_instance_id`，且 `unique_identities` 键序与 `primary_keys` 不一致 | 用 `get_object_types` 的 `primary_keys` 定序；实机验证第 3 条专门核 id 收敛 |
-| G6 5 的 `dagre` 布局名在不同小版本间有 `dagre` / `antv-dagre` 两种 | 安装后以 `node_modules/@antv/g6` 的类型声明为准，不凭记忆 |
-| 测试服 lifecycle（agent-observability）状态不稳定 | 页面按 `lifecycle.unsupported()` 降级提示；验证前先用 Data Browser 确认 lifecycle 可用 |
-| worktree 无 `node_modules` | 在 worktree 内 `pnpm install --frozen-lockfile` 后再加依赖 |
+| 风险                                                                                         | 对策                                                                                   |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `search_instance` 节点无 `_instance_id`，且 `unique_identities` 键序与 `primary_keys` 不一致 | 用 `get_object_types` 的 `primary_keys` 定序；实机验证第 3 条专门核 id 收敛            |
+| G6 5 的 `dagre` 布局名在不同小版本间有 `dagre` / `antv-dagre` 两种                           | 安装后以 `node_modules/@antv/g6` 的类型声明为准，不凭记忆                              |
+| 测试服 lifecycle（agent-observability）状态不稳定                                            | 页面按 `lifecycle.unsupported()` 降级提示；验证前先用 Data Browser 确认 lifecycle 可用 |
+| worktree 无 `node_modules`                                                                   | 在 worktree 内 `pnpm install --frozen-lockfile` 后再加依赖                             |

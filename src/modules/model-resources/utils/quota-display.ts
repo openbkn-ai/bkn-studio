@@ -91,8 +91,8 @@ export function formatReferPrice(
 }
 
 function calculateTokenAmount(record: ModelQuota, type: "in" | "out") {
-  const tokens = type === "in" ? record.inputTokens : record.outputTokens ?? 0;
-  const referPrice = type === "in" ? record.referPriceIn ?? 0 : record.referPriceOut ?? 0;
+  const tokens = type === "in" ? record.inputTokens : (record.outputTokens ?? 0);
+  const referPrice = type === "in" ? (record.referPriceIn ?? 0) : (record.referPriceOut ?? 0);
   const numTypeIndex = type === "in" ? 0 : 1;
   const numType = record.numType?.[numTypeIndex] ?? 1;
   const priceType = record.priceType?.[0] ?? "thousand";
@@ -102,8 +102,7 @@ function calculateTokenAmount(record: ModelQuota, type: "in" | "out") {
   }
 
   return (
-    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) /
-    (PRICE_UNIT[priceType] ?? 1_000)
+    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) / (PRICE_UNIT[priceType] ?? 1_000)
   );
 }
 
@@ -128,8 +127,7 @@ export function formatForecastAmount(
   currencySymbol: string,
 ) {
   const amount =
-    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) /
-    (PRICE_UNIT[priceType] ?? 1_000);
+    (tokens * (TOKEN_UNIT_VALUE[numType] ?? 1_000) * referPrice) / (PRICE_UNIT[priceType] ?? 1_000);
 
   return `${currencySymbol}${amount.toFixed(2)}`;
 }

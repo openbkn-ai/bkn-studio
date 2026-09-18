@@ -87,13 +87,12 @@ export function ModelStatisticsScene() {
     <section className={pageStyles.page}>
       <div className={pageStyles.pageIntro}>
         <h2 className={pageStyles.pageIntroTitle}>{t("modelResources.statistics.title")}</h2>
-        <p className={pageStyles.pageIntroDescription}>{t("modelResources.statistics.description")}</p>
+        <p className={pageStyles.pageIntroDescription}>
+          {t("modelResources.statistics.description")}
+        </p>
       </div>
 
-      <StatisticsHeaderFilter
-        onChange={setFilter}
-        value={filter}
-      />
+      <StatisticsHeaderFilter onChange={setFilter} value={filter} />
 
       {loadError ? (
         <Alert

@@ -7,8 +7,7 @@
 
 import type { APIRequestContext } from "@playwright/test";
 
-export const LOG_BRIDGE_HOST_URL =
-  process.env.E2E_LOG_BRIDGE_URL ?? "http://127.0.0.1:8095";
+export const LOG_BRIDGE_HOST_URL = process.env.E2E_LOG_BRIDGE_URL ?? "http://127.0.0.1:8095";
 export const LOG_BRIDGE_DOCKER_URL = "http://ef-log-bridge:8095";
 
 export function buildLogBridgeLogsUrl(

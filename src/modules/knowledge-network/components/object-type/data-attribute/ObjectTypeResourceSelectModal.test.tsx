@@ -13,15 +13,12 @@ import type {
   ObjectTypeResourceListResult,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
-const {
-  getObjectTypeResourcePreview,
-  listObjectTypeResourceGroups,
-  queryObjectTypeResources,
-} = vi.hoisted(() => ({
-  getObjectTypeResourcePreview: vi.fn(),
-  listObjectTypeResourceGroups: vi.fn(),
-  queryObjectTypeResources: vi.fn(),
-}));
+const { getObjectTypeResourcePreview, listObjectTypeResourceGroups, queryObjectTypeResources } =
+  vi.hoisted(() => ({
+    getObjectTypeResourcePreview: vi.fn(),
+    listObjectTypeResourceGroups: vi.fn(),
+    queryObjectTypeResources: vi.fn(),
+  }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -90,25 +87,18 @@ describe("ObjectTypeResourceSelectModal search", () => {
   it("keeps the latest search result when an older request resolves last", async () => {
     const staleResult = createDeferred<ObjectTypeResourceListResult>();
     const latestResult = createDeferred<ObjectTypeResourceListResult>();
-    queryObjectTypeResources.mockImplementation(
-      (_networkId: string, query: { name?: string }) => {
-        if (query.name === "t") {
-          return staleResult.promise;
-        }
-        if (query.name === "test") {
-          return latestResult.promise;
-        }
-        return Promise.resolve({ items: [], total: 0 });
-      },
-    );
+    queryObjectTypeResources.mockImplementation((_networkId: string, query: { name?: string }) => {
+      if (query.name === "t") {
+        return staleResult.promise;
+      }
+      if (query.name === "test") {
+        return latestResult.promise;
+      }
+      return Promise.resolve({ items: [], total: 0 });
+    });
 
     render(
-      <ObjectTypeResourceSelectModal
-        networkId="kn-1"
-        onCancel={vi.fn()}
-        onOk={vi.fn()}
-        open
-      />,
+      <ObjectTypeResourceSelectModal networkId="kn-1" onCancel={vi.fn()} onOk={vi.fn()} open />,
     );
 
     const searchInput = screen.getByPlaceholderText("common.search");
@@ -151,12 +141,7 @@ describe("ObjectTypeResourceSelectModal search", () => {
     queryObjectTypeResources.mockReturnValue(initialResult.promise);
 
     render(
-      <ObjectTypeResourceSelectModal
-        networkId="kn-1"
-        onCancel={vi.fn()}
-        onOk={vi.fn()}
-        open
-      />,
+      <ObjectTypeResourceSelectModal networkId="kn-1" onCancel={vi.fn()} onOk={vi.fn()} open />,
     );
 
     await waitFor(() => {

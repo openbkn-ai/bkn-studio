@@ -14,6 +14,8 @@ import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/
  * record operation before issuing a sample-data request.
  */
 export function canQueryDataBrowserObjectType(objectType: KnObjectType) {
-  return objectType.operations === undefined
-    || hasKnowledgeNetworkRecordOperation(objectType, "query_data");
+  return (
+    objectType.operations === undefined ||
+    hasKnowledgeNetworkRecordOperation(objectType, "query_data")
+  );
 }
