@@ -9,6 +9,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 
+describe("i18n configuration", () => {
+  it("keeps the vendor support notice out of application and test logs", () => {
+    expect(i18n.options.showSupportNotice).toBe(false);
+  });
+});
+
 describe("document language synchronization", () => {
   afterEach(async () => {
     await i18n.changeLanguage("zh-CN");

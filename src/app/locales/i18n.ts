@@ -15,6 +15,7 @@ import { normalizeSupportedLocale, syncDocumentLanguage } from "@/framework/i18n
 void i18n.use(initReactI18next).init({
   lng: "zh-CN",
   fallbackLng: "en-US",
+  showSupportNotice: false,
   resources: {
     "zh-CN": {
       translation: zhCN,
