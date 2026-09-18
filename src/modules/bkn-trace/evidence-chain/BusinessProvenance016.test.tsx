@@ -185,7 +185,7 @@ describe("BusinessProvenance016", () => {
       ...view,
       timeRail: [
         {
-          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:00Z",
+          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "invoke_function", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:00Z",
           input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { tool_id: "material_where_used" } },
         },
         {
@@ -207,11 +207,12 @@ describe("BusinessProvenance016", () => {
 
     render(<BusinessProvenance016 view={managedView} panel="timeline" />);
     expect(screen.getByRole("heading", { name: "物料反查产品" })).toBeTruthy();
-    expect(screen.getAllByText("execute_tool · material_where_used")).toHaveLength(2);
+    expect(screen.getAllByText("invoke_function · material_where_used")).toHaveLength(2);
     expect(screen.getByText(/业务输入：物料编码 M-1/)).toBeTruthy();
     expect(screen.getByText(/实际结果：受影响产品数 2/)).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "execute_tool" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "展开内部执行（2）" }));
+    fireEvent.click(screen.getByRole("button", { name: "展开内部执行（3）" }));
+    expect(screen.getAllByRole("button", { name: /invoke_function/ }).length).toBeGreaterThan(1);
     expect(screen.getByRole("button", { name: /查询业务对象.*query_object_instance/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /查询业务数据.*run_sql/ })).toBeTruthy();
   });
@@ -249,7 +250,38 @@ describe("BusinessProvenance016", () => {
     expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("成功");
   });
 
-  it("keeps deterministic functions visible when claims have no attribution edge", () => {
+  it("keeps managed function retry attempts in separate timeline groups", () => {
+    const functionInput = { mode: "inline" as const, media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } };
+    const capability = { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" };
+    render(<BusinessProvenance016 view={{ ...view, timeRail: [
+      { id: "time:function:1", order: 1, operation_id: "op-function", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:01Z", input: functionInput, capability },
+      { id: "time:child:1", order: 2, operation_id: "op-child-1", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "failed", started_at: "2026-09-16T08:00:02Z", input: functionInput },
+      { id: "time:function:2", order: 3, operation_id: "op-function", attempt: 2, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:03Z", input: functionInput, capability },
+      { id: "time:child:2", order: 4, operation_id: "op-child-2", parent_operation_id: "op-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:04Z", input: functionInput },
+    ] }} panel="timeline" />);
+
+    expect(screen.getByRole("button", { name: "全部 2" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "成功 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "失败 1" })).toBeTruthy();
+  });
+
+  it("keeps a same-time child inside a single-attempt managed function", () => {
+    const functionInput = { mode: "inline" as const, media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } };
+    const capability = { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" };
+    render(<BusinessProvenance016 view={{ ...view, timeRail: [
+      { id: "time:child:1", order: 1, operation_id: "op-a-child", parent_operation_id: "op-z-function", attempt: 1, interface_name: "run_sql", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput },
+      { id: "time:function:1", order: 2, operation_id: "op-z-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput, capability },
+      { id: "time:outer:1", order: 3, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "completed", started_at: "2026-09-16T08:00:01Z", input: functionInput },
+    ] }} panel="timeline" />);
+
+    expect(screen.getByRole("button", { name: "全部 1" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "物料反查产品" })).toBeTruthy();
+    expect(screen.getAllByText("execute_tool · material_where_used")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "展开内部执行（2）" }));
+    expect(screen.getByRole("button", { name: /查询业务数据.*run_sql/ })).toBeTruthy();
+  });
+
+  it("does not present an unlinked function as support for the selected claim", () => {
     const unlinkedView: EvidenceChainView = {
       ...view,
       selectedPairGraphs: {
@@ -268,9 +300,43 @@ describe("BusinessProvenance016", () => {
       },
     };
     render(<BusinessProvenance016 view={unlinkedView} panel="evidence" />);
-    expect(screen.getByRole("heading", { name: "要X套净需求与齐套" })).toBeTruthy();
-    expect(screen.getByText("物料编码")).toBeTruthy();
-    expect(screen.getByText("受影响产品数 2；products 2 项：P-1、P-2")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "要X套净需求与齐套" })).toBeNull();
+    expect(screen.getByText("尚未归因出可展示的业务函数")).toBeTruthy();
+  });
+
+  it("keeps the recorded parent failure inside a managed function group", () => {
+    const parentFailed: EvidenceChainView = {
+      ...view,
+      timeRail: [
+        {
+          id: "time:outer:1", order: 1, operation_id: "op-outer", attempt: 1, interface_name: "execute_tool", protocol: "mcp", status: "failed", started_at: "2026-09-16T08:00:00Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { tool_id: "material_where_used" } },
+          error: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { code: "wrapper_failed" } },
+        },
+        {
+          id: "time:function:1", order: 2, operation_id: "op-function", parent_operation_id: "op-outer", attempt: 1, interface_name: "material_where_used", protocol: "internal", status: "completed", started_at: "2026-09-16T08:00:01Z",
+          input: { mode: "inline", media_type: "application/json", byte_length: 80, inline: { function_name: "物料反查产品", arguments: { material_code: "M-1" } } },
+          output: { mode: "inline", media_type: "application/json", byte_length: 20, inline: { result: { count: 1 } } },
+          capability: { manifest_id: "managed", manifest_version: "1", evidence_contract: "managed_function_execution/v1", resolution: "matched" },
+        },
+      ],
+    };
+
+    render(<BusinessProvenance016 view={parentFailed} panel="timeline" />);
+    expect(screen.getByRole("button", { name: "失败 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "成功 0" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "展开内部执行（1）" }));
+    fireEvent.click(screen.getByText("调用业务函数").closest("button")!);
+    expect(screen.getByRole("complementary", { name: "调用检查器" })).toHaveTextContent("wrapper_failed");
+  });
+
+  it("does not count an in-progress call as completed", () => {
+    render(<BusinessProvenance016 view={{ ...view, timeRail: [{
+      id: "time:running:1", order: 1, operation_id: "op-running", attempt: 1, interface_name: "run_sql", protocol: "mcp", status: "running", started_at: "2026-09-16T08:00:00Z",
+      input: { mode: "inline", media_type: "application/json", byte_length: 10, inline: { sql: "select 1" } },
+    }] }} panel="timeline" />);
+    expect(screen.getByRole("button", { name: "成功 0" })).toBeTruthy();
+    expect(screen.getAllByText("进行中").length).toBeGreaterThan(0);
   });
 
   it("supports a full-screen provenance workspace", () => {
