@@ -68,6 +68,15 @@ export default defineConfig(({ mode }) => {
       env: {
         VITE_USE_MOCK: "true",
       },
+      onConsoleLog(log, type) {
+        // Keep jsdom's native getComputedStyle behavior while hiding its repeated pseudo-element notice.
+        if (
+          type === "stderr" &&
+          log.includes("Not implemented: Window's getComputedStyle() method: with pseudo-elements")
+        ) {
+          return false;
+        }
+      },
       setupFiles: ["./src/test/setup.ts"],
       exclude: [
         "**/node_modules/**",

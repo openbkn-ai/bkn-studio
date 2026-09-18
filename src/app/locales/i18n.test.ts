@@ -5,13 +5,24 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 
 describe("i18n configuration", () => {
-  it("keeps the vendor support notice out of application and test logs", () => {
-    expect(i18n.options.showSupportNotice).toBe(false);
+  it("keeps the vendor support notice out of application and test logs", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    try {
+      vi.resetModules();
+
+      await import("@/app/locales/i18n");
+
+      expect(consoleInfo).not.toHaveBeenCalledWith(
+        expect.stringContaining("i18next is made possible by our own product"),
+      );
+    } finally {
+      consoleInfo.mockRestore();
+    }
   });
 });
 
