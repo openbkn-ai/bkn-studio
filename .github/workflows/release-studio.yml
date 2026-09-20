@@ -89,11 +89,16 @@ jobs:
             echo "VERSION must be a stable X.Y.Z version; received: ${BASE_VERSION@Q}" >&2
             exit 1
           fi
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           SHORT_SHA="$(git rev-parse --short=7 HEAD)"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             TAG_VERSION="${GITHUB_REF_NAME#v}"
-            if [[ "${TAG_VERSION}" != "${BASE_VERSION}" && "${TAG_VERSION}" != "${BASE_VERSION}-"* ]]; then
+            if [[ "${TAG_VERSION}" != "${BASE_VERSION}" && ! "${TAG_VERSION}" =~ ^"${BASE_VERSION}"-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]]; then
               echo "Tag version ${TAG_VERSION} must equal VERSION ${BASE_VERSION} or use it as a prerelease prefix" >&2
+              exit 1
+            fi
+            if [[ "${PACKAGE_VERSION}" != "${TAG_VERSION}" ]]; then
+              echo "package.json version ${PACKAGE_VERSION} must equal tag version ${TAG_VERSION}" >&2
               exit 1
             fi
             VERSION="${TAG_VERSION}"

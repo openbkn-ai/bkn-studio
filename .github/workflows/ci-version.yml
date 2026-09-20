@@ -9,18 +9,38 @@ on:
   pull_request:
   push:
     branches: ["**"]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-version-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   version:
     name: version consistency
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Verify Git reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$(tr -d '[:space:]' < VERSION)"
+          ref="${{ github.head_ref || github.ref_name }}"
+          if [[ "${{ github.ref_type }}" == tag ]]; then
+            tag="${GITHUB_REF_NAME#v}"
+            [[ "$tag" == "$base" || "$tag" =~ ^"$base"-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]] || { echo "::error::tag v$tag is outside VERSION $base"; exit 1; }
+            package="$(node -p "require('./package.json').version")"
+            [[ "$package" == "$tag" ]] || { echo "::error::package.json version must equal tag v$tag"; exit 1; }
+          elif [[ "$ref" == release/* ]]; then
+            [[ "${ref#release/}" == "$base" ]] || { echo "::error::branch $ref disagrees with VERSION $base"; exit 1; }
+          fi
       - run: node scripts/check-version.mjs
