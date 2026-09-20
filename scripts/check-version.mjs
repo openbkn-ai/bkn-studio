@@ -19,7 +19,11 @@ if (!/^\d+\.\d+\.\d+$/.test(releaseVersion)) {
   );
 }
 
-if (packageVersion !== releaseVersion && !packageVersion.startsWith(`${releaseVersion}-`)) {
+const prereleasePattern = new RegExp(
+  `^${releaseVersion.replaceAll(".", "\\.")}-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*$`,
+);
+
+if (packageVersion !== releaseVersion && !prereleasePattern.test(packageVersion)) {
   throw new Error(
     `package.json version ${JSON.stringify(packageVersion)} must equal VERSION ${JSON.stringify(releaseVersion)} or use it as a prerelease prefix (for example, 0.1.5-rc.1).`,
   );
