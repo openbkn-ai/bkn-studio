@@ -1,0 +1,26 @@
+# Copyright (c) 2026 OpenBKN
+# SPDX-License-Identifier: LicenseRef-OpenBKN
+# Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+# Conditions. See LICENSE for the full text.
+
+name: ci-version
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: version consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-version.mjs
