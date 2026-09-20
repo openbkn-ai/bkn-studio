@@ -108,7 +108,10 @@ export async function listKnowledgeNetworkActionTypes(networkId: string) {
     {
       params: {
         direction: "desc",
-        limit: 100,
+        // Callers filter client-side — the object type detail page keeps only
+        // the actions bound to it — so a truncated page silently hides bound
+        // action types. `limit=-1` disables backend pagination.
+        limit: -1,
         offset: 0,
         sort: "update_time",
       },

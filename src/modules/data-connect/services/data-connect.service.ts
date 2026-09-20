@@ -238,21 +238,32 @@ export async function listDataConnectConnectorTypes() {
     return wait(mockConnectorTypes.map(mapConnectorType));
   }
 
-  const response = await http.get<ListResponse<BackendConnectorType>>(
-    "/vega-backend/v1/connector-types",
-    {
-      params: {
-        available: true,
-        direction: "asc",
-        enabled: true,
-        limit: 100,
-        offset: 0,
-        sort: "name",
-      },
-    },
-  );
+  const pageSize = 100;
+  const entries: BackendConnectorType[] = [];
+  let offset = 0;
+  let hasMore = true;
 
-  return response.data.entries.map(mapConnectorType);
+  while (hasMore) {
+    const response = await http.get<ListResponse<BackendConnectorType>>(
+      "/vega-backend/v1/connector-types",
+      {
+        params: {
+          available: true,
+          direction: "asc",
+          enabled: true,
+          limit: pageSize,
+          offset,
+          sort: "name",
+        },
+      },
+    );
+    const pageEntries = response.data.entries;
+    entries.push(...pageEntries);
+    offset += pageEntries.length;
+    hasMore = pageEntries.length === pageSize && offset < response.data.total_count;
+  }
+
+  return entries.map(mapConnectorType);
 }
 
 export async function getDataConnectConnectorType(type: string) {

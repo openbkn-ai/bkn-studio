@@ -413,8 +413,22 @@ export async function listUsersPage(
 }
 
 export async function listUsers(options?: { skipErrorToast?: boolean }): Promise<AdminUser[]> {
-  const result = await listUsersPage({ offset: 0, limit: 500 }, options);
-  return result.users;
+  const pageSize = 500;
+  const allUsers: AdminUser[] = [];
+  let offset = 0;
+  let total = Infinity;
+
+  while (offset < total) {
+    const result = await listUsersPage({ offset, limit: pageSize }, options);
+    allUsers.push(...result.users);
+    offset += result.users.length;
+    total = result.total;
+    if (result.users.length === 0) {
+      break;
+    }
+  }
+
+  return allUsers;
 }
 
 export async function listDepartments(options?: {
@@ -430,11 +444,30 @@ export async function listDepartments(options?: {
       })),
     );
   }
-  const response = await http.get<{ departments?: BackendDept[] }>(`${ADMIN}/departments`, {
-    params: { offset: 0, limit: 1000 },
-    skipErrorToast: options?.skipErrorToast,
-  });
-  return (response.data.departments ?? []).map(mapDept);
+  const pageSize = 1000;
+  const allDepartments: BackendDept[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await http.get<{ departments?: BackendDept[]; total?: number }>(
+      `${ADMIN}/departments`,
+      {
+        params: { offset, limit: pageSize },
+        skipErrorToast: options?.skipErrorToast,
+      },
+    );
+    const pageDepartments = response.data.departments ?? [];
+    allDepartments.push(...pageDepartments);
+    offset += pageDepartments.length;
+    if (
+      pageDepartments.length < pageSize ||
+      (response.data.total !== undefined && offset >= response.data.total)
+    ) {
+      break;
+    }
+  }
+
+  return allDepartments.map(mapDept);
 }
 
 function isRoleListItemComplete(item: BackendRole): boolean {

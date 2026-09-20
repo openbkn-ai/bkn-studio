@@ -22,6 +22,7 @@ import type {
   UserQuotaSaveItem,
 } from "@/modules/model-resources/types/quota";
 import { listUsersPage } from "@/modules/system-admin/services/admin.service";
+import type { AdminUser } from "@/modules/system-admin/types/admin";
 
 const API_PREFIX = "/mf-model-manager/v1";
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
@@ -413,12 +414,25 @@ export async function searchAssignableUsers(keyword?: string): Promise<Assignabl
   }
 
   try {
-    const result = await listUsersPage(
-      { search: keyword, offset: 0, limit: 50 },
-      { skipErrorToast: true },
-    );
+    const pageSize = 100;
+    const users: AdminUser[] = [];
+    let offset = 0;
+    let total = Infinity;
 
-    return result.users.map((item) => ({
+    while (offset < total) {
+      const result = await listUsersPage(
+        { search: keyword, offset, limit: pageSize },
+        { skipErrorToast: true },
+      );
+      users.push(...result.users);
+      offset += result.users.length;
+      total = result.total;
+      if (result.users.length === 0) {
+        break;
+      }
+    }
+
+    return users.map((item) => ({
       userId: item.id,
       userName: item.name || item.account,
     }));

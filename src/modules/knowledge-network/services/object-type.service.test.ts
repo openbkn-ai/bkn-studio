@@ -90,7 +90,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     });
   });
 
-  it("loads every object type page for permission enrichment", async () => {
+  it("loads every object type page by default", async () => {
     const firstPage = Array.from({ length: 100 }, (_, index) => ({
       id: `object-${index}`,
       name: `Object ${index}`,
@@ -107,10 +107,7 @@ describe("object-type.service · getObjectTypeSampleData", () => {
     const { listKnowledgeNetworkObjectTypes } =
       await import("@/modules/knowledge-network/services/object-type.service");
 
-    const result = await listKnowledgeNetworkObjectTypes("kn-1", {
-      allPages: true,
-      skipErrorToast: true,
-    });
+    const result = await listKnowledgeNetworkObjectTypes("kn-1", { skipErrorToast: true });
 
     expect(result).toHaveLength(101);
     expect(result.at(-1)).toMatchObject({ id: "object-100", operations: ["query_data"] });

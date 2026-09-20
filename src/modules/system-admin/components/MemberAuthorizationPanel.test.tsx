@@ -88,6 +88,19 @@ vi.mock("@/framework/ui/common/AppTable", () => ({
     </div>
   ),
 }));
+vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
+  TablePaginationBar: ({
+    onChange,
+    total,
+  }: {
+    onChange: (page: number) => void;
+    total: number;
+  }) => (
+    <button data-testid="grant-pagination" onClick={() => onChange(2)} type="button">
+      {total}
+    </button>
+  ),
+}));
 vi.mock("@/modules/system-admin/utils/resource-catalog", () => ({
   operationLabel: (_type: string, operation: string) => operation,
   resourceTypeLabel: (type: string) => type,
@@ -138,5 +151,30 @@ describe("MemberAuthorizationPanel", () => {
     expect(screen.queryByTestId("grant-table")).toBeNull();
     await waitFor(() => expect(listObjectGrantsPageMock).not.toHaveBeenCalled());
     expect(resolveGrantNamesMock).not.toHaveBeenCalled();
+  });
+
+  it("loads the selected member's next grant page", async () => {
+    listObjectGrantsPageMock
+      .mockResolvedValueOnce({ grants: [], total: 101 })
+      .mockResolvedValueOnce({ grants: [], total: 101 });
+    resolveGrantNamesMock.mockResolvedValue([]);
+
+    render(<MemberAuthorizationPanel departments={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "select-user" }));
+    await waitFor(() =>
+      expect(listObjectGrantsPageMock).toHaveBeenCalledWith(
+        { accessorId: "user-1", limit: 100, offset: 0 },
+        { resolveNames: false },
+      ),
+    );
+
+    fireEvent.click(screen.getByTestId("grant-pagination"));
+
+    await waitFor(() =>
+      expect(listObjectGrantsPageMock).toHaveBeenLastCalledWith(
+        { accessorId: "user-1", limit: 100, offset: 100 },
+        { resolveNames: false },
+      ),
+    );
   });
 });

@@ -50,9 +50,6 @@ import {
  */
 const CAPABILITY_SECTION_LIMIT = 1000;
 
-/** Enough pages for any real network; a truncated read would understate the nav counts. */
-const CAPABILITY_MAX_PAGES = 10;
-
 /**
  * Tool bindings drive both list pages and both nav counts, and the split between API and function
  * can only be made on entries this client holds. Reading one page would silently undercount a
@@ -70,10 +67,7 @@ async function listAllCapabilities(
   const entries = [...first.entries];
   const boxes = [...first.boxes];
 
-  const pages = Math.min(
-    Math.ceil(first.totalCount / CAPABILITY_SECTION_LIMIT),
-    CAPABILITY_MAX_PAGES,
-  );
+  const pages = Math.ceil(first.totalCount / CAPABILITY_SECTION_LIMIT);
   for (let page = 1; page < pages; page += 1) {
     const next = await listKnowledgeNetworkCapabilities(networkId, {
       limit: CAPABILITY_SECTION_LIMIT,

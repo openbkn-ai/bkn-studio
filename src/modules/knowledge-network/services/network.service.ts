@@ -116,22 +116,30 @@ export async function listKnowledgeNetworkTags() {
     return wait([...new Set(mockKnowledgeNetworks.flatMap((item) => item.tags))].sort());
   }
 
-  const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
-    "/bkn-backend/v1/knowledge-networks",
-    {
-      params: {
-        limit: 200,
-        offset: 0,
-        sort: "update_time",
-        direction: "desc",
-      },
-    },
-  );
-
+  const pageSize = 200;
   const tagSet = new Set<string>();
-  response.data.entries.forEach((item) => {
-    (item.tags ?? []).forEach((tag) => tagSet.add(tag));
-  });
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await http.get<BackendListResponse<BackendKnowledgeNetwork>>(
+      "/bkn-backend/v1/knowledge-networks",
+      {
+        params: {
+          limit: pageSize,
+          offset,
+          sort: "update_time",
+          direction: "desc",
+        },
+      },
+    );
+    const entries = response.data.entries;
+    entries.forEach((item) => {
+      (item.tags ?? []).forEach((tag) => tagSet.add(tag));
+    });
+    offset += entries.length;
+    hasMore = entries.length === pageSize && offset < response.data.total_count;
+  }
 
   return [...tagSet].sort((left, right) => left.localeCompare(right));
 }

@@ -66,7 +66,10 @@ export async function listKnowledgeNetworkConceptGroups(networkId: string) {
     {
       params: {
         direction: "desc",
-        limit: 50,
+        // resolveObjectTypeConceptGroups and the workspace tab both filter
+        // this list client-side, so a truncated page silently drops groups.
+        // `limit=-1` disables backend pagination.
+        limit: -1,
         offset: 0,
         sort: "update_time",
       },

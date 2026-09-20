@@ -117,7 +117,9 @@ export async function listKnowledgeNetworkRelationTypes(networkId: string) {
     {
       params: {
         direction: "desc",
-        limit: 100,
+        // The list panel filters, sorts and paginates client-side, so it needs
+        // every relation type. `limit=-1` disables backend pagination.
+        limit: -1,
         offset: 0,
         sort: "update_time",
       },

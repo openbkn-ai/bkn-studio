@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { isSuperAdmin } from "@/framework/auth/super-admin";
 import { AppTable } from "@/framework/ui/common/AppTable";
+import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 import { listObjectGrantsPage } from "@/modules/system-admin/services/authz.service";
 import { resolveGrantNames } from "@/modules/system-admin/services/authz-objects.service";
@@ -24,6 +25,8 @@ import styles from "@/modules/system-admin/scenes/admin.module.css";
 type MemberAuthorizationPanelProps = {
   departments: AdminDepartment[];
 };
+
+const GRANTS_PAGE_SIZE = 100;
 
 function userName(user: AdminUser) {
   return user.name || user.account || user.id;
@@ -75,13 +78,20 @@ export function MemberAuthorizationPanel({ departments }: MemberAuthorizationPan
   const { t } = useTranslation();
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [grants, setGrants] = useState<ObjectGrant[]>([]);
+  const [grantsPage, setGrantsPage] = useState(1);
+  const [grantsTotal, setGrantsTotal] = useState(0);
   const [grantsLoading, setGrantsLoading] = useState(false);
   const [detailGrantKey, setDetailGrantKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGrantsPage(1);
+  }, [selectedUser?.id]);
 
   useEffect(() => {
     setDetailGrantKey(null);
     if (!selectedUser) {
       setGrants([]);
+      setGrantsTotal(0);
       setGrantsLoading(false);
       return;
     }
@@ -89,13 +99,18 @@ export function MemberAuthorizationPanel({ departments }: MemberAuthorizationPan
       // `super_admin` has the global `*:*:*` wildcard. Do not make a narrower object-grant
       // request that adds no useful information to this review view.
       setGrants([]);
+      setGrantsTotal(0);
       setGrantsLoading(false);
       return;
     }
     let cancelled = false;
     setGrantsLoading(true);
     void listObjectGrantsPage(
-      { accessorId: selectedUser.id, limit: 100, offset: 0 },
+      {
+        accessorId: selectedUser.id,
+        limit: GRANTS_PAGE_SIZE,
+        offset: (grantsPage - 1) * GRANTS_PAGE_SIZE,
+      },
       { resolveNames: false },
     )
       .then((result) => {
@@ -104,6 +119,7 @@ export function MemberAuthorizationPanel({ departments }: MemberAuthorizationPan
         // Render the authoritative grant records immediately; display enrichment must never keep this
         // review surface in a permanent loading state.
         setGrants(result.grants);
+        setGrantsTotal(result.total);
         setGrantsLoading(false);
         void resolveGrantNames(result.grants)
           .then((resolved) => {
@@ -114,13 +130,14 @@ export function MemberAuthorizationPanel({ departments }: MemberAuthorizationPan
       .catch(() => {
         if (!cancelled) {
           setGrants([]);
+          setGrantsTotal(0);
           setGrantsLoading(false);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [selectedUser]);
+  }, [grantsPage, selectedUser]);
 
   const grantColumns: ColumnsType<ObjectGrant> = useMemo(
     () => [
@@ -260,14 +277,26 @@ export function MemberAuthorizationPanel({ departments }: MemberAuthorizationPan
             </div>
           </div>
         ) : selectedUser ? (
-          <AppTable<ObjectGrant>
-            columns={grantColumns}
-            dataSource={grants}
-            loading={grantsLoading}
-            pagination={false}
-            rowKey={grantKey}
-            size="small"
-          />
+          <>
+            <AppTable<ObjectGrant>
+              columns={grantColumns}
+              dataSource={grants}
+              loading={grantsLoading}
+              pagination={false}
+              rowKey={grantKey}
+              size="small"
+            />
+            {grantsTotal > 0 ? (
+              <TablePaginationBar
+                current={grantsPage}
+                onChange={(page) => setGrantsPage(page)}
+                pageSize={GRANTS_PAGE_SIZE}
+                showSizeChanger={false}
+                showTotal={(total) => t("common.total", { total })}
+                total={grantsTotal}
+              />
+            ) : null}
+          </>
         ) : (
           <Empty
             description={t("systemAdmin.objectGrants.memberEmpty")}

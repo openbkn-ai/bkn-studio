@@ -133,6 +133,10 @@ export async function listKnowledgeNetworkObjectTypes(
     );
   }
 
+  // Object types are reused as lookup data throughout the workspace. Returning only the first
+  // server page makes valid types disappear from forms and detail views once a network has more
+  // than 100 types. Callers may still opt into a bounded read explicitly.
+  const allPages = options.allPages ?? true;
   const pageSize = 100;
   const entries: BackendObjectType[] = [];
   let offset = 0;
@@ -155,9 +159,7 @@ export async function listKnowledgeNetworkObjectTypes(
     entries.push(...pageEntries);
 
     hasMore = Boolean(
-      options.allPages &&
-      pageEntries.length === pageSize &&
-      entries.length < response.data.total_count,
+      allPages && pageEntries.length === pageSize && entries.length < response.data.total_count,
     );
     if (!hasMore) {
       break;

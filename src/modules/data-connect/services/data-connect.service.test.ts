@@ -57,6 +57,48 @@ describe("data-connect.service · test connection", () => {
     });
   });
 
+  it("loads every connector-type page instead of silently dropping types after the first 100", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      category: "table",
+      description: "",
+      enabled: true,
+      mode: "local",
+      name: `Connector ${index}`,
+      type: `connector-${index}`,
+    }));
+    getMock
+      .mockResolvedValueOnce({ data: { entries: firstPage, total_count: 101 } })
+      .mockResolvedValueOnce({
+        data: {
+          entries: [
+            {
+              category: "table",
+              description: "",
+              enabled: true,
+              mode: "local",
+              name: "Connector 100",
+              type: "connector-100",
+            },
+          ],
+          total_count: 101,
+        },
+      });
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
+
+    await expect(listDataConnectConnectorTypes()).resolves.toHaveLength(101);
+    expect(getMock).toHaveBeenNthCalledWith(2, "/vega-backend/v1/connector-types", {
+      params: {
+        available: true,
+        direction: "asc",
+        enabled: true,
+        limit: 100,
+        offset: 100,
+        sort: "name",
+      },
+    });
+  });
+
   it("passes data-connection pagination and filters through to Vega", async () => {
     listCatalogsMock.mockResolvedValue({ items: [], total: 23 });
     const { listDataConnectRecords } =

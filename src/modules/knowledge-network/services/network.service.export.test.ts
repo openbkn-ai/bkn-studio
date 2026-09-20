@@ -130,3 +130,33 @@ describe("exportKnowledgeNetwork", () => {
     expect(downloads[0]?.name).toBe("kn-1.tar");
   });
 });
+
+describe("listKnowledgeNetworkTags", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("collects tags from every knowledge-network page", async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: {
+          entries: Array.from({ length: 200 }, (_, index) => ({ tags: [`tag-${index}`] })),
+          total_count: 201,
+        },
+      })
+      .mockResolvedValueOnce({ data: { entries: [{ tags: ["last-tag"] }], total_count: 201 } });
+    const { listKnowledgeNetworkTags } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await expect(listKnowledgeNetworkTags()).resolves.toContain("last-tag");
+    expect(getMock).toHaveBeenNthCalledWith(2, "/bkn-backend/v1/knowledge-networks", {
+      params: { direction: "desc", limit: 200, offset: 200, sort: "update_time" },
+    });
+  });
+});
