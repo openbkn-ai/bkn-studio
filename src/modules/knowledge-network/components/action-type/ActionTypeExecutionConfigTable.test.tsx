@@ -190,4 +190,116 @@ describe("ActionTypeExecutionConfigTable", () => {
     expect(screen.getAllByText("knowledgeNetwork.actionTypeEmptyValue").length).toBeGreaterThan(0);
     expect(screen.queryByText(/box-1|tool-1/)).toBeNull();
   });
+
+  it("lists the tool's parameters when the action type saved none", async () => {
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    resolveActionTypeToolInputSchema.mockResolvedValue([
+      {
+        key: "body",
+        name: "body",
+        source: "Body",
+        type: "object",
+        children: [
+          {
+            key: "body.roleName",
+            name: "roleName",
+            source: "Body",
+            type: "string",
+          },
+          {
+            key: "body.roleKey",
+            name: "roleKey",
+            source: "Body",
+            type: "string",
+          },
+        ],
+      },
+    ]);
+
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource
+        detail={createDetail([])}
+        networkId="network-1"
+      />,
+    );
+
+    await screen.findByRole("button", { name: "Collapse row" });
+
+    expect(screen.getByText("roleName")).toBeTruthy();
+    expect(screen.getByText("roleKey")).toBeTruthy();
+    expect(screen.queryByText("knowledgeNetwork.actionTypeExecutionParameterEmpty")).toBeNull();
+  });
+
+  it("keeps legacy bindings when the tool schema has changed", async () => {
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    resolveActionTypeToolInputSchema.mockResolvedValue([
+      {
+        key: "current_parameter",
+        name: "current_parameter",
+        source: "Body",
+        type: "string",
+      },
+    ]);
+
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource
+        detail={createDetail([
+          {
+            name: "legacy_parameter",
+            source: "Query",
+            type: "string",
+            value: "legacy-value",
+            valueFrom: "const",
+          },
+        ])}
+        networkId="network-1"
+      />,
+    );
+
+    expect(await screen.findByText("current_parameter")).toBeTruthy();
+    expect(screen.getByText("legacy_parameter")).toBeTruthy();
+    expect(screen.getByText("legacy-value")).toBeTruthy();
+  });
+
+  it("matches a uniquely named legacy nested binding to its schema row", async () => {
+    getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({ dataProperties: [] });
+    resolveActionTypeToolInputSchema.mockResolvedValue([
+      {
+        key: "body",
+        name: "body",
+        source: "Body",
+        type: "object",
+        children: [
+          {
+            key: "body.roleName",
+            name: "roleName",
+            source: "Body",
+            type: "string",
+          },
+        ],
+      },
+    ]);
+
+    render(
+      <ActionTypeExecutionConfigTable
+        canResolveActionSource
+        detail={createDetail([
+          {
+            name: "roleName",
+            value: "purchaser",
+            valueFrom: "const",
+          },
+        ])}
+        networkId="network-1"
+      />,
+    );
+
+    await screen.findByRole("button", { name: "Collapse row" });
+
+    expect(screen.getByText("roleName")).toBeTruthy();
+    expect(screen.getAllByText("roleName")).toHaveLength(1);
+    expect(screen.getByText("purchaser")).toBeTruthy();
+  });
 });
