@@ -17,6 +17,7 @@ import type { Entitlement } from "@/framework/entitlement/types";
 import {
   extensionRoutes,
   extensionStandaloneRoutes,
+  extensionWorkspaceActions,
   freezeExtensions,
   registerExtension,
   resetExtensionsForTesting,
@@ -157,6 +158,26 @@ describe("extension registry", () => {
         standaloneRoutes: [{ lazy: () => Promise.resolve({ element: <p /> }), path: "/demo" }],
       }),
     ).toThrow(/without an element/);
+  });
+
+  // Two extensions may each name their button after themselves; the React key must not collide.
+  it("lists workspace buttons across extensions under distinct keys", () => {
+    const path = (networkId: string) => `/demo/${networkId}`;
+    registerExtension({
+      capability: "demo_capability",
+      id: "first",
+      workspaceActions: [{ id: "open", labelKey: "first.open", path }],
+    });
+    registerExtension({
+      capability: "demo_capability",
+      id: "second",
+      workspaceActions: [{ id: "open", labelKey: "second.open", path }],
+    });
+
+    expect(extensionWorkspaceActions().map(({ key, labelKey }) => ({ key, labelKey }))).toEqual([
+      { key: "first:open", labelKey: "first.open" },
+      { key: "second:open", labelKey: "second.open" },
+    ]);
   });
 
   it("adds copy without overriding what is already there", () => {

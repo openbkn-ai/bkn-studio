@@ -6,7 +6,7 @@
  */
 
 import i18n from "i18next";
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
@@ -15,8 +15,8 @@ import type { SupportedLocale } from "@/framework/runtime/types";
 import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 /**
- * What another build adds to Studio without this repository knowing about it: routes, and
- * the copy they render. The community build installs none.
+ * What another build adds to Studio without this repository knowing about it: routes, the
+ * buttons that lead to them, and the copy they render. The community build installs none.
  *
  * Registration happens in exactly one module, `@/app/extensions/installed`, which the entry
  * imports before the app mounts. A build that ships extensions (the enterprise image) swaps
@@ -37,8 +37,25 @@ export type StudioExtension = {
   routes?: RouteObject[];
   /** Routes without the shell, like the knowledge-network workspace pages. */
   standaloneRoutes?: RouteObject[];
+  /** Buttons on the knowledge-network workspace overview, beside Authorize and Edit. */
+  workspaceActions?: WorkspaceAction[];
   /** Copy merged into the translation resources, by locale. */
   locales?: Partial<Record<SupportedLocale, Record<string, unknown>>>;
+};
+
+/**
+ * A button that opens one of the extension's pages for the network on screen, in a new tab.
+ * It is shown whatever the licence says: the page it opens is behind the extension's
+ * capability guard, which is where a licence that falls short gets the upgrade page.
+ */
+export type WorkspaceAction = {
+  /** Unique within the extension. */
+  id: string;
+  icon?: ReactNode;
+  /** Translation key of the button label. */
+  labelKey: string;
+  /** Path inside the app, without the basename, for the given network. */
+  path: (networkId: string) => string;
 };
 
 const installed: StudioExtension[] = [];
@@ -79,6 +96,15 @@ export function extensionRoutes(): RouteObject[] {
 
 export function extensionStandaloneRoutes(): RouteObject[] {
   return installed.flatMap((extension) => gated(extension, extension.standaloneRoutes));
+}
+
+export function extensionWorkspaceActions(): (WorkspaceAction & { key: string })[] {
+  return installed.flatMap((extension) =>
+    (extension.workspaceActions ?? []).map((action) => ({
+      ...action,
+      key: `${extension.id}:${action.id}`,
+    })),
+  );
 }
 
 /**
