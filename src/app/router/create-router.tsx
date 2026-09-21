@@ -17,6 +17,7 @@ import { DEFAULT_APP_ENTRY_PATH } from "@/app/router/app-paths";
 import { NotFoundPage } from "@/app/router/NotFoundPage";
 import { RouteErrorPage } from "@/app/router/RouteErrorPage";
 import { RouteLoading } from "@/app/router/RouteLoading";
+import { extensionRoutes, extensionStandaloneRoutes } from "@/framework/extension/registry";
 
 const AppShell = lazy(async () => {
   const module = await import("@/app/router/shell");
@@ -26,7 +27,7 @@ const AppShell = lazy(async () => {
 export function createAppRouter(basename?: string) {
   return createBrowserRouter(
     [
-      ...standaloneModuleRoutes.map((route) => ({
+      ...[...standaloneModuleRoutes, ...extensionStandaloneRoutes()].map((route) => ({
         ...route,
         errorElement: <RouteErrorPage />,
       })),
@@ -44,6 +45,7 @@ export function createAppRouter(basename?: string) {
             element: <Navigate replace to={defaultModuleRoutePath} />,
           },
           ...moduleRoutes,
+          ...extensionRoutes(),
           {
             path: "*",
             element: <NotFoundPage />,

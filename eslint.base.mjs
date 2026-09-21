@@ -48,6 +48,22 @@ export function createTypeScriptConfig({ typeChecked }) {
     ...reactPluginConfig,
     rules: {
       ...reactPluginConfig.rules,
+      // Studio never imports enterprise code. The enterprise image builds this repository
+      // with its own extensions registered through `@/app/extensions/installed` (see
+      // framework/extension/registry.ts); an import in the other direction would stop the
+      // public repository from building on its own. `@ee/` is that build's source alias.
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@ee/*", "**/openbkn-ee/**"],
+              message:
+                "Studio must not import enterprise code. Enterprise features register through @/app/extensions/installed in the enterprise build.",
+            },
+          ],
+        },
+      ],
       // Never gate visibility based on a license's features[].
       //
       // Authorization is evaluated by **edition** (server-side
