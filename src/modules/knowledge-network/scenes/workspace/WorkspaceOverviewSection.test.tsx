@@ -9,6 +9,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { registerExtension, resetExtensionsForTesting } from "@/framework/extension/registry";
 import type { KnowledgeNetworkRecord } from "@/modules/knowledge-network/types/knowledge-network";
 
 import { WorkspaceOverviewSection } from "./WorkspaceOverviewSection";
@@ -79,9 +80,9 @@ function installHttpClipboardFallback(result: boolean) {
   return copiedTexts;
 }
 
-function renderOverview() {
+function renderOverview(basename?: string) {
   render(
-    <MemoryRouter>
+    <MemoryRouter basename={basename} initialEntries={[`${basename ?? ""}/`]}>
       <WorkspaceOverviewSection
         canModify={false}
         detail={detail}
@@ -100,6 +101,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetExtensionsForTesting();
+  vi.restoreAllMocks();
   if (clipboardDescriptor) {
     Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
   } else {
@@ -138,5 +141,39 @@ describe("WorkspaceOverviewSection clipboard fallback", () => {
       );
     });
     expect(messageMock.success).not.toHaveBeenCalled();
+  });
+});
+
+describe("WorkspaceOverviewSection extension actions", () => {
+  it("shows no extension button when no extension is installed", () => {
+    renderOverview();
+
+    expect(screen.queryByTestId(/^workspace-action-/)).toBeNull();
+  });
+
+  it("opens a registered page for this network in a new tab", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    registerExtension({
+      capability: "graph_explorer",
+      id: "graph-explorer",
+      workspaceActions: [
+        {
+          id: "graph-explorer",
+          labelKey: "knowledgeNetwork.graphExplorer.openAction",
+          path: (networkId) => `/knowledge-network/workspace/${networkId}/graph-explorer`,
+        },
+      ],
+    });
+    renderOverview("/studio");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "knowledgeNetwork.graphExplorer.openAction" }),
+    );
+
+    expect(open).toHaveBeenCalledWith(
+      "/studio/knowledge-network/workspace/network-1/graph-explorer",
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 });

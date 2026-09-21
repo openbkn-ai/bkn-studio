@@ -22,9 +22,10 @@ import { Empty, Spin, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useHref, useNavigate } from "react-router-dom";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
+import { extensionWorkspaceActions, type WorkspaceAction } from "@/framework/extension/registry";
 import { formatNumber } from "@/framework/i18n/format";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -175,6 +176,9 @@ export function WorkspaceOverviewSection({
               <div className={styles.overviewHeaderName}>{detail?.name}</div>
             </div>
             <div className={styles.overviewHeaderTitleRight}>
+              {extensionWorkspaceActions().map((action) => (
+                <ExtensionActionButton action={action} key={action.key} networkId={networkId} />
+              ))}
               {detail && canAuthorize ? (
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("knowledgeNetwork.authorizeAction")}
@@ -367,5 +371,27 @@ export function WorkspaceOverviewSection({
         />
       ) : null}
     </div>
+  );
+}
+
+/** A button another build registered (see registry.ts); the community build registers none. */
+function ExtensionActionButton({
+  action,
+  networkId,
+}: {
+  action: WorkspaceAction;
+  networkId: string;
+}) {
+  const { t } = useTranslation();
+  const href = useHref(action.path(networkId));
+
+  return (
+    <AppButton
+      data-testid={`workspace-action-${action.id}`}
+      icon={action.icon}
+      onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+    >
+      {t(action.labelKey)}
+    </AppButton>
   );
 }
