@@ -44,6 +44,16 @@ export const subscriptionEnUS = {
           "Certified and advanced source connectors (SQL Server and other commercial databases). Community ships the basic connectors only.",
         name: "Advanced data connectivity",
       },
+      graph_explorer: {
+        bullets: {
+          b1: "Find instances by semantic search, filter, browsing or Cypher, then expand along relations hop by hop",
+          b2: "Path finding between two instances, with several layouts",
+          b3: "Exploration history, canvas export and shareable links",
+        },
+        description:
+          "Start from a concrete instance, expand its neighbours and trace paths on a canvas; also opens graph links handed over by agents.",
+        name: "Graph explorer",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "View, query, modify, delete and execute granted separately",

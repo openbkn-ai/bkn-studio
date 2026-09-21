@@ -45,10 +45,10 @@ type CapabilitiesResponse = {
  * 没人走过。
  */
 const MOCK_ENTITLEMENT: Entitlement = {
-  capabilities: ["rbac_basic", "perm_fine_grained"],
+  capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer"],
   edition: "professional",
-  extensions: ["rbac_basic", "perm_fine_grained", "perm_object_level"],
-  features: ["rbac_basic", "perm_fine_grained", "source_sync"],
+  extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+  features: ["rbac_basic", "perm_fine_grained", "graph_explorer", "source_sync"],
   licensed: true,
   limits: { max_users: 100 },
   state: "valid",

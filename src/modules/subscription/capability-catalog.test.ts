@@ -27,7 +27,6 @@ describe("capability catalog", () => {
       "branding",
       "ops_dashboard",
       "bigdata_connect",
-      "explorer",
       "multi_tenant",
       "offline_bundle",
       "sso",
@@ -43,7 +42,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(3);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(4);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
@@ -53,7 +52,8 @@ describe("capability catalog", () => {
    * 本可以按实况判的能力白白退回只看档位。
    *
    * 与后端装配表对齐(2026-08-08 实测 VM 返回):`connector_certified` 由 vega 登记进来,
-   * 加上 bkn-safe 自己的两个。`business_provenance` 上游仍是 planned,没有真实现。
+   * 加上 bkn-safe 自己的两个。`graph_explorer` 由 bkn-safe-ee 登记(实现在企业版前端镜像)。
+   * `business_provenance` 上游仍是 planned,没有真实现。
    */
   it("标为可实测的能力与后端装配表一致", () => {
     const served = CAPABILITY_CATALOG.filter((entry) => entry.reportedByEndpoint).map(
@@ -62,6 +62,7 @@ describe("capability catalog", () => {
 
     expect(served.sort()).toEqual([
       "connector_certified",
+      "graph_explorer",
       "perm_fine_grained",
       "perm_object_level",
       "rbac_basic",
