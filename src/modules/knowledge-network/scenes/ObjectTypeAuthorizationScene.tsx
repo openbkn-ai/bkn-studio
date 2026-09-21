@@ -47,6 +47,7 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { DirectoryUserPicker } from "@/modules/system-admin";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
 import { ObjectTypeDataAttributeFormDrawer } from "@/modules/knowledge-network/components/object-type/data-attribute/ObjectTypeDataAttributeFormDrawer";
+import { RowFilterAuthorizationPanel } from "@/modules/knowledge-network/components/object-type/row-filter/RowFilterAuthorizationPanel";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
@@ -103,7 +104,7 @@ import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-autho
 
 import styles from "./ObjectTypeAuthorizationScene.module.css";
 
-type AuthorizationTab = "base" | "property";
+type AuthorizationTab = "base" | "row-filter" | "property";
 type PropertyFilter = "all" | "explicit" | "inherit" | "invalid";
 
 type PropertyRow = ObjectTypeDataProperty & {
@@ -193,6 +194,8 @@ export function ObjectTypeAuthorizationScene() {
   const [propertySaving, setPropertySaving] = useState(false);
   const [draft, setDraft] = useState<Map<string, PropertyAccessSelection>>(new Map());
   const [editingMaskProperty, setEditingMaskProperty] = useState<ObjectTypeDataProperty>();
+  const [rowFilterDirty, setRowFilterDirty] = useState(false);
+  const [rowFilterDiscardNonce, setRowFilterDiscardNonce] = useState(0);
 
   const syncUserLookup = useCallback(async (rawIds: string[], signal?: AbortSignal) => {
     const ids = [...new Set(rawIds.filter(isUserLookupId))];
@@ -328,22 +331,30 @@ export function ObjectTypeAuthorizationScene() {
 
   const confirmDiscard = useCallback(
     (next: () => void) => {
-      if (!draft.size) {
+      if (!draft.size && !rowFilterDirty) {
         next();
         return;
       }
       void modal.confirm({
         cancelText: t("common.cancel"),
-        content: t("knowledgeNetwork.propertyAuthorizationDiscardDescription", {
-          count: draft.size,
-        }),
+        content: rowFilterDirty
+          ? t("knowledgeNetwork.rowFilterDiscardDescription")
+          : t("knowledgeNetwork.propertyAuthorizationDiscardDescription", { count: draft.size }),
         okButtonProps: { danger: true },
-        okText: t("knowledgeNetwork.propertyAuthorizationDiscard"),
-        onOk: next,
-        title: t("knowledgeNetwork.propertyAuthorizationDiscardTitle"),
+        okText: rowFilterDirty
+          ? t("knowledgeNetwork.rowFilterDiscard")
+          : t("knowledgeNetwork.propertyAuthorizationDiscard"),
+        onOk: () => {
+          setDraft(new Map());
+          setRowFilterDiscardNonce((current) => current + 1);
+          next();
+        },
+        title: rowFilterDirty
+          ? t("knowledgeNetwork.rowFilterDiscardTitle")
+          : t("knowledgeNetwork.propertyAuthorizationDiscardTitle"),
       });
     },
-    [draft.size, modal, t],
+    [draft.size, modal, rowFilterDirty, t],
   );
 
   const userMap = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
@@ -1751,6 +1762,30 @@ export function ObjectTypeAuthorizationScene() {
                   <EditionBadge
                     capability={CAPABILITIES.PERM_FINE_GRAINED}
                     edition="professional"
+                  />
+                </span>
+              ),
+            },
+            {
+              children: (
+                <RequireEdition capability={CAPABILITIES.PERM_OBJECT_LEVEL} minEdition="enterprise">
+                  <RowFilterAuthorizationPanel
+                    discardNonce={rowFilterDiscardNonce}
+                    objectTypeRef={objectTypeRef}
+                    onDirtyChange={setRowFilterDirty}
+                    roles={roles}
+                    users={users}
+                  />
+                </RequireEdition>
+              ),
+              key: "row-filter",
+              label: (
+                <span className="console-tab-with-tier">
+                  {t("knowledgeNetwork.rowFilterTab")}
+                  <EditionBadge
+                    alwaysShow
+                    capability={CAPABILITIES.PERM_OBJECT_LEVEL}
+                    edition="enterprise"
                   />
                 </span>
               ),

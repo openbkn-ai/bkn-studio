@@ -14,4 +14,5 @@ export { createDefaultMetricCalculationFormula } from "./metric";
 export type * from "./network";
 export type * from "./object-type";
 export type * from "./property-authorization";
+export type * from "./row-filter-authorization";
 export type * from "./relation-type";

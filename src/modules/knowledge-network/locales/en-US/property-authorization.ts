@@ -170,4 +170,50 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationLoadFailed: "Could not load permission settings. Try again later.",
   propertyAuthorizationServicePending:
     "The property-grant management route is not open yet. The page and data contract are ready and will use real writes once the server route is enabled.",
+
+  rowFilterTab: "Row filter",
+  rowFilterSubjectTitle: "Subject",
+  rowFilterSubjectDescription: "Set the queryable instance scope for a user or role.",
+  rowFilterSelectUser: "Select a user for row filtering",
+  rowFilterSelectSubject: "Select a user or role",
+  rowFilterSelectSubjectDescription:
+    "Select a subject to inspect and configure its row-filter policy for this object type.",
+  rowFilterBoundary:
+    "Row filtering narrows instance results only after base query permission succeeds; it cannot grant object-type query access by itself.",
+  rowFilterPolicyTitle: "Row-filter policy",
+  rowFilterPolicyDescription: "Each user or role has at most one explicit policy per object type.",
+  rowFilterTemplateLabel: "Filter scope",
+  rowFilterInherit: "Inherit (no explicit policy)",
+  rowFilterTemplate: {
+    all_rows: "All rows",
+    self: "My rows",
+    department: "My department rows",
+    department_tree: "My department and descendant rows",
+    value_set: "Filter by field values",
+    no_rows: "No rows",
+  },
+  rowFilterFieldLabel: "Matching field",
+  rowFilterFieldPlaceholder: "Select a published property that supports exact matching",
+  rowFilterValuesLabel: "Allowed field values",
+  rowFilterValuesPlaceholder: "Separate values with commas or new lines",
+  rowFilterValueSetInvalid:
+    "Enter 1–100 distinct values matching the field type; boolean values must be true or false.",
+  rowFilterRiskHint: "This change may broaden or significantly narrow visible data and requires confirmation before saving.",
+  rowFilterRiskConfirm:
+    "Change the policy from “{{previous}}” to “{{next}}”? This may broaden or significantly narrow visible data.",
+  rowFilterSave: "Save policy",
+  rowFilterDiscardTitle: "Discard unsaved row-filter policy?",
+  rowFilterDiscardDescription: "The row-filter policy has not been saved and cannot be recovered after discarding.",
+  rowFilterDiscard: "Discard changes",
+  rowFilterRevisionConflict:
+    "The policy was updated by someone else. The latest version has been loaded; review and edit again.",
+  rowFilterExplainTitle: "Effective policy",
+  rowFilterExplainDescription:
+    "Explain shows only policy sources and a safe rule summary; it never returns filtered instances.",
+  rowFilterExplainDigestHelp: "The rule digest detects whether a policy changed during pagination.",
+  rowFilterRoleExplain:
+    "A role policy affects direct and indirect members. The final result also depends on each member's other roles and direct user policies.",
+  rowFilterDirectPolicy: "Direct policy",
+  rowFilterEffectiveRule: "Effective rule",
+  rowFilterDigest: "Rule digest",
 } as const;
