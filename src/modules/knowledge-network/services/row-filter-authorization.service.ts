@@ -18,6 +18,7 @@ import type {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const ROW_FILTER_POLICIES = "/safe/v1/admin/row-filter-policies";
+const ROW_FILTER_EXPLAIN = `${ROW_FILTER_POLICIES}/explain`;
 
 type BackendPolicy = {
   property_name?: string;
@@ -163,7 +164,7 @@ export async function explainRowFilter(
       snapshot,
     };
   }
-  const response = await http.post<BackendExplain>(ROW_FILTER_POLICIES, {
+  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, {
     object_type_ref: objectTypeRef,
     subject,
   });

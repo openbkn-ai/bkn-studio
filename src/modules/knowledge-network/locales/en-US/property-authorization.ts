@@ -46,9 +46,9 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationDescription:
     "Configure object access, property visibility, and Column Masking policies.",
   propertyAuthorizationTabBase: "Base permissions",
-  propertyAuthorizationTabProperty: "Property permissions",
+  propertyAuthorizationTabProperty: "Property access control",
   propertyAuthorizationBaseDescription:
-    "Base permissions determine whether a user can view or operate this object type. Property permissions can only further restrict accessible data; they cannot bypass base permissions.",
+    "Base permissions determine whether a user can view or operate this object type. Property access control can only further restrict accessible data; it cannot bypass base permissions.",
   propertyAuthorizationAddUser: "Add user",
   propertyAuthorizationGrantUserLabel: "User",
   propertyAuthorizationGrantOperationLabel: "Allowed operations",
@@ -91,19 +91,19 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationSubjectTitle: "Subject",
   propertyAuthorizationSubjectDescription:
     "Property grants support users and roles only, never departments or everyone.",
-  propertyAuthorizationSelectUser: "Select a user for property permissions",
+  propertyAuthorizationSelectUser: "Select a user for property access control",
   propertyAuthorizationSearchRole: "Search roles",
   propertyAuthorizationRoleEmpty: "No matching roles",
   propertyAuthorizationSelectSubject: "Select a user or role",
   propertyAuthorizationSelectSubjectDescription:
-    "Select a subject to inspect and batch-edit its property permissions.",
+    "Select a subject to inspect and batch-edit its property access control settings.",
   propertyAuthorizationMemberCount_one: "{{count}} member",
   propertyAuthorizationMemberCount_other: "{{count}} members",
   propertyAuthorizationExplicitCount: "{{count}} explicit settings",
   propertyAuthorizationPropertyCount_one: "{{count}} property",
   propertyAuthorizationPropertyCount_other: "{{count}} properties",
   propertyAuthorizationBoundaryHint:
-    "Property permissions can only narrow base permissions; they cannot grant object access by themselves.",
+    "Property access control can only narrow base permissions; it cannot grant object access by itself.",
   propertyAuthorizationRoleImpactCompact_one: "Affects {{count}} member",
   propertyAuthorizationRoleImpactCompact_other: "Affects {{count}} members",
   propertyAuthorizationRoleImpact_one:
@@ -155,17 +155,17 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationNoProperty: "No properties match these filters.",
   propertyAuthorizationUnsaved: "{{count}} unsaved changes",
   propertyAuthorizationSave: "Save changes ({{count}})",
-  propertyAuthorizationConfirmTitle: "Confirm property permission changes",
+  propertyAuthorizationConfirmTitle: "Confirm property access control changes",
   propertyAuthorizationConfirmSummary:
     "This changes {{total}} properties: {{raised}} raised, {{lowered}} lowered, and {{inherited}} restored to inheritance.",
   propertyAuthorizationFullRisk_one:
     "{{count}} property will expose its original value, which may broaden sensitive-data access.",
   propertyAuthorizationFullRisk_other:
     "{{count}} properties will expose original values, which may broaden sensitive-data access.",
-  propertyAuthorizationSaveSuccess: "Updated {{count}} property permissions.",
+  propertyAuthorizationSaveSuccess: "Updated access control settings for {{count}} properties.",
   propertyAuthorizationDiscardTitle: "Discard unsaved changes?",
   propertyAuthorizationDiscardDescription:
-    "{{count}} property permission changes have not been saved and cannot be recovered after discarding.",
+    "Access control changes for {{count}} properties have not been saved and cannot be recovered after discarding.",
   propertyAuthorizationDiscard: "Discard changes",
   propertyAuthorizationLoadFailed: "Could not load permission settings. Try again later.",
   propertyAuthorizationServicePending:

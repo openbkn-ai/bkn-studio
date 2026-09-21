@@ -48,9 +48,9 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationTitle: "{{name}} / 权限配置",
   propertyAuthorizationDescription: "配置对象类基础权限、属性可见范围和列掩码策略。",
   propertyAuthorizationTabBase: "基础权限",
-  propertyAuthorizationTabProperty: "属性权限",
+  propertyAuthorizationTabProperty: "属性访问控制",
   propertyAuthorizationBaseDescription:
-    "基础权限决定用户能否查看或操作此对象类；属性权限只能进一步限制可访问的数据，不能绕过基础权限。",
+    "基础权限决定用户能否查看或操作此对象类；属性访问控制只能进一步限制可访问的数据，不能绕过基础权限。",
   propertyAuthorizationAddUser: "新增授权用户",
   propertyAuthorizationGrantUserLabel: "授权用户",
   propertyAuthorizationGrantOperationLabel: "允许操作",
@@ -92,17 +92,18 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationGranteeEmpty: "当前对象类尚未授权给其他用户。",
   propertyAuthorizationSubjectTitle: "配置主体",
   propertyAuthorizationSubjectDescription: "属性授权仅支持用户和角色，不支持部门或全员。",
-  propertyAuthorizationSelectUser: "选择要配置属性权限的用户",
+  propertyAuthorizationSelectUser: "选择要配置属性访问控制的用户",
   propertyAuthorizationSearchRole: "搜索角色",
   propertyAuthorizationRoleEmpty: "没有匹配的角色",
   propertyAuthorizationSelectSubject: "请选择一个用户或角色",
-  propertyAuthorizationSelectSubjectDescription: "选择主体后，可查看并批量配置该主体的属性权限。",
+  propertyAuthorizationSelectSubjectDescription:
+    "选择主体后，可查看并批量配置该主体的属性访问控制。",
   propertyAuthorizationMemberCount_one: "{{count}} 名成员",
   propertyAuthorizationMemberCount_other: "{{count}} 名成员",
   propertyAuthorizationExplicitCount: "{{count}} 项显式配置",
   propertyAuthorizationPropertyCount_one: "{{count}} 个属性",
   propertyAuthorizationPropertyCount_other: "{{count}} 个属性",
-  propertyAuthorizationBoundaryHint: "属性权限只能收窄基础权限，不能单独授予对象访问能力。",
+  propertyAuthorizationBoundaryHint: "属性访问控制只能收窄基础权限，不能单独授予对象访问能力。",
   propertyAuthorizationRoleImpactCompact_one: "影响 {{count}} 名成员",
   propertyAuthorizationRoleImpactCompact_other: "影响 {{count}} 名成员",
   propertyAuthorizationRoleImpact_one:
@@ -152,15 +153,16 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationNoProperty: "没有符合条件的属性。",
   propertyAuthorizationUnsaved: "{{count}} 项未保存变更",
   propertyAuthorizationSave: "保存变更（{{count}}）",
-  propertyAuthorizationConfirmTitle: "确认属性权限变更",
+  propertyAuthorizationConfirmTitle: "确认属性访问控制变更",
   propertyAuthorizationConfirmSummary:
     "本次将修改 {{total}} 个属性：升档 {{raised}} 项、降档 {{lowered}} 项、恢复继承 {{inherited}} 项。",
   propertyAuthorizationFullRisk_one: "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
   propertyAuthorizationFullRisk_other:
     "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
-  propertyAuthorizationSaveSuccess: "已更新 {{count}} 个属性权限。",
+  propertyAuthorizationSaveSuccess: "已更新 {{count}} 个属性的访问控制设置。",
   propertyAuthorizationDiscardTitle: "放弃未保存的修改？",
-  propertyAuthorizationDiscardDescription: "当前有 {{count}} 项属性权限尚未保存，放弃后无法恢复。",
+  propertyAuthorizationDiscardDescription:
+    "当前有 {{count}} 个属性的访问控制设置尚未保存，放弃后无法恢复。",
   propertyAuthorizationDiscard: "放弃修改",
   propertyAuthorizationLoadFailed: "无法加载权限配置，请稍后重试。",
   propertyAuthorizationServicePending:
