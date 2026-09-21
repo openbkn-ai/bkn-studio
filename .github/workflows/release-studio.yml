@@ -11,9 +11,10 @@ name: release-studio
 # always points at the matching image. bkn-foundry's bkn-foundry.yaml references
 # the published chart by name + version.
 #
-# Versioning mirrors the bkn-foundry convention so image tag == chart version:
-# a `v*` tag IS the release version (leading "v" stripped); every other push
-# gets a prerelease version stamped with branch, commit date and short SHA.
+# `VERSION` is the stable release-line source of truth. A `v*` tag must equal
+# it or use it as a prerelease prefix, while a `release/*` branch must agree
+# exactly; every other push gets a prerelease version stamped with branch,
+# commit date and short SHA.
 #
 # Every branch push publishes, so a branch build is directly deployable without
 # merging or hand-dispatching. Only workflow_dispatch stays build-only by
@@ -40,12 +41,11 @@ on:
         type: boolean
         default: false
 
-# A branch that gets several pushes in a row only needs the newest package, so
-# supersede in-flight branch runs. main and tags never cancel — their packages
-# are referenced by version and must all exist.
+# Every published version is immutable. Do not cancel an in-flight branch run
+# after it has pushed one architecture but before the manifest and Chart exist.
 concurrency:
   group: release-studio-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_type == 'branch' && github.ref_name != 'main' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -83,16 +83,35 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE_VERSION="$(node -p "require('./package.json').version")"
+          BASE_VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "${BASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION must be a stable X.Y.Z version; received: ${BASE_VERSION@Q}" >&2
+            exit 1
+          fi
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           SHORT_SHA="$(git rev-parse --short=7 HEAD)"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # Tag push (e.g. v0.1.0) cuts a release: the tag IS the version.
-            VERSION="${GITHUB_REF_NAME#v}"
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "${TAG_VERSION}" != "${BASE_VERSION}" && ! "${TAG_VERSION}" =~ ^"${BASE_VERSION}"-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*$ ]]; then
+              echo "Tag version ${TAG_VERSION} must equal VERSION ${BASE_VERSION} or use it as a prerelease prefix" >&2
+              exit 1
+            fi
+            if [[ "${PACKAGE_VERSION}" != "${TAG_VERSION}" ]]; then
+              echo "package.json version ${PACKAGE_VERSION} must equal tag version ${TAG_VERSION}" >&2
+              exit 1
+            fi
+            VERSION="${TAG_VERSION}"
           elif [[ "${GITHUB_REF_NAME}" == release/* ]]; then
-            # Release branches use a stable, Helm-compatible version:
-            # release/0.1.2 -> 0.1.2-release.
+            # Release branches publish an immutable preparation build. GA and
+            # RC versions belong to tags, so later branch pushes never overwrite
+            # a deployable candidate.
             RELEASE_VERSION="${GITHUB_REF_NAME#release/}"
-            VERSION="${RELEASE_VERSION}-release"
+            if [[ "${RELEASE_VERSION}" != "${BASE_VERSION}" ]]; then
+              echo "Release branch version ${RELEASE_VERSION} must match VERSION ${BASE_VERSION}" >&2
+              exit 1
+            fi
+            COMMIT_DATE="$(TZ=Asia/Shanghai git show -s --format=%cd --date=format-local:%Y%m%d%H%M%S HEAD)"
+            VERSION="${BASE_VERSION}-release.${COMMIT_DATE}.sha${SHORT_SHA}"
           else
             SANITIZED="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^0-9a-zA-Z.-]+#-#g; s#-+#-#g; s#^[.-]+##; s#[.-]+$##')"
             # Embed the commit date (Asia/Shanghai, fixed-width 14 digits) so the version
