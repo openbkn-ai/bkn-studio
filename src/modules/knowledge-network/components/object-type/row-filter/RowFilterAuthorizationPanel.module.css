@@ -77,7 +77,7 @@
   text-align: center;
 }
 .emptyState > :first-child {
-  color: #2463eb;
+  color: var(--color-primary-600);
   font-size: 38px;
 }
 .emptyState h3 {
