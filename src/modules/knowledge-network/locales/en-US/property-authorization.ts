@@ -198,12 +198,14 @@ export const propertyAuthorizationPart = {
   rowFilterValuesPlaceholder: "Separate values with commas or new lines",
   rowFilterValueSetInvalid:
     "Enter 1–100 distinct values matching the field type; boolean values must be true or false.",
-  rowFilterRiskHint: "This change may broaden or significantly narrow visible data and requires confirmation before saving.",
+  rowFilterRiskHint:
+    "This change may broaden or significantly narrow visible data and requires confirmation before saving.",
   rowFilterRiskConfirm:
     "Change the policy from “{{previous}}” to “{{next}}”? This may broaden or significantly narrow visible data.",
   rowFilterSave: "Save policy",
   rowFilterDiscardTitle: "Discard unsaved row-filter policy?",
-  rowFilterDiscardDescription: "The row-filter policy has not been saved and cannot be recovered after discarding.",
+  rowFilterDiscardDescription:
+    "The row-filter policy has not been saved and cannot be recovered after discarding.",
   rowFilterDiscard: "Discard changes",
   rowFilterRevisionConflict:
     "The policy was updated by someone else. The latest version has been loaded; review and edit again.",

@@ -15,12 +15,7 @@ export type RowFilterSubject = {
 export type RowFilterValueType = "string" | "integer" | "boolean";
 
 export type RowFilterTemplate =
-  | "all_rows"
-  | "self"
-  | "department"
-  | "department_tree"
-  | "value_set"
-  | "no_rows";
+  "all_rows" | "self" | "department" | "department_tree" | "value_set" | "no_rows";
 
 export type RowFilterPolicy = {
   propertyName?: string;

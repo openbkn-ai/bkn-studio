@@ -1772,6 +1772,7 @@ export function ObjectTypeAuthorizationScene() {
                   <RowFilterAuthorizationPanel
                     discardNonce={rowFilterDiscardNonce}
                     objectTypeRef={objectTypeRef}
+                    onBeforeSubjectChange={confirmDiscard}
                     onDirtyChange={setRowFilterDirty}
                     roles={roles}
                     users={users}

@@ -191,7 +191,8 @@ export const propertyAuthorizationPart = {
   rowFilterValuesPlaceholder: "输入值，使用逗号或换行分隔",
   rowFilterValueSetInvalid: "请输入 1～100 个与字段类型一致的去重值；布尔值仅支持 true 或 false。",
   rowFilterRiskHint: "该变更可能扩大或显著收窄可见范围，保存时需要再次确认。",
-  rowFilterRiskConfirm: "将策略从“{{previous}}”修改为“{{next}}”。这可能扩大或显著收窄可见范围，是否继续？",
+  rowFilterRiskConfirm:
+    "将策略从“{{previous}}”修改为“{{next}}”。这可能扩大或显著收窄可见范围，是否继续？",
   rowFilterSave: "保存策略",
   rowFilterDiscardTitle: "放弃未保存的行过滤策略？",
   rowFilterDiscardDescription: "当前行过滤策略尚未保存，放弃后无法恢复。",
@@ -200,7 +201,8 @@ export const propertyAuthorizationPart = {
   rowFilterExplainTitle: "当前生效说明",
   rowFilterExplainDescription: "Explain 仅展示策略来源和安全的规则摘要，不返回任何被过滤实例。",
   rowFilterExplainDigestHelp: "规则指纹用于识别分页请求中策略是否发生变化。",
-  rowFilterRoleExplain: "角色策略会影响直接及间接成员；最终结果还会与每位成员的其他角色和用户直配策略共同计算。",
+  rowFilterRoleExplain:
+    "角色策略会影响直接及间接成员；最终结果还会与每位成员的其他角色和用户直配策略共同计算。",
   rowFilterDirectPolicy: "直接策略",
   rowFilterEffectiveRule: "最终规则",
   rowFilterDigest: "规则指纹",

@@ -151,7 +151,11 @@ export async function explainRowFilter(
     return {
       directPolicy: snapshot.policy ?? undefined,
       effectivePredicate: snapshot.policy
-        ? { kind: snapshot.policy.template, property: snapshot.policy.propertyName, values: snapshot.policy.values }
+        ? {
+            kind: snapshot.policy.template,
+            property: snapshot.policy.propertyName,
+            values: snapshot.policy.values,
+          }
         : { kind: "true" },
       effectiveRowFilterDigest: snapshot.policy ? `mock-${snapshot.revision}` : "mock-true",
       rolePolicies: [],

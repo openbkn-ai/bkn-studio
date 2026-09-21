@@ -5,7 +5,12 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { InfoCircleOutlined, SafetyCertificateOutlined, TeamOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  InfoCircleOutlined,
+  SafetyCertificateOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import { Alert, Avatar, Empty, Input, Segmented, Select, Spin, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +42,7 @@ type EditableTemplate = "inherit" | RowFilterTemplate;
 type Props = {
   discardNonce: number;
   objectTypeRef: string;
+  onBeforeSubjectChange: (next: () => void) => void;
   onDirtyChange: (dirty: boolean) => void;
   roles: AdminRole[];
   users: AdminUser[];
@@ -58,7 +64,10 @@ function valueInputType(type?: RowFilterValueType) {
   return "text";
 }
 
-function parseValues(raw: string, type?: RowFilterValueType): Array<string | number | boolean> | null {
+function parseValues(
+  raw: string,
+  type?: RowFilterValueType,
+): Array<string | number | boolean> | null {
   const tokens = raw
     .split(/[,\n]/)
     .map((token) => token.trim())
@@ -76,7 +85,10 @@ function parseValues(raw: string, type?: RowFilterValueType): Array<string | num
   return [...new Set(tokens)];
 }
 
-function policySummary(policy: RowFilterPolicy | null, t: (key: string, options?: object) => string) {
+function policySummary(
+  policy: RowFilterPolicy | null,
+  t: (key: string, options?: object) => string,
+) {
   if (!policy) return t("knowledgeNetwork.rowFilterInherit");
   const template = t(`knowledgeNetwork.rowFilterTemplate.${policy.template}`);
   if (!policy.propertyName) return template;
@@ -87,6 +99,7 @@ function policySummary(policy: RowFilterPolicy | null, t: (key: string, options?
 export function RowFilterAuthorizationPanel({
   discardNonce,
   objectTypeRef,
+  onBeforeSubjectChange,
   onDirtyChange,
   roles,
   users,
@@ -126,7 +139,7 @@ export function RowFilterAuthorizationPanel({
       : undefined;
   const policyIncomplete =
     template !== "inherit" &&
-    (TEMPLATES_REQUIRING_PROPERTY.has(template) && !propertyName ||
+    ((TEMPLATES_REQUIRING_PROPERTY.has(template) && !propertyName) ||
       (template === "value_set" && Boolean(valueError)));
   const highRisk = template === "inherit" || template === "all_rows" || template === "no_rows";
 
@@ -175,13 +188,17 @@ export function RowFilterAuthorizationPanel({
 
   const visibleRoles = useMemo(() => {
     const keyword = roleKeyword.trim().toLowerCase();
-    return roles.filter((role) => `${role.name} ${role.description}`.toLowerCase().includes(keyword));
+    return roles.filter((role) =>
+      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
+    );
   }, [roleKeyword, roles]);
 
   const changeSubjectType = (nextType: RowFilterSubjectType) => {
-    setSubjectType(nextType);
-    setSubjectId(undefined);
-    setRoleKeyword("");
+    onBeforeSubjectChange(() => {
+      setSubjectType(nextType);
+      setSubjectId(undefined);
+      setRoleKeyword("");
+    });
   };
 
   const save = () => {
@@ -238,8 +255,16 @@ export function RowFilterAuthorizationPanel({
           block
           onChange={(value) => changeSubjectType(value as RowFilterSubjectType)}
           options={[
-            { icon: <UserOutlined />, label: t("knowledgeNetwork.propertyAuthorizationUser"), value: "user" },
-            { icon: <TeamOutlined />, label: t("knowledgeNetwork.propertyAuthorizationRole"), value: "role" },
+            {
+              icon: <UserOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationUser"),
+              value: "user",
+            },
+            {
+              icon: <TeamOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationRole"),
+              value: "role",
+            },
           ]}
           value={subjectType}
         />
@@ -247,7 +272,7 @@ export function RowFilterAuthorizationPanel({
           <DirectoryUserPicker
             ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
             initialUsers={users}
-            onChange={setSubjectId}
+            onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))}
             presentation="inline"
             value={subjectId}
           />
@@ -264,11 +289,13 @@ export function RowFilterAuthorizationPanel({
                 <button
                   className={role.id === subjectId ? styles.subjectSelected : styles.subjectItem}
                   key={role.id}
-                  onClick={() => setSubjectId(role.id)}
+                  onClick={() => onBeforeSubjectChange(() => setSubjectId(role.id))}
                   type="button"
                 >
                   <Avatar icon={<TeamOutlined />} size={32} />
-                  <span><strong>{role.name || role.id}</strong></span>
+                  <span>
+                    <strong>{role.name || role.id}</strong>
+                  </span>
                 </button>
               ))}
               {!visibleRoles.length ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
@@ -285,7 +312,9 @@ export function RowFilterAuthorizationPanel({
             <p>{t("knowledgeNetwork.rowFilterSelectSubjectDescription")}</p>
           </div>
         ) : loading || !snapshot ? (
-          <div className={styles.loading}><Spin /></div>
+          <div className={styles.loading}>
+            <Spin />
+          </div>
         ) : (
           <>
             <Alert
@@ -300,13 +329,15 @@ export function RowFilterAuthorizationPanel({
                   <span>{t("knowledgeNetwork.rowFilterPolicyTitle")}</span>
                   <p>{t("knowledgeNetwork.rowFilterPolicyDescription")}</p>
                 </div>
-                <Tag color={snapshot.policy ? "blue" : "default"}>{policySummary(snapshot.policy, t)}</Tag>
+                <Tag color={snapshot.policy ? "blue" : "default"}>
+                  {policySummary(snapshot.policy, t)}
+                </Tag>
               </div>
               <label>{t("knowledgeNetwork.rowFilterTemplateLabel")}</label>
               <Select
                 onChange={(next) => {
-                  setTemplate(next as EditableTemplate);
-                  if (next === "inherit" || !TEMPLATES_REQUIRING_PROPERTY.has(next as RowFilterTemplate)) {
+                  setTemplate(next);
+                  if (next === "inherit" || !TEMPLATES_REQUIRING_PROPERTY.has(next)) {
                     setPropertyName(undefined);
                     setValuesText("");
                   }
@@ -324,8 +355,14 @@ export function RowFilterAuthorizationPanel({
                 <div className={styles.fieldBlock}>
                   <label>{t("knowledgeNetwork.rowFilterFieldLabel")}</label>
                   <Select
-                    onChange={(next) => { setPropertyName(next); setValuesText(""); }}
-                    options={snapshot.availableFields.map((field) => ({ label: `${field.name} · ${field.type}`, value: field.name }))}
+                    onChange={(next) => {
+                      setPropertyName(next);
+                      setValuesText("");
+                    }}
+                    options={snapshot.availableFields.map((field) => ({
+                      label: `${field.name} · ${field.type}`,
+                      value: field.name,
+                    }))}
                     placeholder={t("knowledgeNetwork.rowFilterFieldPlaceholder")}
                     value={propertyName}
                   />
@@ -346,31 +383,58 @@ export function RowFilterAuthorizationPanel({
                   {valueError ? <span className={styles.fieldError}>{valueError}</span> : null}
                 </div>
               ) : null}
-              {highRisk && dirty ? <Alert message={t("knowledgeNetwork.rowFilterRiskHint")} showIcon type="warning" /> : null}
+              {highRisk && dirty ? (
+                <Alert message={t("knowledgeNetwork.rowFilterRiskHint")} showIcon type="warning" />
+              ) : null}
               <div className={styles.actions}>
-                <AppButton disabled={!dirty || saving} onClick={() => resetDraft(snapshot)}>{t("common.cancel")}</AppButton>
-                <AppButton disabled={!dirty || policyIncomplete} loading={saving} onClick={save} type="primary">
+                <AppButton disabled={!dirty || saving} onClick={() => resetDraft(snapshot)}>
+                  {t("common.cancel")}
+                </AppButton>
+                <AppButton
+                  disabled={!dirty || policyIncomplete}
+                  loading={saving}
+                  onClick={save}
+                  type="primary"
+                >
                   {t("knowledgeNetwork.rowFilterSave")}
                 </AppButton>
               </div>
             </div>
             <div className={styles.explainCard}>
               <div className={styles.cardHead}>
-                <div><span>{t("knowledgeNetwork.rowFilterExplainTitle")}</span><p>{t("knowledgeNetwork.rowFilterExplainDescription")}</p></div>
-                <Tooltip title={t("knowledgeNetwork.rowFilterExplainDigestHelp")}><InfoCircleOutlined /></Tooltip>
+                <div>
+                  <span>{t("knowledgeNetwork.rowFilterExplainTitle")}</span>
+                  <p>{t("knowledgeNetwork.rowFilterExplainDescription")}</p>
+                </div>
+                <Tooltip title={t("knowledgeNetwork.rowFilterExplainDigestHelp")}>
+                  <InfoCircleOutlined />
+                </Tooltip>
               </div>
               {explain?.rolePolicyOnly ? (
                 <Alert message={t("knowledgeNetwork.rowFilterRoleExplain")} showIcon type="info" />
               ) : (
                 <>
-                  <div className={styles.explainLine}><span>{t("knowledgeNetwork.rowFilterDirectPolicy")}</span><strong>{policySummary(explain?.directPolicy ?? null, t)}</strong></div>
-                  <div className={styles.explainLine}><span>{t("knowledgeNetwork.rowFilterEffectiveRule")}</span><strong>{explain?.effectivePredicate?.kind ?? "—"}</strong></div>
-                  <div className={styles.explainLine}><span>{t("knowledgeNetwork.rowFilterDigest")}</span><code>{explain?.effectiveRowFilterDigest || "—"}</code></div>
+                  <div className={styles.explainLine}>
+                    <span>{t("knowledgeNetwork.rowFilterDirectPolicy")}</span>
+                    <strong>{policySummary(explain?.directPolicy ?? null, t)}</strong>
+                  </div>
+                  <div className={styles.explainLine}>
+                    <span>{t("knowledgeNetwork.rowFilterEffectiveRule")}</span>
+                    <strong>{explain?.effectivePredicate?.kind ?? "—"}</strong>
+                  </div>
+                  <div className={styles.explainLine}>
+                    <span>{t("knowledgeNetwork.rowFilterDigest")}</span>
+                    <code>{explain?.effectiveRowFilterDigest || "—"}</code>
+                  </div>
                 </>
               )}
               {explain?.rolePolicies.length ? (
                 <div className={styles.rolePolicies}>
-                  {explain.rolePolicies.map((source) => <Tag key={`${source.subject.type}:${source.subject.id}`}>{source.subject.id} · {policySummary(source.policy, t)}</Tag>)}
+                  {explain.rolePolicies.map((source) => (
+                    <Tag key={`${source.subject.type}:${source.subject.id}`}>
+                      {source.subject.id} · {policySummary(source.policy, t)}
+                    </Tag>
+                  ))}
                 </div>
               ) : null}
             </div>
