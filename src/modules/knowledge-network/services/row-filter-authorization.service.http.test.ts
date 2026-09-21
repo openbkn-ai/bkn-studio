@@ -28,9 +28,8 @@ describe("row-filter-authorization.service HTTP contract", () => {
     vi.stubEnv("VITE_USE_MOCK", "false");
     vi.doMock("@/framework/request/http", () => ({ http: { post } }));
 
-    const { explainRowFilter } = await import(
-      "@/modules/knowledge-network/services/row-filter-authorization.service"
-    );
+    const { explainRowFilter } =
+      await import("@/modules/knowledge-network/services/row-filter-authorization.service");
     await explainRowFilter({ id: "user-1", type: "user" }, "kn-1/order");
 
     expect(post).toHaveBeenCalledWith("/safe/v1/admin/row-filter-policies/explain", {
