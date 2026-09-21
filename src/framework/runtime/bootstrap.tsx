@@ -11,6 +11,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "@/app/App";
 import i18n from "@/app/locales/i18n";
 import { subscribeAuthBroadcast } from "@/framework/auth/token-store";
+import { freezeExtensions } from "@/framework/extension/registry";
 import {
   clearLegacyLocaleCookies,
   persistLocale,
@@ -43,6 +44,7 @@ function ensureAuthBroadcastListener() {
 }
 
 export function mountApp(container: Element, runtimeInput: RuntimeInput = {}) {
+  freezeExtensions();
   ensureAuthBroadcastListener();
   const runtimeMode = runtimeInput.mode ?? "standalone";
   if (runtimeMode === "standalone") {

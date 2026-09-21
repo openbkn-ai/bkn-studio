@@ -8,6 +8,8 @@
 import "@ant-design/v5-patch-for-react-19";
 import "@/app/locales/i18n";
 import "@/styles/global.css";
+// Extensions register here, after the translations exist and before the router is built.
+import "@/app/extensions/installed";
 import { startStandaloneApp } from "@/framework/runtime/bootstrap";
 
 startStandaloneApp();

@@ -127,7 +127,7 @@ describe("fetchEntitlement", () => {
     const entitlement = await (await importFetchEntitlement("true"))();
 
     expect(mockGet).not.toHaveBeenCalled();
-    expect(entitlement.capabilities).toEqual(["rbac_basic", "perm_fine_grained"]);
+    expect(entitlement.capabilities).toEqual(["rbac_basic", "perm_fine_grained", "graph_explorer"]);
     expect(entitlement.extensions).toContain("perm_object_level");
   });
 });

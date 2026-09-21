@@ -177,6 +177,23 @@ src/framework/runtime/
 - `config.ts` 只保留 runtime 合并逻辑
 - 不再在 `config.ts` 中长期手写所有模块权限数组
 
+### 5. 构建期扩展（企业版前端）
+
+付费能力的前端代码不在本仓，而在企业版仓（openbkn-ee 的 `studio/`）。企业版把本仓当 submodule 引入，构建出 `bkn-studio-ee` 镜像；社区镜像里物理上没有这些代码。
+
+```text
+src/framework/extension/registry.ts   注册表：路由、文案、能力门控
+src/app/extensions/installed.ts       唯一的注册点；社区构建为空
+```
+
+规则：
+
+- 依赖只能单向：企业版 import 本仓，本仓**绝不** import 企业版（lint 禁止 `@ee/*`）。企业版构建用打包别名把 `@/app/extensions/installed` 换成自己的注册模块，本仓不改一行
+- 注册在应用挂载前完成（`main.tsx` 在建路由前 import `installed`），挂载时冻结；之后再注册直接抛错，不会悄悄少一条路由
+- 每条扩展路由都由壳层包上能力守卫，显隐只看服务端 `capabilities[]`：证书档位不够时显示升级页（能力名、所需档位、授权门户与版本对比），镜像没装时说明要换镜像。能力要先登记进 `modules/subscription/capability-catalog.ts`，升级页的文案和档位从那里取
+- 扩展文案按 locale 合进 i18n 资源，不覆盖已有 key
+- 扩展用到的本仓内部接口（服务、框架件）改动时，要想到企业版构建会跟着断；企业版 CI 每天拿本仓 main 构建一次来发现漂移
+
 ## 标准模块结构
 
 推荐业务模块采用如下结构：

@@ -49,11 +49,6 @@ export const ConceptGroupDetailPage = lazyNamedExport(
   "ConceptGroupDetailPage",
 );
 
-export const GraphExplorerPage = lazyNamedExport(
-  () => import("@/modules/knowledge-network/pages/GraphExplorerPage"),
-  "GraphExplorerPage",
-);
-
 export const ObjectTypeCreatePage = lazyNamedExport(
   () => import("@/modules/knowledge-network/pages/ObjectTypeCreatePage"),
   "ObjectTypeCreatePage",

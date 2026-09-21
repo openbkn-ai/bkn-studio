@@ -16,7 +16,7 @@ import type { Edition } from "@/framework/entitlement/edition";
  * **产品自带、不在运行时去拉**——决策 7:客户常常完全离线,而离线激活流程正是为拉不到
  * license-server 的客户存在的,那些客户同样拉不到名字。
  *
- * 只收对客户在售的行。`planned`(sso / explorer / multi_tenant / version_mgmt /
+ * 只收对客户在售的行。`planned`(sso / multi_tenant / version_mgmt /
  * offline_bundle / bigdata_connect,以及上游 e8fdf2f 退回 planned 的 audit /
  * ops_dashboard / branding——EE 侧从未实现)一条都不进。`impact_graph` 与
  * `source_sync` 同样不进:登记表里是 active,但这一版产品里没有对应功能,列出来就是在卖
@@ -83,6 +83,14 @@ export const CAPABILITY_CATALOG: CapabilityCatalogEntry[] = [
     reportedByEndpoint: true,
     minEdition: "professional",
     sinceVersion: "0.1.3",
+  },
+  {
+    // 实现在企业版前端镜像,bkn-safe-ee 登记进装配表,端点报得出。
+    category: "semantic",
+    key: CAPABILITIES.GRAPH_EXPLORER,
+    reportedByEndpoint: true,
+    minEdition: "professional",
+    sinceVersion: "0.1.6",
   },
   {
     // 上游 e8fdf2f 把它降到社区档:技术 Trace 免费,对外能力对比里 CLI/SDK 的 trace

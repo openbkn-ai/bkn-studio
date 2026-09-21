@@ -36,6 +36,14 @@ export const CAPABILITIES = {
   BUSINESS_PROVENANCE: "business_provenance",
   /** 认证/高级数据源连接器(SQL Server 等商业库)。专业档起,由 Vega 实现。 */
   CONNECTOR_CERTIFIED: "connector_certified",
+  /**
+   * 图探索:实例级图探索页与独立看图页。专业档起。
+   *
+   * 代码不在本仓——它在企业版前端镜像里,经 `@/app/extensions/installed` 注册进来;社区
+   * 构建没有这个页面。bkn-safe-ee 把它登记进装配表,所以 `/api/safe/v1/capabilities`
+   * 报得出它,入口照常按 `capabilityState()` 判。
+   */
+  GRAPH_EXPLORER: "graph_explorer",
 } as const;
 
 export type CapabilityKey = (typeof CAPABILITIES)[keyof typeof CAPABILITIES];

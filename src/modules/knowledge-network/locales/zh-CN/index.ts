@@ -16,7 +16,6 @@ import { capabilityPart } from "./capability";
 import { propertyAuthorizationPart } from "./property-authorization";
 import { agentChatPart } from "./agent-chat";
 import { contextLoaderPanelPart } from "./context-loader-panel";
-import { graphExplorerPart } from "./graph-explorer";
 
 export const knowledgeNetworkZhCN = {
   knowledgeNetwork: {
@@ -31,6 +30,5 @@ export const knowledgeNetworkZhCN = {
     ...propertyAuthorizationPart,
     ...agentChatPart,
     ...contextLoaderPanelPart,
-    ...graphExplorerPart,
   },
 } as const;

@@ -45,6 +45,15 @@ export const subscriptionZhCN = {
         description: "认证/高级数据源连接器(如 SQL Server 等商业数据库);社区版仅开放基础连接器",
         name: "高级数据连接",
       },
+      graph_explorer: {
+        bullets: {
+          b1: "语义检索、条件、浏览或 Cypher 找到实例,沿关系逐跳展开",
+          b2: "两个实例之间的路径查找,多种布局",
+          b3: "探索历史、画布导出与可分享的链接",
+        },
+        description: "从具体实例出发,在画布上展开邻居、追踪路径;也能打开 Agent 给出的图谱链接",
+        name: "图探索",
+      },
       perm_fine_grained: {
         bullets: {
           b1: "查看、查询、修改、删除、执行分别授权",
