@@ -82,6 +82,47 @@ describe("extension registry", () => {
     expect(screen.queryByText("demo page")).not.toBeInTheDocument();
   });
 
+  // A catalogued capability the licence does not cover gets the upgrade page, not a bare
+  // refusal: what it is, the edition it needs, and the way to the licence portal.
+  it("offers the upgrade when the licence falls short of a catalogued capability", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "demo",
+      standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
+    });
+    renderStandalone(
+      "/demo",
+      entitlement({ edition: "community", extensions: ["graph_explorer"], state: "valid" }),
+    );
+
+    expect(screen.queryByText("demo page")).not.toBeInTheDocument();
+    expect(screen.getByText("图探索")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "升级到专业版" })).toHaveAttribute(
+      "href",
+      "https://license.openbkn.ai/",
+    );
+  });
+
+  it("opens a catalogued capability once the licence covers it", () => {
+    registerExtension({
+      capability: "graph_explorer",
+      id: "demo",
+      standaloneRoutes: [{ element: <p>demo page</p>, path: "/demo" }],
+    });
+    renderStandalone(
+      "/demo",
+      entitlement({
+        capabilities: ["graph_explorer"],
+        edition: "professional",
+        extensions: ["graph_explorer"],
+        licensed: true,
+        state: "valid",
+      }),
+    );
+
+    expect(screen.getByText("demo page")).toBeInTheDocument();
+  });
+
   it("keeps shell routes and standalone routes apart", () => {
     registerExtension({
       capability: "demo_capability",

@@ -10,7 +10,9 @@ import { createElement } from "react";
 import type { RouteObject } from "react-router-dom";
 
 import { RequireCapability } from "@/framework/entitlement/RequireCapability";
+import { RequireEdition } from "@/framework/entitlement/RequireEdition";
 import type { SupportedLocale } from "@/framework/runtime/types";
+import { capabilityMinEdition } from "@/modules/subscription/capability-catalog";
 
 /**
  * What another build adds to Studio without this repository knowing about it: routes, and
@@ -26,8 +28,9 @@ export type StudioExtension = {
   id: string;
   /**
    * Capability key that switches the routes on. The shell reads it from the server's
-   * capability list and does not judge it: every route is wrapped in RequireCapability, so
-   * a build that carries the code still renders nothing the licence does not cover.
+   * capability list and does not judge it: every route is wrapped in a capability guard, so
+   * a build that carries the code still renders nothing the licence does not cover, and a
+   * licence that falls short gets the upgrade page instead.
    */
   capability: string;
   /** Routes inside the app shell, beside the module routes. */
@@ -78,13 +81,27 @@ export function extensionStandaloneRoutes(): RouteObject[] {
   return installed.flatMap((extension) => gated(extension, extension.standaloneRoutes));
 }
 
+/**
+ * A capability the edition catalog knows gets the full upgrade page when the licence does not
+ * cover it: what the capability is, the edition it needs, and the way to the licence portal and
+ * the edition comparison. The page itself stays unmounted, so it sends nothing while locked. A
+ * capability the catalog does not know has no copy for that page and falls back to the plain
+ * guard.
+ */
 function gated(extension: StudioExtension, routes: RouteObject[] = []): RouteObject[] {
+  const { capability } = extension;
+  const minEdition = capabilityMinEdition(capability);
+
   return routes.map((route) => ({
     ...route,
-    element: createElement(RequireCapability, {
-      capability: extension.capability,
-      children: route.element,
-    }),
+    element: minEdition
+      ? createElement(RequireEdition, {
+          capability,
+          children: route.element,
+          minEdition,
+          mountLockedContent: false,
+        })
+      : createElement(RequireCapability, { capability, children: route.element }),
   }));
 }
 

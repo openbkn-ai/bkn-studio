@@ -27,7 +27,7 @@ const CAPABILITIES = "/safe/v1/capabilities";
  */
 type CapabilityEntry = string | { key?: string; licensed?: boolean };
 
-type CapabilitiesResponse = {
+export type CapabilitiesResponse = {
   capabilities?: CapabilityEntry[];
   edition?: string;
   extensions?: CapabilityEntry[];
@@ -125,8 +125,17 @@ export async function fetchEntitlement(): Promise<Entitlement> {
   const response = await http.get<CapabilitiesResponse>(CAPABILITIES, {
     skipErrorToast: true,
   });
-  const data = response.data;
 
+  return parseEntitlement(response.data);
+}
+
+/**
+ * 把 `/api/safe/v1/capabilities` 的响应读成快照,兜底规则见 `fetchEntitlement`。
+ *
+ * 单独导出给自己带 token 请求这个端点的页面用——比如企业版的独立看图页,它不在壳里、
+ * 没有 Provider。同一份响应在两处读成两样,徽标和那个页面就会对同一张证给出不同答案。
+ */
+export function parseEntitlement(data: CapabilitiesResponse): Entitlement {
   return {
     capabilities: toCapabilityKeys(data.capabilities),
     edition: parseEdition(data.edition),
