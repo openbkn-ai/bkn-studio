@@ -198,6 +198,7 @@ export const propertyAuthorizationPart = {
   rowFilterDiscardDescription: "当前行过滤策略尚未保存，放弃后无法恢复。",
   rowFilterDiscard: "放弃修改",
   rowFilterRevisionConflict: "策略已被其他人更新，已刷新为最新内容，请确认后重新编辑。",
+  rowFilterLoadFailed: "无法加载行过滤策略",
   rowFilterExplainTitle: "当前生效说明",
   rowFilterExplainDescription: "Explain 仅展示策略来源和安全的规则摘要，不返回任何被过滤实例。",
   rowFilterExplainDigestHelp: "规则指纹用于识别分页请求中策略是否发生变化。",

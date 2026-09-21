@@ -12,7 +12,8 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Alert, Avatar, Empty, Input, Segmented, Select, Spin, Tag, Tooltip } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { TFunction } from "i18next";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
@@ -56,7 +57,12 @@ const TEMPLATES_REQUIRING_PROPERTY = new Set<RowFilterTemplate>([
 ]);
 
 function policyKey(policy: RowFilterPolicy | null) {
-  return JSON.stringify(policy ?? null);
+  if (!policy) return "null";
+  return JSON.stringify({
+    propertyName: policy.propertyName ?? "",
+    template: policy.template,
+    values: policy.values ?? [],
+  });
 }
 
 function valueInputType(type?: RowFilterValueType) {
@@ -85,10 +91,7 @@ function parseValues(
   return [...new Set(tokens)];
 }
 
-function policySummary(
-  policy: RowFilterPolicy | null,
-  t: (key: string, options?: object) => string,
-) {
+function policySummary(policy: RowFilterPolicy | null, t: TFunction) {
   if (!policy) return t("knowledgeNetwork.rowFilterInherit");
   const template = t(`knowledgeNetwork.rowFilterTemplate.${policy.template}`);
   if (!policy.propertyName) return template;
@@ -112,10 +115,12 @@ export function RowFilterAuthorizationPanel({
   const [snapshot, setSnapshot] = useState<RowFilterSnapshot>();
   const [explain, setExplain] = useState<RowFilterExplain>();
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [template, setTemplate] = useState<EditableTemplate>("inherit");
   const [propertyName, setPropertyName] = useState<string>();
   const [valuesText, setValuesText] = useState("");
+  const loadRequestId = useRef(0);
 
   const subject = useMemo<RowFilterSubject | null>(
     () => (subjectId ? { id: subjectId, type: subjectType } : null),
@@ -152,25 +157,37 @@ export function RowFilterAuthorizationPanel({
 
   const load = useCallback(async () => {
     if (!subject) return;
+    const requestId = ++loadRequestId.current;
     setLoading(true);
+    setLoadError(undefined);
     try {
       const [nextSnapshot, nextExplain] = await Promise.all([
         getRowFilterSnapshot(subject, objectTypeRef),
         explainRowFilter(subject, objectTypeRef),
       ]);
+      if (requestId !== loadRequestId.current) return;
       setSnapshot(nextSnapshot);
       setExplain(nextExplain);
       resetDraft(nextSnapshot);
+    } catch (error) {
+      if (requestId !== loadRequestId.current) return;
+      setSnapshot(undefined);
+      setExplain(undefined);
+      setLoadError(extractRequestErrorMessage(error));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   }, [objectTypeRef, resetDraft, subject]);
 
   useEffect(() => {
     setSnapshot(undefined);
     setExplain(undefined);
+    setLoadError(undefined);
     resetDraft(undefined);
     if (subject) void load();
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [load, resetDraft, subject]);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
@@ -204,6 +221,7 @@ export function RowFilterAuthorizationPanel({
   const save = () => {
     if (!subject || !snapshot || !dirty || policyIncomplete) return;
     const submit = async () => {
+      const requestId = loadRequestId.current;
       setSaving(true);
       try {
         const nextSnapshot = await patchRowFilterPolicy({
@@ -213,9 +231,11 @@ export function RowFilterAuthorizationPanel({
           reason: "updated-from-object-type-authorization",
           subject,
         });
+        if (requestId !== loadRequestId.current) return;
         setSnapshot(nextSnapshot);
         resetDraft(nextSnapshot);
-        setExplain(await explainRowFilter(subject, objectTypeRef));
+        const nextExplain = await explainRowFilter(subject, objectTypeRef);
+        if (requestId === loadRequestId.current) setExplain(nextExplain);
       } catch (error) {
         if (isRequestConflict(error)) {
           void message.warning(t("knowledgeNetwork.rowFilterRevisionConflict"));
@@ -311,9 +331,23 @@ export function RowFilterAuthorizationPanel({
             <h3>{t("knowledgeNetwork.rowFilterSelectSubject")}</h3>
             <p>{t("knowledgeNetwork.rowFilterSelectSubjectDescription")}</p>
           </div>
-        ) : loading || !snapshot ? (
+        ) : loading ? (
           <div className={styles.loading}>
             <Spin />
+          </div>
+        ) : loadError ? (
+          <div className={styles.loadFailure}>
+            <Alert
+              action={<AppButton onClick={() => void load()}>{t("common.retry")}</AppButton>}
+              description={loadError}
+              message={t("knowledgeNetwork.rowFilterLoadFailed")}
+              showIcon
+              type="error"
+            />
+          </div>
+        ) : !snapshot ? (
+          <div className={styles.emptyState}>
+            <p>{t("knowledgeNetwork.rowFilterLoadFailed")}</p>
           </div>
         ) : (
           <>

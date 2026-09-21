@@ -209,6 +209,7 @@ export const propertyAuthorizationPart = {
   rowFilterDiscard: "Discard changes",
   rowFilterRevisionConflict:
     "The policy was updated by someone else. The latest version has been loaded; review and edit again.",
+  rowFilterLoadFailed: "Could not load the row-filter policy",
   rowFilterExplainTitle: "Effective policy",
   rowFilterExplainDescription:
     "Explain shows only policy sources and a safe rule summary; it never returns filtered instances.",

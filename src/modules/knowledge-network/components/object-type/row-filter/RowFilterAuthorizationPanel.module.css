@@ -76,6 +76,9 @@
   min-height: 440px;
   text-align: center;
 }
+.loadFailure {
+  margin: 20px;
+}
 .emptyState > :first-child {
   color: var(--color-primary-600);
   font-size: 38px;
