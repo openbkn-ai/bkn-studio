@@ -11,10 +11,14 @@ import { subscriptionEnUS } from "./en-US";
 import { subscriptionZhCN } from "./zh-CN";
 
 describe("subscription permission terminology", () => {
-  it("uses Column Masking in the object-rule capability matrix", () => {
-    expect(subscriptionZhCN.subscription.capabilities.perm_object_level.bullets.b3).toBe("列掩码");
-    expect(subscriptionEnUS.subscription.capabilities.perm_object_level.bullets.b3).toBe(
-      "Column Masking",
-    );
+  it("lists row filtering and property access control under enterprise object rules", () => {
+    expect(subscriptionZhCN.subscription.capabilities.perm_object_level.bullets).toEqual({
+      b1: "行过滤",
+      b2: "属性访问控制",
+    });
+    expect(subscriptionEnUS.subscription.capabilities.perm_object_level.bullets).toEqual({
+      b1: "Row filtering",
+      b2: "Property access control",
+    });
   });
 });

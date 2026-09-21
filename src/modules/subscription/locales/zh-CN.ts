@@ -11,9 +11,9 @@
  * 看到的同一份文案。两边不一致会让客户拿着证书对不上产品页。
  *
  * `bullets` 不在登记表里,是产品侧补的卖点:版本卡片与升级弹窗共用;`cardBullets` 有值时
- * 卡片改用它(见 `capabilityCardBullets`)。权限三项的条目
- * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 行列权限 / 列掩码 / 审计),
- * 矩阵改了这里要跟着改。
+ * 卡片改用它(见 `capabilityCardBullets`)。细粒度对象授权的条目
+ * 来自对外版本说明的「权限能力矩阵」(资源粒度 / 操作粒度 / 审计),矩阵改了这里要跟着改;
+ * 企业对象规则只列两项企业版能力:行过滤、属性访问控制。
  */
 export const subscriptionZhCN = {
   subscription: {
@@ -64,10 +64,8 @@ export const subscriptionZhCN = {
       },
       perm_object_level: {
         bullets: {
-          b1: "对象类行权限",
-          b2: "对象类列权限,属性分四档",
-          b3: "列掩码",
-          b4: "行列权限变更审计",
+          b1: "行过滤",
+          b2: "属性访问控制",
         },
         description: "企业对象规则兼容层与属性级权限",
         name: "企业对象规则",
