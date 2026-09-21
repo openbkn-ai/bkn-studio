@@ -237,6 +237,7 @@ export function RowFilterAuthorizationPanel({
         const nextExplain = await explainRowFilter(subject, objectTypeRef);
         if (requestId === loadRequestId.current) setExplain(nextExplain);
       } catch (error) {
+        if (requestId !== loadRequestId.current) return;
         if (isRequestConflict(error)) {
           void message.warning(t("knowledgeNetwork.rowFilterRevisionConflict"));
           await load();
