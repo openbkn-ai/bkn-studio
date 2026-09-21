@@ -41,12 +41,11 @@ on:
         type: boolean
         default: false
 
-# A branch that gets several pushes in a row only needs the newest package, so
-# supersede in-flight branch runs. main and tags never cancel — their packages
-# are referenced by version and must all exist.
+# Every published version is immutable. Do not cancel an in-flight branch run
+# after it has pushed one architecture but before the manifest and Chart exist.
 concurrency:
   group: release-studio-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref_type == 'branch' && github.ref_name != 'main' }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -84,7 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE_VERSION="$(tr -d '\r\n' < VERSION)"
+          BASE_VERSION="$(tr -d '[:space:]' < VERSION)"
           if [[ ! "${BASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "VERSION must be a stable X.Y.Z version; received: ${BASE_VERSION@Q}" >&2
             exit 1

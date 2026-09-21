@@ -22,12 +22,12 @@ describe("the package version contract", () => {
     }
   });
 
-  const check = (packageVersion) => {
+  const check = (packageVersion, versionFile = "0.1.5\n") => {
     const root = mkdtempSync(join(tmpdir(), "bkn-studio-version-"));
     roots.push(root);
     mkdirSync(join(root, "scripts"));
     cpSync(checker, join(root, "scripts/check-version.mjs"));
-    writeFileSync(join(root, "VERSION"), "0.1.5\n");
+    writeFileSync(join(root, "VERSION"), versionFile);
     writeFileSync(join(root, "package.json"), JSON.stringify({ version: packageVersion }));
     return spawnSync(process.execPath, [join(root, "scripts/check-version.mjs")], {
       encoding: "utf8",
@@ -42,5 +42,15 @@ describe("the package version contract", () => {
     const result = check(version);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("must equal VERSION");
+  });
+
+  it.each(["0.1", "0.1.5-rc.1", "v0.1.5"])("rejects invalid VERSION %s", (version) => {
+    const result = check("0.1.5", `${version}\n`);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("VERSION must be a stable X.Y.Z version");
+  });
+
+  it("accepts surrounding whitespace in VERSION consistently with CI", () => {
+    expect(check("0.1.5", " \t0.1.5 \n").status).toBe(0);
   });
 });

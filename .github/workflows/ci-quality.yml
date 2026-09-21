@@ -48,6 +48,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Version consistency
+        run: node scripts/check-version.mjs
+
       - name: License header check
         run: node scripts/check-license-headers.mjs
 
