@@ -46,9 +46,9 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationDescription:
     "Configure object access, property visibility, and Column Masking policies.",
   propertyAuthorizationTabBase: "Base permissions",
-  propertyAuthorizationTabProperty: "Property permissions",
+  propertyAuthorizationTabProperty: "Property access control",
   propertyAuthorizationBaseDescription:
-    "Base permissions determine whether a user can view or operate this object type. Property permissions can only further restrict accessible data; they cannot bypass base permissions.",
+    "Base permissions determine whether a user can view or operate this object type. Property access control can only further restrict accessible data; it cannot bypass base permissions.",
   propertyAuthorizationAddUser: "Add user",
   propertyAuthorizationGrantUserLabel: "User",
   propertyAuthorizationGrantOperationLabel: "Allowed operations",
@@ -91,19 +91,19 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationSubjectTitle: "Subject",
   propertyAuthorizationSubjectDescription:
     "Property grants support users and roles only, never departments or everyone.",
-  propertyAuthorizationSelectUser: "Select a user for property permissions",
+  propertyAuthorizationSelectUser: "Select a user for property access control",
   propertyAuthorizationSearchRole: "Search roles",
   propertyAuthorizationRoleEmpty: "No matching roles",
   propertyAuthorizationSelectSubject: "Select a user or role",
   propertyAuthorizationSelectSubjectDescription:
-    "Select a subject to inspect and batch-edit its property permissions.",
+    "Select a subject to inspect and batch-edit its property access control settings.",
   propertyAuthorizationMemberCount_one: "{{count}} member",
   propertyAuthorizationMemberCount_other: "{{count}} members",
   propertyAuthorizationExplicitCount: "{{count}} explicit settings",
   propertyAuthorizationPropertyCount_one: "{{count}} property",
   propertyAuthorizationPropertyCount_other: "{{count}} properties",
   propertyAuthorizationBoundaryHint:
-    "Property permissions can only narrow base permissions; they cannot grant object access by themselves.",
+    "Property access control can only narrow base permissions; it cannot grant object access by itself.",
   propertyAuthorizationRoleImpactCompact_one: "Affects {{count}} member",
   propertyAuthorizationRoleImpactCompact_other: "Affects {{count}} members",
   propertyAuthorizationRoleImpact_one:
@@ -155,19 +155,88 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationNoProperty: "No properties match these filters.",
   propertyAuthorizationUnsaved: "{{count}} unsaved changes",
   propertyAuthorizationSave: "Save changes ({{count}})",
-  propertyAuthorizationConfirmTitle: "Confirm property permission changes",
+  propertyAuthorizationConfirmTitle: "Confirm property access control changes",
   propertyAuthorizationConfirmSummary:
     "This changes {{total}} properties: {{raised}} raised, {{lowered}} lowered, and {{inherited}} restored to inheritance.",
   propertyAuthorizationFullRisk_one:
     "{{count}} property will expose its original value, which may broaden sensitive-data access.",
   propertyAuthorizationFullRisk_other:
     "{{count}} properties will expose original values, which may broaden sensitive-data access.",
-  propertyAuthorizationSaveSuccess: "Updated {{count}} property permissions.",
+  propertyAuthorizationSaveSuccess_one: "Updated access control settings for {{count}} property.",
+  propertyAuthorizationSaveSuccess_other:
+    "Updated access control settings for {{count}} properties.",
   propertyAuthorizationDiscardTitle: "Discard unsaved changes?",
-  propertyAuthorizationDiscardDescription:
-    "{{count}} property permission changes have not been saved and cannot be recovered after discarding.",
+  propertyAuthorizationDiscardDescription_one:
+    "Access control changes for {{count}} property have not been saved and cannot be recovered after discarding.",
+  propertyAuthorizationDiscardDescription_other:
+    "Access control changes for {{count}} properties have not been saved and cannot be recovered after discarding.",
   propertyAuthorizationDiscard: "Discard changes",
   propertyAuthorizationLoadFailed: "Could not load permission settings. Try again later.",
   propertyAuthorizationServicePending:
     "The property-grant management route is not open yet. The page and data contract are ready and will use real writes once the server route is enabled.",
+
+  rowFilterTab: "Row filter",
+  rowFilterSubjectTitle: "Subject",
+  rowFilterSubjectDescription: "Set the queryable instance scope for a user or role.",
+  rowFilterSelectUser: "Select a user for row filtering",
+  rowFilterSelectSubject: "Select a user or role",
+  rowFilterSelectSubjectDescription:
+    "Select a subject to inspect and configure its row-filter policy for this object type.",
+  rowFilterBoundary:
+    "Row filtering narrows instance results only after base query permission succeeds; it cannot grant object-type query access by itself.",
+  rowFilterPolicyTitle: "Row-filter policy",
+  rowFilterPolicyDescription: "Each user or role has at most one explicit policy per object type.",
+  rowFilterInheritStateTitle: "No explicit policy",
+  rowFilterInheritStateDescription:
+    "No additional row filtering applies; base permissions and attribute access control still apply.",
+  rowFilterConfigure: "Configure row-filter policy",
+  rowFilterEffectiveSummaryTitle: "Current effective scope",
+  rowFilterInheritEffectiveSummary:
+    "No row filter is added; data is read within the existing scope after base query permission succeeds.",
+  rowFilterResultTitle: "Current queryable scope",
+  rowFilterInherit: "Inherit (no explicit policy)",
+  rowFilterFieldPlaceholder: "Select a published property that supports exact matching",
+  rowFilterConditionRelation: "Condition relation",
+  rowFilterConditionGroupAnd: "AND",
+  rowFilterConditionGroupOr: "OR",
+  rowFilterAddCondition: "Add condition",
+  rowFilterRemoveCondition: "Remove condition",
+  rowFilterConditionOperator: {
+    between: "is between",
+    gt: "is greater than",
+    gte: "is greater than or equal to",
+    in: "is any of",
+    lt: "is less than",
+    lte: "is less than or equal to",
+    not_in: "is none of",
+  },
+  rowFilterValuesLabel: "Allowed field values",
+  rowFilterValuesPlaceholder: "Separate values with English or Chinese commas, or new lines",
+  rowFilterConditionValueInvalid: "The value format is invalid",
+  rowFilterValuePlaceholder: "Enter a value",
+  rowFilterRangeStartPlaceholder: "Minimum",
+  rowFilterRangeEndPlaceholder: "Maximum",
+  rowFilterRangeSeparator: "to",
+  rowFilterSave: "Save",
+  rowFilterDiscardTitle: "Discard unsaved row-filter policy?",
+  rowFilterDiscardDescription:
+    "The row-filter policy has not been saved and cannot be recovered after discarding.",
+  rowFilterDiscard: "Discard changes",
+  rowFilterRevisionConflict:
+    "The policy was updated by someone else. The latest version has been loaded; review and edit again.",
+  rowFilterLoadFailed: "Could not load the row-filter policy",
+  rowFilterExplainTitle: "Effective policy",
+  rowFilterRoleExplain:
+    "A role policy affects direct and indirect members. The final result also depends on each member's other roles and direct user policies.",
+  rowFilterDirectPolicy: "Direct policy",
+  rowFilterRolePolicies: "Role policies",
+  rowFilterNoRolePolicies: "No role policy applies",
+  rowFilterSourcesTitle: "Rule sources",
+  rowFilterNoRuleSources: "No row-filter rule is configured.",
+  rowFilterSourceCurrentUser: "Current user setting",
+  rowFilterSourceCurrentRole: "Current role setting",
+  rowFilterSourceRole: "{{name}} role",
+  rowFilterEffectBasePermission: "No row filter is added; base query permissions still apply",
+  rowFilterEffectFixedConditions: "Only data matching the fixed conditions below is queryable",
+  rowFilterEffectOneOfSources: "Data matching any of the following rules is queryable",
 } as const;

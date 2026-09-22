@@ -955,7 +955,7 @@ describe("ObjectTypeAuthorizationScene", () => {
     const propertyTab = await screen.findByText(
       "knowledgeNetwork.propertyAuthorizationTabProperty",
     );
-    expect(screen.getByTestId("edition-badge-enterprise")).not.toBeNull();
+    expect(within(propertyTab).getByTestId("edition-badge-enterprise")).not.toBeNull();
     fireEvent.click(propertyTab);
 
     expect((await screen.findAllByText("common.entitlement.unlockTitle")).length).toBeGreaterThan(
