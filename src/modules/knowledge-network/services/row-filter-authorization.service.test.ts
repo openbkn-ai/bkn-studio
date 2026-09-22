@@ -14,7 +14,7 @@ import {
 } from "@/modules/knowledge-network/services/row-filter-authorization.service";
 
 describe("row-filter-authorization.service mock", () => {
-  it("writes an explicit value-set policy and restores inheritance", async () => {
+  it("writes fixed conditions and restores no extra row filter", async () => {
     const subject = { id: "issue-736-user", type: "user" as const };
     const objectTypeRef = "kn-736/order";
     const initial = await getRowFilterSnapshot(subject, objectTypeRef);
@@ -23,19 +23,21 @@ describe("row-filter-authorization.service mock", () => {
     const saved = await patchRowFilterPolicy({
       expectedRevision: initial.revision,
       objectTypeRef,
-      policy: { propertyName: "region", template: "value_set", values: ["east", "south"] },
+      policy: {
+        relation: "and",
+        conditions: [{ operator: "in", propertyName: "region", values: ["east", "south"] }],
+      },
       reason: "test",
       subject,
     });
     expect(saved.policy).toEqual({
-      propertyName: "region",
-      template: "value_set",
-      values: ["east", "south"],
+      relation: "and",
+      conditions: [{ operator: "in", propertyName: "region", values: ["east", "south"] }],
     });
     expect(saved.revision).not.toBeNull();
 
     const explained = await explainRowFilter(subject, objectTypeRef);
-    expect(explained.directPolicy?.template).toBe("value_set");
+    expect(explained.directPolicy?.conditions[0]?.propertyName).toBe("region");
     expect(explained.effectiveRowFilterDigest).toContain("mock-");
 
     const restored = await patchRowFilterPolicy({

@@ -2,17 +2,17 @@
  * Copyright (c) 2026 OpenBKN
  * SPDX-License-Identifier: LicenseRef-OpenBKN
  * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
- * Conditions. See LICENSE for the full text.
+ * Conditions. See LICENSE for details.
  */
 
 import { http } from "@/framework/request/http";
 import type {
+  RowFilterCondition,
   RowFilterExplain,
   RowFilterPatch,
   RowFilterPolicy,
   RowFilterSnapshot,
   RowFilterSubject,
-  RowFilterTemplate,
   RowFilterValueType,
 } from "@/modules/knowledge-network/types/row-filter-authorization";
 
@@ -20,21 +20,19 @@ const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 const ROW_FILTER_POLICIES = "/safe/v1/admin/row-filter-policies";
 const ROW_FILTER_EXPLAIN = `${ROW_FILTER_POLICIES}/explain`;
 
-type BackendPolicy = {
-  property_name?: string;
-  template: RowFilterTemplate;
-  values?: Array<string | number | boolean>;
+type BackendCondition = {
+  operator: RowFilterCondition["operator"];
+  property_name: string;
+  values: Array<string | number | boolean>;
 };
-
+type BackendPolicy = { conditions: BackendCondition[]; relation: "and" | "or" };
 type BackendSnapshot = {
-  available_fields?: Array<{ name: string; type: RowFilterValueType }>;
-  available_templates?: RowFilterTemplate[];
+  available_fields?: Array<{ display_name?: string; name: string; type: RowFilterValueType }>;
   object_type_ref: string;
   policy?: BackendPolicy | null;
   revision?: string | null;
   subject: RowFilterSubject;
 };
-
 type BackendExplain = {
   direct_policy?: BackendPolicy;
   effective_predicate?: RowFilterExplain["effectivePredicate"];
@@ -53,14 +51,35 @@ function snapshotKey(subject: RowFilterSubject, objectTypeRef: string) {
 
 function mapPolicy(policy?: BackendPolicy | null): RowFilterPolicy | null {
   return policy
-    ? { propertyName: policy.property_name, template: policy.template, values: policy.values }
+    ? {
+        relation: policy.relation,
+        conditions: policy.conditions.map((condition) => ({
+          operator: condition.operator,
+          propertyName: condition.property_name,
+          values: condition.values,
+        })),
+      }
     : null;
+}
+
+function toBackendPolicy(policy: RowFilterPolicy): BackendPolicy {
+  return {
+    relation: policy.relation,
+    conditions: policy.conditions.map((condition) => ({
+      operator: condition.operator,
+      property_name: condition.propertyName,
+      values: condition.values,
+    })),
+  };
 }
 
 function mapSnapshot(snapshot: BackendSnapshot): RowFilterSnapshot {
   return {
-    availableFields: snapshot.available_fields ?? [],
-    availableTemplates: snapshot.available_templates ?? [],
+    availableFields: (snapshot.available_fields ?? []).map((field) => ({
+      displayName: field.display_name,
+      name: field.name,
+      type: field.type,
+    })),
     objectTypeRef: snapshot.object_type_ref,
     policy: mapPolicy(snapshot.policy),
     revision: snapshot.revision ?? null,
@@ -72,19 +91,11 @@ function mockSnapshot(subject: RowFilterSubject, objectTypeRef: string): RowFilt
   const current = mockPolicies.get(snapshotKey(subject, objectTypeRef));
   return {
     availableFields: [
-      { name: "owner_user_id", type: "string" },
-      { name: "department_id", type: "string" },
-      { name: "region", type: "string" },
-      { name: "priority", type: "integer" },
-      { name: "is_active", type: "boolean" },
-    ],
-    availableTemplates: [
-      "all_rows",
-      "self",
-      "department",
-      "department_tree",
-      "value_set",
-      "no_rows",
+      { displayName: "Salesperson", name: "salesperson", type: "string" },
+      { displayName: "Owning department name", name: "department_name", type: "string" },
+      { displayName: "Sales region", name: "region", type: "string" },
+      { displayName: "Priority", name: "priority", type: "integer" },
+      { displayName: "Active", name: "is_active", type: "boolean" },
     ],
     objectTypeRef,
     policy: current?.policy ?? null,
@@ -93,19 +104,22 @@ function mockSnapshot(subject: RowFilterSubject, objectTypeRef: string): RowFilt
   };
 }
 
-export async function getRowFilterSnapshot(
-  subject: RowFilterSubject,
-  objectTypeRef: string,
-): Promise<RowFilterSnapshot> {
-  if (useMock) {
-    return mockSnapshot(subject, objectTypeRef);
-  }
+function mockPredicate(policy: RowFilterPolicy | null) {
+  if (!policy) return { kind: "true" };
+  return {
+    kind: policy.relation,
+    predicates: policy.conditions.map((condition) => ({
+      kind: condition.operator,
+      property: condition.propertyName,
+      values: condition.values,
+    })),
+  };
+}
+
+export async function getRowFilterSnapshot(subject: RowFilterSubject, objectTypeRef: string): Promise<RowFilterSnapshot> {
+  if (useMock) return mockSnapshot(subject, objectTypeRef);
   const response = await http.get<BackendSnapshot>(ROW_FILTER_POLICIES, {
-    params: {
-      object_type_ref: objectTypeRef,
-      subject_id: subject.id,
-      subject_type: subject.type,
-    },
+    params: { object_type_ref: objectTypeRef, subject_id: subject.id, subject_type: subject.type },
   });
   return mapSnapshot(response.data);
 }
@@ -130,44 +144,26 @@ export async function patchRowFilterPolicy(patch: RowFilterPatch): Promise<RowFi
   const response = await http.patch<BackendSnapshot>(ROW_FILTER_POLICIES, {
     expected_revision: patch.expectedRevision,
     object_type_ref: patch.objectTypeRef,
-    policy: patch.policy
-      ? {
-          property_name: patch.policy.propertyName,
-          template: patch.policy.template,
-          values: patch.policy.values,
-        }
-      : null,
+    policy: patch.policy ? toBackendPolicy(patch.policy) : null,
     reason: patch.reason,
     subject: patch.subject,
   });
   return mapSnapshot(response.data);
 }
 
-export async function explainRowFilter(
-  subject: RowFilterSubject,
-  objectTypeRef: string,
-): Promise<RowFilterExplain> {
+export async function explainRowFilter(subject: RowFilterSubject, objectTypeRef: string): Promise<RowFilterExplain> {
   if (useMock) {
     const snapshot = mockSnapshot(subject, objectTypeRef);
     return {
       directPolicy: snapshot.policy ?? undefined,
-      effectivePredicate: snapshot.policy
-        ? {
-            kind: snapshot.policy.template,
-            property: snapshot.policy.propertyName,
-            values: snapshot.policy.values,
-          }
-        : { kind: "true" },
+      effectivePredicate: mockPredicate(snapshot.policy),
       effectiveRowFilterDigest: snapshot.policy ? `mock-${snapshot.revision}` : "mock-true",
       rolePolicies: [],
       rolePolicyOnly: subject.type === "role",
       snapshot,
     };
   }
-  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, {
-    object_type_ref: objectTypeRef,
-    subject,
-  });
+  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, { object_type_ref: objectTypeRef, subject });
   return {
     directPolicy: mapPolicy(response.data.direct_policy) ?? undefined,
     effectivePredicate: response.data.effective_predicate,

@@ -1783,6 +1783,13 @@ export function ObjectTypeAuthorizationScene() {
               label: (
                 <span className="console-tab-with-tier">
                   {t("knowledgeNetwork.rowFilterTab")}
+                  <Tooltip title={t("knowledgeNetwork.rowFilterBoundary")}>
+                    <InfoCircleOutlined
+                      aria-label={t("knowledgeNetwork.rowFilterBoundary")}
+                      className={styles.columnHelpIcon}
+                      tabIndex={0}
+                    />
+                  </Tooltip>
                   <EditionBadge
                     alwaysShow
                     capability={CAPABILITIES.PERM_OBJECT_LEVEL}
@@ -1801,6 +1808,13 @@ export function ObjectTypeAuthorizationScene() {
               label: (
                 <span className="console-tab-with-tier">
                   {t("knowledgeNetwork.propertyAuthorizationTabProperty")}
+                  <Tooltip title={t("knowledgeNetwork.propertyAuthorizationBoundaryHint")}>
+                    <InfoCircleOutlined
+                      aria-label={t("knowledgeNetwork.propertyAuthorizationBoundaryHint")}
+                      className={styles.columnHelpIcon}
+                      tabIndex={0}
+                    />
+                  </Tooltip>
                   <EditionBadge
                     alwaysShow
                     capability={CAPABILITIES.PERM_OBJECT_LEVEL}

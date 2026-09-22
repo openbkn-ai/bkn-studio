@@ -90,9 +90,6 @@
 .emptyState p {
   margin: 0;
 }
-.boundary {
-  margin-bottom: 0;
-}
 .policyCard,
 .explainCard {
   border: 1px solid var(--color-border-secondary);
@@ -104,8 +101,68 @@
 .policyCard {
   background: var(--color-bg-layout);
 }
+.inheritCard {
+  gap: 18px;
+}
+.inheritState {
+  align-items: flex-start;
+  background: var(--color-bg-raised);
+  border: 1px dashed var(--color-border-secondary);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+.inheritState strong {
+  color: var(--color-text-primary);
+}
+.inheritState p {
+  color: var(--color-text-secondary);
+  line-height: 20px;
+  margin: 0;
+}
 .explainCard {
   background: var(--color-bg-raised);
+}
+.effectiveResult {
+  background: var(--color-primary-100);
+  border-left: 3px solid var(--color-primary-500);
+  padding: 12px 14px;
+}
+.effectiveResult strong {
+  color: var(--color-text-primary);
+}
+.sourceSection {
+  border-top: 1px solid var(--color-border-secondary);
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+.sourceSection > span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.sourceList {
+  display: grid;
+  gap: 8px;
+}
+.sourceItem {
+  align-items: baseline;
+  background: var(--color-bg-layout);
+  border-radius: 6px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(140px, 0.34fr) minmax(0, 1fr);
+  padding: 10px 12px;
+}
+.sourceItem strong {
+  color: var(--color-text-primary);
+}
+.sourceItem span,
+.sourceEmpty {
+  color: var(--color-text-secondary);
+  line-height: 20px;
+  margin: 0;
 }
 .cardHead {
   align-items: flex-start;
@@ -117,6 +174,16 @@
   color: var(--color-text-primary);
   font-weight: 600;
 }
+.cardTitleWithHelp {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+.cardTitleWithHelp :global(.anticon) {
+  color: var(--color-text-tertiary);
+  cursor: help;
+  font-weight: normal;
+}
 .cardHead p {
   color: var(--color-text-secondary);
   line-height: 20px;
@@ -126,13 +193,82 @@
   color: var(--color-text-primary);
   font-weight: 600;
 }
-.fieldBlock {
-  display: grid;
-  gap: 8px;
-}
 .fieldError {
   color: var(--color-error-text);
   font-size: 12px;
+}
+.noConditions {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  margin: 0;
+}
+.conditionsBlock,
+.conditionsList,
+.conditionItem {
+  display: grid;
+  gap: 10px;
+}
+.conditionsHead {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.conditionsGroup {
+  background: var(--color-interface-panel-bg);
+  border-left: 2px solid var(--color-primary-border);
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+.emptyConditions {
+  align-items: center;
+  border: 1px dashed var(--color-border-secondary);
+  display: flex;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 10px 12px;
+}
+.conditionRelation {
+  align-items: center;
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 2px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 0 8px;
+}
+.conditionRelation span {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.conditionRelation :global(.ant-select) {
+  width: 88px;
+}
+.conditionRow {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(180px, 0.9fr) 140px minmax(220px, 1.1fr) auto;
+}
+.conditionOperatorSelect {
+  width: 100%;
+}
+.conditionValueRange {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.conditionValueRange > span {
+  color: var(--color-text-secondary);
+}
+.conditionError {
+  color: var(--color-error-text);
+  font-size: 12px;
+  grid-column: 1 / -1;
 }
 .actions {
   display: flex;
@@ -154,11 +290,6 @@
 .explainLine code {
   overflow-wrap: anywhere;
 }
-.rolePolicies {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 @media (max-width: 800px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -166,5 +297,19 @@
   .subjectRail {
     border-bottom: 1px solid var(--color-border-secondary);
     border-right: 0;
+  }
+  .conditionRow {
+    grid-template-columns: 1fr auto;
+  }
+  .sourceItem {
+    gap: 4px;
+    grid-template-columns: 1fr;
+  }
+  .conditionRow > :nth-child(2),
+  .conditionRow > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  .conditionOperatorSelect {
+    width: 140px;
   }
 }
