@@ -146,4 +146,40 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
     );
     expect(getKnowledgeNetworkObjectTypeDetail).not.toHaveBeenCalled();
   });
+
+  it("renders mapping modes and concept groups from bounded graph and visible details", async () => {
+    getKnowledgeNetworkOverviewGraph.mockResolvedValue({
+      graph: {
+        edges: [
+          {
+            id: "relation-1",
+            mappingMode: "resource",
+            name: "places",
+            sourceId: "object-customer",
+            targetId: "object-order",
+          },
+        ],
+        nodes: [
+          { id: "object-customer", indexed: true, name: "Customer" },
+          { id: "object-order", indexed: false, name: "Order" },
+        ],
+      },
+      objectTypeTotal: 2,
+      relationTypeTotal: 1,
+      snapshot: "snapshot-1",
+      truncated: false,
+    });
+    getKnowledgeNetworkObjectTypeDetail.mockImplementation(
+      (_networkId: string, objectTypeId: string) =>
+        Promise.resolve({
+          conceptGroupNames: objectTypeId === "object-customer" ? ["Core Group"] : [],
+          dataProperties: [],
+        }),
+    );
+
+    render(<OverviewOntologyBlock detailsExpanded networkId="network-1" />);
+
+    expect(await screen.findByText("Core Group")).not.toBeNull();
+    expect(screen.getByText("knowledgeNetwork.previewMappingResource")).not.toBeNull();
+  });
 });

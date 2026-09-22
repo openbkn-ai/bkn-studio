@@ -531,16 +531,16 @@ export function ObjectTypeListPanel({
             <div className={styles.filterGroup}>
               <span className={styles.filterLabel}>{t("common.tag")}</span>
               <Select
+                allowClear
                 className={styles.filterSelect}
-                onChange={(value) => {
-                  setSelectedTag(value);
+                mode="tags"
+                onChange={(values: string[]) => {
+                  setSelectedTag(values.at(-1)?.trim() || "all");
                   setPage(1);
                 }}
-                options={[
-                  { label: t("common.all"), value: "all" },
-                  ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-                ]}
-                value={selectedTag}
+                options={tagOptions.map((tag) => ({ label: tag, value: tag }))}
+                placeholder={t("common.all")}
+                value={selectedTag === "all" ? [] : [selectedTag]}
               />
             </div>
             <Dropdown

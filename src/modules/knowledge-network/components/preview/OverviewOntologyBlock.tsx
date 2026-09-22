@@ -181,7 +181,7 @@ export function OverviewOntologyBlock({
       color: DEFAULT_COLOR,
       description: "",
       id: edge.id,
-      mappingMode: "direct",
+      mappingMode: edge.mappingMode ?? "direct",
       name: edge.name,
       sourceObjectTypeId: edge.sourceId,
       sourceObjectTypeName: names.get(edge.sourceId) ?? edge.sourceId,
@@ -364,16 +364,18 @@ export function OverviewOntologyBlock({
       {
         title: t("knowledgeNetwork.previewColConceptGroups"),
         key: "groups",
-        render: (_, entity) =>
-          entity.conceptGroupNames.length > 0 ? (
-            entity.conceptGroupNames.map((group) => (
+        render: (_, entity) => {
+          const groups = detailById[entity.id]?.conceptGroupNames ?? entity.conceptGroupNames;
+          return groups.length > 0 ? (
+            groups.map((group) => (
               <Tag key={group} bordered={false}>
                 {group}
               </Tag>
             ))
           ) : (
             <span className={styles.muted}>—</span>
-          ),
+          );
+        },
       },
     ],
     [detailById, hubIds, renderResourceIndexState, t],

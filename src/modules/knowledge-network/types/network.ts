@@ -84,6 +84,7 @@ export type KnowledgeNetworkPreviewNode = {
 
 export type KnowledgeNetworkPreviewEdge = {
   id: string;
+  mappingMode?: "direct" | "resource";
   name: string;
   sourceId: string;
   targetId: string;

@@ -196,8 +196,7 @@ export async function listKnowledgeNetworkObjectTypePage(
       const matchesKeyword =
         !keyword ||
         item.id.toLowerCase().includes(keyword) ||
-        item.name.toLowerCase().includes(keyword) ||
-        item.description.toLowerCase().includes(keyword);
+        item.name.toLowerCase().includes(keyword);
       return matchesKeyword && (!query.tag || item.tags.includes(query.tag));
     });
     const sorted = [...filtered].sort((left, right) => {

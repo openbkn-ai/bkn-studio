@@ -16,6 +16,7 @@ import {
 type BackendOverviewGraph = {
   edges: Array<{
     id: string;
+    mapping_mode?: "direct" | "filtered_cross_join" | "indirect";
     name: string;
     source_id: string;
     target_id: string;
@@ -51,6 +52,7 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
     graph: {
       edges: value.edges.map((edge) => ({
         id: edge.id,
+        mappingMode: edge.mapping_mode === "indirect" ? "resource" : "direct",
         name: edge.name,
         sourceId: edge.source_id,
         targetId: edge.target_id,
@@ -96,6 +98,7 @@ export async function getKnowledgeNetworkOverviewGraph(
         })),
         edges: relations.map((item) => ({
           id: item.id,
+          mappingMode: item.mappingMode,
           name: item.name,
           sourceId: item.sourceObjectTypeId,
           targetId: item.targetObjectTypeId,
