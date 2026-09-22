@@ -79,3 +79,17 @@
   height: 24px;
   padding: 0;
 }
+
+/* The name cell's ellipsis has to live inside the link button: an inline-block button only gets
+   clipped by the cell, never truncated with an ellipsis. */
+.nameLink {
+  max-width: 100%;
+  padding-inline: 0;
+}
+
+.nameText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
