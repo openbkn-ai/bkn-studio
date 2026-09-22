@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Switch, Tabs, Tag, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Switch, Tabs, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,6 +33,7 @@ import {
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { getCatalog, hasCatalogOperation } from "@/shared/catalog";
@@ -109,9 +110,21 @@ function DiscoverTaskProgress({ task }: { task: DataConnectDiscoverTaskSummary }
 function DiscoverTaskPriority({ priority }: { priority: number }) {
   const { t } = useTranslation();
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
-  const color = level === "high" ? "error" : level === "low" ? "default" : "processing";
-  return <Tag color={color}>{t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}</Tag>;
+  const tone = level === "high" ? "error" : level === "low" ? "neutral" : "info";
+  return (
+    <LightStatusTag tone={tone}>
+      {t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}
+    </LightStatusTag>
+  );
 }
+
+const DISCOVER_TASK_STATUS_TONES: Record<DataConnectDiscoverTaskStatus, LightStatusTone> = {
+  cancelled: "neutral",
+  completed: "success",
+  failed: "error",
+  pending: "neutral",
+  running: "info",
+};
 
 export function DataConnectDiscoverScene({
   activeTab: controlledActiveTab,
@@ -694,19 +707,9 @@ export function DataConnectDiscoverScene({
       })),
       filteredValue: taskStatusFilter.length ? taskStatusFilter : null,
       render: (value: DataConnectDiscoverTaskStatus) => (
-        <Tag
-          color={
-            value === "failed"
-              ? "error"
-              : value === "completed"
-                ? "success"
-                : value === "cancelled" || value === "pending"
-                  ? "default"
-                  : "processing"
-          }
-        >
+        <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[value]}>
           {t(`dataConnect.discoverTaskStatuses.${value}`)}
-        </Tag>
+        </LightStatusTag>
       ),
     },
     {

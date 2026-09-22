@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Alert, Dropdown, Space, Tag, type MenuProps } from "antd";
+import { Alert, Dropdown, Space, type MenuProps } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { SemanticUnderstandingTaskDetailDrawer } from "@/modules/data-catalog/components/SemanticUnderstandingTaskDetailDrawer";
@@ -104,39 +105,27 @@ function DiscoverTaskPriority({ priority }: { priority: number }) {
   const { t } = useTranslation();
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
   return (
-    <Tag color={level === "high" ? "error" : level === "low" ? "default" : "processing"}>
+    <LightStatusTag tone={level === "high" ? "error" : level === "low" ? "neutral" : "info"}>
       {t(`dataConnect.discoverTaskPriorities.${level}`, { priority })}
-    </Tag>
+    </LightStatusTag>
   );
 }
 
+const DISCOVER_TASK_STATUS_TONES: Record<DataConnectDiscoverTaskStatus, LightStatusTone> = {
+  cancelled: "neutral",
+  completed: "success",
+  failed: "error",
+  pending: "neutral",
+  running: "info",
+};
+
 function DiscoverTaskStatusTag({ status }: { status: DataConnectDiscoverTaskStatus }) {
   const { t } = useTranslation();
-  const style =
-    status === "completed"
-      ? {
-          background: "var(--color-success-bg)",
-          borderColor: "var(--color-success-border)",
-          color: "var(--color-success-text)",
-        }
-      : status === "failed"
-        ? {
-            background: "var(--color-error-bg)",
-            borderColor: "var(--color-error-border)",
-            color: "var(--color-error-text)",
-          }
-        : status === "cancelled" || status === "pending"
-          ? {
-              background: "var(--color-interface-panel-bg)",
-              borderColor: "var(--color-border)",
-              color: "var(--color-text-secondary)",
-            }
-          : {
-              background: "var(--color-info-bg)",
-              borderColor: "var(--color-info-border)",
-              color: "var(--color-text-link)",
-            };
-  return <Tag style={style}>{t(`dataConnect.discoverTaskStatuses.${status}`)}</Tag>;
+  return (
+    <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[status]}>
+      {t(`dataConnect.discoverTaskStatuses.${status}`)}
+    </LightStatusTag>
+  );
 }
 
 export function DiscoverTaskListPanel() {

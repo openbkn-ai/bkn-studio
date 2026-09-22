@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import i18n from "@/app/locales/i18n";
 import {
-  isCertifiedConnectorType,
   filterConnectorTypes,
   getConnectorConfigDefaults,
   getDataSourceFamilyMeta,
@@ -28,6 +27,7 @@ import {
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 const sqlServerConnector: DataConnectConnectorType = {
+  available: true,
   category: "table",
   description: "Microsoft SQL Server 关系型数据库连接器",
   enabled: true,
@@ -98,6 +98,7 @@ describe("connector-template · SQL Server", () => {
 
   it("keeps unavailable known connector types alongside backend types", () => {
     const oracleConnector: DataConnectConnectorType = {
+      available: true,
       category: "table",
       description: "Oracle connector",
       enabled: true,
@@ -118,6 +119,7 @@ describe("connector-template · SQL Server", () => {
 
   it("filters connector types separately by name and tag", () => {
     const openSearchConnector: DataConnectConnectorType = {
+      available: true,
       category: "index",
       description: "OpenSearch connector",
       enabled: true,
@@ -138,6 +140,7 @@ describe("connector-template · SQL Server", () => {
     ).toEqual([openSearchConnector]);
 
     const anyShareConnector: DataConnectConnectorType = {
+      available: true,
       category: "fileset",
       description: "AnyShare connector",
       enabled: true,
@@ -297,17 +300,3 @@ function field(_name: string, type: string, required: boolean, encrypted = false
     type,
   };
 }
-
-describe("isCertifiedConnectorType", () => {
-  // connector_certified（登记表专业档）覆盖的是商业数据库；权威清单在 Vega 侧，
-  // 这里只是展示快照，漏一条只是少个徽标，不会放行任何东西。
-  it("SQL Server 属于认证连接器", () => {
-    expect(isCertifiedConnectorType("sqlserver")).toBe(true);
-    expect(isCertifiedConnectorType(" SQLServer ".toLowerCase().trim())).toBe(true);
-  });
-
-  it("社区基础连接器不打标", () => {
-    expect(isCertifiedConnectorType("mysql")).toBe(false);
-    expect(isCertifiedConnectorType("postgresql")).toBe(false);
-  });
-});

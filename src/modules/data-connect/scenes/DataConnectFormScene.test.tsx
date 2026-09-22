@@ -200,6 +200,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     updateDataConnectRecordMock.mockResolvedValue(undefined);
     listDataConnectConnectorTypesMock.mockResolvedValue([
       {
+        available: true,
         category: "table",
         description: "",
         enabled: true,
@@ -325,6 +326,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       );
       listDataConnectConnectorTypesMock.mockResolvedValue([
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -334,6 +336,7 @@ describe("DataConnectFormScene · connection preflight", () => {
           type: "postgresql",
         },
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -353,6 +356,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       });
       fireEvent.click(await findConnectorCard("SQL Server"));
       postgresqlDetail.resolve({
+        available: true,
         category: "table",
         description: "",
         enabled: true,
@@ -395,6 +399,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       );
       listDataConnectConnectorTypesMock.mockResolvedValue([
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -404,6 +409,7 @@ describe("DataConnectFormScene · connection preflight", () => {
           type: "postgresql",
         },
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -717,52 +723,16 @@ describe("DataConnectFormScene · connection preflight", () => {
     });
   });
 
-  /**
-   * When the backend disables an authenticated connector, treat it as an entitlement restriction:
-   * render a selectable edition badge and show upgrade guidance instead of an unavailable state.
-   */
   it(
-    "认证连接器被后端关掉时给升级引导,不画「暂不可用」",
-    async () => {
-      permissionState.values = new Set(["catalog:create"]);
-
-      render(<DataConnectFormScene mode="create" />);
-
-      const sqlServerButton = await findConnectorCard("SQL Server");
-
-      expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
-      expect(sqlServerButton.textContent).toContain("关系型数据库");
-      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
-      expect(sqlServerButton.textContent).toContain(
-        "common.entitlement.editionsShort.professional",
-      );
-
-      fireEvent.click(sqlServerButton);
-
-      // 点击不选中,只弹引导;下一步仍走不通。
-      expect(sqlServerButton.className).not.toContain("cardActive");
-      expect(screen.getAllByText("common.entitlement.unlockTitle").length).toBeGreaterThan(0);
-
-      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
-
-      expect(screen.queryByPlaceholderText("例如 供应链主库")).toBeNull();
-    },
-    HEAVY_SCENE_TIMEOUT_MS,
-  );
-
-  /**
-   * 证书已经覆盖这项能力时,后端仍然关着它就不是钱的事,是这套部署没提供。这时说
-   * 「请升级镜像」既指错方向,也把 bkn-safe 的镜像状态硬安到 Vega 头上。
-   */
-  it(
-    "装了且证够时不再推销,照普通连接器画「暂不可用」",
+    "社区版显示 SQL Server 的专业版标签,并服从服务端 available 禁用选择",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
-        capabilities: ["connector_certified", "rbac_basic"],
-        edition: "enterprise",
-        extensions: ["connector_certified", "rbac_basic"],
+        capabilities: [],
+        edition: "community",
+        extensions: [],
       };
+      listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(true, false)]);
 
       render(<DataConnectFormScene mode="create" />);
 
@@ -770,6 +740,30 @@ describe("DataConnectFormScene · connection preflight", () => {
 
       expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
       expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
+      expect(sqlServerButton.textContent).toContain(
+        "common.entitlement.editionsShort.professional",
+      );
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
+    "专业版及以上隐藏 SQL Server 的专业版标签",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      entitlementState.snapshot = {
+        capabilities: [],
+        edition: "professional",
+        extensions: [],
+      };
+      listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(true, true)]);
+
+      render(<DataConnectFormScene mode="create" />);
+
+      const sqlServerButton = await findConnectorCard("SQL Server");
+
+      expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
       expect(sqlServerButton.textContent).not.toContain(
         "common.entitlement.editionsShort.professional",
       );
@@ -777,52 +771,49 @@ describe("DataConnectFormScene · connection preflight", () => {
     HEAVY_SCENE_TIMEOUT_MS,
   );
 
-  /**
-   * 企业证 + 社区 vega:能力两个列表里都没有,是 `not-installed` 而不是 `unknown`。
-   * 该说的是「换镜像」,不是「买证书」——客户已经买过了,弹窗里不该再出购买按钮。
-   */
   it(
-    "证够了但镜像不含 → 说换镜像,不出购买按钮",
-    async () => {
-      permissionState.values = new Set(["catalog:create"]);
-      entitlementState.snapshot = {
-        capabilities: ["rbac_basic"],
-        edition: "enterprise",
-        extensions: ["rbac_basic"],
-      };
-
-      render(<DataConnectFormScene mode="create" />);
-
-      fireEvent.click(await findConnectorCard("SQL Server"));
-
-      expect(screen.getAllByText("common.entitlement.imageMissingTitle").length).toBeGreaterThan(0);
-      expect(screen.queryByText("common.entitlement.upgradeTo")).toBeNull();
-    },
-    HEAVY_SCENE_TIMEOUT_MS,
-  );
-
-  /**
-   * 企业镜像 + 社区证:能力在 `extensions[]` 里、不在 `capabilities[]` 里。这是唯一
-   * 「换一张证就能用」的状态,也是唯一该出商务信息的地方。
-   */
-  it(
-    "装了没买 → 画档位徽标并给升级引导",
+    "SQL Server 停用时服从服务端 enabled,不弹前端升级引导",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
       entitlementState.snapshot = {
         capabilities: [],
         edition: "community",
-        extensions: ["connector_certified", "rbac_basic"],
+        extensions: [],
       };
+      listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(false, true)]);
 
       render(<DataConnectFormScene mode="create" />);
 
       const sqlServerButton = await findConnectorCard("SQL Server");
 
-      expect(sqlServerButton.hasAttribute("disabled")).toBe(false);
+      expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+      expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeDisabled");
+      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeUnavailable");
       expect(sqlServerButton.textContent).toContain(
         "common.entitlement.editionsShort.professional",
       );
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
+    "连接器同时不可用且停用时只显示不可用标签",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      entitlementState.snapshot = {
+        capabilities: [],
+        edition: "community",
+        extensions: [],
+      };
+      listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(false, false)]);
+
+      render(<DataConnectFormScene mode="create" />);
+
+      const sqlServerButton = await findConnectorCard("SQL Server");
+
+      expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+      expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
@@ -848,6 +839,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       });
       listDataConnectConnectorTypesMock.mockResolvedValue([
         {
+          available: true,
           category: "table",
           description: "Microsoft SQL Server 关系型数据库连接器",
           enabled: true,
@@ -935,12 +927,27 @@ function createDeferred<T>() {
   };
 }
 
+function sqlServerConnectorType(enabled: boolean, available: boolean): DataConnectConnectorType {
+  return {
+    available,
+    category: "table",
+    description: "",
+    enabled,
+    fieldConfig: {},
+    mode: "local",
+    name: "SQL Server",
+    requiredEdition: "professional",
+    type: "sqlserver",
+  };
+}
+
 function mockSQLServerEditCatalog(
   options: unknown,
   connectorConfigOverrides: Record<string, unknown> = {},
 ) {
   listDataConnectConnectorTypesMock.mockResolvedValue([
     {
+      available: true,
       category: "table",
       description: "",
       enabled: true,

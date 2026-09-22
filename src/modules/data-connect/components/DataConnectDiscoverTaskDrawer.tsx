@@ -6,12 +6,13 @@
  */
 
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Alert, Descriptions, Drawer, Empty, Progress, Table, Tag } from "antd";
+import { Alert, Descriptions, Drawer, Empty, Progress, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import styles from "@/framework/ui/common/TaskDetailDrawer.module.css";
 import { getDataConnectDiscoverTask } from "@/modules/data-connect/services/discover.service";
 import type {
@@ -35,29 +36,26 @@ function priorityTag(
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
   const level = priority <= 10 ? "low" : priority >= 30 ? "high" : "normal";
-  return (
-    <Tag color={level === "high" ? "error" : level === "low" ? "default" : "processing"}>
-      {priorityLabel(priority, t)}
-    </Tag>
-  );
+  const tone = level === "high" ? "error" : level === "low" ? "neutral" : "info";
+  return <LightStatusTag tone={tone}>{priorityLabel(priority, t)}</LightStatusTag>;
 }
+
+const DISCOVER_TASK_STATUS_TONES: Record<DataConnectDiscoverTask["status"], LightStatusTone> = {
+  cancelled: "neutral",
+  completed: "success",
+  failed: "error",
+  pending: "neutral",
+  running: "info",
+};
 
 function statusTag(
   status: DataConnectDiscoverTask["status"],
   t: (key: string, options?: Record<string, unknown>) => string,
 ) {
-  const statusClass =
-    status === "completed"
-      ? styles.taskSucceeded
-      : status === "failed"
-        ? styles.taskFailed
-        : status === "cancelled"
-          ? styles.taskPending
-          : styles.taskRunning;
   return (
-    <span className={[styles.tag, statusClass].join(" ")}>
+    <LightStatusTag tone={DISCOVER_TASK_STATUS_TONES[status]}>
       {t(`dataConnect.discoverTaskStatuses.${status}`)}
-    </span>
+    </LightStatusTag>
   );
 }
 
@@ -177,10 +175,12 @@ export function DataConnectDiscoverTaskDrawer({
           <section className={styles.sectionCard}>
             <h3 className={styles.sectionTitle}>{t("dataCatalog.task.detailSections.status")}</h3>
             <div className={styles.statusRow}>
-              <Tag color="processing">{t(`dataConnect.discoverStrategies.${task.strategy}`)}</Tag>
-              <Tag color="processing">
+              <LightStatusTag tone="info">
+                {t(`dataConnect.discoverStrategies.${task.strategy}`)}
+              </LightStatusTag>
+              <LightStatusTag tone="info">
                 {t(`dataConnect.discoverTriggerTypes.${task.triggerType}`)}
-              </Tag>
+              </LightStatusTag>
               {priorityTag(task.queuePriority, t)}
               {statusTag(task.status, t)}
             </div>

@@ -77,40 +77,6 @@
 .resultTable {
   margin: 0;
 }
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 0;
-  padding: 2px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-hover);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 20px;
-  white-space: nowrap;
-}
-.taskPending {
-  border-color: rgba(148, 163, 184, 0.22);
-  background: rgba(148, 163, 184, 0.08);
-  color: var(--color-text-secondary);
-}
-.taskRunning {
-  border-color: rgba(37, 99, 235, 0.2);
-  background: rgba(46, 104, 255, 0.08);
-  color: var(--color-text-link);
-}
-.taskSucceeded {
-  border-color: rgba(101, 192, 65, 0.22);
-  background: rgba(101, 192, 65, 0.08);
-  color: var(--color-success-text);
-}
-.taskFailed {
-  border-color: rgba(239, 68, 68, 0.22);
-  background: rgba(239, 68, 68, 0.08);
-  color: var(--color-error-text);
-}
 .calloutWarn {
   display: flex;
   gap: 10px;

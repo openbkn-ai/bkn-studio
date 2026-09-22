@@ -16,6 +16,7 @@ export type {
 } from "@/shared/catalog/types";
 
 import type { CatalogHealthCheckScheduleInput } from "@/shared/catalog/types";
+import type { Edition } from "@/framework/entitlement/edition";
 
 export type ConnectorFieldConfig = {
   encrypted: boolean;
@@ -24,12 +25,14 @@ export type ConnectorFieldConfig = {
 };
 
 export type DataConnectConnectorType = {
+  available: boolean;
   category: string;
   description: string;
   enabled: boolean;
   fieldConfig: Record<string, ConnectorFieldConfig>;
   mode: string;
   name: string;
+  requiredEdition?: Edition;
   type: string;
 };
 

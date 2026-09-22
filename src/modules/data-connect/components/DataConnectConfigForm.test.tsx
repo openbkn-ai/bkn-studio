@@ -14,6 +14,7 @@ import { DataConnectConfigForm } from "@/modules/data-connect/components/DataCon
 import type { DataConnectConnectorType } from "@/modules/data-connect/types/data-connect";
 
 const mariaDbConnector: DataConnectConnectorType = {
+  available: true,
   category: "table",
   description: "MariaDB connector",
   enabled: true,
