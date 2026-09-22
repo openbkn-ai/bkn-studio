@@ -13,6 +13,7 @@ import { LOCALE_COOKIE_NAME } from "@/framework/i18n/locale";
 
 import {
   buildAuthorizationRequestURL,
+  beginLogin,
   canAutoStartLogin,
   completeLogin,
   computeCodeChallenge,
@@ -126,6 +127,26 @@ describe("oauth", () => {
     expect(window.sessionStorage.getItem("bkn_access_token")).toBeNull();
     expect(window.sessionStorage.getItem("bkn_oauth_state")).toBeNull();
     expect(window.sessionStorage.getItem("bkn_oauth_verifier")).toBeNull();
+    expect(window.sessionStorage.getItem("bkn_oauth_return_to")).toBeNull();
+  });
+
+  it("does not retain an external OAuth return path", async () => {
+    window.sessionStorage.setItem("bkn_oauth_state", "state-1");
+    window.sessionStorage.setItem("bkn_oauth_verifier", "verifier-1");
+    window.sessionStorage.setItem("bkn_oauth_return_to", "//attacker.example");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ access_token: "access-1" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      }),
+    );
+
+    await expect(completeLogin("?code=abc&state=state-1")).resolves.toBe("/studio");
+  });
+
+  it("does not store an external return path when login begins", async () => {
+    await beginLogin("//attacker.example");
+
     expect(window.sessionStorage.getItem("bkn_oauth_return_to")).toBeNull();
   });
 

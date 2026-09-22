@@ -6,7 +6,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { createRef } from "react";
+import { createRef, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -56,7 +56,9 @@ vi.mock("@/modules/execution-factory/components/OperatorSyncPublishFields", () =
   OperatorSyncPublishFields: () => null,
 }));
 
-function renderForm(onSubmit: ReturnType<typeof vi.fn>) {
+type QuickAddApiFormSubmit = ComponentProps<typeof QuickAddApiForm>["onSubmit"];
+
+function renderForm(onSubmit: QuickAddApiFormSubmit) {
   const ref = createRef<QuickAddApiFormHandle>();
   render(<QuickAddApiForm formId="quick-add-api" onSubmit={onSubmit} ref={ref} />);
   return ref;
@@ -83,7 +85,7 @@ describe("QuickAddApiForm cURL submit", () => {
   });
 
   it("parses the cURL on submit even when 识别接口信息 was never clicked", async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<QuickAddApiFormSubmit>();
     const ref = renderForm(onSubmit);
 
     fillRequiredFields(SCREENSHOT_CURL);
@@ -110,7 +112,7 @@ describe("QuickAddApiForm cURL submit", () => {
    * when detection had never run, silently creating from A after detecting A, editing to B, and submitting B.
    */
   it("re-parses on submit when the cURL changed after 识别接口信息 was clicked", async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<QuickAddApiFormSubmit>();
     const ref = renderForm(onSubmit);
 
     fillRequiredFields(SCREENSHOT_CURL);
@@ -137,7 +139,7 @@ describe("QuickAddApiForm cURL submit", () => {
   });
 
   it("reports the concrete parse reason instead of the generic build failure", async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<QuickAddApiFormSubmit>();
     const ref = renderForm(onSubmit);
 
     fillRequiredFields("wget https://httpbin.org/post");
