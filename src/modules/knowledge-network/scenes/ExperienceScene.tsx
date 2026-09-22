@@ -208,8 +208,7 @@ export function ExperienceScene({
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
   const currentPath = `${location.pathname}${location.search}`;
-  const apiKeyHandoffId = (location.state as { apiKeyHandoffId?: unknown } | null)
-    ?.apiKeyHandoffId;
+  const apiKeyHandoffId = (location.state as { apiKeyHandoffId?: unknown } | null)?.apiKeyHandoffId;
   const apiKeyPagePath = buildApiKeyPagePath(currentPath);
 
   const copy = useCallback(
