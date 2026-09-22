@@ -302,7 +302,6 @@ export function CapabilityListPanel({
     {
       dataIndex: "name",
       key: "name",
-      ellipsis: true,
       title: t("knowledgeNetwork.capabilityColumnName"),
       // The id is shown only when it is all there is: a name plus its id underneath is noise. The
       // asset becomes a link only when the matching execution-factory detail route is accessible.
@@ -311,20 +310,18 @@ export function CapabilityListPanel({
 
         return canViewCapabilityDetail ? (
           <AppButton
-            className={panelStyles.nameLink}
             onClick={() => {
               // The detail scene's back button returns here rather than to its own list page.
               void navigate(executionFactoryPath(record, kind), {
                 state: buildReturnToState(location),
               });
             }}
-            title={label}
             type="link"
           >
-            <span className={panelStyles.nameText}>{label}</span>
+            {label}
           </AppButton>
         ) : (
-          <span title={label}>{label}</span>
+          <span>{label}</span>
         );
       },
     },
@@ -344,8 +341,6 @@ export function CapabilityListPanel({
       dataIndex: "status",
       key: "status",
       title: t("knowledgeNetwork.capabilityColumnStatus"),
-      width: 110,
-      onCell: () => ({ style: { whiteSpace: "nowrap" } }),
       render: (value: string) => {
         if (value === CAPABILITY_STATUS_MISSING) {
           return (
@@ -394,15 +389,12 @@ export function CapabilityListPanel({
       dataIndex: "comment",
       key: "comment",
       title: t("knowledgeNetwork.capabilityColumnComment"),
-      ellipsis: { showTitle: true },
       render: (value: string) => value || "-",
     },
     {
       dataIndex: "createTime",
       key: "createTime",
       title: t("knowledgeNetwork.capabilityColumnMountTime"),
-      width: 180,
-      onCell: () => ({ style: { whiteSpace: "nowrap" } }),
     },
     {
       key: "actions",
@@ -602,7 +594,7 @@ export function CapabilityListPanel({
                     }
                   : undefined
               }
-              scroll={{ x: 1100 }}
+              scroll={{ x: 880 }}
               size="middle"
             />
           )}
