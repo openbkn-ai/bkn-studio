@@ -311,18 +311,20 @@ export function CapabilityListPanel({
 
         return canViewCapabilityDetail ? (
           <AppButton
+            className={panelStyles.nameLink}
             onClick={() => {
               // The detail scene's back button returns here rather than to its own list page.
               void navigate(executionFactoryPath(record, kind), {
                 state: buildReturnToState(location),
               });
             }}
+            title={label}
             type="link"
           >
-            {label}
+            <span className={panelStyles.nameText}>{label}</span>
           </AppButton>
         ) : (
-          <span>{label}</span>
+          <span title={label}>{label}</span>
         );
       },
     },
@@ -386,8 +388,6 @@ export function CapabilityListPanel({
     {
       key: "references",
       title: t("knowledgeNetwork.capabilityColumnReferences"),
-      width: 90,
-      onCell: () => ({ style: { whiteSpace: "nowrap" } }),
       render: (_: unknown, record) => renderReferences(record),
     },
     {
