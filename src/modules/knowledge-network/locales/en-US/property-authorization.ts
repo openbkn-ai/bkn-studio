@@ -89,9 +89,11 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationSourceEmpty: "No grant sources to display.",
   propertyAuthorizationGranteeEmpty: "No other users are authorized for this object type.",
   propertyAuthorizationSubjectTitle: "Subject",
-  propertyAuthorizationSubjectDescription:
-    "Property grants support users and roles only, never departments or everyone.",
+  propertyAuthorizationSubjectDescription: "Choose the user or role to configure.",
+  propertyAuthorizationSubjectHelp:
+    "Only users and roles can be configured. Organizations filter the user list only; they are not authorization subjects.",
   propertyAuthorizationSelectUser: "Select a user for property access control",
+  propertyAuthorizationUserOrganizationFilter: "Filter users by organization",
   propertyAuthorizationSearchRole: "Search roles",
   propertyAuthorizationRoleEmpty: "No matching roles",
   propertyAuthorizationSelectSubject: "Select a user or role",
@@ -177,8 +179,11 @@ export const propertyAuthorizationPart = {
 
   rowFilterTab: "Row filter",
   rowFilterSubjectTitle: "Subject",
-  rowFilterSubjectDescription: "Set the queryable instance scope for a user or role.",
+  rowFilterSubjectDescription: "Choose the user or role to configure.",
+  rowFilterSubjectHelp:
+    "Only users and roles can be configured. Organizations filter the user list only; they are not authorization subjects.",
   rowFilterSelectUser: "Select a user for row filtering",
+  rowFilterUserOrganizationFilter: "Filter users by organization",
   rowFilterSelectSubject: "Select a user or role",
   rowFilterSelectSubjectDescription:
     "Select a subject to inspect and configure its row-filter policy for this object type.",
@@ -231,11 +236,12 @@ export const propertyAuthorizationPart = {
   rowFilterDirectPolicy: "Direct policy",
   rowFilterRolePolicies: "Role policies",
   rowFilterNoRolePolicies: "No role policy applies",
-  rowFilterSourcesTitle: "Rule sources",
+  rowFilterSourcesTitle: "Effective policy",
   rowFilterNoRuleSources: "No row-filter rule is configured.",
-  rowFilterSourceCurrentUser: "Current user setting",
-  rowFilterSourceCurrentRole: "Current role setting",
-  rowFilterSourceRole: "{{name}} role",
+  rowFilterSourceCurrentUser: "User: {{name}}",
+  rowFilterSourceCurrentRole: "Role: {{name}}",
+  rowFilterSourceRole: "Role: {{name}}",
+  rowFilterFixedConditionsLabel: "Fixed conditions: ",
   rowFilterEffectBasePermission: "No row filter is added; base query permissions still apply",
   rowFilterEffectFixedConditions: "Only data matching the fixed conditions below is queryable",
   rowFilterEffectOneOfSources: "Data matching any of the following rules is queryable",

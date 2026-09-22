@@ -1441,7 +1441,15 @@ export function ObjectTypeAuthorizationScene() {
     <div className={styles.propertyWorkspace}>
       <aside className={styles.subjectRail}>
         <div className={styles.subjectRailHead}>
-          <h2>{t("knowledgeNetwork.propertyAuthorizationSubjectTitle")}</h2>
+          <h2>
+            {t("knowledgeNetwork.propertyAuthorizationSubjectTitle")}
+            <Tooltip title={t("knowledgeNetwork.propertyAuthorizationSubjectHelp")}>
+              <InfoCircleOutlined
+                aria-label={t("knowledgeNetwork.propertyAuthorizationSubjectHelp")}
+                tabIndex={0}
+              />
+            </Tooltip>
+          </h2>
           <p>{t("knowledgeNetwork.propertyAuthorizationSubjectDescription")}</p>
         </div>
         <Segmented
@@ -1469,18 +1477,21 @@ export function ObjectTypeAuthorizationScene() {
           value={subjectType}
         />
         {subjectType === "user" ? (
-          <DirectoryUserPicker
-            ariaLabel={t("knowledgeNetwork.propertyAuthorizationSelectUser")}
-            className={styles.subjectUserPicker}
-            onChange={(nextUserId) => confirmDiscard(() => setSubjectId(nextUserId))}
-            onUsersChange={(selectedUsers) => {
-              if (selectedUsers.length) {
-                setUsers((current) => mergeUsers(current, selectedUsers));
-              }
-            }}
-            presentation="inline"
-            value={subjectId}
-          />
+          <div className={styles.subjectUserPickerSection}>
+            <span>{t("knowledgeNetwork.propertyAuthorizationUserOrganizationFilter")}</span>
+            <DirectoryUserPicker
+              ariaLabel={t("knowledgeNetwork.propertyAuthorizationSelectUser")}
+              className={styles.subjectUserPicker}
+              onChange={(nextUserId) => confirmDiscard(() => setSubjectId(nextUserId))}
+              onUsersChange={(selectedUsers) => {
+                if (selectedUsers.length) {
+                  setUsers((current) => mergeUsers(current, selectedUsers));
+                }
+              }}
+              presentation="inline"
+              value={subjectId}
+            />
+          </div>
         ) : (
           <>
             <Input
@@ -1504,13 +1515,7 @@ export function ObjectTypeAuthorizationScene() {
                       <Avatar icon={<TeamOutlined />} size={34} />
                       <span>
                         <strong>{role.name || role.id}</strong>
-                        <small>
-                          {t("knowledgeNetwork.propertyAuthorizationMemberCount", {
-                            count: role.accessorIds.length,
-                          })}
-                        </small>
                       </span>
-                      <span className={styles.subjectChevron}>›</span>
                     </button>
                   );
                 })

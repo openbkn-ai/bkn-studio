@@ -135,13 +135,14 @@ function policySummary(
       ? "knowledgeNetwork.rowFilterConditionGroupAnd"
       : "knowledgeNetwork.rowFilterConditionGroupOr",
   );
-  return policy.conditions
+  const summary = policy.conditions
     .map((condition) => {
       const field = fields.find((item) => item.name === condition.propertyName);
       const operator = t(`knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`);
       return `${field ? rowFilterFieldBusinessLabel(field) : condition.propertyName} ${operator} ${condition.values.join("、")}`;
     })
     .join(` ${relation} `);
+  return policy.conditions.length > 1 ? `（${summary}）` : summary;
 }
 
 export function RowFilterAuthorizationPanel({
@@ -216,6 +217,13 @@ export function RowFilterAuthorizationPanel({
     </span>
   );
   const directPolicy = explain?.directPolicy ?? initialPolicy;
+  const currentSubjectName =
+    subjectType === "user"
+      ? (() => {
+          const user = users.find((item) => item.id === subjectId);
+          return user?.name?.trim() || user?.account?.trim() || subjectId;
+        })()
+      : roles.find((item) => item.id === subjectId)?.name || subjectId;
   const effectiveSources: EffectiveRuleSource[] = [];
   if (directPolicy) {
     effectiveSources.push({
@@ -225,6 +233,7 @@ export function RowFilterAuthorizationPanel({
         subjectType === "user"
           ? "knowledgeNetwork.rowFilterSourceCurrentUser"
           : "knowledgeNetwork.rowFilterSourceCurrentRole",
+        { name: currentSubjectName },
       ),
     });
   }
@@ -351,7 +360,15 @@ export function RowFilterAuthorizationPanel({
     <div className={styles.workspace}>
       <aside className={styles.subjectRail}>
         <div className={styles.railHead}>
-          <h2>{t("knowledgeNetwork.rowFilterSubjectTitle")}</h2>
+          <h2>
+            {t("knowledgeNetwork.rowFilterSubjectTitle")}
+            <Tooltip title={t("knowledgeNetwork.rowFilterSubjectHelp")}>
+              <InfoCircleOutlined
+                aria-label={t("knowledgeNetwork.rowFilterSubjectHelp")}
+                tabIndex={0}
+              />
+            </Tooltip>
+          </h2>
           <p>{t("knowledgeNetwork.rowFilterSubjectDescription")}</p>
         </div>
         <Segmented
@@ -372,13 +389,16 @@ export function RowFilterAuthorizationPanel({
           value={subjectType}
         />
         {subjectType === "user" ? (
-          <DirectoryUserPicker
-            ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
-            initialUsers={users}
-            onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))}
-            presentation="inline"
-            value={subjectId}
-          />
+          <div className={styles.userPickerSection}>
+            <span>{t("knowledgeNetwork.rowFilterUserOrganizationFilter")}</span>
+            <DirectoryUserPicker
+              ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
+              initialUsers={users}
+              onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))}
+              presentation="inline"
+              value={subjectId}
+            />
+          </div>
         ) : (
           <>
             <Input
@@ -651,7 +671,10 @@ export function RowFilterAuthorizationPanel({
                     {effectiveSources.map((source) => (
                       <div className={styles.sourceItem} key={source.id}>
                         <strong>{source.label}</strong>
-                        <span>{source.effect}</span>
+                        <span>
+                          <b>{t("knowledgeNetwork.rowFilterFixedConditionsLabel")}</b>
+                          {source.effect}
+                        </span>
                       </div>
                     ))}
                   </div>
