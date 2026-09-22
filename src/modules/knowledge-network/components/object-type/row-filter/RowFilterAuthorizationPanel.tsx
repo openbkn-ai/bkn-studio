@@ -40,6 +40,11 @@ import type {
 } from "@/modules/knowledge-network/types/row-filter-authorization";
 
 import styles from "./RowFilterAuthorizationPanel.module.css";
+import {
+  parseRowFilterValues,
+  rowFilterFieldBusinessLabel,
+  rowFilterFieldOptionLabel,
+} from "./row-filter.utils";
 
 const MAX_CONDITIONS = 5;
 
@@ -67,27 +72,6 @@ function valueInputType(type?: RowFilterValueType) {
   return type === "integer" ? "numeric" : "text";
 }
 
-export function parseRowFilterValues(
-  raw: string,
-  type?: RowFilterValueType,
-): Array<string | number | boolean> | null {
-  const tokens = raw
-    .split(/[,，\n]/)
-    .map((token) => token.trim())
-    .filter(Boolean);
-  if (!tokens.length || tokens.length > 100) return null;
-  if (type === "integer") {
-    const values = tokens.map(Number);
-    return values.every(Number.isInteger) ? [...new Set(values)] : null;
-  }
-  if (type === "boolean") {
-    const values = tokens.map((value) => value.toLowerCase());
-    if (!values.every((value) => value === "true" || value === "false")) return null;
-    return [...new Set(values)].map((value) => value === "true");
-  }
-  return [...new Set(tokens)];
-}
-
 function conditionOperators(type?: RowFilterValueType): RowFilterConditionOperator[] {
   if (type === "integer") return ["in", "not_in", "gt", "gte", "lt", "lte", "between"];
   if (type === "string") return ["in", "not_in"];
@@ -108,15 +92,6 @@ function parseConditionValues(
   if (!upperValues || upperValues.length !== 1 || Number(values[0]) > Number(upperValues[0]))
     return null;
   return [values[0], upperValues[0]];
-}
-
-export function rowFilterFieldBusinessLabel(field: RowFilterAvailableField) {
-  const displayName = field.displayName?.trim();
-  return displayName && displayName !== field.name ? `${displayName} (${field.name})` : field.name;
-}
-
-export function rowFilterFieldOptionLabel(field: RowFilterAvailableField) {
-  return `${rowFilterFieldBusinessLabel(field)} · ${field.type}`;
 }
 
 function editableConditionsFor(policy: RowFilterPolicy | null): EditableCondition[] {

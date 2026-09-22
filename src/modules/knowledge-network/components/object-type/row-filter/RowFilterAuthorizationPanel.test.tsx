@@ -50,12 +50,12 @@ vi.mock("@/modules/knowledge-network/services/row-filter-authorization.service",
   patchRowFilterPolicy: mocks.patch,
 }));
 
+import { RowFilterAuthorizationPanel } from "./RowFilterAuthorizationPanel";
 import {
-  RowFilterAuthorizationPanel,
+  parseRowFilterValues,
   rowFilterFieldBusinessLabel,
   rowFilterFieldOptionLabel,
-  parseRowFilterValues,
-} from "./RowFilterAuthorizationPanel";
+} from "./row-filter.utils";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
