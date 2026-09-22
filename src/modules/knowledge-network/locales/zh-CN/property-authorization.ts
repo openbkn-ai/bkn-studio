@@ -159,9 +159,12 @@ export const propertyAuthorizationPart = {
   propertyAuthorizationFullRisk_one: "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
   propertyAuthorizationFullRisk_other:
     "其中 {{count}} 项将调整为“原值”，可能扩大敏感数据可见范围。",
-  propertyAuthorizationSaveSuccess: "已更新 {{count}} 个属性的访问控制设置。",
+  propertyAuthorizationSaveSuccess_one: "已更新 {{count}} 个属性的访问控制设置。",
+  propertyAuthorizationSaveSuccess_other: "已更新 {{count}} 个属性的访问控制设置。",
   propertyAuthorizationDiscardTitle: "放弃未保存的修改？",
-  propertyAuthorizationDiscardDescription:
+  propertyAuthorizationDiscardDescription_one:
+    "当前有 {{count}} 个属性的访问控制设置尚未保存，放弃后无法恢复。",
+  propertyAuthorizationDiscardDescription_other:
     "当前有 {{count}} 个属性的访问控制设置尚未保存，放弃后无法恢复。",
   propertyAuthorizationDiscard: "放弃修改",
   propertyAuthorizationLoadFailed: "无法加载权限配置，请稍后重试。",

@@ -162,9 +162,13 @@ export const propertyAuthorizationPart = {
     "{{count}} property will expose its original value, which may broaden sensitive-data access.",
   propertyAuthorizationFullRisk_other:
     "{{count}} properties will expose original values, which may broaden sensitive-data access.",
-  propertyAuthorizationSaveSuccess: "Updated access control settings for {{count}} properties.",
+  propertyAuthorizationSaveSuccess_one: "Updated access control settings for {{count}} property.",
+  propertyAuthorizationSaveSuccess_other:
+    "Updated access control settings for {{count}} properties.",
   propertyAuthorizationDiscardTitle: "Discard unsaved changes?",
-  propertyAuthorizationDiscardDescription:
+  propertyAuthorizationDiscardDescription_one:
+    "Access control changes for {{count}} property have not been saved and cannot be recovered after discarding.",
+  propertyAuthorizationDiscardDescription_other:
     "Access control changes for {{count}} properties have not been saved and cannot be recovered after discarding.",
   propertyAuthorizationDiscard: "Discard changes",
   propertyAuthorizationLoadFailed: "Could not load permission settings. Try again later.",
