@@ -208,6 +208,8 @@ export function ExperienceScene({
   const { networkId } = useParams<{ networkId: string }>();
   const id = networkId ?? "";
   const currentPath = `${location.pathname}${location.search}`;
+  const apiKeyHandoffId = (location.state as { apiKeyHandoffId?: unknown } | null)
+    ?.apiKeyHandoffId;
   const apiKeyPagePath = buildApiKeyPagePath(currentPath);
 
   const copy = useCallback(
@@ -242,15 +244,12 @@ export function ExperienceScene({
   const [appKey, setAppKey] = useState("");
 
   useEffect(() => {
-    const key = consumeApiKeyHandoff(
-      currentPath,
-      (location.state as { apiKeyHandoffId?: unknown } | null)?.apiKeyHandoffId,
-    );
+    const key = consumeApiKeyHandoff(currentPath, apiKeyHandoffId);
     if (!key) return;
     setAuthMode("apikey");
     setAppKey(key);
     message.success(t("knowledgeNetwork.contextLoaderPanel.experience.apiKeyAutoFilled"));
-  }, [currentPath, message, t]);
+  }, [apiKeyHandoffId, currentPath, message, t]);
   const token = authMode === "apikey" ? appKey.trim() : sessionToken;
 
   const [filter, setFilter] = useState("");
