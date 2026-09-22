@@ -21,7 +21,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, values?: { name?: string }) =>
+      key === "knowledgeNetwork.rowFilterSourceCurrentUser" ? `User: ${values?.name}` : key,
+  }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -32,12 +35,30 @@ vi.mock("@/framework/context/use-app-services", () => ({
 }));
 
 vi.mock("@/modules/system-admin", () => ({
-  DirectoryUserPicker: ({ onChange }: { onChange: (id: string) => void }) => (
+  DirectoryUserPicker: ({
+    onChange,
+    onUsersChange,
+  }: {
+    onChange: (id: string) => void;
+    onUsersChange?: (users: Array<{ id: string; name: string }>) => void;
+  }) => (
     <div>
-      <button onClick={() => onChange("user-a")} type="button">
+      <button
+        onClick={() => {
+          onUsersChange?.([{ id: "user-a", name: "Selected user A" }]);
+          onChange("user-a");
+        }}
+        type="button"
+      >
         select-user-a
       </button>
-      <button onClick={() => onChange("user-b")} type="button">
+      <button
+        onClick={() => {
+          onUsersChange?.([{ id: "user-b", name: "Selected user B" }]);
+          onChange("user-b");
+        }}
+        type="button"
+      >
         select-user-b
       </button>
     </div>
@@ -149,6 +170,17 @@ describe("RowFilterAuthorizationPanel", () => {
     expect(screen.queryByText("knowledgeNetwork.rowFilterAutomaticScopeLabel")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.rowFilterUserIDFieldLabel")).toBeNull();
     expect(screen.queryByText("knowledgeNetwork.rowFilterFixedConditionsLabel")).toBeNull();
+  });
+
+  it("uses the selected user's display name in the effective policy source", async () => {
+    const value = snapshot("user-a");
+    mocks.getSnapshot.mockResolvedValue(value);
+    mocks.explain.mockResolvedValue(explain(value));
+    renderPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: "select-user-a" }));
+
+    expect(await screen.findByText("User: Selected user A")).not.toBeNull();
   });
 
   it("shows a retryable error instead of spinning forever when loading fails", async () => {

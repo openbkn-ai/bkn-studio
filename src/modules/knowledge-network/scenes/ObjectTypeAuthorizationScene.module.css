@@ -497,6 +497,8 @@
 }
 
 .subjectUserPicker {
+  height: clamp(400px, calc(100dvh - 300px), 540px);
+  min-height: 400px;
   width: 100%;
 }
 .subjectUserPickerSection {

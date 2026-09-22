@@ -28,11 +28,13 @@ describe("property authorization terminology", () => {
     expect(zhCN.propertyAuthorizationSubjectHelp).toContain("组织仅用于筛选用户列表");
     expect(zhCN.rowFilterSubjectHelp).toContain("组织仅用于筛选用户列表");
     expect(zhCN.rowFilterSourcesTitle).toBe("生效策略");
+    expect(zhCN.rowFilterConditionGroupWrap).toBe("（{{summary}}）");
 
     expect(enUS.propertyAuthorizationSubjectDescription).toBe(
       "Choose the user or role to configure.",
     );
     expect(enUS.rowFilterSubjectDescription).toBe("Choose the user or role to configure.");
     expect(enUS.rowFilterSourcesTitle).toBe("Effective policy");
+    expect(enUS.rowFilterConditionGroupWrap).toBe("({{summary}})");
   });
 });

@@ -159,6 +159,7 @@ export function RowFilterAuthorizationPanel({
   const { message } = useAppServices();
   const [subjectType, setSubjectType] = useState<RowFilterSubjectType>("user");
   const [subjectId, setSubjectId] = useState<string>();
+  const [pickedUsers, setPickedUsers] = useState<AdminUser[]>([]);
   const [roleKeyword, setRoleKeyword] = useState("");
   const [snapshot, setSnapshot] = useState<RowFilterSnapshot>();
   const [explain, setExplain] = useState<RowFilterExplain>();
@@ -222,7 +223,9 @@ export function RowFilterAuthorizationPanel({
   const currentSubjectName =
     subjectType === "user"
       ? (() => {
-          const user = users.find((item) => item.id === subjectId);
+          const user =
+            users.find((item) => item.id === subjectId) ??
+            pickedUsers.find((item) => item.id === subjectId);
           return user?.name?.trim() || user?.account?.trim() || subjectId;
         })()
       : roles.find((item) => item.id === subjectId)?.name || subjectId;
@@ -395,8 +398,16 @@ export function RowFilterAuthorizationPanel({
             <span>{t("knowledgeNetwork.rowFilterUserOrganizationFilter")}</span>
             <DirectoryUserPicker
               ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
+              className={styles.userPicker}
               initialUsers={users}
               onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))}
+              onUsersChange={(nextUsers) =>
+                setPickedUsers((current) => {
+                  const byID = new Map(current.map((user) => [user.id, user]));
+                  nextUsers.forEach((user) => byID.set(user.id, user));
+                  return [...byID.values()];
+                })
+              }
               presentation="inline"
               value={subjectId}
             />

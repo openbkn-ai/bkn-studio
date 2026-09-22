@@ -50,6 +50,11 @@
   color: var(--color-text-secondary);
   font-size: 12px;
 }
+.userPicker {
+  height: clamp(400px, calc(100dvh - 300px), 540px);
+  min-height: 400px;
+  width: 100%;
+}
 .subjectItem,
 .subjectSelected {
   align-items: center;

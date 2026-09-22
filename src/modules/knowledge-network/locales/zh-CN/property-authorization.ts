@@ -196,6 +196,7 @@ export const propertyAuthorizationPart = {
   rowFilterConditionRelation: "条件关系",
   rowFilterConditionGroupAnd: "且",
   rowFilterConditionGroupOr: "或",
+  rowFilterConditionGroupWrap: "（{{summary}}）",
   rowFilterAddCondition: "添加条件",
   rowFilterRemoveCondition: "删除条件",
   rowFilterConditionOperator: {

@@ -204,6 +204,7 @@ export const propertyAuthorizationPart = {
   rowFilterConditionRelation: "Condition relation",
   rowFilterConditionGroupAnd: "AND",
   rowFilterConditionGroupOr: "OR",
+  rowFilterConditionGroupWrap: "({{summary}})",
   rowFilterAddCondition: "Add condition",
   rowFilterRemoveCondition: "Remove condition",
   rowFilterConditionOperator: {
