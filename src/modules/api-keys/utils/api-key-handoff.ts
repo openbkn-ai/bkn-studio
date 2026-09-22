@@ -15,6 +15,11 @@ type ApiKeyHandoff = {
 
 const pendingHandoffs = new Map<string, ApiKeyHandoff>();
 
+// 清理旧版遗留在 Web Storage 中的明文交接项。
+if (typeof window !== "undefined") {
+  window.sessionStorage.removeItem("openbkn.pending-api-key-handoff");
+}
+
 function isSafeReturnTo(value: string | null | undefined): value is string {
   if (!value?.startsWith("/")) return false;
   try {
