@@ -170,6 +170,74 @@ export async function listKnowledgeNetworkObjectTypes(
   return entries.map(mapObjectType);
 }
 
+export type KnowledgeNetworkObjectTypePageQuery = {
+  direction?: "asc" | "desc";
+  limit: number;
+  namePattern?: string;
+  offset: number;
+  sort?: "name" | "update_time";
+  tag?: string;
+};
+
+export type KnowledgeNetworkObjectTypePage = {
+  entries: KnowledgeNetworkObjectTypeRecord[];
+  totalCount: number;
+};
+
+/** Reads one authorization-filtered server page for the object-type workspace. */
+export async function listKnowledgeNetworkObjectTypePage(
+  networkId: string,
+  query: KnowledgeNetworkObjectTypePageQuery,
+  options: { skipErrorToast?: boolean } = {},
+): Promise<KnowledgeNetworkObjectTypePage> {
+  if (useMock) {
+    const keyword = query.namePattern?.trim().toLowerCase() ?? "";
+    const filtered = (mockObjectTypes[networkId] ?? []).filter((item) => {
+      const matchesKeyword =
+        !keyword ||
+        item.id.toLowerCase().includes(keyword) ||
+        item.name.toLowerCase().includes(keyword) ||
+        item.description.toLowerCase().includes(keyword);
+      return matchesKeyword && (!query.tag || item.tags.includes(query.tag));
+    });
+    const sorted = [...filtered].sort((left, right) => {
+      const leftValue = query.sort === "name" ? left.name : left.updateTime;
+      const rightValue = query.sort === "name" ? right.name : right.updateTime;
+      const result = leftValue.localeCompare(rightValue, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return query.direction === "asc" ? result : -result;
+    });
+    return wait({
+      entries: sorted
+        .slice(query.offset, query.offset + query.limit)
+        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      totalCount: sorted.length,
+    });
+  }
+
+  const response = await http.get<BackendListResponse<BackendObjectType>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/object-types`,
+    {
+      params: {
+        direction: query.direction ?? "desc",
+        limit: query.limit,
+        name_pattern: query.namePattern?.trim() || undefined,
+        offset: query.offset,
+        sort: query.sort ?? "update_time",
+        tag: query.tag?.trim() || undefined,
+      },
+      skipErrorToast: options.skipErrorToast,
+    },
+  );
+
+  return {
+    entries: response.data.entries.map(mapObjectType),
+    totalCount: response.data.total_count,
+  };
+}
+
 export async function getKnowledgeNetworkObjectType(networkId: string, objectTypeId: string) {
   if (useMock) {
     const record = (mockObjectTypes[networkId] ?? []).find((item) => item.id === objectTypeId);

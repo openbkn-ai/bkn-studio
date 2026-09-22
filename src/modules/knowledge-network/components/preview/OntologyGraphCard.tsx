@@ -36,14 +36,18 @@ import { buildModelingPreviewGraph } from "@/modules/knowledge-network/utils/bui
 import styles from "./OntologyGraphCard.module.css";
 
 type OntologyGraphCardProps = {
+  loadConceptGroups?: boolean;
   networkId: string;
   objectTypes?: KnowledgeNetworkObjectTypeRecord[];
+  onExpandNode?: (id: string) => void;
   relationTypes?: KnowledgeNetworkRelationTypeRecord[];
 };
 
 export function OntologyGraphCard({
+  loadConceptGroups = true,
   networkId,
   objectTypes: objectTypesProp,
+  onExpandNode,
   relationTypes: relationTypesProp,
 }: OntologyGraphCardProps) {
   const { t } = useTranslation();
@@ -104,22 +108,45 @@ export function OntologyGraphCard({
     [objectTypes],
   );
 
+  const handleSelect = (id: string | null) => {
+    setSelectedId(id);
+    if (id && id !== selectedId) {
+      onExpandNode?.(id);
+    }
+  };
+
   // Concept-group membership from node to group ID for logical-group clustering. Group details supply member object types.
   const [groupOf, setGroupOf] = useState<Map<string, string>>(new Map());
   const [groupNames, setGroupNames] = useState<Map<string, string>>(new Map());
   useEffect(() => {
+    if (!loadConceptGroups) {
+      setGroupOf(new Map());
+      setGroupNames(new Map());
+      return;
+    }
     let cancelled = false;
     listKnowledgeNetworkConceptGroups(networkId)
       .then(async (groups) => {
-        const details = await Promise.all(
-          groups.map((group) =>
-            getKnowledgeNetworkConceptGroup(networkId, group.id).catch(() => null),
-          ),
-        );
+        const details = new Map<
+          string,
+          Awaited<ReturnType<typeof getKnowledgeNetworkConceptGroup>>
+        >();
+        let nextIndex = 0;
+        const workers = Array.from({ length: Math.min(6, groups.length) }, async () => {
+          while (nextIndex < groups.length) {
+            const group = groups[nextIndex];
+            nextIndex += 1;
+            details.set(
+              group.id,
+              await getKnowledgeNetworkConceptGroup(networkId, group.id).catch(() => null),
+            );
+          }
+        });
+        await Promise.all(workers);
         if (cancelled) return;
         const map = new Map<string, string>();
-        details.forEach((detail, index) => {
-          detail?.objectTypes.forEach((item) => map.set(item.id, groups[index].id));
+        groups.forEach((group) => {
+          details.get(group.id)?.objectTypes.forEach((item) => map.set(item.id, group.id));
         });
         setGroupOf(map);
         setGroupNames(new Map(groups.map((group) => [group.id, group.name])));
@@ -133,7 +160,7 @@ export function OntologyGraphCard({
     return () => {
       cancelled = true;
     };
-  }, [networkId]);
+  }, [loadConceptGroups, networkId]);
 
   return (
     <div className={styles.graphCard}>
@@ -162,7 +189,7 @@ export function OntologyGraphCard({
               groupOf={groupOf}
               groupNames={groupNames}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={handleSelect}
             />
           </div>
           <aside className={styles.graphAside}>
@@ -171,7 +198,7 @@ export function OntologyGraphCard({
               objectTypes={objectTypes}
               relationTypes={relationTypes}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={handleSelect}
             />
           </aside>
         </div>

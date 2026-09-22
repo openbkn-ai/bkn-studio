@@ -133,6 +133,18 @@
   font-weight: 500;
 }
 
+.graphSummary {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
 .tblName {
   display: inline-flex;
   align-items: center;

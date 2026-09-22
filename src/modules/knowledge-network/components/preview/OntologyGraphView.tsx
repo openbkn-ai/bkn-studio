@@ -36,6 +36,9 @@ const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const INITIAL_VIEW = { x: 0, y: 0, w: PREVIEW_LAYOUT_WIDTH, h: PREVIEW_LAYOUT_HEIGHT };
 const GROUP_HULL_PAD = 28;
+const FORCE_LAYOUT_NODE_LIMIT = 80;
+const EDGE_LABEL_LIMIT = 120;
+const RENDERED_EDGE_LIMIT = 240;
 // Group-boundary colors, assigned stably after sorting by group ID.
 const GROUP_COLORS = [
   "#2e68ff",
@@ -199,14 +202,28 @@ export function OntologyGraphView({
   const { t } = useTranslation();
   const [mode, setMode] = useState<OntologyLayoutMode>("force");
   const [showEdgeLabels, setShowEdgeLabels] = useState(true);
+  const effectiveMode =
+    graph.nodes.length > FORCE_LAYOUT_NODE_LIMIT && mode === "force" ? "group" : mode;
+  const edgeLabelsVisible = showEdgeLabels && graph.edges.length <= EDGE_LABEL_LIMIT;
+  const renderedEdges = useMemo(() => {
+    if (graph.edges.length <= RENDERED_EDGE_LIMIT) {
+      return graph.edges;
+    }
+    if (selectedId) {
+      return graph.edges.filter(
+        (edge) => edge.sourceId === selectedId || edge.targetId === selectedId,
+      );
+    }
+    return graph.edges.slice(0, RENDERED_EDGE_LIMIT);
+  }, [graph.edges, selectedId]);
 
   // Recompute layout when graph or arrangement changes, not when selecting a node.
   const { positions, radiusById, hubId } = useMemo(() => {
     const ids = graph.nodes.map((node) => node.id);
     const layout =
-      mode === "circle"
+      effectiveMode === "circle"
         ? circleLayout(ids)
-        : mode === "group"
+        : effectiveMode === "group"
           ? groupLayout(ids, groupOf ?? new Map<string, string>())
           : computePreviewGraphLayout(graph);
     const positionMap = new Map(
@@ -234,7 +251,7 @@ export function OntologyGraphView({
     );
 
     return { positions: positionMap, radiusById: radius, hubId: topId };
-  }, [graph, mode, groupOf]);
+  }, [effectiveMode, graph, groupOf]);
 
   const neighbors = useMemo(() => {
     const neighborSet = new Set<string>();
@@ -293,7 +310,7 @@ export function OntologyGraphView({
 
   // In logical-group mode, calculate each group's bounding box from current positions, including drags, and draw dashed boundaries with names.
   const groupHulls = useMemo(() => {
-    if (mode !== "group" || !groupOf || groupOf.size === 0) return [];
+    if (effectiveMode !== "group" || !groupOf || groupOf.size === 0) return [];
     const buckets = new Map<string, string[]>();
     graph.nodes.forEach((node) => {
       const gid = groupOf.get(node.id);
@@ -331,7 +348,7 @@ export function OntologyGraphView({
         };
       })
       .filter((hull): hull is NonNullable<typeof hull> => hull !== null);
-  }, [mode, groupOf, groupNames, graph, posOf, radiusById]);
+  }, [effectiveMode, groupOf, groupNames, graph, posOf, radiusById]);
 
   const toSvgPoint = useCallback((clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -420,9 +437,13 @@ export function OntologyGraphView({
         <Dropdown
           trigger={["click"]}
           menu={{
-            selectedKeys: [mode],
+            selectedKeys: [effectiveMode],
             items: [
-              { key: "force", label: t("knowledgeNetwork.previewLayoutForce") },
+              {
+                disabled: graph.nodes.length > FORCE_LAYOUT_NODE_LIMIT,
+                key: "force",
+                label: t("knowledgeNetwork.previewLayoutForce"),
+              },
               { key: "circle", label: t("knowledgeNetwork.previewLayoutCircle") },
               { key: "group", label: t("knowledgeNetwork.previewLayoutGroup") },
             ],
@@ -438,9 +459,9 @@ export function OntologyGraphView({
             title={t("knowledgeNetwork.previewRearrange")}
           >
             <RetweetOutlined />
-            {mode === "circle"
+            {effectiveMode === "circle"
               ? t("knowledgeNetwork.previewLayoutCircle")
-              : mode === "group"
+              : effectiveMode === "group"
                 ? t("knowledgeNetwork.previewLayoutGroup")
                 : t("knowledgeNetwork.previewLayoutForce")}
             <DownOutlined className={styles.arrangeCaret} />
@@ -448,16 +469,17 @@ export function OntologyGraphView({
         </Dropdown>
         <button
           type="button"
-          className={`${styles.edgeToggle} ${showEdgeLabels ? styles.edgeToggleOn : ""}`}
+          className={`${styles.edgeToggle} ${edgeLabelsVisible ? styles.edgeToggleOn : ""}`}
           title={t(
-            showEdgeLabels
+            edgeLabelsVisible
               ? "knowledgeNetwork.previewHideEdgeLabels"
               : "knowledgeNetwork.previewShowEdgeLabels",
           )}
-          aria-pressed={showEdgeLabels}
+          aria-pressed={edgeLabelsVisible}
+          disabled={graph.edges.length > EDGE_LABEL_LIMIT}
           onClick={() => setShowEdgeLabels((value) => !value)}
         >
-          {showEdgeLabels ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+          {edgeLabelsVisible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
         </button>
       </div>
       <svg
@@ -527,7 +549,7 @@ export function OntologyGraphView({
         ) : null}
 
         <g className={styles.edges}>
-          {graph.edges.map((edge) => {
+          {renderedEdges.map((edge) => {
             const a = posOf(edge.sourceId);
             const b = posOf(edge.targetId);
             if (!a || !b) {
@@ -563,7 +585,7 @@ export function OntologyGraphView({
                   y2={ey}
                   markerEnd={`url(#kn-onto-arrow${active ? "-hi" : ""})`}
                 />
-                {showEdgeLabels || active ? (
+                {edgeLabelsVisible || active ? (
                   <>
                     <rect
                       className={styles.edgeLabelBg}

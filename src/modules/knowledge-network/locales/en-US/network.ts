@@ -96,6 +96,10 @@ export const networkPart = {
   previewExperience: "Capability verification",
   previewExperienceHint: "Query & retrieval experience for this network is coming soon.",
   previewGraphLegend: "Node = entity class, edge = relation class, green dot = indexed",
+  previewGraphLoadMore: "Load more",
+  previewGraphSummary:
+    "Showing {{loadedNodes}} of {{totalNodes}} entity classes and {{loadedEdges}} of {{totalEdges}} relation classes",
+  previewGraphTruncated: "Summary graph",
   previewRearrange: "Re-arrange",
   previewLayoutForce: "Default layout",
   previewLayoutCircle: "Circle layout",
