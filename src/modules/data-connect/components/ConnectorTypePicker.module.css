@@ -173,9 +173,6 @@
 }
 
 .checkMark {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -187,12 +184,15 @@
   font-size: 11px;
 }
 
+.checkMarkPlaceholder {
+  visibility: hidden;
+}
+
 .cardHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  padding-right: 24px;
 }
 
 .cardHeader strong {

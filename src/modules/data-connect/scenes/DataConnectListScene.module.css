@@ -119,10 +119,6 @@
   max-width: none;
 }
 
-.statusTag {
-  composes: statusTag from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
 .nameCell {
   composes: nameCell from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
@@ -176,33 +172,6 @@
 
 .modeText {
   color: var(--business-color-secondary);
-}
-
-.statusEnabled {
-  composes: statusSuccess from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.statusDisabled {
-  composes: statusDisabled from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.healthHealthy {
-  composes: statusSuccess from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.healthDegraded {
-  composes: statusWarning from "../../../framework/ui/common/BusinessPageTemplate.module.css";
-}
-
-.healthUnhealthy,
-.healthOffline {
-  border-color: rgba(220, 38, 38, 0.22);
-  background: rgba(220, 38, 38, 0.08);
-  color: var(--business-color-danger);
-}
-
-.healthUnchecked {
-  composes: statusDisabled from "../../../framework/ui/common/BusinessPageTemplate.module.css";
 }
 
 .actionLink {

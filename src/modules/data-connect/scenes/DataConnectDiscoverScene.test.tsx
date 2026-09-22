@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import taskStyles from "@/framework/ui/common/TaskDetailDrawer.module.css";
+import lightStatusStyles from "@/framework/ui/common/LightStatusTag.module.css";
 
 import { DataConnectDiscoverScene } from "./DataConnectDiscoverScene";
 
@@ -105,8 +106,18 @@ vi.mock("antd", () => ({
       {items.find((item) => item.key === activeKey)?.children}
     </div>
   ),
-  Tag: ({ children, color }: { children?: ReactNode; color?: string }) => (
-    <span data-color={color}>{children}</span>
+  Tag: ({
+    children,
+    className,
+    color,
+  }: {
+    children?: ReactNode;
+    className?: string;
+    color?: string;
+  }) => (
+    <span className={className} data-color={color}>
+      {children}
+    </span>
   ),
 }));
 
@@ -597,7 +608,7 @@ describe("DataConnectDiscoverScene", () => {
     );
   });
 
-  it("renders pending task status and progress with the neutral color", async () => {
+  it("renders pending task status and progress with the neutral light style", async () => {
     listTasksMock.mockResolvedValue({
       items: [
         {
@@ -617,7 +628,7 @@ describe("DataConnectDiscoverScene", () => {
     render(<DataConnectDiscoverScene catalogId="catalog-1" />);
 
     const status = await screen.findByText("dataConnect.discoverTaskStatuses.pending");
-    expect(status.getAttribute("data-color")).toBe("default");
+    expect(status).toHaveClass(lightStatusStyles.neutral);
     expect(document.querySelector(`.${taskStyles.progressFillMuted}`)).not.toBeNull();
   });
 

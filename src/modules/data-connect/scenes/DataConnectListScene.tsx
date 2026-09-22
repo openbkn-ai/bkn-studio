@@ -6,7 +6,7 @@
  */
 
 import { ApiOutlined, EllipsisOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Dropdown, Input, Select, Space, Tag, Tooltip, type MenuProps } from "antd";
+import { Alert, Dropdown, Input, Select, Space, Tooltip, type MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { AppTable } from "@/framework/ui/common/AppTable";
 import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import {
@@ -45,11 +46,11 @@ import {
 
 import styles from "./DataConnectListScene.module.css";
 
-const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
-  degraded: "orange",
+const HEALTH_STATUS_TONES: Record<DataConnectRecord["healthStatus"], LightStatusTone> = {
+  degraded: "warning",
   healthy: "success",
   offline: "error",
-  unchecked: "default",
+  unchecked: "neutral",
   unhealthy: "error",
 };
 
@@ -450,9 +451,9 @@ export function DataConnectListScene({
       title: t("common.status"),
       width: 96,
       render: (_, record) => (
-        <Tag color={record.enabled ? "success" : "default"}>
+        <LightStatusTag tone={record.enabled ? "success" : "neutral"}>
           {record.enabled ? t("common.enabled") : t("common.disabled")}
-        </Tag>
+        </LightStatusTag>
       ),
     },
     {
@@ -460,7 +461,9 @@ export function DataConnectListScene({
       title: t("common.healthStatus"),
       width: 112,
       render: (value: DataConnectRecord["healthStatus"]) => (
-        <Tag color={HEALTH_STATUS_COLORS[value]}>{t(`dataConnect.healthStatuses.${value}`)}</Tag>
+        <LightStatusTag tone={HEALTH_STATUS_TONES[value]}>
+          {t(`dataConnect.healthStatuses.${value}`)}
+        </LightStatusTag>
       ),
     },
     {

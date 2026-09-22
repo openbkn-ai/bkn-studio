@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { extractRequestErrorMessage, isRequestConflict } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { LightStatusTag, type LightStatusTone } from "@/framework/ui/common/LightStatusTag";
 import { HealthCheckScheduleFormModal } from "@/modules/data-connect/components/HealthCheckScheduleFormModal";
 import { humanizeConnectorFieldLabel } from "@/modules/data-connect/lib/connector-template";
 import {
@@ -37,11 +38,11 @@ type DataConnectDetailDrawerProps = {
   recordId: string;
 };
 
-const HEALTH_STATUS_COLORS: Record<DataConnectRecord["healthStatus"], string> = {
-  degraded: "orange",
+const HEALTH_STATUS_TONES: Record<DataConnectRecord["healthStatus"], LightStatusTone> = {
+  degraded: "warning",
   healthy: "success",
   offline: "error",
-  unchecked: "default",
+  unchecked: "neutral",
   unhealthy: "error",
 };
 
@@ -206,18 +207,18 @@ export function DataConnectDetailDrawer({
                   key: "status",
                   label: t("common.status"),
                   children: (
-                    <Tag color={record.enabled ? "success" : "default"}>
+                    <LightStatusTag tone={record.enabled ? "success" : "neutral"}>
                       {record.enabled ? t("common.enabled") : t("common.disabled")}
-                    </Tag>
+                    </LightStatusTag>
                   ),
                 },
                 {
                   key: "health",
                   label: t("common.healthStatus"),
                   children: (
-                    <Tag color={HEALTH_STATUS_COLORS[record.healthStatus]}>
+                    <LightStatusTag tone={HEALTH_STATUS_TONES[record.healthStatus]}>
                       {t(`dataConnect.healthStatuses.${record.healthStatus}`)}
-                    </Tag>
+                    </LightStatusTag>
                   ),
                 },
                 {

@@ -77,6 +77,7 @@ export const dataConnectEnUS = {
     connectorTypeNameSearchPlaceholder: "Search by connector name",
     connectorTypeTagFilterPlaceholder: "Filter by tag",
     connectorTypeEmpty: "No connector types match the current filters.",
+    connectorTypeDisabled: "Disabled",
     connectorTypeUnavailable: "Unavailable",
     discardChangesTitle: "Discard unsaved changes?",
     discardChangesDescription:

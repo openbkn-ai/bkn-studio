@@ -8,6 +8,7 @@
 import axios from "axios";
 
 import i18n from "@/app/locales/i18n";
+import { atLeast, isEdition, parseEdition } from "@/framework/entitlement/edition";
 import { extractRequestErrorDetails } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import {
@@ -47,13 +48,19 @@ type BackendConnectorFieldConfig = {
 };
 
 type BackendConnectorType = {
+  available: boolean;
   category: string;
   description: string;
   enabled: boolean;
   field_config?: Record<string, BackendConnectorFieldConfig>;
   mode: string;
   name: string;
+  required_edition?: string;
   type: string;
+};
+
+type MockConnectorType = Omit<BackendConnectorType, "available"> & {
+  available?: boolean;
 };
 
 type ListResponse<T> = {
@@ -63,7 +70,7 @@ type ListResponse<T> = {
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
-const mockConnectorTypes: BackendConnectorType[] = [
+const mockConnectorTypes: MockConnectorType[] = [
   {
     type: "mariadb",
     name: "MariaDB",
@@ -86,7 +93,7 @@ const mockConnectorTypes: BackendConnectorType[] = [
     category: "table",
     mode: "local",
     description: "Connect MySQL-compatible databases.",
-    enabled: true,
+    enabled: false,
     field_config: {
       host: mockField("Host", "Database host address", "string", true),
       port: mockField("Port", "Database port", "integer", true),
@@ -120,6 +127,7 @@ const mockConnectorTypes: BackendConnectorType[] = [
     mode: "local",
     description: "Connect Microsoft SQL Server databases.",
     enabled: true,
+    required_edition: "professional",
     field_config: {
       host: mockField("Host", "SQL Server server host address", "string", true),
       port: mockField("Port", "SQL Server TCP port", "integer", true),
@@ -141,12 +149,23 @@ const mockConnectorTypes: BackendConnectorType[] = [
     },
   },
   {
+    type: "oracle",
+    name: "Oracle",
+    category: "table",
+    mode: "local",
+    description: "Connect Oracle relational databases.",
+    enabled: false,
+    available: false,
+    required_edition: "professional",
+  },
+  {
     type: "opensearch",
     name: "OpenSearch",
     category: "index",
     mode: "local",
     description: "Connect OpenSearch engines.",
     enabled: true,
+    available: false,
     field_config: {
       host: mockField("Host", "OpenSearch server host address", "string", true),
       port: mockField("Port", "OpenSearch server port", "integer", true),
@@ -214,12 +233,14 @@ const wait = async <T>(value: T) =>
 
 function mapConnectorType(item: BackendConnectorType): DataConnectConnectorType {
   return {
+    available: item.available,
     type: item.type,
     name: item.name,
     category: item.category,
     mode: item.mode,
     description: item.description,
     enabled: item.enabled,
+    requiredEdition: isEdition(item.required_edition) ? item.required_edition : undefined,
     fieldConfig: Object.fromEntries(
       Object.entries(item.field_config ?? {}).map(([key, value]) => [
         key,
@@ -233,9 +254,23 @@ function mapConnectorType(item: BackendConnectorType): DataConnectConnectorType 
   };
 }
 
+function mockConnectorAvailability(requiredEdition?: string) {
+  return (
+    !isEdition(requiredEdition) ||
+    atLeast(parseEdition(import.meta.env.VITE_MOCK_EDITION), requiredEdition)
+  );
+}
+
+function getMockConnectorTypes() {
+  return mockConnectorTypes.map((item) => ({
+    ...item,
+    available: item.available ?? mockConnectorAvailability(item.required_edition),
+  }));
+}
+
 export async function listDataConnectConnectorTypes() {
   if (useMock) {
-    return wait(mockConnectorTypes.map(mapConnectorType));
+    return wait(getMockConnectorTypes().map(mapConnectorType));
   }
 
   const pageSize = 100;
@@ -248,9 +283,7 @@ export async function listDataConnectConnectorTypes() {
       "/vega-backend/v1/connector-types",
       {
         params: {
-          available: true,
           direction: "asc",
-          enabled: true,
           limit: pageSize,
           offset,
           sort: "name",
@@ -268,7 +301,7 @@ export async function listDataConnectConnectorTypes() {
 
 export async function getDataConnectConnectorType(type: string) {
   if (useMock) {
-    const connectorType = mockConnectorTypes.find((item) => item.type === type);
+    const connectorType = getMockConnectorTypes().find((item) => item.type === type);
     if (!connectorType) {
       throw new Error(`Connector type ${type} was not found`);
     }

@@ -14,8 +14,9 @@ vi.mock("@/framework/request/http", () => ({
 }));
 
 // useMock 是模块加载时求值的常量,所以每个用例先 stub 再动态 import。
-async function importFetchEntitlement(useMock: "false" | "true" = "false") {
+async function importFetchEntitlement(useMock: "false" | "true" = "false", mockEdition = "") {
   vi.stubEnv("VITE_USE_MOCK", useMock);
+  vi.stubEnv("VITE_MOCK_EDITION", mockEdition);
   vi.resetModules();
   const module = await import("@/framework/entitlement/entitlement.service");
   return module.fetchEntitlement;
@@ -122,12 +123,82 @@ describe("fetchEntitlement", () => {
     expect(entitlement.extensions).toEqual(["rbac_basic", "perm_object_level"]);
   });
 
-  // mock 模式覆盖三态里的两态,本地开发才走得到升级引导那条路。
-  it("mock 模式给出企业镜像 + 专业证,不发请求", async () => {
+  it("mock 模式默认给出社区镜像快照,不发请求", async () => {
     const entitlement = await (await importFetchEntitlement("true"))();
 
     expect(mockGet).not.toHaveBeenCalled();
-    expect(entitlement.capabilities).toEqual(["rbac_basic", "perm_fine_grained", "graph_explorer"]);
-    expect(entitlement.extensions).toContain("perm_object_level");
+    expect(entitlement).toEqual({
+      capabilities: [],
+      edition: "community",
+      extensions: [],
+      features: [],
+      licensed: false,
+      limits: {},
+      state: "fallback_community",
+    });
+  });
+
+  it("mock 模式按 VITE_MOCK_EDITION 生成对应档位的快照", async () => {
+    const professional = await (await importFetchEntitlement("true", "professional"))();
+    expect(professional).toEqual({
+      capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer"],
+      edition: "professional",
+      extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+      features: [
+        "rbac_basic",
+        "perm_fine_grained",
+        "graph_explorer",
+        "perm_object_level",
+        "source_sync",
+      ],
+      licensed: true,
+      limits: { max_users: 100 },
+      state: "valid",
+    });
+
+    const enterprise = await (await importFetchEntitlement("true", "enterprise"))();
+    expect(enterprise).toEqual({
+      capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+      edition: "enterprise",
+      extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+      features: [
+        "rbac_basic",
+        "perm_fine_grained",
+        "graph_explorer",
+        "perm_object_level",
+        "source_sync",
+      ],
+      licensed: true,
+      limits: { max_users: 1000 },
+      state: "valid",
+    });
+
+    const industry = await (await importFetchEntitlement("true", "industry"))();
+    expect(industry).toEqual({
+      capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+      edition: "industry",
+      extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+      features: [
+        "rbac_basic",
+        "perm_fine_grained",
+        "graph_explorer",
+        "perm_object_level",
+        "source_sync",
+      ],
+      licensed: true,
+      limits: { max_users: -1 },
+      state: "valid",
+    });
+
+    const invalid = await (await importFetchEntitlement("true", "platinum"))();
+    expect(invalid).toEqual({
+      capabilities: [],
+      edition: "community",
+      extensions: [],
+      features: [],
+      licensed: false,
+      limits: {},
+      state: "fallback_community",
+    });
   });
 });

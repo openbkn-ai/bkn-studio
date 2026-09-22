@@ -722,7 +722,8 @@ export const mockResources: CatalogResource[] = [
     category: "table",
     schemaName: "customer_center",
     sourceIdentifier: "crm_core.discover_unchanged_orders",
-    description: "用于验证源端元数据未变化的探查状态。",
+    description: "用于验证资源停用时的展示与操作门控。",
+    enabled: false,
     lastDiscoverStatus: "unchanged",
     schema: [
       {

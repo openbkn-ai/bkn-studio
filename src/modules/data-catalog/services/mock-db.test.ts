@@ -144,6 +144,16 @@ describe("data catalog discover-status mocks", () => {
     });
   });
 
+  it("provides a disabled resource while its catalog remains enabled", () => {
+    const resource = mockResources.find((item) => item.id === "res-discovery-unchanged");
+
+    expect(resource).toMatchObject({
+      catalogId: "cat-001",
+      enabled: false,
+      lastDiscoverStatus: "unchanged",
+    });
+  });
+
   it("keeps mock task key fields compatible with their resource schema", () => {
     const resourcesById = new Map(mockResources.map((resource) => [resource.id, resource]));
 

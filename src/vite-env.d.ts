@@ -17,6 +17,7 @@ interface ImportMetaEnv {
   readonly VITE_DEV_REFRESH_TOKEN?: string;
   readonly VITE_SAFE_PROXY_TARGET?: string;
   readonly VITE_INSTALL_STATUS_URL?: string;
+  readonly VITE_MOCK_EDITION?: "community" | "professional" | "enterprise" | "industry";
   readonly VITE_USE_MOCK?: "true" | "false";
   readonly VITE_CAPABILITY_UX_V2?: "true" | "false";
 }

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { parseEdition } from "@/framework/entitlement/edition";
+import { parseEdition, type Edition } from "@/framework/entitlement/edition";
 import type { Entitlement, LicenseState } from "@/framework/entitlement/types";
 import { http } from "@/framework/request/http";
 
@@ -37,22 +37,69 @@ export type CapabilitiesResponse = {
   state?: string;
 };
 
-/**
- * mock 模拟「企业镜像 + 专业证」:装了两个能力,只买得起其中一个。
- *
- * 选这个组合是因为它同时覆盖三态里的两个——`rbac_basic` 可用、`perm_object_level`
- * 装了没买——本地开发因此能看见升级引导长什么样。全买或全不买的 mock 会让升级路径
- * 没人走过。
- */
-const MOCK_ENTITLEMENT: Entitlement = {
-  capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer"],
-  edition: "professional",
-  extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
-  features: ["rbac_basic", "perm_fine_grained", "graph_explorer", "source_sync"],
-  licensed: true,
-  limits: { max_users: 100 },
-  state: "valid",
-};
+/** VITE_MOCK_EDITION 驱动本地授权 mock；未设置或无效值安全降级为社区版。 */
+function mockEntitlement(edition: Edition): Entitlement {
+  switch (edition) {
+    case "community":
+      return {
+        capabilities: [],
+        edition: "community",
+        extensions: [],
+        features: [],
+        licensed: false,
+        limits: {},
+        state: "fallback_community",
+      };
+    case "professional":
+      return {
+        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer"],
+        edition: "professional",
+        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        features: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "perm_object_level",
+          "source_sync",
+        ],
+        licensed: true,
+        limits: { max_users: 100 },
+        state: "valid",
+      };
+    case "enterprise":
+      return {
+        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        edition: "enterprise",
+        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        features: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "perm_object_level",
+          "source_sync",
+        ],
+        licensed: true,
+        limits: { max_users: 1000 },
+        state: "valid",
+      };
+    case "industry":
+      return {
+        capabilities: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        edition: "industry",
+        extensions: ["rbac_basic", "perm_fine_grained", "graph_explorer", "perm_object_level"],
+        features: [
+          "rbac_basic",
+          "perm_fine_grained",
+          "graph_explorer",
+          "perm_object_level",
+          "source_sync",
+        ],
+        licensed: true,
+        limits: { max_users: -1 },
+        state: "valid",
+      };
+  }
+}
 
 const LICENSE_STATES: readonly LicenseState[] = [
   "fallback_community",
@@ -119,7 +166,7 @@ function toLimits(value: unknown): Record<string, number> {
  */
 export async function fetchEntitlement(): Promise<Entitlement> {
   if (useMock) {
-    return { ...MOCK_ENTITLEMENT };
+    return mockEntitlement(parseEdition(import.meta.env.VITE_MOCK_EDITION));
   }
 
   const response = await http.get<CapabilitiesResponse>(CAPABILITIES, {

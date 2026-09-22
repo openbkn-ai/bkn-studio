@@ -202,6 +202,7 @@ describe("DataConnectDetailDrawer", () => {
       <DataConnectDetailDrawer
         connectorTypes={[
           {
+            available: true,
             category: "table",
             description: "",
             enabled: true,
@@ -248,6 +249,7 @@ describe("DataConnectDetailDrawer", () => {
       <DataConnectDetailDrawer
         connectorTypes={[
           {
+            available: true,
             category: "table",
             description: "",
             enabled: true,
@@ -283,6 +285,7 @@ describe("DataConnectDetailDrawer", () => {
       <DataConnectDetailDrawer
         connectorTypes={[
           {
+            available: true,
             category: "table",
             description: "",
             enabled: true,
@@ -318,6 +321,7 @@ describe("DataConnectDetailDrawer", () => {
       <DataConnectDetailDrawer
         connectorTypes={[
           {
+            available: true,
             category: "table",
             description: "",
             enabled: true,

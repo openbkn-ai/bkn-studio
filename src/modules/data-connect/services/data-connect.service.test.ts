@@ -38,18 +38,38 @@ describe("data-connect.service · test connection", () => {
     vi.unstubAllEnvs();
   });
 
-  it("filters connector types to enabled implementations available in the backend", async () => {
-    getMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+  it("lists connector types regardless of runtime availability and enabled state", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            available: false,
+            category: "table",
+            description: "",
+            enabled: true,
+            mode: "local",
+            name: "SQL Server",
+            required_edition: "professional",
+            type: "sqlserver",
+          },
+        ],
+        total_count: 1,
+      },
+    });
     const { listDataConnectConnectorTypes } =
       await import("@/modules/data-connect/services/data-connect.service");
 
-    await listDataConnectConnectorTypes();
+    await expect(listDataConnectConnectorTypes()).resolves.toMatchObject([
+      {
+        available: false,
+        requiredEdition: "professional",
+        type: "sqlserver",
+      },
+    ]);
 
     expect(getMock).toHaveBeenCalledWith("/vega-backend/v1/connector-types", {
       params: {
-        available: true,
         direction: "asc",
-        enabled: true,
         limit: 100,
         offset: 0,
         sort: "name",
@@ -89,9 +109,7 @@ describe("data-connect.service · test connection", () => {
     await expect(listDataConnectConnectorTypes()).resolves.toHaveLength(101);
     expect(getMock).toHaveBeenNthCalledWith(2, "/vega-backend/v1/connector-types", {
       params: {
-        available: true,
         direction: "asc",
-        enabled: true,
         limit: 100,
         offset: 100,
         sort: "name",
@@ -273,6 +291,7 @@ describe("data-connect.service · test connection", () => {
       "schemas",
       "options",
     ]);
+    expect(fieldsByType.get("oracle")).toEqual({});
     expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
       "host",
       "port",
@@ -296,6 +315,18 @@ describe("data-connect.service · test connection", () => {
       required: false,
       type: "string",
     });
+
+    const editionsByType = new Map(
+      connectorTypes.map((connector) => [connector.type, connector.requiredEdition]),
+    );
+    expect(editionsByType.get("sqlserver")).toBe("professional");
+    expect(editionsByType.get("oracle")).toBe("professional");
+    expect(editionsByType.get("mysql")).toBeUndefined();
+
+    const stateByType = new Map(connectorTypes.map((connector) => [connector.type, connector]));
+    expect(stateByType.get("opensearch")).toMatchObject({ available: false, enabled: true });
+    expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: false });
+    expect(stateByType.get("mysql")).toMatchObject({ available: true, enabled: false });
   });
 
   it("recognizes only the backend connection-test failure code", async () => {
