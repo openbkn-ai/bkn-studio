@@ -11,12 +11,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OAuthCallback } from "@/framework/auth/OAuthCallback";
 
 const oauth = vi.hoisted(() => ({
-  beginLogin: vi.fn(() => Promise.resolve()),
   completeLogin: vi.fn(() => Promise.resolve("/studio/")),
   consumeCsrfRetry: vi.fn(() => true),
-  getStoredReturnTo: vi.fn(() => "/studio/knowledge-network"),
   isCsrfConflictCallback: vi.fn(() => false),
   releaseFlowLock: vi.fn(),
+  retryLogin: vi.fn(() => Promise.resolve()),
   stashCallbackError: vi.fn(),
   takeStashedCallbackError: vi.fn(() => null as string | null),
 }));
@@ -55,7 +54,7 @@ describe("OAuthCallback CSRF recovery wiring", () => {
     render(<OAuthCallback />);
 
     expect(oauth.completeLogin).toHaveBeenCalledTimes(1);
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.retryLogin).not.toHaveBeenCalled();
     // The retry budget must survive a successful callback.
     expect(oauth.consumeCsrfRetry).not.toHaveBeenCalled();
   });
@@ -65,7 +64,7 @@ describe("OAuthCallback CSRF recovery wiring", () => {
 
     render(<OAuthCallback />);
 
-    expect(oauth.beginLogin).toHaveBeenCalledWith("/studio/knowledge-network", "zh-CN");
+    expect(oauth.retryLogin).toHaveBeenCalledWith("zh-CN");
     expect(oauth.completeLogin).not.toHaveBeenCalled();
     expect(oauth.stashCallbackError).toHaveBeenCalledTimes(1);
   });
@@ -78,7 +77,7 @@ describe("OAuthCallback CSRF recovery wiring", () => {
 
     render(<OAuthCallback />);
 
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.retryLogin).not.toHaveBeenCalled();
     expect(oauth.completeLogin).toHaveBeenCalledTimes(1);
     // The retry's own message describes the retry, not the real cause.
     expect(await screen.findByText("the original reason")).toBeTruthy();

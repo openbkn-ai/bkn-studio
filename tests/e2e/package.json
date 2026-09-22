@@ -22,7 +22,7 @@
   "devDependencies": {
     "@playwright/test": "1.61.1",
     "@types/node": "^24.6.1",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "typescript": "~5.9.3"
   }
 }

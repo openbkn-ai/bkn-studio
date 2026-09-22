@@ -242,7 +242,10 @@ export function ExperienceScene({
   const [appKey, setAppKey] = useState("");
 
   useEffect(() => {
-    const key = consumeApiKeyHandoff(currentPath);
+    const key = consumeApiKeyHandoff(
+      currentPath,
+      (location.state as { apiKeyHandoffId?: unknown } | null)?.apiKeyHandoffId,
+    );
     if (!key) return;
     setAuthMode("apikey");
     setAppKey(key);

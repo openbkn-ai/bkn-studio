@@ -168,7 +168,7 @@ function scanTypeScriptEnglishText(filePath, source) {
 }
 
 function scanHtmlEnglishText(filePath, source) {
-  const withoutComments = source.replace(/<!--[\s\S]*?-->/g, "");
+  const withoutComments = stripHtmlComments(source);
   withoutComments.split(/\r?\n/).forEach((line, index) => {
     for (const match of line.matchAll(/>([^<>]+)</g))
       addEnglishTextFinding(filePath, index + 1, match[1]);
@@ -306,8 +306,17 @@ function looksLikeTechnicalValue(text) {
     looksLikeSqlSnippet(text) ||
     /^<[^>]+>$/.test(text) ||
     /^[A-Z][A-Z0-9_-]+$/.test(text) ||
-    /^[a-zA-Z_$][\w$]*(?:[./:_-][\w$-]+)+$/.test(text) ||
+    looksLikeCompoundIdentifier(text) ||
     /^\{\{[^}]+\}\}$/.test(text)
+  );
+}
+
+function looksLikeCompoundIdentifier(text) {
+  const segments = text.split(/[./:_-]/);
+  return (
+    segments.length > 1 &&
+    /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(segments[0]) &&
+    segments.slice(1).every((segment) => /^[A-Za-z0-9_$]+$/.test(segment))
   );
 }
 
@@ -454,7 +463,18 @@ function stripComments(source) {
 }
 
 function stripHtmlComments(source) {
-  return source.replace(/<!--[\s\S]*?-->/g, (comment) => comment.replace(/[^\n]/g, " "));
+  let cursor = 0;
+  let output = "";
+  while (cursor < source.length) {
+    const commentStart = source.indexOf("<!--", cursor);
+    if (commentStart < 0) return output + source.slice(cursor);
+    output += source.slice(cursor, commentStart);
+    const commentEnd = source.indexOf("-->", commentStart + 4);
+    if (commentEnd < 0) return output + source.slice(commentStart).replace(/[^\n]/g, " ");
+    output += source.slice(commentStart, commentEnd + 3).replace(/[^\n]/g, " ");
+    cursor = commentEnd + 3;
+  }
+  return output;
 }
 
 function isEscaped(source, index) {

@@ -93,6 +93,18 @@ export function isOAuthCallbackPath(pathname = window.location.pathname) {
   return pathname === getAppCallbackPath();
 }
 
+function getSafeReturnTo(value: string | null | undefined): string | undefined {
+  if (!value?.startsWith("/")) return undefined;
+  try {
+    const target = new URL(value, window.location.origin);
+    return target.origin === window.location.origin
+      ? `${target.pathname}${target.search}${target.hash}`
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function base64UrlEncode(bytes: Uint8Array) {
   let binary = "";
   for (const byte of bytes) {
@@ -288,10 +300,6 @@ export function consumeCsrfRetry() {
   return true;
 }
 
-export function getStoredReturnTo() {
-  return window.sessionStorage.getItem(RETURN_TO_KEY) ?? undefined;
-}
-
 export function buildAuthorizationRequestURL(
   codeChallenge: string,
   state: string,
@@ -313,18 +321,12 @@ export function buildAuthorizationRequestURL(
   return `${gatewayOrigin()}${AUTHORIZE_PATH}?${params.toString()}`;
 }
 
-export async function beginLogin(returnTo?: string, requestedLocale?: string | null) {
+async function startLogin(requestedLocale?: string | null) {
   const verifier = randomUrlSafeString();
   const state = randomUrlSafeString();
 
   window.sessionStorage.setItem(VERIFIER_KEY, verifier);
   window.sessionStorage.setItem(STATE_KEY, state);
-  if (returnTo && !isOAuthCallbackPath(returnTo)) {
-    window.sessionStorage.setItem(RETURN_TO_KEY, returnTo);
-  } else {
-    window.sessionStorage.removeItem(RETURN_TO_KEY);
-  }
-
   const authorizationURL = buildAuthorizationRequestURL(
     await computeCodeChallenge(verifier),
     state,
@@ -335,6 +337,21 @@ export async function beginLogin(returnTo?: string, requestedLocale?: string | n
   // auto-redirecting until this flow finishes or the lock ages out.
   writeFlowLock();
   window.location.assign(authorizationURL);
+}
+
+export async function beginLogin(returnTo?: string, requestedLocale?: string | null) {
+  const safeReturnTo = getSafeReturnTo(returnTo);
+  if (safeReturnTo && !isOAuthCallbackPath(safeReturnTo)) {
+    window.sessionStorage.setItem(RETURN_TO_KEY, safeReturnTo);
+  } else {
+    window.sessionStorage.removeItem(RETURN_TO_KEY);
+  }
+  await startLogin(requestedLocale);
+}
+
+/** Retries the OAuth request while preserving the already validated return path. */
+export async function retryLogin(requestedLocale?: string | null) {
+  await startLogin(requestedLocale);
 }
 
 async function requestToken(body: URLSearchParams): Promise<TokenResponse> {
@@ -410,7 +427,8 @@ export async function completeLogin(search = window.location.search) {
   window.sessionStorage.removeItem(CSRF_ORIGINAL_ERROR_KEY);
   releaseFlowLock();
 
-  const returnTo = window.sessionStorage.getItem(RETURN_TO_KEY) ?? getAppHomePath();
+  const returnTo =
+    getSafeReturnTo(window.sessionStorage.getItem(RETURN_TO_KEY)) ?? getAppHomePath();
   window.sessionStorage.removeItem(RETURN_TO_KEY);
   return returnTo;
 }
