@@ -1005,7 +1005,8 @@ export const bknTraceZhCN = {
         status: "接入状态",
       },
       capturePolicy: {
-        acknowledgementCount: "{{count}} 个端点确认",
+        acknowledgementCount_one: "{{count}} 个端点确认",
+        acknowledgementCount_other: "{{count}} 个端点确认",
         coverageGap: "系统记录了采集缺口；回滚不能恢复已丢弃的 Trace 或证据。",
         desiredState: "期望状态",
         effectiveState: "生效状态",

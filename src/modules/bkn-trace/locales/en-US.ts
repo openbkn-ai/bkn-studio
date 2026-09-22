@@ -1067,7 +1067,8 @@ export const bknTraceEnUS = {
         status: "Integration status",
       },
       capturePolicy: {
-        acknowledgementCount: "{{count}} endpoint acknowledgements",
+        acknowledgementCount_one: "{{count}} endpoint acknowledgement",
+        acknowledgementCount_other: "{{count}} endpoint acknowledgements",
         coverageGap:
           "A coverage gap is recorded; rollback cannot restore discarded Trace or Evidence.",
         desiredState: "Desired state",
