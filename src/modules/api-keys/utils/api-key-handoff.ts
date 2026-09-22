@@ -33,8 +33,15 @@ function isSafeReturnTo(value: string | null | undefined): value is string {
   }
 }
 
-function createHandoffId() {
-  return globalThis.crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+function createHandoffId(): string | null {
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto) return null;
+  if (typeof webCrypto.randomUUID === "function") return webCrypto.randomUUID();
+  if (typeof webCrypto.getRandomValues !== "function") return null;
+
+  const bytes = new Uint8Array(16);
+  webCrypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function buildApiKeyPagePath(returnTo: string): string {
@@ -49,6 +56,7 @@ export function readApiKeyReturnTo(search: string): string | null {
 export function saveApiKeyHandoff(returnTo: string, key: string): string | null {
   if (typeof window === "undefined" || !isSafeReturnTo(returnTo) || !key) return null;
   const handoffId = createHandoffId();
+  if (!handoffId) return null;
   pendingHandoffs.set(handoffId, { expiresAt: Date.now() + HANDOFF_TTL_MS, key, returnTo });
   return handoffId;
 }
