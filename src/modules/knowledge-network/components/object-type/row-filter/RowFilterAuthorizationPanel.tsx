@@ -142,7 +142,9 @@ function policySummary(
       return `${field ? rowFilterFieldBusinessLabel(field) : condition.propertyName} ${operator} ${condition.values.join("、")}`;
     })
     .join(` ${relation} `);
-  return policy.conditions.length > 1 ? `（${summary}）` : summary;
+  return policy.conditions.length > 1
+    ? t("knowledgeNetwork.rowFilterConditionGroupWrap", { summary })
+    : summary;
 }
 
 export function RowFilterAuthorizationPanel({
