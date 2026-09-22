@@ -54,7 +54,46 @@ describe("BKN Trace access profile service", () => {
       managementAudit: false,
       securityAudit: false,
       technicalTrace: false,
+      traceEvidenceConfigurationRead: false,
     });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("roles");
+  });
+
+  it("reads the unified Trace/Evidence policy without collapsing effective state to a boolean", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        revision: 9,
+        desired_state: "enabled",
+        effective_state: "enabling",
+        last_stable_revision: 8,
+        coverage_gap: false,
+        operation: {
+          id: "op-9",
+          phase: "enabling",
+          requested_state: "enabled",
+          expected_revision: 9,
+        },
+        acknowledgements: [],
+      },
+    });
+
+    const { getTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(getTraceEvidenceConfiguration()).resolves.toEqual({
+      revision: 9,
+      desiredState: "enabled",
+      effectiveState: "enabling",
+      lastStableRevision: 8,
+      coverageGap: false,
+      operation: {
+        id: "op-9",
+        phase: "enabling",
+        requestedState: "enabled",
+        expectedRevision: 9,
+      },
+      acknowledgements: [],
+    });
+    expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-configuration");
   });
 });
