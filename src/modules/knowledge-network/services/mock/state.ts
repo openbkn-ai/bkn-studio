@@ -534,6 +534,19 @@ export function cloneDataProperties(properties: ObjectTypeDataProperty[]) {
   }));
 }
 
+function isSafeMockStoreKey(value: string) {
+  return value !== "__proto__" && value !== "constructor" && value !== "prototype";
+}
+
+function withoutMockStoreEntry<T>(store: Record<string, T> | undefined, key: string) {
+  return store
+    ? (Object.fromEntries(Object.entries(store).filter(([entryKey]) => entryKey !== key)) as Record<
+        string,
+        T
+      >)
+    : undefined;
+}
+
 export const mockObjectTypeDataSources: Record<string, Record<string, ObjectTypeDataSource>> = {
   "kn-domain-risk": {
     "ot-risk-order": { id: "dv-risk-order", name: "风险订单视图" },
@@ -547,6 +560,7 @@ export function persistMockObjectTypeProperties(
   logicProperties: ObjectTypeLogicProperty[],
   dataSource?: ObjectTypeDataSource,
 ) {
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(objectTypeId)) return;
   mockObjectTypeDataProperties[networkId] = {
     ...(mockObjectTypeDataProperties[networkId] ?? {}),
     [objectTypeId]: cloneDataProperties(dataProperties),
@@ -568,15 +582,13 @@ export function persistMockObjectTypeProperties(
 }
 
 export function removeMockObjectTypeProperties(networkId: string, objectTypeId: string) {
-  if (mockObjectTypeDataProperties[networkId]) {
-    delete mockObjectTypeDataProperties[networkId][objectTypeId];
-  }
-  if (mockObjectTypeLogicProperties[networkId]) {
-    delete mockObjectTypeLogicProperties[networkId][objectTypeId];
-  }
-  if (mockObjectTypeDataSources[networkId]) {
-    delete mockObjectTypeDataSources[networkId][objectTypeId];
-  }
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(objectTypeId)) return;
+  mockObjectTypeDataProperties[networkId] =
+    withoutMockStoreEntry(mockObjectTypeDataProperties[networkId], objectTypeId) ?? {};
+  mockObjectTypeLogicProperties[networkId] =
+    withoutMockStoreEntry(mockObjectTypeLogicProperties[networkId], objectTypeId) ?? {};
+  mockObjectTypeDataSources[networkId] =
+    withoutMockStoreEntry(mockObjectTypeDataSources[networkId], objectTypeId) ?? {};
 }
 
 export const mockObjectTypeSmallModels: ObjectTypeSmallModel[] = [
@@ -802,6 +814,7 @@ export function persistMockRelationTypeResourceMappings(
     resourceMappings: RelationTypeResourceRowMapping[];
   },
 ) {
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
   mockRelationTypeResourceMappings[networkId] = {
     ...(mockRelationTypeResourceMappings[networkId] ?? {}),
     [relationTypeId]: {
@@ -813,9 +826,9 @@ export function persistMockRelationTypeResourceMappings(
 }
 
 export function removeMockRelationTypeResourceMappings(networkId: string, relationTypeId: string) {
-  if (mockRelationTypeResourceMappings[networkId]) {
-    delete mockRelationTypeResourceMappings[networkId][relationTypeId];
-  }
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
+  mockRelationTypeResourceMappings[networkId] =
+    withoutMockStoreEntry(mockRelationTypeResourceMappings[networkId], relationTypeId) ?? {};
 }
 
 export function cloneRelationTypePropertyMappings(
@@ -829,6 +842,7 @@ export function persistMockRelationTypeMappings(
   relationTypeId: string,
   propertyMappings: RelationTypePropertyMapping[],
 ) {
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
   mockRelationTypeMappings[networkId] = {
     ...(mockRelationTypeMappings[networkId] ?? {}),
     [relationTypeId]: cloneRelationTypePropertyMappings(propertyMappings),
@@ -836,9 +850,9 @@ export function persistMockRelationTypeMappings(
 }
 
 export function removeMockRelationTypeMappings(networkId: string, relationTypeId: string) {
-  if (mockRelationTypeMappings[networkId]) {
-    delete mockRelationTypeMappings[networkId][relationTypeId];
-  }
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(relationTypeId)) return;
+  mockRelationTypeMappings[networkId] =
+    withoutMockStoreEntry(mockRelationTypeMappings[networkId], relationTypeId) ?? {};
 }
 
 export const mockActionTypes: Record<string, KnowledgeNetworkActionTypeRecord[]> = {
@@ -928,6 +942,7 @@ export function persistMockActionTypeExecutionConfig(
   actionTypeId: string,
   executionConfig: ActionTypeExecutionConfig,
 ) {
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(actionTypeId)) return;
   mockActionTypeExecutionConfigs[networkId] = {
     ...(mockActionTypeExecutionConfigs[networkId] ?? {}),
     [actionTypeId]: cloneActionTypeExecutionConfig(executionConfig),
@@ -935,9 +950,9 @@ export function persistMockActionTypeExecutionConfig(
 }
 
 export function removeMockActionTypeExecutionConfig(networkId: string, actionTypeId: string) {
-  if (mockActionTypeExecutionConfigs[networkId]) {
-    delete mockActionTypeExecutionConfigs[networkId][actionTypeId];
-  }
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(actionTypeId)) return;
+  mockActionTypeExecutionConfigs[networkId] =
+    withoutMockStoreEntry(mockActionTypeExecutionConfigs[networkId], actionTypeId) ?? {};
 }
 
 export function persistMockActionTypeDetailExtras(
@@ -945,6 +960,7 @@ export function persistMockActionTypeDetailExtras(
   actionTypeId: string,
   extras: ActionTypeDetailExtras,
 ) {
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(actionTypeId)) return;
   const current = mockActionTypeDetailExtras[networkId]?.[actionTypeId] ?? {};
   mockActionTypeDetailExtras[networkId] = {
     ...(mockActionTypeDetailExtras[networkId] ?? {}),
@@ -966,9 +982,9 @@ export function persistMockActionTypeDetailExtras(
 }
 
 export function removeMockActionTypeDetailExtras(networkId: string, actionTypeId: string) {
-  if (mockActionTypeDetailExtras[networkId]) {
-    delete mockActionTypeDetailExtras[networkId][actionTypeId];
-  }
+  if (!isSafeMockStoreKey(networkId) || !isSafeMockStoreKey(actionTypeId)) return;
+  mockActionTypeDetailExtras[networkId] =
+    withoutMockStoreEntry(mockActionTypeDetailExtras[networkId], actionTypeId) ?? {};
 }
 
 export const mockActionTypeExecutionLogs: Record<string, ActionTypeExecutionLogDetail[]> = {

@@ -248,7 +248,9 @@ function conditionOperator(value: unknown): string | undefined {
 function formatCondition(value: unknown): string {
   if (typeof value === "string") {
     const text = value.trim();
-    if (/^(?:\[object Object\]\s*[,;；、]?\s*)+$/i.test(text)) return "";
+    const withoutObjectMarkers = text.replace(/\[object Object\]/gi, "");
+    if (withoutObjectMarkers.length !== text.length && /^[\s,;；、]*$/.test(withoutObjectMarkers))
+      return "";
     try {
       const parsed = JSON.parse(text) as unknown;
       if (typeof parsed === "object" && parsed !== null) return formatCondition(parsed);

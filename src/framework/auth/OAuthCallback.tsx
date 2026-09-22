@@ -11,12 +11,11 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  beginLogin,
   completeLogin,
   consumeCsrfRetry,
-  getStoredReturnTo,
   isCsrfConflictCallback,
   releaseFlowLock,
+  retryLogin,
   stashCallbackError,
   takeStashedCallbackError,
 } from "@/framework/auth/oauth";
@@ -52,7 +51,7 @@ export function OAuthCallback() {
 
     if (isCsrfConflictCallback() && consumeCsrfRetry()) {
       stashCallbackError();
-      beginLogin(getStoredReturnTo(), loginLocale).catch(fail);
+      retryLogin(loginLocale).catch(fail);
       return;
     }
 

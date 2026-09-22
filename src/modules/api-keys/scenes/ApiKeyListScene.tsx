@@ -107,8 +107,8 @@ export function ApiKeyListScene({ embedded = false }: { embedded?: boolean } = {
     const issued = secret;
     setSecret(null);
     if (issued && returnTo) {
-      saveApiKeyHandoff(returnTo, issued.key);
-      void navigate(returnTo);
+      const apiKeyHandoffId = saveApiKeyHandoff(returnTo, issued.key);
+      void navigate(returnTo, { state: apiKeyHandoffId ? { apiKeyHandoffId } : undefined });
     }
   };
 
