@@ -17,7 +17,11 @@ const pendingHandoffs = new Map<string, ApiKeyHandoff>();
 
 // 清理旧版遗留在 Web Storage 中的明文交接项。
 if (typeof window !== "undefined") {
-  window.sessionStorage.removeItem("openbkn.pending-api-key-handoff");
+  try {
+    window.sessionStorage.removeItem("openbkn.pending-api-key-handoff");
+  } catch {
+    // Ignore unavailable sessionStorage.
+  }
 }
 
 function isSafeReturnTo(value: string | null | undefined): value is string {
