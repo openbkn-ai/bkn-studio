@@ -549,7 +549,7 @@ export function OverviewOntologyBlock({
                           <div className={styles.sectionCard}>
                             <div className={styles.sectionCardTitle}>
                               {t("knowledgeNetwork.previewEntityClasses")}
-                              <span className={styles.badge}>{objectTypeTotal}</span>
+                              <span className={styles.badge}>{objectTypes.length}</span>
                             </div>
                             <Table
                               rowKey="id"
@@ -577,7 +577,7 @@ export function OverviewOntologyBlock({
                           <div className={`${styles.sectionCard} ${styles.sectionCardSecondary}`}>
                             <div className={styles.sectionCardTitle}>
                               {t("knowledgeNetwork.previewRelationClasses")}
-                              <span className={styles.badge}>{relationTypeTotal}</span>
+                              <span className={styles.badge}>{relationTypes.length}</span>
                             </div>
                             <Table
                               rowKey="id"
