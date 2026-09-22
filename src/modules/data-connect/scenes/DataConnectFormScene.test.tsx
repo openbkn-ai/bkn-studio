@@ -794,6 +794,28 @@ describe("DataConnectFormScene · connection preflight", () => {
   );
 
   it(
+    "连接器同时不可用且停用时只显示不可用标签",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      entitlementState.snapshot = {
+        capabilities: [],
+        edition: "community",
+        extensions: [],
+      };
+      listDataConnectConnectorTypesMock.mockResolvedValue([sqlServerConnectorType(false, false)]);
+
+      render(<DataConnectFormScene mode="create" />);
+
+      const sqlServerButton = await findConnectorCard("SQL Server");
+
+      expect(sqlServerButton.hasAttribute("disabled")).toBe(true);
+      expect(sqlServerButton.textContent).toContain("dataConnect.connectorTypeUnavailable");
+      expect(sqlServerButton.textContent).not.toContain("dataConnect.connectorTypeDisabled");
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
+
+  it(
     "creates a SQL Server catalog with the default port",
     async () => {
       permissionState.values = new Set(["catalog:create"]);
