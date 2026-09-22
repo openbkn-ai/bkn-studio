@@ -21,4 +21,20 @@ describe("property authorization terminology", () => {
     expect(enUS.objectTypeMaskRuleTitle).toBe("Column Masking Rule");
     expect(enUS.propertyAuthorizationMaskedMissing).toContain("Column Masking");
   });
+
+  it("uses the same subject boundary on property access and row filtering", () => {
+    expect(zhCN.propertyAuthorizationSubjectDescription).toBe("选择要配置的用户或角色。");
+    expect(zhCN.rowFilterSubjectDescription).toBe("选择要配置的用户或角色。");
+    expect(zhCN.propertyAuthorizationSubjectHelp).toContain("组织仅用于筛选用户列表");
+    expect(zhCN.rowFilterSubjectHelp).toContain("组织仅用于筛选用户列表");
+    expect(zhCN.rowFilterSourcesTitle).toBe("生效策略");
+    expect(zhCN.rowFilterConditionGroupWrap).toBe("（{{summary}}）");
+
+    expect(enUS.propertyAuthorizationSubjectDescription).toBe(
+      "Choose the user or role to configure.",
+    );
+    expect(enUS.rowFilterSubjectDescription).toBe("Choose the user or role to configure.");
+    expect(enUS.rowFilterSourcesTitle).toBe("Effective policy");
+    expect(enUS.rowFilterConditionGroupWrap).toBe("({{summary}})");
+  });
 });

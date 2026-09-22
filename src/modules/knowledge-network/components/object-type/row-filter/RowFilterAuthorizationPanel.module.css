@@ -19,9 +19,17 @@
   padding: 20px;
 }
 .railHead h2 {
+  align-items: center;
   color: var(--color-text-primary);
+  display: inline-flex;
   font-size: 18px;
+  gap: 6px;
   margin: 0;
+}
+.railHead h2 :global(.anticon) {
+  color: var(--color-text-tertiary);
+  cursor: help;
+  font-size: 14px;
 }
 .railHead p {
   color: var(--color-text-secondary);
@@ -33,6 +41,19 @@
   gap: 6px;
   max-height: 390px;
   overflow: auto;
+}
+.userPickerSection {
+  display: grid;
+  gap: 6px;
+}
+.userPickerSection > span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.userPicker {
+  height: clamp(400px, calc(100dvh - 300px), 540px);
+  min-height: 400px;
+  width: 100%;
 }
 .subjectItem,
 .subjectSelected {
@@ -163,6 +184,11 @@
   color: var(--color-text-secondary);
   line-height: 20px;
   margin: 0;
+}
+.sourceItem span b {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin-right: 4px;
 }
 .cardHead {
   align-items: flex-start;
