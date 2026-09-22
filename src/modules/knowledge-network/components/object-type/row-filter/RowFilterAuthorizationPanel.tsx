@@ -67,8 +67,14 @@ function valueInputType(type?: RowFilterValueType) {
   return type === "integer" ? "numeric" : "text";
 }
 
-export function parseRowFilterValues(raw: string, type?: RowFilterValueType): Array<string | number | boolean> | null {
-  const tokens = raw.split(/[,，\n]/).map((token) => token.trim()).filter(Boolean);
+export function parseRowFilterValues(
+  raw: string,
+  type?: RowFilterValueType,
+): Array<string | number | boolean> | null {
+  const tokens = raw
+    .split(/[,，\n]/)
+    .map((token) => token.trim())
+    .filter(Boolean);
   if (!tokens.length || tokens.length > 100) return null;
   if (type === "integer") {
     const values = tokens.map(Number);
@@ -88,7 +94,10 @@ function conditionOperators(type?: RowFilterValueType): RowFilterConditionOperat
   return ["in"];
 }
 
-function parseConditionValues(condition: EditableCondition, type?: RowFilterValueType): Array<string | number | boolean> | null {
+function parseConditionValues(
+  condition: EditableCondition,
+  type?: RowFilterValueType,
+): Array<string | number | boolean> | null {
   if (!type || !conditionOperators(type).includes(condition.operator)) return null;
   const values = parseRowFilterValues(condition.valuesText, type);
   if (!values) return null;
@@ -96,7 +105,8 @@ function parseConditionValues(condition: EditableCondition, type?: RowFilterValu
   if (type !== "integer" || values.length !== 1) return null;
   if (condition.operator !== "between") return values;
   const upperValues = parseRowFilterValues(condition.upperValueText ?? "", "integer");
-  if (!upperValues || upperValues.length !== 1 || Number(values[0]) > Number(upperValues[0])) return null;
+  if (!upperValues || upperValues.length !== 1 || Number(values[0]) > Number(upperValues[0]))
+    return null;
   return [values[0], upperValues[0]];
 }
 
@@ -114,10 +124,14 @@ function editableConditionsFor(policy: RowFilterPolicy | null): EditableConditio
     id: `saved-${index}-${condition.propertyName}`,
     operator: condition.operator,
     propertyName: condition.propertyName,
-    upperValueText: condition.operator === "between" ? String(condition.values[1] ?? "") : undefined,
+    upperValueText:
+      condition.operator === "between" ? String(condition.values[1] ?? "") : undefined,
     valuesText: String(condition.values[0] ?? "").concat(
       condition.operator === "in" || condition.operator === "not_in"
-        ? condition.values.slice(1).map((value) => `, ${value}`).join("")
+        ? condition.values
+            .slice(1)
+            .map((value) => `, ${value}`)
+            .join("")
         : "",
     ),
   }));
@@ -135,7 +149,11 @@ function editableStateKey(relation: "and" | "or", conditions: EditableCondition[
   });
 }
 
-function policySummary(policy: RowFilterPolicy | null, t: TFunction, fields: RowFilterAvailableField[]) {
+function policySummary(
+  policy: RowFilterPolicy | null,
+  t: TFunction,
+  fields: RowFilterAvailableField[],
+) {
   if (!policy) return t("knowledgeNetwork.rowFilterInherit");
   const relation = t(
     policy.relation === "and"
@@ -151,7 +169,14 @@ function policySummary(policy: RowFilterPolicy | null, t: TFunction, fields: Row
     .join(` ${relation} `);
 }
 
-export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBeforeSubjectChange, onDirtyChange, roles, users }: Props) {
+export function RowFilterAuthorizationPanel({
+  discardNonce,
+  objectTypeRef,
+  onBeforeSubjectChange,
+  onDirtyChange,
+  roles,
+  users,
+}: Props) {
   const { t } = useTranslation();
   const { message } = useAppServices();
   const [subjectType, setSubjectType] = useState<RowFilterSubjectType>("user");
@@ -167,9 +192,15 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
   const [conditionRelation, setConditionRelation] = useState<"and" | "or">("and");
   const loadRequestId = useRef(0);
 
-  const subject = useMemo<RowFilterSubject | null>(() => subjectId ? { id: subjectId, type: subjectType } : null, [subjectId, subjectType]);
+  const subject = useMemo<RowFilterSubject | null>(
+    () => (subjectId ? { id: subjectId, type: subjectType } : null),
+    [subjectId, subjectType],
+  );
   const initialPolicy = snapshot?.policy ?? null;
-  const baselineState = useMemo(() => editableStateKey(initialPolicy?.relation ?? "and", editableConditionsFor(initialPolicy)), [initialPolicy]);
+  const baselineState = useMemo(
+    () => editableStateKey(initialPolicy?.relation ?? "and", editableConditionsFor(initialPolicy)),
+    [initialPolicy],
+  );
   const currentState = editableStateKey(conditionRelation, conditions);
   const dirty = Boolean(snapshot) && editing && currentState !== baselineState;
   const conditionErrors = conditions.map((condition) => {
@@ -182,7 +213,9 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
     return {
       relation: conditionRelation,
       conditions: conditions.map((condition) => {
-        const field = snapshot?.availableFields.find((item) => item.name === condition.propertyName);
+        const field = snapshot?.availableFields.find(
+          (item) => item.name === condition.propertyName,
+        );
         return {
           operator: condition.operator,
           propertyName: condition.propertyName as string,
@@ -191,12 +224,19 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
       }),
     };
   }, [conditionRelation, conditions, hasConditionError, snapshot?.availableFields]);
-  const canSave = dirty && !saving && !hasConditionError && (Boolean(conditions.length) || Boolean(initialPolicy));
+  const canSave =
+    dirty &&
+    !saving &&
+    !hasConditionError &&
+    (Boolean(conditions.length) || Boolean(initialPolicy));
   const policyTitle = (
     <span className={styles.cardTitleWithHelp}>
       {t("knowledgeNetwork.rowFilterPolicyTitle")}
       <Tooltip title={t("knowledgeNetwork.rowFilterPolicyDescription")}>
-        <InfoCircleOutlined aria-label={t("knowledgeNetwork.rowFilterPolicyDescription")} tabIndex={0} />
+        <InfoCircleOutlined
+          aria-label={t("knowledgeNetwork.rowFilterPolicyDescription")}
+          tabIndex={0}
+        />
       </Tooltip>
     </span>
   );
@@ -206,7 +246,11 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
     effectiveSources.push({
       effect: policySummary(directPolicy, t, snapshot?.availableFields ?? []),
       id: `current-${subjectType}`,
-      label: t(subjectType === "user" ? "knowledgeNetwork.rowFilterSourceCurrentUser" : "knowledgeNetwork.rowFilterSourceCurrentRole"),
+      label: t(
+        subjectType === "user"
+          ? "knowledgeNetwork.rowFilterSourceCurrentUser"
+          : "knowledgeNetwork.rowFilterSourceCurrentRole",
+      ),
     });
   }
   (explain?.rolePolicies ?? []).forEach((source) => {
@@ -236,7 +280,10 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
     setLoading(true);
     setLoadError(undefined);
     try {
-      const [nextSnapshot, nextExplain] = await Promise.all([getRowFilterSnapshot(subject, objectTypeRef), explainRowFilter(subject, objectTypeRef)]);
+      const [nextSnapshot, nextExplain] = await Promise.all([
+        getRowFilterSnapshot(subject, objectTypeRef),
+        explainRowFilter(subject, objectTypeRef),
+      ]);
       if (requestId !== loadRequestId.current) return;
       setSnapshot(nextSnapshot);
       setExplain(nextExplain);
@@ -252,23 +299,39 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
   }, [objectTypeRef, resetDraft, subject]);
 
   useEffect(() => {
-    setSnapshot(undefined); setExplain(undefined); setLoadError(undefined); resetDraft(undefined);
+    setSnapshot(undefined);
+    setExplain(undefined);
+    setLoadError(undefined);
+    resetDraft(undefined);
     if (subject) void load();
-    return () => { loadRequestId.current += 1; };
+    return () => {
+      loadRequestId.current += 1;
+    };
   }, [load, resetDraft, subject]);
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
-  useEffect(() => { if (snapshot) resetDraft(snapshot); }, [discardNonce, resetDraft, snapshot]);
   useEffect(() => {
-    const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
+    if (snapshot) resetDraft(snapshot);
+  }, [discardNonce, resetDraft, snapshot]);
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (dirty) event.preventDefault();
+    };
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
 
   const visibleRoles = useMemo(() => {
     const keyword = roleKeyword.trim().toLowerCase();
-    return roles.filter((role) => `${role.name} ${role.description}`.toLowerCase().includes(keyword));
+    return roles.filter((role) =>
+      `${role.name} ${role.description}`.toLowerCase().includes(keyword),
+    );
   }, [roleKeyword, roles]);
-  const changeSubjectType = (nextType: RowFilterSubjectType) => onBeforeSubjectChange(() => { setSubjectType(nextType); setSubjectId(undefined); setRoleKeyword(""); });
+  const changeSubjectType = (nextType: RowFilterSubjectType) =>
+    onBeforeSubjectChange(() => {
+      setSubjectType(nextType);
+      setSubjectId(undefined);
+      setRoleKeyword("");
+    });
   const save = async () => {
     if (!subject || !snapshot || !canSave) return;
     const requestId = loadRequestId.current;
@@ -288,63 +351,344 @@ export function RowFilterAuthorizationPanel({ discardNonce, objectTypeRef, onBef
       if (requestId === loadRequestId.current) setExplain(nextExplain);
     } catch (error) {
       if (requestId !== loadRequestId.current) return;
-      if (isRequestConflict(error)) { void message.warning(t("knowledgeNetwork.rowFilterRevisionConflict")); await load(); return; }
+      if (isRequestConflict(error)) {
+        void message.warning(t("knowledgeNetwork.rowFilterRevisionConflict"));
+        await load();
+        return;
+      }
       void message.error(extractRequestErrorMessage(error));
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const addCondition = () => setConditions((current) => [...current, { id: crypto.randomUUID(), operator: "in", valuesText: "" }]);
-  const updateCondition = (id: string, update: Partial<EditableCondition>) => setConditions((current) => current.map((condition) => condition.id === id ? { ...condition, ...update } : condition));
+  const addCondition = () =>
+    setConditions((current) => [
+      ...current,
+      { id: crypto.randomUUID(), operator: "in", valuesText: "" },
+    ]);
+  const updateCondition = (id: string, update: Partial<EditableCondition>) =>
+    setConditions((current) =>
+      current.map((condition) => (condition.id === id ? { ...condition, ...update } : condition)),
+    );
 
   return (
     <div className={styles.workspace}>
       <aside className={styles.subjectRail}>
-        <div className={styles.railHead}><h2>{t("knowledgeNetwork.rowFilterSubjectTitle")}</h2><p>{t("knowledgeNetwork.rowFilterSubjectDescription")}</p></div>
-        <Segmented block onChange={(value) => changeSubjectType(value as RowFilterSubjectType)} options={[
-          { icon: <UserOutlined />, label: t("knowledgeNetwork.propertyAuthorizationUser"), value: "user" },
-          { icon: <TeamOutlined />, label: t("knowledgeNetwork.propertyAuthorizationRole"), value: "role" },
-        ]} value={subjectType} />
-        {subjectType === "user" ? <DirectoryUserPicker ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")} initialUsers={users} onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))} presentation="inline" value={subjectId} /> : (
-          <><Input allowClear onChange={(event) => setRoleKeyword(event.target.value)} placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")} value={roleKeyword} />
-            <div className={styles.roleList}>{visibleRoles.map((role) => <button className={role.id === subjectId ? styles.subjectSelected : styles.subjectItem} key={role.id} onClick={() => onBeforeSubjectChange(() => setSubjectId(role.id))} type="button"><Avatar icon={<TeamOutlined />} size={32} /><span><strong>{role.name || role.id}</strong></span></button>)}{!visibleRoles.length ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}</div>
+        <div className={styles.railHead}>
+          <h2>{t("knowledgeNetwork.rowFilterSubjectTitle")}</h2>
+          <p>{t("knowledgeNetwork.rowFilterSubjectDescription")}</p>
+        </div>
+        <Segmented
+          block
+          onChange={(value) => changeSubjectType(value as RowFilterSubjectType)}
+          options={[
+            {
+              icon: <UserOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationUser"),
+              value: "user",
+            },
+            {
+              icon: <TeamOutlined />,
+              label: t("knowledgeNetwork.propertyAuthorizationRole"),
+              value: "role",
+            },
+          ]}
+          value={subjectType}
+        />
+        {subjectType === "user" ? (
+          <DirectoryUserPicker
+            ariaLabel={t("knowledgeNetwork.rowFilterSelectUser")}
+            initialUsers={users}
+            onChange={(nextUserId) => onBeforeSubjectChange(() => setSubjectId(nextUserId))}
+            presentation="inline"
+            value={subjectId}
+          />
+        ) : (
+          <>
+            <Input
+              allowClear
+              onChange={(event) => setRoleKeyword(event.target.value)}
+              placeholder={t("knowledgeNetwork.propertyAuthorizationSearchRole")}
+              value={roleKeyword}
+            />
+            <div className={styles.roleList}>
+              {visibleRoles.map((role) => (
+                <button
+                  className={role.id === subjectId ? styles.subjectSelected : styles.subjectItem}
+                  key={role.id}
+                  onClick={() => onBeforeSubjectChange(() => setSubjectId(role.id))}
+                  type="button"
+                >
+                  <Avatar icon={<TeamOutlined />} size={32} />
+                  <span>
+                    <strong>{role.name || role.id}</strong>
+                  </span>
+                </button>
+              ))}
+              {!visibleRoles.length ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
+            </div>
           </>
         )}
       </aside>
       <section className={styles.content}>
-        {!subject ? <div className={styles.emptyState}><SafetyCertificateOutlined /><h3>{t("knowledgeNetwork.rowFilterSelectSubject")}</h3><p>{t("knowledgeNetwork.rowFilterSelectSubjectDescription")}</p></div>
-          : loading ? <div className={styles.loading}><Spin /></div>
-          : loadError ? <div className={styles.loadFailure}><Alert action={<AppButton onClick={() => void load()}>{t("common.retry")}</AppButton>} description={loadError} message={t("knowledgeNetwork.rowFilterLoadFailed")} showIcon type="error" /></div>
-          : !snapshot ? <div className={styles.emptyState}><p>{t("knowledgeNetwork.rowFilterLoadFailed")}</p></div>
-          : <>
-            {!editing ? <div className={`${styles.policyCard} ${styles.inheritCard}`}><div className={styles.cardHead}><div>{policyTitle}</div></div><div className={styles.inheritState}><strong>{t("knowledgeNetwork.rowFilterInheritStateTitle")}</strong><p>{t("knowledgeNetwork.rowFilterInheritStateDescription")}</p><AppButton onClick={() => setEditing(true)} type="primary">{t("knowledgeNetwork.rowFilterConfigure")}</AppButton></div></div>
-              : <div className={styles.policyCard}>
-                <div className={styles.cardHead}><div>{policyTitle}</div></div>
-                <div className={styles.conditionsBlock}><div className={conditions.length ? styles.conditionsGroup : styles.emptyConditions}>
-                  <div className={styles.conditionsHead}>
-                    {conditions.length > 1 ? <div className={styles.conditionRelation}><span>{t("knowledgeNetwork.rowFilterConditionRelation")}</span><Select onChange={setConditionRelation} options={[{ label: t("knowledgeNetwork.rowFilterConditionGroupAnd"), value: "and" }, { label: t("knowledgeNetwork.rowFilterConditionGroupOr"), value: "or" }]} value={conditionRelation} /></div> : null}
-                    <AppButton disabled={conditions.length >= MAX_CONDITIONS} icon={<PlusOutlined />} onClick={addCondition} type="default">{t("knowledgeNetwork.rowFilterAddCondition")}</AppButton>
+        {!subject ? (
+          <div className={styles.emptyState}>
+            <SafetyCertificateOutlined />
+            <h3>{t("knowledgeNetwork.rowFilterSelectSubject")}</h3>
+            <p>{t("knowledgeNetwork.rowFilterSelectSubjectDescription")}</p>
+          </div>
+        ) : loading ? (
+          <div className={styles.loading}>
+            <Spin />
+          </div>
+        ) : loadError ? (
+          <div className={styles.loadFailure}>
+            <Alert
+              action={<AppButton onClick={() => void load()}>{t("common.retry")}</AppButton>}
+              description={loadError}
+              message={t("knowledgeNetwork.rowFilterLoadFailed")}
+              showIcon
+              type="error"
+            />
+          </div>
+        ) : !snapshot ? (
+          <div className={styles.emptyState}>
+            <p>{t("knowledgeNetwork.rowFilterLoadFailed")}</p>
+          </div>
+        ) : (
+          <>
+            {!editing ? (
+              <div className={`${styles.policyCard} ${styles.inheritCard}`}>
+                <div className={styles.cardHead}>
+                  <div>{policyTitle}</div>
+                </div>
+                <div className={styles.inheritState}>
+                  <strong>{t("knowledgeNetwork.rowFilterInheritStateTitle")}</strong>
+                  <p>{t("knowledgeNetwork.rowFilterInheritStateDescription")}</p>
+                  <AppButton onClick={() => setEditing(true)} type="primary">
+                    {t("knowledgeNetwork.rowFilterConfigure")}
+                  </AppButton>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.policyCard}>
+                <div className={styles.cardHead}>
+                  <div>{policyTitle}</div>
+                </div>
+                <div className={styles.conditionsBlock}>
+                  <div
+                    className={conditions.length ? styles.conditionsGroup : styles.emptyConditions}
+                  >
+                    <div className={styles.conditionsHead}>
+                      {conditions.length > 1 ? (
+                        <div className={styles.conditionRelation}>
+                          <span>{t("knowledgeNetwork.rowFilterConditionRelation")}</span>
+                          <Select
+                            onChange={setConditionRelation}
+                            options={[
+                              {
+                                label: t("knowledgeNetwork.rowFilterConditionGroupAnd"),
+                                value: "and",
+                              },
+                              {
+                                label: t("knowledgeNetwork.rowFilterConditionGroupOr"),
+                                value: "or",
+                              },
+                            ]}
+                            value={conditionRelation}
+                          />
+                        </div>
+                      ) : null}
+                      <AppButton
+                        disabled={conditions.length >= MAX_CONDITIONS}
+                        icon={<PlusOutlined />}
+                        onClick={addCondition}
+                        type="default"
+                      >
+                        {t("knowledgeNetwork.rowFilterAddCondition")}
+                      </AppButton>
+                    </div>
+                    {conditions.length ? (
+                      <div className={styles.conditionsList}>
+                        {conditions.map((condition, index) => {
+                          const field = snapshot.availableFields.find(
+                            (item) => item.name === condition.propertyName,
+                          );
+                          const isRangeOperator = condition.operator === "between";
+                          const showConditionError =
+                            condition.touched &&
+                            Boolean(
+                              condition.valuesText.trim() || condition.upperValueText?.trim(),
+                            ) &&
+                            conditionErrors[index];
+                          return (
+                            <div className={styles.conditionItem} key={condition.id}>
+                              <div className={styles.conditionRow}>
+                                <Select
+                                  onChange={(propertyName) =>
+                                    updateCondition(condition.id, {
+                                      operator: "in",
+                                      propertyName,
+                                      touched: false,
+                                      upperValueText: "",
+                                      valuesText: "",
+                                    })
+                                  }
+                                  options={snapshot.availableFields.map((item) => ({
+                                    label: rowFilterFieldOptionLabel(item),
+                                    value: item.name,
+                                  }))}
+                                  placeholder={t("knowledgeNetwork.rowFilterFieldPlaceholder")}
+                                  value={condition.propertyName}
+                                />
+                                <Select
+                                  className={styles.conditionOperatorSelect}
+                                  disabled={!condition.propertyName}
+                                  onChange={(operator) =>
+                                    updateCondition(condition.id, {
+                                      operator,
+                                      touched: false,
+                                      upperValueText: "",
+                                      valuesText: "",
+                                    })
+                                  }
+                                  options={conditionOperators(field?.type).map((operator) => ({
+                                    label: t(
+                                      `knowledgeNetwork.rowFilterConditionOperator.${operator}`,
+                                    ),
+                                    value: operator,
+                                  }))}
+                                  value={condition.operator}
+                                />
+                                {isRangeOperator ? (
+                                  <div className={styles.conditionValueRange}>
+                                    <Input
+                                      disabled={!condition.propertyName}
+                                      inputMode="numeric"
+                                      onBlur={() =>
+                                        updateCondition(condition.id, { touched: true })
+                                      }
+                                      onChange={(event) =>
+                                        updateCondition(condition.id, {
+                                          touched: true,
+                                          valuesText: event.target.value,
+                                        })
+                                      }
+                                      placeholder={t(
+                                        "knowledgeNetwork.rowFilterRangeStartPlaceholder",
+                                      )}
+                                      status={showConditionError ? "error" : undefined}
+                                      value={condition.valuesText}
+                                    />
+                                    <span>{t("knowledgeNetwork.rowFilterRangeSeparator")}</span>
+                                    <Input
+                                      disabled={!condition.propertyName}
+                                      inputMode="numeric"
+                                      onBlur={() =>
+                                        updateCondition(condition.id, { touched: true })
+                                      }
+                                      onChange={(event) =>
+                                        updateCondition(condition.id, {
+                                          touched: true,
+                                          upperValueText: event.target.value,
+                                        })
+                                      }
+                                      placeholder={t(
+                                        "knowledgeNetwork.rowFilterRangeEndPlaceholder",
+                                      )}
+                                      status={showConditionError ? "error" : undefined}
+                                      value={condition.upperValueText}
+                                    />
+                                  </div>
+                                ) : (
+                                  <Input.TextArea
+                                    autoSize={{ minRows: 1, maxRows: 3 }}
+                                    disabled={!condition.propertyName}
+                                    inputMode={valueInputType(field?.type)}
+                                    onBlur={() => updateCondition(condition.id, { touched: true })}
+                                    onChange={(event) =>
+                                      updateCondition(condition.id, {
+                                        touched: true,
+                                        valuesText: event.target.value,
+                                      })
+                                    }
+                                    placeholder={t(
+                                      condition.operator === "in" || condition.operator === "not_in"
+                                        ? "knowledgeNetwork.rowFilterValuesPlaceholder"
+                                        : "knowledgeNetwork.rowFilterValuePlaceholder",
+                                    )}
+                                    status={showConditionError ? "error" : undefined}
+                                    value={condition.valuesText}
+                                  />
+                                )}
+                                <AppButton
+                                  aria-label={t("knowledgeNetwork.rowFilterRemoveCondition")}
+                                  icon={<DeleteOutlined />}
+                                  onClick={() =>
+                                    setConditions((current) =>
+                                      current.filter((item) => item.id !== condition.id),
+                                    )
+                                  }
+                                  type="text"
+                                />
+                                {showConditionError ? (
+                                  <span className={styles.conditionError}>
+                                    {t("knowledgeNetwork.rowFilterConditionValueInvalid")}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
-                  {conditions.length ? <div className={styles.conditionsList}>{conditions.map((condition, index) => {
-                    const field = snapshot.availableFields.find((item) => item.name === condition.propertyName);
-                    const isRangeOperator = condition.operator === "between";
-                    const showConditionError = condition.touched && Boolean(condition.valuesText.trim() || condition.upperValueText?.trim()) && conditionErrors[index];
-                    return <div className={styles.conditionItem} key={condition.id}><div className={styles.conditionRow}>
-                      <Select onChange={(propertyName) => updateCondition(condition.id, { operator: "in", propertyName, touched: false, upperValueText: "", valuesText: "" })} options={snapshot.availableFields.map((item) => ({ label: rowFilterFieldOptionLabel(item), value: item.name }))} placeholder={t("knowledgeNetwork.rowFilterFieldPlaceholder")} value={condition.propertyName} />
-                      <Select className={styles.conditionOperatorSelect} disabled={!condition.propertyName} onChange={(operator) => updateCondition(condition.id, { operator, touched: false, upperValueText: "", valuesText: "" })} options={conditionOperators(field?.type).map((operator) => ({ label: t(`knowledgeNetwork.rowFilterConditionOperator.${operator}`), value: operator }))} value={condition.operator} />
-                      {isRangeOperator ? <div className={styles.conditionValueRange}>
-                        <Input disabled={!condition.propertyName} inputMode="numeric" onBlur={() => updateCondition(condition.id, { touched: true })} onChange={(event) => updateCondition(condition.id, { touched: true, valuesText: event.target.value })} placeholder={t("knowledgeNetwork.rowFilterRangeStartPlaceholder")} status={showConditionError ? "error" : undefined} value={condition.valuesText} />
-                        <span>{t("knowledgeNetwork.rowFilterRangeSeparator")}</span>
-                        <Input disabled={!condition.propertyName} inputMode="numeric" onBlur={() => updateCondition(condition.id, { touched: true })} onChange={(event) => updateCondition(condition.id, { touched: true, upperValueText: event.target.value })} placeholder={t("knowledgeNetwork.rowFilterRangeEndPlaceholder")} status={showConditionError ? "error" : undefined} value={condition.upperValueText} />
-                      </div> : <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} disabled={!condition.propertyName} inputMode={valueInputType(field?.type)} onBlur={() => updateCondition(condition.id, { touched: true })} onChange={(event) => updateCondition(condition.id, { touched: true, valuesText: event.target.value })} placeholder={t(condition.operator === "in" || condition.operator === "not_in" ? "knowledgeNetwork.rowFilterValuesPlaceholder" : "knowledgeNetwork.rowFilterValuePlaceholder")} status={showConditionError ? "error" : undefined} value={condition.valuesText} />}
-                      <AppButton aria-label={t("knowledgeNetwork.rowFilterRemoveCondition")} icon={<DeleteOutlined />} onClick={() => setConditions((current) => current.filter((item) => item.id !== condition.id))} type="text" />
-                      {showConditionError ? <span className={styles.conditionError}>{t("knowledgeNetwork.rowFilterConditionValueInvalid")}</span> : null}
-                    </div></div>;
-                  })}</div> : null}
-                </div></div>
-                <div className={styles.actions}><AppButton disabled={!dirty || saving} onClick={() => resetDraft(snapshot)}>{t("common.cancel")}</AppButton><AppButton disabled={!canSave} loading={saving} onClick={() => void save()} type="primary">{t("knowledgeNetwork.rowFilterSave")}</AppButton></div>
-              </div>}
-            <div className={styles.explainCard}><div className={styles.cardHead}><div><span>{t("knowledgeNetwork.rowFilterResultTitle")}</span></div></div><div className={styles.effectiveResult}><strong>{effectivePolicyEffect}</strong></div><div className={styles.sourceSection}><span>{t("knowledgeNetwork.rowFilterSourcesTitle")}</span>{effectiveSources.length ? <div className={styles.sourceList}>{effectiveSources.map((source) => <div className={styles.sourceItem} key={source.id}><strong>{source.label}</strong><span>{source.effect}</span></div>)}</div> : <p className={styles.sourceEmpty}>{t("knowledgeNetwork.rowFilterNoRuleSources")}</p>}</div></div>
-          </>}
+                </div>
+                <div className={styles.actions}>
+                  <AppButton disabled={!dirty || saving} onClick={() => resetDraft(snapshot)}>
+                    {t("common.cancel")}
+                  </AppButton>
+                  <AppButton
+                    disabled={!canSave}
+                    loading={saving}
+                    onClick={() => void save()}
+                    type="primary"
+                  >
+                    {t("knowledgeNetwork.rowFilterSave")}
+                  </AppButton>
+                </div>
+              </div>
+            )}
+            <div className={styles.explainCard}>
+              <div className={styles.cardHead}>
+                <div>
+                  <span>{t("knowledgeNetwork.rowFilterResultTitle")}</span>
+                </div>
+              </div>
+              <div className={styles.effectiveResult}>
+                <strong>{effectivePolicyEffect}</strong>
+              </div>
+              <div className={styles.sourceSection}>
+                <span>{t("knowledgeNetwork.rowFilterSourcesTitle")}</span>
+                {effectiveSources.length ? (
+                  <div className={styles.sourceList}>
+                    {effectiveSources.map((source) => (
+                      <div className={styles.sourceItem} key={source.id}>
+                        <strong>{source.label}</strong>
+                        <span>{source.effect}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.sourceEmpty}>
+                    {t("knowledgeNetwork.rowFilterNoRuleSources")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

@@ -116,7 +116,10 @@ function mockPredicate(policy: RowFilterPolicy | null) {
   };
 }
 
-export async function getRowFilterSnapshot(subject: RowFilterSubject, objectTypeRef: string): Promise<RowFilterSnapshot> {
+export async function getRowFilterSnapshot(
+  subject: RowFilterSubject,
+  objectTypeRef: string,
+): Promise<RowFilterSnapshot> {
   if (useMock) return mockSnapshot(subject, objectTypeRef);
   const response = await http.get<BackendSnapshot>(ROW_FILTER_POLICIES, {
     params: { object_type_ref: objectTypeRef, subject_id: subject.id, subject_type: subject.type },
@@ -151,7 +154,10 @@ export async function patchRowFilterPolicy(patch: RowFilterPatch): Promise<RowFi
   return mapSnapshot(response.data);
 }
 
-export async function explainRowFilter(subject: RowFilterSubject, objectTypeRef: string): Promise<RowFilterExplain> {
+export async function explainRowFilter(
+  subject: RowFilterSubject,
+  objectTypeRef: string,
+): Promise<RowFilterExplain> {
   if (useMock) {
     const snapshot = mockSnapshot(subject, objectTypeRef);
     return {
@@ -163,7 +169,10 @@ export async function explainRowFilter(subject: RowFilterSubject, objectTypeRef:
       snapshot,
     };
   }
-  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, { object_type_ref: objectTypeRef, subject });
+  const response = await http.post<BackendExplain>(ROW_FILTER_EXPLAIN, {
+    object_type_ref: objectTypeRef,
+    subject,
+  });
   return {
     directPolicy: mapPolicy(response.data.direct_policy) ?? undefined,
     effectivePredicate: response.data.effective_predicate,

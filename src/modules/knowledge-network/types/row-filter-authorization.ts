@@ -8,14 +8,7 @@
 export type RowFilterSubjectType = "user" | "role";
 export type RowFilterSubject = { id: string; type: RowFilterSubjectType };
 export type RowFilterValueType = "string" | "integer" | "boolean";
-export type RowFilterConditionOperator =
-  | "between"
-  | "gt"
-  | "gte"
-  | "in"
-  | "lt"
-  | "lte"
-  | "not_in";
+export type RowFilterConditionOperator = "between" | "gt" | "gte" | "in" | "lt" | "lte" | "not_in";
 
 export type RowFilterCondition = {
   operator: RowFilterConditionOperator;

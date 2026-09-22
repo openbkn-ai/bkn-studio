@@ -71,7 +71,10 @@ function snapshot(subjectId: string): RowFilterSnapshot {
   return {
     availableFields: [{ name: "region", type: "string" }],
     objectTypeRef: "network-1/object-1",
-    policy: { conditions: [{ operator: "in", propertyName: "region", values: ["east"] }], relation: "and" },
+    policy: {
+      conditions: [{ operator: "in", propertyName: "region", values: ["east"] }],
+      relation: "and",
+    },
     revision: `${subjectId}-revision`,
     subject: { id: subjectId, type: "user" },
   };
@@ -137,7 +140,9 @@ describe("RowFilterAuthorizationPanel", () => {
     renderPanel();
 
     fireEvent.click(screen.getByRole("button", { name: "select-user-a" }));
-    fireEvent.click(await screen.findByRole("button", { name: "knowledgeNetwork.rowFilterConfigure" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "knowledgeNetwork.rowFilterConfigure" }),
+    );
 
     expect(screen.getByText("knowledgeNetwork.rowFilterAddCondition")).not.toBeNull();
     expect(screen.queryByText("knowledgeNetwork.rowFilterAutomaticStrategy")).toBeNull();
@@ -185,7 +190,9 @@ describe("RowFilterAuthorizationPanel", () => {
     aSnapshot.resolve(staleA);
     aExplain.resolve(explain(staleA));
     await waitFor(() =>
-      expect(screen.queryAllByText("knowledgeNetwork.rowFilterEffectBasePermission")).toHaveLength(0),
+      expect(screen.queryAllByText("knowledgeNetwork.rowFilterEffectBasePermission")).toHaveLength(
+        0,
+      ),
     );
     expect(
       screen.getAllByText("knowledgeNetwork.rowFilterEffectFixedConditions").length,
