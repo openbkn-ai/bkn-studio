@@ -200,6 +200,7 @@ describe("DataConnectFormScene · connection preflight", () => {
     updateDataConnectRecordMock.mockResolvedValue(undefined);
     listDataConnectConnectorTypesMock.mockResolvedValue([
       {
+        available: true,
         category: "table",
         description: "",
         enabled: true,
@@ -398,6 +399,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       );
       listDataConnectConnectorTypesMock.mockResolvedValue([
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -407,6 +409,7 @@ describe("DataConnectFormScene · connection preflight", () => {
           type: "postgresql",
         },
         {
+          available: true,
           category: "table",
           description: "",
           enabled: true,
@@ -836,6 +839,7 @@ describe("DataConnectFormScene · connection preflight", () => {
       });
       listDataConnectConnectorTypesMock.mockResolvedValue([
         {
+          available: true,
           category: "table",
           description: "Microsoft SQL Server 关系型数据库连接器",
           enabled: true,
@@ -943,6 +947,7 @@ function mockSQLServerEditCatalog(
 ) {
   listDataConnectConnectorTypesMock.mockResolvedValue([
     {
+      available: true,
       category: "table",
       description: "",
       enabled: true,
