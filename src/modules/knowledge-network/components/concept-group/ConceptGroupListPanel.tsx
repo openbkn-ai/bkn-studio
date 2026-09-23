@@ -73,6 +73,7 @@ export function ConceptGroupListPanel({
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [authorizingRecord, setAuthorizingRecord] = useState<ConceptGroupRecord | null>(null);
   const [items, setItems] = useState<ConceptGroupRecord[]>([]);
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -106,6 +107,7 @@ export function ConceptGroupListPanel({
           return;
         }
         setItems(result.entries);
+        setTagOptions(result.availableTags);
         setTotalCount(result.totalCount);
         setSelectedRowKeys([]);
       })
@@ -133,14 +135,6 @@ export function ConceptGroupListPanel({
     sortBy,
     sortDirection,
   ]);
-
-  const tagOptions = useMemo(() => {
-    const tags = new Set<string>();
-    items.forEach((item) => {
-      (item.tags ?? []).forEach((tag) => tags.add(tag));
-    });
-    return [...tags].sort((left, right) => left.localeCompare(right));
-  }, [items]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || selectedTag !== "all",
@@ -406,7 +400,7 @@ export function ConceptGroupListPanel({
                 {canModify ? (
                   <JsonResourceImportButton
                     className={styles.toolbarButton}
-                    onImported={async () => setRefreshVersion((current) => current + 1)}
+                    onImported={() => setRefreshVersion((current) => current + 1)}
                     onImport={onImport}
                   />
                 ) : null}

@@ -30,6 +30,9 @@ type RelationTypeObjectTypeSelectProps = Omit<
   SelectProps<string, ObjectTypeSelectOption>,
   "options" | "optionRender" | "filterOption"
 > & {
+  filterResolvedOptions?: (
+    objectTypes: KnowledgeNetworkObjectTypeRecord[],
+  ) => KnowledgeNetworkObjectTypeRecord[];
   networkId?: string;
   objectTypes: KnowledgeNetworkObjectTypeRecord[];
   onResolvedOptionsChange?: (objectTypes: KnowledgeNetworkObjectTypeRecord[]) => void;
@@ -47,6 +50,7 @@ function mergeObjectTypes(
 }
 
 export function RelationTypeObjectTypeSelect({
+  filterResolvedOptions,
   networkId,
   objectTypes,
   onResolvedOptionsChange,
@@ -57,6 +61,17 @@ export function RelationTypeObjectTypeSelect({
   const [remoteObjectTypes, setRemoteObjectTypes] = useState(objectTypes);
   const [searching, setSearching] = useState(false);
   const searchSequence = useRef(0);
+  const searchTimer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      searchSequence.current += 1;
+      if (searchTimer.current !== null) {
+        window.clearTimeout(searchTimer.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     setRemoteObjectTypes((current) => mergeObjectTypes(objectTypes, current));
@@ -73,14 +88,18 @@ export function RelationTypeObjectTypeSelect({
         if (!active || !record) {
           return;
         }
-        setRemoteObjectTypes((current) => mergeObjectTypes(current, [record]));
-        onResolvedOptionsChange?.([record]);
+        const resolved = filterResolvedOptions?.([record]) ?? [record];
+        if (resolved.length === 0) {
+          return;
+        }
+        setRemoteObjectTypes((current) => mergeObjectTypes(current, resolved));
+        onResolvedOptionsChange?.(resolved);
       })
       .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [networkId, onResolvedOptionsChange, remoteObjectTypes, value]);
+  }, [filterResolvedOptions, networkId, onResolvedOptionsChange, remoteObjectTypes, value]);
 
   const handleSearch = (keyword: string) => {
     onSearch?.(keyword);
@@ -90,7 +109,11 @@ export function RelationTypeObjectTypeSelect({
 
     const sequence = ++searchSequence.current;
     setSearching(true);
-    window.setTimeout(() => {
+    if (searchTimer.current !== null) {
+      window.clearTimeout(searchTimer.current);
+    }
+    searchTimer.current = window.setTimeout(() => {
+      searchTimer.current = null;
       if (sequence !== searchSequence.current) {
         return;
       }
@@ -105,15 +128,25 @@ export function RelationTypeObjectTypeSelect({
           if (sequence !== searchSequence.current) {
             return;
           }
+          const resolved = filterResolvedOptions?.(page.entries) ?? page.entries;
           setRemoteObjectTypes((current) => {
             const selectedObjectType = value
               ? current.find((item) => item.id === value)
               : undefined;
-            return selectedObjectType
-              ? mergeObjectTypes(page.entries, [selectedObjectType])
-              : page.entries;
+            return selectedObjectType ? mergeObjectTypes(resolved, [selectedObjectType]) : resolved;
           });
-          onResolvedOptionsChange?.(page.entries);
+          onResolvedOptionsChange?.(resolved);
+        })
+        .catch(() => {
+          if (sequence !== searchSequence.current) {
+            return;
+          }
+          setRemoteObjectTypes((current) => {
+            const selectedObjectType = value
+              ? current.find((item) => item.id === value)
+              : undefined;
+            return selectedObjectType ? [selectedObjectType] : [];
+          });
         })
         .finally(() => {
           if (sequence === searchSequence.current) {

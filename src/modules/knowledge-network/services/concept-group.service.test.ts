@@ -27,6 +27,7 @@ describe("concept-group.service - listKnowledgeNetworkConceptGroupPage", () => {
   it("pushes paging and filters to the backend", async () => {
     getMock.mockResolvedValue({
       data: {
+        available_tags: ["core", "archive"],
         entries: [{ id: "cg-1", name: "Orders", tags: ["core"] }],
         total_count: 31,
       },
@@ -54,6 +55,7 @@ describe("concept-group.service - listKnowledgeNetworkConceptGroupPage", () => {
       },
     });
     expect(result.totalCount).toBe(31);
+    expect(result.availableTags).toEqual(["core", "archive"]);
     expect(result.entries[0]).toMatchObject({ id: "cg-1", name: "Orders" });
   });
 });

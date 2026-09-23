@@ -90,8 +90,13 @@ export type KnowledgeNetworkConceptGroupPageQuery = {
 };
 
 export type KnowledgeNetworkConceptGroupPage = {
+  availableTags: string[];
   entries: ConceptGroupRecord[];
   totalCount: number;
+};
+
+type BackendConceptGroupPage = BackendListResponse<BackendConceptGroup> & {
+  available_tags?: string[];
 };
 
 /** Reads one authorization-filtered server page for the concept-group workspace. */
@@ -119,6 +124,9 @@ export async function listKnowledgeNetworkConceptGroupPage(
       return query.direction === "asc" ? result : -result;
     });
     return wait({
+      availableTags: [
+        ...new Set((mockConceptGroups[networkId] ?? []).flatMap((item) => item.tags ?? [])),
+      ].sort((left, right) => left.localeCompare(right)),
       entries: sorted
         .slice(query.offset, query.offset + query.limit)
         .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
@@ -126,7 +134,7 @@ export async function listKnowledgeNetworkConceptGroupPage(
     });
   }
 
-  const response = await http.get<BackendListResponse<BackendConceptGroup>>(
+  const response = await http.get<BackendConceptGroupPage>(
     `/bkn-backend/v1/knowledge-networks/${networkId}/concept-groups`,
     {
       params: {
@@ -141,6 +149,7 @@ export async function listKnowledgeNetworkConceptGroupPage(
   );
 
   return {
+    availableTags: response.data.available_tags ?? [],
     entries: response.data.entries.map(mapConceptGroup),
     totalCount: response.data.total_count,
   };

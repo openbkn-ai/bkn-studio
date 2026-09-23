@@ -392,6 +392,7 @@ export function MetricFormScene({
                   ]}
                 >
                   <RelationTypeObjectTypeSelect
+                    filterResolvedOptions={filterMetricObjectTypeOptions}
                     networkId={networkId}
                     objectTypes={objectTypes}
                     onChange={() => resetObjectTypeDependentFields(form)}

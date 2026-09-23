@@ -73,4 +73,29 @@ describe("RelationTypeObjectTypeSelect", () => {
       sort: "name",
     });
   });
+
+  it("filters remotely resolved options before rendering them", async () => {
+    mocks.listObjectTypePage.mockResolvedValue({
+      entries: [
+        { color: "#222222", id: "allowed", name: "Allowed object" },
+        { color: "#333333", id: "denied", name: "Denied object" },
+      ],
+      totalCount: 2,
+    });
+
+    render(
+      <RelationTypeObjectTypeSelect
+        filterResolvedOptions={(items) => items.filter((item) => item.id === "allowed")}
+        networkId="network-1"
+        objectTypes={[]}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "object type" }), {
+      target: { value: "object" },
+    });
+
+    await waitFor(() => expect(screen.getByText("Allowed object")).not.toBeNull());
+    expect(screen.queryByText("Denied object")).toBeNull();
+  });
 });

@@ -232,6 +232,10 @@ export function ObjectTypeDetailScene() {
   const [previewPageSize, setPreviewPageSize] = useState(10);
   const [relatedKeyword, setRelatedKeyword] = useState("");
   const debouncedRelatedKeyword = useDebouncedValue(relatedKeyword.trim(), 300);
+  const relatedRequestKeyword = activeTab === "related" ? debouncedRelatedKeyword : "";
+  const relatedRelationsRequestPage = activeTab === "overview" ? 1 : relatedRelationsPage;
+  const relatedMetricsRequestPage = activeTab === "overview" ? 1 : relatedMetricsPage;
+  const relatedActionsRequestPage = activeTab === "overview" ? 1 : relatedActionsPage;
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
@@ -308,6 +312,12 @@ export function ObjectTypeDetailScene() {
 
   const openTab = useCallback(
     (tab: ObjectTypeDetailTabKey, params?: Record<string, string>) => {
+      if (tab !== "related") {
+        setRelatedKeyword("");
+        setRelatedRelationsPage(1);
+        setRelatedMetricsPage(1);
+        setRelatedActionsPage(1);
+      }
       setSearchParams(
         (current) => {
           const next = new URLSearchParams(current);
@@ -388,9 +398,24 @@ export function ObjectTypeDetailScene() {
     (dataSection === "instance" || dataSection === "logic") &&
     canQueryData &&
     Boolean(detail?.dataSource?.id);
-  const shouldLoadRelatedRelations = Boolean(networkId && objectTypeId && detail);
-  const shouldLoadRelatedMetrics = Boolean(networkId && objectTypeId && detail);
-  const shouldLoadRelatedActions = Boolean(networkId && objectTypeId && detail);
+  const shouldLoadRelatedRelations = Boolean(
+    networkId &&
+    objectTypeId &&
+    detail &&
+    (activeTab === "overview" || (activeTab === "related" && relatedSection === "relations")),
+  );
+  const shouldLoadRelatedMetrics = Boolean(
+    networkId &&
+    objectTypeId &&
+    detail &&
+    (activeTab === "overview" || (activeTab === "related" && relatedSection === "metrics")),
+  );
+  const shouldLoadRelatedActions = Boolean(
+    networkId &&
+    objectTypeId &&
+    detail &&
+    (activeTab === "overview" || (activeTab === "related" && relatedSection === "actions")),
+  );
 
   useEffect(() => {
     if (!shouldLoadPreview || !networkId || !objectTypeId) {
@@ -515,9 +540,9 @@ export function ObjectTypeDetailScene() {
 
     void listKnowledgeNetworkMetrics(networkId, {
       direction: "desc",
-      keyword: debouncedRelatedKeyword || undefined,
+      keyword: relatedRequestKeyword || undefined,
       limit: relatedMetricsPageSize,
-      offset: (relatedMetricsPage - 1) * relatedMetricsPageSize,
+      offset: (relatedMetricsRequestPage - 1) * relatedMetricsPageSize,
       scopeRef: objectTypeId,
       sort: "update_time",
     })
@@ -548,9 +573,9 @@ export function ObjectTypeDetailScene() {
   }, [
     networkId,
     objectTypeId,
-    debouncedRelatedKeyword,
-    relatedMetricsPage,
+    relatedMetricsRequestPage,
     relatedMetricsPageSize,
+    relatedRequestKeyword,
     shouldLoadRelatedMetrics,
   ]);
 
@@ -567,9 +592,9 @@ export function ObjectTypeDetailScene() {
     void listKnowledgeNetworkActionTypePage(networkId, {
       direction: "desc",
       limit: relatedActionsPageSize,
-      namePattern: debouncedRelatedKeyword,
+      namePattern: relatedRequestKeyword,
       objectTypeId,
-      offset: (relatedActionsPage - 1) * relatedActionsPageSize,
+      offset: (relatedActionsRequestPage - 1) * relatedActionsPageSize,
       sort: "update_time",
     })
       .then((result) => {
@@ -599,9 +624,9 @@ export function ObjectTypeDetailScene() {
   }, [
     networkId,
     objectTypeId,
-    relatedActionsPage,
+    relatedActionsRequestPage,
     relatedActionsPageSize,
-    debouncedRelatedKeyword,
+    relatedRequestKeyword,
     shouldLoadRelatedActions,
   ]);
 
@@ -619,8 +644,8 @@ export function ObjectTypeDetailScene() {
       boundObjectTypeId: objectTypeId,
       direction: "desc",
       limit: relatedRelationsPageSize,
-      namePattern: debouncedRelatedKeyword,
-      offset: (relatedRelationsPage - 1) * relatedRelationsPageSize,
+      namePattern: relatedRequestKeyword,
+      offset: (relatedRelationsRequestPage - 1) * relatedRelationsPageSize,
       sort: "update_time",
     })
       .then((result) => {
@@ -678,9 +703,9 @@ export function ObjectTypeDetailScene() {
   }, [
     networkId,
     objectTypeId,
-    debouncedRelatedKeyword,
-    relatedRelationsPage,
+    relatedRelationsRequestPage,
     relatedRelationsPageSize,
+    relatedRequestKeyword,
     shouldLoadRelatedRelations,
   ]);
 
