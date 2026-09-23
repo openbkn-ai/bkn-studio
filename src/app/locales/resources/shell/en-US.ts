@@ -58,6 +58,7 @@ export const shellEnUS = {
       roleManagement: "Role Management",
       authorizationManagement: "Permission Management",
       licenseManagement: "License Management",
+      accessAddressManagement: "Access Addresses",
       modelManagement: "Model Configuration",
       bknTrace: "BKN Trace",
       observability: "Observability",

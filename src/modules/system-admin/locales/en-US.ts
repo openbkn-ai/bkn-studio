@@ -1190,6 +1190,80 @@ export const systemAdminEnUS = {
         unknown: "{{error}}",
       },
     },
+    accessOrigins: {
+      title: "Access Addresses",
+      description: "Manage browser origins allowed to complete Studio login and logout flows.",
+      add: "Add access address",
+      sync: "Sync now",
+      delete: "Delete",
+      deleteTitle: "Delete access address",
+      deleteConfirm:
+        "Delete “{{origin}}”? New login and logout flows started from this address will no longer complete.",
+      callback: "Login callback",
+      logout: "Logout return",
+      empty: "No access addresses",
+      columns: {
+        origin: "Access address",
+        source: "Source",
+        syncState: "Sync status",
+        security: "Connection security",
+        actions: "Actions",
+      },
+      form: {
+        label: "New access address",
+        placeholder: "For example, https://10.0.0.20 or http://10.0.0.20:30080",
+        help: "Enter only an origin: protocol, host, and optional port. Do not include a path, query, or wildcard.",
+        helpTooltipLabel: "Access address login callback guidance",
+        helpTooltip:
+          "The login callback uses the protocol, host, and port in the browser address bar. Saved addresses synchronize to the authentication service without a restart; unregistered addresses remain blocked.",
+      },
+      sources: {
+        system: "System",
+        deployment: "Deployment",
+        runtime: "Runtime",
+      },
+      status: {
+        synced: "Synced",
+        pending: "Pending",
+        error: "Sync failed",
+        deleting: "Pending deletion",
+      },
+      security: {
+        https: "HTTPS",
+        http: "HTTP (insecure)",
+        httpHint:
+          "HTTP does not encrypt login traffic. Use it only on a trusted private network or for local development.",
+      },
+      readOnly: {
+        label: "Read only",
+        system: "The primary system address is deployment-managed and cannot be deleted here.",
+        deployment:
+          "This address comes from Helm deployment configuration and cannot be deleted here.",
+        runtime: "This address cannot currently be deleted.",
+      },
+      validation: {
+        invalid:
+          "Enter a complete HTTP(S) origin without a path, credentials, query, fragment, or wildcard.",
+        duplicate: "This access address already exists.",
+      },
+      toast: {
+        created: "Access address added and synchronized",
+        savedPending: "Access address saved and waiting for authentication-service synchronization",
+        deleted: "Access address deleted",
+        deletePending: "Deletion saved and waiting for authentication-service synchronization",
+        synced: "All access addresses synchronized to the authentication service",
+        syncPending:
+          "Synchronization is pending and will retry when the authentication service recovers",
+      },
+      errors: {
+        create: "Failed to add access address: {{error}}",
+        delete: "Failed to delete access address: {{error}}",
+        notFound: "This access address no longer exists. The list has been refreshed.",
+        deleteConflict:
+          "This address cannot be deleted in its current state. The list has been refreshed.",
+        sync: "Failed to synchronize now: {{error}}",
+      },
+    },
     audit: {
       title: "Audit Log",
       description:

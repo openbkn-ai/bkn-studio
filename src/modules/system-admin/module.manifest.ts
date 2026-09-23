@@ -31,6 +31,7 @@ export const systemAdminModuleManifest = {
     "admin-authz:revoke",
     "admin-license:view",
     "admin-license:manage",
+    "admin-client:manage",
     "admin-audit:view",
   ],
   requiresShell: true,
@@ -43,6 +44,7 @@ export const systemAdminModuleManifest = {
     "authorization/role-members",
     "authorization/object-grants",
     "license-management/license",
+    "oauth/access-origins",
   ],
   scenes: [
     {
@@ -71,6 +73,13 @@ export const systemAdminModuleManifest = {
       exportName: "LicenseManagementScene",
       description:
         "Manage the product license for the current OpenBKN cluster: view state, copy the device fingerprint, import license or activation certificate text, activate online, and remove the license.",
+      inputs: [],
+    },
+    {
+      id: "system-admin.oauth-access-origins",
+      exportName: "OAuthAccessOriginsScene",
+      description:
+        "Manage the browser origins allowed to complete BKN Studio OAuth login and logout flows.",
       inputs: [],
     },
     {

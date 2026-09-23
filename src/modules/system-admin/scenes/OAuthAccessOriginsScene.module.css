@@ -1,0 +1,211 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
+.pageIcon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--admin-color-link-border);
+  background: var(--admin-color-link-bg);
+  color: var(--admin-color-primary);
+  font-size: 18px;
+}
+
+.addForm {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface);
+}
+
+.addForm > button {
+  margin-top: 23px;
+}
+
+.fieldBody {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fieldLabel label {
+  color: var(--admin-color-heading);
+  font-size: var(--admin-font-size-meta);
+  font-weight: var(--admin-font-weight-medium);
+  line-height: 1.4;
+}
+
+.helpIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--admin-color-muted);
+  cursor: help;
+  font-size: 14px;
+  line-height: 1;
+  outline: none;
+}
+
+.helpIcon:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--admin-color-primary);
+  outline-offset: 2px;
+}
+
+.helpTooltip:global(.ant-tooltip) {
+  max-width: min(440px, calc(100vw - 48px));
+}
+
+.helpTooltip :global(.ant-tooltip-inner) {
+  max-width: min(440px, calc(100vw - 48px));
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+}
+
+.fieldHelp,
+.fieldError {
+  min-height: 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.fieldHelp {
+  color: var(--admin-color-secondary);
+}
+
+.fieldError {
+  color: var(--admin-color-danger);
+}
+
+.loadError {
+  margin-top: 14px;
+  border-radius: 0;
+}
+
+.tableSection {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface);
+}
+
+.tableSection :global(.ant-table-wrapper),
+.tableSection :global(.ant-table) {
+  border-radius: 0;
+}
+
+.originCell {
+  min-width: 0;
+}
+
+.originCell > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-color-heading);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  font-weight: var(--admin-font-weight-strong);
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uriDetails {
+  display: grid;
+  gap: 3px;
+  margin: 7px 0 0;
+}
+
+.uriDetails > div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.uriDetails dt,
+.uriDetails dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.uriDetails dt {
+  color: var(--admin-color-muted);
+}
+
+.uriDetails dd {
+  overflow: hidden;
+  color: var(--admin-color-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusCell {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.statusCell > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--admin-color-danger);
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.securityText,
+.httpWarning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.securityText {
+  color: var(--admin-color-secondary);
+}
+
+.httpWarning {
+  color: var(--admin-color-warning);
+}
+
+.readOnly {
+  color: var(--admin-color-muted);
+  font-size: 13px;
+}
+
+.duplicateRow > td {
+  background: var(--admin-color-warning-bg) !important;
+}
+
+@media (max-width: 720px) {
+  .addForm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addForm > button {
+    align-self: flex-start;
+    margin-top: 0;
+  }
+}

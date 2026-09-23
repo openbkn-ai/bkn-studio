@@ -187,6 +187,9 @@ describe("ObjectTypeAuthorizationScene", () => {
     expect(screen.getByText("network-1 / object-1")).not.toBeNull();
   });
 
+  // This integration path mounts the directory picker and the authorization
+  // editor together. It completes in about four seconds alone, but can exceed
+  // the global ten-second limit while the full jsdom suite runs in parallel.
   it("uses the page-owned base permission editor instead of the shared drawer", async () => {
     mocks.getDetail.mockResolvedValue({
       color: "#356af6",
@@ -248,7 +251,7 @@ describe("ObjectTypeAuthorizationScene", () => {
         operations: ["view_detail"],
       }),
     );
-  });
+  }, 20_000);
 
   it("uses the public subject label in the source drawer", async () => {
     mocks.getDetail.mockResolvedValue({
