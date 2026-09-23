@@ -8,6 +8,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+
 const mocks = vi.hoisted(() => ({
   listObjectTypePage: vi.fn(),
 }));
@@ -40,6 +42,21 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
 
 import { RelationTypeObjectTypeSelect } from "./RelationTypeObjectTypeSelect";
 
+function objectType(id: string, name: string, color = "#2f54eb"): KnowledgeNetworkObjectTypeRecord {
+  return {
+    color,
+    conceptGroupIds: [],
+    conceptGroupNames: [],
+    description: "",
+    hasIndex: false,
+    id,
+    name,
+    tags: [],
+    updateTime: "",
+    updaterName: "",
+  };
+}
+
 describe("RelationTypeObjectTypeSelect", () => {
   it("replaces stale options with remote search results while preserving the selected option", async () => {
     mocks.listObjectTypePage.mockResolvedValue({
@@ -51,8 +68,8 @@ describe("RelationTypeObjectTypeSelect", () => {
       <RelationTypeObjectTypeSelect
         networkId="network-1"
         objectTypes={[
-          { color: "#111111", id: "selected", name: "Selected object" },
-          { color: "#333333", id: "stale", name: "Stale object" },
+          objectType("selected", "Selected object", "#111111"),
+          objectType("stale", "Stale object", "#333333"),
         ]}
         value="selected"
       />,
