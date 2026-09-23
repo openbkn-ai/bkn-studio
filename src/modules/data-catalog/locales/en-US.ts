@@ -393,6 +393,7 @@ export const dataCatalogEnUS = {
       enabledStatus: "Enabled",
       discoverStatus: "Discovery Status",
       rowCount: "Rows",
+      estimatedRowCount: "Approximately {{count}} rows",
       indexState: "Local Index Status",
       indexName: "Local Index Name",
       localIndexStatuses: {

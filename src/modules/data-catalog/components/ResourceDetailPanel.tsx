@@ -70,6 +70,13 @@ export function ResourceDetailPanel({
   const gate = resourceGateOf(catalog);
   const readOnly = isResourceIndexReadOnly(catalog) || !canEdit;
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
+  const rowCount = resource.rowCount ?? resource.estimatedRowCount;
+  const rowCountDisplay =
+    rowCount === null || rowCount === undefined
+      ? "-"
+      : resource.rowCount === null
+        ? t("dataCatalog.resource.estimatedRowCount", { count: rowCount })
+        : rowCount;
 
   useEffect(() => {
     setResource(resourceProp);
@@ -511,7 +518,7 @@ export function ResourceDetailPanel({
           </div>
           <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
             <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
-            <span className={styles.basicInfoValue}>{resource.rowCount ?? "-"}</span>
+            <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
           </div>
 
           <div className={styles.basicInfoItem}>
@@ -622,7 +629,7 @@ export function ResourceDetailPanel({
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
               <span className={styles.basicInfoLabel}>{t("dataCatalog.resource.rowCount")}</span>
-              <span className={styles.basicInfoValue}>{resource.rowCount ?? "-"}</span>
+              <span className={styles.basicInfoValue}>{rowCountDisplay}</span>
             </div>
             <div className={`${styles.basicInfoItem} ${styles.basicInfoQuarter}`}>
               <span className={styles.basicInfoLabel}>

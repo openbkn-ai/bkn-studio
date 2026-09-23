@@ -41,6 +41,7 @@ const resource: CatalogResource = {
   name: "orders",
   operations: ["modify", "query_data", "view_detail"],
   rowCount: 1,
+  estimatedRowCount: 1,
   schemaName: "public",
   schema: [
     {
@@ -124,20 +125,32 @@ describe("ResourceDetailPanel", () => {
           active
           canEdit={false}
           catalog={null}
-          resource={{ ...resource, rowCount: 0 }}
+          resource={{ ...resource, rowCount: null, estimatedRowCount: 0 }}
         />
       </MemoryRouter>,
     );
 
-    const rowCountLabels = screen.getAllByText("dataCatalog.resource.rowCount");
-    expect(rowCountLabels).toHaveLength(2);
-    rowCountLabels.forEach((label) => {
-      expect(label.parentElement?.textContent).toContain("0");
-    });
+    expect(screen.getAllByText("dataCatalog.resource.estimatedRowCount")).toHaveLength(2);
     expect(screen.queryByText(resource.updateTime)).toBeNull();
     expect(screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" })).toHaveLength(
       3,
     );
+  });
+
+  it("shows an exact row count without the estimate prefix", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, rowCount: 42, estimatedRowCount: 41 }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("42")).toHaveLength(2);
+    expect(screen.queryByText("dataCatalog.resource.estimatedRowCount")).toBeNull();
   });
 
   it("shows the original source metadata for each field", () => {
