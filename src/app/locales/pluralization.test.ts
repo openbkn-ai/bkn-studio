@@ -57,6 +57,12 @@ describe("English count pluralization", () => {
       zero: "0 rows",
     },
     {
+      key: "dataCatalog.resource.estimatedRowCount",
+      one: "Approximately 1 row",
+      other: "Approximately 2 rows",
+      zero: "Approximately 0 rows",
+    },
+    {
       key: "executionFactory.toolCountLabel",
       one: "1 tool",
       other: "2 tools",
@@ -80,6 +86,26 @@ describe("English count pluralization", () => {
     expect(i18n.t(key, { count: 0, formattedCount: "0" })).toBe(zero);
     expect(i18n.t(key, { count: 1, formattedCount: "1" })).toBe(one);
     expect(i18n.t(key, { count: 2, formattedCount: "2" })).toBe(other);
+  });
+
+  it("preserves a large estimated count in both languages", async () => {
+    const count = "9007199254740993";
+
+    await i18n.changeLanguage("en-US");
+    expect(
+      i18n.t("dataCatalog.resource.estimatedRowCount", {
+        count: Number(count),
+        formattedCount: count,
+      }),
+    ).toBe(`Approximately ${count} rows`);
+
+    await i18n.changeLanguage("zh-CN");
+    expect(
+      i18n.t("dataCatalog.resource.estimatedRowCount", {
+        count: Number(count),
+        formattedCount: count,
+      }),
+    ).toBe(`约 ${count} 条`);
   });
 
   it("selects _one/_other for every English plural resource", async () => {

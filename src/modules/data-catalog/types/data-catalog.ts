@@ -88,8 +88,10 @@ export type CatalogResource = {
   name: string;
   /** Effective operations for the current account on this Resource. */
   operations?: string[];
-  /** Resource row count returned by Vega; null when the backend did not calculate it. */
+  /** Resource count returned by Vega; null means unavailable. */
   rowCount: ResourceRowCount | null;
+  /** Estimated source count returned by Vega; null means unavailable. */
+  estimatedRowCount?: ResourceRowCount | null;
   /** Schema in the physical data source; named distinctly from the field-definition schema. */
   schemaName?: string;
   schema: ResourceSchemaField[];

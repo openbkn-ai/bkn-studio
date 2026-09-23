@@ -236,6 +236,7 @@ type BackendResourceDetailFields = {
   column_count?: number;
   index_config?: BackendIndexConfig | null;
   row_count?: number | string;
+  estimated_row_count?: number | string;
   schema_definition?: BackendSchemaField[] | null;
   source_metadata?: {
     foreign_keys?: unknown[];
@@ -354,6 +355,7 @@ function mapResource(
     // Scale fields and schema_definition are detail-only; list resources map them to null and an empty schema.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
     rowCount: item.row_count ?? null,
+    estimatedRowCount: item.estimated_row_count ?? null,
     schemaName: item.schema,
     status: normalizeResourceStatus(item.status),
     statusMessage: item.status_message?.trim() || undefined,

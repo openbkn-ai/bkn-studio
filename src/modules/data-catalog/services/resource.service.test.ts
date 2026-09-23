@@ -357,6 +357,7 @@ describe("resource.service · getCatalogResources", () => {
             name: "orders",
             operations: ["view_detail", "query_data"],
             row_count: 42,
+            estimated_row_count: 41,
             source_metadata: {
               foreign_keys: [{ name: "fk_orders_customer" }],
               indices: [{ name: "PRIMARY" }, { name: "idx_orders_updated_at" }],
@@ -384,6 +385,7 @@ describe("resource.service · getCatalogResources", () => {
         localIndexStatus: "available",
         operations: ["view_detail", "query_data"],
         rowCount: 42,
+        estimatedRowCount: 41,
         sourceMetadata: {
           foreignKeyCount: 1,
           indexCount: 2,
@@ -418,6 +420,25 @@ describe("resource.service · getCatalogResources", () => {
       transformResponse: transformPrecisionSafeJSONResponse,
     });
     expect(resource?.rowCount).toBe(rowCount);
+  });
+
+  it("preserves an unsafe int64 estimated row count when the exact count is missing", async () => {
+    const estimatedRowCount = "9007199254740993";
+    getMock.mockImplementation(
+      (_: string, config: { transformResponse?: (data: unknown) => unknown }) =>
+        Promise.resolve({
+          data: config.transformResponse?.(
+            `{"entries":[{"catalog_id":"cat-1","category":"table","id":"res-1","name":"orders","estimated_row_count":${estimatedRowCount}}]}`,
+          ),
+        }),
+    );
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    const [resource] = await getCatalogResources(["res-1"]);
+
+    expect(resource?.rowCount).toBeNull();
+    expect(resource?.estimatedRowCount).toBe(estimatedRowCount);
   });
 
   it("keeps missing source index and foreign-key counts unknown", async () => {
