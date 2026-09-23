@@ -13,6 +13,7 @@ export * from "@/modules/knowledge-network/services/object-type-logic.service";
 export * from "@/modules/knowledge-network/services/relation-type.service";
 export * from "@/modules/knowledge-network/services/action-type.service";
 export * from "@/modules/knowledge-network/services/object-type-logic-property-trial.service";
+export * from "@/modules/knowledge-network/services/overview-graph.service";
 export * from "@/modules/knowledge-network/services/metric.service";
 export {
   KnowledgeNetworkImportBindingError,

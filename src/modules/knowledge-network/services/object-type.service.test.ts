@@ -125,6 +125,47 @@ describe("object-type.service · getObjectTypeSampleData", () => {
       },
     );
   });
+
+  it("requests one server page with search, tag, and stable pagination parameters", async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        entries: [{ id: "object-101", name: "Order", operations: ["view_detail"] }],
+        total_count: 137,
+      },
+    });
+    const { listKnowledgeNetworkObjectTypePage } =
+      await import("@/modules/knowledge-network/services/object-type.service");
+
+    const result = await listKnowledgeNetworkObjectTypePage(
+      "kn-1",
+      {
+        direction: "asc",
+        limit: 10,
+        namePattern: "  Order  ",
+        offset: 100,
+        sort: "name",
+        tag: "  core  ",
+      },
+      { skipErrorToast: true },
+    );
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1/object-types", {
+      params: {
+        direction: "asc",
+        limit: 10,
+        name_pattern: "Order",
+        offset: 100,
+        sort: "name",
+        tag: "core",
+      },
+      skipErrorToast: true,
+    });
+    expect(result).toMatchObject({
+      entries: [{ id: "object-101", name: "Order", operations: ["view_detail"] }],
+      totalCount: 137,
+    });
+  });
 });
 
 describe("object-type.service · validateKnowledgeNetworkObjectType", () => {

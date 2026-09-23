@@ -254,7 +254,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
             setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
             break;
           case "object-types":
-            setObjectTypes(await listKnowledgeNetworkObjectTypes(networkId));
             break;
           case "relation-types": {
             const [objectTypeResult, relationTypeResult] = await Promise.all([

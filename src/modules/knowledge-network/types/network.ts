@@ -78,11 +78,13 @@ export type KnowledgeNetworkPreviewNode = {
   color: string;
   icon?: string;
   id: string;
+  indexed?: boolean;
   name: string;
 };
 
 export type KnowledgeNetworkPreviewEdge = {
   id: string;
+  mappingMode?: "direct" | "resource";
   name: string;
   sourceId: string;
   targetId: string;
@@ -91,6 +93,15 @@ export type KnowledgeNetworkPreviewEdge = {
 export type KnowledgeNetworkPreviewGraph = {
   edges: KnowledgeNetworkPreviewEdge[];
   nodes: KnowledgeNetworkPreviewNode[];
+};
+
+export type KnowledgeNetworkOverviewGraph = {
+  graph: KnowledgeNetworkPreviewGraph;
+  nextCursor?: string;
+  objectTypeTotal: number;
+  relationTypeTotal: number;
+  snapshot: string;
+  truncated: boolean;
 };
 
 export type KnowledgeNetworkImportMode = "ignore" | "overwrite";

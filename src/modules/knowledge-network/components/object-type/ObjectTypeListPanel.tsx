@@ -34,6 +34,7 @@ import {
 } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import type { KnowledgeNetworkObjectTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import { listKnowledgeNetworkObjectTypePage } from "@/modules/knowledge-network/services/object-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -41,11 +42,8 @@ import styles from "@/modules/knowledge-network/components/shared/ResourceListPa
 type ObjectTypeListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
-  items: KnowledgeNetworkObjectTypeRecord[];
-  loading?: boolean;
   networkId: string;
   onDelete: (records: KnowledgeNetworkObjectTypeRecord[]) => Promise<void>;
-  onRefresh: () => Promise<void>;
 };
 
 function readSortBy(value: string | null): "name" | "updateTime" {
@@ -61,11 +59,8 @@ const PAGE_SIZE_STORAGE_SCOPE = "object-types";
 export function ObjectTypeListPanel({
   canDelete,
   canModify,
-  items,
-  loading,
   networkId,
   onDelete,
-  onRefresh,
 }: ObjectTypeListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -87,6 +82,67 @@ export function ObjectTypeListPanel({
       : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [items, setItems] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    void listKnowledgeNetworkObjectTypePage(networkId, {
+      direction: sortDirection,
+      limit: pageSize,
+      namePattern: debouncedKeyword,
+      offset: (page - 1) * pageSize,
+      sort: sortBy === "name" ? "name" : "update_time",
+      tag: selectedTag === "all" ? undefined : selectedTag,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+        if (page > maxPage) {
+          setItems([]);
+          setTotalCount(result.totalCount);
+          setPage(maxPage);
+          return;
+        }
+        setItems(result.entries);
+        setTotalCount(result.totalCount);
+        setSelectedRowKeys([]);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setItems([]);
+          setTotalCount(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedKeyword,
+    networkId,
+    page,
+    pageSize,
+    refreshVersion,
+    selectedTag,
+    sortBy,
+    sortDirection,
+  ]);
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextTag = searchParams.get("tag") ?? "all";
@@ -156,50 +212,16 @@ export function ObjectTypeListPanel({
     items.forEach((item) => {
       item.tags.forEach((tag) => tags.add(tag));
     });
+    if (selectedTag !== "all") {
+      tags.add(selectedTag);
+    }
     return [...tags].sort((left, right) => left.localeCompare(right));
-  }, [items]);
+  }, [items, selectedTag]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || selectedTag !== "all",
     [keyword, selectedTag],
   );
-
-  const filteredItems = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return items.filter((item) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.id.toLowerCase().includes(normalizedKeyword) ||
-        item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesTag = selectedTag === "all" || item.tags.includes(selectedTag);
-
-      return matchesKeyword && matchesTag;
-    });
-  }, [items, keyword, selectedTag]);
-
-  const sortedItems = useMemo(() => {
-    const nextItems = [...filteredItems];
-
-    nextItems.sort((left, right) => {
-      const leftValue = sortBy === "name" ? left.name : left.updateTime;
-      const rightValue = sortBy === "name" ? right.name : right.updateTime;
-      const compareResult = leftValue.localeCompare(rightValue, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-
-      return sortDirection === "asc" ? compareResult : -compareResult;
-    });
-
-    return nextItems;
-  }, [filteredItems, sortBy, sortDirection]);
-
-  const paginatedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedItems.slice(start, start + pageSize);
-  }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
     () =>
@@ -236,6 +258,7 @@ export function ObjectTypeListPanel({
       onOk: async () => {
         await onDelete(records);
         setSelectedRowKeys([]);
+        setRefreshVersion((current) => current + 1);
       },
       width: 520,
     });
@@ -450,7 +473,7 @@ export function ObjectTypeListPanel({
     );
   };
 
-  const tableEmptyText = loading ? (
+  const tableEmptyText = isLoading ? (
     <div className={styles.loadingEmptyState} />
   ) : (
     renderEmptyContent()
@@ -508,16 +531,16 @@ export function ObjectTypeListPanel({
             <div className={styles.filterGroup}>
               <span className={styles.filterLabel}>{t("common.tag")}</span>
               <Select
+                allowClear
                 className={styles.filterSelect}
-                onChange={(value) => {
-                  setSelectedTag(value);
+                mode="tags"
+                onChange={(values: string[]) => {
+                  setSelectedTag(values.at(-1)?.trim() || "all");
                   setPage(1);
                 }}
-                options={[
-                  { label: t("common.all"), value: "all" },
-                  ...tagOptions.map((tag) => ({ label: tag, value: tag })),
-                ]}
-                value={selectedTag}
+                options={tagOptions.map((tag) => ({ label: tag, value: tag }))}
+                placeholder={t("common.all")}
+                value={selectedTag === "all" ? [] : [selectedTag]}
               />
             </div>
             <Dropdown
@@ -555,7 +578,7 @@ export function ObjectTypeListPanel({
               aria-label={t("common.refresh")}
               className={styles.iconButton}
               onClick={() => {
-                void onRefresh();
+                setRefreshVersion((current) => current + 1);
               }}
               type="button"
             >
@@ -567,8 +590,8 @@ export function ObjectTypeListPanel({
         <div className={styles.tableCard}>
           <Table<KnowledgeNetworkObjectTypeRecord>
             columns={columns}
-            dataSource={paginatedItems}
-            loading={loading}
+            dataSource={items}
+            loading={isLoading}
             locale={{ emptyText: tableEmptyText }}
             pagination={false}
             rowKey="id"
@@ -590,7 +613,7 @@ export function ObjectTypeListPanel({
           />
         </div>
 
-        {sortedItems.length > 0 ? (
+        {totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}
@@ -601,7 +624,7 @@ export function ObjectTypeListPanel({
               pageSize={pageSize}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
-              total={sortedItems.length}
+              total={totalCount}
             />
           </div>
         ) : null}
