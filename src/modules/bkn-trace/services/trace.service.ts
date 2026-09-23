@@ -22,6 +22,76 @@ export type TraceAccessProfile = {
   managementAudit: boolean;
   securityAudit: boolean;
   technicalTrace: boolean;
+  traceEvidenceConfigurationRead: boolean;
+};
+
+export type CapturePolicyState =
+  "enabled" | "disabled" | "enabling" | "disabling" | "rolling_back" | "unknown";
+export type CapturePolicyPhase =
+  | "pending"
+  | "enabling"
+  | "disabling"
+  | "rolling_back"
+  | "succeeded"
+  | "failed"
+  | "rollback_completed"
+  | "rollback_failed"
+  | "unknown";
+
+const capturePolicyStates = new Set<CapturePolicyState>([
+  "enabled",
+  "disabled",
+  "enabling",
+  "disabling",
+  "rolling_back",
+]);
+const capturePolicyPhases = new Set<CapturePolicyPhase>([
+  "pending",
+  "enabling",
+  "disabling",
+  "rolling_back",
+  "succeeded",
+  "failed",
+  "rollback_completed",
+  "rollback_failed",
+]);
+
+function normalizeCapturePolicyState(value?: string): CapturePolicyState {
+  return value && capturePolicyStates.has(value as CapturePolicyState)
+    ? (value as CapturePolicyState)
+    : "unknown";
+}
+
+function normalizeCapturePolicyPhase(value?: string): CapturePolicyPhase {
+  return value && capturePolicyPhases.has(value as CapturePolicyPhase)
+    ? (value as CapturePolicyPhase)
+    : "unknown";
+}
+export type CapturePolicy = {
+  revision: number;
+  desiredState: CapturePolicyState;
+  effectiveState: CapturePolicyState;
+  lastStableRevision: number;
+  coverageGap: boolean;
+  operation: {
+    id: string;
+    phase: CapturePolicyPhase;
+    requestedState: CapturePolicyState;
+    expectedRevision: number;
+    errorCode?: string;
+  };
+  acknowledgements: Array<{
+    instanceId: string;
+    generation: string;
+    ready: boolean;
+    state: string;
+    queueDisposition: {
+      exported: number;
+      dropped: number;
+      unaccounted: number | null;
+    };
+    revision: number;
+  }>;
 };
 
 type BackendTraceAccessProfile = {
@@ -37,6 +107,34 @@ type BackendTraceAccessProfile = {
   management_audit?: boolean;
   security_audit?: boolean;
   technical_trace?: boolean;
+  trace_evidence_configuration_read?: boolean;
+};
+
+type BackendCapturePolicy = {
+  revision?: number;
+  desired_state?: CapturePolicyState;
+  effective_state?: CapturePolicyState;
+  last_stable_revision?: number;
+  coverage_gap?: boolean;
+  operation?: {
+    id?: string;
+    phase?: CapturePolicyPhase;
+    requested_state?: CapturePolicyState;
+    expected_revision?: number;
+    error_code?: string;
+  };
+  acknowledgements?: Array<{
+    instance_id?: string;
+    generation?: string;
+    ready?: boolean;
+    state?: string;
+    queue_disposition?: {
+      exported?: number;
+      dropped?: number;
+      unaccounted?: number | null;
+    };
+    revision?: number;
+  }>;
 };
 
 export async function getAccessProfile(): Promise<TraceAccessProfile> {
@@ -56,5 +154,39 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
     managementAudit: Boolean(response.data.management_audit),
     securityAudit: Boolean(response.data.security_audit),
     technicalTrace: Boolean(response.data.technical_trace),
+    traceEvidenceConfigurationRead: Boolean(response.data.trace_evidence_configuration_read),
+  };
+}
+
+export async function getTraceEvidenceConfiguration(): Promise<CapturePolicy> {
+  const response = await http.get<BackendCapturePolicy>(
+    `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
+  );
+  const data = response.data;
+  return {
+    revision: data.revision ?? 0,
+    desiredState: normalizeCapturePolicyState(data.desired_state),
+    effectiveState: normalizeCapturePolicyState(data.effective_state),
+    lastStableRevision: data.last_stable_revision ?? 0,
+    coverageGap: Boolean(data.coverage_gap),
+    operation: {
+      id: data.operation?.id ?? "",
+      phase: normalizeCapturePolicyPhase(data.operation?.phase),
+      requestedState: normalizeCapturePolicyState(data.operation?.requested_state),
+      expectedRevision: data.operation?.expected_revision ?? 0,
+      errorCode: data.operation?.error_code,
+    },
+    acknowledgements: (data.acknowledgements ?? []).map((ack) => ({
+      instanceId: ack.instance_id ?? "",
+      generation: ack.generation ?? "",
+      ready: Boolean(ack.ready),
+      state: ack.state ?? "gap",
+      queueDisposition: {
+        exported: ack.queue_disposition?.exported ?? 0,
+        dropped: ack.queue_disposition?.dropped ?? 0,
+        unaccounted: ack.queue_disposition?.unaccounted ?? null,
+      },
+      revision: ack.revision ?? 0,
+    })),
   };
 }

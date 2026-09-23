@@ -29,7 +29,11 @@ import {
   type LogPolicy,
   type LogSourceStatus,
 } from "@/modules/bkn-trace/services/observability.service";
-import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import {
+  getAccessProfile,
+  getTraceEvidenceConfiguration,
+  type CapturePolicy,
+} from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = {
   dataKind: string;
@@ -56,6 +60,8 @@ export function ObservabilitySettingsScene() {
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
   const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
   const [archiveManage, setArchiveManage] = useState(false);
+  const [capturePolicy, setCapturePolicy] = useState<CapturePolicy>();
+  const [capturePolicyUnavailable, setCapturePolicyUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
@@ -69,7 +75,11 @@ export function ObservabilitySettingsScene() {
     let active = true;
     getAccessProfile()
       .then(async (profile) => {
-        if (!profile.globalLogSearch && !profile.logPolicyRead) {
+        if (
+          !profile.globalLogSearch &&
+          !profile.logPolicyRead &&
+          !profile.traceEvidenceConfigurationRead
+        ) {
           if (active) {
             setDenied(true);
             setLoading(false);
@@ -84,6 +94,7 @@ export function ObservabilitySettingsScene() {
           traceArchiveResult,
           logJobsResult,
           traceJobsResult,
+          capturePolicyResult,
         ] = await Promise.allSettled([
           profile.globalLogSearch ? listLogSources() : Promise.resolve([]),
           profile.logPolicyRead ? listLogPolicies() : Promise.resolve([]),
@@ -99,6 +110,9 @@ export function ObservabilitySettingsScene() {
           profile.observabilityArchiveManage
             ? listArchiveJobs("trace")
             : Promise.resolve<ArchiveJob[]>([]),
+          profile.traceEvidenceConfigurationRead
+            ? getTraceEvidenceConfiguration()
+            : Promise.resolve<CapturePolicy | undefined>(undefined),
         ]);
         if (!active) return;
         if (sourceResult.status === "fulfilled") {
@@ -116,6 +130,12 @@ export function ObservabilitySettingsScene() {
           ...(logJobsResult.status === "fulfilled" ? logJobsResult.value : []),
           ...(traceJobsResult.status === "fulfilled" ? traceJobsResult.value : []),
         ]);
+        if (capturePolicyResult.status === "fulfilled" && capturePolicyResult.value) {
+          setCapturePolicy(capturePolicyResult.value);
+          setCapturePolicyUnavailable(false);
+        } else if (profile.traceEvidenceConfigurationRead) {
+          setCapturePolicyUnavailable(true);
+        }
         if (sourceResult.status === "rejected" || policyResult.status === "rejected")
           setError(t("bknTrace.errors.queryFailed"));
         setLoading(false);
@@ -298,6 +318,10 @@ export function ObservabilitySettingsScene() {
       </header>
       <Alert message={t("bknTrace.settings.readOnlyNotice")} showIcon type="info" />
       {error ? <Alert message={error} showIcon type="error" /> : null}
+
+      {capturePolicy || capturePolicyUnavailable ? (
+        <CapturePolicySection policy={capturePolicy} unavailable={capturePolicyUnavailable} />
+      ) : null}
 
       <SettingsSection title={t("bknTrace.settings.overview")}>
         <div className={styles.metricGrid}>
@@ -566,6 +590,53 @@ function SettingsSection({ children, title }: { children: ReactNode; title: stri
       <Typography.Title level={4}>{title}</Typography.Title>
       {children}
     </section>
+  );
+}
+
+function CapturePolicySection({
+  policy,
+  unavailable,
+}: {
+  policy?: CapturePolicy;
+  unavailable: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <SettingsSection title={t("bknTrace.settings.capturePolicy.title")}>
+      {unavailable || !policy ? (
+        <Alert message={t("bknTrace.settings.capturePolicy.unavailable")} showIcon type="warning" />
+      ) : (
+        <>
+          <div className={styles.metricGrid}>
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.desiredState")}
+              value={t(`bknTrace.settings.capturePolicy.states.${policy.desiredState}`)}
+            />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.effectiveState")}
+              value={t(`bknTrace.settings.capturePolicy.states.${policy.effectiveState}`)}
+            />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.phase")}
+              value={t(`bknTrace.settings.capturePolicy.phases.${policy.operation.phase}`)}
+            />
+            <Metric label={t("bknTrace.settings.capturePolicy.revision")} value={policy.revision} />
+          </div>
+          {policy.coverageGap ? (
+            <Alert
+              message={t("bknTrace.settings.capturePolicy.coverageGap")}
+              showIcon
+              type="warning"
+            />
+          ) : null}
+          <Typography.Paragraph type="secondary">
+            {t("bknTrace.settings.capturePolicy.acknowledgementCount", {
+              count: policy.acknowledgements.length,
+            })}
+          </Typography.Paragraph>
+        </>
+      )}
+    </SettingsSection>
   );
 }
 
