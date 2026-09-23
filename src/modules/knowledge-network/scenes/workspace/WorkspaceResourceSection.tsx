@@ -103,20 +103,15 @@ export function WorkspaceResourceSection({
     case "relation-types":
       return (
         <RelationTypeListPanel
-          items={data.relationTypes}
           canModify={canModify}
           canDelete={canDelete}
-          loading={data.sectionLoading}
           networkId={networkId}
-          objectTypes={data.objectTypes}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkRelationType(networkId, record.id)),
             );
             void message.success(t("common.success"));
-            await data.reloadRelationTypes();
           }}
-          onRefresh={data.reloadRelationTypes}
         />
       );
     case "action-types":

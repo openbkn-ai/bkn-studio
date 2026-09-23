@@ -129,6 +129,78 @@ export async function listKnowledgeNetworkRelationTypes(networkId: string) {
   return response.data.entries.map(mapRelationType);
 }
 
+export type KnowledgeNetworkRelationTypePageQuery = {
+  direction?: "asc" | "desc";
+  limit: number;
+  namePattern?: string;
+  offset: number;
+  sort?: "name" | "update_time";
+  sourceObjectTypeId?: string;
+  targetObjectTypeId?: string;
+};
+
+export type KnowledgeNetworkRelationTypePage = {
+  entries: KnowledgeNetworkRelationTypeRecord[];
+  totalCount: number;
+};
+
+/** Reads one authorization-filtered server page for the relation-type workspace. */
+export async function listKnowledgeNetworkRelationTypePage(
+  networkId: string,
+  query: KnowledgeNetworkRelationTypePageQuery,
+): Promise<KnowledgeNetworkRelationTypePage> {
+  if (useMock) {
+    const keyword = query.namePattern?.trim().toLowerCase() ?? "";
+    const filtered = (mockRelationTypes[networkId] ?? []).filter((item) => {
+      const matchesKeyword =
+        !keyword ||
+        item.id.toLowerCase().includes(keyword) ||
+        item.name.toLowerCase().includes(keyword) ||
+        item.description.toLowerCase().includes(keyword);
+      return (
+        matchesKeyword &&
+        (!query.sourceObjectTypeId || item.sourceObjectTypeId === query.sourceObjectTypeId) &&
+        (!query.targetObjectTypeId || item.targetObjectTypeId === query.targetObjectTypeId)
+      );
+    });
+    const sorted = [...filtered].sort((left, right) => {
+      const leftValue = query.sort === "name" ? left.name : left.updateTime;
+      const rightValue = query.sort === "name" ? right.name : right.updateTime;
+      const result = leftValue.localeCompare(rightValue, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return query.direction === "asc" ? result : -result;
+    });
+    return wait({
+      entries: sorted
+        .slice(query.offset, query.offset + query.limit)
+        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      totalCount: sorted.length,
+    });
+  }
+
+  const response = await http.get<BackendListResponse<BackendRelationType>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`,
+    {
+      params: {
+        direction: query.direction ?? "desc",
+        limit: query.limit,
+        name_pattern: query.namePattern?.trim() || undefined,
+        offset: query.offset,
+        sort: query.sort ?? "update_time",
+        source_object_type_id: query.sourceObjectTypeId || undefined,
+        target_object_type_id: query.targetObjectTypeId || undefined,
+      },
+    },
+  );
+
+  return {
+    entries: response.data.entries.map(mapRelationType),
+    totalCount: response.data.total_count,
+  };
+}
+
 export async function getKnowledgeNetworkRelationType(networkId: string, relationTypeId: string) {
   if (useMock) {
     return wait(

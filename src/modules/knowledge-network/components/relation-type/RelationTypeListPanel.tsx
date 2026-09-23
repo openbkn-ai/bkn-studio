@@ -16,9 +16,9 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -27,12 +27,18 @@ import modalStyles from "@/modules/knowledge-network/components/network/Knowledg
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
-import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
+import {
+  readPositiveInteger,
+  readStoredPageSize,
+  writeStoredPageSize,
+} from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
-import type {
-  KnowledgeNetworkObjectTypeRecord,
-  KnowledgeNetworkRelationTypeRecord,
-} from "@/modules/knowledge-network/types/knowledge-network";
+import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
+import {
+  getKnowledgeNetworkObjectType,
+  listKnowledgeNetworkObjectTypePage,
+} from "@/modules/knowledge-network/services/object-type.service";
+import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -40,90 +46,287 @@ import styles from "@/modules/knowledge-network/components/shared/ResourceListPa
 type RelationTypeListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
-  items: KnowledgeNetworkRelationTypeRecord[];
-  loading?: boolean;
   networkId: string;
-  objectTypes: KnowledgeNetworkObjectTypeRecord[];
   onDelete: (records: KnowledgeNetworkRelationTypeRecord[]) => Promise<void>;
-  onRefresh: () => Promise<void>;
 };
+
+function readSortBy(value: string | null): "name" | "updateTime" {
+  return value === "name" ? "name" : "updateTime";
+}
+
+function readSortDirection(value: string | null): "asc" | "desc" {
+  return value === "asc" ? "asc" : "desc";
+}
+
+const PAGE_SIZE_STORAGE_SCOPE = "relation-types";
+
+type RelationObjectTypeFilterProps = {
+  label: string;
+  networkId: string;
+  onChange: (value: string) => void;
+  value: string;
+};
+
+export function RelationObjectTypeFilter({
+  label,
+  networkId,
+  onChange,
+  value,
+}: RelationObjectTypeFilterProps) {
+  const { t } = useTranslation();
+  const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const optionsRef = useRef(options);
+  const [selectedOption, setSelectedOption] = useState<{ label: string; value: string }>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void listKnowledgeNetworkObjectTypePage(networkId, {
+      direction: "asc",
+      limit: 20,
+      namePattern: debouncedKeyword,
+      offset: 0,
+      sort: "name",
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const next = result.entries.map((item) => ({ label: item.name, value: item.id }));
+        optionsRef.current = next;
+        setOptions(next);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          optionsRef.current = [];
+          setOptions([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedKeyword, networkId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (value === "all") {
+      setSelectedOption(undefined);
+      return () => {
+        cancelled = true;
+      };
+    }
+    const existing = optionsRef.current.find((item) => item.value === value);
+    if (existing) {
+      setSelectedOption(existing);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setSelectedOption(undefined);
+    void getKnowledgeNetworkObjectType(networkId, value)
+      .then((item) => {
+        if (!cancelled && item) {
+          setSelectedOption({ label: item.name, value: item.id });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, value]);
+
+  const displayedOptions = useMemo(() => {
+    if (
+      !selectedOption ||
+      selectedOption.value !== value ||
+      options.some((item) => item.value === selectedOption.value)
+    ) {
+      return options;
+    }
+    return [...options, selectedOption];
+  }, [options, selectedOption, value]);
+
+  return (
+    <div className={styles.filterGroup}>
+      <span className={styles.filterLabel}>{label}</span>
+      <Select
+        allowClear
+        className={styles.filterSelect}
+        filterOption={false}
+        loading={loading}
+        onChange={(nextValue) => onChange(nextValue || "all")}
+        onSearch={setKeyword}
+        options={displayedOptions}
+        placeholder={t("common.all")}
+        showSearch
+        value={value === "all" ? undefined : value}
+      />
+    </div>
+  );
+}
 
 export function RelationTypeListPanel({
   canDelete,
   canModify,
-  items,
-  loading,
   networkId,
-  objectTypes,
   onDelete,
-  onRefresh,
 }: RelationTypeListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { modal } = useAppServices();
   const canAuthorizeChildren = useKnowledgeNetworkCanOperate(networkId, "authorize");
-  const [keyword, setKeyword] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [targetFilter, setTargetFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "updateTime">("updateTime");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = usePersistentPageSize("relation-types");
+  const [keyword, setKeyword] = useState(() => searchParams.get("q") ?? "");
+  const [sourceFilter, setSourceFilter] = useState(() => searchParams.get("source") ?? "all");
+  const [targetFilter, setTargetFilter] = useState(() => searchParams.get("target") ?? "all");
+  const [sortBy, setSortBy] = useState<"name" | "updateTime">(() =>
+    readSortBy(searchParams.get("sort")),
+  );
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(() =>
+    readSortDirection(searchParams.get("order")),
+  );
+  const [page, setPage] = useState(() => readPositiveInteger(searchParams.get("page"), 1));
+  const [pageSize, setPageSize] = useState(() =>
+    searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10),
+  );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [authorizingRecord, setAuthorizingRecord] =
     useState<KnowledgeNetworkRelationTypeRecord | null>(null);
 
-  const objectTypeOptions = useMemo(
-    () =>
-      objectTypes.map((item) => ({
-        label: item.name,
-        value: item.id,
-      })),
-    [objectTypes],
-  );
+  const [items, setItems] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    setLoadError(false);
+    void listKnowledgeNetworkRelationTypePage(networkId, {
+      direction: sortDirection,
+      limit: pageSize,
+      namePattern: debouncedKeyword,
+      offset: (page - 1) * pageSize,
+      sort: sortBy === "name" ? "name" : "update_time",
+      sourceObjectTypeId: sourceFilter === "all" ? undefined : sourceFilter,
+      targetObjectTypeId: targetFilter === "all" ? undefined : targetFilter,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+        if (page > maxPage) {
+          setItems([]);
+          setTotalCount(result.totalCount);
+          setPage(maxPage);
+          return;
+        }
+        setItems(result.entries);
+        setTotalCount(result.totalCount);
+        setSelectedRowKeys([]);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setItems([]);
+          setTotalCount(0);
+          setLoadError(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedKeyword,
+    networkId,
+    page,
+    pageSize,
+    refreshVersion,
+    sortBy,
+    sortDirection,
+    sourceFilter,
+    targetFilter,
+  ]);
+
+  useEffect(() => {
+    const nextKeyword = searchParams.get("q") ?? "";
+    const nextSource = searchParams.get("source") ?? "all";
+    const nextTarget = searchParams.get("target") ?? "all";
+    const nextSortBy = readSortBy(searchParams.get("sort"));
+    const nextSortDirection = readSortDirection(searchParams.get("order"));
+    const nextPage = readPositiveInteger(searchParams.get("page"), 1);
+    const nextPageSize = searchParams.has("pageSize")
+      ? readPositiveInteger(searchParams.get("pageSize"), 10)
+      : readStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, 10);
+    setKeyword((current) => (current === nextKeyword ? current : nextKeyword));
+    setSourceFilter((current) => (current === nextSource ? current : nextSource));
+    setTargetFilter((current) => (current === nextTarget ? current : nextTarget));
+    setSortBy((current) => (current === nextSortBy ? current : nextSortBy));
+    setSortDirection((current) => (current === nextSortDirection ? current : nextSortDirection));
+    setPage((current) => (current === nextPage ? current : nextPage));
+    setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    writeStoredPageSize(PAGE_SIZE_STORAGE_SCOPE, pageSize);
+    const setOrDelete = (key: string, value: string, fallback: string) => {
+      if (value !== fallback) nextParams.set(key, value);
+      else nextParams.delete(key);
+    };
+    setOrDelete("q", keyword.trim(), "");
+    setOrDelete("source", sourceFilter, "all");
+    setOrDelete("target", targetFilter, "all");
+    setOrDelete("sort", sortBy, "updateTime");
+    setOrDelete("order", sortDirection, "desc");
+    setOrDelete("page", String(page), "1");
+    setOrDelete("pageSize", String(pageSize), "10");
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [
+    keyword,
+    page,
+    pageSize,
+    searchParams,
+    setSearchParams,
+    sortBy,
+    sortDirection,
+    sourceFilter,
+    targetFilter,
+  ]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || sourceFilter !== "all" || targetFilter !== "all",
     [keyword, sourceFilter, targetFilter],
   );
-
-  const filteredItems = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return items.filter((item) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.id.toLowerCase().includes(normalizedKeyword) ||
-        item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesSource = sourceFilter === "all" || item.sourceObjectTypeId === sourceFilter;
-      const matchesTarget = targetFilter === "all" || item.targetObjectTypeId === targetFilter;
-
-      return matchesKeyword && matchesSource && matchesTarget;
-    });
-  }, [items, keyword, sourceFilter, targetFilter]);
-
-  const sortedItems = useMemo(() => {
-    const nextItems = [...filteredItems];
-
-    nextItems.sort((left, right) => {
-      const leftValue = sortBy === "name" ? left.name : left.updateTime;
-      const rightValue = sortBy === "name" ? right.name : right.updateTime;
-      const compareResult = leftValue.localeCompare(rightValue, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-
-      return sortDirection === "asc" ? compareResult : -compareResult;
-    });
-
-    return nextItems;
-  }, [filteredItems, sortBy, sortDirection]);
-
-  const paginatedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedItems.slice(start, start + pageSize);
-  }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
     () =>
@@ -160,6 +363,7 @@ export function RelationTypeListPanel({
       onOk: async () => {
         await onDelete(records);
         setSelectedRowKeys([]);
+        setRefreshVersion((current) => current + 1);
       },
       width: 520,
     });
@@ -388,8 +592,17 @@ export function RelationTypeListPanel({
     );
   };
 
-  const tableEmptyText = loading ? (
+  const tableEmptyText = isLoading ? (
     <div className={styles.loadingEmptyState} />
+  ) : loadError ? (
+    <Empty
+      className={styles.emptyPanel}
+      description={t("knowledgeNetwork.relationTypeListLoadFailed")}
+    >
+      <AppButton onClick={() => setRefreshVersion((current) => current + 1)}>
+        {t("common.retry")}
+      </AppButton>
+    </Empty>
   ) : (
     renderEmptyContent()
   );
@@ -443,38 +656,24 @@ export function RelationTypeListPanel({
               prefix={<SearchOutlined className={styles.searchIcon} />}
               value={keyword}
             />
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>
-                {t("knowledgeNetwork.relationTypeListSourceObject")}
-              </span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => {
-                  setSourceFilter(value);
-                  setPage(1);
-                }}
-                optionFilterProp="label"
-                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-                showSearch
-                value={sourceFilter}
-              />
-            </div>
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>
-                {t("knowledgeNetwork.relationTypeListTargetObject")}
-              </span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => {
-                  setTargetFilter(value);
-                  setPage(1);
-                }}
-                optionFilterProp="label"
-                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-                showSearch
-                value={targetFilter}
-              />
-            </div>
+            <RelationObjectTypeFilter
+              label={t("knowledgeNetwork.relationTypeListSourceObject")}
+              networkId={networkId}
+              onChange={(value) => {
+                setSourceFilter(value);
+                setPage(1);
+              }}
+              value={sourceFilter}
+            />
+            <RelationObjectTypeFilter
+              label={t("knowledgeNetwork.relationTypeListTargetObject")}
+              networkId={networkId}
+              onChange={(value) => {
+                setTargetFilter(value);
+                setPage(1);
+              }}
+              value={targetFilter}
+            />
             <Dropdown
               menu={{
                 items: [
@@ -510,7 +709,7 @@ export function RelationTypeListPanel({
               aria-label={t("common.refresh")}
               className={styles.iconButton}
               onClick={() => {
-                void onRefresh();
+                setRefreshVersion((current) => current + 1);
               }}
               type="button"
             >
@@ -522,8 +721,8 @@ export function RelationTypeListPanel({
         <div className={styles.tableCard}>
           <Table<KnowledgeNetworkRelationTypeRecord>
             columns={columns}
-            dataSource={paginatedItems}
-            loading={loading}
+            dataSource={items}
+            loading={isLoading}
             locale={{ emptyText: tableEmptyText }}
             pagination={false}
             rowKey="id"
@@ -545,7 +744,7 @@ export function RelationTypeListPanel({
           />
         </div>
 
-        {sortedItems.length > 0 ? (
+        {totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}
@@ -556,7 +755,7 @@ export function RelationTypeListPanel({
               pageSize={pageSize}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
-              total={sortedItems.length}
+              total={totalCount}
             />
           </div>
         ) : null}

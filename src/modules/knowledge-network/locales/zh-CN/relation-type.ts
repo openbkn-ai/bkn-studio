@@ -78,6 +78,7 @@ export const relationtypePart = {
   relationTypeSourceObjectPlaceholder: "请选择起点",
   relationTypeSourceObjectRequired: "请选择起点。",
   relationTypesTitle: "关系类",
+  relationTypeListLoadFailed: "关系类加载失败，请重试。",
   relationTypeTargetObject: "目标对象类",
   relationTypeTargetObjectPlaceholder: "请选择终点",
   relationTypeTargetObjectRequired: "请选择终点。",

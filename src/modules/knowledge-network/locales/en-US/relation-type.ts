@@ -87,6 +87,7 @@ export const relationtypePart = {
   relationTypeSourceObjectPlaceholder: "Select a source object type",
   relationTypeSourceObjectRequired: "Please select a source object type.",
   relationTypesTitle: "Relation types",
+  relationTypeListLoadFailed: "Could not load relation types. Please try again.",
   relationTypeTargetObject: "Target object type",
   relationTypeTargetObjectPlaceholder: "Select a target object type",
   relationTypeTargetObjectRequired: "Please select a target object type.",
