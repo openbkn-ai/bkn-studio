@@ -123,7 +123,7 @@ describe("ResourceDetailPanel", () => {
     expect(tag.closest(".ant-space")?.parentElement?.tagName).not.toBe("P");
   });
 
-  it("keeps zero row counts visible and exposes copy actions for identifiers", () => {
+  it("keeps zero estimated row counts visible and exposes copy actions for identifiers", () => {
     render(
       <MemoryRouter>
         <ResourceDetailPanel
@@ -140,6 +140,22 @@ describe("ResourceDetailPanel", () => {
     expect(screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" })).toHaveLength(
       3,
     );
+  });
+
+  it("shows an exact zero row count without the estimate prefix", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, rowCount: 0, estimatedRowCount: null }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("0")).toHaveLength(2);
+    expect(screen.queryByText("estimated:0")).toBeNull();
   });
 
   it("shows an exact row count without the estimate prefix", () => {
