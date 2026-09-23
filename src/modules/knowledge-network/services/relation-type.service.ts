@@ -130,6 +130,7 @@ export async function listKnowledgeNetworkRelationTypes(networkId: string) {
 }
 
 export type KnowledgeNetworkRelationTypePageQuery = {
+  boundObjectTypeId?: string;
   direction?: "asc" | "desc";
   limit: number;
   namePattern?: string;
@@ -159,6 +160,9 @@ export async function listKnowledgeNetworkRelationTypePage(
         item.description.toLowerCase().includes(keyword);
       return (
         matchesKeyword &&
+        (!query.boundObjectTypeId ||
+          item.sourceObjectTypeId === query.boundObjectTypeId ||
+          item.targetObjectTypeId === query.boundObjectTypeId) &&
         (!query.sourceObjectTypeId || item.sourceObjectTypeId === query.sourceObjectTypeId) &&
         (!query.targetObjectTypeId || item.targetObjectTypeId === query.targetObjectTypeId)
       );
@@ -184,6 +188,7 @@ export async function listKnowledgeNetworkRelationTypePage(
     `/bkn-backend/v1/knowledge-networks/${networkId}/relation-types`,
     {
       params: {
+        bound_object_type_id: query.boundObjectTypeId || undefined,
         direction: query.direction ?? "desc",
         limit: query.limit,
         name_pattern: query.namePattern?.trim() || undefined,

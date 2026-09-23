@@ -14,6 +14,60 @@ vi.mock("@/framework/request/http", () => ({
   http: { get: getMock, post: postMock },
 }));
 
+describe("action-type.service - listKnowledgeNetworkActionTypePage", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("pushes paging and filters to the backend", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            action_type: "modify",
+            id: "action-1",
+            name: "Update order",
+            object_type_id: "object-1",
+          },
+        ],
+        total_count: 21,
+      },
+    });
+    const { listKnowledgeNetworkActionTypePage } =
+      await import("@/modules/knowledge-network/services/action-type.service");
+
+    const result = await listKnowledgeNetworkActionTypePage("kn-1", {
+      actionKind: "update",
+      direction: "asc",
+      limit: 10,
+      namePattern: " order ",
+      objectTypeId: "object-1",
+      offset: 10,
+      sort: "name",
+    });
+
+    expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1/action-types", {
+      params: {
+        action_type: "modify",
+        direction: "asc",
+        limit: 10,
+        name_pattern: "order",
+        object_type_id: "object-1",
+        offset: 10,
+        sort: "name",
+      },
+    });
+    expect(result.totalCount).toBe(21);
+    expect(result.entries[0]).toMatchObject({ actionKind: "update", id: "action-1" });
+  });
+});
+
 describe("action-type.service - executeKnowledgeNetworkActionTypeNow", () => {
   beforeEach(() => {
     vi.resetModules();

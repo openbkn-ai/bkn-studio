@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
@@ -40,9 +41,9 @@ import {
   deleteKnowledgeNetworkObjectType,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
-  listKnowledgeNetworkActionTypes,
+  listKnowledgeNetworkActionTypePage,
   listKnowledgeNetworkMetrics,
-  listKnowledgeNetworkRelationTypes,
+  listKnowledgeNetworkRelationTypePage,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
   KnowledgeNetworkActionTypeRecord,
@@ -197,6 +198,7 @@ export function ObjectTypeDetailScene() {
   const [previewKeyword, setPreviewKeyword] = useState("");
   const [previewLoadedObjectTypeId, setPreviewLoadedObjectTypeId] = useState<string | null>(null);
   const [relatedRelations, setRelatedRelations] = useState<RelatedRelationRow[]>([]);
+  const [relatedRelationsTotalCount, setRelatedRelationsTotalCount] = useState(0);
   const [relatedRelationsLoading, setRelatedRelationsLoading] = useState(false);
   const [relatedRelationsError, setRelatedRelationsError] = useState<string | null>(null);
   const [relatedRelationsLoadedObjectTypeId, setRelatedRelationsLoadedObjectTypeId] = useState<
@@ -214,6 +216,7 @@ export function ObjectTypeDetailScene() {
   const [relatedMetricsPage, setRelatedMetricsPage] = useState(1);
   const [relatedMetricsPageSize, setRelatedMetricsPageSize] = useState(10);
   const [relatedActions, setRelatedActions] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
+  const [relatedActionsTotalCount, setRelatedActionsTotalCount] = useState(0);
   const [relatedActionsLoading, setRelatedActionsLoading] = useState(false);
   const [relatedActionsError, setRelatedActionsError] = useState<string | null>(null);
   const [relatedActionsLoadedObjectTypeId, setRelatedActionsLoadedObjectTypeId] = useState<
@@ -228,6 +231,7 @@ export function ObjectTypeDetailScene() {
   const [previewPage, setPreviewPage] = useState(1);
   const [previewPageSize, setPreviewPageSize] = useState(10);
   const [relatedKeyword, setRelatedKeyword] = useState("");
+  const debouncedRelatedKeyword = useDebouncedValue(relatedKeyword.trim(), 300);
   const propertyTableState = useObjectTypePropertyTableState();
   const loadedObjectTypeKeyRef = useRef<string | null>(null);
   const listPath = `/knowledge-network/workspace/${networkId}/object-types`;
@@ -470,6 +474,7 @@ export function ObjectTypeDetailScene() {
     setPreviewLoadedObjectTypeId(null);
     setPreviewPage(1);
     setRelatedRelations([]);
+    setRelatedRelationsTotalCount(0);
     setRelatedRelationsError(null);
     setRelatedRelationsLoadedObjectTypeId(null);
     setRelatedRelationsPage(1);
@@ -479,6 +484,7 @@ export function ObjectTypeDetailScene() {
     setRelatedMetricsLoadedObjectTypeId(null);
     setRelatedMetricsPage(1);
     setRelatedActions([]);
+    setRelatedActionsTotalCount(0);
     setRelatedActionsError(null);
     setRelatedActionsLoadedObjectTypeId(null);
     setRelatedActionsPage(1);
@@ -503,18 +509,15 @@ export function ObjectTypeDetailScene() {
       return;
     }
 
-    if (relatedMetricsLoadedObjectTypeId === objectTypeId) {
-      return;
-    }
-
     let cancelled = false;
     setRelatedMetricsLoading(true);
     setRelatedMetricsError(null);
 
     void listKnowledgeNetworkMetrics(networkId, {
       direction: "desc",
-      limit: -1,
-      offset: 0,
+      keyword: debouncedRelatedKeyword || undefined,
+      limit: relatedMetricsPageSize,
+      offset: (relatedMetricsPage - 1) * relatedMetricsPageSize,
       scopeRef: objectTypeId,
       sort: "update_time",
     })
@@ -542,7 +545,14 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [networkId, objectTypeId, relatedMetricsLoadedObjectTypeId, shouldLoadRelatedMetrics]);
+  }, [
+    networkId,
+    objectTypeId,
+    debouncedRelatedKeyword,
+    relatedMetricsPage,
+    relatedMetricsPageSize,
+    shouldLoadRelatedMetrics,
+  ]);
 
   useEffect(() => {
     if (!shouldLoadRelatedActions || !networkId || !objectTypeId) {
@@ -550,24 +560,29 @@ export function ObjectTypeDetailScene() {
       return;
     }
 
-    if (relatedActionsLoadedObjectTypeId === objectTypeId) {
-      return;
-    }
-
     let cancelled = false;
     setRelatedActionsLoading(true);
     setRelatedActionsError(null);
 
-    void listKnowledgeNetworkActionTypes(networkId)
-      .then((items) => {
+    void listKnowledgeNetworkActionTypePage(networkId, {
+      direction: "desc",
+      limit: relatedActionsPageSize,
+      namePattern: debouncedRelatedKeyword,
+      objectTypeId,
+      offset: (relatedActionsPage - 1) * relatedActionsPageSize,
+      sort: "update_time",
+    })
+      .then((result) => {
         if (!cancelled) {
-          setRelatedActions(items.filter((item) => item.objectTypeId === objectTypeId));
+          setRelatedActions(result.entries);
+          setRelatedActionsTotalCount(result.totalCount);
           setRelatedActionsLoadedObjectTypeId(objectTypeId);
         }
       })
       .catch((nextError) => {
         if (!cancelled) {
           setRelatedActions([]);
+          setRelatedActionsTotalCount(0);
           setRelatedActionsError(extractRequestErrorMessage(nextError));
           setRelatedActionsLoadedObjectTypeId(null);
         }
@@ -581,7 +596,14 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [networkId, objectTypeId, relatedActionsLoadedObjectTypeId, shouldLoadRelatedActions]);
+  }, [
+    networkId,
+    objectTypeId,
+    relatedActionsPage,
+    relatedActionsPageSize,
+    debouncedRelatedKeyword,
+    shouldLoadRelatedActions,
+  ]);
 
   useEffect(() => {
     if (!shouldLoadRelatedRelations || !networkId || !objectTypeId) {
@@ -589,21 +611,24 @@ export function ObjectTypeDetailScene() {
       return;
     }
 
-    if (relatedRelationsLoadedObjectTypeId === objectTypeId) {
-      return;
-    }
-
     let cancelled = false;
     setRelatedRelationsLoading(true);
     setRelatedRelationsError(null);
 
-    void listKnowledgeNetworkRelationTypes(networkId)
-      .then((items) => {
+    void listKnowledgeNetworkRelationTypePage(networkId, {
+      boundObjectTypeId: objectTypeId,
+      direction: "desc",
+      limit: relatedRelationsPageSize,
+      namePattern: debouncedRelatedKeyword,
+      offset: (relatedRelationsPage - 1) * relatedRelationsPageSize,
+      sort: "update_time",
+    })
+      .then((result) => {
         if (cancelled) {
           return;
         }
 
-        const rows = items.flatMap<RelatedRelationRow>((item) => {
+        const rows = result.entries.flatMap<RelatedRelationRow>((item) => {
           if (item.sourceObjectTypeId === objectTypeId) {
             return [
               {
@@ -630,11 +655,13 @@ export function ObjectTypeDetailScene() {
         });
 
         setRelatedRelations(rows);
+        setRelatedRelationsTotalCount(result.totalCount);
         setRelatedRelationsLoadedObjectTypeId(objectTypeId);
       })
       .catch((nextError) => {
         if (!cancelled) {
           setRelatedRelations([]);
+          setRelatedRelationsTotalCount(0);
           setRelatedRelationsError(extractRequestErrorMessage(nextError));
           setRelatedRelationsLoadedObjectTypeId(null);
         }
@@ -648,7 +675,14 @@ export function ObjectTypeDetailScene() {
     return () => {
       cancelled = true;
     };
-  }, [networkId, objectTypeId, relatedRelationsLoadedObjectTypeId, shouldLoadRelatedRelations]);
+  }, [
+    networkId,
+    objectTypeId,
+    debouncedRelatedKeyword,
+    relatedRelationsPage,
+    relatedRelationsPageSize,
+    shouldLoadRelatedRelations,
+  ]);
 
   const filteredDataProperties = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -697,37 +731,6 @@ export function ObjectTypeDetailScene() {
     );
   }, [preview?.rows, previewKeyword]);
 
-  const filteredRelatedRelations = useMemo(() => {
-    const normalized = relatedKeyword.trim().toLowerCase();
-    if (!normalized) {
-      return relatedRelations;
-    }
-
-    return relatedRelations.filter(
-      (item) =>
-        normalizedSearchText(item.name).includes(normalized) ||
-        normalizedSearchText(item.oppositeObjectTypeName).includes(normalized),
-    );
-  }, [relatedKeyword, relatedRelations]);
-
-  const filteredRelatedMetrics = useMemo(() => {
-    const normalized = relatedKeyword.trim().toLowerCase();
-    if (!normalized) {
-      return relatedMetrics;
-    }
-
-    return relatedMetrics.filter((item) => normalizedSearchText(item.name).includes(normalized));
-  }, [relatedKeyword, relatedMetrics]);
-
-  const filteredRelatedActions = useMemo(() => {
-    const normalized = relatedKeyword.trim().toLowerCase();
-    if (!normalized) {
-      return relatedActions;
-    }
-
-    return relatedActions.filter((item) => normalizedSearchText(item.name).includes(normalized));
-  }, [relatedActions, relatedKeyword]);
-
   const pagedDataProperties = useMemo(() => {
     const start = (dataPage - 1) * dataPageSize;
     return filteredDataProperties.slice(start, start + dataPageSize);
@@ -743,20 +746,9 @@ export function ObjectTypeDetailScene() {
     return filteredPreviewRows.slice(start, start + previewPageSize);
   }, [filteredPreviewRows, previewPage, previewPageSize]);
 
-  const pagedRelatedRelations = useMemo(() => {
-    const start = (relatedRelationsPage - 1) * relatedRelationsPageSize;
-    return filteredRelatedRelations.slice(start, start + relatedRelationsPageSize);
-  }, [filteredRelatedRelations, relatedRelationsPage, relatedRelationsPageSize]);
-
-  const pagedRelatedMetrics = useMemo(() => {
-    const start = (relatedMetricsPage - 1) * relatedMetricsPageSize;
-    return filteredRelatedMetrics.slice(start, start + relatedMetricsPageSize);
-  }, [filteredRelatedMetrics, relatedMetricsPage, relatedMetricsPageSize]);
-
-  const pagedRelatedActions = useMemo(() => {
-    const start = (relatedActionsPage - 1) * relatedActionsPageSize;
-    return filteredRelatedActions.slice(start, start + relatedActionsPageSize);
-  }, [filteredRelatedActions, relatedActionsPage, relatedActionsPageSize]);
+  const pagedRelatedRelations = relatedRelations;
+  const pagedRelatedMetrics = relatedMetrics;
+  const pagedRelatedActions = relatedActions;
 
   const propertyTableVisibleColumnKeys = useMemo(
     () => ["index", ...propertyTableState.tableColumns.map((column) => column.key)],
@@ -1214,7 +1206,7 @@ export function ObjectTypeDetailScene() {
             disabled={
               relatedActionsLoadedObjectTypeId === objectTypeId &&
               !relatedActionsLoading &&
-              relatedActions.length === 0
+              relatedActionsTotalCount === 0
             }
             onClick={() => {
               openTab("related", { relatedSection: "actions" });
@@ -1232,7 +1224,7 @@ export function ObjectTypeDetailScene() {
                 error: relatedActionsError,
                 loaded: relatedActionsLoadedObjectTypeId === objectTypeId,
                 loading: relatedActionsLoading,
-                value: relatedActions.length,
+                value: relatedActionsTotalCount,
               })}
             </span>
           </button>
@@ -1254,7 +1246,7 @@ export function ObjectTypeDetailScene() {
                 error: relatedRelationsError,
                 loaded: relatedRelationsLoadedObjectTypeId === objectTypeId,
                 loading: relatedRelationsLoading,
-                value: relatedRelations.length,
+                value: relatedRelationsTotalCount,
               })}
             </span>
           </button>
@@ -1871,7 +1863,7 @@ export function ObjectTypeDetailScene() {
                   scroll={{ x: 920 }}
                   size="small"
                 />
-                {filteredRelatedRelations.length > relatedRelationsPageSize ? (
+                {relatedRelationsTotalCount > relatedRelationsPageSize ? (
                   <div className={styles.paginationBar}>
                     <TablePaginationBar
                       current={relatedRelationsPage}
@@ -1882,7 +1874,7 @@ export function ObjectTypeDetailScene() {
                       pageSize={relatedRelationsPageSize}
                       showSizeChanger
                       showTotal={(total) => t("common.total", { total })}
-                      total={filteredRelatedRelations.length}
+                      total={relatedRelationsTotalCount}
                     />
                   </div>
                 ) : null}
@@ -1897,16 +1889,6 @@ export function ObjectTypeDetailScene() {
               <Alert message={relatedMetricsError} showIcon type="error" />
             ) : (
               <>
-                {relatedMetricsTotalCount > relatedMetrics.length ? (
-                  <Alert
-                    message={t("knowledgeNetwork.objectTypeDetailRelatedMetricsPartial", {
-                      loaded: relatedMetrics.length,
-                      total: relatedMetricsTotalCount,
-                    })}
-                    showIcon
-                    type="warning"
-                  />
-                ) : null}
                 <Table<KnowledgeNetworkMetricRecord>
                   columns={relatedMetricColumns}
                   dataSource={pagedRelatedMetrics}
@@ -1923,7 +1905,7 @@ export function ObjectTypeDetailScene() {
                   scroll={{ x: 760 }}
                   size="small"
                 />
-                {filteredRelatedMetrics.length > relatedMetricsPageSize ? (
+                {relatedMetricsTotalCount > relatedMetricsPageSize ? (
                   <div className={styles.paginationBar}>
                     <TablePaginationBar
                       current={relatedMetricsPage}
@@ -1934,7 +1916,7 @@ export function ObjectTypeDetailScene() {
                       pageSize={relatedMetricsPageSize}
                       showSizeChanger
                       showTotal={(total) => t("common.total", { total })}
-                      total={filteredRelatedMetrics.length}
+                      total={relatedMetricsTotalCount}
                     />
                   </div>
                 ) : null}
@@ -1965,7 +1947,7 @@ export function ObjectTypeDetailScene() {
                   scroll={{ x: 760 }}
                   size="small"
                 />
-                {filteredRelatedActions.length > relatedActionsPageSize ? (
+                {relatedActionsTotalCount > relatedActionsPageSize ? (
                   <div className={styles.paginationBar}>
                     <TablePaginationBar
                       current={relatedActionsPage}
@@ -1976,7 +1958,7 @@ export function ObjectTypeDetailScene() {
                       pageSize={relatedActionsPageSize}
                       showSizeChanger
                       showTotal={(total) => t("common.total", { total })}
-                      total={filteredRelatedActions.length}
+                      total={relatedActionsTotalCount}
                     />
                   </div>
                 ) : null}

@@ -29,7 +29,8 @@ import {
 import {
   createKnowledgeNetworkRelationType,
   getKnowledgeNetworkRelationTypeDetail,
-  listKnowledgeNetworkObjectTypes,
+  getKnowledgeNetworkObjectType,
+  listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkRelationType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
@@ -105,7 +106,13 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
       }
 
       try {
-        const nextObjectTypes = await listKnowledgeNetworkObjectTypes(networkId);
+        const objectTypePage = await listKnowledgeNetworkObjectTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          offset: 0,
+          sort: "name",
+        });
+        let nextObjectTypes = objectTypePage.entries;
         setObjectTypes(nextObjectTypes);
 
         if (mode === "edit" && relationTypeId) {
@@ -126,12 +133,34 @@ export function RelationTypeFormScene({ mode }: RelationTypeFormSceneProps) {
             mappingMode: detail.mappingMode,
             mappingRules: buildRelationTypeMappingRulesFromDetail(detail),
           };
+          const selectedObjectTypeIds = Array.from(
+            new Set(
+              [
+                nextMapping.mappingRules.sourceObjectTypeId,
+                nextMapping.mappingRules.targetObjectTypeId,
+              ].filter(Boolean),
+            ),
+          );
+          const selectedObjectTypes = await Promise.all(
+            selectedObjectTypeIds
+              .filter((id) => !nextObjectTypes.some((item) => item.id === id))
+              .map((id) => getKnowledgeNetworkObjectType(networkId, id)),
+          );
+          nextObjectTypes = [
+            ...nextObjectTypes,
+            ...selectedObjectTypes.filter((item): item is KnowledgeNetworkObjectTypeRecord =>
+              Boolean(item),
+            ),
+          ];
+          setObjectTypes(nextObjectTypes);
 
           setBasicValue(nextBasic);
           setMappingValue(nextMapping);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
           setDoneStep(1);
+        } else {
+          setObjectTypes(nextObjectTypes);
         }
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));

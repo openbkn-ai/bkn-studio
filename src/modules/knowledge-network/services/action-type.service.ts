@@ -17,6 +17,7 @@ import type {
   ActionTypeExecutionResultPage,
   ActionTypeExecutionResultQuery,
   KnowledgeNetworkActionTypeMutationPayload,
+  KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkImportMode,
   KnowledgeNetworkActionTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -36,6 +37,7 @@ import {
   mapActionTypeExecutionLogDetail,
   mapActionTypeExecutionLogList,
   mapActionTypeExecutionResultPage,
+  toBackendActionTypeEnum,
   toBackendActionTypeCreateEntry,
   toBackendActionTypeUpdatePayload,
 } from "@/modules/knowledge-network/services/mappers";
@@ -119,6 +121,75 @@ export async function listKnowledgeNetworkActionTypes(networkId: string) {
   );
 
   return response.data.entries.map(mapActionType);
+}
+
+export type KnowledgeNetworkActionTypePageQuery = {
+  actionKind?: KnowledgeNetworkActionTypeKind;
+  direction?: "asc" | "desc";
+  limit: number;
+  namePattern?: string;
+  objectTypeId?: string;
+  offset: number;
+  sort?: "name" | "update_time";
+};
+
+export type KnowledgeNetworkActionTypePage = {
+  entries: KnowledgeNetworkActionTypeRecord[];
+  totalCount: number;
+};
+
+/** Reads one authorization-filtered server page for action-type lists and related resources. */
+export async function listKnowledgeNetworkActionTypePage(
+  networkId: string,
+  query: KnowledgeNetworkActionTypePageQuery,
+): Promise<KnowledgeNetworkActionTypePage> {
+  if (useMock) {
+    const keyword = query.namePattern?.trim().toLowerCase() ?? "";
+    const filtered = (mockActionTypes[networkId] ?? []).filter(
+      (item) =>
+        (!keyword ||
+          item.id.toLowerCase().includes(keyword) ||
+          item.name.toLowerCase().includes(keyword) ||
+          item.description.toLowerCase().includes(keyword)) &&
+        (!query.actionKind || item.actionKind === query.actionKind) &&
+        (!query.objectTypeId || item.objectTypeId === query.objectTypeId),
+    );
+    const sorted = [...filtered].sort((left, right) => {
+      const leftValue = query.sort === "name" ? left.name : left.updateTime;
+      const rightValue = query.sort === "name" ? right.name : right.updateTime;
+      const result = leftValue.localeCompare(rightValue, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return query.direction === "asc" ? result : -result;
+    });
+    return wait({
+      entries: sorted
+        .slice(query.offset, query.offset + query.limit)
+        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      totalCount: sorted.length,
+    });
+  }
+
+  const response = await http.get<BackendListResponse<BackendActionType>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/action-types`,
+    {
+      params: {
+        action_type: query.actionKind ? toBackendActionTypeEnum(query.actionKind) : undefined,
+        direction: query.direction ?? "desc",
+        limit: query.limit,
+        name_pattern: query.namePattern?.trim() || undefined,
+        object_type_id: query.objectTypeId || undefined,
+        offset: query.offset,
+        sort: query.sort ?? "update_time",
+      },
+    },
+  );
+
+  return {
+    entries: response.data.entries.map(mapActionType),
+    totalCount: response.data.total_count,
+  };
 }
 
 export async function getKnowledgeNetworkActionType(networkId: string, actionTypeId: string) {

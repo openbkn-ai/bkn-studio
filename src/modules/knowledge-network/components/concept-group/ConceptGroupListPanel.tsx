@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -32,6 +32,7 @@ import { ResourceTagList } from "@/modules/knowledge-network/components/shared/R
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { getKnowledgeNetworkConceptGroup } from "@/modules/knowledge-network/services/knowledge-network.service";
+import { listKnowledgeNetworkConceptGroupPage } from "@/modules/knowledge-network/services/concept-group.service";
 import type {
   ConceptGroupRecord,
   KnowledgeNetworkImportMode,
@@ -44,26 +45,20 @@ import styles from "@/modules/knowledge-network/components/shared/ResourceListPa
 type ConceptGroupListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
-  items: ConceptGroupRecord[];
-  loading?: boolean;
   networkId: string;
   onDelete: (records: ConceptGroupRecord[]) => Promise<void>;
   onImport: (
     payload: Record<string, unknown>,
     importMode?: KnowledgeNetworkImportMode,
   ) => Promise<void>;
-  onRefresh: () => Promise<void>;
 };
 
 export function ConceptGroupListPanel({
   canDelete,
   canModify,
-  items,
-  loading,
   networkId,
   onDelete,
   onImport,
-  onRefresh,
 }: ConceptGroupListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -77,6 +72,67 @@ export function ConceptGroupListPanel({
   const [pageSize, setPageSize] = usePersistentPageSize("concept-groups");
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [authorizingRecord, setAuthorizingRecord] = useState<ConceptGroupRecord | null>(null);
+  const [items, setItems] = useState<ConceptGroupRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    void listKnowledgeNetworkConceptGroupPage(networkId, {
+      direction: sortDirection,
+      limit: pageSize,
+      namePattern: debouncedKeyword,
+      offset: (page - 1) * pageSize,
+      sort: sortBy === "name" ? "name" : "update_time",
+      tag: selectedTag === "all" ? undefined : selectedTag,
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+        if (page > maxPage) {
+          setItems([]);
+          setTotalCount(result.totalCount);
+          setPage(maxPage);
+          return;
+        }
+        setItems(result.entries);
+        setTotalCount(result.totalCount);
+        setSelectedRowKeys([]);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setItems([]);
+          setTotalCount(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    debouncedKeyword,
+    networkId,
+    page,
+    pageSize,
+    refreshVersion,
+    selectedTag,
+    sortBy,
+    sortDirection,
+  ]);
 
   const tagOptions = useMemo(() => {
     const tags = new Set<string>();
@@ -90,43 +146,6 @@ export function ConceptGroupListPanel({
     () => Boolean(keyword.trim()) || selectedTag !== "all",
     [keyword, selectedTag],
   );
-
-  const filteredItems = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return items.filter((item) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.id.toLowerCase().includes(normalizedKeyword) ||
-        item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesTag = selectedTag === "all" || (item.tags ?? []).includes(selectedTag);
-
-      return matchesKeyword && matchesTag;
-    });
-  }, [items, keyword, selectedTag]);
-
-  const sortedItems = useMemo(() => {
-    const nextItems = [...filteredItems];
-
-    nextItems.sort((left, right) => {
-      const leftValue = sortBy === "name" ? left.name : left.updateTime;
-      const rightValue = sortBy === "name" ? right.name : right.updateTime;
-      const compareResult = leftValue.localeCompare(rightValue, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-
-      return sortDirection === "asc" ? compareResult : -compareResult;
-    });
-
-    return nextItems;
-  }, [filteredItems, sortBy, sortDirection]);
-
-  const paginatedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedItems.slice(start, start + pageSize);
-  }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
     () =>
@@ -163,6 +182,7 @@ export function ConceptGroupListPanel({
       onOk: async () => {
         await onDelete(records);
         setSelectedRowKeys([]);
+        setRefreshVersion((current) => current + 1);
       },
       width: 520,
     });
@@ -386,7 +406,7 @@ export function ConceptGroupListPanel({
                 {canModify ? (
                   <JsonResourceImportButton
                     className={styles.toolbarButton}
-                    onImported={onRefresh}
+                    onImported={async () => setRefreshVersion((current) => current + 1)}
                     onImport={onImport}
                   />
                 ) : null}
@@ -449,7 +469,7 @@ export function ConceptGroupListPanel({
               aria-label={t("common.refresh")}
               className={styles.iconButton}
               onClick={() => {
-                void onRefresh();
+                setRefreshVersion((current) => current + 1);
               }}
               type="button"
             >
@@ -461,8 +481,8 @@ export function ConceptGroupListPanel({
         <div className={styles.tableCard}>
           <Table<ConceptGroupRecord>
             columns={columns}
-            dataSource={paginatedItems}
-            loading={loading}
+            dataSource={items}
+            loading={isLoading}
             locale={{ emptyText: renderEmptyContent() }}
             pagination={false}
             rowKey="id"
@@ -484,7 +504,7 @@ export function ConceptGroupListPanel({
           />
         </div>
 
-        {sortedItems.length > 0 ? (
+        {totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}
@@ -495,7 +515,7 @@ export function ConceptGroupListPanel({
               pageSize={pageSize}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
-              total={sortedItems.length}
+              total={totalCount}
             />
           </div>
         ) : null}

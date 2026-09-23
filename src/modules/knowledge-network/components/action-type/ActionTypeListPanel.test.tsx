@@ -9,6 +9,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const navigate = vi.hoisted(() => vi.fn());
+const listActionTypePage = vi.hoisted(() => vi.fn());
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -35,6 +36,17 @@ vi.mock("@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify", () => 
   useKnowledgeNetworkCanOperate: () => true,
 }));
 
+vi.mock("@/modules/knowledge-network/services/action-type.service", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("@/modules/knowledge-network/services/action-type.service")
+  >()),
+  listKnowledgeNetworkActionTypePage: listActionTypePage,
+}));
+
+vi.mock("@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter", () => ({
+  ObjectTypeRemoteFilter: () => null,
+}));
+
 import { ActionTypeListPanel } from "./ActionTypeListPanel";
 
 const originalMatchMedia = window.matchMedia;
@@ -58,37 +70,39 @@ afterAll(() => {
 afterEach(() => {
   cleanup();
   navigate.mockReset();
+  listActionTypePage.mockReset();
 });
 
 describe("ActionTypeListPanel menu access", () => {
   it("exposes execution management only with execute access", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "update",
+          color: "#1677ff",
+          description: "Update an order",
+          id: "action-1",
+          name: "Update order",
+          objectTypeId: "object-1",
+          objectTypeName: "Order",
+          operations: ["execute"],
+          tags: [],
+          updateTime: "2026-08-20 10:00:00",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 1,
+    });
     render(
       <ActionTypeListPanel
         canDelete={false}
         canModify={false}
-        items={[
-          {
-            actionKind: "update",
-            color: "#1677ff",
-            description: "Update an order",
-            id: "action-1",
-            name: "Update order",
-            objectTypeId: "object-1",
-            objectTypeName: "Order",
-            operations: ["execute"],
-            tags: [],
-            updateTime: "2026-08-20 10:00:00",
-            updaterName: "admin",
-          },
-        ]}
         networkId="network-1"
-        objectTypes={[]}
         onDelete={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "common.actions" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common.actions" }));
 
     expect(await screen.findByText("knowledgeNetwork.actionTypeExecutionEntry")).not.toBeNull();
     expect(screen.queryByText("common.edit")).toBeNull();
@@ -96,33 +110,34 @@ describe("ActionTypeListPanel menu access", () => {
   });
 
   it("uses root authorize plus child view for the configure-permissions entry", async () => {
+    listActionTypePage.mockResolvedValue({
+      entries: [
+        {
+          actionKind: "update",
+          color: "#1677ff",
+          description: "Update an order",
+          id: "action-1",
+          name: "Update order",
+          objectTypeId: "object-1",
+          objectTypeName: "Order",
+          operations: ["view_detail"],
+          tags: [],
+          updateTime: "2026-08-20 10:00:00",
+          updaterName: "admin",
+        },
+      ],
+      totalCount: 1,
+    });
     render(
       <ActionTypeListPanel
         canDelete={false}
         canModify={false}
-        items={[
-          {
-            actionKind: "update",
-            color: "#1677ff",
-            description: "Update an order",
-            id: "action-1",
-            name: "Update order",
-            objectTypeId: "object-1",
-            objectTypeName: "Order",
-            operations: ["view_detail"],
-            tags: [],
-            updateTime: "2026-08-20 10:00:00",
-            updaterName: "admin",
-          },
-        ]}
         networkId="network-1"
-        objectTypes={[]}
         onDelete={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "common.actions" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common.actions" }));
 
     expect(await screen.findByText("knowledgeNetwork.authorizeAction")).not.toBeNull();
     expect(screen.getByText("common.entitlement.editionsShort.professional")).not.toBeNull();

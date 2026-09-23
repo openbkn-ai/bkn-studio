@@ -25,6 +25,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import { MetricCalculationEditor } from "@/modules/knowledge-network/components/metric/MetricCalculationEditor";
+import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
 
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 
@@ -36,7 +37,7 @@ import {
 import {
   createKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
-  listKnowledgeNetworkObjectTypes,
+  listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkMetric,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 
@@ -123,12 +124,6 @@ export function MetricFormScene({
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
-  const objectTypeOptions = useMemo(
-    () => objectTypes.map((item) => ({ label: item.name, value: item.id })),
-
-    [objectTypes],
-  );
-
   const activeFallbackProperties = useMemo(
     () => (objectTypeId === fallbackObjectTypeId ? fallbackProperties : []),
     [fallbackObjectTypeId, fallbackProperties, objectTypeId],
@@ -143,9 +138,13 @@ export function MetricFormScene({
       setLoadError(null);
 
       try {
-        const objectTypeResult = filterMetricObjectTypeOptions(
-          await listKnowledgeNetworkObjectTypes(networkId),
-        );
+        const objectTypePage = await listKnowledgeNetworkObjectTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          offset: 0,
+          sort: "name",
+        });
+        const objectTypeResult = filterMetricObjectTypeOptions(objectTypePage.entries);
 
         if (mode === "edit" && metricId) {
           setLoading(true);
@@ -392,16 +391,19 @@ export function MetricFormScene({
                     },
                   ]}
                 >
-                  <Select
+                  <RelationTypeObjectTypeSelect
+                    networkId={networkId}
+                    objectTypes={objectTypes}
                     onChange={() => resetObjectTypeDependentFields(form)}
-
-                    optionFilterProp="label"
-
-                    options={objectTypeOptions}
-
+                    onResolvedOptionsChange={(resolvedObjectTypes) => {
+                      const authorized = filterMetricObjectTypeOptions(resolvedObjectTypes);
+                      setObjectTypes((current) => {
+                        const merged = new Map(current.map((item) => [item.id, item]));
+                        authorized.forEach((item) => merged.set(item.id, item));
+                        return Array.from(merged.values());
+                      });
+                    }}
                     placeholder={t("knowledgeNetwork.metricBoundObjectTypePlaceholder")}
-
-                    showSearch
                   />
                 </Form.Item>
 

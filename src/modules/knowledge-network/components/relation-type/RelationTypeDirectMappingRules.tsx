@@ -213,6 +213,7 @@ export function RelationTypeDirectMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
+            networkId={networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleSourceObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeSourceObjectPlaceholder")}
@@ -240,6 +241,7 @@ export function RelationTypeDirectMappingRules({
       render: (cellValue: string | undefined, row) =>
         row.rowType === "object" ? (
           <RelationTypeObjectTypeSelect
+            networkId={networkId}
             objectTypes={objectTypes}
             onChange={(nextValue) => handleTargetObjectChange(nextValue ?? "")}
             placeholder={t("knowledgeNetwork.relationTypeTargetObjectPlaceholder")}

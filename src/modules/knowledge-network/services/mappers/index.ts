@@ -523,6 +523,7 @@ export {
 } from "./relation-type.mapper";
 export {
   mapActionTypeDetail,
+  toBackendActionTypeEnum,
   toBackendActionTypeCreateEntry,
   toBackendActionTypeUpdatePayload,
 } from "./action-type.mapper";
