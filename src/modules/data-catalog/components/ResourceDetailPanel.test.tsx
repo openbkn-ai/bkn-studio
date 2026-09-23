@@ -17,7 +17,12 @@ const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { count?: number; formattedCount?: number | string }) =>
+      key === "dataCatalog.resource.estimatedRowCount" && typeof options?.count === "number"
+        ? `estimated:${options?.formattedCount}`
+        : key,
+  }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -130,7 +135,7 @@ describe("ResourceDetailPanel", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getAllByText("dataCatalog.resource.estimatedRowCount")).toHaveLength(2);
+    expect(screen.getAllByText("estimated:0")).toHaveLength(2);
     expect(screen.queryByText(resource.updateTime)).toBeNull();
     expect(screen.getAllByRole("button", { name: "dataCatalog.resource.copyValue" })).toHaveLength(
       3,
@@ -150,7 +155,40 @@ describe("ResourceDetailPanel", () => {
     );
 
     expect(screen.getAllByText("42")).toHaveLength(2);
-    expect(screen.queryByText("dataCatalog.resource.estimatedRowCount")).toBeNull();
+    expect(screen.queryByText("estimated:41")).toBeNull();
+  });
+
+  it("preserves a large estimated row count and shows a placeholder when both counts are absent", () => {
+    const largeCount = "9007199254740993";
+    const { rerender } = render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, rowCount: null, estimatedRowCount: largeCount }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText(`estimated:${largeCount}`)).toHaveLength(2);
+
+    rerender(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, rowCount: null, estimatedRowCount: null }}
+        />
+      </MemoryRouter>,
+    );
+
+    const rowCountLabels = screen.getAllByText("dataCatalog.resource.rowCount");
+    expect(rowCountLabels).toHaveLength(2);
+    rowCountLabels.forEach((label) => {
+      expect(label.parentElement?.textContent).toBe("dataCatalog.resource.rowCount-");
+    });
   });
 
   it("shows the original source metadata for each field", () => {

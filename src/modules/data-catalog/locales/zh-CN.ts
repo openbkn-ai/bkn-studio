@@ -378,7 +378,8 @@ export const dataCatalogZhCN = {
       enabledStatus: "启用状态",
       discoverStatus: "探查状态",
       rowCount: "行数",
-      estimatedRowCount: "约 {{count}} 条",
+      estimatedRowCount_one: "约 {{formattedCount}} 条",
+      estimatedRowCount_other: "约 {{formattedCount}} 条",
       indexState: "本地索引状态",
       indexName: "本地索引名称",
       localIndexStatuses: {

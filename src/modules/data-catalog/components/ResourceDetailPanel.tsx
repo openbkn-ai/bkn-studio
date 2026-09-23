@@ -75,7 +75,10 @@ export function ResourceDetailPanel({
     rowCount === null || rowCount === undefined
       ? "-"
       : resource.rowCount === null
-        ? t("dataCatalog.resource.estimatedRowCount", { count: rowCount })
+        ? t("dataCatalog.resource.estimatedRowCount", {
+            count: Number(rowCount),
+            formattedCount: rowCount,
+          })
         : rowCount;
 
   useEffect(() => {
