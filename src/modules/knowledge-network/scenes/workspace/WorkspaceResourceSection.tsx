@@ -68,22 +68,18 @@ export function WorkspaceResourceSection({
     case "concept-groups":
       return (
         <ConceptGroupListPanel
-          items={data.conceptGroups}
           canModify={canModify}
           canDelete={canDelete}
-          loading={data.sectionLoading}
           networkId={networkId}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkConceptGroup(networkId, record.id)),
             );
             void message.success(t("common.success"));
-            await data.reloadConceptGroups();
           }}
           onImport={(payload, importMode) =>
             importKnowledgeNetworkConceptGroup(networkId, payload, importMode)
           }
-          onRefresh={data.reloadConceptGroups}
         />
       );
     case "object-types":
@@ -117,20 +113,15 @@ export function WorkspaceResourceSection({
     case "action-types":
       return (
         <ActionTypeListPanel
-          items={data.actionTypes}
           canModify={canModify}
           canDelete={canDelete}
-          loading={data.sectionLoading}
           networkId={networkId}
-          objectTypes={data.objectTypes}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkActionType(networkId, record.id)),
             );
             void message.success(t("common.success"));
-            await data.reloadActionTypes();
           }}
-          onRefresh={data.reloadActionTypes}
         />
       );
     case "metrics":
@@ -162,7 +153,6 @@ export function WorkspaceResourceSection({
             : section === "apis"
               ? data.apis
               : data.functions;
-
       return (
         <CapabilityListPanel
           canDelete={canModify}

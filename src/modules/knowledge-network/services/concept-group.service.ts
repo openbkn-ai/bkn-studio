@@ -11,6 +11,7 @@ import { unwrapSingleEntryResponse, type SingleEntryResponse } from "@/framework
 import { ensureKnowledgeNetworkChildOperations } from "@/modules/knowledge-network/services/child-resource-operations.service";
 import type {
   ConceptGroupDetail,
+  ConceptGroupRecord,
   ConceptGroupMutationPayload,
   KnowledgeNetworkImportMode,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -77,6 +78,81 @@ export async function listKnowledgeNetworkConceptGroups(networkId: string) {
   );
 
   return response.data.entries.map(mapConceptGroup);
+}
+
+export type KnowledgeNetworkConceptGroupPageQuery = {
+  direction?: "asc" | "desc";
+  limit: number;
+  namePattern?: string;
+  offset: number;
+  sort?: "name" | "update_time";
+  tag?: string;
+};
+
+export type KnowledgeNetworkConceptGroupPage = {
+  availableTags: string[];
+  entries: ConceptGroupRecord[];
+  totalCount: number;
+};
+
+type BackendConceptGroupPage = BackendListResponse<BackendConceptGroup> & {
+  available_tags?: string[];
+};
+
+/** Reads one authorization-filtered server page for the concept-group workspace. */
+export async function listKnowledgeNetworkConceptGroupPage(
+  networkId: string,
+  query: KnowledgeNetworkConceptGroupPageQuery,
+): Promise<KnowledgeNetworkConceptGroupPage> {
+  if (useMock) {
+    const keyword = query.namePattern?.trim().toLowerCase() ?? "";
+    const filtered = (mockConceptGroups[networkId] ?? []).filter(
+      (item) =>
+        (!keyword ||
+          item.id.toLowerCase().includes(keyword) ||
+          item.name.toLowerCase().includes(keyword) ||
+          item.description.toLowerCase().includes(keyword)) &&
+        (!query.tag || (item.tags ?? []).includes(query.tag)),
+    );
+    const sorted = [...filtered].sort((left, right) => {
+      const leftValue = query.sort === "name" ? left.name : left.updateTime;
+      const rightValue = query.sort === "name" ? right.name : right.updateTime;
+      const result = leftValue.localeCompare(rightValue, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      return query.direction === "asc" ? result : -result;
+    });
+    return wait({
+      availableTags: [
+        ...new Set((mockConceptGroups[networkId] ?? []).flatMap((item) => item.tags ?? [])),
+      ].sort((left, right) => left.localeCompare(right)),
+      entries: sorted
+        .slice(query.offset, query.offset + query.limit)
+        .map((item) => ({ ...item, operations: mockKnowledgeNetworkChildOperations })),
+      totalCount: sorted.length,
+    });
+  }
+
+  const response = await http.get<BackendConceptGroupPage>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}/concept-groups`,
+    {
+      params: {
+        direction: query.direction ?? "desc",
+        limit: query.limit,
+        name_pattern: query.namePattern?.trim() || undefined,
+        offset: query.offset,
+        sort: query.sort ?? "update_time",
+        tag: query.tag?.trim() || undefined,
+      },
+    },
+  );
+
+  return {
+    availableTags: response.data.available_tags ?? [],
+    entries: response.data.entries.map(mapConceptGroup),
+    totalCount: response.data.total_count,
+  };
 }
 
 export async function getKnowledgeNetworkConceptGroup(networkId: string, groupId: string) {

@@ -11,11 +11,9 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import type { KnowledgeNetworkWorkspaceSection } from "@/modules/knowledge-network/contracts/scenes";
 import {
   getKnowledgeNetwork,
-  listKnowledgeNetworkActionTypes,
+  getKnowledgeNetworkStatistics,
   getMetricApiAvailability,
-  listKnowledgeNetworkConceptGroups,
   listKnowledgeNetworkMetrics,
-  listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRecentObjects,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
@@ -26,10 +24,7 @@ import {
 import type {
   CapabilityBindingListResult,
   CapabilityType,
-  ConceptGroupRecord,
-  KnowledgeNetworkActionTypeRecord,
   KnowledgeNetworkMetricRecord,
-  KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
 } from "@/modules/knowledge-network/types/knowledge-network";
@@ -129,9 +124,6 @@ function sectionCacheKey(networkId: string, section: KnowledgeNetworkWorkspaceSe
 export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWorkspaceSection) {
   const [detail, setDetail] = useState<KnowledgeNetworkRecord | null>(null);
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
-  const [conceptGroups, setConceptGroups] = useState<ConceptGroupRecord[]>([]);
-  const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
   const [functions, setFunctions] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
   const [apis, setApis] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
@@ -146,6 +138,7 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   const loadedSectionsRef = useRef<Set<string>>(new Set());
   const recentLoadedRef = useRef(false);
   const pendingMetricsTotalRef = useRef(createMetricsTotalPending());
+  const detailRequestRef = useRef(0);
   const detailRef = useRef<KnowledgeNetworkRecord | null>(null);
   detailRef.current = detail;
 
@@ -201,22 +194,57 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
       return;
     }
 
+    const requestId = detailRequestRef.current + 1;
+    detailRequestRef.current = requestId;
     setDetailLoading(true);
     setDetailError(null);
 
     try {
       const fetched = await getKnowledgeNetwork(networkId);
+      if (detailRequestRef.current !== requestId) {
+        return;
+      }
       const merged = fetched
         ? mergePendingMetricsTotalIntoDetail(fetched, pendingMetricsTotalRef.current)
         : null;
       detailRef.current = merged;
       setDetail(merged);
+
+      void getKnowledgeNetworkStatistics(networkId)
+        .then((statistics) => {
+          if (!statistics || detailRequestRef.current !== requestId) {
+            return;
+          }
+          const current = detailRef.current;
+          if (!current || current.id !== networkId) {
+            return;
+          }
+          const resolvedStatistics = loadedSectionsRef.current.has(
+            sectionCacheKey(networkId, "metrics"),
+          )
+            ? { ...statistics, metricsTotal: current.statistics.metricsTotal }
+            : statistics;
+          const withStatistics = mergePendingMetricsTotalIntoDetail(
+            { ...current, statistics: resolvedStatistics },
+            pendingMetricsTotalRef.current,
+          );
+          detailRef.current = withStatistics;
+          setDetail(withStatistics);
+        })
+        .catch((error) => {
+          logServiceFallback("useWorkspaceData.statistics", error);
+        });
     } catch (error) {
+      if (detailRequestRef.current !== requestId) {
+        return;
+      }
       detailRef.current = null;
       setDetail(null);
       setDetailError(extractRequestErrorMessage(error));
     } finally {
-      setDetailLoading(false);
+      if (detailRequestRef.current === requestId) {
+        setDetailLoading(false);
+      }
     }
   }, [networkId]);
 
@@ -248,7 +276,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
           case "experience-mcp":
             break;
           case "concept-groups":
-            setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
             break;
           case "object-types":
             break;
@@ -256,12 +283,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
             break;
           }
           case "action-types": {
-            const [objectTypeResult, actionTypeResult] = await Promise.all([
-              listKnowledgeNetworkObjectTypes(networkId),
-              listKnowledgeNetworkActionTypes(networkId),
-            ]);
-            setObjectTypes(objectTypeResult);
-            setActionTypes(actionTypeResult);
             break;
           }
           case "functions":
@@ -312,40 +333,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     await loadSectionData(section, { force: true });
   }, [clearSectionCache, loadDetail, loadSectionData, section]);
 
-  const reloadConceptGroups = useCallback(async () => {
-    if (!networkId) {
-      return;
-    }
-
-    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "concept-groups"));
-    setConceptGroups(await listKnowledgeNetworkConceptGroups(networkId));
-    loadedSectionsRef.current.add(sectionCacheKey(networkId, "concept-groups"));
-  }, [networkId]);
-
-  const reloadObjectTypes = useCallback(async () => {
-    if (!networkId) {
-      return;
-    }
-
-    ["object-types", "relation-types", "action-types"].forEach((item) => {
-      loadedSectionsRef.current.delete(
-        sectionCacheKey(networkId, item as KnowledgeNetworkWorkspaceSection),
-      );
-    });
-    setObjectTypes(await listKnowledgeNetworkObjectTypes(networkId));
-    loadedSectionsRef.current.add(sectionCacheKey(networkId, "object-types"));
-  }, [networkId]);
-
-  const reloadActionTypes = useCallback(async () => {
-    if (!networkId) {
-      return;
-    }
-
-    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "action-types"));
-    setActionTypes(await listKnowledgeNetworkActionTypes(networkId));
-    loadedSectionsRef.current.add(sectionCacheKey(networkId, "action-types"));
-  }, [networkId]);
-
   const reloadCapabilities = useCallback(
     async (capabilityType: CapabilityType) => {
       if (!networkId) {
@@ -393,8 +380,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   }, [networkId, applyMetricsTotalToDetail]);
 
   return {
-    actionTypes,
-    conceptGroups,
     detail,
     detailError,
     detailLoading,
@@ -408,14 +393,10 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     mcpTools,
     metricApiUnavailable,
     metrics,
-    objectTypes,
     recentObjects,
     recentLoading,
-    reloadActionTypes,
     reloadCapabilities,
-    reloadConceptGroups,
     reloadMetrics,
-    reloadObjectTypes,
     sectionError,
     sectionLoading,
     skills,

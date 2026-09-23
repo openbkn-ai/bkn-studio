@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -26,6 +26,7 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
+import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
@@ -33,8 +34,8 @@ import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/co
 import type {
   KnowledgeNetworkActionTypeKind,
   KnowledgeNetworkActionTypeRecord,
-  KnowledgeNetworkObjectTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
+import { listKnowledgeNetworkActionTypePage } from "@/modules/knowledge-network/services/action-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
 import styles from "@/modules/knowledge-network/components/shared/ResourceListPanel.module.css";
@@ -42,12 +43,8 @@ import styles from "@/modules/knowledge-network/components/shared/ResourceListPa
 type ActionTypeListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
-  items: KnowledgeNetworkActionTypeRecord[];
-  loading?: boolean;
   networkId: string;
-  objectTypes: KnowledgeNetworkObjectTypeRecord[];
   onDelete: (records: KnowledgeNetworkActionTypeRecord[]) => Promise<void>;
-  onRefresh: () => Promise<void>;
 };
 
 function getActionKindLabel(
@@ -70,12 +67,8 @@ function getActionKindLabel(
 export function ActionTypeListPanel({
   canDelete,
   canModify,
-  items,
-  loading,
   networkId,
-  objectTypes,
   onDelete,
-  onRefresh,
 }: ActionTypeListPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -93,59 +86,74 @@ export function ActionTypeListPanel({
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [authorizingRecord, setAuthorizingRecord] =
     useState<KnowledgeNetworkActionTypeRecord | null>(null);
+  const [items, setItems] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
 
-  const objectTypeOptions = useMemo(
-    () =>
-      objectTypes.map((item) => ({
-        label: item.name,
-        value: item.id,
-      })),
-    [objectTypes],
-  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedKeyword(keyword), 250);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoading(true);
+    void listKnowledgeNetworkActionTypePage(networkId, {
+      actionKind: actionKindFilter === "all" ? undefined : actionKindFilter,
+      direction: sortDirection,
+      limit: pageSize,
+      namePattern: debouncedKeyword,
+      objectTypeId: objectTypeFilter === "all" ? undefined : objectTypeFilter,
+      offset: (page - 1) * pageSize,
+      sort: sortBy === "name" ? "name" : "update_time",
+    })
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        const maxPage = Math.max(1, Math.ceil(result.totalCount / pageSize));
+        if (page > maxPage) {
+          setItems([]);
+          setTotalCount(result.totalCount);
+          setPage(maxPage);
+          return;
+        }
+        setItems(result.entries);
+        setTotalCount(result.totalCount);
+        setSelectedRowKeys([]);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setItems([]);
+          setTotalCount(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    actionKindFilter,
+    debouncedKeyword,
+    networkId,
+    objectTypeFilter,
+    page,
+    pageSize,
+    refreshVersion,
+    sortBy,
+    sortDirection,
+  ]);
 
   const hasActiveFilter = useMemo(
     () => Boolean(keyword.trim()) || actionKindFilter !== "all" || objectTypeFilter !== "all",
     [actionKindFilter, keyword, objectTypeFilter],
   );
-
-  const filteredItems = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return items.filter((item) => {
-      const matchesKeyword =
-        !normalizedKeyword ||
-        item.name.toLowerCase().includes(normalizedKeyword) ||
-        item.id.toLowerCase().includes(normalizedKeyword) ||
-        item.description.toLowerCase().includes(normalizedKeyword);
-      const matchesActionKind = actionKindFilter === "all" || item.actionKind === actionKindFilter;
-      const matchesObjectType =
-        objectTypeFilter === "all" || item.objectTypeId === objectTypeFilter;
-
-      return matchesKeyword && matchesActionKind && matchesObjectType;
-    });
-  }, [actionKindFilter, items, keyword, objectTypeFilter]);
-
-  const sortedItems = useMemo(() => {
-    const nextItems = [...filteredItems];
-
-    nextItems.sort((left, right) => {
-      const leftValue = sortBy === "name" ? left.name : left.updateTime;
-      const rightValue = sortBy === "name" ? right.name : right.updateTime;
-      const compareResult = leftValue.localeCompare(rightValue, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      });
-
-      return sortDirection === "asc" ? compareResult : -compareResult;
-    });
-
-    return nextItems;
-  }, [filteredItems, sortBy, sortDirection]);
-
-  const paginatedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return sortedItems.slice(start, start + pageSize);
-  }, [page, pageSize, sortedItems]);
 
   const selectedRows = useMemo(
     () =>
@@ -182,6 +190,7 @@ export function ActionTypeListPanel({
       onOk: async () => {
         await onDelete(records);
         setSelectedRowKeys([]);
+        setRefreshVersion((current) => current + 1);
       },
       width: 520,
     });
@@ -419,20 +428,15 @@ export function ActionTypeListPanel({
               prefix={<SearchOutlined className={styles.searchIcon} />}
               value={keyword}
             />
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeObject")}</span>
-              <Select
-                className={styles.filterSelect}
-                onChange={(value) => {
-                  setObjectTypeFilter(value);
-                  setPage(1);
-                }}
-                optionFilterProp="label"
-                options={[{ label: t("common.all"), value: "all" }, ...objectTypeOptions]}
-                showSearch
-                value={objectTypeFilter}
-              />
-            </div>
+            <ObjectTypeRemoteFilter
+              label={t("knowledgeNetwork.actionTypeObject")}
+              networkId={networkId}
+              onChange={(value) => {
+                setObjectTypeFilter(value);
+                setPage(1);
+              }}
+              value={objectTypeFilter}
+            />
             <div className={styles.filterGroup}>
               <span className={styles.filterLabel}>{t("knowledgeNetwork.actionTypeKind")}</span>
               <Select
@@ -477,7 +481,7 @@ export function ActionTypeListPanel({
               aria-label={t("common.refresh")}
               className={styles.iconButton}
               onClick={() => {
-                void onRefresh();
+                setRefreshVersion((current) => current + 1);
               }}
               type="button"
             >
@@ -489,8 +493,8 @@ export function ActionTypeListPanel({
         <div className={styles.tableCard}>
           <Table<KnowledgeNetworkActionTypeRecord>
             columns={columns}
-            dataSource={paginatedItems}
-            loading={loading}
+            dataSource={items}
+            loading={isLoading}
             locale={{ emptyText: renderEmptyContent() }}
             pagination={false}
             rowKey="id"
@@ -512,7 +516,7 @@ export function ActionTypeListPanel({
           />
         </div>
 
-        {sortedItems.length > 0 ? (
+        {totalCount > 0 ? (
           <div className={styles.paginationBar}>
             <TablePaginationBar
               current={page}
@@ -523,7 +527,7 @@ export function ActionTypeListPanel({
               pageSize={pageSize}
               showSizeChanger
               showTotal={(total) => t("common.total", { total })}
-              total={sortedItems.length}
+              total={totalCount}
             />
           </div>
         ) : null}

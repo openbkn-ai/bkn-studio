@@ -15,9 +15,11 @@ const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
   getObjectTypeSampleData: vi.fn(),
+  listKnowledgeNetworkActionTypePage: vi.fn(),
   listKnowledgeNetworkActionTypes: vi.fn(),
   listKnowledgeNetworkMetrics: vi.fn(),
   listKnowledgeNetworkObjectTypes: vi.fn(),
+  listKnowledgeNetworkRelationTypePage: vi.fn(),
   listKnowledgeNetworkRelationTypes: vi.fn(),
   modalConfirm: vi.fn(),
   navigate: vi.fn(),
@@ -85,9 +87,11 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
   getObjectTypeSampleData: mocks.getObjectTypeSampleData,
+  listKnowledgeNetworkActionTypePage: mocks.listKnowledgeNetworkActionTypePage,
   listKnowledgeNetworkActionTypes: mocks.listKnowledgeNetworkActionTypes,
   listKnowledgeNetworkMetrics: mocks.listKnowledgeNetworkMetrics,
   listKnowledgeNetworkObjectTypes: mocks.listKnowledgeNetworkObjectTypes,
+  listKnowledgeNetworkRelationTypePage: mocks.listKnowledgeNetworkRelationTypePage,
   listKnowledgeNetworkRelationTypes: mocks.listKnowledgeNetworkRelationTypes,
 }));
 
@@ -125,9 +129,11 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.listKnowledgeNetworkActionTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkActionTypes.mockResolvedValue([]);
   mocks.listKnowledgeNetworkMetrics.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkObjectTypes.mockResolvedValue([]);
+  mocks.listKnowledgeNetworkRelationTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
   mocks.searchParams.current = "";

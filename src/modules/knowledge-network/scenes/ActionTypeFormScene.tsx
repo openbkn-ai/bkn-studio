@@ -42,7 +42,8 @@ import {
   createKnowledgeNetworkActionType,
   getKnowledgeNetworkActionTypeDetail,
   getKnowledgeNetworkObjectTypeDetail,
-  listKnowledgeNetworkObjectTypes,
+  getKnowledgeNetworkObjectType,
+  listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkActionType,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import type {
@@ -164,8 +165,13 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
       }
 
       try {
-        const nextObjectTypes = await listKnowledgeNetworkObjectTypes(networkId);
-        setObjectTypes(nextObjectTypes);
+        const objectTypePage = await listKnowledgeNetworkObjectTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          offset: 0,
+          sort: "name",
+        });
+        let nextObjectTypes = objectTypePage.entries;
 
         if (mode === "edit" && actionTypeId) {
           setLoading(true);
@@ -186,11 +192,25 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
             objectTypeId: detail.objectTypeId,
             tags: detail.tags,
           };
+          const selectedObjectTypes = await Promise.all(
+            Array.from(
+              new Set([nextBasic.objectTypeId, nextBasic.affectObjectTypeId].filter(Boolean)),
+            )
+              .filter((id) => !nextObjectTypes.some((item) => item.id === id))
+              .map((id) => getKnowledgeNetworkObjectType(networkId, id!)),
+          );
+          nextObjectTypes = [
+            ...nextObjectTypes,
+            ...selectedObjectTypes.filter((item): item is KnowledgeNetworkObjectTypeRecord =>
+              Boolean(item),
+            ),
+          ];
 
           setExecutionValue(detail.executionConfig);
           setPageTitle(detail.name);
           basicForm.setFieldsValue(nextBasic);
         }
+        setObjectTypes(nextObjectTypes);
       } catch (error) {
         setLoadError(extractRequestErrorMessage(error));
       } finally {
@@ -403,6 +423,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                             ]}
                           >
                             <RelationTypeObjectTypeSelect
+                              networkId={networkId}
                               objectTypes={objectTypes}
                               placeholder={t("knowledgeNetwork.actionTypeObjectSelectPlaceholder")}
                             />
@@ -496,6 +517,7 @@ export function ActionTypeFormScene({ mode }: ActionTypeFormSceneProps) {
                       >
                         <RelationTypeObjectTypeSelect
                           allowClear
+                          networkId={networkId}
                           objectTypes={objectTypes}
                           placeholder={t("knowledgeNetwork.actionTypeAffectedObjectPlaceholder")}
                         />

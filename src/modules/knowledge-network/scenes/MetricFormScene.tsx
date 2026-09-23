@@ -12,7 +12,7 @@
 
 import { Alert, Form, Input, Select, Spin } from "antd";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -25,6 +25,7 @@ import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 
 import { MetricCalculationEditor } from "@/modules/knowledge-network/components/metric/MetricCalculationEditor";
+import { RelationTypeObjectTypeSelect } from "@/modules/knowledge-network/components/relation-type/RelationTypeObjectTypeSelect";
 
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 
@@ -36,7 +37,7 @@ import {
 import {
   createKnowledgeNetworkMetric,
   getKnowledgeNetworkMetric,
-  listKnowledgeNetworkObjectTypes,
+  listKnowledgeNetworkObjectTypePage,
   updateKnowledgeNetworkMetric,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 
@@ -123,15 +124,21 @@ export function MetricFormScene({
 
   const listPath = `/knowledge-network/workspace/${networkId}/metrics`;
 
-  const objectTypeOptions = useMemo(
-    () => objectTypes.map((item) => ({ label: item.name, value: item.id })),
-
-    [objectTypes],
-  );
-
   const activeFallbackProperties = useMemo(
     () => (objectTypeId === fallbackObjectTypeId ? fallbackProperties : []),
     [fallbackObjectTypeId, fallbackProperties, objectTypeId],
+  );
+
+  const handleResolvedObjectTypesChange = useCallback(
+    (resolvedObjectTypes: KnowledgeNetworkObjectTypeRecord[]) => {
+      const authorized = filterMetricObjectTypeOptions(resolvedObjectTypes);
+      setObjectTypes((current) => {
+        const merged = new Map(current.map((item) => [item.id, item]));
+        authorized.forEach((item) => merged.set(item.id, item));
+        return Array.from(merged.values());
+      });
+    },
+    [],
   );
 
   useEffect(() => {
@@ -143,9 +150,13 @@ export function MetricFormScene({
       setLoadError(null);
 
       try {
-        const objectTypeResult = filterMetricObjectTypeOptions(
-          await listKnowledgeNetworkObjectTypes(networkId),
-        );
+        const objectTypePage = await listKnowledgeNetworkObjectTypePage(networkId, {
+          direction: "asc",
+          limit: 20,
+          offset: 0,
+          sort: "name",
+        });
+        const objectTypeResult = filterMetricObjectTypeOptions(objectTypePage.entries);
 
         if (mode === "edit" && metricId) {
           setLoading(true);
@@ -392,16 +403,13 @@ export function MetricFormScene({
                     },
                   ]}
                 >
-                  <Select
+                  <RelationTypeObjectTypeSelect
+                    filterResolvedOptions={filterMetricObjectTypeOptions}
+                    networkId={networkId}
+                    objectTypes={objectTypes}
                     onChange={() => resetObjectTypeDependentFields(form)}
-
-                    optionFilterProp="label"
-
-                    options={objectTypeOptions}
-
+                    onResolvedOptionsChange={handleResolvedObjectTypesChange}
                     placeholder={t("knowledgeNetwork.metricBoundObjectTypePlaceholder")}
-
-                    showSearch
                   />
                 </Form.Item>
 

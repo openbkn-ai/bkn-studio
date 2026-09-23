@@ -20,6 +20,7 @@ import type {
   KnowledgeNetworkListResult,
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
+  KnowledgeNetworkStatistics,
 } from "@/modules/knowledge-network/types/knowledge-network";
 import type {
   BackendKnowledgeNetwork,
@@ -45,7 +46,6 @@ import {
   emptyStatistics,
   filterKnowledgeNetworks,
   formatTimestamp,
-  logServiceFallback,
   KnowledgeNetworkImportBindingError,
   stringFromUnknown,
   throwImportConflict,
@@ -149,26 +149,30 @@ export async function getKnowledgeNetwork(networkId: string) {
     return wait(mockKnowledgeNetworks.find((item) => item.id === networkId) ?? null);
   }
 
-  try {
-    const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
-      `/bkn-backend/v1/knowledge-networks/${networkId}`,
-      {
-        params: { include_statistics: true },
-      },
-    );
+  const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}`,
+  );
 
-    const record = unwrapSingleEntryResponse(response.data);
-    return record ? mapKnowledgeNetwork(record) : null;
-  } catch (error) {
-    logServiceFallback("getKnowledgeNetwork", error, "retrying without include_statistics");
-    const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
-      `/bkn-backend/v1/knowledge-networks/${networkId}`,
-      {},
-    );
+  const record = unwrapSingleEntryResponse(response.data);
+  return record ? mapKnowledgeNetwork(record) : null;
+}
 
-    const record = unwrapSingleEntryResponse(response.data);
-    return record ? mapKnowledgeNetwork(record) : null;
+/** Loads navigation counts independently so workspace content is not blocked by statistics. */
+export async function getKnowledgeNetworkStatistics(
+  networkId: string,
+): Promise<KnowledgeNetworkStatistics | null> {
+  if (useMock) {
+    return wait(mockKnowledgeNetworks.find((item) => item.id === networkId)?.statistics ?? null);
   }
+
+  const response = await http.get<SingleEntryResponse<BackendKnowledgeNetwork>>(
+    `/bkn-backend/v1/knowledge-networks/${networkId}`,
+    {
+      params: { detail_level: "summary", include_statistics: true },
+    },
+  );
+  const record = unwrapSingleEntryResponse(response.data);
+  return record ? mapKnowledgeNetwork(record).statistics : null;
 }
 
 export async function createKnowledgeNetwork(input: KnowledgeNetworkMutationPayload) {
