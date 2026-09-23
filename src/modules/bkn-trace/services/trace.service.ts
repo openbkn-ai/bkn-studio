@@ -25,7 +25,13 @@ export type TraceAccessProfile = {
   traceEvidenceConfigurationRead: boolean;
 };
 
-export type CapturePolicyState = "enabled" | "disabled" | "enabling" | "disabling" | "rolling_back";
+export type CapturePolicyState =
+  | "enabled"
+  | "disabled"
+  | "enabling"
+  | "disabling"
+  | "rolling_back"
+  | "unknown";
 export type CapturePolicyPhase =
   | "pending"
   | "enabling"
@@ -34,7 +40,38 @@ export type CapturePolicyPhase =
   | "succeeded"
   | "failed"
   | "rollback_completed"
-  | "rollback_failed";
+  | "rollback_failed"
+  | "unknown";
+
+const capturePolicyStates = new Set<CapturePolicyState>([
+  "enabled",
+  "disabled",
+  "enabling",
+  "disabling",
+  "rolling_back",
+]);
+const capturePolicyPhases = new Set<CapturePolicyPhase>([
+  "pending",
+  "enabling",
+  "disabling",
+  "rolling_back",
+  "succeeded",
+  "failed",
+  "rollback_completed",
+  "rollback_failed",
+]);
+
+function normalizeCapturePolicyState(value?: string): CapturePolicyState {
+  return value && capturePolicyStates.has(value as CapturePolicyState)
+    ? (value as CapturePolicyState)
+    : "unknown";
+}
+
+function normalizeCapturePolicyPhase(value?: string): CapturePolicyPhase {
+  return value && capturePolicyPhases.has(value as CapturePolicyPhase)
+    ? (value as CapturePolicyPhase)
+    : "unknown";
+}
 export type CapturePolicy = {
   revision: number;
   desiredState: CapturePolicyState;
@@ -133,14 +170,14 @@ export async function getTraceEvidenceConfiguration(): Promise<CapturePolicy> {
   const data = response.data;
   return {
     revision: data.revision ?? 0,
-    desiredState: data.desired_state ?? "disabled",
-    effectiveState: data.effective_state ?? "disabled",
+    desiredState: normalizeCapturePolicyState(data.desired_state),
+    effectiveState: normalizeCapturePolicyState(data.effective_state),
     lastStableRevision: data.last_stable_revision ?? 0,
     coverageGap: Boolean(data.coverage_gap),
     operation: {
       id: data.operation?.id ?? "",
-      phase: data.operation?.phase ?? "failed",
-      requestedState: data.operation?.requested_state ?? "disabled",
+      phase: normalizeCapturePolicyPhase(data.operation?.phase),
+      requestedState: normalizeCapturePolicyState(data.operation?.requested_state),
       expectedRevision: data.operation?.expected_revision ?? 0,
       errorCode: data.operation?.error_code,
     },

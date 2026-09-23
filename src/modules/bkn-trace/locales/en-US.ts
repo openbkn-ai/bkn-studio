@@ -1083,6 +1083,7 @@ export const bknTraceEnUS = {
           failed: "Failed",
           rollback_completed: "Rollback completed",
           rollback_failed: "Rollback failed",
+          unknown: "Unknown",
         },
         revision: "Policy revision",
         states: {
@@ -1091,6 +1092,7 @@ export const bknTraceEnUS = {
           enabling: "Enabling",
           disabling: "Disabling",
           rolling_back: "Rolling back",
+          unknown: "Unknown",
         },
         title: "Trace and Evidence capture policy",
         unavailable: "The capture policy state is not currently available from the server.",
