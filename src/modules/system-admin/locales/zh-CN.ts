@@ -1108,9 +1108,6 @@ export const systemAdminZhCN = {
     accessOrigins: {
       title: "访问地址",
       description: "管理允许完成 Studio 登录和退出流程的浏览器地址。",
-      introTitle: "登录入口白名单",
-      introDescription:
-        "Studio 会使用浏览器地址栏中的协议、主机和端口作为登录回调地址。新增地址保存后会自动同步到认证服务，无需重启；未登记地址仍会被拒绝。",
       add: "添加访问地址",
       sync: "立即同步",
       delete: "删除",
@@ -1130,6 +1127,9 @@ export const systemAdminZhCN = {
         label: "新增访问地址",
         placeholder: "例如 https://10.0.0.20 或 http://10.0.0.20:30080",
         help: "仅填写 origin：协议、主机和可选端口，不要填写路径、查询参数或通配符。",
+        helpTooltipLabel: "访问地址登录回调说明",
+        helpTooltip:
+          "登录回调使用浏览器地址栏的协议、主机和端口。保存后会同步到认证服务，无需重启；未登记地址会被拒绝。",
       },
       sources: {
         system: "系统地址",

@@ -104,6 +104,20 @@ describe("OAuthAccessOriginsScene", () => {
     ).toHaveLength(1);
   });
 
+  it("keeps login callback guidance in a focusable tooltip instead of an intro alert", async () => {
+    renderScene();
+    await screen.findByText("https://public.example.com");
+
+    expect(screen.queryByText("systemAdmin.accessOrigins.introTitle")).toBeNull();
+    const guidance = screen.getByLabelText("systemAdmin.accessOrigins.form.helpTooltipLabel");
+    expect(guidance).toHaveAttribute("tabindex", "0");
+    fireEvent.mouseEnter(guidance);
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.closest('[class*="helpTooltip"]')).toBeTruthy();
+    expect(tooltip).toHaveTextContent("systemAdmin.accessOrigins.form.helpTooltip");
+  });
+
   it("keeps invalid input local and does not submit it", async () => {
     renderScene();
     await screen.findByText("https://public.example.com");

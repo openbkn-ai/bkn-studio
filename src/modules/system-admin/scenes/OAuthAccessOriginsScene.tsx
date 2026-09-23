@@ -7,6 +7,7 @@
 
 import {
   GlobalOutlined,
+  InfoCircleOutlined,
   LockOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -308,17 +309,23 @@ export function OAuthAccessOriginsScene() {
         </div>
       </div>
 
-      <Alert
-        className={styles.introAlert}
-        description={t("systemAdmin.accessOrigins.introDescription")}
-        message={t("systemAdmin.accessOrigins.introTitle")}
-        showIcon
-        type="info"
-      />
-
       <form className={styles.addForm} onSubmit={(event) => void handleCreate(event)}>
         <div className={styles.fieldBody}>
-          <label htmlFor="oauth-access-origin">{t("systemAdmin.accessOrigins.form.label")}</label>
+          <div className={styles.fieldLabel}>
+            <label htmlFor="oauth-access-origin">{t("systemAdmin.accessOrigins.form.label")}</label>
+            <Tooltip
+              classNames={{ root: styles.helpTooltip }}
+              title={t("systemAdmin.accessOrigins.form.helpTooltip")}
+            >
+              <span
+                aria-label={t("systemAdmin.accessOrigins.form.helpTooltipLabel")}
+                className={styles.helpIcon}
+                tabIndex={0}
+              >
+                <InfoCircleOutlined />
+              </span>
+            </Tooltip>
+          </div>
           <Input
             aria-describedby={inputError ? "oauth-access-origin-error" : "oauth-access-origin-help"}
             id="oauth-access-origin"

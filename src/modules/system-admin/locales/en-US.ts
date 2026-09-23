@@ -1193,9 +1193,6 @@ export const systemAdminEnUS = {
     accessOrigins: {
       title: "Access Addresses",
       description: "Manage browser origins allowed to complete Studio login and logout flows.",
-      introTitle: "Login origin allowlist",
-      introDescription:
-        "Studio uses the protocol, host, and port shown in the browser address bar for its login callback. New addresses are synchronized automatically without a restart; unregistered addresses remain blocked.",
       add: "Add access address",
       sync: "Sync now",
       delete: "Delete",
@@ -1216,6 +1213,9 @@ export const systemAdminEnUS = {
         label: "New access address",
         placeholder: "For example, https://10.0.0.20 or http://10.0.0.20:30080",
         help: "Enter only an origin: protocol, host, and optional port. Do not include a path, query, or wildcard.",
+        helpTooltipLabel: "Access address login callback guidance",
+        helpTooltip:
+          "The login callback uses the protocol, host, and port in the browser address bar. Saved addresses synchronize to the authentication service without a restart; unregistered addresses remain blocked.",
       },
       sources: {
         system: "System",

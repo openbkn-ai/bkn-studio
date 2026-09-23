@@ -17,11 +17,6 @@
   font-size: 18px;
 }
 
-.introAlert {
-  margin-top: 14px;
-  border-radius: 0;
-}
-
 .addForm {
   display: flex;
   align-items: flex-start;
@@ -43,11 +38,43 @@
   min-width: 0;
 }
 
-.fieldBody label {
+.fieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fieldLabel label {
   color: var(--admin-color-heading);
   font-size: var(--admin-font-size-meta);
   font-weight: var(--admin-font-weight-medium);
   line-height: 1.4;
+}
+
+.helpIcon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--admin-color-muted);
+  cursor: help;
+  font-size: 14px;
+  line-height: 1;
+  outline: none;
+}
+
+.helpIcon:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--admin-color-primary);
+  outline-offset: 2px;
+}
+
+.helpTooltip:global(.ant-tooltip) {
+  max-width: min(440px, calc(100vw - 48px));
+}
+
+.helpTooltip :global(.ant-tooltip-inner) {
+  max-width: min(440px, calc(100vw - 48px));
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
 }
 
 .fieldHelp,
