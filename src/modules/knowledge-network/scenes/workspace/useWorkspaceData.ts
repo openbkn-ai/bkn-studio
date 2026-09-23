@@ -17,7 +17,6 @@ import {
   listKnowledgeNetworkMetrics,
   listKnowledgeNetworkObjectTypes,
   listKnowledgeNetworkRecentObjects,
-  listKnowledgeNetworkRelationTypes,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { listKnowledgeNetworkCapabilities } from "@/modules/knowledge-network/services/capability-binding.service";
 import {
@@ -33,7 +32,6 @@ import type {
   KnowledgeNetworkObjectTypeRecord,
   KnowledgeNetworkRecord,
   KnowledgeNetworkRecentObject,
-  KnowledgeNetworkRelationTypeRecord,
 } from "@/modules/knowledge-network/types/knowledge-network";
 
 import {
@@ -133,7 +131,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
   const [recentObjects, setRecentObjects] = useState<KnowledgeNetworkRecentObject[]>([]);
   const [conceptGroups, setConceptGroups] = useState<ConceptGroupRecord[]>([]);
   const [objectTypes, setObjectTypes] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
-  const [relationTypes, setRelationTypes] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [actionTypes, setActionTypes] = useState<KnowledgeNetworkActionTypeRecord[]>([]);
   const [metrics, setMetrics] = useState<KnowledgeNetworkMetricRecord[]>([]);
   const [functions, setFunctions] = useState<CapabilityBindingListResult>(EMPTY_CAPABILITY_RESULT);
@@ -256,12 +253,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
           case "object-types":
             break;
           case "relation-types": {
-            const [objectTypeResult, relationTypeResult] = await Promise.all([
-              listKnowledgeNetworkObjectTypes(networkId),
-              listKnowledgeNetworkRelationTypes(networkId),
-            ]);
-            setObjectTypes(objectTypeResult);
-            setRelationTypes(relationTypeResult);
             break;
           }
           case "action-types": {
@@ -345,16 +336,6 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     loadedSectionsRef.current.add(sectionCacheKey(networkId, "object-types"));
   }, [networkId]);
 
-  const reloadRelationTypes = useCallback(async () => {
-    if (!networkId) {
-      return;
-    }
-
-    loadedSectionsRef.current.delete(sectionCacheKey(networkId, "relation-types"));
-    setRelationTypes(await listKnowledgeNetworkRelationTypes(networkId));
-    loadedSectionsRef.current.add(sectionCacheKey(networkId, "relation-types"));
-  }, [networkId]);
-
   const reloadActionTypes = useCallback(async () => {
     if (!networkId) {
       return;
@@ -430,13 +411,11 @@ export function useWorkspaceData(networkId: string, section: KnowledgeNetworkWor
     objectTypes,
     recentObjects,
     recentLoading,
-    relationTypes,
     reloadActionTypes,
     reloadCapabilities,
     reloadConceptGroups,
     reloadMetrics,
     reloadObjectTypes,
-    reloadRelationTypes,
     sectionError,
     sectionLoading,
     skills,
