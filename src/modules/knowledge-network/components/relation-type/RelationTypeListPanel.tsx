@@ -16,7 +16,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -34,7 +34,10 @@ import {
 } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import type { KnowledgeNetworkRelationTypeRecord } from "@/modules/knowledge-network/types/knowledge-network";
-import { listKnowledgeNetworkObjectTypePage } from "@/modules/knowledge-network/services/object-type.service";
+import {
+  getKnowledgeNetworkObjectType,
+  listKnowledgeNetworkObjectTypePage,
+} from "@/modules/knowledge-network/services/object-type.service";
 import { listKnowledgeNetworkRelationTypePage } from "@/modules/knowledge-network/services/relation-type.service";
 import { hasKnowledgeNetworkRecordOperation } from "@/modules/knowledge-network/utils/record-operations";
 
@@ -64,7 +67,7 @@ type RelationObjectTypeFilterProps = {
   value: string;
 };
 
-function RelationObjectTypeFilter({
+export function RelationObjectTypeFilter({
   label,
   networkId,
   onChange,
@@ -74,6 +77,8 @@ function RelationObjectTypeFilter({
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [options, setOptions] = useState<Array<{ label: string; value: string }>>([]);
+  const optionsRef = useRef(options);
+  const [selectedOption, setSelectedOption] = useState<{ label: string; value: string }>();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -96,17 +101,13 @@ function RelationObjectTypeFilter({
           return;
         }
         const next = result.entries.map((item) => ({ label: item.name, value: item.id }));
-        setOptions((current) => {
-          const selected = current.find((item) => item.value === value);
-          if (selected && !next.some((item) => item.value === selected.value)) {
-            next.push(selected);
-          }
-          return next;
-        });
+        optionsRef.current = next;
+        setOptions(next);
       })
       .catch(() => {
         if (!cancelled) {
-          setOptions((current) => current.filter((item) => item.value === value));
+          optionsRef.current = [];
+          setOptions([]);
         }
       })
       .finally(() => {
@@ -117,7 +118,46 @@ function RelationObjectTypeFilter({
     return () => {
       cancelled = true;
     };
-  }, [debouncedKeyword, networkId, value]);
+  }, [debouncedKeyword, networkId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (value === "all") {
+      setSelectedOption(undefined);
+      return () => {
+        cancelled = true;
+      };
+    }
+    const existing = optionsRef.current.find((item) => item.value === value);
+    if (existing) {
+      setSelectedOption(existing);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setSelectedOption(undefined);
+    void getKnowledgeNetworkObjectType(networkId, value)
+      .then((item) => {
+        if (!cancelled && item) {
+          setSelectedOption({ label: item.name, value: item.id });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [networkId, value]);
+
+  const displayedOptions = useMemo(() => {
+    if (
+      !selectedOption ||
+      selectedOption.value !== value ||
+      options.some((item) => item.value === selectedOption.value)
+    ) {
+      return options;
+    }
+    return [...options, selectedOption];
+  }, [options, selectedOption, value]);
 
   return (
     <div className={styles.filterGroup}>
@@ -129,7 +169,7 @@ function RelationObjectTypeFilter({
         loading={loading}
         onChange={(nextValue) => onChange(nextValue || "all")}
         onSearch={setKeyword}
-        options={options}
+        options={displayedOptions}
         placeholder={t("common.all")}
         showSearch
         value={value === "all" ? undefined : value}
@@ -171,6 +211,7 @@ export function RelationTypeListPanel({
   const [items, setItems] = useState<KnowledgeNetworkRelationTypeRecord[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [debouncedKeyword, setDebouncedKeyword] = useState(keyword);
 
@@ -182,6 +223,7 @@ export function RelationTypeListPanel({
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setLoadError(false);
     void listKnowledgeNetworkRelationTypePage(networkId, {
       direction: sortDirection,
       limit: pageSize,
@@ -210,6 +252,7 @@ export function RelationTypeListPanel({
         if (!cancelled) {
           setItems([]);
           setTotalCount(0);
+          setLoadError(true);
         }
       })
       .finally(() => {
@@ -551,6 +594,15 @@ export function RelationTypeListPanel({
 
   const tableEmptyText = isLoading ? (
     <div className={styles.loadingEmptyState} />
+  ) : loadError ? (
+    <Empty
+      className={styles.emptyPanel}
+      description={t("knowledgeNetwork.relationTypeListLoadFailed")}
+    >
+      <AppButton onClick={() => setRefreshVersion((current) => current + 1)}>
+        {t("common.retry")}
+      </AppButton>
+    </Empty>
   ) : (
     renderEmptyContent()
   );
