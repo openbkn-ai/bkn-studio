@@ -10,6 +10,8 @@
 
 [中文](README.zh-CN.md) | English
 
+🌐 **Website:** [openbkn.ai](https://openbkn.ai)
+
 BKN Studio is the unified product workspace for OpenBKN. It provides a visual, collaborative, and delivery-ready frontend for enterprise knowledge networks, data resource governance, model resource management, agent debugging, and platform operations.
 
 It is not a collection of isolated feature pages. It is the unified operating interface for business users, implementation teams, data engineers, and AI engineers. Users can model knowledge networks, connect data resources, build indexes, orchestrate tool capabilities, configure models, and debug runtime behavior in one place.
