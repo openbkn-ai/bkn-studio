@@ -12,7 +12,7 @@
 
 import { Alert, Form, Input, Select, Spin } from "antd";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
@@ -127,6 +127,18 @@ export function MetricFormScene({
   const activeFallbackProperties = useMemo(
     () => (objectTypeId === fallbackObjectTypeId ? fallbackProperties : []),
     [fallbackObjectTypeId, fallbackProperties, objectTypeId],
+  );
+
+  const handleResolvedObjectTypesChange = useCallback(
+    (resolvedObjectTypes: KnowledgeNetworkObjectTypeRecord[]) => {
+      const authorized = filterMetricObjectTypeOptions(resolvedObjectTypes);
+      setObjectTypes((current) => {
+        const merged = new Map(current.map((item) => [item.id, item]));
+        authorized.forEach((item) => merged.set(item.id, item));
+        return Array.from(merged.values());
+      });
+    },
+    [],
   );
 
   useEffect(() => {
@@ -396,14 +408,7 @@ export function MetricFormScene({
                     networkId={networkId}
                     objectTypes={objectTypes}
                     onChange={() => resetObjectTypeDependentFields(form)}
-                    onResolvedOptionsChange={(resolvedObjectTypes) => {
-                      const authorized = filterMetricObjectTypeOptions(resolvedObjectTypes);
-                      setObjectTypes((current) => {
-                        const merged = new Map(current.map((item) => [item.id, item]));
-                        authorized.forEach((item) => merged.set(item.id, item));
-                        return Array.from(merged.values());
-                      });
-                    }}
+                    onResolvedOptionsChange={handleResolvedObjectTypesChange}
                     placeholder={t("knowledgeNetwork.metricBoundObjectTypePlaceholder")}
                   />
                 </Form.Item>
