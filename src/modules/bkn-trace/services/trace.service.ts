@@ -26,12 +26,7 @@ export type TraceAccessProfile = {
 };
 
 export type CapturePolicyState =
-  | "enabled"
-  | "disabled"
-  | "enabling"
-  | "disabling"
-  | "rolling_back"
-  | "unknown";
+  "enabled" | "disabled" | "enabling" | "disabling" | "rolling_back" | "unknown";
 export type CapturePolicyPhase =
   | "pending"
   | "enabling"
