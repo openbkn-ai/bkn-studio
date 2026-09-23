@@ -1020,6 +1020,7 @@ export const bknTraceZhCN = {
           failed: "失败",
           rollback_completed: "回滚完成",
           rollback_failed: "回滚失败",
+          unknown: "未知",
         },
         revision: "策略版本",
         states: {
@@ -1028,6 +1029,7 @@ export const bknTraceZhCN = {
           enabling: "开启中",
           disabling: "关闭中",
           rolling_back: "回滚中",
+          unknown: "未知",
         },
         title: "Trace 与证据采集策略",
         unavailable: "服务端当前未提供采集策略状态。",

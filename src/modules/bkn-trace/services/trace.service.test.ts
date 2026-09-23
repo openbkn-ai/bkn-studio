@@ -96,4 +96,19 @@ describe("BKN Trace access profile service", () => {
     });
     expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-configuration");
   });
+
+  it("preserves unknown state when the backend omits policy fields", async () => {
+    getMock.mockResolvedValue({ data: { revision: 10 } });
+    const { getTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(getTraceEvidenceConfiguration()).resolves.toMatchObject({
+      desiredState: "unknown",
+      effectiveState: "unknown",
+      operation: {
+        phase: "unknown",
+        requestedState: "unknown",
+      },
+    });
+  });
 });
