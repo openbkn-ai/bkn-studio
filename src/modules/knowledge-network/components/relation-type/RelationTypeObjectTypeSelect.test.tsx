@@ -13,7 +13,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("antd", () => ({
-  Select: ({ onSearch, options }: { onSearch: (value: string) => void; options: Array<{ label: string }> }) => (
+  Select: ({
+    onSearch,
+    options,
+  }: {
+    onSearch: (value: string) => void;
+    options: Array<{ label: string }>;
+  }) => (
     <div>
       <input aria-label="object type" onChange={(event) => onSearch(event.target.value)} />
       {options.map((option) => (
