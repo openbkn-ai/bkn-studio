@@ -45,10 +45,14 @@ export function OntologyInspectorPanel({
     if (!resourceId) {
       return "—";
     }
-    return formatKnowledgeNetworkObjectTypeIndexStateLabel(record.hasIndex, t);
+    return formatKnowledgeNetworkObjectTypeIndexStateLabel(
+      record.indexStatus ?? record.hasIndex,
+      t,
+    );
   };
 
-  const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) => record.hasIndex;
+  const hasIndexedLegend = (record: KnowledgeNetworkObjectTypeRecord) =>
+    record.indexStatus ? record.indexStatus.state === "available" : record.hasIndex;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);

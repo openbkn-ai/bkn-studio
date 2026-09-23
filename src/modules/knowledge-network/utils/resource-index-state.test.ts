@@ -19,4 +19,14 @@ describe("formatKnowledgeNetworkObjectTypeIndexStateLabel", () => {
       "knowledgeNetwork.previewNotIndexed",
     );
   });
+
+  it("keeps an unread resource distinguishable from an unavailable index", () => {
+    const t = ((key: string) => key) as never;
+    expect(formatKnowledgeNetworkObjectTypeIndexStateLabel({ state: "unknown" }, t)).toBe(
+      "knowledgeNetwork.objectTypeIndexStateUnknown",
+    );
+    expect(formatKnowledgeNetworkObjectTypeIndexStateLabel({ state: "resource_missing" }, t)).toBe(
+      "knowledgeNetwork.objectTypeIndexStateResourceMissing",
+    );
+  });
 });

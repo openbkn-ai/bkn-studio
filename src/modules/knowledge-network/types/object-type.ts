@@ -12,6 +12,7 @@ export type KnowledgeNetworkObjectTypeRecord = {
   dataSource?: ObjectTypeDataSource;
   description: string;
   hasIndex: boolean;
+  indexStatus?: ObjectTypeIndexStatus;
   icon?: string;
   id: string;
   name: string;
@@ -19,6 +20,20 @@ export type KnowledgeNetworkObjectTypeRecord = {
   tags: string[];
   updateTime: string;
   updaterName: string;
+};
+
+export type ObjectTypeIndexState =
+  "available" | "unavailable" | "unknown" | "resource_missing" | "not_applicable";
+
+export type ObjectTypeIndexStatus = {
+  sourceStatus?: string;
+  state: ObjectTypeIndexState;
+};
+
+export type ObjectTypeIndexFeature = {
+  available: boolean | null;
+  configured: boolean;
+  type: "keyword" | "fulltext" | "vector";
 };
 
 export type ObjectTypeMappedField = {
@@ -114,6 +129,7 @@ export type ObjectTypeDataProperty = {
   displayKey: boolean;
   displayName: string;
   incrementalKey: boolean;
+  indexFeatures?: ObjectTypeIndexFeature[];
   maskRule?: ObjectTypeMaskRule;
   mappedField?: ObjectTypeMappedField;
   name: string;

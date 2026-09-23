@@ -324,7 +324,10 @@ export function OverviewOntologyBlock({
 
   const renderResourceIndexState = useCallback(
     (entity: KnowledgeNetworkObjectTypeRecord) => {
-      const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(entity.hasIndex, t);
+      const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(
+        entity.indexStatus ?? entity.hasIndex,
+        t,
+      );
 
       return <span>{label}</span>;
     },

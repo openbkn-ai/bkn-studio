@@ -62,4 +62,23 @@ describe("data property mask rule mapper", () => {
       replacement: "•",
     });
   });
+
+  it("maps response-only configured index features without sending them back on save", () => {
+    const property = mapDataProperty(
+      {
+        index_features: [
+          { type: "keyword", configured: true, available: true },
+          { type: "fulltext", configured: true, available: null },
+        ],
+        name: "summary",
+      },
+      meta,
+    );
+
+    expect(property.indexFeatures).toEqual([
+      { type: "keyword", configured: true, available: true },
+      { type: "fulltext", configured: true, available: null },
+    ]);
+    expect(toBackendDataProperty(property)).not.toHaveProperty("index_features");
+  });
 });
