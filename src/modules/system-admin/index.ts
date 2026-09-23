@@ -15,6 +15,8 @@ export { UserManagementScene } from "@/modules/system-admin/scenes/UserManagemen
 export { RoleManagementScene } from "@/modules/system-admin/scenes/RoleManagementScene";
 export { AuditLogScene } from "@/modules/system-admin/scenes/AuditLogScene";
 export { LicenseManagementScene } from "@/modules/system-admin/scenes/LicenseManagementScene";
+export { OAuthAccessOriginsScene } from "@/modules/system-admin/scenes/OAuthAccessOriginsScene";
 export { DirectoryUserPicker } from "@/modules/system-admin/components/DirectoryUserPicker";
 export type { DirectoryUserPickerProps } from "@/modules/system-admin/components/DirectoryUserPicker";
 export type * from "@/modules/system-admin/types/admin";
+export type * from "@/modules/system-admin/types/oauth-access-origin";

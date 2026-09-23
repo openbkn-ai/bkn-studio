@@ -39,6 +39,11 @@ const LicenseManagementPage = lazy(async () => {
   return { default: module.LicenseManagementPage };
 });
 
+const OAuthAccessOriginsPage = lazy(async () => {
+  const module = await import("@/modules/system-admin/pages/OAuthAccessOriginsPage");
+  return { default: module.OAuthAccessOriginsPage };
+});
+
 function withRouteLoading(element: ReactNode) {
   return <Suspense fallback={<RouteLoading />}>{element}</Suspense>;
 }
@@ -108,6 +113,17 @@ export const systemAdminRoutes: RouteObject[] = [
       },
     },
     element: guarded(systemAdminPermissions.license, <LicenseManagementPage />),
+  },
+  {
+    path: "system/access-addresses",
+    handle: {
+      console: {
+        descriptionKey: "systemAdmin.accessOrigins.description",
+        menuKey: "access-address-management",
+        titleKey: "systemAdmin.accessOrigins.title",
+      },
+    },
+    element: guarded(systemAdminPermissions.accessOrigins, <OAuthAccessOriginsPage />),
   },
   {
     path: "system/audit",

@@ -13,7 +13,7 @@
 // required to enter, including read-only review. Each write action is checked again against its
 // authzPoints entry by PermissionGate, so auditors can review policies but cannot grant or revoke.
 export const systemAdminPermissions: Record<
-  "audit" | "authorizations" | "license" | "licenseManage" | "roles" | "users",
+  "accessOrigins" | "audit" | "authorizations" | "license" | "licenseManage" | "roles" | "users",
   string[]
 > = {
   users: [
@@ -40,6 +40,7 @@ export const systemAdminPermissions: Record<
   authorizations: ["admin-authz:view", "admin-authz:grant", "admin-authz:revoke"],
   license: ["admin-license:view", "admin-license:manage"],
   licenseManage: ["admin-license:manage"],
+  accessOrigins: ["admin-client:manage"],
   audit: ["admin-audit:view"],
 };
 

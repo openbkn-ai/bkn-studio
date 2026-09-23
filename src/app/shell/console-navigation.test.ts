@@ -40,12 +40,13 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     ]);
   });
 
-  it("超管(全部权限)→ 系统管理可见,4 个子项齐全", () => {
+  it("超管(全部权限)→ 系统管理可见,各子项齐全", () => {
     const all = [
       ...systemAdminPermissions.users,
       ...systemAdminPermissions.roles,
       ...systemAdminPermissions.authorizations,
       ...systemAdminPermissions.license,
+      ...systemAdminPermissions.accessOrigins,
       ...systemAdminPermissions.audit,
     ];
     const group = systemGroup(filterNavByPermission(consoleNavigation, all));
@@ -56,9 +57,16 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
         "role-management",
         "authorization-management",
         "license-management",
+        "access-address-management",
         "log-management",
       ]),
     );
+  });
+
+  it("仅持有 admin-client:manage → 系统管理只显示访问地址", () => {
+    const group = systemGroup(filterNavByPermission(consoleNavigation, ["admin-client:manage"]));
+    expect(group).toBeDefined();
+    expect(keys(group!.children ?? [])).toEqual(["access-address-management"]);
   });
 
   it("仅持有 admin-audit:view → 系统管理只包含原有管理审计日志", () => {

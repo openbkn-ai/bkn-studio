@@ -11,6 +11,7 @@ import {
   ExperimentOutlined,
   FileProtectOutlined,
   FileTextOutlined,
+  GlobalOutlined,
   KeyOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -73,6 +74,13 @@ export const baseConsoleNavigation: ConsoleNavItem[] = [
         icon: <FileProtectOutlined />,
         path: "/system/license",
         permission: systemAdminPermissions.license,
+      },
+      {
+        key: "access-address-management",
+        labelKey: "shell.items.accessAddressManagement",
+        icon: <GlobalOutlined />,
+        path: "/system/access-addresses",
+        permission: systemAdminPermissions.accessOrigins,
       },
       {
         key: "log-management",

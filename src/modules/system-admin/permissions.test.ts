@@ -67,6 +67,11 @@ const canEnter = (permissions: string[], page: string[]) =>
   hasPermissions({ currentPermissions: permissions, mode: "any", requiredPermissions: page });
 
 describe("授权面权限点", () => {
+  it("访问地址入口与后端客户端管理权限保持一致", () => {
+    expect(systemAdminPermissions.accessOrigins).toEqual(["admin-client:manage"]);
+    expect(systemAdminModuleManifest.permissions).toContain("admin-client:manage");
+  });
+
   it("每个动作点位都在 manifest 里声明，否则永远推导不出来", () => {
     for (const point of Object.values(authzPoints)) {
       expect(systemAdminModuleManifest.permissions).toContain(point);
