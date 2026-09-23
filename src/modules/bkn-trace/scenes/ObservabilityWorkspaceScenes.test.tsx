@@ -96,6 +96,7 @@ const profile = {
   managementAudit: false,
   securityAudit: false,
   technicalTrace: true,
+  traceEvidenceConfigurationRead: true,
   observabilityArchiveManage: true,
 };
 

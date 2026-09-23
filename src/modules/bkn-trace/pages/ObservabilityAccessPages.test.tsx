@@ -41,6 +41,7 @@ const baseProfile = {
   observabilityArchiveManage: false,
   securityAudit: false,
   technicalTrace: false,
+  traceEvidenceConfigurationRead: false,
 };
 
 describe("observability capability pages", () => {
