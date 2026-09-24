@@ -482,6 +482,75 @@ describe("DataConnectDetailDrawer", () => {
     expect(items.at(-1)?.className).toContain("configItemFull");
   });
 
+  it.each([
+    ["mysql", "databases"],
+    ["oracle", "schemas"],
+    ["anyshare", "paths"],
+  ])("shows an empty %s %s list as a dash", async (connectorType, fieldName) => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType,
+      connectorConfig: { [fieldName]: [] },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { [fieldName]: { encrypted: false, required: false, type: "array" } },
+            mode: "local",
+            name: connectorType,
+            type: connectorType,
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    const configSection = await screen.findByText("dataConnect.connectorConfig");
+    const item = configSection.closest("section")?.querySelector('[class*="configItem"]');
+    expect(item?.querySelector('[class*="configValue"]')?.textContent).toBe("-");
+    expect(item?.querySelector(".ant-tag")).toBeNull();
+  });
+
+  it("shows empty connection options as a dash", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { options: {} },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { options: { encrypted: false, required: false, type: "object" } },
+            mode: "local",
+            name: "PostgreSQL",
+            type: "postgresql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    const configSection = await screen.findByText("dataConnect.connectorConfig");
+    const item = configSection.closest("section")?.querySelector('[class*="configItem"]');
+    expect(item?.querySelector('[class*="configValue"]')?.textContent).toBe("-");
+    expect(item?.querySelector(".ant-tag")).toBeNull();
+  });
+
   it("renders database lists as tags", async () => {
     getRecordMock.mockResolvedValue({
       ...record,

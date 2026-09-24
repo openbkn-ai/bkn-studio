@@ -441,11 +441,20 @@ function formatConfigValue(value: unknown, t: TFunction, truncateListItems = fal
   }
 
   if (Array.isArray(value)) {
-    return <ConfigListValue t={t} truncate={truncateListItems} values={value} />;
+    return value.length > 0 ? (
+      <ConfigListValue t={t} truncate={truncateListItems} values={value} />
+    ) : (
+      "-"
+    );
   }
 
   if (typeof value === "object" && !Array.isArray(value)) {
-    return <ConfigObjectValue value={value as Record<string, unknown>} t={t} />;
+    const objectValue = value as Record<string, unknown>;
+    return Object.keys(objectValue).length > 0 ? (
+      <ConfigObjectValue value={objectValue} t={t} />
+    ) : (
+      "-"
+    );
   }
 
   return JSON.stringify(value, null, 2);
