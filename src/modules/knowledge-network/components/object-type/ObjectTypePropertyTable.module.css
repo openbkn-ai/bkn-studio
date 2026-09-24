@@ -44,3 +44,24 @@
   color: var(--color-text-link);
   font-size: 14px;
 }
+
+.indexFeatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.indexFeatureAvailable,
+.indexFeatureUnavailable,
+.indexFeatureUnknown {
+  margin-inline-end: 0;
+}
+
+.indexFeatureUnavailable {
+  color: var(--color-text-secondary);
+}
+
+.indexFeatureUnknown {
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}

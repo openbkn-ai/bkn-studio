@@ -55,6 +55,11 @@ export type BackendDataProperty = {
     type?: string;
   };
   name: string;
+  index_features?: Array<{
+    available?: boolean | null;
+    configured?: boolean;
+    type: "keyword" | "fulltext" | "vector";
+  }>;
   mask_rule?:
     | { kind: "fixed"; replacement: string }
     | { kind: "partial"; keep_start: number; keep_end: number; replacement: string }
@@ -135,17 +140,17 @@ export type BackendObjectType = {
   data_properties?: BackendDataProperty[];
   data_source?: BackendDataSource;
   display_key?: string;
-  has_index?: boolean;
   icon?: string;
   id: string;
+  index_status?: {
+    state?: "available" | "unavailable" | "unknown" | "resource_missing" | "not_applicable";
+    source_status?: string;
+  };
   incremental_key?: string;
   logic_properties?: BackendLogicProperty[];
   name: string;
   operations?: string[];
   primary_keys?: string[];
-  status?: {
-    index_available?: boolean;
-  };
   tags?: string[];
   update_time?: number;
   updater?: BackendAccountInfo;

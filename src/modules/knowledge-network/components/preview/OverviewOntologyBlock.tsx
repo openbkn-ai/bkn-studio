@@ -165,9 +165,10 @@ export function OverviewOntologyBlock({
         conceptGroupIds: [],
         conceptGroupNames: [],
         description: "",
-        hasIndex: node.indexed ?? false,
+        hasIndex: node.indexStatus?.state === "available",
         icon: node.icon,
         id: node.id,
+        indexStatus: node.indexStatus,
         name: node.name,
         tags: [],
         updateTime: "",
@@ -324,7 +325,10 @@ export function OverviewOntologyBlock({
 
   const renderResourceIndexState = useCallback(
     (entity: KnowledgeNetworkObjectTypeRecord) => {
-      const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(entity.hasIndex, t);
+      const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(
+        entity.indexStatus ?? entity.hasIndex,
+        t,
+      );
 
       return <span>{label}</span>;
     },

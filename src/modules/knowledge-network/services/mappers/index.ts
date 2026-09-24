@@ -104,7 +104,12 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
           type: item.data_source.type,
         }
       : undefined,
-    hasIndex: item.has_index ?? item.status?.index_available ?? false,
+    indexStatus: item.index_status?.state
+      ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
+      : undefined,
+    // The UI still keeps a boolean for graph rendering, but it is derived exclusively from the
+    // current BKN index_status; there is no persisted-status fallback.
+    hasIndex: item.index_status?.state === "available",
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
   };
@@ -125,6 +130,11 @@ export function mapDataProperty(
     displayKey: name === meta.displayKey,
     displayName,
     incrementalKey: false,
+    indexFeatures: item.index_features?.map((feature) => ({
+      available: feature.available ?? null,
+      configured: feature.configured ?? false,
+      type: feature.type,
+    })),
     maskRule: item.mask_rule ? mapMaskRuleFromBackend(item.mask_rule) : undefined,
     mappedField: item.mapped_field
       ? {

@@ -5,6 +5,8 @@
  * Conditions. See LICENSE for the full text.
  */
 
+import type { ObjectTypeIndexStatus } from "./object-type";
+
 export type KnowledgeNetworkListQuery = {
   direction?: "asc" | "desc";
   keyword: string;
@@ -78,7 +80,7 @@ export type KnowledgeNetworkPreviewNode = {
   color: string;
   icon?: string;
   id: string;
-  indexed?: boolean;
+  indexStatus?: ObjectTypeIndexStatus;
   name: string;
 };
 

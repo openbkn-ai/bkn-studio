@@ -1157,7 +1157,10 @@ export function ObjectTypeDetailScene() {
                   {t("knowledgeNetwork.objectTypeResourceIndexState")}
                 </span>
                 <span className={styles.dataViewStatus}>
-                  {formatKnowledgeNetworkObjectTypeIndexStateLabel(detail.hasIndex, t)}
+                  {formatKnowledgeNetworkObjectTypeIndexStateLabel(
+                    detail.indexStatus ?? detail.hasIndex,
+                    t,
+                  )}
                 </span>
               </div>
             </div>

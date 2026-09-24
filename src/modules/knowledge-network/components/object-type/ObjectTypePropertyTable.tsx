@@ -6,7 +6,7 @@
  */
 
 import { CheckOutlined } from "@ant-design/icons";
-import { Table, Tooltip } from "antd";
+import { Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -144,6 +144,50 @@ export function ObjectTypePropertyTable({
                 <Tooltip title={text}>
                   <span className={styles.cellEllipsis}>{text}</span>
                 </Tooltip>
+              );
+            },
+          };
+        case "indexFeatures":
+          return {
+            key: "indexFeatures",
+            dataIndex: "indexFeatures",
+            title: t("knowledgeNetwork.objectTypePropertyIndexFeatures"),
+            width: 220,
+            render: (value: ObjectTypeDataProperty["indexFeatures"]) => {
+              const configuredFeatures = value?.filter((feature) => feature.configured) ?? [];
+              if (!configuredFeatures.length) {
+                return "—";
+              }
+
+              return (
+                <span className={styles.indexFeatures}>
+                  {configuredFeatures.map((feature) => {
+                    const availability =
+                      feature.available === true
+                        ? t("knowledgeNetwork.objectTypeIndexFeatureAvailable")
+                        : feature.available === false
+                          ? t("knowledgeNetwork.objectTypeIndexFeatureUnavailable")
+                          : t("knowledgeNetwork.objectTypeIndexFeatureUnknown");
+                    const color = feature.available === true ? "blue" : undefined;
+
+                    return (
+                      <Tooltip key={feature.type} title={`${feature.type}: ${availability}`}>
+                        <Tag
+                          className={
+                            feature.available === true
+                              ? styles.indexFeatureAvailable
+                              : feature.available === false
+                                ? styles.indexFeatureUnavailable
+                                : styles.indexFeatureUnknown
+                          }
+                          color={color}
+                        >
+                          {feature.type}
+                        </Tag>
+                      </Tooltip>
+                    );
+                  })}
+                </span>
               );
             },
           };

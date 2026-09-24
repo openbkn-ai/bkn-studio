@@ -397,7 +397,10 @@ export function ObjectTypeListPanel({
           return "--";
         }
 
-        const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(record.hasIndex, t);
+        const label = formatKnowledgeNetworkObjectTypeIndexStateLabel(
+          record.indexStatus ?? record.hasIndex,
+          t,
+        );
 
         return (
           <button

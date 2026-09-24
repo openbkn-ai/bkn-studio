@@ -77,4 +77,28 @@ describe("ObjectTypePropertyTable", () => {
       within(emptyDescriptionRow as HTMLTableRowElement).getAllByText("—").length,
     ).toBeGreaterThan(0);
   });
+
+  it("shows configured index features and keeps unavailable features visible", () => {
+    render(
+      <ObjectTypePropertyTable
+        properties={[
+          createProperty({
+            indexFeatures: [
+              { type: "keyword", configured: true, available: true },
+              { type: "vector", configured: true, available: false },
+              { type: "fulltext", configured: false, available: true },
+            ],
+          }),
+        ]}
+        showToolbar={false}
+      />,
+    );
+
+    expect(
+      screen.getAllByText("knowledgeNetwork.objectTypePropertyIndexFeatures").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("keyword")).toBeVisible();
+    expect(screen.getByText("vector")).toBeVisible();
+    expect(screen.queryByText("fulltext")).not.toBeInTheDocument();
+  });
 });

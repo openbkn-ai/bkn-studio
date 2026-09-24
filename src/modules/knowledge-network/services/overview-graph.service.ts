@@ -27,7 +27,10 @@ type BackendOverviewGraph = {
     degree?: number;
     icon?: string;
     id: string;
-    indexed?: boolean;
+    index_status?: {
+      state?: "available" | "unavailable" | "unknown" | "resource_missing" | "not_applicable";
+      source_status?: string;
+    };
     name: string;
   }>;
   object_type_total: number;
@@ -61,7 +64,9 @@ function mapOverviewGraph(value: BackendOverviewGraph): KnowledgeNetworkOverview
         color: node.color?.trim() || "#1677ff",
         icon: node.icon,
         id: node.id,
-        indexed: node.indexed,
+        indexStatus: node.index_status?.state
+          ? { state: node.index_status.state, sourceStatus: node.index_status.source_status }
+          : undefined,
         name: node.name,
       })),
     },
@@ -93,7 +98,7 @@ export async function getKnowledgeNetworkOverviewGraph(
           color: item.color,
           icon: item.icon,
           id: item.id,
-          indexed: item.hasIndex,
+          indexStatus: item.indexStatus,
           name: item.name,
         })),
         edges: relations.map((item) => ({

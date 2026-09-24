@@ -15,6 +15,7 @@ export const ObjectTypePropertyTableColumns: DetailTableColumnDefinition[] = [
   { key: "comment", labelKey: "knowledgeNetwork.objectTypePropertyDescription" },
   { key: "type", labelKey: "knowledgeNetwork.objectTypePropertyType" },
   { key: "mappedField", labelKey: "knowledgeNetwork.objectTypePropertyMappedField" },
+  { key: "indexFeatures", labelKey: "knowledgeNetwork.objectTypePropertyIndexFeatures" },
   { key: "primaryKey", labelKey: "knowledgeNetwork.objectTypePropertyPrimaryKey" },
   { key: "displayKey", labelKey: "knowledgeNetwork.objectTypePropertyTitle" },
 ];
