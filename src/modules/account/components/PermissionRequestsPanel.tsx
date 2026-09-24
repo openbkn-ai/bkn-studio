@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026 OpenBKN
+ * SPDX-License-Identifier: LicenseRef-OpenBKN
+ * Licensed under the OpenBKN License, a modified Apache 2.0 with Additional
+ * Conditions. See LICENSE for the full text.
+ */
+
 import { Alert, Avatar, Button, Divider, Drawer, Form, Input, Space, Table, Tabs, Tag, Timeline, Tooltip } from "antd";
 import { useEffect, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
