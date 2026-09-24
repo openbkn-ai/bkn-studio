@@ -19,36 +19,9 @@ import {
   createPermissionRequest,
   listPermissionRequests,
 } from "@/modules/account/services/permission-requests.service";
+import { getMissingResourcePermissionOperations } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 
 type RequestForm = { operations?: string[]; reason?: string };
-
-const RESOURCE_PERMISSION_OPERATIONS: Record<string, readonly string[]> = {
-  // A catalog is its own authorization root. Creating a catalog and changing
-  // its ACL are deliberately excluded: neither can be requested for an
-  // existing catalog instance.
-  catalog: [
-    "view_detail",
-    "modify",
-    "delete",
-    "task_manage",
-    "resource_manage",
-    "query_data",
-    "data_write",
-  ],
-  // A data resource inherits the applicable catalog business operations via
-  // the resource-parent mapping. It has no instance-level create, authorize,
-  // or task_manage operation.
-  resource: ["view_detail", "query_data", "data_write", "modify", "delete"],
-  tool_box: ["view", "modify", "delete", "publish", "unpublish", "execute"],
-  function: ["view", "modify", "delete", "publish", "unpublish", "execute"],
-  mcp: ["view", "modify", "delete", "publish", "unpublish", "execute"],
-  skill: ["view", "modify", "delete", "publish", "unpublish", "execute"],
-  concept_group: ["view_detail", "modify", "delete"],
-  object_type: ["view_detail", "modify", "delete", "query_data"],
-  relation_type: ["view_detail", "modify", "delete", "query_data"],
-  action_type: ["view_detail", "modify", "delete", "execute"],
-  metric: ["view_detail", "modify", "delete", "query_data"],
-};
 
 type ResourcePermissionRequestActionProps = {
   operations?: string[];
@@ -57,33 +30,6 @@ type ResourcePermissionRequestActionProps = {
   resourceName: string;
   trigger?: "button" | "text";
 };
-
-export function canRequestResourcePermission(
-  resourceType: string,
-  operations: string[] | undefined,
-  permissionRequestsEnabled = true,
-) {
-  if (!permissionRequestsEnabled || getRuntimeConfig().currentUser.isSuperAdmin) {
-    return false;
-  }
-  return getMissingResourcePermissionOperations(resourceType, operations).length > 0;
-}
-
-export function getMissingResourcePermissionOperations(
-  resourceType: string,
-  operations: string[] | undefined,
-) {
-  // Do not infer missing permissions when the backend did not return the
-  // effective operation set. Otherwise owners could incorrectly see and
-  // submit a permission request for resources they already control.
-  if (!operations || operations.includes("*") || operations.includes("full_business_access")) {
-    return [];
-  }
-
-  return (RESOURCE_PERMISSION_OPERATIONS[resourceType] ?? []).filter(
-    (operation) => !operations.includes(operation),
-  );
-}
 
 export function ResourcePermissionRequestAction({
   operations,
@@ -149,7 +95,7 @@ export function ResourcePermissionRequestAction({
         resourceType,
         resourceID,
         resourceName,
-        operations: communityBuild ? ["full_business_access"] : (values.operations ?? []),
+        operations: values.operations ?? [],
         reason: values.reason?.trim() ?? "",
       });
       void message.success(t("knowledgeNetwork.permissionRequestSuccess"));
@@ -176,10 +122,7 @@ export function ResourcePermissionRequestAction({
         centered
         confirmLoading={submitting}
         okButtonProps={{
-          disabled:
-            loading ||
-            (communityBuild && pending) ||
-            (!communityBuild && selectableOperations.length === 0),
+          disabled: loading || selectableOperations.length === 0,
         }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
         onCancel={() => {
@@ -194,13 +137,6 @@ export function ResourcePermissionRequestAction({
             <Form.Item label={t("knowledgeNetwork.permissionRequestResource")}>
               <Input disabled value={`${resourceName} (${resourceID})`} />
             </Form.Item>
-            {communityBuild ? (
-              <Alert
-                showIcon
-                type="warning"
-                message={t("knowledgeNetwork.permissionRequestCommunity")}
-              />
-            ) : null}
             {pending ? (
               <Alert
                 showIcon
@@ -213,30 +149,19 @@ export function ResourcePermissionRequestAction({
                 })}
               />
             ) : null}
-            {communityBuild ? (
-              <Form.Item
-                label={t("knowledgeNetwork.permissionRequestOperations")}
-                style={{ marginTop: 16 }}
-              >
-                <Checkbox checked disabled>
-                  {t("knowledgeNetwork.permissionOperation.full_business_access")}
-                </Checkbox>
-              </Form.Item>
-            ) : (
-              <Form.Item
-                label={t("knowledgeNetwork.permissionRequestOperations")}
-                name="operations"
-                rules={[{ required: true }]}
-                style={{ marginTop: 16 }}
-              >
-                <Checkbox.Group
-                  options={selectableOperations.map((operation) => ({
-                    label: t(`knowledgeNetwork.permissionOperation.${operation}`),
-                    value: operation,
-                  }))}
-                />
-              </Form.Item>
-            )}
+            <Form.Item
+              label={t("knowledgeNetwork.permissionRequestOperations")}
+              name="operations"
+              rules={[{ required: true }]}
+              style={{ marginTop: 16 }}
+            >
+              <Checkbox.Group
+                options={selectableOperations.map((operation) => ({
+                  label: t(`knowledgeNetwork.permissionOperation.${operation}`),
+                  value: operation,
+                }))}
+              />
+            </Form.Item>
             <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
               <Input.TextArea maxLength={512} rows={3} />
             </Form.Item>

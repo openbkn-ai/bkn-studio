@@ -14,10 +14,8 @@ import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
-import {
-  canRequestResourcePermission,
-  ResourcePermissionRequestAction,
-} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
 

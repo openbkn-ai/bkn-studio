@@ -28,10 +28,8 @@ import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIn
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
-import {
-  canRequestResourcePermission,
-  ResourcePermissionRequestAction,
-} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";

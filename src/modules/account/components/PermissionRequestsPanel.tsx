@@ -11,7 +11,6 @@ import {
   Button,
   Divider,
   Drawer,
-  Form,
   Input,
   Space,
   Table,
@@ -20,13 +19,12 @@ import {
   Timeline,
   Tooltip,
 } from "antd";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
   cancelPermissionRequest,
-  createPermissionRequest,
   decidePermissionRequest,
   getPermissionRequest,
   listPermissionRequestReviews,
@@ -38,13 +36,6 @@ import {
 import styles from "./PermissionRequestsPanel.module.css";
 
 type Tab = "mine" | "todo" | "reviewed";
-type ApplyForm = {
-  resourceType: string;
-  resourceID: string;
-  resourceName?: string;
-  operations: string;
-  reason: string;
-};
 const pageSize = 20;
 
 function truncatedText(content: ReactNode, title: string, lines = 1) {
@@ -106,11 +97,11 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
   const [rows, setRows] = useState<PermissionRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
+  const offsetRef = useRef(offset);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<PermissionRequest | null>(null);
   const [reviews, setReviews] = useState<PermissionRequestReview[]>([]);
   const [comment, setComment] = useState("");
-  const [form] = Form.useForm<ApplyForm>();
 
   const requestOperations = (request: PermissionRequest) =>
     (request.operations?.length ? request.operations : [request.operation])
@@ -179,27 +170,35 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
           date,
         );
   };
-  const load = async (next = tab, nextOffset = offset) => {
-    setLoading(true);
-    try {
-      const page = await listPermissionRequests(next, pageSize, nextOffset);
-      setRows(page.entries);
-      setTotal(page.total_count);
-    } catch {
-      message.error(t("account.permissionRequests.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const load = useCallback(
+    async (next: Tab, nextOffset: number) => {
+      setLoading(true);
+      try {
+        const page = await listPermissionRequests(next, pageSize, nextOffset);
+        setRows(page.entries);
+        setTotal(page.total_count);
+      } catch {
+        message.error(t("account.permissionRequests.loadFailed"));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [message, t],
+  );
+
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
 
   useEffect(() => {
     setOffset(0);
     void load(tab, 0);
-    const timer = window.setInterval(() => void load(tab, 0), 30000);
+    const timer = window.setInterval(() => void load(tab, offsetRef.current), 30000);
     return () => window.clearInterval(timer);
-  }, [tab]);
+  }, [load, tab]);
 
   const openDetail = async (id: string) => {
+    setComment("");
     try {
       const [request, nextReviews] = await Promise.all([
         getPermissionRequest(id),
@@ -211,9 +210,14 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
       message.error(t("account.permissionRequests.detailsFailed"));
     }
   };
-  const decide = async (id: string, decision: "approve" | "reject") => {
+  const closeDetail = () => {
+    setComment("");
+    setReviews([]);
+    setDetail(null);
+  };
+  const decide = async (id: string, decision: "approve" | "reject", reviewComment = "") => {
     try {
-      await decidePermissionRequest(id, decision, comment);
+      await decidePermissionRequest(id, decision, reviewComment);
       setComment("");
       message.success(
         t(
@@ -222,7 +226,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
             : "account.permissionRequests.rejectSuccess",
         ),
       );
-      await load();
+      await load(tab, offset);
       if (detail?.id === id) await openDetail(id);
     } catch {
       message.error(t("account.permissionRequests.decisionFailed"));
@@ -232,25 +236,11 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
     try {
       await cancelPermissionRequest(id);
       message.success(t("account.permissionRequests.cancel"));
-      await load();
+      await load(tab, offset);
     } catch {
       message.error(t("account.permissionRequests.decisionFailed"));
     }
   };
-  const apply = async (values: ApplyForm) => {
-    const operations = values.operations
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    try {
-      await createPermissionRequest({ ...values, operations });
-      form.resetFields();
-      setTab("mine");
-    } catch {
-      message.error(t("account.permissionRequests.decisionFailed"));
-    }
-  };
-
   const defaultColumns = [
     {
       title: t("account.permissionRequests.type"),
@@ -422,33 +412,12 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
   return (
     <Tabs
       activeKey={tab}
+      destroyOnHidden
       onChange={(key) => setTab(key as Tab)}
       items={tabs.map((item) => ({
         ...item,
         children: (
           <>
-            {tab === "mine" && (
-              <Form form={form} layout="inline" onFinish={(values) => void apply(values)}>
-                <Form.Item name="resourceType" rules={[{ required: true }]}>
-                  <Input placeholder={t("account.permissionRequests.resourceTypePlaceholder")} />
-                </Form.Item>
-                <Form.Item name="resourceID" rules={[{ required: true }]}>
-                  <Input placeholder={t("account.permissionRequests.resourceIDPlaceholder")} />
-                </Form.Item>
-                <Form.Item name="resourceName">
-                  <Input placeholder={t("account.permissionRequests.resourceNamePlaceholder")} />
-                </Form.Item>
-                <Form.Item name="operations" rules={[{ required: true }]}>
-                  <Input placeholder={t("account.permissionRequests.operationsPlaceholder")} />
-                </Form.Item>
-                <Form.Item name="reason">
-                  <Input placeholder={t("account.permissionRequests.reason")} />
-                </Form.Item>
-                <Button type="primary" htmlType="submit">
-                  {t("account.permissionRequests.create")}
-                </Button>
-              </Form>
-            )}
             <Table
               rowKey="id"
               loading={loading}
@@ -487,7 +456,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                 ) : null
               }
               open={detail !== null}
-              onClose={() => setDetail(null)}
+              onClose={closeDetail}
               width={520}
             >
               {detail?.operations?.includes("full_business_access") && (
@@ -566,13 +535,16 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                     style={{ marginTop: 16 }}
                   />
                   <div style={{ marginTop: 12 }}>
-                    <Button type="primary" onClick={() => void decide(detail.id, "approve")}>
+                    <Button
+                      type="primary"
+                      onClick={() => void decide(detail.id, "approve", comment)}
+                    >
                       {t("account.permissionRequests.approve")}
                     </Button>
                     <Button
                       danger
                       style={{ marginLeft: 8 }}
-                      onClick={() => void decide(detail.id, "reject")}
+                      onClick={() => void decide(detail.id, "reject", comment)}
                     >
                       {t("account.permissionRequests.reject")}
                     </Button>
