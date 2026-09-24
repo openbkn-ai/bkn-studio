@@ -134,7 +134,8 @@ export const homeEnUS = {
         not_installed: "Not installed",
         unavailable: "Unavailable",
       },
-      tables: "{{count}} tables",
+      tables_one: "{{count}} table",
+      tables_other: "{{count}} tables",
       unavailableBanner:
         "The sample manifest does not match the image version, or the source is not the official repository. Nothing can be installed.",
       versionLabel: "Version {{version}}",
