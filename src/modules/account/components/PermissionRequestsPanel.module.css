@@ -1,5 +1,5 @@
 .drawerTitle {
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   font-size: 18px;
   font-weight: 600;
 }
@@ -31,16 +31,16 @@
 }
 
 .statusGranted {
-  color: #36a865;
+  color: var(--color-success-text);
 }
 .statusRejected {
-  color: #ff6b75;
+  color: var(--color-error-text);
 }
 .statusPending {
-  color: #2f6ee5;
+  color: var(--color-text-link);
 }
 .statusDefault {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .summary {
@@ -57,11 +57,11 @@
 }
 
 .summaryLabel {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .summaryValue {
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -84,24 +84,24 @@
 .resourcePill {
   background: #f5f8ff;
   border-color: #d8e6ff;
-  color: #2468c9;
+  color: var(--color-text-link);
   height: auto;
 }
 
 .operationPill {
   background: #f8fafc;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .sectionTitle {
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 20px;
 }
 
 .timelineName {
-  color: #1f1f1f;
+  color: var(--color-text-primary);
   font-weight: 500;
 }
 
@@ -110,27 +110,27 @@
 }
 
 .timelineTime {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
   font-size: 13px;
   margin-top: 4px;
 }
 
 .timelineComment {
-  color: #595959;
+  color: var(--color-text-secondary);
   margin-top: 4px;
 }
 
 .started {
-  color: #36a865;
+  color: var(--color-success-text);
 }
 .approved {
-  color: #36a865;
+  color: var(--color-success-text);
 }
 .rejected {
-  color: #ff4d4f;
+  color: var(--color-error-text);
 }
 .pending {
-  color: #2f6ee5;
+  color: var(--color-text-link);
 }
 /**
  * Copyright (c) 2026 OpenBKN
