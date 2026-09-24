@@ -497,7 +497,7 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
           disabled: permissionRequestLoading || selectablePermissionOperations.length === 0,
         }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
-        onCancel={closePermissionRequest}
+        onCancel={() => closePermissionRequest()}
         onOk={() => permissionRequestForm.submit()}
         open={Boolean(permissionRequestRecord)}
         title={t("knowledgeNetwork.permissionRequestTitle")}

@@ -72,7 +72,7 @@
 
 .resourcePill,
 .operationPill {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   display: inline-flex;
   line-height: 22px;
@@ -82,14 +82,14 @@
 }
 
 .resourcePill {
-  background: #f5f8ff;
-  border-color: #d8e6ff;
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-border);
   color: var(--color-text-link);
   height: auto;
 }
 
 .operationPill {
-  background: #f8fafc;
+  background: var(--color-fill-secondary);
   color: var(--color-text-secondary);
 }
 
