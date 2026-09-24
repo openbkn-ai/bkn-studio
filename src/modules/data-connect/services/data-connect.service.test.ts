@@ -249,6 +249,7 @@ describe("data-connect.service · test connection", () => {
   it("covers every built-in connector field from the Vega initialization data", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_EDITION", "community");
     const { listDataConnectConnectorTypes } =
       await import("@/modules/data-connect/services/data-connect.service");
 
@@ -291,7 +292,20 @@ describe("data-connect.service · test connection", () => {
       "schemas",
       "options",
     ]);
-    expect(fieldsByType.get("oracle")).toEqual({});
+    expect(Object.keys(fieldsByType.get("oracle") ?? {})).toEqual([
+      "host",
+      "port",
+      "username",
+      "password",
+      "service_name",
+      "schemas",
+      "options",
+    ]);
+    expect(fieldsByType.get("oracle")?.password).toMatchObject({
+      encrypted: true,
+      required: true,
+      type: "string",
+    });
     expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
       "host",
       "port",
@@ -325,8 +339,23 @@ describe("data-connect.service · test connection", () => {
 
     const stateByType = new Map(connectorTypes.map((connector) => [connector.type, connector]));
     expect(stateByType.get("opensearch")).toMatchObject({ available: false, enabled: true });
-    expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: false });
+    expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: true });
     expect(stateByType.get("mysql")).toMatchObject({ available: true, enabled: false });
+  });
+
+  it("makes the mock Oracle connector available only at professional edition or above", async () => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.stubEnv("VITE_MOCK_EDITION", "professional");
+    const { listDataConnectConnectorTypes } =
+      await import("@/modules/data-connect/services/data-connect.service");
+
+    const connectorTypes = await listDataConnectConnectorTypes();
+    expect(connectorTypes.find((connector) => connector.type === "oracle")).toMatchObject({
+      available: true,
+      enabled: true,
+      requiredEdition: "professional",
+    });
   });
 
   it("recognizes only the backend connection-test failure code", async () => {

@@ -117,9 +117,9 @@
 }
 
 .configFormHorizontal :global(.ant-form-item-label) {
-  flex: 0 0 96px !important;
-  width: 96px !important;
-  max-width: 96px !important;
+  flex: 0 0 128px !important;
+  width: 128px !important;
+  max-width: 128px !important;
   padding: 0 12px 0 0 !important;
   text-align: right !important;
   white-space: nowrap;

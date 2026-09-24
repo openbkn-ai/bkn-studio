@@ -309,6 +309,7 @@ export const dataCatalogZhCN = {
         mariadb: "MariaDB",
         mysql: "MySQL",
         opensearch: "OpenSearch",
+        oracle: "Oracle",
         postgresql: "PostgreSQL",
         sqlserver: "SQL Server",
       },

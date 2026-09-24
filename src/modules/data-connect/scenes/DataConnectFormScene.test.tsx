@@ -902,6 +902,82 @@ describe("DataConnectFormScene · connection preflight", () => {
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
+
+  it(
+    "creates an Oracle catalog with a service name and the default port",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const oracleConnector: DataConnectConnectorType = {
+        available: true,
+        category: "table",
+        description: "Oracle 关系型数据库连接器",
+        enabled: true,
+        fieldConfig: {
+          host: connectorField("主机地址", "string", true),
+          port: connectorField("端口号", "integer", true),
+          username: connectorField("用户名", "string", true),
+          password: connectorField("密码", "string", true, true),
+          service_name: connectorField("服务名", "string", true),
+          schemas: connectorField("Schema 列表", "array", false),
+          options: connectorField("连接参数", "object", false),
+        },
+        mode: "local",
+        name: "Oracle",
+        type: "oracle",
+      };
+      getDataConnectConnectorTypeMock.mockResolvedValue(oracleConnector);
+      listDataConnectConnectorTypesMock.mockResolvedValue([oracleConnector]);
+
+      render(<DataConnectFormScene mode="create" />);
+
+      fireEvent.click(await findConnectorCard("Oracle"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+      fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "oracle-orders" },
+      });
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("oracle");
+      fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
+        target: { value: "oracle.example.com" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("例如 readonly_user"), {
+        target: { value: "readonly_user" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.encryptedFieldPlaceholder"), {
+        target: { value: "test-password" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await screen.findByText("common.required");
+      expect(createDataConnectRecordMock).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByPlaceholderText("例如 ORCLPDB1"), {
+        target: { value: "ORCLPDB1" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+
+      await waitFor(() => {
+        expect(createDataConnectRecordMock).toHaveBeenCalledWith(
+          {
+            connectorConfig: {
+              host: "oracle.example.com",
+              password: "test-password",
+              port: 1521,
+              service_name: "ORCLPDB1",
+              username: "readonly_user",
+            },
+            connectorType: "oracle",
+            description: "",
+            enabled: true,
+            healthCheckSchedule: { cronExpr: undefined, mode: "inherit" },
+            name: "oracle-orders",
+            tags: [],
+          },
+          { skipErrorToast: true },
+        );
+      });
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
 });
 
 function connectorField(_name: string, type: string, required: boolean, encrypted = false) {

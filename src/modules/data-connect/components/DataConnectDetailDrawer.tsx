@@ -46,6 +46,26 @@ const HEALTH_STATUS_TONES: Record<DataConnectRecord["healthStatus"], LightStatus
   unhealthy: "error",
 };
 
+const CONNECTOR_CONFIG_FIELD_ORDER: Record<string, readonly string[]> = {
+  mariadb: ["host", "port", "username", "password", "databases", "options"],
+  mysql: ["host", "port", "username", "password", "databases", "options"],
+  postgresql: ["host", "port", "username", "password", "database", "schemas", "options"],
+  sqlserver: ["host", "port", "username", "password", "database", "schemas", "options"],
+  oracle: ["host", "port", "username", "password", "service_name", "schemas", "options"],
+  opensearch: ["host", "port", "username", "password", "index_pattern"],
+  anyshare: [
+    "protocol",
+    "host",
+    "port",
+    "auth_type",
+    "token",
+    "app_id",
+    "app_secret",
+    "doc_lib_type",
+    "paths",
+  ],
+};
+
 export function DataConnectDetailDrawer({
   connectorTypes,
   onClose,
@@ -249,7 +269,14 @@ export function DataConnectDetailDrawer({
             {configEntries.length > 0 ? (
               <div className={styles.configGrid}>
                 {configEntries.map((item) => (
-                  <div className={styles.configItem} key={item.key}>
+                  <div
+                    className={
+                      item.fullRow
+                        ? `${styles.configItem} ${styles.configItemFull}`
+                        : styles.configItem
+                    }
+                    key={item.key}
+                  >
                     <span className={styles.configLabel}>{item.label}</span>
                     {item.description ? (
                       <span className={styles.configHint}>{item.description}</span>
@@ -400,7 +427,7 @@ export function DataConnectDetailDrawer({
   );
 }
 
-function formatConfigValue(value: unknown, t: TFunction) {
+function formatConfigValue(value: unknown, t: TFunction, truncateListItems = false) {
   if (value === null || value === undefined || value === "") {
     return "-";
   }
@@ -413,6 +440,10 @@ function formatConfigValue(value: unknown, t: TFunction) {
     return String(value);
   }
 
+  if (Array.isArray(value)) {
+    return <ConfigListValue t={t} truncate={truncateListItems} values={value} />;
+  }
+
   if (typeof value === "object" && !Array.isArray(value)) {
     return <ConfigObjectValue value={value as Record<string, unknown>} t={t} />;
   }
@@ -420,11 +451,25 @@ function formatConfigValue(value: unknown, t: TFunction) {
   return JSON.stringify(value, null, 2);
 }
 
-function DatabaseListValue({ values }: { values: unknown[] }) {
+function ConfigListValue({
+  t,
+  truncate,
+  values,
+}: {
+  t: TFunction;
+  truncate: boolean;
+  values: unknown[];
+}) {
   return (
     <Space size={[4, 4]} wrap>
       {values.map((value, index) => (
-        <Tag key={`${String(value)}-${index}`}>{String(value)}</Tag>
+        <Tag
+          className={truncate ? styles.configSchemaTag : undefined}
+          key={`${String(value)}-${index}`}
+          title={truncate ? String(value) : undefined}
+        >
+          {formatConfigTagValue(value, t)}
+        </Tag>
       ))}
     </Space>
   );
@@ -468,8 +513,8 @@ function buildConfigEntries(
   const templateKeys = Object.keys(fieldConfig);
   const keys = (templateKeys.length > 0 ? templateKeys : Object.keys(config)).sort(
     (left, right) => {
-      const leftRank = configFieldOrderRank(left);
-      const rightRank = configFieldOrderRank(right);
+      const leftRank = configFieldOrderRank(left, record.connectorType);
+      const rightRank = configFieldOrderRank(right, record.connectorType);
 
       if (leftRank !== rightRank) {
         return leftRank - rightRank;
@@ -486,15 +531,16 @@ function buildConfigEntries(
     const hasValue = Object.prototype.hasOwnProperty.call(config, key);
     return {
       description: "",
+      fullRow: key.trim().toLowerCase() === "options",
       key,
       label: humanizeConnectorFieldLabel(key, connectorType?.type),
       value: configItem?.encrypted ? (
-        t("dataConnect.sensitiveValueHidden")
+        <span title={t("dataConnect.encryptedFieldEditHint")}>••••••••</span>
       ) : hasValue ? (
-        isDatabaseListField(key) && Array.isArray(config[key]) ? (
-          <DatabaseListValue values={config[key]} />
-        ) : (
-          formatConfigValue(config[key], t)
+        formatConfigValue(
+          config[key],
+          t,
+          key.trim().toLowerCase() === "schemas" || key.trim().toLowerCase() === "schema_list",
         )
       ) : (
         "-"
@@ -503,29 +549,12 @@ function buildConfigEntries(
   });
 }
 
-function isDatabaseListField(key: string) {
+function configFieldOrderRank(key: string, connectorType: string) {
   const normalized = key.trim().toLowerCase();
-  return normalized === "database_list" || normalized === "databases";
-}
-
-function configFieldOrderRank(key: string) {
-  const normalized = key.trim().toLowerCase();
-  const rankMap: Record<string, number> = {
-    host: 1,
-    hostname: 1,
-    server: 1,
-    port: 2,
-    user: 3,
-    username: 3,
-    account: 3,
-    password: 4,
-    database: 5,
-    db: 5,
-    database_list: 5,
-    databases: 5,
-    schema: 5,
-    schema_list: 5,
-  };
-
-  return rankMap[normalized] ?? 100;
+  if (normalized === "options") {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  const order = CONNECTOR_CONFIG_FIELD_ORDER[connectorType.trim().toLowerCase()];
+  const rank = order?.indexOf(normalized) ?? -1;
+  return rank < 0 ? 100 : rank;
 }

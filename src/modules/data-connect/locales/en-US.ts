@@ -322,6 +322,9 @@ export const dataConnectEnUS = {
         opensearch: {
           description: "Connect OpenSearch indexes.",
         },
+        oracle: {
+          description: "Connect Oracle relational databases.",
+        },
         postgresql: {
           description: "Connect PostgreSQL relational databases.",
         },
@@ -362,6 +365,7 @@ export const dataConnectEnUS = {
         schema: "Schema",
         schema_list: "Schema list",
         schemas: "Schema list",
+        service_name: "Service name",
         secret: "Secret",
         secret_key: "Secret key",
         server: "Host",
@@ -398,9 +402,13 @@ export const dataConnectEnUS = {
         schema_list: "For example: public, ods",
         schemas:
           "Leave empty to discover all accessible schemas, or enter each name and press Enter",
+        service_name: "For example: ORCLPDB1",
         secret: "Enter secret",
         secret_key: "Enter secret",
         server: "For example: db.example.internal",
+        oracleOptions: 'For example: {"timeout":30,"charset":"UTF8"}',
+        oracleSchemas:
+          "Leave empty to discover accessible schemas, or enter a name and press Enter",
         sqlserverOptions: 'For example: {"encrypt":true,"trustservercertificate":false}',
         table: "For example: order_detail",
         token: "Enter access token",
@@ -415,12 +423,15 @@ export const dataConnectEnUS = {
           "When specified, database names must exactly match the database, including case",
         schemaIdentifierCase:
           "When specified, schema names must exactly match the database, including case",
+        oracleSchemaIdentifierCase:
+          "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
       },
       portPlaceholders: {
         default: "For example: 3306",
         mariadb: "For example: 3306",
         mysql: "For example: 3306",
         opensearch: "For example: 9200",
+        oracle: "For example: 1521",
         postgresql: "For example: 5432",
         sqlserver: "For example: 1433",
       },
@@ -464,7 +475,6 @@ export const dataConnectEnUS = {
     descriptionPlaceholder: "Briefly describe the purpose (optional)",
     booleanTrue: "Yes",
     booleanFalse: "No",
-    sensitiveValueHidden: "Hidden",
     switchOn: "On",
     switchOff: "Off",
     selectFieldPlaceholder: "Select {{field}}",

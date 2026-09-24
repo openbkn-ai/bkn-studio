@@ -306,6 +306,9 @@ export const dataConnectZhCN = {
         opensearch: {
           description: "连接 OpenSearch 检索索引。",
         },
+        oracle: {
+          description: "连接 Oracle 关系型数据库。",
+        },
         postgresql: {
           description: "连接 PostgreSQL 关系型数据库。",
         },
@@ -346,6 +349,7 @@ export const dataConnectZhCN = {
         schema: "Schema",
         schema_list: "Schema 列表",
         schemas: "Schema 列表",
+        service_name: "服务名",
         secret: "密钥",
         secret_key: "密钥",
         server: "主机地址",
@@ -381,9 +385,12 @@ export const dataConnectZhCN = {
         schema: "例如 public",
         schema_list: "例如 public, ods",
         schemas: "留空扫描全部可访问 Schema；输入名称后按回车逐个添加",
+        service_name: "例如 ORCLPDB1",
         secret: "请输入密钥",
         secret_key: "请输入密钥",
         server: "例如 db.example.internal",
+        oracleOptions: '例如 {"timeout":30,"charset":"UTF8"}',
+        oracleSchemas: "留空扫描可访问 Schema；输入名称后按回车逐个添加",
         sqlserverOptions: '例如 {"encrypt":true,"trustservercertificate":false}',
         table: "例如 order_detail",
         token: "请输入访问令牌",
@@ -396,12 +403,15 @@ export const dataConnectZhCN = {
       hints: {
         databaseIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
         schemaIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
+        oracleSchemaIdentifierCase:
+          "未加引号的全小写名称会转为大写；区分大小写的全小写名称请用双引号包裹",
       },
       portPlaceholders: {
         default: "例如 3306",
         mariadb: "例如 3306",
         mysql: "例如 3306",
         opensearch: "例如 9200",
+        oracle: "例如 1521",
         postgresql: "例如 5432",
         sqlserver: "例如 1433",
       },
@@ -445,7 +455,6 @@ export const dataConnectZhCN = {
     descriptionPlaceholder: "简要说明用途（可选）",
     booleanTrue: "是",
     booleanFalse: "否",
-    sensitiveValueHidden: "已隐藏",
     switchOn: "开",
     switchOff: "关",
     selectFieldPlaceholder: "请选择{{field}}",
