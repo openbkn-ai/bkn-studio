@@ -34,6 +34,8 @@ import {
   writeHomeBuildState,
 } from "@/modules/home/lib/build-path-state";
 
+import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
+
 import styles from "./HomeScene.module.css";
 
 type BuildStageId = HomeBuildStage;
@@ -405,7 +407,7 @@ export function HomeScene() {
 
       <div className={styles.pathTabsOuter}>
         <div className={styles.pathTabs} role="tablist" aria-label={t("home.pathLabel")}>
-          {(["engineering", "platform"] as const).map((path) => (
+          {(["engineering", "platform", "sample"] as const).map((path) => (
             <button
               aria-selected={activePath === path}
               className={activePath === path ? styles.pathTabActive : styles.pathTab}
@@ -424,7 +426,9 @@ export function HomeScene() {
 
       <main className={styles.content}>
         <div className={styles.contentInner}>
-          {activePath === "platform" ? (
+          {activePath === "sample" ? (
+            <SampleExperience />
+          ) : activePath === "platform" ? (
             <section aria-labelledby="platform-build-title" className={styles.buildArea}>
               <div className={styles.sectionHeading}>
                 <div>
