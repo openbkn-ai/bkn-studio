@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 describe("OverviewOntologyBlock resource authorization regression", () => {
-  it("uses authorized hasIndex summaries without reading resource details when a bound resource is denied", async () => {
+  it("uses authorized index statuses without reading resource details when a bound resource is denied", async () => {
     getKnowledgeNetworkOverviewGraph.mockResolvedValue({
       graph: {
         edges: [],
@@ -71,13 +71,13 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
           {
             color: "#1677ff",
             id: "object-denied-resource",
-            indexed: true,
+            indexStatus: { state: "available" },
             name: "Customer",
           },
           {
             color: "#52c41a",
             id: "object-authorized-resource",
-            indexed: false,
+            indexStatus: { state: "unavailable" },
             name: "Order",
           },
         ],
@@ -104,7 +104,9 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
       .mockResolvedValueOnce({
         graph: {
           edges: [],
-          nodes: [{ id: "object-denied-resource", indexed: true, name: "Customer" }],
+          nodes: [
+            { id: "object-denied-resource", indexStatus: { state: "available" }, name: "Customer" },
+          ],
         },
         objectTypeTotal: 2,
         relationTypeTotal: 1,
@@ -122,8 +124,8 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
             },
           ],
           nodes: [
-            { id: "object-denied-resource", indexed: true, name: "Customer" },
-            { id: "object-order", indexed: false, name: "Order" },
+            { id: "object-denied-resource", indexStatus: { state: "available" }, name: "Customer" },
+            { id: "object-order", indexStatus: { state: "unavailable" }, name: "Order" },
           ],
         },
         objectTypeTotal: 2,
@@ -160,8 +162,8 @@ describe("OverviewOntologyBlock resource authorization regression", () => {
           },
         ],
         nodes: [
-          { id: "object-customer", indexed: true, name: "Customer" },
-          { id: "object-order", indexed: false, name: "Order" },
+          { id: "object-customer", indexStatus: { state: "available" }, name: "Customer" },
+          { id: "object-order", indexStatus: { state: "unavailable" }, name: "Order" },
         ],
       },
       objectTypeTotal: 2,
