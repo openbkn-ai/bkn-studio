@@ -44,8 +44,9 @@ describe("sample catalog", () => {
 
     expect(catalog.sourceRejected).toBe(false);
     expect(catalog.samples).toHaveLength(1);
-    expect(catalog.samples[0]?.questions).toEqual([]);
-    expect(sampleCardAction(catalog.samples[0]!)).toBe("install");
+    const sample = catalog.samples[0];
+    expect(sample?.questions).toEqual([]);
+    expect(sample && sampleCardAction(sample)).toBe("install");
     expect(sampleCatalogName("northwind")).toBe("bkn-sample-northwind");
   });
 
@@ -55,11 +56,11 @@ describe("sample catalog", () => {
         item({ installable: false, installedAt: "2026-09-24T03:40:00Z", status: "installed" }),
       ],
     });
-    const installed = catalog.samples[0]!;
+    const installed = catalog.samples[0];
 
-    expect(installed.questions).toEqual(["Which orders are open?"]);
-    expect(installed.installedAt).toBe("2026-09-24T03:40:00Z");
-    expect(sampleCardAction(installed)).toBe("open");
+    expect(installed?.questions).toEqual(["Which orders are open?"]);
+    expect(installed?.installedAt).toBe("2026-09-24T03:40:00Z");
+    expect(installed && sampleCardAction(installed)).toBe("open");
   });
 
   it("marks a non-official source as unavailable", () => {
@@ -69,21 +70,32 @@ describe("sample catalog", () => {
     });
 
     expect(catalog.sourceRejected).toBe(true);
-    expect(catalog.samples[0]).toMatchObject({ installable: false, status: "unavailable" });
-    expect(sampleCardAction(catalog.samples[0]!)).toBe("none");
+    const sample = catalog.samples[0];
+    expect(sample).toMatchObject({ installable: false, status: "unavailable" });
+    expect(sample && sampleCardAction(sample)).toBe("none");
+  });
+
+  it("accepts the official repository with a .git suffix or trailing slash", () => {
+    const catalog = parseSampleCatalog({
+      samples: [item()],
+      sourceRepo: "https://github.com/openbkn-ai/bkn-samples.git/",
+    });
+
+    expect(catalog.sourceRejected).toBe(false);
+    expect(catalog.samples[0]?.status).toBe("not_installed");
   });
 
   it("keeps retry only for a failed sample", () => {
     const failed = parseSampleCatalog([
       item({ installationId: "inst-1", message: "Smoke failed", status: "failed" }),
-    ]).samples[0]!;
+    ]).samples[0];
     const conflict = parseSampleCatalog([
       item({ installable: false, message: "Catalog exists", status: "conflict" }),
-    ]).samples[0]!;
+    ]).samples[0];
 
-    expect(sampleCardAction(failed)).toBe("retry");
-    expect(sampleCardAction({ ...failed, installable: false })).toBe("retry");
-    expect(sampleCardAction(conflict)).toBe("none");
+    expect(failed && sampleCardAction(failed)).toBe("retry");
+    expect(failed && sampleCardAction({ ...failed, installable: false })).toBe("retry");
+    expect(conflict && sampleCardAction(conflict)).toBe("none");
   });
 
   it("reads an in-progress installation", () => {

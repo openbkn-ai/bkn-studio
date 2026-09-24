@@ -42,6 +42,7 @@ vi.mock("@/modules/home/services/sample-catalog.service", () => ({
 }));
 
 import { SampleExperience } from "@/modules/home/scenes/SampleExperience";
+import { SampleRequestError } from "@/modules/home/services/sample-catalog.service";
 
 const network = { displayName: "Northwind network", id: "northwind_kn" };
 
@@ -70,15 +71,13 @@ function renderExperience() {
 describe("SampleExperience", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getSampleInstallation.mockImplementation(
-      async (sampleName: string, installationId: string) => ({
-        id: installationId,
-        sample: sampleName,
-        stages: [{ id: "database", name: "Prepare database", state: "running" }],
-        status: "installing",
-        version: "0.1.0",
-      }),
-    );
+    getSampleInstallation.mockImplementation((sampleName: string, installationId: string) => ({
+      id: installationId,
+      sample: sampleName,
+      stages: [{ id: "database", name: "Prepare database", state: "running" }],
+      status: "installing",
+      version: "0.1.0",
+    }));
   });
 
   it("asks for confirmation before installing a catalog sample", async () => {
@@ -100,6 +99,44 @@ describe("SampleExperience", () => {
     fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
 
     await waitFor(() => expect(createSampleInstallation).toHaveBeenCalledWith("northwind"));
+  });
+
+  it("closes the confirm dialog and shows the install error", async () => {
+    listSamples.mockResolvedValue({ samples: [sample()], sourceRejected: false });
+    createSampleInstallation.mockRejectedValue(
+      new SampleRequestError("forbidden", "Need an administrator"),
+    );
+    renderExperience();
+
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    expect(await screen.findByText("Need an administrator")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("home.sample.confirm.irreversible")).toBeNull());
+  });
+
+  it("polls the created installation when the catalog omits its id", async () => {
+    listSamples
+      .mockResolvedValueOnce({ samples: [sample()], sourceRejected: false })
+      .mockResolvedValue({
+        samples: [sample({ installable: false, installationId: null, status: "installing" })],
+        sourceRejected: false,
+      });
+    createSampleInstallation.mockResolvedValue({
+      id: "inst-created",
+      sample: "northwind",
+      stages: [],
+      status: "installing",
+      version: "0.1.0",
+    });
+    renderExperience();
+
+    fireEvent.click(await screen.findByRole("button", { name: "home.sample.actions.install" }));
+    fireEvent.click(screen.getByRole("button", { name: "home.sample.actions.start" }));
+
+    await waitFor(() =>
+      expect(getSampleInstallation).toHaveBeenCalledWith("northwind", "inst-created"),
+    );
   });
 
   it("shows an installed sample without install or retry", async () => {

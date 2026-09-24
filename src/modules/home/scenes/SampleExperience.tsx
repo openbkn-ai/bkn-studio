@@ -6,7 +6,7 @@
  */
 
 import { Modal } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -39,6 +39,8 @@ export function SampleExperience() {
   const [pending, setPending] = useState<SampleCatalogItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState("");
+  const installationsRef = useRef(installations);
+  installationsRef.current = installations;
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -55,9 +57,14 @@ export function SampleExperience() {
   }, [loadCatalog]);
 
   useEffect(() => {
-    const active = (catalog?.samples ?? []).filter(
-      (item) => item.status === "installing" && item.installationId,
-    );
+    const active = (catalog?.samples ?? []).flatMap((item) => {
+      if (item.status !== "installing") {
+        return [];
+      }
+
+      const installationId = item.installationId ?? installationsRef.current[item.name]?.id ?? null;
+      return installationId ? [{ installationId, name: item.name }] : [];
+    });
 
     if (active.length === 0) {
       return;
@@ -69,7 +76,7 @@ export function SampleExperience() {
       const updates = await Promise.all(
         active.map(async (item) => {
           try {
-            return await getSampleInstallation(item.name, item.installationId ?? "");
+            return await getSampleInstallation(item.name, item.installationId);
           } catch {
             return null;
           }
@@ -119,6 +126,7 @@ export function SampleExperience() {
     } catch (error) {
       const requestError =
         error instanceof SampleRequestError ? error : new SampleRequestError("install_failed", "");
+      setPending(null);
       setActionError(
         requestError.message || t(`home.sample.errors.${knownError(requestError.code)}`),
       );
@@ -186,6 +194,7 @@ export function SampleExperience() {
       </div>
 
       <Modal
+        destroyOnHidden
         footer={null}
         onCancel={() => setPending(null)}
         open={pending !== null}

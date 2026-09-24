@@ -106,7 +106,8 @@ export function parseSampleCatalog(payload: unknown): SampleCatalog {
   }
 
   const sourceRepo = optionalString(payload.sourceRepo);
-  const sourceRejected = sourceRepo !== undefined && sourceRepo !== OFFICIAL_SAMPLE_SOURCE;
+  const sourceRejected =
+    sourceRepo !== undefined && normalizeSource(sourceRepo) !== OFFICIAL_SAMPLE_SOURCE;
   const records = payload.samples ?? payload.items;
 
   if (!Array.isArray(records)) {
@@ -265,6 +266,10 @@ function stringList(value: unknown) {
 
 function finiteCount(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeSource(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\.git$/i, "");
 }
 
 function optionalString(value: unknown) {
