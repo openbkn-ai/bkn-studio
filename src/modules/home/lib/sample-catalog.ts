@@ -269,7 +269,10 @@ function finiteCount(value: unknown) {
 }
 
 function normalizeSource(value: string) {
-  return value.trim().replace(/\/+$/, "").replace(/\.git$/i, "");
+  return value
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\.git$/i, "");
 }
 
 function optionalString(value: unknown) {
