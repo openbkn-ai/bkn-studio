@@ -7,6 +7,7 @@
 
 import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
+import { type SingleEntryResponse, unwrapSingleEntryResponse } from "@/framework/request/normalize";
 import type { PermissionRequest } from "@/modules/account/services/permission-requests.service";
 
 export type PermissionRequestResourceCheck =
@@ -49,8 +50,8 @@ export async function checkPermissionRequestResource(
   if (!path) return "unsupported";
 
   try {
-    await http.get(path, { skipErrorToast: true });
-    return "exists";
+    const response = await http.get<SingleEntryResponse<unknown>>(path, { skipErrorToast: true });
+    return unwrapSingleEntryResponse(response.data) ? "exists" : "not_found";
   } catch (error) {
     if (isRequestNotFound(error)) return "not_found";
     if (isRequestForbidden(error)) return "forbidden";

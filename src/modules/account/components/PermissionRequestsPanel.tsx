@@ -59,6 +59,8 @@ import {
   type PermissionRequestResourceCheck,
 } from "@/modules/account/services/permission-request-resource.service";
 
+import { shouldRefreshPermissionRequestDetail } from "./permission-request-detail";
+
 import styles from "./PermissionRequestsPanel.module.css";
 
 type Tab = "mine" | "todo" | "reviewed";
@@ -429,7 +431,9 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
     try {
       await cancelPermissionRequest(id);
       message.success(t("account.permissionRequests.cancel"));
-      setDetail(await getPermissionRequest(id));
+      if (shouldRefreshPermissionRequestDetail(detail, id)) {
+        setDetail(await getPermissionRequest(id));
+      }
       await load(tab, offset);
       notifyPermissionRequestTodoSummaryChanged();
     } catch (error) {
