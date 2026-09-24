@@ -132,7 +132,7 @@ export function mapDataProperty(
     incrementalKey: false,
     indexFeatures: item.index_features?.map((feature) => ({
       available: feature.available ?? null,
-      configured: feature.configured ?? true,
+      configured: feature.configured ?? false,
       type: feature.type,
     })),
     maskRule: item.mask_rule ? mapMaskRuleFromBackend(item.mask_rule) : undefined,

@@ -154,13 +154,14 @@ export function ObjectTypePropertyTable({
             title: t("knowledgeNetwork.objectTypePropertyIndexFeatures"),
             width: 220,
             render: (value: ObjectTypeDataProperty["indexFeatures"]) => {
-              if (!value?.length) {
+              const configuredFeatures = value?.filter((feature) => feature.configured) ?? [];
+              if (!configuredFeatures.length) {
                 return "—";
               }
 
               return (
                 <span className={styles.indexFeatures}>
-                  {value.map((feature) => {
+                  {configuredFeatures.map((feature) => {
                     const availability =
                       feature.available === true
                         ? t("knowledgeNetwork.objectTypeIndexFeatureAvailable")

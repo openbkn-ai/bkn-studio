@@ -81,4 +81,18 @@ describe("data property mask rule mapper", () => {
     ]);
     expect(toBackendDataProperty(property)).not.toHaveProperty("index_features");
   });
+
+  it("treats a missing configured flag as not configured", () => {
+    const property = mapDataProperty(
+      {
+        index_features: [{ type: "vector", available: true }],
+        name: "embedding",
+      },
+      meta,
+    );
+
+    expect(property.indexFeatures).toEqual([
+      { type: "vector", configured: false, available: true },
+    ]);
+  });
 });

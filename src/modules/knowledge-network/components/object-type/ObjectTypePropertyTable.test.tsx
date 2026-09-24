@@ -86,6 +86,7 @@ describe("ObjectTypePropertyTable", () => {
             indexFeatures: [
               { type: "keyword", configured: true, available: true },
               { type: "vector", configured: true, available: false },
+              { type: "fulltext", configured: false, available: true },
             ],
           }),
         ]}
@@ -98,5 +99,6 @@ describe("ObjectTypePropertyTable", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText("keyword")).toBeVisible();
     expect(screen.getByText("vector")).toBeVisible();
+    expect(screen.queryByText("fulltext")).not.toBeInTheDocument();
   });
 });

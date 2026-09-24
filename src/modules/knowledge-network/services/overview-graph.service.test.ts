@@ -55,4 +55,47 @@ describe("overview-graph.service", () => {
 
     expect(result.graph.edges[0]).toMatchObject({ mappingMode: "resource" });
   });
+
+  it("maps the backend index status instead of the retired indexed boolean", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        edges: [],
+        nodes: [
+          { id: "customer", index_status: { state: "available" }, name: "Customer" },
+          { id: "order", index_status: { state: "unknown" }, name: "Order" },
+        ],
+        object_type_total: 2,
+        relation_type_total: 0,
+        returned_edges: 0,
+        returned_nodes: 2,
+        snapshot: "snapshot-1",
+        truncated: false,
+      },
+    });
+    const { getKnowledgeNetworkOverviewGraph } =
+      await import("@/modules/knowledge-network/services/overview-graph.service");
+
+    const result = await getKnowledgeNetworkOverviewGraph("network-1");
+
+    expect(result.graph.nodes).toMatchObject([
+      { id: "customer", indexStatus: { state: "available" } },
+      { id: "order", indexStatus: { state: "unknown" } },
+    ]);
+  });
+
+  it("keeps mock overview node statuses aligned with their index markers", async () => {
+    vi.stubEnv("VITE_USE_MOCK", "true");
+    vi.resetModules();
+    const { getKnowledgeNetworkOverviewGraph } =
+      await import("@/modules/knowledge-network/services/overview-graph.service");
+
+    const result = await getKnowledgeNetworkOverviewGraph("kn-domain-risk");
+
+    expect(result.graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "ot-risk-order", indexStatus: { state: "available" } }),
+        expect.objectContaining({ id: "ot-risk-device", indexStatus: { state: "unavailable" } }),
+      ]),
+    );
+  });
 });
