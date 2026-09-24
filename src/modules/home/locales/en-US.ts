@@ -70,6 +70,75 @@ export const homeEnUS = {
         heading: "Build a knowledge network manually",
         title: "Manual build",
       },
+      sample: {
+        description:
+          "Install sample data and a knowledge network into this environment. After the smoke test passes, the sample is ready. No database or image address is required.",
+        heading: "Install an official sample",
+        title: "One-click experience",
+      },
+    },
+    sample: {
+      actions: {
+        cancel: "Cancel",
+        install: "Install",
+        open: "Open knowledge network",
+        retry: "Retry",
+        start: "Start installation",
+      },
+      adminHint: "Administrator required",
+      confirm: {
+        body: "This creates a database for the sample in the current OpenBKN cluster, then scans, binds, and runs the smoke test.",
+        catalog: "Catalog name {{catalog}}",
+        irreversible:
+          "After a successful install, the home page shows status only. The sample cannot be added again, and there is no uninstall.",
+        namespace: "Sample database namespace {{namespace}}",
+        network: "Knowledge network {{network}}",
+        title: "Install {{name}} {{version}}",
+      },
+      empty: "No samples are available to install",
+      errors: {
+        already_installed: "This sample is already installed",
+        database_not_ready: "The sample database did not pass the readiness check",
+        discover_incomplete: "Data resources were not fully discovered",
+        forbidden: "An administrator is required to install",
+        image_unavailable: "The sample database image cannot be pulled right now",
+        install_failed: "Installation did not finish. Existing resources were kept.",
+        ownership_conflict:
+          "A resource with the same name already exists and was not created by this installer",
+        sample_data_unavailable: "The sample data is not ready",
+        source_rejected:
+          "The sample source is not the official repository, or the version does not match",
+        storage_class_missing: "The cluster has no default storage class",
+        use_retry: "Continue the failed installation instead of adding it again",
+        verify_failed: "The smoke test did not pass. Earlier resources were kept.",
+      },
+      installedMeta: "Installed at {{time}} · version {{version}}.",
+      llmNote:
+        "Configure a model from manual build before asking questions. That does not change this installation result.",
+      loadFailed: "The sample catalog could not be loaded",
+      loading: "Loading the sample catalog",
+      reload: "Reload",
+      sourceLabel: "Source",
+      sourceName: "openbkn-ai/bkn-samples",
+      stageState: {
+        failed: "Failed",
+        pending: "Not started",
+        running: "In progress",
+        succeeded: "Completed",
+      },
+      status: {
+        conflict: "Name conflict",
+        failed: "Install failed",
+        installed: "Installed",
+        installing: "Installing",
+        not_installed: "Not installed",
+        unavailable: "Unavailable",
+      },
+      tables_one: "{{count}} table",
+      tables_other: "{{count}} tables",
+      unavailableBanner:
+        "The sample manifest does not match the image version, or the source is not the official repository. Nothing can be installed.",
+      versionLabel: "Version {{version}}",
     },
     platform: {
       configuration: "Configuration",
