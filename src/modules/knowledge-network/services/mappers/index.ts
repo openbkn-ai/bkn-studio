@@ -107,11 +107,9 @@ export function mapObjectType(item: BackendObjectType): KnowledgeNetworkObjectTy
     indexStatus: item.index_status?.state
       ? { state: item.index_status.state, sourceStatus: item.index_status.source_status }
       : undefined,
-    // Keep a boolean for graph compatibility. New status-aware surfaces must use indexStatus so
-    // an unread Vega resource stays unknown rather than looking unavailable.
-    hasIndex:
-      item.index_status?.state === "available" ||
-      (!item.index_status?.state && (item.has_index ?? item.status?.index_available ?? false)),
+    // The UI still keeps a boolean for graph rendering, but it is derived exclusively from the
+    // current BKN index_status; there is no persisted-status fallback.
+    hasIndex: item.index_status?.state === "available",
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id ?? "-",
   };

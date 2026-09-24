@@ -140,7 +140,6 @@ export type BackendObjectType = {
   data_properties?: BackendDataProperty[];
   data_source?: BackendDataSource;
   display_key?: string;
-  has_index?: boolean;
   icon?: string;
   id: string;
   index_status?: {
@@ -152,9 +151,6 @@ export type BackendObjectType = {
   name: string;
   operations?: string[];
   primary_keys?: string[];
-  status?: {
-    index_available?: boolean;
-  };
   tags?: string[];
   update_time?: number;
   updater?: BackendAccountInfo;
