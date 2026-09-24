@@ -226,7 +226,7 @@ describe("DataConnectDetailDrawer", () => {
 
     expect(await screen.findByText("db.example.com")).toBeTruthy();
     const maskedPassword = screen.getByText("••••••••");
-    expect(maskedPassword.getAttribute("title")).toBe("dataConnect.encryptedFieldEditHint");
+    expect(maskedPassword.hasAttribute("title")).toBe(false);
     const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
     expect(configSection).not.toBeNull();
     const values = [...configSection!.querySelectorAll('[class*="configItem"]')].map(

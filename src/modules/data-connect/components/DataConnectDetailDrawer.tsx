@@ -534,17 +534,15 @@ function buildConfigEntries(
       fullRow: key.trim().toLowerCase() === "options",
       key,
       label: humanizeConnectorFieldLabel(key, connectorType?.type),
-      value: configItem?.encrypted ? (
-        <span title={t("dataConnect.encryptedFieldEditHint")}>••••••••</span>
-      ) : hasValue ? (
-        formatConfigValue(
-          config[key],
-          t,
-          key.trim().toLowerCase() === "schemas" || key.trim().toLowerCase() === "schema_list",
-        )
-      ) : (
-        "-"
-      ),
+      value: configItem?.encrypted
+        ? "••••••••"
+        : hasValue
+          ? formatConfigValue(
+              config[key],
+              t,
+              key.trim().toLowerCase() === "schemas" || key.trim().toLowerCase() === "schema_list",
+            )
+          : "-",
     };
   });
 }

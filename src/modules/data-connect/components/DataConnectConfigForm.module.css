@@ -321,4 +321,28 @@
     flex-direction: column;
     align-items: stretch;
   }
+
+  .section > .grid {
+    margin-inline: 0;
+  }
+
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .fieldLabel {
+    justify-content: flex-start;
+    flex: none;
+    width: auto;
+    min-height: 0;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .fieldStart .fieldLabel {
+    padding-top: 0;
+  }
 }
