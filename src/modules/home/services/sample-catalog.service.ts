@@ -15,7 +15,7 @@ import {
   type SampleInstallation,
 } from "@/modules/home/lib/sample-catalog";
 
-const SAMPLE_API = "/api/studio/samples";
+const SAMPLE_API = "/studio/samples";
 
 export class SampleRequestError extends Error {
   code: string;

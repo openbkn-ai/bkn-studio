@@ -38,7 +38,7 @@ describe("sample catalog service", () => {
     getMock.mockResolvedValue({ data: { samples: [] } });
 
     await expect(listSamples()).resolves.toEqual({ samples: [], sourceRejected: false });
-    expect(getMock).toHaveBeenCalledWith("/api/studio/samples", { skipErrorToast: true });
+    expect(getMock).toHaveBeenCalledWith("/studio/samples", { skipErrorToast: true });
   });
 
   it("creates an installation without a request body", async () => {
@@ -46,7 +46,7 @@ describe("sample catalog service", () => {
 
     await expect(createSampleInstallation("northwind")).resolves.toMatchObject({ id: "inst-1" });
     expect(postMock).toHaveBeenCalledWith(
-      "/api/studio/samples/northwind/installations",
+      "/studio/samples/northwind/installations",
       {},
       { skipErrorToast: true },
     );
