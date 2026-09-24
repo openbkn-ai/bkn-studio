@@ -168,7 +168,7 @@ function parseSample(payload: unknown): SampleCatalogItem | null {
 
   return {
     catalogId: optionalString(payload.catalogId),
-    displayName: optionalString(payload.displayName) ?? payload.name,
+    displayName: optionalString(payload.displayName) ?? name,
     expectedTables: finiteCount(payload.expectedTables),
     installationId: optionalString(payload.installationId) ?? null,
     installable: payload.installable === true,
