@@ -70,13 +70,29 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
     expect(getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail"]))).toEqual([
       "view",
       "export",
+      "request-permission",
     ]);
   });
 
   it("shows edit and delete only when record operations allow them", () => {
     expect(
       getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail", "modify", "delete"])),
+    ).toEqual(["view", "edit", "export", "request-permission", "delete"]);
+  });
+
+  it("hides permission request when every business operation is already granted", () => {
+    expect(
+      getKnowledgeNetworkCardMenuKeys(
+        createRecord(["view_detail", "create", "modify", "delete", "execute", "query_data"]),
+      ),
     ).toEqual(["view", "edit", "export", "delete"]);
+  });
+
+  it("hides permission request for a super administrator", () => {
+    expect(getKnowledgeNetworkCardMenuKeys(createRecord(["view_detail"]), false)).toEqual([
+      "view",
+      "export",
+    ]);
   });
 
   it("denies actions when operation data is missing", () => {

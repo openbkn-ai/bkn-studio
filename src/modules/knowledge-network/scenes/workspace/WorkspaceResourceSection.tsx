@@ -51,6 +51,7 @@ type WorkspaceResourceSectionProps = {
   canModify: boolean;
   data: WorkspaceData;
   networkId: string;
+  networkName: string;
   section: KnowledgeNetworkWorkspaceSection;
 };
 
@@ -59,6 +60,7 @@ export function WorkspaceResourceSection({
   canModify,
   data,
   networkId,
+  networkName,
   section,
 }: WorkspaceResourceSectionProps) {
   const { t } = useTranslation();
@@ -71,6 +73,7 @@ export function WorkspaceResourceSection({
           canModify={canModify}
           canDelete={canDelete}
           networkId={networkId}
+          networkName={networkName}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkConceptGroup(networkId, record.id)),
@@ -88,6 +91,7 @@ export function WorkspaceResourceSection({
           canModify={canModify}
           canDelete={canDelete}
           networkId={networkId}
+          networkName={networkName}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkObjectType(networkId, record.id)),
@@ -102,6 +106,7 @@ export function WorkspaceResourceSection({
           canModify={canModify}
           canDelete={canDelete}
           networkId={networkId}
+          networkName={networkName}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkRelationType(networkId, record.id)),
@@ -116,6 +121,7 @@ export function WorkspaceResourceSection({
           canModify={canModify}
           canDelete={canDelete}
           networkId={networkId}
+          networkName={networkName}
           onDelete={async (records) => {
             await Promise.all(
               records.map((record) => deleteKnowledgeNetworkActionType(networkId, record.id)),
@@ -132,6 +138,7 @@ export function WorkspaceResourceSection({
           canDelete={canDelete}
           metrics={data.metrics}
           networkId={networkId}
+          networkName={networkName}
           onDelete={async (metricId) => {
             await deleteKnowledgeNetworkMetric(networkId, metricId);
           }}

@@ -11,15 +11,19 @@ import { useTranslation } from "react-i18next";
 
 import { ProfilePanel } from "@/modules/account/components/ProfilePanel";
 import { SecurityPanel } from "@/modules/account/components/SecurityPanel";
+import { PermissionRequestsPanel } from "@/modules/account/components/PermissionRequestsPanel";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import { getMyProfile, type MyProfile } from "@/modules/account/services/profile.service";
 import { ApiKeyListScene } from "@/modules/api-keys/scenes/ApiKeyListScene";
 
 import styles from "./AccountScene.module.css";
 
-export type AccountSection = "profile" | "security" | "api-keys";
+export type AccountSection = "profile" | "security" | "api-keys" | "permission-requests";
 
 function sectionKey(section: AccountSection) {
-  return section === "api-keys" ? "apiKeys" : section;
+  if (section === "api-keys") return "apiKeys";
+  if (section === "permission-requests") return "permissionRequests";
+  return section;
 }
 
 export function AccountScene({ section }: { section: AccountSection }) {
@@ -50,6 +54,9 @@ export function AccountScene({ section }: { section: AccountSection }) {
   const renderSection = () => {
     if (section === "api-keys") {
       return <ApiKeyListScene embedded />;
+    }
+    if (section === "permission-requests") {
+      return <PermissionRequestsPanel hideMine={getRuntimeConfig().currentUser.isSuperAdmin} />;
     }
 
     if (profileLoading) {

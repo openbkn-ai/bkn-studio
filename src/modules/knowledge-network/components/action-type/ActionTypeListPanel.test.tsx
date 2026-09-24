@@ -98,6 +98,7 @@ describe("ActionTypeListPanel menu access", () => {
         canDelete={false}
         canModify={false}
         networkId="network-1"
+        networkName="Test network"
         onDelete={vi.fn()}
       />,
     );
@@ -133,6 +134,7 @@ describe("ActionTypeListPanel menu access", () => {
         canDelete={false}
         canModify={false}
         networkId="network-1"
+        networkName="Test network"
         onDelete={vi.fn()}
       />,
     );

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { KeyOutlined, LockOutlined, UserOutlined } from "@ant-design/icons";
+import { AuditOutlined, KeyOutlined, LockOutlined, UserOutlined } from "@ant-design/icons";
 
 import type { ConsoleNavItem } from "@/app/shell/navigation/types";
 
@@ -27,5 +27,11 @@ export const accountSideNavigation: ConsoleNavItem[] = [
     labelKey: "account.sections.apiKeys.title",
     icon: <KeyOutlined />,
     path: "/account/api-keys",
+  },
+  {
+    key: "account-permission-requests",
+    labelKey: "account.sections.permissionRequests.title",
+    icon: <AuditOutlined />,
+    path: "/account/permission-requests",
   },
 ];

@@ -21,6 +21,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -30,6 +32,8 @@ import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { authzPoints } from "@/modules/system-admin/permissions";
 import { resourceQueryBlockReason } from "@/modules/data-catalog/lib/resource-query-availability";
 import { isCatalogPhysical } from "@/modules/data-catalog/lib/index-state";
@@ -128,6 +132,7 @@ export function ResourceListPanel({
 }: ResourceListPanelProps) {
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
@@ -167,10 +172,16 @@ export function ResourceListPanel({
   // point. Asking only the second one hid the button from every person who built a data connection.
   const ownsCatalogAuthorize = hasCatalogOperation(catalog, "authorize");
   const canAuthorizeCatalog = !catalog.builtin && (ownsCatalogAuthorize || canAuthorizeGrants);
+  const canRequestCatalogPermission = canRequestResourcePermission(
+    "catalog",
+    catalog.operations,
+    permissionRequestsEnabled,
+  );
   const showOperationBar =
     resourceTotal > 0 ||
     hasResourceQuery ||
     canAuthorizeCatalog ||
+    canRequestCatalogPermission ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -452,6 +463,21 @@ export function ResourceListPanel({
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
           });
         }
+        if (
+          canRequestResourcePermission("resource", record.operations, permissionRequestsEnabled)
+        ) {
+          moreItems.push({
+            key: "request-permission",
+            label: (
+              <ResourcePermissionRequestAction
+                operations={record.operations}
+                resourceID={record.id}
+                resourceName={deriveDisplayName(record, catalog.connectorType)}
+                resourceType="resource"
+              />
+            ),
+          });
+        }
 
         return (
           <Space className={styles.actionGroup} size={4}>
@@ -546,6 +572,15 @@ export function ResourceListPanel({
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("dataCatalog.catalog.authorize")}
                 </AppButton>
+              ) : null}
+              {canRequestCatalogPermission ? (
+                <ResourcePermissionRequestAction
+                  operations={catalog.operations}
+                  resourceID={catalog.id}
+                  resourceName={catalog.name}
+                  resourceType="catalog"
+                  trigger="button"
+                />
               ) : null}
             </div>
           </div>

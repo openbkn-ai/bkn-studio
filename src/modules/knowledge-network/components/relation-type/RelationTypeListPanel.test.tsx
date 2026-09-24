@@ -72,6 +72,7 @@ function renderPanel(initialEntry = "/") {
         canDelete={false}
         canModify={false}
         networkId="network-1"
+        networkName="Test network"
         onDelete={vi.fn()}
       />
     </MemoryRouter>,

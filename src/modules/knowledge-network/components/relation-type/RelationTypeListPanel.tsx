@@ -21,10 +21,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import {
@@ -46,6 +50,7 @@ type RelationTypeListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
   networkId: string;
+  networkName: string;
   onDelete: (records: KnowledgeNetworkRelationTypeRecord[]) => Promise<void>;
 };
 
@@ -63,8 +68,10 @@ export function RelationTypeListPanel({
   canDelete,
   canModify,
   networkId,
+  networkName,
   onDelete,
 }: RelationTypeListPanelProps) {
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -340,6 +347,25 @@ export function RelationTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
+          ...(canRequestResourcePermission(
+            "relation_type",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="relation_type"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
+            : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [
                 { key: "edit", label: t("common.edit") },

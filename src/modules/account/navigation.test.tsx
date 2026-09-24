@@ -15,6 +15,7 @@ describe("accountSideNavigation", () => {
       "/account/profile",
       "/account/security",
       "/account/api-keys",
+      "/account/permission-requests",
     ]);
   });
 });

@@ -11,7 +11,11 @@ import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { PermissionGate } from "@/framework/permission/PermissionGate";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { getExecutionUnitLifecycleActions } from "@/modules/execution-factory/utils/execution-unit-lifecycle";
 import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
 
@@ -61,6 +65,19 @@ function canRunMenuAction(item: ExecutionUnitCardItem, action: ExecutionUnitCard
   }
 }
 
+// Function toolboxes use the same object ID as their box, but bkn-safe keeps
+// a distinct resource type so Function grants remain isolated from OpenAPI
+// Tool Box grants. Operators are retired and have no object-grant type.
+function permissionRequestResourceType(
+  activeTab: ExecutionUnitTab,
+  item: ExecutionUnitCardItem,
+): string | null {
+  if (activeTab === "toolbox") {
+    return item.metadataType === "function" ? "function" : "tool_box";
+  }
+  return activeTab === "mcp" || activeTab === "skill" ? activeTab : null;
+}
+
 function pushMenuAction(
   menuItems: MenuProps["items"],
   key: string,
@@ -97,6 +114,7 @@ export function ExecutionUnitCardMenu({
   onAction,
 }: ExecutionUnitCardMenuProps) {
   const { t } = useTranslation();
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
 
   if (marketMode) {
     const permission = getInstallPermission();
@@ -211,6 +229,24 @@ export function ExecutionUnitCardMenu({
       "authorize",
       item,
     );
+  }
+
+  const permissionType = permissionRequestResourceType(activeTab, item);
+  if (
+    permissionType &&
+    canRequestResourcePermission(permissionType, item.operations, permissionRequestsEnabled)
+  ) {
+    menuItems.push({
+      key: "request-permission",
+      label: (
+        <ResourcePermissionRequestAction
+          operations={item.operations}
+          resourceID={item.id}
+          resourceName={item.name}
+          resourceType={permissionType}
+        />
+      ),
+    });
   }
 
   pushMenuAction(menuItems, "delete", t("common.delete"), onAction, "delete", item, {

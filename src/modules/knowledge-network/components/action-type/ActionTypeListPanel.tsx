@@ -21,6 +21,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
@@ -28,6 +30,8 @@ import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-ne
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
@@ -44,6 +48,7 @@ type ActionTypeListPanelProps = {
   canDelete: boolean;
   canModify: boolean;
   networkId: string;
+  networkName: string;
   onDelete: (records: KnowledgeNetworkActionTypeRecord[]) => Promise<void>;
 };
 
@@ -68,8 +73,10 @@ export function ActionTypeListPanel({
   canDelete,
   canModify,
   networkId,
+  networkName,
   onDelete,
 }: ActionTypeListPanelProps) {
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { modal } = useAppServices();
@@ -259,6 +266,25 @@ export function ActionTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
+          ...(canRequestResourcePermission(
+            "action_type",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="action_type"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
+            : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]
             : []),
