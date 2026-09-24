@@ -81,9 +81,11 @@ describe("getKnowledgeNetworkCardMenuKeys", () => {
   });
 
   it("hides permission request when every business operation is already granted", () => {
-    expect(getKnowledgeNetworkCardMenuKeys(createRecord([
-      "view_detail", "create", "modify", "delete", "execute", "query_data",
-    ]))).toEqual(["view", "edit", "export", "delete"]);
+    expect(
+      getKnowledgeNetworkCardMenuKeys(
+        createRecord(["view_detail", "create", "modify", "delete", "execute", "query_data"]),
+      ),
+    ).toEqual(["view", "edit", "export", "delete"]);
   });
 
   it("hides permission request for a super administrator", () => {

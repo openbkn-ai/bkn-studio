@@ -41,7 +41,10 @@ import {
   updateKnowledgeNetwork,
 } from "@/modules/knowledge-network/services/knowledge-network.service";
 import { logServiceFallback } from "@/modules/knowledge-network/services/shared/runtime";
-import { createPermissionRequest, listPermissionRequests } from "@/modules/account/services/permission-requests.service";
+import {
+  createPermissionRequest,
+  listPermissionRequests,
+} from "@/modules/account/services/permission-requests.service";
 import type {
   KnowledgeNetworkMutationPayload,
   KnowledgeNetworkRecord,
@@ -77,7 +80,8 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
   const [authorizingRecord, setAuthorizingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<KnowledgeNetworkRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [permissionRequestRecord, setPermissionRequestRecord] = useState<KnowledgeNetworkRecord | null>(null);
+  const [permissionRequestRecord, setPermissionRequestRecord] =
+    useState<KnowledgeNetworkRecord | null>(null);
   const [pendingPermissionOperations, setPendingPermissionOperations] = useState<string[]>([]);
   const [permissionRequestLoading, setPermissionRequestLoading] = useState(false);
   const [permissionRequestSubmitting, setPermissionRequestSubmitting] = useState(false);
@@ -175,8 +179,15 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     try {
       const page = await listPermissionRequests("mine", 200, 0);
       const pendingOperations = page.entries
-        .filter((request) => request.status === "pending" && request.resource_type === "knowledge_network" && request.resource_id === record.id)
-        .flatMap((request) => request.operations?.length ? request.operations : [request.operation]);
+        .filter(
+          (request) =>
+            request.status === "pending" &&
+            request.resource_type === "knowledge_network" &&
+            request.resource_id === record.id,
+        )
+        .flatMap((request) =>
+          request.operations?.length ? request.operations : [request.operation],
+        );
       setPendingPermissionOperations(pendingOperations);
     } catch (error) {
       setPermissionRequestRecord(null);
@@ -222,8 +233,12 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
     : [];
   const hasPendingFullBusinessAccess = pendingPermissionOperations.includes("full_business_access");
   const selectablePermissionOperations = communityBuild
-    ? (hasPendingFullBusinessAccess ? [] : ["full_business_access"])
-    : missingPermissionOperations.filter((operation) => !pendingPermissionOperations.includes(operation));
+    ? hasPendingFullBusinessAccess
+      ? []
+      : ["full_business_access"]
+    : missingPermissionOperations.filter(
+        (operation) => !pendingPermissionOperations.includes(operation),
+      );
 
   const closeDelete = () => {
     if (deleting) {
@@ -432,9 +447,11 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
                     }}
                     onOpen={openWorkspace}
                     canRequestPermission={canRequestPermission}
-                    onRequestPermission={canRequestPermission
-                      ? (record) => void openPermissionRequest(record)
-                      : undefined}
+                    onRequestPermission={
+                      canRequestPermission
+                        ? (record) => void openPermissionRequest(record)
+                        : undefined
+                    }
                     record={record}
                   />
                 ))}
@@ -476,7 +493,9 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
       <Modal
         centered
         confirmLoading={permissionRequestSubmitting}
-        okButtonProps={{ disabled: permissionRequestLoading || selectablePermissionOperations.length === 0 }}
+        okButtonProps={{
+          disabled: permissionRequestLoading || selectablePermissionOperations.length === 0,
+        }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
         onCancel={closePermissionRequest}
         onOk={() => permissionRequestForm.submit()}
@@ -484,13 +503,64 @@ export function KnowledgeNetworkListScene({ onOpenWorkspace }: KnowledgeNetworkL
         title={t("knowledgeNetwork.permissionRequestTitle")}
       >
         <Spin spinning={permissionRequestLoading}>
-          <Form form={permissionRequestForm} layout="vertical" onFinish={(values) => void submitPermissionRequest(values)}>
+          <Form
+            form={permissionRequestForm}
+            layout="vertical"
+            onFinish={(values) => void submitPermissionRequest(values)}
+          >
             <Form.Item label={t("knowledgeNetwork.permissionRequestNetwork")}>
-              <Input disabled value={permissionRequestRecord ? `${permissionRequestRecord.name} (${permissionRequestRecord.id})` : ""} />
+              <Input
+                disabled
+                value={
+                  permissionRequestRecord
+                    ? `${permissionRequestRecord.name} (${permissionRequestRecord.id})`
+                    : ""
+                }
+              />
             </Form.Item>
-            {communityBuild ? <Alert showIcon type="warning" message={t("knowledgeNetwork.permissionRequestCommunity")} /> : null}
-            {pendingPermissionOperations.length > 0 ? <Alert showIcon style={{ marginTop: 16 }} type="info" message={t("knowledgeNetwork.permissionRequestPending", { operations: pendingPermissionOperations.map((operation) => t(`knowledgeNetwork.permissionOperation.${operation}`)).join("、") })} /> : null}
-            {communityBuild ? <Form.Item label={t("knowledgeNetwork.permissionRequestOperations")} style={{ marginTop: 16 }}><Checkbox checked disabled>{t("knowledgeNetwork.permissionOperation.full_business_access")}</Checkbox></Form.Item> : <Form.Item label={t("knowledgeNetwork.permissionRequestOperations")} name="operations" rules={[{ required: true }]} style={{ marginTop: 16 }}><Checkbox.Group options={selectablePermissionOperations.map((operation) => ({ label: t(`knowledgeNetwork.permissionOperation.${operation}`), value: operation }))} /></Form.Item>}
+            {communityBuild ? (
+              <Alert
+                showIcon
+                type="warning"
+                message={t("knowledgeNetwork.permissionRequestCommunity")}
+              />
+            ) : null}
+            {pendingPermissionOperations.length > 0 ? (
+              <Alert
+                showIcon
+                style={{ marginTop: 16 }}
+                type="info"
+                message={t("knowledgeNetwork.permissionRequestPending", {
+                  operations: pendingPermissionOperations
+                    .map((operation) => t(`knowledgeNetwork.permissionOperation.${operation}`))
+                    .join("、"),
+                })}
+              />
+            ) : null}
+            {communityBuild ? (
+              <Form.Item
+                label={t("knowledgeNetwork.permissionRequestOperations")}
+                style={{ marginTop: 16 }}
+              >
+                <Checkbox checked disabled>
+                  {t("knowledgeNetwork.permissionOperation.full_business_access")}
+                </Checkbox>
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label={t("knowledgeNetwork.permissionRequestOperations")}
+                name="operations"
+                rules={[{ required: true }]}
+                style={{ marginTop: 16 }}
+              >
+                <Checkbox.Group
+                  options={selectablePermissionOperations.map((operation) => ({
+                    label: t(`knowledgeNetwork.permissionOperation.${operation}`),
+                    value: operation,
+                  }))}
+                />
+              </Form.Item>
+            )}
             <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
               <Input.TextArea maxLength={512} rows={3} />
             </Form.Item>

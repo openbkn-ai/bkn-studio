@@ -47,9 +47,11 @@ export const networkPart = {
   permissionRequestReasonRequired: "Please enter a reason.",
   permissionRequestSubmit: "Submit request",
   permissionRequestSuccess: "Permission request submitted.",
-  permissionRequestNoOperations: "You already have every requestable business permission on this knowledge network.",
+  permissionRequestNoOperations:
+    "You already have every requestable business permission on this knowledge network.",
   permissionRequestPending: "These permissions already have a pending request: {{operations}}",
-  permissionRequestCommunity: "In the Community edition, approval grants every business permission on this knowledge network, excluding authorization management.",
+  permissionRequestCommunity:
+    "In the Community edition, approval grants every business permission on this knowledge network, excluding authorization management.",
   permissionOperation: {
     view: "View",
     view_detail: "View details",

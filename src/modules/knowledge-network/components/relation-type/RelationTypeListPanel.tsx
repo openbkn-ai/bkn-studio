@@ -27,7 +27,10 @@ import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import modalStyles from "@/modules/knowledge-network/components/network/KnowledgeNetworkFormModal.module.css";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
-import { canRequestResourcePermission, ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import {
@@ -346,8 +349,24 @@ export function RelationTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canRequestResourcePermission("relation_type", record.operations, permissionRequestsEnabled)
-            ? [{ key: "request-permission", label: <ResourcePermissionRequestAction operations={record.operations} resourceType="relation_type" resourceID={`${networkId}/${record.id}`} resourceName={`${networkName} / ${record.name}`} /> }]
+          ...(canRequestResourcePermission(
+            "relation_type",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="relation_type"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [

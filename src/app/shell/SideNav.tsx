@@ -47,10 +47,12 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const isAccountRoute = location.pathname.startsWith("/account");
 
   const navigationItems = useMemo(
-    () => (isAccountRoute
-      ? accountSideNavigation.filter((item) =>
-        !isCommunityBuild(entitlement) || item.key !== "account-permission-requests")
-      : consoleNavigationItems),
+    () =>
+      isAccountRoute
+        ? accountSideNavigation.filter(
+            (item) => !isCommunityBuild(entitlement) || item.key !== "account-permission-requests",
+          )
+        : consoleNavigationItems,
     [consoleNavigationItems, entitlement, isAccountRoute],
   );
 

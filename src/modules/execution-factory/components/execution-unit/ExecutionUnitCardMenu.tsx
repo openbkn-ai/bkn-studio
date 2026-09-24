@@ -234,7 +234,10 @@ export function ExecutionUnitCardMenu({
   }
 
   const permissionType = permissionRequestResourceType(activeTab, item);
-  if (permissionType && canRequestResourcePermission(permissionType, item.operations, permissionRequestsEnabled)) {
+  if (
+    permissionType &&
+    canRequestResourcePermission(permissionType, item.operations, permissionRequestsEnabled)
+  ) {
     menuItems.push({
       key: "request-permission",
       label: (

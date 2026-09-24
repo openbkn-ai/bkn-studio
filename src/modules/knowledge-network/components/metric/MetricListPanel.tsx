@@ -29,7 +29,10 @@ import modalStyles from "@/modules/knowledge-network/components/network/Knowledg
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
-import { canRequestResourcePermission, ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import {
@@ -250,7 +253,19 @@ export function MetricListPanel({
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
           ...(canRequestResourcePermission("metric", record.operations, permissionRequestsEnabled)
-            ? [{ key: "request-permission", label: <ResourcePermissionRequestAction operations={record.operations} resourceType="metric" resourceID={`${networkId}/${record.id}`} resourceName={`${networkName} / ${record.name}`} /> }]
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="metric"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]

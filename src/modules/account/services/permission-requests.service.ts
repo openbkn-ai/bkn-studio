@@ -26,15 +26,37 @@ export type PermissionRequest = {
 
 export type PermissionRequestPage = { entries: PermissionRequest[]; total_count: number };
 
-export async function listPermissionRequests(kind: "mine" | "todo" | "reviewed", limit = 20, offset = 0) {
-  const response = await http.get<PermissionRequestPage>(`/safe/v1/me/permission-requests/${kind}`, { params: { limit, offset, sort: "created_at", direction: "desc" } });
+export async function listPermissionRequests(
+  kind: "mine" | "todo" | "reviewed",
+  limit = 20,
+  offset = 0,
+) {
+  const response = await http.get<PermissionRequestPage>(
+    `/safe/v1/me/permission-requests/${kind}`,
+    { params: { limit, offset, sort: "created_at", direction: "desc" } },
+  );
   return response.data;
 }
 
-export type PermissionRequestReview = { id: string; reviewer_id: string; reviewer_name?: string; decision: string; comment: string; created_at: string };
+export type PermissionRequestReview = {
+  id: string;
+  reviewer_id: string;
+  reviewer_name?: string;
+  decision: string;
+  comment: string;
+  created_at: string;
+};
 
-export async function decidePermissionRequest(id: string, decision: "approve" | "reject", comment = "") {
-  await http.post(`/safe/v1/me/permission-requests/${id}/decision`, { decision, comment }, { skipErrorToast: true });
+export async function decidePermissionRequest(
+  id: string,
+  decision: "approve" | "reject",
+  comment = "",
+) {
+  await http.post(
+    `/safe/v1/me/permission-requests/${id}/decision`,
+    { decision, comment },
+    { skipErrorToast: true },
+  );
 }
 
 export async function cancelPermissionRequest(id: string) {
@@ -47,7 +69,9 @@ export async function getPermissionRequest(id: string) {
 }
 
 export async function listPermissionRequestReviews(id: string) {
-  const response = await http.get<{ entries: PermissionRequestReview[] }>(`/safe/v1/me/permission-requests/${id}/reviews`);
+  const response = await http.get<{ entries: PermissionRequestReview[] }>(
+    `/safe/v1/me/permission-requests/${id}/reviews`,
+  );
   return response.data.entries;
 }
 

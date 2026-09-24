@@ -30,10 +30,18 @@
   position: relative;
 }
 
-.statusGranted { color: #36a865; }
-.statusRejected { color: #ff6b75; }
-.statusPending { color: #2f6ee5; }
-.statusDefault { color: #8c8c8c; }
+.statusGranted {
+  color: #36a865;
+}
+.statusRejected {
+  color: #ff6b75;
+}
+.statusPending {
+  color: #2f6ee5;
+}
+.statusDefault {
+  color: #8c8c8c;
+}
 
 .summary {
   display: grid;
@@ -112,10 +120,18 @@
   margin-top: 4px;
 }
 
-.started { color: #36a865; }
-.approved { color: #36a865; }
-.rejected { color: #ff4d4f; }
-.pending { color: #2f6ee5; }
+.started {
+  color: #36a865;
+}
+.approved {
+  color: #36a865;
+}
+.rejected {
+  color: #ff4d4f;
+}
+.pending {
+  color: #2f6ee5;
+}
 /**
  * Copyright (c) 2026 OpenBKN
  * SPDX-License-Identifier: LicenseRef-OpenBKN

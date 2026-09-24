@@ -532,7 +532,11 @@ export function ResourceWorkspaceScene({
                 <EditionBadge capability={CAPABILITIES.PERM_FINE_GRAINED} edition="professional" />
               </AppButton>
             ) : null}
-            {canRequestResourcePermission("resource", resource.operations, permissionRequestsEnabled) ? (
+            {canRequestResourcePermission(
+              "resource",
+              resource.operations,
+              permissionRequestsEnabled,
+            ) ? (
               <ResourcePermissionRequestAction
                 operations={resource.operations}
                 resourceID={resource.id}

@@ -71,7 +71,7 @@ export function KnowledgeNetworkCard({
               ? t("knowledgeNetwork.authorizeAction")
               : key === "request-permission"
                 ? t("knowledgeNetwork.requestPermission")
-              : t("common.delete"),
+                : t("common.delete"),
     // Export is the one entry that fans out: the same network leaves either as
     // the JSON view or as the BKN package, so the format is picked here rather
     // than in a dialog after the click.

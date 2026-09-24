@@ -26,7 +26,15 @@ const RESOURCE_PERMISSION_OPERATIONS: Record<string, readonly string[]> = {
   // A catalog is its own authorization root. Creating a catalog and changing
   // its ACL are deliberately excluded: neither can be requested for an
   // existing catalog instance.
-  catalog: ["view_detail", "modify", "delete", "task_manage", "resource_manage", "query_data", "data_write"],
+  catalog: [
+    "view_detail",
+    "modify",
+    "delete",
+    "task_manage",
+    "resource_manage",
+    "query_data",
+    "data_write",
+  ],
   // A data resource inherits the applicable catalog business operations via
   // the resource-parent mapping. It has no instance-level create, authorize,
   // or task_manage operation.
@@ -72,7 +80,9 @@ export function getMissingResourcePermissionOperations(
     return [];
   }
 
-  return (RESOURCE_PERMISSION_OPERATIONS[resourceType] ?? []).filter((operation) => !operations.includes(operation));
+  return (RESOURCE_PERMISSION_OPERATIONS[resourceType] ?? []).filter(
+    (operation) => !operations.includes(operation),
+  );
 }
 
 export function ResourcePermissionRequestAction({
@@ -93,7 +103,10 @@ export function ResourcePermissionRequestAction({
   const [pendingOperations, setPendingOperations] = useState<string[]>([]);
   const [form] = Form.useForm<RequestForm>();
   const selectableOperations = useMemo(
-    () => getMissingResourcePermissionOperations(resourceType, operations).filter((operation) => !pendingOperations.includes(operation)),
+    () =>
+      getMissingResourcePermissionOperations(resourceType, operations).filter(
+        (operation) => !pendingOperations.includes(operation),
+      ),
     [operations, pendingOperations, resourceType],
   );
 
@@ -110,12 +123,15 @@ export function ResourcePermissionRequestAction({
     try {
       const page = await listPermissionRequests("mine", 200, 0);
       const nextPendingOperations = page.entries
-        .filter((request) =>
-        request.status === "pending" &&
-        request.resource_type === resourceType &&
-        request.resource_id === resourceID,
+        .filter(
+          (request) =>
+            request.status === "pending" &&
+            request.resource_type === resourceType &&
+            request.resource_id === resourceID,
         )
-        .flatMap((request) => request.operations?.length ? request.operations : [request.operation]);
+        .flatMap((request) =>
+          request.operations?.length ? request.operations : [request.operation],
+        );
       setPendingOperations(nextPendingOperations);
       setPending(nextPendingOperations.length > 0);
     } catch (error) {
@@ -133,7 +149,7 @@ export function ResourcePermissionRequestAction({
         resourceType,
         resourceID,
         resourceName,
-        operations: communityBuild ? ["full_business_access"] : values.operations ?? [],
+        operations: communityBuild ? ["full_business_access"] : (values.operations ?? []),
         reason: values.reason?.trim() ?? "",
       });
       void message.success(t("knowledgeNetwork.permissionRequestSuccess"));
@@ -159,7 +175,12 @@ export function ResourcePermissionRequestAction({
       <Modal
         centered
         confirmLoading={submitting}
-        okButtonProps={{ disabled: loading || (communityBuild && pending) || (!communityBuild && selectableOperations.length === 0) }}
+        okButtonProps={{
+          disabled:
+            loading ||
+            (communityBuild && pending) ||
+            (!communityBuild && selectableOperations.length === 0),
+        }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
         onCancel={() => {
           if (!submitting) setOpen(false);
@@ -173,9 +194,49 @@ export function ResourcePermissionRequestAction({
             <Form.Item label={t("knowledgeNetwork.permissionRequestResource")}>
               <Input disabled value={`${resourceName} (${resourceID})`} />
             </Form.Item>
-            {communityBuild ? <Alert showIcon type="warning" message={t("knowledgeNetwork.permissionRequestCommunity")} /> : null}
-            {pending ? <Alert showIcon style={{ marginTop: 16 }} type="info" message={t("knowledgeNetwork.permissionRequestPending", { operations: pendingOperations.map((operation) => t(`knowledgeNetwork.permissionOperation.${operation}`)).join("、") })} /> : null}
-            {communityBuild ? <Form.Item label={t("knowledgeNetwork.permissionRequestOperations")} style={{ marginTop: 16 }}><Checkbox checked disabled>{t("knowledgeNetwork.permissionOperation.full_business_access")}</Checkbox></Form.Item> : <Form.Item label={t("knowledgeNetwork.permissionRequestOperations")} name="operations" rules={[{ required: true }]} style={{ marginTop: 16 }}><Checkbox.Group options={selectableOperations.map((operation) => ({ label: t(`knowledgeNetwork.permissionOperation.${operation}`), value: operation }))} /></Form.Item>}
+            {communityBuild ? (
+              <Alert
+                showIcon
+                type="warning"
+                message={t("knowledgeNetwork.permissionRequestCommunity")}
+              />
+            ) : null}
+            {pending ? (
+              <Alert
+                showIcon
+                style={{ marginTop: 16 }}
+                type="info"
+                message={t("knowledgeNetwork.permissionRequestPending", {
+                  operations: pendingOperations
+                    .map((operation) => t(`knowledgeNetwork.permissionOperation.${operation}`))
+                    .join("、"),
+                })}
+              />
+            ) : null}
+            {communityBuild ? (
+              <Form.Item
+                label={t("knowledgeNetwork.permissionRequestOperations")}
+                style={{ marginTop: 16 }}
+              >
+                <Checkbox checked disabled>
+                  {t("knowledgeNetwork.permissionOperation.full_business_access")}
+                </Checkbox>
+              </Form.Item>
+            ) : (
+              <Form.Item
+                label={t("knowledgeNetwork.permissionRequestOperations")}
+                name="operations"
+                rules={[{ required: true }]}
+                style={{ marginTop: 16 }}
+              >
+                <Checkbox.Group
+                  options={selectableOperations.map((operation) => ({
+                    label: t(`knowledgeNetwork.permissionOperation.${operation}`),
+                    value: operation,
+                  }))}
+                />
+              </Form.Item>
+            )}
             <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
               <Input.TextArea maxLength={512} rows={3} />
             </Form.Item>

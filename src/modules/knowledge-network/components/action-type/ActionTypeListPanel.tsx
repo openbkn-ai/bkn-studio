@@ -30,7 +30,10 @@ import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-ne
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ObjectTypeRemoteFilter } from "@/modules/knowledge-network/components/shared/ObjectTypeRemoteFilter";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
-import { canRequestResourcePermission, ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
@@ -265,8 +268,24 @@ export function ActionTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canRequestResourcePermission("action_type", record.operations, permissionRequestsEnabled)
-            ? [{ key: "request-permission", label: <ResourcePermissionRequestAction operations={record.operations} resourceType="action_type" resourceID={`${networkId}/${record.id}`} resourceName={`${networkName} / ${record.name}`} /> }]
+          ...(canRequestResourcePermission(
+            "action_type",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="action_type"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]

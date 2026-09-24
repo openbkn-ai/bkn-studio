@@ -31,7 +31,10 @@ import { JsonResourceImportButton } from "@/modules/knowledge-network/components
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { KnowledgeNetworkObjectAuthorizeDrawer } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkObjectAuthorizeDrawer";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
-import { canRequestResourcePermission, ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { usePersistentPageSize } from "@/modules/knowledge-network/components/shared/usePersistentPageSize";
 import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks/useKnowledgeNetworkCanModify";
 import { getKnowledgeNetworkConceptGroup } from "@/modules/knowledge-network/services/knowledge-network.service";
@@ -260,8 +263,24 @@ export function ConceptGroupListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canRequestResourcePermission("concept_group", record.operations, permissionRequestsEnabled)
-            ? [{ key: "request-permission", label: <ResourcePermissionRequestAction operations={record.operations} resourceType="concept_group" resourceID={`${networkId}/${record.id}`} resourceName={`${networkName} / ${record.name}`} /> }]
+          ...(canRequestResourcePermission(
+            "concept_group",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="concept_group"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "query_data")
             ? [{ key: "export", label: t("knowledgeNetwork.conceptGroupExport") }]

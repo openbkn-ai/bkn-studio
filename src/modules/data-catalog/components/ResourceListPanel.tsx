@@ -465,7 +465,9 @@ export function ResourceListPanel({
             label: t("dataCatalog.resourceWorkspace.tabSemanticUnderstanding"),
           });
         }
-        if (canRequestResourcePermission("resource", record.operations, permissionRequestsEnabled)) {
+        if (
+          canRequestResourcePermission("resource", record.operations, permissionRequestsEnabled)
+        ) {
           moreItems.push({
             key: "request-permission",
             label: (

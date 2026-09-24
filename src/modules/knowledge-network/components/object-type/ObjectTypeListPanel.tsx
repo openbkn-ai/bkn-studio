@@ -29,7 +29,10 @@ import { useKnowledgeNetworkCanOperate } from "@/modules/knowledge-network/hooks
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
-import { canRequestResourcePermission, ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import {
   readPositiveInteger,
   readStoredPageSize,
@@ -328,8 +331,24 @@ export function ObjectTypeListPanel({
       render: (_value, record) => {
         const menuItems: MenuProps["items"] = [
           { key: "view", label: t("common.detail") },
-          ...(canRequestResourcePermission("object_type", record.operations, permissionRequestsEnabled)
-            ? [{ key: "request-permission", label: <ResourcePermissionRequestAction operations={record.operations} resourceType="object_type" resourceID={`${networkId}/${record.id}`} resourceName={`${networkName} / ${record.name}`} /> }]
+          ...(canRequestResourcePermission(
+            "object_type",
+            record.operations,
+            permissionRequestsEnabled,
+          )
+            ? [
+                {
+                  key: "request-permission",
+                  label: (
+                    <ResourcePermissionRequestAction
+                      operations={record.operations}
+                      resourceType="object_type"
+                      resourceID={`${networkId}/${record.id}`}
+                      resourceName={`${networkName} / ${record.name}`}
+                    />
+                  ),
+                },
+              ]
             : []),
           ...(hasKnowledgeNetworkRecordOperation(record, "modify")
             ? [{ key: "edit", label: t("common.edit") }]

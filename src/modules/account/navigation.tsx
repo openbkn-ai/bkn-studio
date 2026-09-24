@@ -28,5 +28,10 @@ export const accountSideNavigation: ConsoleNavItem[] = [
     icon: <KeyOutlined />,
     path: "/account/api-keys",
   },
-  { key: "account-permission-requests", labelKey: "account.sections.permissionRequests.title", icon: <AuditOutlined />, path: "/account/permission-requests" },
+  {
+    key: "account-permission-requests",
+    labelKey: "account.sections.permissionRequests.title",
+    icon: <AuditOutlined />,
+    path: "/account/permission-requests",
+  },
 ];

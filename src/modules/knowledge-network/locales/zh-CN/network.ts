@@ -49,7 +49,8 @@ export const networkPart = {
   permissionRequestSuccess: "权限申请已提交。",
   permissionRequestNoOperations: "您已拥有该知识网络的全部可申请业务权限。",
   permissionRequestPending: "以下权限已有待审核申请：{{operations}}",
-  permissionRequestCommunity: "社区版审批通过后将授予该知识网络的全部业务权限，不包含授权管理权限。",
+  permissionRequestCommunity:
+    "社区版审批通过后将授予该知识网络的全部业务权限，不包含授权管理权限。",
   permissionOperation: {
     view: "查看",
     view_detail: "查看详情",
