@@ -6,6 +6,7 @@
  */
 
 import {
+  AuditOutlined,
   CheckOutlined,
   CloudServerOutlined,
   GlobalOutlined,
@@ -15,7 +16,7 @@ import {
   SunOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { Dropdown } from "antd";
+import { Badge, Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -28,10 +29,15 @@ import type { AppRouteHandle } from "@/app/shell/route-meta";
 import { logout } from "@/framework/auth/oauth";
 import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runtime-config";
 import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
+import { isCommunityBuild } from "@/framework/entitlement/types";
 import { APP_VERSION } from "@/framework/runtime/app-version";
 import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
+import {
+  getPermissionRequestTodoSummary,
+  onPermissionRequestTodoSummaryChanged,
+} from "@/modules/account/services/permission-requests.service";
 
 export function TopBar() {
   const { t } = useTranslation();
@@ -46,8 +52,41 @@ export function TopBar() {
   const { snapshot } = useEntitlementContext();
   const routeHandle = matches[matches.length - 1]?.handle as AppRouteHandle | undefined;
   const [networkName, setNetworkName] = useState<string | null>(null);
+  const [pendingPermissionRequestCount, setPendingPermissionRequestCount] = useState(0);
   const isKnowledgeNetworkRoute =
     routeHandle?.console?.menuKey?.startsWith("domain-knowledge-network") ?? false;
+  const permissionRequestsAvailable = !isCommunityBuild(entitlement);
+
+  useEffect(() => {
+    if (!permissionRequestsAvailable) {
+      setPendingPermissionRequestCount(0);
+      return;
+    }
+    let disposed = false;
+    let loading = false;
+    const refresh = () => {
+      if (document.visibilityState !== "visible" || loading) return;
+      loading = true;
+      void getPermissionRequestTodoSummary()
+        .then((summary) => {
+          if (!disposed) setPendingPermissionRequestCount(summary.pending_count);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          loading = false;
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60000);
+    document.addEventListener("visibilitychange", refresh);
+    const removeSummaryListener = onPermissionRequestTodoSummaryChanged(refresh);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      removeSummaryListener();
+    };
+  }, [permissionRequestsAvailable]);
 
   useEffect(() => {
     if (!isKnowledgeNetworkRoute || !networkId) {
@@ -268,6 +307,24 @@ export function TopBar() {
       </div>
 
       <div className="console-topbar-actions">
+        {permissionRequestsAvailable && pendingPermissionRequestCount > 0 ? (
+          <Badge count={pendingPermissionRequestCount} overflowCount={99} size="small">
+            <button
+              aria-label={t("shell.items.pendingPermissionRequests", {
+                count: pendingPermissionRequestCount,
+              })}
+              className="console-topbar-chip console-topbar-chip-accent"
+              onClick={() => void navigate("/account/permission-requests?tab=todo")}
+              title={t("shell.items.pendingPermissionRequests", {
+                count: pendingPermissionRequestCount,
+              })}
+              type="button"
+            >
+              <AuditOutlined aria-hidden />
+              <span>{t("shell.items.permissionReviews")}</span>
+            </button>
+          </Badge>
+        ) : null}
         <button
           aria-label={t(
             resolvedTheme === "dark" ? "shell.theme.switchToLight" : "shell.theme.switchToDark",

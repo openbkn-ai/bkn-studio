@@ -7,6 +7,25 @@
 
 import { http } from "@/framework/request/http";
 
+type PermissionRequestErrorResponse = {
+  error_code?: string;
+  error_details?: { reason?: string };
+};
+
+function permissionRequestConflictReason(error: unknown): string | undefined {
+  const data = (error as { response?: { data?: PermissionRequestErrorResponse } })?.response?.data;
+  if (data?.error_code !== "BknSafe.Conflict") return undefined;
+  return data.error_details?.reason;
+}
+
+export function isPermissionAlreadyGrantedError(error: unknown) {
+  return permissionRequestConflictReason(error) === "permission_already_granted";
+}
+
+export function isPermissionRequestResourceDeletedError(error: unknown) {
+  return permissionRequestConflictReason(error) === "resource_deleted";
+}
+
 export type PermissionRequest = {
   id: string;
   requester_id: string;
@@ -25,17 +44,58 @@ export type PermissionRequest = {
 };
 
 export type PermissionRequestPage = { entries: PermissionRequest[]; total_count: number };
+export type PermissionRequestTodoSummary = {
+  pending_count: number;
+};
+export type PermissionRequestFilters = {
+  requester?: string;
+  resourceID?: string;
+  resourceName?: string;
+  resourceType?: string;
+  status?: string;
+};
 
 export async function listPermissionRequests(
   kind: "mine" | "todo" | "reviewed",
   limit = 20,
   offset = 0,
+  filters: PermissionRequestFilters = {},
 ) {
   const response = await http.get<PermissionRequestPage>(
     `/safe/v1/me/permission-requests/${kind}`,
-    { params: { limit, offset, sort: "created_at", direction: "desc" } },
+    {
+      params: {
+        limit,
+        offset,
+        sort: "created_at",
+        direction: "desc",
+        resource_type: filters.resourceType || undefined,
+        resource_id: filters.resourceID || undefined,
+        status: filters.status || undefined,
+        resource_name: filters.resourceName || undefined,
+        requester: filters.requester || undefined,
+      },
+    },
   );
   return response.data;
+}
+
+export async function getPermissionRequestTodoSummary() {
+  const response = await http.get<PermissionRequestTodoSummary>(
+    "/safe/v1/me/permission-requests/todo/summary",
+  );
+  return response.data;
+}
+
+const permissionRequestTodoSummaryChangedEvent = "permission-request-todo-summary-changed";
+
+export function notifyPermissionRequestTodoSummaryChanged() {
+  window.dispatchEvent(new Event(permissionRequestTodoSummaryChangedEvent));
+}
+
+export function onPermissionRequestTodoSummaryChanged(listener: () => void) {
+  window.addEventListener(permissionRequestTodoSummaryChangedEvent, listener);
+  return () => window.removeEventListener(permissionRequestTodoSummaryChangedEvent, listener);
 }
 
 export type PermissionRequestReview = {
@@ -52,11 +112,12 @@ export async function decidePermissionRequest(
   decision: "approve" | "reject",
   comment = "",
 ) {
-  await http.post(
+  const response = await http.post<PermissionRequest>(
     `/safe/v1/me/permission-requests/${id}/decision`,
     { decision, comment },
     { skipErrorToast: true },
   );
+  return response.data;
 }
 
 export async function cancelPermissionRequest(id: string) {

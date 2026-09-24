@@ -68,6 +68,8 @@ export const shellZhCN = {
       logManagement: "审计日志",
       apiKeys: "API Key",
       account: "个人中心",
+      permissionReviews: "权限审核",
+      pendingPermissionRequests: "有 {{count}} 项待审核申请",
       installStatus: "后端服务状态",
     },
   },

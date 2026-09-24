@@ -47,6 +47,12 @@ export const networkPart = {
   permissionRequestReasonRequired: "Please enter a reason.",
   permissionRequestSubmit: "Submit request",
   permissionRequestSuccess: "Permission request submitted.",
+  permissionRequestViewMine: "View my requests",
+  permissionRequestAlreadyGranted:
+    "You already have the selected permission. The request window has been closed; refresh the page to update permission state.",
+  permissionRequestResourceDeleted:
+    "This resource has been deleted and can no longer accept permission requests.",
+  permissionRequestResourceID: "Resource ID: {{id}}",
   permissionRequestNoOperations:
     "You already have every requestable business permission on this knowledge network.",
   permissionRequestPending: "These permissions already have a pending request: {{operations}}",

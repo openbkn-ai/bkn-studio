@@ -69,6 +69,8 @@ export const shellEnUS = {
       logManagement: "Audit Logs",
       apiKeys: "API Key",
       account: "Account",
+      permissionReviews: "Permission reviews",
+      pendingPermissionRequests: "{{count}} permission request(s) awaiting review",
       installStatus: "Backend Service Status",
     },
   },

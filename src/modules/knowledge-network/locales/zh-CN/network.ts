@@ -47,6 +47,10 @@ export const networkPart = {
   permissionRequestReasonRequired: "请输入申请原因。",
   permissionRequestSubmit: "提交申请",
   permissionRequestSuccess: "权限申请已提交。",
+  permissionRequestViewMine: "查看我的申请",
+  permissionRequestAlreadyGranted: "所选权限已拥有，申请窗口已关闭。请刷新当前页面以更新权限状态。",
+  permissionRequestResourceDeleted: "该资源已删除，无法申请权限。",
+  permissionRequestResourceID: "资源 ID：{{id}}",
   permissionRequestNoOperations: "您已拥有该知识网络的全部可申请业务权限。",
   permissionRequestPending: "以下权限已有待审核申请：{{operations}}",
   permissionRequestCommunity:
