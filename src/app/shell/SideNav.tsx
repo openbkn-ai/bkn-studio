@@ -16,6 +16,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useMatches, useNavigate } from "react-router-dom";
 
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 
 import { consoleNavigation, findConsoleNavItemByPath } from "@/app/shell/console-navigation";
 import { shouldAlwaysShowEditionBadge } from "@/app/shell/navigation/edition-badge";
@@ -35,6 +37,7 @@ type SideNavProps = {
 
 export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const { t } = useTranslation();
+  const entitlement = useEntitlement();
   const consoleNavigationItems = useConsoleNavigation();
   const location = useLocation();
   const matches = useMatches();
@@ -44,8 +47,11 @@ export function SideNav({ collapsed, onToggleCollapsed }: SideNavProps) {
   const isAccountRoute = location.pathname.startsWith("/account");
 
   const navigationItems = useMemo(
-    () => (isAccountRoute ? accountSideNavigation : consoleNavigationItems),
-    [consoleNavigationItems, isAccountRoute],
+    () => (isAccountRoute
+      ? accountSideNavigation.filter((item) =>
+        !isCommunityBuild(entitlement) || item.key !== "account-permission-requests")
+      : consoleNavigationItems),
+    [consoleNavigationItems, entitlement, isAccountRoute],
   );
 
   const selectedItem = useMemo(

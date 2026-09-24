@@ -1,0 +1,118 @@
+.drawerTitle {
+  color: #1f1f1f;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.statusSeal {
+  align-items: center;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 600;
+  height: 64px;
+  justify-content: center;
+  position: relative;
+  width: 64px;
+}
+
+.statusSeal::before {
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: "";
+  inset: 5px;
+  opacity: 0.35;
+  position: absolute;
+}
+
+.statusSeal > span {
+  position: relative;
+}
+
+.statusGranted { color: #36a865; }
+.statusRejected { color: #ff6b75; }
+.statusPending { color: #2f6ee5; }
+.statusDefault { color: #8c8c8c; }
+
+.summary {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.summaryRow {
+  align-items: flex-start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.summaryLabel {
+  color: #8c8c8c;
+}
+
+.summaryValue {
+  color: #1f1f1f;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detailLink {
+  padding: 0;
+}
+
+.resourcePill,
+.operationPill {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  display: inline-flex;
+  line-height: 22px;
+  margin: 0 4px;
+  padding: 0 8px;
+  vertical-align: baseline;
+}
+
+.resourcePill {
+  background: #f5f8ff;
+  border-color: #d8e6ff;
+  color: #2468c9;
+  height: auto;
+}
+
+.operationPill {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.sectionTitle {
+  color: #1f1f1f;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.timelineName {
+  color: #1f1f1f;
+  font-weight: 500;
+}
+
+.timelineStatus {
+  margin-top: 4px;
+}
+
+.timelineTime {
+  color: #8c8c8c;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.timelineComment {
+  color: #595959;
+  margin-top: 4px;
+}
+
+.started { color: #36a865; }
+.approved { color: #36a865; }
+.rejected { color: #ff4d4f; }
+.pending { color: #2f6ee5; }

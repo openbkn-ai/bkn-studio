@@ -36,6 +36,8 @@ type KnowledgeNetworkCardProps = {
   onEdit: (record: KnowledgeNetworkRecord) => void;
   onExport: (record: KnowledgeNetworkRecord, format: KnowledgeNetworkExportFormat) => void;
   onOpen: (record: KnowledgeNetworkRecord) => void;
+  canRequestPermission?: boolean;
+  onRequestPermission?: (record: KnowledgeNetworkRecord) => void;
   record: KnowledgeNetworkRecord;
 };
 
@@ -45,12 +47,17 @@ export function KnowledgeNetworkCard({
   onEdit,
   onExport,
   onOpen,
+  canRequestPermission = true,
+  onRequestPermission = () => undefined,
   record,
 }: KnowledgeNetworkCardProps) {
   const { t } = useTranslation();
   const description = record.description || t("knowledgeNetwork.noDescription");
   const updateTime = formatKnowledgeNetworkUpdateTime(record.updateTime);
-  const dropdownItems: MenuProps["items"] = getKnowledgeNetworkCardMenuKeys(record).map((key) => ({
+  const dropdownItems: MenuProps["items"] = getKnowledgeNetworkCardMenuKeys(
+    record,
+    canRequestPermission,
+  ).map((key) => ({
     key,
     danger: key === "delete",
     label:
@@ -62,6 +69,8 @@ export function KnowledgeNetworkCard({
             ? t("knowledgeNetwork.export")
             : key === "authorize"
               ? t("knowledgeNetwork.authorizeAction")
+              : key === "request-permission"
+                ? t("knowledgeNetwork.requestPermission")
               : t("common.delete"),
     // Export is the one entry that fans out: the same network leaves either as
     // the JSON view or as the BKN package, so the format is picked here rather
@@ -127,6 +136,11 @@ export function KnowledgeNetworkCard({
 
               if (key === "authorize") {
                 onAuthorize(record);
+                return;
+              }
+
+              if (key === "request-permission") {
+                onRequestPermission(record);
                 return;
               }
 

@@ -264,6 +264,7 @@ export function KnowledgeNetworkWorkspaceScene({
         canModify={canModify}
         data={workspaceData}
         networkId={activeNetworkId}
+        networkName={detail?.name ?? activeNetworkId}
         section={section}
       />
     );

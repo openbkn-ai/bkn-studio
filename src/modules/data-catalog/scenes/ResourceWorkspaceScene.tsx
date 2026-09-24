@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -26,6 +28,10 @@ import { ResourceIndexPanel } from "@/modules/data-catalog/components/ResourceIn
 import { ResourcePreviewPanel } from "@/modules/data-catalog/components/ResourcePreviewPanel";
 import { ResourceSemanticUnderstandingPanel } from "@/modules/data-catalog/components/ResourceSemanticUnderstandingPanel";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
+import {
+  canRequestResourcePermission,
+  ResourcePermissionRequestAction,
+} from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { indexStateOf, resourceGateOf, sortTasks } from "@/modules/data-catalog/lib/index-state";
@@ -65,6 +71,7 @@ export function ResourceWorkspaceScene({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { message, modal, runtimeConfig } = useAppServices();
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   // Reading this table's rows is granted on the table itself; its management verbs live on the
   // owning catalog (openbkn-ai/bkn-foundry#986). Shown to whoever may issue grants at all.
   const canAuthorizeGrants = hasPermissions({
@@ -524,6 +531,15 @@ export function ResourceWorkspaceScene({
                 {t("dataCatalog.catalog.authorize")}
                 <EditionBadge capability={CAPABILITIES.PERM_FINE_GRAINED} edition="professional" />
               </AppButton>
+            ) : null}
+            {canRequestResourcePermission("resource", resource.operations, permissionRequestsEnabled) ? (
+              <ResourcePermissionRequestAction
+                operations={resource.operations}
+                resourceID={resource.id}
+                resourceName={resource.name}
+                resourceType="resource"
+                trigger="button"
+              />
             ) : null}
           </Space>
         </div>

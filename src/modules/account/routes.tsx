@@ -22,6 +22,11 @@ function withRouteLoading(element: ReactNode) {
 
 export const accountRoutes: RouteObject[] = [
   {
+	path: "account/permission-requests",
+	handle: { console: { descriptionKey: "account.description", menuKey: "account", titleKey: "account.title" } },
+	element: withRouteLoading(<AccountPage section="permission-requests" />),
+  },
+  {
     path: "account",
     element: <Navigate replace to="/account/profile" />,
   },
