@@ -514,7 +514,9 @@ export function DataConnectFormScene({
                   setHasUnsavedChanges(true);
                 }}
                 labelAlign="right"
-                labelCol={currentStep === 0 && mode === "create" ? undefined : { flex: "0 0 96px" }}
+                labelCol={
+                  currentStep === 0 && mode === "create" ? undefined : { flex: "0 0 128px" }
+                }
                 layout={currentStep === 0 && mode === "create" ? "vertical" : "horizontal"}
                 wrapperCol={currentStep === 0 && mode === "create" ? undefined : { flex: "1 1 0" }}
               >

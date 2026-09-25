@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DataConnectDetailDrawer } from "@/modules/data-connect/components/DataConnectDetailDrawer";
+import { humanizeConnectorFieldLabel } from "@/modules/data-connect/lib/connector-template";
 
 const { getRecordMock, getScheduleMock, messageErrorMock, updateScheduleMock } = vi.hoisted(() => ({
   getRecordMock: vi.fn(),
@@ -224,7 +225,8 @@ describe("DataConnectDetailDrawer", () => {
     );
 
     expect(await screen.findByText("db.example.com")).toBeTruthy();
-    expect(screen.getByText("dataConnect.sensitiveValueHidden")).toBeTruthy();
+    const maskedPassword = screen.getByText("••••••••");
+    expect(maskedPassword.hasAttribute("title")).toBe(false);
     const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
     expect(configSection).not.toBeNull();
     const values = [...configSection!.querySelectorAll('[class*="configItem"]')].map(
@@ -234,8 +236,40 @@ describe("DataConnectDetailDrawer", () => {
       expect.stringContaining("db.example.com"),
       expect.stringContaining("5432"),
       expect.stringContaining("readonly_user"),
-      expect.stringContaining("dataConnect.sensitiveValueHidden"),
+      expect.stringContaining("••••••••"),
     ]);
+  });
+
+  it("never echoes an encrypted password returned by the detail API", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { password: "actual-password" },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              password: { encrypted: true, required: true, type: "string" },
+            },
+            mode: "local",
+            name: "PostgreSQL",
+            type: "postgresql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    expect(await screen.findByText("••••••••")).toBeTruthy();
+    expect(screen.queryByText("actual-password")).toBeNull();
   });
 
   it("uses the connector template as the configuration schema", async () => {
@@ -274,6 +308,249 @@ describe("DataConnectDetailDrawer", () => {
     expect(configSection!.textContent).not.toContain("legacy_database");
   });
 
+  it("pairs Oracle service name with schemas and places options on the last full row", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType: "oracle",
+      connectorConfig: {
+        host: "oracle.example.com",
+        port: 1521,
+        username: "readonly_user",
+        password: "secret",
+        service_name: "ORCLPDB1",
+        schemas: ["OPENBKN_IT"],
+        options: { timeout: 30 },
+      },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              options: { encrypted: false, required: false, type: "object" },
+              schemas: { encrypted: false, required: false, type: "array" },
+              service_name: { encrypted: false, required: true, type: "string" },
+              password: { encrypted: true, required: true, type: "string" },
+              username: { encrypted: false, required: true, type: "string" },
+              port: { encrypted: false, required: true, type: "integer" },
+              host: { encrypted: false, required: true, type: "string" },
+            },
+            mode: "local",
+            name: "Oracle",
+            type: "oracle",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("ORCLPDB1");
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection).not.toBeNull();
+    const items = [...configSection!.querySelectorAll('[class*="configItem"]')];
+    expect(items.map((item) => item.querySelector('[class*="configLabel"]')?.textContent)).toEqual([
+      "主机地址",
+      "端口号",
+      "用户名",
+      "密码",
+      "服务名",
+      "Schema 列表",
+      "连接参数",
+    ]);
+    expect(items[6]?.className).toContain("configItemFull");
+    expect(items.slice(0, 6).every((item) => !item.className.includes("configItemFull"))).toBe(
+      true,
+    );
+    expect(items[5]?.querySelectorAll(".ant-tag")).toHaveLength(1);
+    expect(items[6]?.querySelectorAll(".ant-tag")).toHaveLength(1);
+    expect(items[5]?.textContent).toContain("OPENBKN_IT");
+    expect(items[6]?.textContent).toContain("timeout: 30");
+  });
+
+  it.each([
+    ["mariadb", ["host", "port", "username", "password", "databases", "options"]],
+    ["mysql", ["host", "port", "username", "password", "databases", "options"]],
+    ["postgresql", ["host", "port", "username", "password", "database", "schemas", "options"]],
+    ["sqlserver", ["host", "port", "username", "password", "database", "schemas", "options"]],
+    ["opensearch", ["host", "port", "username", "password", "index_pattern"]],
+    [
+      "anyshare",
+      [
+        "protocol",
+        "host",
+        "port",
+        "auth_type",
+        "token",
+        "app_id",
+        "app_secret",
+        "doc_lib_type",
+        "paths",
+      ],
+    ],
+  ])("orders %s detail fields by connector type", async (connectorType, fieldNames) => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType,
+      connectorConfig: Object.fromEntries(fieldNames.map((name) => [name, name])),
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: Object.fromEntries(
+              [...fieldNames]
+                .reverse()
+                .map((name) => [name, { encrypted: false, required: false, type: "string" }]),
+            ),
+            mode: "local",
+            name: connectorType,
+            type: connectorType,
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    const configSection = await screen.findByText("dataConnect.connectorConfig");
+    await waitFor(() => {
+      expect(
+        configSection.closest("section")?.querySelectorAll('[class*="configItem"]'),
+      ).toHaveLength(fieldNames.length);
+    });
+    const items = [...configSection.closest("section")!.querySelectorAll('[class*="configItem"]')];
+    expect(items.map((item) => item.querySelector('[class*="configLabel"]')?.textContent)).toEqual(
+      fieldNames.map((name) => humanizeConnectorFieldLabel(name, connectorType)),
+    );
+    if (fieldNames.includes("options")) {
+      expect(items.at(-1)?.className).toContain("configItemFull");
+    }
+  });
+
+  it("places options last and across both columns for an unknown connector type", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType: "custom",
+      connectorConfig: {
+        options: { timeout: 30 },
+        host: "custom.example.com",
+        custom_setting: "on",
+      },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: {
+              options: { encrypted: false, required: false, type: "object" },
+              host: { encrypted: false, required: true, type: "string" },
+              custom_setting: { encrypted: false, required: false, type: "string" },
+            },
+            mode: "local",
+            name: "Custom",
+            type: "custom",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("timeout: 30");
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    const items = [...configSection!.querySelectorAll('[class*="configItem"]')];
+    expect(items.at(-1)?.querySelector('[class*="configLabel"]')?.textContent).toBe("连接参数");
+    expect(items.at(-1)?.className).toContain("configItemFull");
+  });
+
+  it.each([
+    ["mysql", "databases"],
+    ["oracle", "schemas"],
+    ["anyshare", "paths"],
+  ])("shows an empty %s %s list as a dash", async (connectorType, fieldName) => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType,
+      connectorConfig: { [fieldName]: [] },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { [fieldName]: { encrypted: false, required: false, type: "array" } },
+            mode: "local",
+            name: connectorType,
+            type: connectorType,
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    const configSection = await screen.findByText("dataConnect.connectorConfig");
+    const item = configSection.closest("section")?.querySelector('[class*="configItem"]');
+    expect(item?.querySelector('[class*="configValue"]')?.textContent).toBe("-");
+    expect(item?.querySelector(".ant-tag")).toBeNull();
+  });
+
+  it("shows empty connection options as a dash", async () => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorConfig: { options: {} },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { options: { encrypted: false, required: false, type: "object" } },
+            mode: "local",
+            name: "PostgreSQL",
+            type: "postgresql",
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    const configSection = await screen.findByText("dataConnect.connectorConfig");
+    const item = configSection.closest("section")?.querySelector('[class*="configItem"]');
+    expect(item?.querySelector('[class*="configValue"]')?.textContent).toBe("-");
+    expect(item?.querySelector(".ant-tag")).toBeNull();
+  });
+
   it("renders database lists as tags", async () => {
     getRecordMock.mockResolvedValue({
       ...record,
@@ -309,6 +586,82 @@ describe("DataConnectDetailDrawer", () => {
     expect(configSection!.querySelectorAll(".ant-tag")).toHaveLength(2);
     expect(screen.getByText("reporting")).toBeTruthy();
   });
+
+  it.each([
+    ["postgresql", "schemas"],
+    ["sqlserver", "schemas"],
+    ["oracle", "schemas"],
+    ["anyshare", "paths"],
+  ])("renders %s %s lists as tags", async (connectorType, fieldName) => {
+    getRecordMock.mockResolvedValue({
+      ...record,
+      connectorType,
+      connectorConfig: { [fieldName]: ["first", "second"] },
+    });
+
+    render(
+      <DataConnectDetailDrawer
+        connectorTypes={[
+          {
+            available: true,
+            category: "table",
+            description: "",
+            enabled: true,
+            fieldConfig: { [fieldName]: { encrypted: false, required: false, type: "array" } },
+            mode: "local",
+            name: connectorType,
+            type: connectorType,
+          },
+        ]}
+        onClose={vi.fn()}
+        open
+        recordId="catalog-1"
+      />,
+    );
+
+    await screen.findByText("first");
+    const configSection = screen.getByText("dataConnect.connectorConfig").closest("section");
+    expect(configSection?.querySelectorAll(".ant-tag")).toHaveLength(2);
+    expect(screen.getByText("second")).toBeTruthy();
+  });
+
+  it.each(["postgresql", "sqlserver", "oracle"])(
+    "truncates long %s schema tags while preserving the full name",
+    async (connectorType) => {
+      const schemaName = "SCHEMA_WITH_A_NAME_THAT_IS_TOO_LONG_FOR_THE_DETAIL_CARD";
+      getRecordMock.mockResolvedValue({
+        ...record,
+        connectorType,
+        connectorConfig: { schemas: [schemaName] },
+      });
+
+      render(
+        <DataConnectDetailDrawer
+          connectorTypes={[
+            {
+              available: true,
+              category: "table",
+              description: "",
+              enabled: true,
+              fieldConfig: {
+                schemas: { encrypted: false, required: false, type: "array" },
+              },
+              mode: "local",
+              name: connectorType,
+              type: connectorType,
+            },
+          ]}
+          onClose={vi.fn()}
+          open
+          recordId="catalog-1"
+        />,
+      );
+
+      const schemaTag = await screen.findByText(schemaName);
+      expect(schemaTag.className).toContain("configSchemaTag");
+      expect(schemaTag.getAttribute("title")).toBe(schemaName);
+    },
+  );
 
   it("renders object configuration values as key-value tags", async () => {
     getRecordMock.mockResolvedValue({

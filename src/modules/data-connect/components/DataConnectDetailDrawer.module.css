@@ -108,6 +108,10 @@
   background: var(--color-interface-panel-bg);
 }
 
+.configItemFull {
+  grid-column: 1 / -1;
+}
+
 .configLabel {
   color: var(--color-text-tertiary);
   font-size: 12px;
@@ -127,6 +131,14 @@
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.configSchemaTag {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 @media (max-width: 768px) {

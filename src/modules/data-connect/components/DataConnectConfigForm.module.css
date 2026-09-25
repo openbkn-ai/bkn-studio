@@ -108,6 +108,11 @@
   row-gap: 0;
 }
 
+/* Match the content inset of bordered connector groups. */
+.section > .grid {
+  margin-inline: 13px;
+}
+
 .spanHalf {
   grid-column: span 1;
   min-width: 0;
@@ -134,8 +139,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 0 0 96px;
-  width: 96px;
+  flex: 0 0 128px;
+  width: 128px;
   min-height: 32px;
   color: var(--color-text-secondary);
   font-size: 13px;
@@ -317,8 +322,27 @@
     align-items: stretch;
   }
 
+  .section > .grid {
+    margin-inline: 0;
+  }
+
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
   .fieldLabel {
-    flex-basis: 80px;
-    width: 80px;
+    justify-content: flex-start;
+    flex: none;
+    width: auto;
+    min-height: 0;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .fieldStart .fieldLabel {
+    padding-top: 0;
   }
 }

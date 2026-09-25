@@ -128,6 +128,54 @@ describe("catalog.service · mock listCatalogs", () => {
     vi.unstubAllEnvs();
   });
 
+  it("provides SQL Server and Oracle mock connections with their connector-specific fields", async () => {
+    const { getCatalog, listCatalogs } = await import("@/shared/catalog/catalog.service");
+
+    for (const [connectorType, expectedConfig] of [
+      [
+        "sqlserver",
+        {
+          host: "sqlserver.internal.example",
+          port: 1433,
+          database: "inventory",
+          schemas: ["dbo", "reporting"],
+        },
+      ],
+      [
+        "oracle",
+        {
+          host: "oracle.internal.example",
+          port: 1521,
+          service_name: "ORCLPDB1",
+          schemas: ["APP", "REPORTING"],
+        },
+      ],
+    ] as const) {
+      const result = await listCatalogs({
+        connectorType,
+        keyword: "",
+        page: 1,
+        pageSize: 50,
+        type: "physical",
+      });
+
+      expect(result.items).toHaveLength(1);
+      const connection = result.items[0];
+      expect(connection).toMatchObject({
+        category: "table",
+        connectorType,
+        enabled: true,
+        type: "physical",
+      });
+      expect(connection.connectorConfig).toMatchObject(expectedConfig);
+      expect(connection.connectorConfig).not.toHaveProperty("password");
+      await expect(getCatalog(connection.id)).resolves.toMatchObject({
+        connectorConfig: expectedConfig,
+        connectorType,
+      });
+    }
+  });
+
   it("sorts by name and direction before slicing catalog pages", async () => {
     const { listCatalogs } = await import("@/shared/catalog/catalog.service");
 

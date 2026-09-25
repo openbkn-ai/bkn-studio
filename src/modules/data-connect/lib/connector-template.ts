@@ -107,6 +107,7 @@ const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
   knownConnectorType("mysql", "MySQL", "table"),
   knownConnectorType("postgresql", "PostgreSQL", "table"),
   knownConnectorType("sqlserver", "SQL Server", "table"),
+  knownConnectorType("oracle", "Oracle", "table"),
   knownConnectorType("opensearch", "OpenSearch", "index"),
 ];
 
@@ -139,6 +140,9 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   sqlserver: {
     port: 1433,
   },
+  oracle: {
+    port: 1521,
+  },
   opensearch: {
     port: 9200,
   },
@@ -149,6 +153,7 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   mysql: "For example: 3306",
   postgresql: "For example: 5432",
   sqlserver: "For example: 1433",
+  oracle: "For example: 1521",
   opensearch: "For example: 9200",
 };
 
@@ -256,6 +261,15 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     schemas: { group: "advanced", label: "Schema list" },
     options: { group: "advanced", label: "Connection options" },
   },
+  oracle: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    service_name: { label: "Service name" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
   opensearch: {
     host: { label: "Host" },
     port: { label: "Port" },
@@ -352,6 +366,7 @@ const GENERIC_FIELD_LABELS: Record<string, string> = {
   schema: "Schema",
   schema_list: "Schema list",
   schemas: "Schema list",
+  service_name: "Service name",
   secret: "Secret",
   secret_key: "Secret key",
   server: "Host",
@@ -385,6 +400,7 @@ const CONNECTION_KEYS = new Set([
   "project",
   "schema",
   "schema_list",
+  "service_name",
   "server",
   "table",
   "uri",
@@ -546,6 +562,7 @@ export function connectorFieldOrderRank(key: string) {
     databases: 4,
     schema: 4,
     schema_list: 4,
+    service_name: 4,
     table: 5,
     endpoint: 6,
     url: 6,
@@ -579,6 +596,7 @@ export function getConnectorFieldPlaceholder(
     schema_list: "For example: public, ods",
     schemas:
       "Leave empty to discover all accessible schemas; enter each name exactly as it appears in the database, including case",
+    service_name: "For example: ORCLPDB1",
     secret: "Enter secret",
     secret_key: "Enter secret",
     server: "For example: db.example.internal",
@@ -599,6 +617,20 @@ export function getConnectorFieldPlaceholder(
     return dataConnectText(
       "connectorTemplates.placeholders.sqlserverOptions",
       'For example: {"encrypt":true,"trustservercertificate":false}',
+    );
+  }
+
+  if (normalized === "options" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.oracleOptions",
+      'For example: {"timeout":30,"charset":"UTF8"}',
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.oracleSchemas",
+      "Leave empty to discover accessible schemas; enter a name and press Enter",
     );
   }
 
@@ -645,6 +677,13 @@ export function getConnectorFieldHint(fieldName: string, connectorType?: string)
     return dataConnectText(
       "connectorTemplates.hints.schemaIdentifierCase",
       "When specified, schema names must exactly match the database, including case",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "oracle") {
+    return dataConnectText(
+      "connectorTemplates.hints.oracleSchemaIdentifierCase",
+      "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
     );
   }
 
