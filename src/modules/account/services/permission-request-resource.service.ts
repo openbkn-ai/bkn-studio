@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { isRequestForbidden, isRequestNotFound } from "@/framework/request/error-message";
+import { isRequestForbidden } from "@/framework/request/error-message";
 import { http } from "@/framework/request/http";
 import { type SingleEntryResponse, unwrapSingleEntryResponse } from "@/framework/request/normalize";
 import type { PermissionRequest } from "@/modules/account/services/permission-requests.service";
@@ -51,9 +51,11 @@ export async function checkPermissionRequestResource(
 
   try {
     const response = await http.get<SingleEntryResponse<unknown>>(path, { skipErrorToast: true });
-    return unwrapSingleEntryResponse(response.data) ? "exists" : "not_found";
+    // A single-entry envelope can be empty when the gateway filters a resource
+    // the current user cannot read. Only the permission-request status is
+    // authoritative for reporting that the resource was deleted.
+    return unwrapSingleEntryResponse(response.data) ? "exists" : "unavailable";
   } catch (error) {
-    if (isRequestNotFound(error)) return "not_found";
     if (isRequestForbidden(error)) return "forbidden";
     return "unavailable";
   }

@@ -23,10 +23,10 @@ const request = {
 describe("checkPermissionRequestResource", () => {
   beforeEach(() => getMock.mockReset());
 
-  it("treats an empty single-entry envelope as a deleted resource", async () => {
+  it("does not mistake an empty single-entry envelope for a deleted resource", async () => {
     getMock.mockResolvedValue({ data: { entries: [] } });
 
-    await expect(checkPermissionRequestResource(request)).resolves.toBe("not_found");
+    await expect(checkPermissionRequestResource(request)).resolves.toBe("unavailable");
     expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/network-1", {
       skipErrorToast: true,
     });
