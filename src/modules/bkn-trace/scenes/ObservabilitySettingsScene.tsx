@@ -653,7 +653,9 @@ function CapturePolicySection({
               value={
                 operation
                   ? t(`bknTrace.settings.capturePolicy.phases.${operation.phase}`)
-                  : t("bknTrace.settings.capturePolicy.noActiveOperation")
+                  : operationUnavailable
+                    ? t("bknTrace.settings.capturePolicy.dataUnavailable")
+                    : t("bknTrace.settings.capturePolicy.noActiveOperation")
               }
             />
             <Metric

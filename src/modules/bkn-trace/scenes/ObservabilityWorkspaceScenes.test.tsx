@@ -40,6 +40,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.domainAuditActions.create": "创建",
       "bknTrace.logs.targetTypes.object_type": "对象类",
       "bknTrace.settings.status.healthy": "已接入",
+      "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
       "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
       "bknTrace.settings.capturePolicy.operationUnavailable":
         "当前没有可读取的活动操作；操作详情不在配置快照中。",
@@ -743,6 +744,27 @@ describe("observability workspace scenes", () => {
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-9"));
     expect(screen.getByText("bknTrace.settings.capturePolicy.phases.enabling")).not.toBeNull();
+  });
+
+  it("活动操作读取失败时将阶段标记为不可用而不是无活动操作", async () => {
+    vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
+      kind: "configuration_get",
+      desiredState: "enabled",
+      effectiveState: "disabling",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockRejectedValueOnce(new Error("operation unavailable"));
+
+    render(<ObservabilitySettingsScene />);
+
+    await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-10"));
+    expect(screen.getByText("不可用（当前合同未提供）")).not.toBeNull();
+    expect(screen.getByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).not.toBeNull();
+    expect(screen.queryByText("无活动操作")).toBeNull();
   });
 
   it("稳定配置没有活动操作时显示中性阶段并不显示操作不可用告警", async () => {

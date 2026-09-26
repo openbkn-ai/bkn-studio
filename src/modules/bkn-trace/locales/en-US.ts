@@ -1067,6 +1067,7 @@ export const bknTraceEnUS = {
         status: "Integration status",
       },
       capturePolicy: {
+        dataUnavailable: "Unavailable (not provided by the current contract)",
         desiredState: "Desired state",
         effectiveState: "Effective state",
         phase: "Operation phase",

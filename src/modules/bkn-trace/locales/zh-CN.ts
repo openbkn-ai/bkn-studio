@@ -1005,6 +1005,7 @@ export const bknTraceZhCN = {
         status: "接入状态",
       },
       capturePolicy: {
+        dataUnavailable: "不可用（当前合同未提供）",
         desiredState: "期望状态",
         effectiveState: "生效状态",
         phase: "操作阶段",
