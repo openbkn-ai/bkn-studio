@@ -653,7 +653,7 @@ function CapturePolicySection({
               value={
                 operation
                   ? t(`bknTrace.settings.capturePolicy.phases.${operation.phase}`)
-                  : t("bknTrace.settings.capturePolicy.dataUnavailable")
+                  : t("bknTrace.settings.capturePolicy.noActiveOperation")
               }
             />
             <Metric
@@ -663,14 +663,6 @@ function CapturePolicySection({
             <Metric
               label={t("bknTrace.settings.capturePolicy.lastStableRevision")}
               value={configuration.lastStableRevision}
-            />
-            <Metric
-              label={t("bknTrace.settings.capturePolicy.acknowledgements")}
-              value={t("bknTrace.settings.capturePolicy.dataUnavailable")}
-            />
-            <Metric
-              label={t("bknTrace.settings.capturePolicy.coverageGapState")}
-              value={t("bknTrace.settings.capturePolicy.dataUnavailable")}
             />
           </div>
           {operationUnavailable ? (

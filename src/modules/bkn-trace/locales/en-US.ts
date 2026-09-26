@@ -1067,13 +1067,6 @@ export const bknTraceEnUS = {
         status: "Integration status",
       },
       capturePolicy: {
-        acknowledgementCount_one: "{{count}} endpoint acknowledgement",
-        acknowledgementCount_other: "{{count}} endpoint acknowledgements",
-        acknowledgements: "Endpoint acknowledgements",
-        coverageGap:
-          "A coverage gap is recorded; rollback cannot restore discarded Trace or Evidence.",
-        coverageGapState: "Coverage gap",
-        dataUnavailable: "Unavailable (not provided by the current contract)",
         desiredState: "Desired state",
         effectiveState: "Effective state",
         phase: "Operation phase",
@@ -1089,6 +1082,7 @@ export const bknTraceEnUS = {
           unknown: "Unknown",
         },
         lastStableRevision: "Last stable revision",
+        noActiveOperation: "No active operation",
         operationUnavailable:
           "No active operation is readable; operation details are not part of the configuration snapshot.",
         revision: "Policy revision",

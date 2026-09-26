@@ -68,7 +68,7 @@ function normalizeCapturePolicyPhase(value?: string): CapturePolicyPhase {
     : "unknown";
 }
 export type CapturePolicyConfiguration = {
-  kind: string;
+  kind?: string;
   desiredState: CapturePolicyState;
   effectiveState: CapturePolicyState;
   policyRevision: number;
@@ -160,7 +160,7 @@ export async function getTraceEvidenceConfiguration(): Promise<CapturePolicyConf
   );
   const data = response.data;
   return {
-    kind: data.kind ?? "configuration_get",
+    kind: data.kind,
     desiredState: normalizeCapturePolicyState(data.desired_state),
     effectiveState: normalizeCapturePolicyState(data.effective_state),
     policyRevision: data.policy_revision ?? 0,

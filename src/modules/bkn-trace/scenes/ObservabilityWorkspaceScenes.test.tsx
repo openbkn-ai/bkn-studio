@@ -40,7 +40,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.domainAuditActions.create": "创建",
       "bknTrace.logs.targetTypes.object_type": "对象类",
       "bknTrace.settings.status.healthy": "已接入",
-      "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
+      "bknTrace.settings.capturePolicy.noActiveOperation": "无活动操作",
       "bknTrace.settings.capturePolicy.operationUnavailable":
         "当前没有可读取的活动操作；操作详情不在配置快照中。",
       "bknTrace.settings.sourceState.partial_management_audit_coverage":
@@ -720,7 +720,7 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
   });
 
-  it("按冻结合同分别读取配置快照和活动操作，并明确标记未提供的 ack/gap", async () => {
+  it("按冻结合同分别读取配置快照和活动操作", async () => {
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
       kind: "configuration_get",
       desiredState: "enabled",
@@ -742,15 +742,15 @@ describe("observability workspace scenes", () => {
 
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-9"));
-    expect(screen.getAllByText("不可用（当前合同未提供）")).toHaveLength(2);
     expect(screen.getByText("bknTrace.settings.capturePolicy.phases.enabling")).not.toBeNull();
   });
 
-  it("稳定配置没有活动操作时不显示操作不可用告警", async () => {
+  it("稳定配置没有活动操作时显示中性阶段并不显示操作不可用告警", async () => {
     render(<ObservabilitySettingsScene />);
 
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
     expect(getTraceEvidenceOperation).not.toHaveBeenCalled();
+    expect(screen.getByText("无活动操作")).not.toBeNull();
     expect(screen.queryByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).toBeNull();
   });
 
