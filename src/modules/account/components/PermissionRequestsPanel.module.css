@@ -70,27 +70,84 @@
   padding: 0;
 }
 
-.resourcePill,
-.operationPill {
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+.requestRow {
+  cursor: pointer;
+}
+
+.requestRow:hover > td {
+  background: var(--color-fill-secondary) !important;
+}
+
+.filters {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.filters :global(.ant-select) {
+  min-width: 132px;
+}
+
+.search {
+  margin-left: auto;
+  max-width: 280px;
+}
+
+.resourceCheckPending {
+  color: var(--color-text-tertiary);
+}
+
+.resourceCheckUnavailable {
+  color: var(--color-text-secondary);
+}
+
+.requestContent {
+  display: grid;
+  gap: 6px;
+}
+
+.requestContentRow {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+}
+
+.resourceIcon {
+  align-items: center;
+  background: var(--color-primary-600);
+  border-radius: 2px;
+  color: var(--color-text-inverse);
   display: inline-flex;
-  line-height: 22px;
-  margin: 0 4px;
-  padding: 0 8px;
-  vertical-align: baseline;
+  flex: 0 0 auto;
+  font-size: 16px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.requestContentLabel {
+  color: var(--color-text-tertiary);
+  flex: 0 0 auto;
+  line-height: 24px;
+}
+
+.operationList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .resourcePill {
   background: var(--color-primary-50);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
   border-color: var(--color-primary-border);
   color: var(--color-text-link);
+  display: inline-flex;
   height: auto;
-}
-
-.operationPill {
-  background: var(--color-fill-secondary);
-  color: var(--color-text-secondary);
+  line-height: 22px;
+  padding: 0 8px;
+  vertical-align: baseline;
 }
 
 .sectionTitle {
@@ -128,6 +185,9 @@
 }
 .rejected {
   color: var(--color-error-text);
+}
+.cancelled {
+  color: var(--color-text-tertiary);
 }
 .pending {
   color: var(--color-text-link);

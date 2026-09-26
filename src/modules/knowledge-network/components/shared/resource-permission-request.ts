@@ -8,6 +8,7 @@
 import { getRuntimeConfig } from "@/framework/runtime/config";
 
 const resourcePermissionOperations: Record<string, readonly string[]> = {
+  knowledge_network: ["view_detail", "modify", "delete", "execute", "query_data"],
   catalog: [
     "view_detail",
     "modify",
@@ -28,6 +29,39 @@ const resourcePermissionOperations: Record<string, readonly string[]> = {
   action_type: ["view_detail", "modify", "delete", "execute"],
   metric: ["view_detail", "modify", "delete", "query_data"],
 };
+
+export type RequestablePermissionOperation = {
+  key: string;
+  requires: readonly string[];
+};
+
+// Expands a selection only with prerequisites that are still missing. A
+// prerequisite absent from requestableOperations is already effective for the
+// user, so sending it again would make the whole request conflict at the
+// server's live-permission check.
+export function togglePermissionRequestOperation(
+  current: string[],
+  operationKey: string,
+  requestableOperations: readonly RequestablePermissionOperation[],
+) {
+  const operation = requestableOperations.find((candidate) => candidate.key === operationKey);
+  if (!operation) return current;
+
+  if (current.includes(operationKey)) {
+    const requiredBySelection = requestableOperations.some(
+      (candidate) => current.includes(candidate.key) && candidate.requires.includes(operationKey),
+    );
+    return requiredBySelection
+      ? current
+      : current.filter((candidateOperation) => candidateOperation !== operationKey);
+  }
+
+  const requestableKeys = new Set(requestableOperations.map((candidate) => candidate.key));
+  const missingRequirements = operation.requires.filter((requirement) =>
+    requestableKeys.has(requirement),
+  );
+  return [...new Set([...current, ...missingRequirements, operationKey])];
+}
 
 export function canRequestResourcePermission(
   resourceType: string,
