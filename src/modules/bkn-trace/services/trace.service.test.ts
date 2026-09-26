@@ -99,8 +99,6 @@ describe("BKN Trace access profile service", () => {
         expected_revision: 9,
       },
     });
-    const { getTraceEvidenceConfiguration } =
-      await import("@/modules/bkn-trace/services/trace.service");
     const { getTraceEvidenceOperation } =
       await import("@/modules/bkn-trace/services/trace.service");
 
@@ -111,7 +109,6 @@ describe("BKN Trace access profile service", () => {
       expectedRevision: 9,
     });
     expect(getMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-operations/op-9");
-    expect(getTraceEvidenceConfiguration).toBeTypeOf("function");
   });
 
   it("normalizes missing configuration states without fabricating queue or gap data", async () => {
