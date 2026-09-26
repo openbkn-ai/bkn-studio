@@ -1007,7 +1007,10 @@ export const bknTraceZhCN = {
       capturePolicy: {
         acknowledgementCount_one: "{{count}} 个端点确认",
         acknowledgementCount_other: "{{count}} 个端点确认",
+        acknowledgements: "端点确认",
         coverageGap: "系统记录了采集缺口；回滚不能恢复已丢弃的 Trace 或证据。",
+        coverageGapState: "采集缺口",
+        dataUnavailable: "不可用（当前合同未提供）",
         desiredState: "期望状态",
         effectiveState: "生效状态",
         phase: "操作阶段",
@@ -1022,6 +1025,8 @@ export const bknTraceZhCN = {
           rollback_failed: "回滚失败",
           unknown: "未知",
         },
+        lastStableRevision: "最近稳定版本",
+        operationUnavailable: "当前没有可读取的活动操作；操作详情不在配置快照中。",
         revision: "策略版本",
         states: {
           enabled: "已开启",

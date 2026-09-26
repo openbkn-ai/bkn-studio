@@ -20,7 +20,11 @@ import {
   listLogs,
   listLogSources,
 } from "@/modules/bkn-trace/services/observability.service";
-import { getAccessProfile } from "@/modules/bkn-trace/services/trace.service";
+import {
+  getAccessProfile,
+  getTraceEvidenceConfiguration,
+  getTraceEvidenceOperation,
+} from "@/modules/bkn-trace/services/trace.service";
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
 const translate = (key: string, options?: Record<string, unknown>) => {
@@ -36,6 +40,9 @@ const translate = (key: string, options?: Record<string, unknown>) => {
       "bknTrace.logs.domainAuditActions.create": "创建",
       "bknTrace.logs.targetTypes.object_type": "对象类",
       "bknTrace.settings.status.healthy": "已接入",
+      "bknTrace.settings.capturePolicy.dataUnavailable": "不可用（当前合同未提供）",
+      "bknTrace.settings.capturePolicy.operationUnavailable":
+        "当前没有可读取的活动操作；操作详情不在配置快照中。",
       "bknTrace.settings.sourceState.partial_management_audit_coverage":
         "已接入部分管理操作；其余操作尚未纳入审计。",
     }[key] ?? key;
@@ -54,7 +61,12 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => {
   const original =
     await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
-  return { ...original, getAccessProfile: vi.fn() };
+  return {
+    ...original,
+    getAccessProfile: vi.fn(),
+    getTraceEvidenceConfiguration: vi.fn(),
+    getTraceEvidenceOperation: vi.fn(),
+  };
 });
 
 vi.mock("@/modules/bkn-trace/services/observability.service", async (importOriginal) => {
@@ -132,6 +144,16 @@ describe("observability workspace scenes", () => {
     vi.mocked(listArchiveJobs).mockResolvedValue([]);
     window.history.replaceState({}, "", "/observability/logs");
     vi.mocked(getAccessProfile).mockResolvedValue(profile);
+    vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
+      kind: "configuration_get",
+      desiredState: "enabled",
+      effectiveState: "enabled",
+      policyRevision: 9,
+      lastStableRevision: 8,
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockReset();
     vi.mocked(listLogs).mockResolvedValue({
       count: { accuracy: "partial", value: 1 },
       data: [
@@ -696,6 +718,32 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.status.not_integrated")).not.toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
     expect(screen.getByText("bknTrace.settings.readOnlyNotice")).not.toBeNull();
+  });
+
+  it("按冻结合同分别读取配置快照和活动操作，并明确标记未提供的 ack/gap", async () => {
+    vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
+      kind: "configuration_get",
+      desiredState: "enabled",
+      effectiveState: "disabled",
+      policyRevision: 9,
+      lastStableRevision: 8,
+      activeOperationId: "op-9",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockResolvedValue({
+      id: "op-9",
+      phase: "enabling",
+      requestedState: "enabled",
+      expectedRevision: 9,
+    });
+
+    render(<ObservabilitySettingsScene />);
+
+    await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getTraceEvidenceOperation).toHaveBeenCalledWith("op-9"));
+    expect(screen.getAllByText("不可用（当前合同未提供）")).toHaveLength(2);
+    expect(screen.getByText("bknTrace.settings.capturePolicy.phases.enabling")).not.toBeNull();
   });
 
   it("非超级管理员访问设置页时拒绝访问且不请求数据", () => {

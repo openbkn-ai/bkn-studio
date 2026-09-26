@@ -67,31 +67,23 @@ function normalizeCapturePolicyPhase(value?: string): CapturePolicyPhase {
     ? (value as CapturePolicyPhase)
     : "unknown";
 }
-export type CapturePolicy = {
-  revision: number;
+export type CapturePolicyConfiguration = {
+  kind: string;
   desiredState: CapturePolicyState;
   effectiveState: CapturePolicyState;
+  policyRevision: number;
   lastStableRevision: number;
-  coverageGap: boolean;
-  operation: {
-    id: string;
-    phase: CapturePolicyPhase;
-    requestedState: CapturePolicyState;
-    expectedRevision: number;
-    errorCode?: string;
-  };
-  acknowledgements: Array<{
-    instanceId: string;
-    generation: string;
-    ready: boolean;
-    state: string;
-    queueDisposition: {
-      exported: number;
-      dropped: number;
-      unaccounted: number | null;
-    };
-    revision: number;
-  }>;
+  activeOperationId?: string;
+  heartbeatIntervalSeconds: number;
+  leaseTtlSeconds: number;
+};
+
+export type CapturePolicyOperation = {
+  id: string;
+  phase: CapturePolicyPhase;
+  requestedState: CapturePolicyState;
+  expectedRevision: number;
+  errorCode?: string;
 };
 
 type BackendTraceAccessProfile = {
@@ -110,31 +102,35 @@ type BackendTraceAccessProfile = {
   trace_evidence_configuration_read?: boolean;
 };
 
+type BackendCapturePolicyOperation = {
+  id?: string;
+  phase?: CapturePolicyPhase;
+  requested_state?: CapturePolicyState;
+  expected_revision?: number;
+  error_code?: string;
+};
+
+function normalizeCapturePolicyOperation(
+  data: BackendCapturePolicyOperation,
+): CapturePolicyOperation {
+  return {
+    id: data.id ?? "",
+    phase: normalizeCapturePolicyPhase(data.phase),
+    requestedState: normalizeCapturePolicyState(data.requested_state),
+    expectedRevision: data.expected_revision ?? 0,
+    errorCode: data.error_code,
+  };
+}
+
 type BackendCapturePolicy = {
-  revision?: number;
+  kind?: string;
   desired_state?: CapturePolicyState;
   effective_state?: CapturePolicyState;
+  policy_revision?: number;
   last_stable_revision?: number;
-  coverage_gap?: boolean;
-  operation?: {
-    id?: string;
-    phase?: CapturePolicyPhase;
-    requested_state?: CapturePolicyState;
-    expected_revision?: number;
-    error_code?: string;
-  };
-  acknowledgements?: Array<{
-    instance_id?: string;
-    generation?: string;
-    ready?: boolean;
-    state?: string;
-    queue_disposition?: {
-      exported?: number;
-      dropped?: number;
-      unaccounted?: number | null;
-    };
-    revision?: number;
-  }>;
+  active_operation_id?: string;
+  heartbeat_interval_seconds?: number;
+  lease_ttl_seconds?: number;
 };
 
 export async function getAccessProfile(): Promise<TraceAccessProfile> {
@@ -158,35 +154,28 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
   };
 }
 
-export async function getTraceEvidenceConfiguration(): Promise<CapturePolicy> {
+export async function getTraceEvidenceConfiguration(): Promise<CapturePolicyConfiguration> {
   const response = await http.get<BackendCapturePolicy>(
     `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
   );
   const data = response.data;
   return {
-    revision: data.revision ?? 0,
+    kind: data.kind ?? "configuration_get",
     desiredState: normalizeCapturePolicyState(data.desired_state),
     effectiveState: normalizeCapturePolicyState(data.effective_state),
+    policyRevision: data.policy_revision ?? 0,
     lastStableRevision: data.last_stable_revision ?? 0,
-    coverageGap: Boolean(data.coverage_gap),
-    operation: {
-      id: data.operation?.id ?? "",
-      phase: normalizeCapturePolicyPhase(data.operation?.phase),
-      requestedState: normalizeCapturePolicyState(data.operation?.requested_state),
-      expectedRevision: data.operation?.expected_revision ?? 0,
-      errorCode: data.operation?.error_code,
-    },
-    acknowledgements: (data.acknowledgements ?? []).map((ack) => ({
-      instanceId: ack.instance_id ?? "",
-      generation: ack.generation ?? "",
-      ready: Boolean(ack.ready),
-      state: ack.state ?? "gap",
-      queueDisposition: {
-        exported: ack.queue_disposition?.exported ?? 0,
-        dropped: ack.queue_disposition?.dropped ?? 0,
-        unaccounted: ack.queue_disposition?.unaccounted ?? null,
-      },
-      revision: ack.revision ?? 0,
-    })),
+    activeOperationId: data.active_operation_id,
+    heartbeatIntervalSeconds: data.heartbeat_interval_seconds ?? 0,
+    leaseTtlSeconds: data.lease_ttl_seconds ?? 0,
   };
+}
+
+export async function getTraceEvidenceOperation(
+  operationId: string,
+): Promise<CapturePolicyOperation> {
+  const response = await http.get<BackendCapturePolicyOperation>(
+    `${OBSERVABILITY_API_PREFIX}/trace-evidence-operations/${encodeURIComponent(operationId)}`,
+  );
+  return normalizeCapturePolicyOperation(response.data);
 }
