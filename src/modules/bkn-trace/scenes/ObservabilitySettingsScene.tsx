@@ -32,7 +32,9 @@ import {
 import {
   getAccessProfile,
   getTraceEvidenceConfiguration,
-  type CapturePolicy,
+  getTraceEvidenceOperation,
+  type CapturePolicyConfiguration,
+  type CapturePolicyOperation,
 } from "@/modules/bkn-trace/services/trace.service";
 
 type StorageRow = {
@@ -60,8 +62,10 @@ export function ObservabilitySettingsScene() {
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
   const [archiveJobs, setArchiveJobs] = useState<ArchiveJob[]>([]);
   const [archiveManage, setArchiveManage] = useState(false);
-  const [capturePolicy, setCapturePolicy] = useState<CapturePolicy>();
+  const [capturePolicy, setCapturePolicy] = useState<CapturePolicyConfiguration>();
+  const [capturePolicyOperation, setCapturePolicyOperation] = useState<CapturePolicyOperation>();
   const [capturePolicyUnavailable, setCapturePolicyUnavailable] = useState(false);
+  const [capturePolicyOperationUnavailable, setCapturePolicyOperationUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
@@ -112,7 +116,7 @@ export function ObservabilitySettingsScene() {
             : Promise.resolve<ArchiveJob[]>([]),
           profile.traceEvidenceConfigurationRead
             ? getTraceEvidenceConfiguration()
-            : Promise.resolve<CapturePolicy | undefined>(undefined),
+            : Promise.resolve<CapturePolicyConfiguration | undefined>(undefined),
         ]);
         if (!active) return;
         if (sourceResult.status === "fulfilled") {
@@ -133,8 +137,27 @@ export function ObservabilitySettingsScene() {
         if (capturePolicyResult.status === "fulfilled" && capturePolicyResult.value) {
           setCapturePolicy(capturePolicyResult.value);
           setCapturePolicyUnavailable(false);
+          if (capturePolicyResult.value.activeOperationId) {
+            const operationResult = await Promise.allSettled([
+              getTraceEvidenceOperation(capturePolicyResult.value.activeOperationId),
+            ]);
+            if (!active) return;
+            if (operationResult[0]?.status === "fulfilled") {
+              setCapturePolicyOperation(operationResult[0].value);
+              setCapturePolicyOperationUnavailable(false);
+            } else {
+              setCapturePolicyOperation(undefined);
+              setCapturePolicyOperationUnavailable(true);
+            }
+          } else {
+            setCapturePolicyOperation(undefined);
+            setCapturePolicyOperationUnavailable(false);
+          }
         } else if (profile.traceEvidenceConfigurationRead) {
+          setCapturePolicy(undefined);
+          setCapturePolicyOperation(undefined);
           setCapturePolicyUnavailable(true);
+          setCapturePolicyOperationUnavailable(false);
         }
         if (sourceResult.status === "rejected" || policyResult.status === "rejected")
           setError(t("bknTrace.errors.queryFailed"));
@@ -320,7 +343,12 @@ export function ObservabilitySettingsScene() {
       {error ? <Alert message={error} showIcon type="error" /> : null}
 
       {capturePolicy || capturePolicyUnavailable ? (
-        <CapturePolicySection policy={capturePolicy} unavailable={capturePolicyUnavailable} />
+        <CapturePolicySection
+          configuration={capturePolicy}
+          operation={capturePolicyOperation}
+          operationUnavailable={capturePolicyOperationUnavailable}
+          unavailable={capturePolicyUnavailable}
+        />
       ) : null}
 
       <SettingsSection title={t("bknTrace.settings.overview")}>
@@ -594,46 +622,58 @@ function SettingsSection({ children, title }: { children: ReactNode; title: stri
 }
 
 function CapturePolicySection({
-  policy,
+  configuration,
+  operation,
+  operationUnavailable,
   unavailable,
 }: {
-  policy?: CapturePolicy;
+  configuration?: CapturePolicyConfiguration;
+  operation?: CapturePolicyOperation;
+  operationUnavailable: boolean;
   unavailable: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <SettingsSection title={t("bknTrace.settings.capturePolicy.title")}>
-      {unavailable || !policy ? (
+      {unavailable || !configuration ? (
         <Alert message={t("bknTrace.settings.capturePolicy.unavailable")} showIcon type="warning" />
       ) : (
         <>
           <div className={styles.metricGrid}>
             <Metric
               label={t("bknTrace.settings.capturePolicy.desiredState")}
-              value={t(`bknTrace.settings.capturePolicy.states.${policy.desiredState}`)}
+              value={t(`bknTrace.settings.capturePolicy.states.${configuration.desiredState}`)}
             />
             <Metric
               label={t("bknTrace.settings.capturePolicy.effectiveState")}
-              value={t(`bknTrace.settings.capturePolicy.states.${policy.effectiveState}`)}
+              value={t(`bknTrace.settings.capturePolicy.states.${configuration.effectiveState}`)}
             />
             <Metric
               label={t("bknTrace.settings.capturePolicy.phase")}
-              value={t(`bknTrace.settings.capturePolicy.phases.${policy.operation.phase}`)}
+              value={
+                operation
+                  ? t(`bknTrace.settings.capturePolicy.phases.${operation.phase}`)
+                  : operationUnavailable
+                    ? t("bknTrace.settings.capturePolicy.dataUnavailable")
+                    : t("bknTrace.settings.capturePolicy.noActiveOperation")
+              }
             />
-            <Metric label={t("bknTrace.settings.capturePolicy.revision")} value={policy.revision} />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.revision")}
+              value={configuration.policyRevision}
+            />
+            <Metric
+              label={t("bknTrace.settings.capturePolicy.lastStableRevision")}
+              value={configuration.lastStableRevision}
+            />
           </div>
-          {policy.coverageGap ? (
+          {operationUnavailable ? (
             <Alert
-              message={t("bknTrace.settings.capturePolicy.coverageGap")}
+              message={t("bknTrace.settings.capturePolicy.operationUnavailable")}
               showIcon
-              type="warning"
+              type="info"
             />
           ) : null}
-          <Typography.Paragraph type="secondary">
-            {t("bknTrace.settings.capturePolicy.acknowledgementCount", {
-              count: policy.acknowledgements.length,
-            })}
-          </Typography.Paragraph>
         </>
       )}
     </SettingsSection>
