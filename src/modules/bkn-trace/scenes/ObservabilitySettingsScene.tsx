@@ -151,7 +151,7 @@ export function ObservabilitySettingsScene() {
             }
           } else {
             setCapturePolicyOperation(undefined);
-            setCapturePolicyOperationUnavailable(true);
+            setCapturePolicyOperationUnavailable(false);
           }
         } else if (profile.traceEvidenceConfigurationRead) {
           setCapturePolicy(undefined);

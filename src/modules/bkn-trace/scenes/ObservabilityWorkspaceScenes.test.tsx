@@ -746,6 +746,14 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.capturePolicy.phases.enabling")).not.toBeNull();
   });
 
+  it("稳定配置没有活动操作时不显示操作不可用告警", async () => {
+    render(<ObservabilitySettingsScene />);
+
+    await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(1));
+    expect(getTraceEvidenceOperation).not.toHaveBeenCalled();
+    expect(screen.queryByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).toBeNull();
+  });
+
   it("非超级管理员访问设置页时拒绝访问且不请求数据", () => {
     mockCurrentUser.isSuperAdmin = false;
 
