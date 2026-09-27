@@ -31,7 +31,10 @@ import { useRuntimeConfig, useUpdateLocale } from "@/framework/context/use-runti
 import { useEntitlement, useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { APP_VERSION } from "@/framework/runtime/app-version";
-import { getInstallStatusUrl } from "@/framework/runtime/install-status-url";
+import {
+  buildInstallStatusRedirectUrl,
+  getInstallStatusUrl,
+} from "@/framework/runtime/install-status-url";
 import type { SupportedLocale } from "@/framework/runtime/types";
 import { getKnowledgeNetwork } from "@/modules/knowledge-network/services/knowledge-network.service";
 import {
@@ -196,7 +199,14 @@ export function TopBar() {
         key: "install-status",
         label: t("shell.items.installStatus"),
         onClick: () => {
-          window.open(installStatusUrl, "_blank", "noopener,noreferrer");
+          const redirectUrl = buildInstallStatusRedirectUrl(
+            installStatusUrl,
+            runtimeConfig.auth.tokenManager.getAccessToken(),
+            runtimeConfig.locale,
+          );
+          if (redirectUrl) {
+            window.open(redirectUrl, "_blank", "noopener,noreferrer");
+          }
         },
       });
     }
@@ -251,6 +261,7 @@ export function TopBar() {
     entitlement.edition,
     installStatusUrl,
     navigate,
+    runtimeConfig.auth.tokenManager,
     runtimeConfig.locale,
     runtimeConfig.mode,
     snapshot,
