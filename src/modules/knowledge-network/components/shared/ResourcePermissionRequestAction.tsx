@@ -14,8 +14,28 @@ import {
   LockOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Form, Input, Modal, Space, Spin, Tag, Tooltip, Typography } from "antd";
-import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  Modal,
+  Space,
+  Spin,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -27,12 +47,16 @@ import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import {
   createPermissionRequest,
+  getPermissionRequestProposalPreview,
   isPermissionAlreadyGrantedError,
   isPermissionRequestResourceDeletedError,
   listPermissionRequests,
 } from "@/modules/account/services/permission-requests.service";
+import { getKnowledgeNetworkObjectTypeDetail } from "@/modules/knowledge-network/services/object-type.service";
+import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/property-authorization";
 import {
   getMissingResourcePermissionOperations,
+  hasRequestableObjectTypePermission,
   togglePermissionRequestOperation,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
@@ -41,6 +65,26 @@ import { useAuthorizationRegistry } from "@/modules/system-admin/hooks/use-autho
 import authorizationStyles from "@/modules/system-admin/scenes/admin.module.css";
 
 type RequestForm = { operations?: string[]; reason?: string };
+type ProposalKind = "grant" | "row_filter" | "property_grants";
+type ProposalPreview = {
+  row_filter?: {
+    available_fields?: Array<{
+      display_name?: string;
+      name: string;
+      type: string;
+    }>;
+    policy?: {
+      conditions: Array<{
+        operator: string;
+        property_name: string;
+        values: Array<string | number | boolean>;
+      }>;
+      relation: "and" | "or";
+    } | null;
+    revision?: string | null;
+  };
+  property_grants?: { entries?: Array<{ level: string; property_name: string }> };
+};
 
 type ResourcePermissionRequestActionProps = {
   operations?: string[];
@@ -82,9 +126,25 @@ export function ResourcePermissionRequestAction({
   const [submitting, setSubmitting] = useState(false);
   const [pending, setPending] = useState(false);
   const [pendingOperations, setPendingOperations] = useState<string[]>([]);
+  const [pendingProposalKinds, setPendingProposalKinds] = useState<string[]>([]);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [proposalKind, setProposalKind] = useState<ProposalKind>("grant");
+  const [proposalPreview, setProposalPreview] = useState<ProposalPreview>();
+  const [proposalPreviewResolved, setProposalPreviewResolved] = useState(false);
+  const [selectedPropertyNames, setSelectedPropertyNames] = useState<string[]>([]);
+  const [objectProperties, setObjectProperties] = useState<
+    Array<{ displayName?: string; name: string }>
+  >([]);
   const [form] = Form.useForm<RequestForm>();
   const requestOpen = open ?? internalOpen;
+  const hasRowFilter = Boolean(proposalPreview?.row_filter?.policy?.conditions.length);
+  const restrictedProperties = useMemo(
+    () =>
+      (proposalPreview?.property_grants?.entries ?? []).filter(
+        (entry) => entry.level !== "full" && entry.level !== "inherit",
+      ),
+    [proposalPreview],
+  );
   const selectableOperationKeys = useMemo(
     () =>
       getMissingResourcePermissionOperations(resourceType, operations).filter(
@@ -133,10 +193,13 @@ export function ResourcePermissionRequestAction({
       return next;
     });
   };
-  const setRequestOpen = (nextOpen: boolean) => {
-    if (open === undefined) setInternalOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
+  const setRequestOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (open === undefined) setInternalOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [onOpenChange, open],
+  );
 
   const openRequest = (event: MouseEvent | KeyboardEvent) => {
     event.preventDefault();
@@ -151,7 +214,13 @@ export function ResourcePermissionRequestAction({
     form.resetFields();
     setPending(false);
     setPendingOperations([]);
+    setPendingProposalKinds([]);
     setSelectedOperations([]);
+    setProposalKind("grant");
+    setProposalPreview(undefined);
+    setProposalPreviewResolved(resourceType !== "object_type");
+    setSelectedPropertyNames([]);
+    setObjectProperties([]);
     void listPermissionRequests("mine", 20, 0, {
       resourceID,
       resourceType,
@@ -170,6 +239,16 @@ export function ResourcePermissionRequestAction({
             request.operations?.length ? request.operations : [request.operation],
           );
         setPendingOperations(nextPendingOperations);
+        setPendingProposalKinds(
+          page.entries
+            .filter(
+              (request) =>
+                request.status === "pending" &&
+                request.proposal_kind &&
+                request.proposal_kind !== "grant",
+            )
+            .map((request) => request.proposal_kind as string),
+        );
         setPending(nextPendingOperations.length > 0);
       })
       .catch((error) => {
@@ -184,14 +263,100 @@ export function ResourcePermissionRequestAction({
     };
   }, [form, message, requestOpen, resourceID, resourceType]);
 
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type") return;
+    let active = true;
+    void getPermissionRequestProposalPreview(resourceID)
+      .then((preview) => {
+        if (!active) return;
+        setProposalPreview(preview as ProposalPreview);
+      })
+      .catch(() => {
+        if (active) {
+          // The policy extension is optional. Base operation requests remain available.
+          setProposalPreview({});
+        }
+      })
+      .finally(() => {
+        if (active) setProposalPreviewResolved(true);
+      });
+    const [networkId, objectTypeId] = resourceID.split("/", 2);
+    if (networkId && objectTypeId) {
+      void getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId)
+        .then((detail) => {
+          if (active)
+            setObjectProperties(
+              (detail?.dataProperties ?? []).map((property) => ({
+                name: property.name,
+                displayName: property.displayName,
+              })),
+            );
+        })
+        .catch(() => undefined);
+    }
+    return () => {
+      active = false;
+    };
+  }, [requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved || loading)
+      return;
+    const hasPendingRequest = pendingOperations.length > 0 || pendingProposalKinds.length > 0;
+    const hasRequestableContent = hasRequestableObjectTypePermission({
+      hasPendingRequest,
+      hasRowFilter,
+      missingOperationCount: selectableOperationKeys.length,
+      restrictedPropertyCount: restrictedProperties.length,
+    });
+    if (hasRequestableContent) return;
+
+    setRequestOpen(false);
+    void message.info(t("knowledgeNetwork.permissionRequestNothingAvailable"));
+  }, [
+    hasRowFilter,
+    loading,
+    message,
+    pendingOperations.length,
+    pendingProposalKinds.length,
+    proposalPreviewResolved,
+    requestOpen,
+    resourceType,
+    restrictedProperties.length,
+    selectableOperationKeys.length,
+    setRequestOpen,
+    t,
+  ]);
+
   const submit = async (values: RequestForm) => {
+    const rowFilter = proposalPreview?.row_filter;
+    const propertyChanges = selectedPropertyNames.map((property_name) => ({
+      property_name,
+      level: "full",
+    }));
+    if (proposalKind === "property_grants" && !propertyChanges.length) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyIncomplete"));
+      return;
+    }
     setSubmitting(true);
     try {
       await createPermissionRequest({
         resourceType,
         resourceID,
         resourceName,
-        operations: values.operations ?? [],
+        operations: proposalKind === "grant" ? (values.operations ?? []) : [],
+        proposal:
+          proposalKind === "row_filter"
+            ? {
+                kind: "row_filter",
+                payload: {
+                  current_policy: rowFilter?.policy ?? null,
+                  current_revision: rowFilter?.revision ?? null,
+                },
+              }
+            : proposalKind === "property_grants"
+              ? { kind: "property_grants", payload: { changes: propertyChanges } }
+              : undefined,
         reason: values.reason?.trim() ?? "",
       });
       setRequestOpen(false);
@@ -255,7 +420,12 @@ export function ResourcePermissionRequestAction({
         centered
         confirmLoading={submitting}
         okButtonProps={{
-          disabled: loading || catalogLoading || selectedOperations.length === 0,
+          disabled:
+            loading ||
+            catalogLoading ||
+            (proposalKind !== "grant" && pendingProposalKinds.includes(proposalKind)) ||
+            (proposalKind === "grant" && selectedOperations.length === 0) ||
+            (proposalKind === "property_grants" && selectedPropertyNames.length === 0),
         }}
         okText={t("knowledgeNetwork.permissionRequestSubmit")}
         onCancel={() => {
@@ -286,7 +456,7 @@ export function ResourcePermissionRequestAction({
               error={catalogError}
               onRetry={retryAuthorizationRegistry}
             />
-            {pending ? (
+            {pending && proposalKind === "grant" ? (
               <Alert
                 showIcon
                 style={{ marginTop: 16 }}
@@ -298,78 +468,201 @@ export function ResourcePermissionRequestAction({
                 })}
               />
             ) : null}
-            <Form.Item hidden name="operations" rules={[{ required: true }]}>
-              <Input />
-            </Form.Item>
-            <Form.Item
-              label={t("knowledgeNetwork.permissionRequestOperations")}
-              style={{ marginTop: 16 }}
-            >
-              <div className={authorizationStyles.authzGrantFieldHead}>
-                <span className={authorizationStyles.authzGrantFieldLabel}>
-                  {t("systemAdmin.objectGrants.selectedOperationCount", {
-                    selected: selectedOperations.length,
-                    total: selectableOperations.length,
-                  })}
-                </span>
-                <div className={authorizationStyles.authzGrantFieldActions}>
-                  <Button
-                    disabled={
-                      catalogLoading ||
-                      !selectableOperations.length ||
-                      selectedOperations.length === selectableOperations.length
-                    }
-                    onClick={() =>
-                      setOperations(selectableOperations.map((operation) => operation.key))
-                    }
-                    size="small"
-                    type="link"
-                  >
-                    {t("systemAdmin.objectGrants.selectAllOperations")}
-                  </Button>
-                  <Button
-                    disabled={catalogLoading || !selectedOperations.length}
-                    onClick={() => setOperations([])}
-                    size="small"
-                    type="link"
-                  >
-                    {t("systemAdmin.objectGrants.clearOperations")}
-                  </Button>
-                </div>
-              </div>
-              <div
-                aria-label={t("knowledgeNetwork.permissionRequestOperations")}
-                className={authorizationStyles.authzGrantOperations}
-                role="group"
-              >
-                {selectableOperations.map((operation) => {
-                  const selected = selectedOperations.includes(operation.key);
-                  const required = selectedRequirements.includes(operation.key);
-                  return (
-                    <Tooltip key={operation.key} title={operation.description ?? operation.key}>
-                      <button
-                        aria-label={`${operation.label} (${operation.key})`}
-                        aria-pressed={selected}
-                        className={
-                          selected
-                            ? authorizationStyles.authzGrantOperationSelected
-                            : authorizationStyles.authzGrantOperation
+            {pendingProposalKinds.includes(proposalKind) ? (
+              <Alert
+                showIcon
+                style={{ marginTop: 16 }}
+                type="info"
+                message={t("knowledgeNetwork.permissionRequestPolicyPending")}
+              />
+            ) : null}
+            {resourceType === "object_type" ? (
+              <Tabs
+                activeKey={proposalKind}
+                items={[
+                  { key: "grant", label: t("knowledgeNetwork.permissionRequestBasePermissions") },
+                  {
+                    key: "row_filter",
+                    label: t("knowledgeNetwork.permissionRequestRowScope"),
+                    disabled: !hasRowFilter,
+                  },
+                  {
+                    key: "property_grants",
+                    label: t("knowledgeNetwork.permissionRequestPropertyScope"),
+                    disabled: !restrictedProperties.length,
+                  },
+                ]}
+                onChange={(key) => setProposalKind(key as ProposalKind)}
+              />
+            ) : null}
+            {proposalKind === "grant" ? (
+              <>
+                <Form.Item hidden name="operations" rules={[{ required: true }]}>
+                  <Input />
+                </Form.Item>
+                <Form.Item
+                  label={t("knowledgeNetwork.permissionRequestOperations")}
+                  style={{ marginTop: 16 }}
+                >
+                  <div className={authorizationStyles.authzGrantFieldHead}>
+                    <span className={authorizationStyles.authzGrantFieldLabel}>
+                      {t("systemAdmin.objectGrants.selectedOperationCount", {
+                        selected: selectedOperations.length,
+                        total: selectableOperations.length,
+                      })}
+                    </span>
+                    <div className={authorizationStyles.authzGrantFieldActions}>
+                      <Button
+                        disabled={
+                          catalogLoading ||
+                          !selectableOperations.length ||
+                          selectedOperations.length === selectableOperations.length
                         }
-                        disabled={catalogLoading}
-                        onClick={() => toggleOperation(operation.key)}
-                        type="button"
+                        onClick={() =>
+                          setOperations(selectableOperations.map((operation) => operation.key))
+                        }
+                        size="small"
+                        type="link"
                       >
-                        {operation.label}
-                        {required ? (
-                          <LockOutlined className={authorizationStyles.authzGrantLock} />
-                        ) : null}
-                      </button>
-                    </Tooltip>
+                        {t("systemAdmin.objectGrants.selectAllOperations")}
+                      </Button>
+                      <Button
+                        disabled={catalogLoading || !selectedOperations.length}
+                        onClick={() => setOperations([])}
+                        size="small"
+                        type="link"
+                      >
+                        {t("systemAdmin.objectGrants.clearOperations")}
+                      </Button>
+                    </div>
+                  </div>
+                  <div
+                    aria-label={t("knowledgeNetwork.permissionRequestOperations")}
+                    className={authorizationStyles.authzGrantOperations}
+                    role="group"
+                  >
+                    {selectableOperations.map((operation) => {
+                      const selected = selectedOperations.includes(operation.key);
+                      const required = selectedRequirements.includes(operation.key);
+                      return (
+                        <Tooltip key={operation.key} title={operation.description ?? operation.key}>
+                          <button
+                            aria-label={`${operation.label} (${operation.key})`}
+                            aria-pressed={selected}
+                            className={
+                              selected
+                                ? authorizationStyles.authzGrantOperationSelected
+                                : authorizationStyles.authzGrantOperation
+                            }
+                            disabled={catalogLoading}
+                            onClick={() => toggleOperation(operation.key)}
+                            type="button"
+                          >
+                            {operation.label}
+                            {required ? (
+                              <LockOutlined className={authorizationStyles.authzGrantLock} />
+                            ) : null}
+                          </button>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </Form.Item>
+              </>
+            ) : null}
+            {proposalKind === "row_filter" ? (
+              <>
+                <Alert
+                  showIcon
+                  type="info"
+                  message={t("knowledgeNetwork.permissionRequestRowScopeHint")}
+                />
+                {(proposalPreview?.row_filter?.policy?.conditions ?? []).map((condition) => {
+                  const field = proposalPreview?.row_filter?.available_fields?.find(
+                    (item) => item.name === condition.property_name,
+                  );
+                  return (
+                    <Form.Item
+                      key={`${condition.property_name}-${condition.operator}`}
+                      label={`${field?.display_name || condition.property_name} · ${t(`knowledgeNetwork.rowFilterConditionOperator.${condition.operator}`)}`}
+                      style={{ marginTop: 16 }}
+                    >
+                      <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                        <Space wrap>
+                          <Typography.Text type="secondary">
+                            {t("knowledgeNetwork.permissionRequestRowScopeCurrentValues")}
+                          </Typography.Text>
+                          {condition.values.map((value) => (
+                            <Tag key={String(value)}>{String(value)}</Tag>
+                          ))}
+                        </Space>
+                      </Space>
+                    </Form.Item>
                   );
                 })}
-              </div>
-            </Form.Item>
-            <Form.Item label={t("knowledgeNetwork.permissionRequestReason")} name="reason">
+              </>
+            ) : null}
+            {proposalKind === "property_grants" ? (
+              <>
+                <Alert
+                  showIcon
+                  type="info"
+                  message={t("knowledgeNetwork.permissionRequestPropertyScopeHint")}
+                />
+                <Typography.Text type="secondary">
+                  {t("knowledgeNetwork.permissionRequestPropertyScopeBase", {
+                    level: t(
+                      `knowledgeNetwork.propertyAuthorizationLevel.${basePropertyAccessLevel(operations ?? [])}`,
+                    ),
+                  })}
+                </Typography.Text>
+                <Checkbox.Group
+                  style={{ display: "block", marginTop: 12 }}
+                  value={selectedPropertyNames}
+                  onChange={(values) => setSelectedPropertyNames(values.map(String))}
+                >
+                  {restrictedProperties.map((entry) => {
+                    const property = objectProperties.find(
+                      (item) => item.name === entry.property_name,
+                    );
+                    return (
+                      <Form.Item
+                        key={entry.property_name}
+                        label={property?.displayName || entry.property_name}
+                      >
+                        <Space>
+                          <Typography.Text type="secondary">
+                            {t("knowledgeNetwork.permissionRequestPropertyScopeExplicit", {
+                              level: t(
+                                `knowledgeNetwork.propertyAuthorizationLevel.${entry.level}`,
+                              ),
+                            })}
+                          </Typography.Text>
+                          <Checkbox value={entry.property_name}>
+                            {t("knowledgeNetwork.permissionRequestPropertyScopeOriginalValue")}
+                          </Checkbox>
+                        </Space>
+                      </Form.Item>
+                    );
+                  })}
+                </Checkbox.Group>
+              </>
+            ) : null}
+            <Form.Item
+              label={t("knowledgeNetwork.permissionRequestReason")}
+              name="reason"
+              rules={
+                proposalKind === "row_filter"
+                  ? [
+                      {
+                        message: t("knowledgeNetwork.permissionRequestReasonRequired"),
+                        required: true,
+                        whitespace: true,
+                      },
+                    ]
+                  : undefined
+              }
+            >
               <Input.TextArea maxLength={512} rows={3} />
             </Form.Item>
           </Form>

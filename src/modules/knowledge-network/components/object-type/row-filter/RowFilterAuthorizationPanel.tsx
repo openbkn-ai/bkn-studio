@@ -50,6 +50,7 @@ const MAX_CONDITIONS = 5;
 
 type Props = {
   discardNonce: number;
+  initialSubjectId?: string;
   objectTypeRef: string;
   onBeforeSubjectChange: (next: () => void) => void;
   onDirtyChange: (dirty: boolean) => void;
@@ -149,6 +150,7 @@ function policySummary(
 
 export function RowFilterAuthorizationPanel({
   discardNonce,
+  initialSubjectId,
   objectTypeRef,
   onBeforeSubjectChange,
   onDirtyChange,
@@ -170,6 +172,13 @@ export function RowFilterAuthorizationPanel({
   const [conditions, setConditions] = useState<EditableCondition[]>([]);
   const [conditionRelation, setConditionRelation] = useState<"and" | "or">("and");
   const loadRequestId = useRef(0);
+
+  useEffect(() => {
+    if (initialSubjectId) {
+      setSubjectType("user");
+      setSubjectId(initialSubjectId);
+    }
+  }, [initialSubjectId]);
 
   const subject = useMemo<RowFilterSubject | null>(
     () => (subjectId ? { id: subjectId, type: subjectType } : null),

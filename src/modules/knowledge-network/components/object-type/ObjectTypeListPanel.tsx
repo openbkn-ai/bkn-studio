@@ -15,7 +15,7 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Empty, Input, Select, Table } from "antd";
 import type { MenuProps, TableProps } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -30,7 +30,12 @@ import { renderResourceIcon } from "@/modules/knowledge-network/components/share
 import { KnowledgeNetworkAuthorizationActionLabel } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkAuthorizationActionLabel";
 import { ResourceTagList } from "@/modules/knowledge-network/components/shared/ResourceTagList";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
-import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import {
+  canRequestResourcePermission,
+  getMissingResourcePermissionOperations,
+  hasRequestableObjectTypePolicyScope,
+} from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import { getPermissionRequestProposalPreview } from "@/modules/account/services/permission-requests.service";
 import {
   readPositiveInteger,
   readStoredPageSize,
@@ -90,6 +95,8 @@ export function ObjectTypeListPanel({
   );
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
   const [items, setItems] = useState<KnowledgeNetworkObjectTypeRecord[]>([]);
+  const [policyRequestableIDs, setPolicyRequestableIDs] = useState<Set<string>>(() => new Set());
+  const policyRequestabilityCache = useRef(new Map<string, boolean>());
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshVersion, setRefreshVersion] = useState(0);
@@ -150,6 +157,54 @@ export function ObjectTypeListPanel({
     sortBy,
     sortDirection,
   ]);
+  useEffect(() => {
+    if (!permissionRequestsEnabled) {
+      setPolicyRequestableIDs(new Set());
+      return;
+    }
+    let cancelled = false;
+    const candidates = items.filter(
+      (record) =>
+        getMissingResourcePermissionOperations("object_type", record.operations).length === 0,
+    );
+    const resolved = new Set(
+      candidates
+        .filter((record) => policyRequestabilityCache.current.get(`${networkId}/${record.id}`))
+        .map((record) => record.id),
+    );
+    setPolicyRequestableIDs(resolved);
+
+    const unresolved = candidates.filter(
+      (record) => !policyRequestabilityCache.current.has(`${networkId}/${record.id}`),
+    );
+    if (!unresolved.length) return;
+
+    void Promise.all(
+      unresolved.map(async (record) => {
+        const resourceID = `${networkId}/${record.id}`;
+        try {
+          const preview = await getPermissionRequestProposalPreview(resourceID);
+          return [record.id, hasRequestableObjectTypePolicyScope(preview)] as const;
+        } catch {
+          return [record.id, false] as const;
+        }
+      }),
+    ).then((results) => {
+      if (cancelled) return;
+      for (const [id, requestable] of results) {
+        policyRequestabilityCache.current.set(`${networkId}/${id}`, requestable);
+      }
+      setPolicyRequestableIDs(
+        new Set([
+          ...resolved,
+          ...results.filter(([, requestable]) => requestable).map(([id]) => id),
+        ]),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, networkId, permissionRequestsEnabled]);
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextTag = searchParams.get("tag") ?? "all";
@@ -333,7 +388,9 @@ export function ObjectTypeListPanel({
             "object_type",
             record.operations,
             permissionRequestsEnabled,
-          )
+          ) &&
+          (getMissingResourcePermissionOperations("object_type", record.operations).length > 0 ||
+            policyRequestableIDs.has(record.id))
             ? [
                 {
                   key: "request-permission",

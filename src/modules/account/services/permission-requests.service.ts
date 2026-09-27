@@ -37,6 +37,8 @@ export type PermissionRequest = {
   resource_name?: string;
   operation: string;
   operations: string[];
+  proposal_kind?: "grant" | "row_filter" | "property_grants";
+  proposal_payload?: string;
   reason: string;
   status: string;
   created_at: string;
@@ -84,6 +86,16 @@ export async function getPermissionRequestTodoSummary() {
   const response = await http.get<PermissionRequestTodoSummary>(
     "/safe/v1/me/permission-requests/todo/summary",
   );
+  return response.data;
+}
+
+export async function getPermissionRequestProposalPreview(resourceID: string) {
+  const response = await http.get<{
+    property_grants: unknown;
+    row_filter: unknown;
+  }>("/safe/v1/me/permission-requests/proposal-preview", {
+    params: { resource_id: resourceID, resource_type: "object_type" },
+  });
   return response.data;
 }
 
@@ -140,7 +152,8 @@ export async function createPermissionRequest(payload: {
   resourceType: string;
   resourceID: string;
   resourceName?: string;
-  operations: string[];
+  operations?: string[];
+  proposal?: { kind: "row_filter" | "property_grants"; payload: unknown };
   reason: string;
 }) {
   await http.post(
@@ -148,6 +161,7 @@ export async function createPermissionRequest(payload: {
     {
       resource: { type: payload.resourceType, id: payload.resourceID, name: payload.resourceName },
       operations: payload.operations,
+      proposal: payload.proposal,
       reason: payload.reason,
     },
     { skipErrorToast: true },

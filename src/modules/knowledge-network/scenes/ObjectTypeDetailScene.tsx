@@ -25,7 +25,14 @@ import {
 } from "@/modules/knowledge-network/utils/object-type-proxy-read-error";
 import { KnowledgeNetworkResourceConfigShell } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceConfigShell";
 import { KnowledgeNetworkResourceDetailActions } from "@/modules/knowledge-network/components/shared/KnowledgeNetworkResourceDetailActions";
+import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { renderResourceIcon } from "@/modules/knowledge-network/components/shared/ResourceIconSelect";
+import {
+  canRequestResourcePermission,
+  getMissingResourcePermissionOperations,
+  hasRequestableObjectTypePolicyScope,
+} from "@/modules/knowledge-network/components/shared/resource-permission-request";
+import { getPermissionRequestProposalPreview } from "@/modules/account/services/permission-requests.service";
 import {
   ObjectTypePropertyTable,
   ObjectTypePropertyTableColumnSettings,
@@ -187,6 +194,7 @@ export function ObjectTypeDetailScene() {
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
+  const [policyScopeRequestable, setPolicyScopeRequestable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [propertyType, setPropertyType] = useState<"data" | "logic">("data");
@@ -391,6 +399,33 @@ export function ObjectTypeDetailScene() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const missingRequestableOperations = getMissingResourcePermissionOperations(
+    "object_type",
+    detail?.operations,
+  );
+  useEffect(() => {
+    if (!detail || missingRequestableOperations.length > 0) {
+      setPolicyScopeRequestable(false);
+      return;
+    }
+    let active = true;
+    void getPermissionRequestProposalPreview(`${networkId}/${detail.id}`)
+      .then((preview) => {
+        if (active) setPolicyScopeRequestable(hasRequestableObjectTypePolicyScope(preview));
+      })
+      .catch(() => {
+        if (active) setPolicyScopeRequestable(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [detail, missingRequestableOperations.length, networkId]);
+
+  const canRequestPermission =
+    Boolean(detail) &&
+    canRequestResourcePermission("object_type", detail.operations) &&
+    (missingRequestableOperations.length > 0 || policyScopeRequestable);
 
   const canQueryData = hasKnowledgeNetworkRecordOperation(detail, "query_data");
   const shouldLoadPreview =
@@ -2002,39 +2037,50 @@ export function ObjectTypeDetailScene() {
     <>
       <KnowledgeNetworkResourceConfigShell
         actions={
-          <KnowledgeNetworkResourceDetailActions
-            actions={[
-              {
-                key: "edit",
-                label: t("common.edit"),
-                onClick: () => {
-                  void navigate(
-                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
-                  );
+          <>
+            {canRequestPermission ? (
+              <ResourcePermissionRequestAction
+                operations={detail.operations}
+                resourceID={`${networkId}/${detail.id}`}
+                resourceName={detail.name}
+                resourceType="object_type"
+                trigger="button"
+              />
+            ) : null}
+            <KnowledgeNetworkResourceDetailActions
+              actions={[
+                {
+                  key: "edit",
+                  label: t("common.edit"),
+                  onClick: () => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/edit`,
+                    );
+                  },
+                  operation: "modify",
+                  type: "primary",
                 },
-                operation: "modify",
-                type: "primary",
-              },
-              {
-                key: "authorize",
-                label: t("knowledgeNetwork.propertyAuthorizationAction"),
-                onClick: () => {
-                  void navigate(
-                    `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization`,
-                  );
+                {
+                  key: "authorize",
+                  label: t("knowledgeNetwork.propertyAuthorizationAction"),
+                  onClick: () => {
+                    void navigate(
+                      `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization`,
+                    );
+                  },
+                  operation: "authorize",
                 },
-                operation: "authorize",
-              },
-              {
-                danger: true,
-                key: "delete",
-                label: t("common.delete"),
-                onClick: confirmDelete,
-                operation: "delete",
-              },
-            ]}
-            record={detail}
-          />
+                {
+                  danger: true,
+                  key: "delete",
+                  label: t("common.delete"),
+                  onClick: confirmDelete,
+                  operation: "delete",
+                },
+              ]}
+              record={detail}
+            />
+          </>
         }
         onBack={() => {
           void navigate(returnPath);

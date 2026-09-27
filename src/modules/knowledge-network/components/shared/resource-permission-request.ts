@@ -69,7 +69,39 @@ export function canRequestResourcePermission(
   permissionRequestsEnabled = true,
 ) {
   if (!permissionRequestsEnabled || getRuntimeConfig().currentUser.isSuperAdmin) return false;
+  // Object types additionally expose self-service row/property restrictions.
+  // Those policies remain meaningful even when every base operation is already
+  // effective, so do not hide the only entry point in that situation.
+  if (resourceType === "object_type" && Array.isArray(operations)) return true;
   return getMissingResourcePermissionOperations(resourceType, operations).length > 0;
+}
+
+export function hasRequestableObjectTypePermission({
+  hasPendingRequest,
+  hasRowFilter,
+  missingOperationCount,
+  restrictedPropertyCount,
+}: {
+  hasPendingRequest: boolean;
+  hasRowFilter: boolean;
+  missingOperationCount: number;
+  restrictedPropertyCount: number;
+}) {
+  return (
+    missingOperationCount > 0 || hasRowFilter || restrictedPropertyCount > 0 || hasPendingRequest
+  );
+}
+
+export function hasRequestableObjectTypePolicyScope(preview: unknown) {
+  const value = preview as {
+    property_grants?: { entries?: Array<{ level?: string }> };
+    row_filter?: { policy?: { conditions?: unknown[] } | null };
+  };
+  const hasRestrictedRowScope = Boolean(value.row_filter?.policy?.conditions?.length);
+  const hasRestrictedPropertyScope = (value.property_grants?.entries ?? []).some(
+    (entry) => entry.level !== "full" && entry.level !== "inherit",
+  );
+  return hasRestrictedRowScope || hasRestrictedPropertyScope;
 }
 
 export function getMissingResourcePermissionOperations(

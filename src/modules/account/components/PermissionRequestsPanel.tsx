@@ -35,7 +35,7 @@ import {
 } from "antd";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
 import {
@@ -135,8 +135,9 @@ function resourceDetailPath(request: PermissionRequest) {
 }
 
 export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boolean }) {
-  const { message } = useAppServices();
+  const { message, runtimeConfig } = useAppServices();
   const { i18n, t } = useTranslation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => {
     const requestedTab = searchParams.get("tab");
@@ -240,6 +241,50 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
     if (resourceCheck?.id !== request.id || resourceCheck.result !== "exists" || !path) return;
     window.open(`${import.meta.env.BASE_URL}${path}`, "_blank", "noopener,noreferrer");
   };
+  function proposalContent(request: PermissionRequest) {
+    if (!request.proposal_kind || request.proposal_kind === "grant" || !request.proposal_payload)
+      return null;
+    try {
+      const payload = JSON.parse(request.proposal_payload) as {
+        changes?: Array<{ level?: string; property_name?: string }>;
+        current_policy?: {
+          conditions?: Array<{ operator?: string; property_name?: string; values?: unknown[] }>;
+        } | null;
+        policy?: {
+          conditions?: Array<{ operator?: string; property_name?: string; values?: unknown[] }>;
+        };
+      };
+      if (request.proposal_kind === "row_filter") {
+        return (
+          <div className={styles.requestContentRow}>
+            <span className={styles.requestContentLabel}>
+              {t("account.permissionRequests.rowPermissions")}：
+            </span>
+            <span>{t("account.permissionRequests.expandRowAccess")}</span>
+          </div>
+        );
+      }
+      return (
+        <div className={styles.requestContentRow}>
+          <span className={styles.requestContentLabel}>
+            {t("account.permissionRequests.propertyPermissions")}：
+          </span>
+          <span>
+            {(payload.changes ?? []).map((change, index) => (
+              <Tag key={`${change.property_name}-${index}`}>
+                {change.property_name}：
+                {t(`account.permissionRequests.propertyAccessLevels.${change.level}`, {
+                  defaultValue: change.level,
+                })}
+              </Tag>
+            ))}
+          </span>
+        </div>
+      );
+    } catch {
+      return null;
+    }
+  }
   const requestContent = (request: PermissionRequest) => (
     <div className={styles.requestContent}>
       <div className={styles.requestContentRow}>
@@ -249,25 +294,52 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
         </span>
         <span className={styles.resourcePill}>{resourceName(request)}</span>
       </div>
-      <div className={styles.requestContentRow}>
-        <span className={styles.requestContentLabel}>
-          {t("account.permissionRequests.operations")}
-        </span>
-        <span className={styles.operationList}>
-          {requestOperationNames(request).map(({ id, name }) => (
-            <Tag
-              color={
-                ["delete", "authorize", "full_business_access"].includes(id) ? "volcano" : "blue"
-              }
-              key={id}
-            >
-              {name}
-            </Tag>
-          ))}
-        </span>
-      </div>
+      {(!request.proposal_kind || request.proposal_kind === "grant") && (
+        <div className={styles.requestContentRow}>
+          <span className={styles.requestContentLabel}>
+            {t("account.permissionRequests.operations")}：
+          </span>
+          <span className={styles.operationList}>
+            {requestOperationNames(request).map(({ id, name }) => (
+              <Tag
+                color={
+                  ["delete", "authorize", "full_business_access"].includes(id) ? "volcano" : "blue"
+                }
+                key={id}
+              >
+                {name}
+              </Tag>
+            ))}
+          </span>
+        </div>
+      )}
+      {proposalContent(request)}
     </div>
   );
+  const approveConfirmDescription = (request: PermissionRequest) => {
+    if (request.proposal_kind === "row_filter") {
+      return t("account.permissionRequests.rowFilterApprovalConfirmDescription");
+    }
+    if (request.proposal_kind !== "property_grants" || !request.proposal_payload) {
+      return t("account.permissionRequests.approveConfirmDescription");
+    }
+    try {
+      const payload = JSON.parse(request.proposal_payload) as {
+        changes?: Array<{ property_name?: string }>;
+      };
+      const fields = (payload.changes ?? [])
+        .map((change) => change.property_name)
+        .filter((name): name is string => Boolean(name));
+      if (fields.length) {
+        return t("account.permissionRequests.propertyApprovalConfirmDescription", {
+          fields: fields.join("、"),
+        });
+      }
+    } catch {
+      // Fall through to the safe generic description for malformed legacy data.
+    }
+    return t("account.permissionRequests.approveConfirmDescription");
+  };
   const resourceDetailsAction = (request: PermissionRequest) => {
     const result = resourceCheck?.id === request.id ? resourceCheck.result : "checking";
     if (result === "checking")
@@ -296,6 +368,20 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
             : "account.permissionRequests.resourceCheckFailed";
     return <span className={styles.resourceCheckUnavailable}>{t(messageKey)}</span>;
   };
+  const configureRowFilter = (request: PermissionRequest) => {
+    const [networkId, objectTypeId] = request.resource_id.split("/", 2);
+    if (!networkId || !objectTypeId) return;
+    const params = new URLSearchParams({ requester_id: request.requester_id });
+    void navigate(
+      `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/authorization?${params.toString()}`,
+    );
+  };
+  const canConfigureRowFilter = (request: PermissionRequest) =>
+    request.status === "granted" &&
+    request.proposal_kind === "row_filter" &&
+    request.resource_type === "object_type" &&
+    Boolean(runtimeConfig.currentUser.id) &&
+    runtimeConfig.currentUser.id === request.reviewer_id;
   const formatRequestTime = (value: string) => {
     const date = new Date(value);
     return Number.isNaN(date.getTime())
@@ -810,6 +896,15 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                   style={{ marginBottom: 16 }}
                 />
               )}
+              {detail && canConfigureRowFilter(detail) && (
+                <Alert
+                  description={t("account.permissionRequests.rowFilterConfigurationNotice")}
+                  message={t("account.permissionRequests.rowFilterConfigurationTitle")}
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                  type="info"
+                />
+              )}
               {detail && (
                 <div className={styles.summary}>
                   <div className={styles.summaryRow}>
@@ -856,6 +951,11 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                     </span>
                     <span className={styles.summaryValue}>{resourceDetailsAction(detail)}</span>
                   </div>
+                  {canConfigureRowFilter(detail) ? (
+                    <Button onClick={() => configureRowFilter(detail)} type="primary">
+                      {t("account.permissionRequests.configureRowFilter")}
+                    </Button>
+                  ) : null}
                 </div>
               )}
               {detail?.status === "pending" && tab === "todo" && (
@@ -870,7 +970,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
                   <div style={{ marginTop: 12 }}>
                     <Popconfirm
                       cancelButtonProps={{ disabled: submitting }}
-                      description={t("account.permissionRequests.approveConfirmDescription")}
+                      description={approveConfirmDescription(detail)}
                       okButtonProps={{ loading: submitting }}
                       okText={t("account.permissionRequests.approve")}
                       onConfirm={() => {
