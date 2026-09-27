@@ -121,6 +121,73 @@ describe("sendRequest", () => {
     });
   });
 
+  // /mcp-compact/ does not publish response_format and rejects undeclared arguments, so the
+  // selector the full endpoint takes must not ride along.
+  it("calls the compact endpoint without injecting response_format", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+      );
+
+    await sendRequest(
+      {
+        base: "https://platform.example.com",
+        token: "token-1",
+        knId: "kn-demo",
+        mcpProfile: "compact",
+      },
+      searchSchema,
+      "mcp",
+      { response_format: "toon" },
+      '{"query":"orders","kn_id":"kn-demo"}',
+      undefined,
+      undefined,
+      bknContext,
+    );
+
+    fetchSpy.mock.calls.forEach(([url]) => {
+      expect(url).toBe("https://platform.example.com/api/agent-retrieval/v1/mcp-compact/");
+    });
+    const call = jsonRpcBody(fetchSpy.mock.calls[2][1]) as {
+      params: { arguments: Record<string, unknown> };
+    };
+    expect(call.params.arguments).toEqual({
+      query: "orders",
+      kn_id: "kn-demo",
+      bkn_context: bknContext,
+    });
+  });
+
+  it("keeps injecting response_format on the full endpoint", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 200, headers: { "Mcp-Session-Id": "session-1" } }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 202 }))
+      .mockResolvedValueOnce(
+        new Response('{"jsonrpc":"2.0","result":{"content":[]}}', { status: 200 }),
+      );
+
+    await sendRequest(
+      { base: "https://platform.example.com", token: "token-1", knId: "kn-demo" },
+      searchSchema,
+      "mcp",
+      { response_format: "toon" },
+      "{}",
+    );
+
+    const call = jsonRpcBody(fetchSpy.mock.calls[2][1]) as {
+      params: { arguments: Record<string, unknown> };
+    };
+    expect(call.params.arguments).toMatchObject({ response_format: "toon" });
+  });
+
   it("carries the managed context into the REST body", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

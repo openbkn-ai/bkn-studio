@@ -213,6 +213,15 @@ export const contextLoaderPanelPart = {
       noDebuggableMcpServicesDescription:
         "After the service list returns, select a tool on the left and run it.",
     },
+    mcpProfile: {
+      label: "Endpoint",
+      full: "Full",
+      compact: "Compact",
+      fullHint:
+        "Publishes every tool. Suits hosts that load tool definitions on demand, such as Claude Code.",
+      compactHint:
+        "Publishes the common tools and reaches the rest through an on-demand gateway. Its tool definitions are about a third of the full endpoint's, which suits hosts that send every tool definition on each turn.",
+    },
     mcpConnect: {
       title: "Let Agents Call OpenBKN Capabilities",
       description:

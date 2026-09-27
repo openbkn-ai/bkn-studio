@@ -38,7 +38,6 @@ import {
 } from "@/modules/knowledge-network/hooks/useExperienceNetwork";
 import {
   CONTEXT_LOADER_OPS,
-  MCP_PATH,
   REST_CONTEXT_LOADER_OPS,
   buildCurl,
   buildTestData,
@@ -50,6 +49,7 @@ import {
   requestDataAssistantKindOf,
   listMcpTools,
   mcpOpsFrom,
+  mcpPathFor,
   mcpPathOf,
   sendRequest,
   subgraphPathFor,
@@ -60,6 +60,7 @@ import {
   type KnDetail,
   type KnObjectType,
   type KnRelationType,
+  type McpProfile,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
 import {
@@ -318,6 +319,11 @@ export function ExperienceScene({
   const currentKnIdRef = useRef(knId);
   currentKnIdRef.current = knId;
   const env: ContextLoaderEnv = useMemo(() => ({ base, token, knId }), [base, token, knId]);
+  // The MCP console can target either Context Loader endpoint. Agent chat keeps the full one, so
+  // the profile rides on a separate env used only by the MCP console's list, call and cURL.
+  const [mcpProfile, setMcpProfile] = useState<McpProfile>("full");
+  const mcpEnv: ContextLoaderEnv = useMemo(() => ({ ...env, mcpProfile }), [env, mcpProfile]);
+  const mcpUrl = `${serverAddress}${mcpPathFor(mcpProfile)}`;
 
   // Agent chat uses fresh OAuth tokens per request and refreshes once after 401.
   // Retrieval tools use selected auth mode: OAuth session or bak_ AppKey.
@@ -367,7 +373,17 @@ export function ExperienceScene({
     setToolDefs(null);
     setToolsError(null);
     setToolsLoading(false);
-  }, [knId]);
+  }, [knId, mcpProfile]);
+  const selectMcpProfile = useCallback(
+    (next: McpProfile) => {
+      invalidateRequest();
+      invalidateFill();
+      setResponse(null);
+      setReqError(null);
+      setMcpProfile(next);
+    },
+    [invalidateFill, invalidateRequest],
+  );
   const loadTools = useCallback(
     (force = false) => {
       if (toolsLoading) return;
@@ -379,7 +395,7 @@ export function ExperienceScene({
       const requestKnId = knId;
       setToolsLoading(true);
       setToolsError(null);
-      listMcpTools(env, tokenProvider, controller.signal)
+      listMcpTools(mcpEnv, tokenProvider, controller.signal)
         .then((list) => {
           if (sequence === toolsSequenceRef.current && requestKnId === currentKnIdRef.current)
             setToolDefs(list);
@@ -404,7 +420,7 @@ export function ExperienceScene({
           }
         });
     },
-    [env, knId, t, toolDefs, toolsLoading, tokenProvider],
+    [mcpEnv, knId, t, toolDefs, toolsLoading, tokenProvider],
   );
   // Fetch once when entering MCP mode; failures are shown inline only.
   useEffect(() => {
@@ -456,20 +472,23 @@ export function ExperienceScene({
   const curl = useMemo(
     () =>
       op
-        ? buildCurl({ ...env, base: serverAddress }, op, mode, queryVals, bodyText, {
+        ? buildCurl({ ...mcpEnv, base: serverAddress }, op, mode, queryVals, bodyText, {
             conversation_id: "<conversation_id returned by bkn_start_interaction>",
             interaction_id: "<interaction_id returned by bkn_start_interaction>",
           })
         : "",
-    [env, serverAddress, op, mode, queryVals, bodyText],
+    [mcpEnv, serverAddress, op, mode, queryVals, bodyText],
   );
 
   const displayPath = op ? (mode === "mcp" ? mcpPathOf(op) : op.path) : "";
-  // MCP has no query string, but response_format is still configurable through arguments.
+  // MCP has no query string, but response_format is still configurable through arguments on the
+  // full endpoint. The compact endpoint does not publish it and rejects it as undeclared.
   const visibleQuery = op
     ? mode === "rest"
       ? op.query
-      : op.query.filter((param) => param.name === "response_format")
+      : mcpProfile === "compact"
+        ? []
+        : op.query.filter((param) => param.name === "response_format")
     : [];
   const responseView = useMemo(
     () => (response ? formatResponseView(response.text) : null),
@@ -509,8 +528,8 @@ export function ExperienceScene({
       const freshToken =
         authMode === "apikey"
           ? appKey.trim()
-          : (runtimeConfig.auth.tokenManager.getAccessToken() ?? env.token);
-      const freshEnv = { ...env, token: freshToken };
+          : (runtimeConfig.auth.tokenManager.getAccessToken() ?? mcpEnv.token);
+      const freshEnv = { ...mcpEnv, token: freshToken };
       const send = (turn: BknTurn | null = null) =>
         sendRequest(
           freshEnv,
@@ -549,7 +568,7 @@ export function ExperienceScene({
       }
     }
   }, [
-    env,
+    mcpEnv,
     op,
     mode,
     queryVals,
@@ -836,11 +855,8 @@ export function ExperienceScene({
               </div>
               <div className={styles.ef}>
                 <label>{t("knowledgeNetwork.contextLoaderPanel.experience.serviceAddress")}</label>
-                <div
-                  className={styles.addr}
-                  title={mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
-                >
-                  {mode === "mcp" ? `${serverAddress}${MCP_PATH}` : serverAddress}
+                <div className={styles.addr} title={mode === "mcp" ? mcpUrl : serverAddress}>
+                  {mode === "mcp" ? mcpUrl : serverAddress}
                 </div>
               </div>
               <div className={styles.ef}>
@@ -945,7 +961,9 @@ export function ExperienceScene({
           toolsError={toolsError}
           currentTool={currentTool}
           onReloadTools={() => loadTools(true)}
-          mcpUrl={`${serverAddress}${MCP_PATH}`}
+          mcpUrl={mcpUrl}
+          mcpProfile={mcpProfile}
+          onMcpProfileChange={selectMcpProfile}
           appKeyValue={appKey.trim()}
           showMcpConnect={showMcpConnect}
           dataBrowserPanel={
@@ -971,7 +989,7 @@ export function ExperienceScene({
       <McpSetupModal
         open={guideOpen}
         onClose={() => setGuideOpen(false)}
-        mcpUrl={`${serverAddress}${MCP_PATH}`}
+        mcpUrl={mcpUrl}
         onManageApiKey={() => void navigate(apiKeyPagePath)}
         copy={copy}
       />

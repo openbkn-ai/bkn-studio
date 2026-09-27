@@ -45,6 +45,29 @@ describe("mcpOpsFrom", () => {
     expect(ops[1].id).toBe("not_in_catalog");
   });
 
+  // /mcp-compact/ rejects undeclared arguments, so a curated example carrying REST-only fields
+  // would fail there unedited.
+  it("narrows a curated example to the arguments the reported tool declares", () => {
+    const [op] = mcpOpsFrom([
+      {
+        name: "search_schema",
+        inputSchema: { type: "object", properties: { query: {}, kn_id: {} } },
+      },
+    ]);
+    expect(op.mcpArgs).toEqual({
+      query: "Find core business objects and relations",
+      kn_id: "your_kn_id",
+    });
+  });
+
+  it("keeps the curated op itself when the tool declares every example argument", () => {
+    const curated = CONTEXT_LOADER_OPS.find((op) => op.id === "get_kn_detail")!;
+    const [op] = mcpOpsFrom([
+      { name: "get_kn_detail", inputSchema: { type: "object", properties: { kn_id: {} } } },
+    ]);
+    expect(op).toBe(curated);
+  });
+
   // The retired tool must not come back through the curated catalogue (#1401).
   it("carries no entry for the retired recall tools", () => {
     expect(

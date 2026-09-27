@@ -753,6 +753,35 @@
   line-height: 1.5;
 }
 
+.mcpProfileBar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 0;
+  background: var(--color-bg-raised);
+}
+
+.mcpProfileRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mcpProfileLabel {
+  color: var(--txt);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mcpProfileHint {
+  min-width: 0;
+  color: var(--faint);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .listSearch {
   padding: 10px 12px 8px;
   border-bottom: 1px solid var(--line2);
