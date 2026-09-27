@@ -299,6 +299,19 @@ describe("login CSRF flow lock", () => {
     vi.useRealTimers();
   });
 
+  it("cancels an automatic login during its jitter", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const controller = new AbortController();
+    const attempt = beginAutoLogin("/studio", undefined, controller.signal);
+    controller.abort();
+
+    await vi.runAllTimersAsync();
+
+    await expect(attempt).resolves.toBe(false);
+    vi.useRealTimers();
+  });
+
   it("ignores a malformed lock rather than deadlocking sign-in", () => {
     window.localStorage.setItem(FLOW_LOCK_KEY, "not json");
     expect(canAutoStartLogin()).toBe(true);

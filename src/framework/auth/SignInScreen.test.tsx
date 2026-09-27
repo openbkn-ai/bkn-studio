@@ -67,7 +67,11 @@ describe("SignInScreen auto-redirect gating", () => {
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
 
     expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
-    expect(oauth.beginAutoLogin).toHaveBeenCalledWith(expect.any(String), "zh-CN");
+    expect(oauth.beginAutoLogin).toHaveBeenCalledWith(
+      expect.any(String),
+      "zh-CN",
+      expect.any(AbortSignal),
+    );
   });
 
   // A background tab redirecting would rewrite the browser's single login CSRF
@@ -149,6 +153,22 @@ describe("SignInScreen auto-redirect gating", () => {
     });
 
     expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("does not retry an expired lock while the tab is hidden", async () => {
+    vi.useFakeTimers();
+    setVisibility("hidden");
+    oauth.canAutoStartLogin.mockReturnValue(false);
+    oauth.msUntilAutoStartAllowed.mockReturnValue(0);
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(oauth.msUntilAutoStartAllowed).toHaveBeenCalledTimes(1);
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

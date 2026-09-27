@@ -30,6 +30,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   const { i18n, t } = useTranslation();
   const loginLocale = i18n.resolvedLanguage ?? i18n.language;
   const startedRef = useRef(false);
+  const autoLoginAbortRef = useRef<AbortController | null>(null);
   const [redirecting, setRedirecting] = useState(true);
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [deferredToOtherTab, setDeferredToOtherTab] = useState(false);
@@ -57,9 +58,15 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
       setDeferredToOtherTab(false);
       setRedirecting(true);
       const { hash, pathname, search } = window.location;
+      const controller = new AbortController();
+      autoLoginAbortRef.current?.abort();
+      autoLoginAbortRef.current = controller;
 
-      void beginAutoLogin(`${pathname}${search}${hash}`, loginLocale)
+      void beginAutoLogin(`${pathname}${search}${hash}`, loginLocale, controller.signal)
         .then((started) => {
+          if (controller.signal.aborted) {
+            return;
+          }
           if (started) {
             return;
           }
@@ -88,19 +95,19 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     // a time, so that tab may start its own flow. A lock release reaches every
     // waiting tab at once — starting there would put them all on the wire
     // together, so they reload and pick up the shared cookie instead.
-    const retry = () => void startIfAllowed();
+    const retry = () => {
+      if (!startIfAllowed() && document.visibilityState === "visible") {
+        setRetryGeneration((generation) => generation + 1);
+      }
+    };
     document.addEventListener("visibilitychange", retry);
     const unsubscribe = subscribeFlowLockRelease(reloadForSharedAuthState);
     const wait = msUntilAutoStartAllowed();
     const expiryTimer =
-      wait === null
+      document.visibilityState !== "visible" || wait === null
         ? undefined
         : window.setTimeout(() => {
-            if (!startIfAllowed()) {
-              // The lock may have been replaced while this tab was waiting.
-              // Rebuild the effect to calculate the new lock's remaining TTL.
-              setRetryGeneration((generation) => generation + 1);
-            }
+            retry();
           }, wait + 50);
     return () => {
       document.removeEventListener("visibilitychange", retry);
@@ -118,6 +125,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   // Explicit intent overrides the other-tab lock: the user is here, so this is
   // the flow that should own the CSRF cookie.
   const handleSignIn = () => {
+    autoLoginAbortRef.current?.abort();
     startedRef.current = true;
     setRedirecting(true);
     setRedirectError(null);
@@ -184,7 +192,10 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
           <button
             className={styles.devToggle}
             type="button"
-            onClick={() => setShowDevTokenForm(true)}
+            onClick={() => {
+              autoLoginAbortRef.current?.abort();
+              setShowDevTokenForm(true);
+            }}
           >
             {t("auth.devTokenToggle")}
           </button>

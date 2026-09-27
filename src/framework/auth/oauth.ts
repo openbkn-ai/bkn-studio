@@ -365,12 +365,16 @@ export async function beginLogin(returnTo?: string, requestedLocale?: string | n
  * check. localStorage has no compare-and-swap primitive, so this only reduces
  * the chance that visible tabs released from a failed flow start together.
  */
-export async function beginAutoLogin(returnTo?: string, requestedLocale?: string | null) {
+export async function beginAutoLogin(
+  returnTo?: string,
+  requestedLocale?: string | null,
+  signal?: AbortSignal,
+) {
   await new Promise<void>((resolve) => {
     window.setTimeout(resolve, Math.floor(Math.random() * (AUTO_START_LOGIN_JITTER_MS + 1)));
   });
 
-  if (document.visibilityState !== "visible" || !canAutoStartLogin()) {
+  if (signal?.aborted || document.visibilityState !== "visible" || !canAutoStartLogin()) {
     return false;
   }
 
