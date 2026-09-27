@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useAppServices } from "@/framework/context/use-app-services";
+import { isCommunityBuild } from "@/framework/entitlement/types";
+import { useEntitlement } from "@/framework/entitlement/use-entitlement";
 import { useDebouncedValue } from "@/framework/hooks/use-debounced-value";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
@@ -168,6 +170,7 @@ function estimatePreviewTextWidth(value: string | number | undefined) {
 }
 
 export function ObjectTypeDetailScene() {
+  const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -405,7 +408,7 @@ export function ObjectTypeDetailScene() {
     detail?.operations,
   );
   useEffect(() => {
-    if (!detail || missingRequestableOperations.length > 0) {
+    if (!detail || !permissionRequestsEnabled || missingRequestableOperations.length > 0) {
       setPolicyScopeRequestable(false);
       return;
     }
@@ -420,11 +423,11 @@ export function ObjectTypeDetailScene() {
     return () => {
       active = false;
     };
-  }, [detail, missingRequestableOperations.length, networkId]);
+  }, [detail, missingRequestableOperations.length, networkId, permissionRequestsEnabled]);
 
   const canRequestPermission =
     Boolean(detail) &&
-    canRequestResourcePermission("object_type", detail.operations) &&
+    canRequestResourcePermission("object_type", detail?.operations, permissionRequestsEnabled) &&
     (missingRequestableOperations.length > 0 || policyScopeRequestable);
 
   const canQueryData = hasKnowledgeNetworkRecordOperation(detail, "query_data");

@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canRequestResourcePermission,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
   togglePermissionRequestOperation,
@@ -77,5 +78,11 @@ describe("hasRequestableObjectTypePermission", () => {
         restrictedPropertyCount: 1,
       }),
     ).toBe(true);
+  });
+});
+
+describe("canRequestResourcePermission", () => {
+  it("does not expose a request entry when the edition disables permission requests", () => {
+    expect(canRequestResourcePermission("object_type", [], false)).toBe(false);
   });
 });

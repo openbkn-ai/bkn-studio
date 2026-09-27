@@ -22,6 +22,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { getRuntimeConfig } from "@/framework/runtime/config";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { formatKnowledgeNetworkObjectTypeIndexStateLabel } from "@/modules/knowledge-network/utils/resource-index-state";
@@ -74,6 +75,8 @@ export function ObjectTypeListPanel({
   onDelete,
 }: ObjectTypeListPanelProps) {
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const policyScopePreviewsEnabled =
+    permissionRequestsEnabled && !getRuntimeConfig().currentUser.isSuperAdmin;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -158,7 +161,10 @@ export function ObjectTypeListPanel({
     sortDirection,
   ]);
   useEffect(() => {
-    if (!permissionRequestsEnabled) {
+    policyRequestabilityCache.current.clear();
+  }, [networkId, refreshVersion]);
+  useEffect(() => {
+    if (!policyScopePreviewsEnabled) {
       setPolicyRequestableIDs(new Set());
       return;
     }
@@ -204,7 +210,7 @@ export function ObjectTypeListPanel({
     return () => {
       cancelled = true;
     };
-  }, [items, networkId, permissionRequestsEnabled]);
+  }, [items, networkId, policyScopePreviewsEnabled, refreshVersion]);
   useEffect(() => {
     const nextKeyword = searchParams.get("q") ?? "";
     const nextTag = searchParams.get("tag") ?? "all";
