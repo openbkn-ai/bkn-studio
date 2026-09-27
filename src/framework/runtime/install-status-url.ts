@@ -7,6 +7,33 @@
 
 const INSTALL_STATUS_PATH = "/install-status";
 
+/**
+ * Builds the administrator redirect URL for install-status.
+ *
+ * The token deliberately goes in the URL fragment rather than query string:
+ * browsers do not send fragments to the server, reverse proxy, or access logs.
+ * The install-status page removes it from the address bar after reading it.
+ */
+export function buildInstallStatusRedirectUrl(
+  installStatusUrl: string,
+  accessToken: string | null,
+  locale: "zh-CN" | "en-US",
+): string | null {
+  const token = accessToken?.trim();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const url = new URL(installStatusUrl);
+    url.searchParams.set("lang", locale === "en-US" ? "en" : "zh");
+    url.hash = new URLSearchParams({ token }).toString();
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function resolveConfiguredInstallStatusUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) {
