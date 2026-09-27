@@ -128,7 +128,7 @@ describe("catalog.service · mock listCatalogs", () => {
     vi.unstubAllEnvs();
   });
 
-  it("provides SQL Server and Oracle mock connections with their connector-specific fields", async () => {
+  it("provides enterprise database mock connections with their connector-specific fields", async () => {
     const { getCatalog, listCatalogs } = await import("@/shared/catalog/catalog.service");
 
     for (const [connectorType, expectedConfig] of [
@@ -148,6 +148,15 @@ describe("catalog.service · mock listCatalogs", () => {
           port: 1521,
           service_name: "ORCLPDB1",
           schemas: ["APP", "REPORTING"],
+        },
+      ],
+      [
+        "hana",
+        {
+          host: "hana.internal.example",
+          port: 443,
+          database: "TENANT_DB",
+          schemas: ["ANALYTICS"],
         },
       ],
     ] as const) {
@@ -205,12 +214,12 @@ describe("catalog.service · mock listCatalogs", () => {
     });
 
     expect(firstPage.items.map((catalog) => catalog.name)).toEqual([
+      "analytics_hana",
       "customer_master",
-      "finance_dw",
     ]);
     expect(secondPage.items.map((catalog) => catalog.name)).toEqual([
+      "finance_dw",
       "ISSUE180_IV18007_PG17_orders_archive_20260915",
-      "ISSUE180_IV18007_PG17_orders_current_20260915",
     ]);
     expect(descendingPage.items.map((catalog) => catalog.name)).toEqual([
       "summary_only_resource_catalog",

@@ -324,6 +324,7 @@ export const dataCatalogEnUS = {
         mysql: "MySQL",
         opensearch: "OpenSearch",
         oracle: "Oracle",
+        hana: "SAP HANA",
         postgresql: "PostgreSQL",
         sqlserver: "SQL Server",
       },

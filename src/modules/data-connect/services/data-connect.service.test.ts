@@ -306,6 +306,20 @@ describe("data-connect.service · test connection", () => {
       required: true,
       type: "string",
     });
+    expect(Object.keys(fieldsByType.get("hana") ?? {})).toEqual([
+      "host",
+      "port",
+      "username",
+      "password",
+      "database",
+      "schemas",
+      "options",
+    ]);
+    expect(fieldsByType.get("hana")?.password).toMatchObject({
+      encrypted: true,
+      required: true,
+      type: "string",
+    });
     expect(Object.keys(fieldsByType.get("opensearch") ?? {})).toEqual([
       "host",
       "port",
@@ -335,15 +349,17 @@ describe("data-connect.service · test connection", () => {
     );
     expect(editionsByType.get("sqlserver")).toBe("professional");
     expect(editionsByType.get("oracle")).toBe("professional");
+    expect(editionsByType.get("hana")).toBe("professional");
     expect(editionsByType.get("mysql")).toBeUndefined();
 
     const stateByType = new Map(connectorTypes.map((connector) => [connector.type, connector]));
     expect(stateByType.get("opensearch")).toMatchObject({ available: false, enabled: true });
     expect(stateByType.get("oracle")).toMatchObject({ available: false, enabled: true });
+    expect(stateByType.get("hana")).toMatchObject({ available: false, enabled: true });
     expect(stateByType.get("mysql")).toMatchObject({ available: true, enabled: false });
   });
 
-  it("makes the mock Oracle connector available only at professional edition or above", async () => {
+  it("makes enterprise database connectors available only at professional edition or above", async () => {
     vi.resetModules();
     vi.stubEnv("VITE_USE_MOCK", "true");
     vi.stubEnv("VITE_MOCK_EDITION", "professional");
@@ -352,6 +368,11 @@ describe("data-connect.service · test connection", () => {
 
     const connectorTypes = await listDataConnectConnectorTypes();
     expect(connectorTypes.find((connector) => connector.type === "oracle")).toMatchObject({
+      available: true,
+      enabled: true,
+      requiredEdition: "professional",
+    });
+    expect(connectorTypes.find((connector) => connector.type === "hana")).toMatchObject({
       available: true,
       enabled: true,
       requiredEdition: "professional",

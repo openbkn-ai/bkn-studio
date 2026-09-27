@@ -64,6 +64,25 @@ const oracleConnector: DataConnectConnectorType = {
   type: "oracle",
 };
 
+const hanaConnector: DataConnectConnectorType = {
+  available: true,
+  category: "table",
+  description: "SAP HANA 关系型数据库连接器",
+  enabled: true,
+  fieldConfig: {
+    host: field("主机地址", "string", true),
+    port: field("端口号", "integer", true),
+    username: field("用户名", "string", true),
+    password: field("密码", "string", true, true),
+    database: field("租户数据库名", "string", true),
+    schemas: field("Schema 列表", "array", false),
+    options: field("连接参数", "object", false),
+  },
+  mode: "local",
+  name: "SAP HANA",
+  type: "hana",
+};
+
 describe("connector-template · SQL Server", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("zh-CN");
@@ -317,6 +336,36 @@ describe("connector-template · SQL Server", () => {
     expect(humanizeConnectorFieldLabel("service_name", "oracle")).toBe("Service name");
     expect(getConnectorFieldPlaceholder("port", "integer", "oracle")).toBe("For example: 1521");
     expect(getConnectorFieldHint("schemas", "oracle")).toContain("normalized to uppercase");
+  });
+
+  it("provides HANA tenant defaults and schema guidance", async () => {
+    expect(getConnectorConfigDefaults(hanaConnector)).toEqual({
+      port: 443,
+      options: '{"tls":true}',
+    });
+    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("例如 443");
+    expect(getConnectorFieldPlaceholder("database", "string", "hana")).toBe("例如 TENANT_DB");
+    expect(getConnectorFieldPlaceholder("options", "object", "hana")).toBe('例如 {"tls":true}');
+    expect(getConnectorFieldPlaceholder("schemas", "array", "hana")).toContain("非系统 Schema");
+    expect(getConnectorFieldHint("schemas", "hana")).toContain("大小写完全一致");
+    expect(getConnectorTemplateMeta(hanaConnector).description).toBe(
+      "连接 SAP HANA 关系型数据库。",
+    );
+    expect(
+      groupConnectorFields(hanaConnector).map((group) => [
+        group.key,
+        group.fields.map(([name]) => name),
+      ]),
+    ).toEqual([
+      ["connection", ["host", "port", "database"]],
+      ["auth", ["username", "password"]],
+      ["advanced", ["options", "schemas"]],
+    ]);
+
+    await i18n.changeLanguage("en-US");
+    expect(humanizeConnectorFieldLabel("database", "hana")).toBe("Tenant database");
+    expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("For example: 443");
+    expect(getConnectorFieldHint("schemas", "hana")).toContain("including case");
   });
 
   it("uses the AnyShare template for enum controls and conditional credentials", () => {
