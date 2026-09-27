@@ -39,66 +39,7 @@
 .headerActions {
   gap: 6px;
 }
-.modeToggle {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--txt);
-  font-size: 14px;
-  font-weight: 600;
-}
-.modeToggle :global(.ant-switch) {
-  min-width: 34px;
-  height: 20px;
-  background: var(--color-fill-secondary);
-}
-.modeToggle :global(.ant-switch.ant-switch-checked) {
-  background: var(--color-primary-600);
-}
-.modeToggle :global(.ant-switch .ant-switch-handle) {
-  top: 2px;
-  width: 16px;
-  height: 16px;
-}
-.cmpReport {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid rgba(46, 104, 255, 0.28);
-  background: var(--color-bg-surface);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 7px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.cmpReport:hover:not(:disabled) {
-  background: rgba(46, 104, 255, 0.08);
-}
-.cmpReport:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
 
-/* Comparison report modal (portals cannot access .page's cascaded variables, so define them locally). */
-.rptRoot {
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-  --accent: var(--color-primary-500);
-  --line: rgba(15, 30, 54, 0.1);
-  --txt: var(--color-text-primary);
-  --txt2: var(--color-text-secondary);
-  --faint: var(--color-text-tertiary);
-  --code: var(--color-fill-quaternary);
-  --chip: var(--color-fill-secondary);
-  font-size: 13px;
-  color: var(--txt);
-}
-
-:global(:root[data-theme="dark"]) .rptRoot,
 :global(:root[data-theme="dark"]) .configDrawer {
   --accent: var(--color-primary-500);
   --line: var(--color-border);
@@ -109,234 +50,13 @@
   --chip: var(--color-interface-panel-bg);
   --field-bd: var(--color-border);
 }
-/* Report header actions (copy / export) */
-.rptActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.rptActBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid rgba(46, 104, 255, 0.28);
-  background: var(--color-bg-surface);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-.rptActBtn:hover {
-  background: rgba(46, 104, 255, 0.08);
-}
-
-.rptQ {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 2px 0 16px;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--txt);
-  background: var(--code);
-  border-radius: 10px;
-}
-.rptQMark {
-  color: var(--accent);
-  font-size: 18px;
-  line-height: 1;
-}
-.rptTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  margin-bottom: 18px;
-  /* Fixed layout: overview and per-round metric tables use aligned column widths. */
-  table-layout: fixed;
-}
-.rptTable th,
-.rptTable td {
-  border: 1px solid var(--line);
-  padding: 10px 14px;
-  text-align: left;
-  vertical-align: top;
-  word-break: break-word;
-  line-height: 1.6;
-}
-.rptTable th {
-  background: var(--code);
-  font-weight: 600;
-}
-.rptTable th:first-child,
-.rptTable td:first-child {
-  width: 130px;
-}
-.rptTable td:first-child {
-  color: var(--txt2);
-}
-.rptBest {
-  color: var(--color-success-text);
-  font-weight: 700;
-}
-.rptOkTxt {
-  color: var(--color-success-text);
-}
-.rptErrTxt {
-  color: var(--color-error-text);
-  font-weight: 600;
-}
-.rptToolTags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-.rptTool {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--txt2);
-  background: var(--chip);
-  border-radius: 5px;
-  padding: 2px 7px;
-}
-.rptToolErr {
-  color: var(--color-error-text);
-  background: rgba(214, 58, 58, 0.09);
-}
-
-/* Per-round sections */
-.rptRound {
-  margin-top: 20px;
-}
-.rptRoundNo {
-  flex: 0 0 auto;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--accent);
-  background: rgba(46, 104, 255, 0.1);
-  border-radius: 6px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-.rptAnsBox > summary {
-  list-style: none;
-  cursor: pointer;
-}
-.rptAnsBox > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* Answer comparison (two independently scrolling columns) */
-.rptAnsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.rptAnsBox {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--color-bg-surface);
-}
-.rptAnsHead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: var(--code);
-  border-bottom: 1px solid var(--line);
-}
-.rptAnsLbl {
-  font-size: 11px;
-  color: var(--faint);
-}
-.rptAnsBody {
-  padding: 12px 14px;
-  max-height: 260px;
-  overflow: auto;
-  font-size: 13px;
-}
-.rptSumHead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 700;
-  margin: 4px 0 8px;
-}
-.rptGenBtn {
-  border: 0;
-  border-radius: 7px;
-  background: var(--accent);
-  color: var(--color-text-inverse);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 12px;
-  cursor: pointer;
-}
-.rptGenBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.rptSummary {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: var(--color-bg-surface);
-  max-height: 320px;
-  overflow: auto;
-}
-.rptHint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--faint);
-}
 
 /* Conversation workspace */
-.soloStage,
-.compareStage {
+.soloStage {
   padding: 0 0 104px;
 }
-.soloStage {
-}
-.compareStage {
-}
-.soloPanel,
-.comparePanel {
+.soloPanel {
   width: 100%;
-}
-.comparePanel {
-}
-
-/* Split view: two conversation panels side by side */
-.panes {
-  display: flex;
-  align-items: flex-start;
-}
-.panesSingle {
-  justify-content: center;
-}
-.pane {
-  /* Equal zero-basis tracks keep both sides at 50/50 regardless of content. */
-  flex: 1 1 0;
-  min-width: 0;
-}
-.pane + .pane {
-  border-left: 1px solid var(--line);
-}
-.panesSingle .pane {
-  flex: 1 1 auto;
-}
-/* Identity badge for the highlighted panel: solid gradient */
-.paneTitleHl {
-  background: linear-gradient(135deg, #2762ff, #7b5cff);
-  border-color: transparent;
-  color: var(--color-text-inverse);
-  box-shadow: 0 3px 10px rgba(91, 90, 255, 0.35);
 }
 
 /* Single conversation panel root (ChatPane) */
@@ -344,7 +64,7 @@
   min-width: 0;
 }
 
-/* Panel identity badge (comparison-mode panel header) */
+/* Panel identity badge (workspace header) */
 .paneTitle {
   flex: 0 0 auto;
   font-size: 11.5px;
@@ -355,12 +75,6 @@
   border-radius: 7px;
   padding: 3px 9px;
   white-space: nowrap;
-}
-
-/* Panel tool selection (strictly limits the tool set passed to the model) */
-.toolSelect {
-  min-width: 118px;
-  max-width: 200px;
 }
 
 /* Panel dropdown: override the global navy-derived gray selection background with light blue. */
@@ -377,111 +91,11 @@
   color: var(--accent);
 }
 
-/* Comparison-mode input area: send targets and comparison report */
-.toolOption {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-  line-height: 1.25;
-}
-
-.toolOptionName {
-  overflow: hidden;
-  color: var(--txt);
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolOptionId {
-  overflow: hidden;
-  color: var(--txt2);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .paneMenu :global(.ant-select-item-option-content) {
   min-width: 0;
 }
 
-.targetBar {
-  max-width: 1080px;
-  margin: 0 auto 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.targetLeft {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.targetLabel {
-  flex: 0 0 auto;
-  color: var(--txt2);
-  font-size: 12px;
-  font-weight: 600;
-}
-.targetSeg {
-  flex: 0 0 auto;
-}
-/* The default white selected state is too subtle; use a solid primary color with white text. The switch thumb uses the same color. */
-.targetSeg :global(.ant-segmented-item-selected) {
-  background: var(--accent);
-  color: var(--color-text-inverse);
-  font-weight: 600;
-}
-.targetSeg :global(.ant-segmented-item-selected:hover) {
-  color: var(--color-text-inverse);
-}
-.targetSeg :global(.ant-segmented-thumb) {
-  background: var(--accent);
-}
-
-/* Half-width split-panel header: compact enough to fit on one line where possible */
-.barCompact {
-  gap: 6px 8px;
-  padding: 8px 14px;
-}
-.barCompact .modelSelect {
-  min-width: 120px;
-  max-width: 170px;
-}
-
-/* Top toolbar */
-.bar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  max-width: 1280px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 12px 18px 10px;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-}
-.barLeft,
-.barActions {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.barLeft {
-  flex: 1 1 auto;
-}
-.barActions {
-  flex: 0 0 auto;
-}
+/* Toolbar controls */
 .barField {
   display: flex;
   align-items: center;
@@ -652,8 +266,7 @@
   font-size: 12px;
   font-weight: 600;
 }
-.configCard .modelSelect,
-.configCard .toolSelect {
+.configCard .modelSelect {
   width: 100%;
   max-width: none;
 }
@@ -1067,16 +680,8 @@
   .agentHeader {
     padding: 8px 18px;
   }
-  .compareStage,
   .soloStage {
     padding: 0 0 104px;
-  }
-  .panes {
-    flex-direction: column;
-  }
-  .pane + .pane {
-    border-top: 1px solid var(--line);
-    border-left: 0;
   }
   .composer {
     padding: 12px 18px 14px;

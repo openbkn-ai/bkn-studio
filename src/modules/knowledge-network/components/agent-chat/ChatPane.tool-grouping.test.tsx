@@ -54,10 +54,8 @@ vi.mock("@/modules/knowledge-network/services/bkn-lifecycle.service", async (imp
 vi.mock("react-router-dom", () => ({ useNavigate: () => vi.fn() }));
 
 const profile: PaneProfile = {
-  paneKey: "solo",
   defaultPrompt: DEFAULT_PROMPT,
   injectKnContext: false,
-  defaultToolNames: null,
   evidenceHint: KN_EVIDENCE_HINT,
 };
 
@@ -97,7 +95,6 @@ function renderPane() {
       knSummary={null}
       suggestions={[]}
       getTools={() => Promise.resolve(toolDefs)}
-      toolDefs={toolDefs}
       pageScrollRef={createRef<HTMLDivElement>()}
     />,
   );
