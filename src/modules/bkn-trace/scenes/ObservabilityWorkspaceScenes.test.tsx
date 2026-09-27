@@ -842,6 +842,12 @@ describe("observability workspace scenes", () => {
     expect(await screen.findByText("bknTrace.settings.capturePolicy.changeFailed")).not.toBeNull();
     expect(screen.getAllByText("bknTrace.settings.capturePolicy.states.enabled")).toHaveLength(2);
     expect(screen.queryByText("bknTrace.settings.capturePolicy.states.disabled")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.cancel" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    expect(screen.queryByText("bknTrace.settings.capturePolicy.changeFailed")).toBeNull();
   });
 
   it("shows rollback as rollback, not a successful disable", async () => {

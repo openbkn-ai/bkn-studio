@@ -732,7 +732,10 @@ function CapturePolicySection({
           {canWrite ? (
             <Button
               disabled={!stable || Boolean(configuration.activeOperationId) || submitting}
-              onClick={() => setConfirmOpen(true)}
+              onClick={() => {
+                setChangeError(false);
+                setConfirmOpen(true);
+              }}
               type="primary"
             >
               {t(
@@ -744,7 +747,10 @@ function CapturePolicySection({
             cancelText={t("common.cancel")}
             confirmLoading={submitting}
             okText={t("bknTrace.settings.capturePolicy.confirmAction")}
-            onCancel={() => setConfirmOpen(false)}
+            onCancel={() => {
+              setChangeError(false);
+              setConfirmOpen(false);
+            }}
             onOk={() => void change()}
             open={confirmOpen}
             title={t("bknTrace.settings.capturePolicy.confirmTitle")}

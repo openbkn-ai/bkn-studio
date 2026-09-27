@@ -140,13 +140,13 @@ describe("filterNavByPermission — 系统管理按功能独立授权", () => {
     );
   });
 
-  it("可观测性设置仅对超级管理员显示", () => {
+  it("可观测性设置入口不按角色隐藏，页面由服务端 Access Profile 授权", () => {
     const regular = filterNavByPermission(consoleNavigation, []);
     const superAdmin = filterNavByPermission(consoleNavigation, [], true);
     const observabilityChildren = (items: ReturnType<typeof filterNavByPermission>) =>
       items.find((item) => item.key === "observability")?.children ?? [];
 
-    expect(keys(observabilityChildren(regular))).not.toContain("observability-settings");
+    expect(keys(observabilityChildren(regular))).toContain("observability-settings");
     expect(keys(observabilityChildren(superAdmin))).toContain("observability-settings");
   });
 });
