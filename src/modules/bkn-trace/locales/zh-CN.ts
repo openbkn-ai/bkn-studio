@@ -1005,6 +1005,13 @@ export const bknTraceZhCN = {
         status: "接入状态",
       },
       capturePolicy: {
+        enable: "开启 Trace 与证据采集",
+        disable: "关闭 Trace 与证据采集",
+        confirmAction: "确认切换",
+        confirmTitle: "确认切换采集策略",
+        confirmWarning:
+          "切换影响所有接入的 Trace 与证据生产者。实例收敛期间可能出现混合状态；关闭期间的数据不会补录。建议在业务空闲时操作。",
+        changeFailed: "策略变更未被接受，请刷新状态后重试。",
         dataUnavailable: "不可用（当前合同未提供）",
         desiredState: "期望状态",
         effectiveState: "生效状态",
@@ -1023,6 +1030,7 @@ export const bknTraceZhCN = {
         lastStableRevision: "最近稳定版本",
         noActiveOperation: "无活动操作",
         operationUnavailable: "当前没有可读取的活动操作；操作详情不在配置快照中。",
+        reconcileRequired: "采集策略未收敛；请由管理员检查控制面并执行 reconcile，暂不可再次切换。",
         revision: "策略版本",
         states: {
           enabled: "已开启",
@@ -1048,7 +1056,7 @@ export const bknTraceZhCN = {
       notReturned: "接口未返回",
       overview: "运行概览",
       policies: "保留与存储策略",
-      readOnlyNotice: "0.1.4 保持只读；页面只展示服务端已返回的维护事实。",
+      readOnlyNotice: "以下采集来源、存储与归档信息以服务端返回的实际状态为准。",
       recentArchives: "最近归档",
       sources: "采集来源",
       sourceLabels: {

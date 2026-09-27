@@ -23,6 +23,7 @@ export type TraceAccessProfile = {
   securityAudit: boolean;
   technicalTrace: boolean;
   traceEvidenceConfigurationRead: boolean;
+  traceEvidenceConfigurationWrite: boolean;
 };
 
 export type CapturePolicyState =
@@ -100,6 +101,7 @@ type BackendTraceAccessProfile = {
   security_audit?: boolean;
   technical_trace?: boolean;
   trace_evidence_configuration_read?: boolean;
+  trace_evidence_configuration_write?: boolean;
 };
 
 type BackendCapturePolicyOperation = {
@@ -133,6 +135,27 @@ type BackendCapturePolicy = {
   lease_ttl_seconds?: number;
 };
 
+type BackendCapturePolicySnapshot = {
+  desired_state?: CapturePolicyState;
+  effective_state?: CapturePolicyState;
+  revision: number;
+  last_stable_revision?: number;
+  operation: BackendCapturePolicyOperation;
+};
+
+function normalizeCapturePolicy(data: BackendCapturePolicy): CapturePolicyConfiguration {
+  return {
+    kind: data.kind,
+    desiredState: normalizeCapturePolicyState(data.desired_state),
+    effectiveState: normalizeCapturePolicyState(data.effective_state),
+    policyRevision: data.policy_revision ?? 0,
+    lastStableRevision: data.last_stable_revision ?? 0,
+    activeOperationId: data.active_operation_id,
+    heartbeatIntervalSeconds: data.heartbeat_interval_seconds ?? 0,
+    leaseTtlSeconds: data.lease_ttl_seconds ?? 0,
+  };
+}
+
 export async function getAccessProfile(): Promise<TraceAccessProfile> {
   const response = await http.get<BackendTraceAccessProfile>(
     `${OBSERVABILITY_API_PREFIX}/access-profile`,
@@ -151,6 +174,7 @@ export async function getAccessProfile(): Promise<TraceAccessProfile> {
     securityAudit: Boolean(response.data.security_audit),
     technicalTrace: Boolean(response.data.technical_trace),
     traceEvidenceConfigurationRead: Boolean(response.data.trace_evidence_configuration_read),
+    traceEvidenceConfigurationWrite: Boolean(response.data.trace_evidence_configuration_write),
   };
 }
 
@@ -158,17 +182,28 @@ export async function getTraceEvidenceConfiguration(): Promise<CapturePolicyConf
   const response = await http.get<BackendCapturePolicy>(
     `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
   );
-  const data = response.data;
-  return {
-    kind: data.kind,
-    desiredState: normalizeCapturePolicyState(data.desired_state),
-    effectiveState: normalizeCapturePolicyState(data.effective_state),
-    policyRevision: data.policy_revision ?? 0,
-    lastStableRevision: data.last_stable_revision ?? 0,
-    activeOperationId: data.active_operation_id,
-    heartbeatIntervalSeconds: data.heartbeat_interval_seconds ?? 0,
-    leaseTtlSeconds: data.lease_ttl_seconds ?? 0,
-  };
+  return normalizeCapturePolicy(response.data);
+}
+
+export async function changeTraceEvidenceConfiguration(
+  desiredState: "enabled" | "disabled",
+  expectedRevision: number,
+): Promise<CapturePolicyConfiguration> {
+  const response = await http.put<BackendCapturePolicySnapshot>(
+    `${OBSERVABILITY_API_PREFIX}/trace-evidence-configuration`,
+    { desired_state: desiredState, expected_revision: expectedRevision },
+  );
+  const snapshot = response.data;
+  if (snapshot.revision === undefined || !snapshot.operation?.id) {
+    throw new Error("Invalid Trace/Evidence change response");
+  }
+  return normalizeCapturePolicy({
+    desired_state: snapshot.desired_state,
+    effective_state: snapshot.effective_state,
+    policy_revision: snapshot.revision,
+    last_stable_revision: snapshot.last_stable_revision,
+    active_operation_id: snapshot.operation.id,
+  });
 }
 
 export async function getTraceEvidenceOperation(
