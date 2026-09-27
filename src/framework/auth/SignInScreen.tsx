@@ -11,8 +11,10 @@ import { useTranslation } from "react-i18next";
 
 import { DevTokenSetupForm } from "@/framework/auth/DevTokenSetupForm";
 import {
+  beginAutoLogin,
   beginLogin,
   canAutoStartLogin,
+  msUntilAutoStartAllowed,
   reloadForSharedAuthState,
   subscribeFlowLockRelease,
 } from "@/framework/auth/oauth";
@@ -32,6 +34,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [deferredToOtherTab, setDeferredToOtherTab] = useState(false);
   const [showDevTokenForm, setShowDevTokenForm] = useState(false);
+  const [retryGeneration, setRetryGeneration] = useState(0);
 
   useEffect(() => {
     if (showDevTokenForm) {
@@ -55,11 +58,22 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
       setRedirecting(true);
       const { hash, pathname, search } = window.location;
 
-      beginLogin(`${pathname}${search}${hash}`, loginLocale).catch((cause: unknown) => {
-        setRedirectError(cause instanceof Error ? cause.message : String(cause));
-        setRedirecting(false);
-        startedRef.current = false;
-      });
+      void beginAutoLogin(`${pathname}${search}${hash}`, loginLocale)
+        .then((started) => {
+          if (started) {
+            return;
+          }
+
+          // Another visible tab won the post-jitter lock check. Re-run this
+          // effect so this tab starts waiting for its release or TTL expiry.
+          startedRef.current = false;
+          setRetryGeneration((generation) => generation + 1);
+        })
+        .catch((cause: unknown) => {
+          setRedirectError(cause instanceof Error ? cause.message : String(cause));
+          setRedirecting(false);
+          startedRef.current = false;
+        });
       return true;
     };
 
@@ -77,11 +91,25 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     const retry = () => void startIfAllowed();
     document.addEventListener("visibilitychange", retry);
     const unsubscribe = subscribeFlowLockRelease(reloadForSharedAuthState);
+    const wait = msUntilAutoStartAllowed();
+    const expiryTimer =
+      wait === null
+        ? undefined
+        : window.setTimeout(() => {
+            if (!startIfAllowed()) {
+              // The lock may have been replaced while this tab was waiting.
+              // Rebuild the effect to calculate the new lock's remaining TTL.
+              setRetryGeneration((generation) => generation + 1);
+            }
+          }, wait + 50);
     return () => {
       document.removeEventListener("visibilitychange", retry);
       unsubscribe();
+      if (expiryTimer !== undefined) {
+        window.clearTimeout(expiryTimer);
+      }
     };
-  }, [loginLocale, showDevTokenForm]);
+  }, [loginLocale, retryGeneration, showDevTokenForm]);
 
   if (showDevTokenForm) {
     return <DevTokenSetupForm onSaved={onDevTokenSaved} />;

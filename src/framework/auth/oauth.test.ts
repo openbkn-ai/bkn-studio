@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOCALE_COOKIE_NAME } from "@/framework/i18n/locale";
 
 import {
+  beginAutoLogin,
   buildAuthorizationRequestURL,
   beginLogin,
   canAutoStartLogin,
@@ -21,6 +22,7 @@ import {
   isCsrfConflictCallback,
   releaseFlowLock,
   logout,
+  msUntilAutoStartAllowed,
   shouldUseOAuthGate,
   stashCallbackError,
   subscribeFlowLockRelease,
@@ -260,6 +262,41 @@ describe("login CSRF flow lock", () => {
     );
 
     expect(canAutoStartLogin()).toBe(true);
+  });
+
+  it("reports a bounded wait for a foreign lock", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-27T00:00:00.000Z"));
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() - 60_000 }),
+    );
+
+    expect(msUntilAutoStartAllowed()).toBe(120_000);
+
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() + 60_000 }),
+    );
+    expect(msUntilAutoStartAllowed()).toBe(180_000);
+
+    vi.useRealTimers();
+  });
+
+  it("rechecks the lock after the automatic-login jitter", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+
+    const attempt = beginAutoLogin("/studio");
+    window.localStorage.setItem(
+      FLOW_LOCK_KEY,
+      JSON.stringify({ loadId: "some-other-page-load", startedAt: Date.now() }),
+    );
+
+    await vi.runAllTimersAsync();
+
+    await expect(attempt).resolves.toBe(false);
+    vi.useRealTimers();
   });
 
   it("ignores a malformed lock rather than deadlocking sign-in", () => {
