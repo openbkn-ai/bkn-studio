@@ -21,6 +21,7 @@ import {
   listLogSources,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
+  changeTraceEvidenceConfiguration,
   getAccessProfile,
   getTraceEvidenceConfiguration,
   getTraceEvidenceOperation,
@@ -64,6 +65,7 @@ vi.mock("@/modules/bkn-trace/services/trace.service", async (importOriginal) => 
     await importOriginal<typeof import("@/modules/bkn-trace/services/trace.service")>();
   return {
     ...original,
+    changeTraceEvidenceConfiguration: vi.fn(),
     getAccessProfile: vi.fn(),
     getTraceEvidenceConfiguration: vi.fn(),
     getTraceEvidenceOperation: vi.fn(),
@@ -110,6 +112,7 @@ const profile = {
   securityAudit: false,
   technicalTrace: true,
   traceEvidenceConfigurationRead: true,
+  traceEvidenceConfigurationWrite: false,
   observabilityArchiveManage: true,
 };
 
@@ -746,6 +749,223 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.capturePolicy.phases.enabling")).not.toBeNull();
   });
 
+  it("only a server write grant exposes a confirmed revision-guarded disable action", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(getTraceEvidenceConfiguration)
+      .mockResolvedValueOnce({
+        desiredState: "enabled",
+        effectiveState: "enabled",
+        policyRevision: 9,
+        lastStableRevision: 8,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValue({
+        desiredState: "disabled",
+        effectiveState: "enabled",
+        policyRevision: 10,
+        lastStableRevision: 9,
+        activeOperationId: "op-10",
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      });
+    vi.mocked(changeTraceEvidenceConfiguration).mockResolvedValue({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockResolvedValue({
+      id: "op-10",
+      phase: "disabling",
+      requestedState: "disabled",
+      expectedRevision: 9,
+    });
+
+    render(<ObservabilitySettingsScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    expect(changeTraceEvidenceConfiguration).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.confirmAction" }),
+    );
+    await waitFor(() =>
+      expect(changeTraceEvidenceConfiguration).toHaveBeenCalledWith("disabled", 9),
+    );
+    expect(
+      await screen.findByText("bknTrace.settings.capturePolicy.phases.pending"),
+    ).not.toBeNull();
+    expect(
+      await screen.findByText(
+        "bknTrace.settings.capturePolicy.phases.disabling",
+        {},
+        { timeout: 4000 },
+      ),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("does not expose switch controls without the exact write grant", async () => {
+    render(<ObservabilitySettingsScene />);
+    expect(await screen.findByText("bknTrace.settings.capturePolicy.title")).not.toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    ).toBeNull();
+  });
+
+  it("keeps a rejected change visible as an error without claiming the switch changed", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(changeTraceEvidenceConfiguration).mockRejectedValue(new Error("revision conflict"));
+
+    render(<ObservabilitySettingsScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.confirmAction" }),
+    );
+
+    expect(await screen.findByText("bknTrace.settings.capturePolicy.changeFailed")).not.toBeNull();
+    expect(screen.getAllByText("bknTrace.settings.capturePolicy.states.enabled")).toHaveLength(2);
+    expect(screen.queryByText("bknTrace.settings.capturePolicy.states.disabled")).toBeNull();
+  });
+
+  it("shows rollback as rollback, not a successful disable", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(getTraceEvidenceConfiguration)
+      .mockResolvedValueOnce({
+        desiredState: "enabled",
+        effectiveState: "enabled",
+        policyRevision: 9,
+        lastStableRevision: 9,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValue({
+        desiredState: "enabled",
+        effectiveState: "enabled",
+        policyRevision: 10,
+        lastStableRevision: 9,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      });
+    vi.mocked(changeTraceEvidenceConfiguration).mockResolvedValue({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockResolvedValue({
+      id: "op-10",
+      phase: "rollback_completed",
+      requestedState: "disabled",
+      expectedRevision: 9,
+    });
+
+    render(<ObservabilitySettingsScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.confirmAction" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "bknTrace.settings.capturePolicy.phases.rollback_completed",
+        {},
+        { timeout: 4000 },
+      ),
+    ).not.toBeNull();
+    expect(screen.getAllByText("bknTrace.settings.capturePolicy.states.enabled")).toHaveLength(2);
+    expect(screen.queryByText("bknTrace.settings.capturePolicy.phases.succeeded")).toBeNull();
+  });
+
+  it("keeps polling after terminal operation until a fresh configuration clears the active ID", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(getTraceEvidenceConfiguration)
+      .mockResolvedValueOnce({
+        desiredState: "enabled",
+        effectiveState: "enabled",
+        policyRevision: 9,
+        lastStableRevision: 9,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValueOnce({
+        desiredState: "disabled",
+        effectiveState: "enabled",
+        policyRevision: 10,
+        lastStableRevision: 9,
+        activeOperationId: "op-10",
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValue({
+        desiredState: "disabled",
+        effectiveState: "disabled",
+        policyRevision: 10,
+        lastStableRevision: 10,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      });
+    vi.mocked(changeTraceEvidenceConfiguration).mockResolvedValue({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockResolvedValue({
+      id: "op-10",
+      phase: "succeeded",
+      requestedState: "disabled",
+      expectedRevision: 9,
+    });
+
+    render(<ObservabilitySettingsScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.confirmAction" }),
+    );
+
+    await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(3), {
+      timeout: 6000,
+    });
+    expect(
+      screen
+        .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+  });
+
   it("活动操作读取失败时将阶段标记为不可用而不是无活动操作", async () => {
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
       kind: "configuration_get",
@@ -776,15 +996,13 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).toBeNull();
   });
 
-  it("非超级管理员访问设置页时拒绝访问且不请求数据", () => {
+  it("非超级管理员仍按服务端能力访问设置页", async () => {
     mockCurrentUser.isSuperAdmin = false;
 
     render(<ObservabilitySettingsScene />);
 
-    expect(screen.getByText("bknTrace.errors.accessDenied")).not.toBeNull();
-    expect(getAccessProfile).not.toHaveBeenCalled();
-    expect(listLogSources).not.toHaveBeenCalled();
-    expect(listLogPolicies).not.toHaveBeenCalled();
+    expect(await screen.findByText("bknTrace.settings.capturePolicy.title")).not.toBeNull();
+    expect(getAccessProfile).toHaveBeenCalled();
   });
 
   it("设置页只展示可维护的日志保留项，不暴露内部 Trace 存储", async () => {

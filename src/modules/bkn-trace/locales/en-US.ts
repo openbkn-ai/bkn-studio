@@ -1067,6 +1067,13 @@ export const bknTraceEnUS = {
         status: "Integration status",
       },
       capturePolicy: {
+        enable: "Enable Trace and Evidence capture",
+        disable: "Disable Trace and Evidence capture",
+        confirmAction: "Confirm change",
+        confirmTitle: "Confirm capture policy change",
+        confirmWarning:
+          "This affects every connected Trace and Evidence producer. Instances may be mixed while converging, and data missed while disabled will not be backfilled. Use a quiet period.",
+        changeFailed: "The policy change was not accepted. Refresh the state and try again.",
         dataUnavailable: "Unavailable (not provided by the current contract)",
         desiredState: "Desired state",
         effectiveState: "Effective state",
@@ -1113,7 +1120,7 @@ export const bknTraceEnUS = {
       overview: "Runtime overview",
       policies: "Retention and storage policies",
       readOnlyNotice:
-        "Version 0.1.4 remains read-only and shows only maintenance facts returned by the server.",
+        "Collection sources, storage and archive information reflect the actual state returned by the server.",
       recentArchives: "Recent archives",
       sources: "Collection sources",
       sourceLabels: {

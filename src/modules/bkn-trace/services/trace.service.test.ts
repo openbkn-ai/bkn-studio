@@ -8,15 +8,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMock = vi.hoisted(() => vi.fn());
+const putMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/framework/request/http", () => ({
-  http: { get: getMock },
+  http: { get: getMock, put: putMock },
 }));
 
 describe("BKN Trace access profile service", () => {
   beforeEach(() => {
     vi.resetModules();
     getMock.mockReset();
+    putMock.mockReset();
   });
 
   it("uses only the server-derived whole-record access profile", async () => {
@@ -55,8 +57,46 @@ describe("BKN Trace access profile service", () => {
       securityAudit: false,
       technicalTrace: false,
       traceEvidenceConfigurationRead: false,
+      traceEvidenceConfigurationWrite: false,
     });
     expect(getMock.mock.calls.flat().join(" ")).not.toContain("roles");
+  });
+
+  it("maps the exact server write grant and submits revision-guarded change", async () => {
+    getMock.mockResolvedValue({
+      data: { trace_evidence_configuration_read: true, trace_evidence_configuration_write: true },
+    });
+    putMock.mockResolvedValue({
+      data: {
+        desired_state: "disabled",
+        effective_state: "enabled",
+        revision: 10,
+        last_stable_revision: 9,
+        operation: {
+          id: "op-10",
+          phase: "disabling",
+          requested_state: "disabled",
+          expected_revision: 9,
+        },
+      },
+    });
+    const { getAccessProfile, changeTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(getAccessProfile()).resolves.toMatchObject({
+      traceEvidenceConfigurationRead: true,
+      traceEvidenceConfigurationWrite: true,
+    });
+    await expect(changeTraceEvidenceConfiguration("disabled", 9)).resolves.toMatchObject({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      activeOperationId: "op-10",
+    });
+    expect(putMock).toHaveBeenCalledWith("/agent-observability/v1/trace-evidence-configuration", {
+      desired_state: "disabled",
+      expected_revision: 9,
+    });
   });
 
   it("reads the frozen configuration_get contract without inventing operation or queue fields", async () => {

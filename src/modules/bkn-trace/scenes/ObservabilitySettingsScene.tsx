@@ -11,7 +11,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useAppServices } from "@/framework/context/use-app-services";
 import styles from "@/modules/bkn-trace/scenes/ObservabilityWorkspace.module.css";
 import {
   BUSINESS_MODULES,
@@ -30,6 +29,7 @@ import {
   type LogSourceStatus,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
+  changeTraceEvidenceConfiguration,
   getAccessProfile,
   getTraceEvidenceConfiguration,
   getTraceEvidenceOperation,
@@ -54,8 +54,6 @@ type ModuleSourceRow = {
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
-  const { runtimeConfig } = useAppServices();
-  const superAdmin = runtimeConfig.currentUser.isSuperAdmin;
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
@@ -66,16 +64,13 @@ export function ObservabilitySettingsScene() {
   const [capturePolicyOperation, setCapturePolicyOperation] = useState<CapturePolicyOperation>();
   const [capturePolicyUnavailable, setCapturePolicyUnavailable] = useState(false);
   const [capturePolicyOperationUnavailable, setCapturePolicyOperationUnavailable] = useState(false);
+  const [capturePolicyWrite, setCapturePolicyWrite] = useState(false);
+  const [pollingOperationId, setPollingOperationId] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!superAdmin) {
-      setDenied(true);
-      setLoading(false);
-      return;
-    }
     let active = true;
     getAccessProfile()
       .then(async (profile) => {
@@ -91,6 +86,7 @@ export function ObservabilitySettingsScene() {
           return;
         }
         setArchiveManage(profile.observabilityArchiveManage);
+        setCapturePolicyWrite(profile.traceEvidenceConfigurationWrite);
         const [
           sourceResult,
           policyResult,
@@ -138,12 +134,15 @@ export function ObservabilitySettingsScene() {
           setCapturePolicy(capturePolicyResult.value);
           setCapturePolicyUnavailable(false);
           if (capturePolicyResult.value.activeOperationId) {
+            setPollingOperationId(capturePolicyResult.value.activeOperationId);
             const operationResult = await Promise.allSettled([
               getTraceEvidenceOperation(capturePolicyResult.value.activeOperationId),
             ]);
             if (!active) return;
             if (operationResult[0]?.status === "fulfilled") {
               setCapturePolicyOperation(operationResult[0].value);
+              if (isSettledCapturePolicy(capturePolicyResult.value, operationResult[0].value))
+                setPollingOperationId(undefined);
               setCapturePolicyOperationUnavailable(false);
             } else {
               setCapturePolicyOperation(undefined);
@@ -172,7 +171,37 @@ export function ObservabilitySettingsScene() {
     return () => {
       active = false;
     };
-  }, [superAdmin, t]);
+  }, [t]);
+
+  useEffect(() => {
+    if (!pollingOperationId) return;
+    let active = true;
+    let timer: number;
+    const poll = async () => {
+      let terminal = false;
+      try {
+        const [operation, configuration] = await Promise.all([
+          getTraceEvidenceOperation(pollingOperationId),
+          getTraceEvidenceConfiguration(),
+        ]);
+        if (!active) return;
+        setCapturePolicyOperation(operation);
+        setCapturePolicyOperationUnavailable(false);
+        setCapturePolicy(configuration);
+        terminal = isSettledCapturePolicy(configuration, operation);
+        if (terminal) setPollingOperationId(undefined);
+      } catch {
+        if (active) setCapturePolicyOperationUnavailable(true);
+      } finally {
+        if (active && !terminal) timer = window.setTimeout(() => void poll(), 2000);
+      }
+    };
+    timer = window.setTimeout(() => void poll(), 2000);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [pollingOperationId]);
 
   const moduleSources = useMemo<ModuleSourceRow[]>(
     () =>
@@ -324,12 +353,7 @@ export function ObservabilitySettingsScene() {
     },
   ];
 
-  if (!superAdmin || loading)
-    return superAdmin ? (
-      <Spin />
-    ) : (
-      <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />
-    );
+  if (loading) return <Spin />;
   if (denied) return <Alert message={t("bknTrace.errors.accessDenied")} showIcon type="warning" />;
   return (
     <div className={styles.workspace}>
@@ -348,6 +372,17 @@ export function ObservabilitySettingsScene() {
           operation={capturePolicyOperation}
           operationUnavailable={capturePolicyOperationUnavailable}
           unavailable={capturePolicyUnavailable}
+          canWrite={capturePolicyWrite}
+          onChange={async (desiredState, expectedRevision) => {
+            const configuration = await changeTraceEvidenceConfiguration(
+              desiredState,
+              expectedRevision,
+            );
+            setCapturePolicy(configuration);
+            setCapturePolicyOperation(undefined);
+            setCapturePolicyOperationUnavailable(false);
+            setPollingOperationId(configuration.activeOperationId);
+          }}
         />
       ) : null}
 
@@ -622,17 +657,42 @@ function SettingsSection({ children, title }: { children: ReactNode; title: stri
 }
 
 function CapturePolicySection({
+  canWrite,
   configuration,
+  onChange,
   operation,
   operationUnavailable,
   unavailable,
 }: {
+  canWrite: boolean;
   configuration?: CapturePolicyConfiguration;
+  onChange: (desiredState: "enabled" | "disabled", expectedRevision: number) => Promise<void>;
   operation?: CapturePolicyOperation;
   operationUnavailable: boolean;
   unavailable: boolean;
 }) {
   const { t } = useTranslation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [changeError, setChangeError] = useState(false);
+  const nextState = configuration?.desiredState === "enabled" ? "disabled" : "enabled";
+  const stable =
+    configuration &&
+    configuration.desiredState === configuration.effectiveState &&
+    (configuration.desiredState === "enabled" || configuration.desiredState === "disabled");
+  const change = async () => {
+    if (!configuration || !stable) return;
+    setSubmitting(true);
+    setChangeError(false);
+    try {
+      await onChange(nextState, configuration.policyRevision);
+      setConfirmOpen(false);
+    } catch {
+      setChangeError(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <SettingsSection title={t("bknTrace.settings.capturePolicy.title")}>
       {unavailable || !configuration ? (
@@ -655,7 +715,9 @@ function CapturePolicySection({
                   ? t(`bknTrace.settings.capturePolicy.phases.${operation.phase}`)
                   : operationUnavailable
                     ? t("bknTrace.settings.capturePolicy.dataUnavailable")
-                    : t("bknTrace.settings.capturePolicy.noActiveOperation")
+                    : configuration.activeOperationId
+                      ? t("bknTrace.settings.capturePolicy.phases.pending")
+                      : t("bknTrace.settings.capturePolicy.noActiveOperation")
               }
             />
             <Metric
@@ -667,6 +729,37 @@ function CapturePolicySection({
               value={configuration.lastStableRevision}
             />
           </div>
+          {canWrite ? (
+            <Button
+              disabled={!stable || Boolean(configuration.activeOperationId) || submitting}
+              onClick={() => setConfirmOpen(true)}
+              type="primary"
+            >
+              {t(
+                `bknTrace.settings.capturePolicy.${nextState === "enabled" ? "enable" : "disable"}`,
+              )}
+            </Button>
+          ) : null}
+          <Modal
+            cancelText={t("common.cancel")}
+            confirmLoading={submitting}
+            okText={t("bknTrace.settings.capturePolicy.confirmAction")}
+            onCancel={() => setConfirmOpen(false)}
+            onOk={() => void change()}
+            open={confirmOpen}
+            title={t("bknTrace.settings.capturePolicy.confirmTitle")}
+          >
+            <Typography.Paragraph>
+              {t("bknTrace.settings.capturePolicy.confirmWarning")}
+            </Typography.Paragraph>
+            {changeError ? (
+              <Alert
+                message={t("bknTrace.settings.capturePolicy.changeFailed")}
+                showIcon
+                type="error"
+              />
+            ) : null}
+          </Modal>
           {operationUnavailable ? (
             <Alert
               message={t("bknTrace.settings.capturePolicy.operationUnavailable")}
@@ -678,6 +771,17 @@ function CapturePolicySection({
       )}
     </SettingsSection>
   );
+}
+
+function isTerminalCapturePolicyPhase(phase: CapturePolicyOperation["phase"]): boolean {
+  return ["succeeded", "failed", "rollback_completed", "rollback_failed"].includes(phase);
+}
+
+function isSettledCapturePolicy(
+  configuration: CapturePolicyConfiguration,
+  operation: CapturePolicyOperation,
+): boolean {
+  return isTerminalCapturePolicyPhase(operation.phase) && !configuration.activeOperationId;
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {

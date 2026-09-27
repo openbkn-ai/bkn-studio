@@ -11,7 +11,6 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { RouteLoading } from "@/app/router/RouteLoading";
 import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { RequireEdition } from "@/framework/entitlement/RequireEdition";
-import { RequireSuperAdmin } from "@/framework/permission/RequireSuperAdmin";
 import type { AppRouteContribution } from "@/app/router/types";
 
 const BusinessProvenancePage = lazy(async () => {
@@ -86,9 +85,7 @@ export const bknTraceRoutes: RouteObject[] = [
         titleKey: "bknTrace.settings.title",
       },
     },
-    element: (
-      <RequireSuperAdmin>{withRouteLoading(<ObservabilitySettingsPage />)}</RequireSuperAdmin>
-    ),
+    element: withRouteLoading(<ObservabilitySettingsPage />),
   },
   {
     path: "system/bkn-trace",
