@@ -552,10 +552,14 @@ function knownConnectorType(
 
 export function humanizeConnectorFieldLabel(name: string, connectorType?: string) {
   const normalized = name.trim().toLowerCase();
-  if (normalized === "database" && connectorType?.trim().toLowerCase() === "hana") {
-    return dataConnectText("connectorTemplates.fieldLabels.hanaDatabase", "Tenant database");
-  }
   const template = getConnectorFieldTemplate(connectorType, normalized);
+  const typeKey = connectorType?.trim().toLowerCase();
+  if (template && typeKey) {
+    const specificKey = `dataConnect.connectorTemplates.fieldLabels.${typeKey}.${normalized}`;
+    if (i18n.exists(specificKey)) {
+      return i18n.t(specificKey, { defaultValue: template.label });
+    }
+  }
   const defaultLabel = template?.label ?? GENERIC_FIELD_LABELS[normalized];
   if (defaultLabel) {
     return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, defaultLabel);

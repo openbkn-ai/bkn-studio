@@ -336,7 +336,9 @@ export const dataConnectEnUS = {
         },
       },
       fieldLabels: {
-        hanaDatabase: "Tenant database",
+        hana: {
+          database: "Tenant database",
+        },
         account: "Account",
         api_key: "API Key",
         app_id: "Application ID",
@@ -433,7 +435,8 @@ export const dataConnectEnUS = {
           "When specified, schema names must exactly match the database, including case",
         oracleSchemaIdentifierCase:
           "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
-        hanaSchemaIdentifierCase: "Schema names must match HANA exactly, including case",
+        hanaSchemaIdentifierCase:
+          "Use the schema name as stored in HANA, including case; unquoted names are usually uppercase",
       },
       portPlaceholders: {
         default: "For example: 3306",

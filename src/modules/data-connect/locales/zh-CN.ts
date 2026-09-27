@@ -320,7 +320,9 @@ export const dataConnectZhCN = {
         },
       },
       fieldLabels: {
-        hanaDatabase: "租户数据库",
+        hana: {
+          database: "租户数据库",
+        },
         account: "账号",
         api_key: "API Key",
         app_id: "应用 ID",
@@ -412,7 +414,8 @@ export const dataConnectZhCN = {
         schemaIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
         oracleSchemaIdentifierCase:
           "未加引号的全小写名称会转为大写；区分大小写的全小写名称请用双引号包裹",
-        hanaSchemaIdentifierCase: "Schema 名称须与 HANA 中的实际名称及大小写完全一致",
+        hanaSchemaIdentifierCase:
+          "按 HANA 中实际存储的 Schema 名称及大小写填写；未加引号的名称通常为大写",
       },
       portPlaceholders: {
         default: "例如 3306",

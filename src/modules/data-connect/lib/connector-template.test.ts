@@ -347,7 +347,9 @@ describe("connector-template · SQL Server", () => {
     expect(getConnectorFieldPlaceholder("database", "string", "hana")).toBe("例如 TENANT_DB");
     expect(getConnectorFieldPlaceholder("options", "object", "hana")).toBe('例如 {"tls":true}');
     expect(getConnectorFieldPlaceholder("schemas", "array", "hana")).toContain("非系统 Schema");
-    expect(getConnectorFieldHint("schemas", "hana")).toContain("大小写完全一致");
+    expect(getConnectorFieldHint("schemas", "hana")).toContain("未加引号的名称通常为大写");
+    expect(humanizeConnectorFieldLabel("host", "hana")).toBe("主机地址");
+    expect(humanizeConnectorFieldLabel("database", "hana")).toBe("租户数据库");
     expect(getConnectorTemplateMeta(hanaConnector).description).toBe(
       "连接 SAP HANA 关系型数据库。",
     );
@@ -364,8 +366,11 @@ describe("connector-template · SQL Server", () => {
 
     await i18n.changeLanguage("en-US");
     expect(humanizeConnectorFieldLabel("database", "hana")).toBe("Tenant database");
+    expect(humanizeConnectorFieldLabel("host", "hana")).toBe("Host");
     expect(getConnectorFieldPlaceholder("port", "integer", "hana")).toBe("For example: 443");
-    expect(getConnectorFieldHint("schemas", "hana")).toContain("including case");
+    expect(getConnectorFieldHint("schemas", "hana")).toContain(
+      "unquoted names are usually uppercase",
+    );
   });
 
   it("uses the AnyShare template for enum controls and conditional credentials", () => {
