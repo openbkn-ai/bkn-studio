@@ -16,7 +16,7 @@ const oauth = vi.hoisted(() => {
     beginAutoLogin: vi.fn(() => Promise.resolve(true)),
     beginLogin: vi.fn(() => Promise.resolve()),
     canAutoStartLogin: vi.fn(() => true),
-    msUntilAutoStartAllowed: vi.fn(() => null),
+    msUntilAutoStartAllowed: vi.fn<() => number | null>(() => null),
     reloadForSharedAuthState: vi.fn(),
     /** Stand-in for the cross-tab `storage` event; `emit` fires the release. */
     subscribeFlowLockRelease: vi.fn((onRelease: () => void) => {
