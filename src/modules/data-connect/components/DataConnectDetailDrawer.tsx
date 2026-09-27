@@ -52,6 +52,7 @@ const CONNECTOR_CONFIG_FIELD_ORDER: Record<string, readonly string[]> = {
   postgresql: ["host", "port", "username", "password", "database", "schemas", "options"],
   sqlserver: ["host", "port", "username", "password", "database", "schemas", "options"],
   oracle: ["host", "port", "username", "password", "service_name", "schemas", "options"],
+  hana: ["host", "port", "username", "password", "database", "schemas", "options"],
   opensearch: ["host", "port", "username", "password", "index_pattern"],
   anyshare: [
     "protocol",

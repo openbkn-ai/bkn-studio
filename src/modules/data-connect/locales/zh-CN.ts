@@ -309,6 +309,9 @@ export const dataConnectZhCN = {
         oracle: {
           description: "连接 Oracle 关系型数据库。",
         },
+        hana: {
+          description: "连接 SAP HANA 关系型数据库。",
+        },
         postgresql: {
           description: "连接 PostgreSQL 关系型数据库。",
         },
@@ -317,6 +320,9 @@ export const dataConnectZhCN = {
         },
       },
       fieldLabels: {
+        hana: {
+          database: "租户数据库",
+        },
         account: "账号",
         api_key: "API Key",
         app_id: "应用 ID",
@@ -390,6 +396,9 @@ export const dataConnectZhCN = {
         secret_key: "请输入密钥",
         server: "例如 db.example.internal",
         oracleOptions: '例如 {"timeout":30,"charset":"UTF8"}',
+        hanaDatabase: "例如 TENANT_DB",
+        hanaOptions: '例如 {"tls":true}',
+        hanaSchemas: "留空扫描可访问的非系统 Schema；输入名称后按回车逐个添加",
         oracleSchemas: "留空扫描可访问 Schema；输入名称后按回车逐个添加",
         sqlserverOptions: '例如 {"encrypt":true,"trustservercertificate":false}',
         table: "例如 order_detail",
@@ -405,6 +414,8 @@ export const dataConnectZhCN = {
         schemaIdentifierCase: "填写时必须与数据库中的实际名称及大小写完全一致",
         oracleSchemaIdentifierCase:
           "未加引号的全小写名称会转为大写；区分大小写的全小写名称请用双引号包裹",
+        hanaSchemaIdentifierCase:
+          "按 HANA 中实际存储的 Schema 名称及大小写填写；未加引号的名称通常为大写",
       },
       portPlaceholders: {
         default: "例如 3306",
@@ -412,6 +423,7 @@ export const dataConnectZhCN = {
         mysql: "例如 3306",
         opensearch: "例如 9200",
         oracle: "例如 1521",
+        hana: "例如 443",
         postgresql: "例如 5432",
         sqlserver: "例如 1433",
       },

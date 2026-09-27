@@ -485,6 +485,7 @@ describe("DataConnectDetailDrawer", () => {
   it.each([
     ["mysql", "databases"],
     ["oracle", "schemas"],
+    ["hana", "schemas"],
     ["anyshare", "paths"],
   ])("shows an empty %s %s list as a dash", async (connectorType, fieldName) => {
     getRecordMock.mockResolvedValue({
@@ -591,6 +592,7 @@ describe("DataConnectDetailDrawer", () => {
     ["postgresql", "schemas"],
     ["sqlserver", "schemas"],
     ["oracle", "schemas"],
+    ["hana", "schemas"],
     ["anyshare", "paths"],
   ])("renders %s %s lists as tags", async (connectorType, fieldName) => {
     getRecordMock.mockResolvedValue({
@@ -625,7 +627,7 @@ describe("DataConnectDetailDrawer", () => {
     expect(screen.getByText("second")).toBeTruthy();
   });
 
-  it.each(["postgresql", "sqlserver", "oracle"])(
+  it.each(["postgresql", "sqlserver", "oracle", "hana"])(
     "truncates long %s schema tags while preserving the full name",
     async (connectorType) => {
       const schemaName = "SCHEMA_WITH_A_NAME_THAT_IS_TOO_LONG_FOR_THE_DETAIL_CARD";

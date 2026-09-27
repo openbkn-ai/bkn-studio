@@ -325,6 +325,9 @@ export const dataConnectEnUS = {
         oracle: {
           description: "Connect Oracle relational databases.",
         },
+        hana: {
+          description: "Connect SAP HANA relational databases.",
+        },
         postgresql: {
           description: "Connect PostgreSQL relational databases.",
         },
@@ -333,6 +336,9 @@ export const dataConnectEnUS = {
         },
       },
       fieldLabels: {
+        hana: {
+          database: "Tenant database",
+        },
         account: "Account",
         api_key: "API Key",
         app_id: "Application ID",
@@ -407,6 +413,10 @@ export const dataConnectEnUS = {
         secret_key: "Enter secret",
         server: "For example: db.example.internal",
         oracleOptions: 'For example: {"timeout":30,"charset":"UTF8"}',
+        hanaDatabase: "For example: TENANT_DB",
+        hanaOptions: 'For example: {"tls":true}',
+        hanaSchemas:
+          "Leave empty to discover accessible non-system schemas; enter a name and press Enter",
         oracleSchemas:
           "Leave empty to discover accessible schemas, or enter a name and press Enter",
         sqlserverOptions: 'For example: {"encrypt":true,"trustservercertificate":false}',
@@ -425,6 +435,8 @@ export const dataConnectEnUS = {
           "When specified, schema names must exactly match the database, including case",
         oracleSchemaIdentifierCase:
           "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
+        hanaSchemaIdentifierCase:
+          "Use the schema name as stored in HANA, including case; unquoted names are usually uppercase",
       },
       portPlaceholders: {
         default: "For example: 3306",
@@ -432,6 +444,7 @@ export const dataConnectEnUS = {
         mysql: "For example: 3306",
         opensearch: "For example: 9200",
         oracle: "For example: 1521",
+        hana: "For example: 443",
         postgresql: "For example: 5432",
         sqlserver: "For example: 1433",
       },

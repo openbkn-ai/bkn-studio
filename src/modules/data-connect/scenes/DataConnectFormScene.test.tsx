@@ -978,6 +978,80 @@ describe("DataConnectFormScene · connection preflight", () => {
     },
     HEAVY_SCENE_TIMEOUT_MS,
   );
+  it(
+    "creates a HANA catalog with a required tenant database and TLS on port 443",
+    async () => {
+      permissionState.values = new Set(["catalog:create"]);
+      const hanaConnector: DataConnectConnectorType = {
+        available: true,
+        category: "table",
+        description: "SAP HANA 关系型数据库连接器",
+        enabled: true,
+        fieldConfig: {
+          host: connectorField("主机地址", "string", true),
+          port: connectorField("端口号", "integer", true),
+          username: connectorField("用户名", "string", true),
+          password: connectorField("密码", "string", true, true),
+          database: connectorField("租户数据库名", "string", true),
+          schemas: connectorField("Schema 列表", "array", false),
+          options: connectorField("连接参数", "object", false),
+        },
+        mode: "local",
+        name: "SAP HANA",
+        type: "hana",
+      };
+      getDataConnectConnectorTypeMock.mockResolvedValue(hanaConnector);
+      listDataConnectConnectorTypesMock.mockResolvedValue([hanaConnector]);
+
+      render(<DataConnectFormScene mode="create" />);
+      fireEvent.click(await findConnectorCard("SAP HANA"));
+      fireEvent.click(screen.getByRole("button", { name: "common.next" }));
+
+      fireEvent.change(await screen.findByPlaceholderText("dataConnect.namePlaceholder"), {
+        target: { value: "hana-analytics" },
+      });
+      expect(getDataConnectConnectorTypeMock).toHaveBeenCalledWith("hana");
+      fireEvent.change(screen.getByPlaceholderText("例如 db.example.internal"), {
+        target: { value: "hana.example.com" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("例如 readonly_user"), {
+        target: { value: "readonly_user" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("dataConnect.encryptedFieldPlaceholder"), {
+        target: { value: "test-password" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await screen.findByText("common.required");
+      expect(createDataConnectRecordMock).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByPlaceholderText("例如 TENANT_DB"), {
+        target: { value: "TENANT_DB" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "common.confirm" }));
+      await waitFor(() => {
+        expect(createDataConnectRecordMock).toHaveBeenCalledWith(
+          {
+            connectorConfig: {
+              host: "hana.example.com",
+              password: "test-password",
+              port: 443,
+              options: { tls: true },
+              database: "TENANT_DB",
+              username: "readonly_user",
+            },
+            connectorType: "hana",
+            description: "",
+            enabled: true,
+            healthCheckSchedule: { cronExpr: undefined, mode: "inherit" },
+            name: "hana-analytics",
+            tags: [],
+          },
+          { skipErrorToast: true },
+        );
+      });
+    },
+    HEAVY_SCENE_TIMEOUT_MS,
+  );
 });
 
 function connectorField(_name: string, type: string, required: boolean, encrypted = false) {

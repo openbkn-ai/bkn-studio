@@ -94,6 +94,9 @@ const TYPE_TO_TEMPLATE_FALLBACKS: Record<string, { description?: string; label?:
   oracle: {
     description: "Connect Oracle relational databases.",
   },
+  hana: {
+    description: "Connect SAP HANA relational databases.",
+  },
   opensearch: {
     description: "Connect OpenSearch indexes.",
   },
@@ -108,6 +111,7 @@ const KNOWN_CONNECTOR_TYPES: DataConnectConnectorType[] = [
   knownConnectorType("postgresql", "PostgreSQL", "table"),
   knownConnectorType("sqlserver", "SQL Server", "table"),
   knownConnectorType("oracle", "Oracle", "table"),
+  knownConnectorType("hana", "SAP HANA", "table"),
   knownConnectorType("opensearch", "OpenSearch", "index"),
 ];
 
@@ -143,6 +147,10 @@ const TYPE_FIELD_DEFAULTS: Record<string, Record<string, unknown>> = {
   oracle: {
     port: 1521,
   },
+  hana: {
+    port: 443,
+    options: '{"tls":true}',
+  },
   opensearch: {
     port: 9200,
   },
@@ -154,6 +162,7 @@ const TYPE_PORT_PLACEHOLDER: Record<string, string> = {
   postgresql: "For example: 5432",
   sqlserver: "For example: 1433",
   oracle: "For example: 1521",
+  hana: "For example: 443",
   opensearch: "For example: 9200",
 };
 
@@ -267,6 +276,15 @@ const CONNECTOR_FIELD_TEMPLATES: Record<string, Record<string, ConnectorFieldTem
     username: { group: "auth", label: "Username" },
     password: { group: "auth", label: "Password" },
     service_name: { label: "Service name" },
+    schemas: { group: "advanced", label: "Schema list" },
+    options: { group: "advanced", label: "Connection options" },
+  },
+  hana: {
+    host: { label: "Host" },
+    port: { label: "Port" },
+    username: { group: "auth", label: "Username" },
+    password: { group: "auth", label: "Password" },
+    database: { label: "Tenant database" },
     schemas: { group: "advanced", label: "Schema list" },
     options: { group: "advanced", label: "Connection options" },
   },
@@ -535,6 +553,13 @@ function knownConnectorType(
 export function humanizeConnectorFieldLabel(name: string, connectorType?: string) {
   const normalized = name.trim().toLowerCase();
   const template = getConnectorFieldTemplate(connectorType, normalized);
+  const typeKey = connectorType?.trim().toLowerCase();
+  if (template && typeKey) {
+    const specificKey = `dataConnect.connectorTemplates.fieldLabels.${typeKey}.${normalized}`;
+    if (i18n.exists(specificKey)) {
+      return i18n.t(specificKey, { defaultValue: template.label });
+    }
+  }
   const defaultLabel = template?.label ?? GENERIC_FIELD_LABELS[normalized];
   if (defaultLabel) {
     return dataConnectText(`connectorTemplates.fieldLabels.${normalized}`, defaultLabel);
@@ -627,10 +652,31 @@ export function getConnectorFieldPlaceholder(
     );
   }
 
+  if (normalized === "options" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaOptions",
+      'For example: {"tls":true}',
+    );
+  }
+
+  if (normalized === "database" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaDatabase",
+      "For example: TENANT_DB",
+    );
+  }
+
   if (normalized === "schemas" && typeKey === "oracle") {
     return dataConnectText(
       "connectorTemplates.placeholders.oracleSchemas",
       "Leave empty to discover accessible schemas; enter a name and press Enter",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.placeholders.hanaSchemas",
+      "Leave empty to discover accessible non-system schemas; enter a name and press Enter",
     );
   }
 
@@ -684,6 +730,13 @@ export function getConnectorFieldHint(fieldName: string, connectorType?: string)
     return dataConnectText(
       "connectorTemplates.hints.oracleSchemaIdentifierCase",
       "Unquoted lowercase names are normalized to uppercase; wrap case-sensitive lowercase names in double quotes",
+    );
+  }
+
+  if (normalized === "schemas" && typeKey === "hana") {
+    return dataConnectText(
+      "connectorTemplates.hints.hanaSchemaIdentifierCase",
+      "Schema names must match HANA exactly, including case",
     );
   }
 
