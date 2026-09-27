@@ -11,8 +11,10 @@ import { useTranslation } from "react-i18next";
 
 import { DevTokenSetupForm } from "@/framework/auth/DevTokenSetupForm";
 import {
+  beginAutoLogin,
   beginLogin,
   canAutoStartLogin,
+  msUntilAutoStartAllowed,
   reloadForSharedAuthState,
   subscribeFlowLockRelease,
 } from "@/framework/auth/oauth";
@@ -28,10 +30,12 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   const { i18n, t } = useTranslation();
   const loginLocale = i18n.resolvedLanguage ?? i18n.language;
   const startedRef = useRef(false);
+  const autoLoginAbortRef = useRef<AbortController | null>(null);
   const [redirecting, setRedirecting] = useState(true);
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [deferredToOtherTab, setDeferredToOtherTab] = useState(false);
   const [showDevTokenForm, setShowDevTokenForm] = useState(false);
+  const [retryGeneration, setRetryGeneration] = useState(0);
 
   useEffect(() => {
     if (showDevTokenForm) {
@@ -54,12 +58,29 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
       setDeferredToOtherTab(false);
       setRedirecting(true);
       const { hash, pathname, search } = window.location;
+      const controller = new AbortController();
+      autoLoginAbortRef.current?.abort();
+      autoLoginAbortRef.current = controller;
 
-      beginLogin(`${pathname}${search}${hash}`, loginLocale).catch((cause: unknown) => {
-        setRedirectError(cause instanceof Error ? cause.message : String(cause));
-        setRedirecting(false);
-        startedRef.current = false;
-      });
+      void beginAutoLogin(`${pathname}${search}${hash}`, loginLocale, controller.signal)
+        .then((started) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          if (started) {
+            return;
+          }
+
+          // Another visible tab won the post-jitter lock check. Re-run this
+          // effect so this tab starts waiting for its release or TTL expiry.
+          startedRef.current = false;
+          setRetryGeneration((generation) => generation + 1);
+        })
+        .catch((cause: unknown) => {
+          setRedirectError(cause instanceof Error ? cause.message : String(cause));
+          setRedirecting(false);
+          startedRef.current = false;
+        });
       return true;
     };
 
@@ -74,14 +95,28 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
     // a time, so that tab may start its own flow. A lock release reaches every
     // waiting tab at once — starting there would put them all on the wire
     // together, so they reload and pick up the shared cookie instead.
-    const retry = () => void startIfAllowed();
+    const retry = () => {
+      if (!startIfAllowed() && document.visibilityState === "visible") {
+        setRetryGeneration((generation) => generation + 1);
+      }
+    };
     document.addEventListener("visibilitychange", retry);
     const unsubscribe = subscribeFlowLockRelease(reloadForSharedAuthState);
+    const wait = msUntilAutoStartAllowed();
+    const expiryTimer =
+      document.visibilityState !== "visible" || wait === null
+        ? undefined
+        : window.setTimeout(() => {
+            retry();
+          }, wait + 50);
     return () => {
       document.removeEventListener("visibilitychange", retry);
       unsubscribe();
+      if (expiryTimer !== undefined) {
+        window.clearTimeout(expiryTimer);
+      }
     };
-  }, [loginLocale, showDevTokenForm]);
+  }, [loginLocale, retryGeneration, showDevTokenForm]);
 
   if (showDevTokenForm) {
     return <DevTokenSetupForm onSaved={onDevTokenSaved} />;
@@ -90,6 +125,7 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
   // Explicit intent overrides the other-tab lock: the user is here, so this is
   // the flow that should own the CSRF cookie.
   const handleSignIn = () => {
+    autoLoginAbortRef.current?.abort();
     startedRef.current = true;
     setRedirecting(true);
     setRedirectError(null);
@@ -156,7 +192,10 @@ export function SignInScreen({ onDevTokenSaved }: SignInScreenProps) {
           <button
             className={styles.devToggle}
             type="button"
-            onClick={() => setShowDevTokenForm(true)}
+            onClick={() => {
+              autoLoginAbortRef.current?.abort();
+              setShowDevTokenForm(true);
+            }}
           >
             {t("auth.devTokenToggle")}
           </button>

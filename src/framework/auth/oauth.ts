@@ -71,6 +71,7 @@ const FLOW_OWNER_KEY = "bkn_oauth_flow_owner";
 // lock makes *automatic* redirects yield to a flow another tab already owns;
 // an explicit sign-in click always takes over.
 const FLOW_LOCK_TTL_MS = 3 * 60 * 1000;
+const AUTO_START_LOGIN_JITTER_MS = 500;
 
 type TokenResponse = {
   access_token: string;
@@ -224,6 +225,16 @@ export function canAutoStartLogin() {
   return Date.now() - lock.startedAt > FLOW_LOCK_TTL_MS;
 }
 
+/** Milliseconds until a foreign lock ages out; null when no other flow blocks us. */
+export function msUntilAutoStartAllowed() {
+  const lock = readFlowLock();
+  if (!lock || ownsFlowLock(lock)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(FLOW_LOCK_TTL_MS, lock.startedAt + FLOW_LOCK_TTL_MS - Date.now()));
+}
+
 /**
  * Re-evaluate auth state from scratch after another tab's flow ended. Tokens
  * live in cookies shared by same-origin tabs, so by the time the lock is
@@ -347,6 +358,28 @@ export async function beginLogin(returnTo?: string, requestedLocale?: string | n
     window.sessionStorage.removeItem(RETURN_TO_KEY);
   }
   await startLogin(requestedLocale);
+}
+
+/**
+ * Starts an automatic login after a small randomized delay and a final lock
+ * check. localStorage has no compare-and-swap primitive, so this only reduces
+ * the chance that visible tabs released from a failed flow start together.
+ */
+export async function beginAutoLogin(
+  returnTo?: string,
+  requestedLocale?: string | null,
+  signal?: AbortSignal,
+) {
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, Math.floor(Math.random() * (AUTO_START_LOGIN_JITTER_MS + 1)));
+  });
+
+  if (signal?.aborted || document.visibilityState !== "visible" || !canAutoStartLogin()) {
+    return false;
+  }
+
+  await beginLogin(returnTo, requestedLocale);
+  return true;
 }
 
 /** Retries the OAuth request while preserving the already validated return path. */

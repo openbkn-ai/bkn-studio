@@ -13,8 +13,10 @@ import { SignInScreen } from "@/framework/auth/SignInScreen";
 const oauth = vi.hoisted(() => {
   const listeners = new Set<() => void>();
   return {
+    beginAutoLogin: vi.fn(() => Promise.resolve(true)),
     beginLogin: vi.fn(() => Promise.resolve()),
     canAutoStartLogin: vi.fn(() => true),
+    msUntilAutoStartAllowed: vi.fn<() => number | null>(() => null),
     reloadForSharedAuthState: vi.fn(),
     /** Stand-in for the cross-tab `storage` event; `emit` fires the release. */
     subscribeFlowLockRelease: vi.fn((onRelease: () => void) => {
@@ -52,17 +54,24 @@ function setVisibility(state: DocumentVisibilityState) {
 
 describe("SignInScreen auto-redirect gating", () => {
   beforeEach(() => {
+    oauth.beginAutoLogin.mockClear();
     oauth.beginLogin.mockClear();
     oauth.canAutoStartLogin.mockReset();
     oauth.canAutoStartLogin.mockReturnValue(true);
+    oauth.msUntilAutoStartAllowed.mockReset();
+    oauth.msUntilAutoStartAllowed.mockReturnValue(null);
     setVisibility("visible");
   });
 
   it("redirects to hydra on its own when nothing else owns the flow", () => {
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
 
-    expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
-    expect(oauth.beginLogin).toHaveBeenCalledWith(expect.any(String), "zh-CN");
+    expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
+    expect(oauth.beginAutoLogin).toHaveBeenCalledWith(
+      expect.any(String),
+      "zh-CN",
+      expect.any(AbortSignal),
+    );
   });
 
   // A background tab redirecting would rewrite the browser's single login CSRF
@@ -72,20 +81,20 @@ describe("SignInScreen auto-redirect gating", () => {
 
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
 
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
   });
 
   it("redirects once the hidden tab is brought to the front", () => {
     setVisibility("hidden");
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
 
     setVisibility("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
 
-    expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
+    expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
   });
 
   // Side-by-side windows are never hidden, so visibilitychange never fires for
@@ -106,7 +115,7 @@ describe("SignInScreen auto-redirect gating", () => {
     });
 
     expect(oauth.reloadForSharedAuthState).toHaveBeenCalledTimes(1);
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
   });
 
   it("defers to another tab's in-flight login and offers a manual takeover", async () => {
@@ -114,7 +123,7 @@ describe("SignInScreen auto-redirect gating", () => {
 
     render(<SignInScreen onDevTokenSaved={vi.fn()} />);
 
-    expect(oauth.beginLogin).not.toHaveBeenCalled();
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
     expect(await screen.findByText("auth.signInOtherTabTitle")).toBeTruthy();
 
     // Explicit intent wins: the user is on this tab, so it takes the flow over.
@@ -123,5 +132,43 @@ describe("SignInScreen auto-redirect gating", () => {
     });
 
     expect(oauth.beginLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it("recalculates the wait when another flow replaces the lock", async () => {
+    vi.useFakeTimers();
+    oauth.canAutoStartLogin.mockReturnValue(false);
+    oauth.msUntilAutoStartAllowed.mockReturnValueOnce(100).mockReturnValue(200);
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+    expect(screen.getByText("auth.signInOtherTabTitle")).toBeTruthy();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
+    });
+
+    expect(oauth.msUntilAutoStartAllowed).toHaveBeenCalledTimes(2);
+
+    oauth.canAutoStartLogin.mockReturnValue(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    expect(oauth.beginAutoLogin).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("does not retry an expired lock while the tab is hidden", async () => {
+    vi.useFakeTimers();
+    setVisibility("hidden");
+    oauth.canAutoStartLogin.mockReturnValue(false);
+    oauth.msUntilAutoStartAllowed.mockReturnValue(0);
+    render(<SignInScreen onDevTokenSaved={vi.fn()} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(oauth.msUntilAutoStartAllowed).toHaveBeenCalledTimes(1);
+    expect(oauth.beginAutoLogin).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
