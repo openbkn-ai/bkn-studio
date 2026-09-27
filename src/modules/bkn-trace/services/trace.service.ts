@@ -138,9 +138,9 @@ type BackendCapturePolicy = {
 type BackendCapturePolicySnapshot = {
   desired_state?: CapturePolicyState;
   effective_state?: CapturePolicyState;
-  revision?: number;
+  revision: number;
   last_stable_revision?: number;
-  operation?: BackendCapturePolicyOperation;
+  operation: BackendCapturePolicyOperation;
 };
 
 function normalizeCapturePolicy(data: BackendCapturePolicy): CapturePolicyConfiguration {
@@ -194,7 +194,7 @@ export async function changeTraceEvidenceConfiguration(
     { desired_state: desiredState, expected_revision: expectedRevision },
   );
   const snapshot = response.data;
-  if (!snapshot.revision || !snapshot.operation?.id) {
+  if (snapshot.revision === undefined || !snapshot.operation?.id) {
     throw new Error("Invalid Trace/Evidence change response");
   }
   return normalizeCapturePolicy({

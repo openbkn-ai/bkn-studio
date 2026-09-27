@@ -1030,6 +1030,7 @@ export const bknTraceZhCN = {
         lastStableRevision: "最近稳定版本",
         noActiveOperation: "无活动操作",
         operationUnavailable: "当前没有可读取的活动操作；操作详情不在配置快照中。",
+        reconcileRequired: "采集策略未收敛；请由管理员检查控制面并执行 reconcile，暂不可再次切换。",
         revision: "策略版本",
         states: {
           enabled: "已开启",

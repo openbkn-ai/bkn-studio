@@ -177,24 +177,37 @@ export function ObservabilitySettingsScene() {
     if (!pollingOperationId) return;
     let active = true;
     let timer: number;
+    let consecutiveFailures = 0;
     const poll = async () => {
       let terminal = false;
-      try {
-        const [operation, configuration] = await Promise.all([
-          getTraceEvidenceOperation(pollingOperationId),
-          getTraceEvidenceConfiguration(),
-        ]);
-        if (!active) return;
-        setCapturePolicyOperation(operation);
+      const [operationResult, configurationResult] = await Promise.allSettled([
+        getTraceEvidenceOperation(pollingOperationId),
+        getTraceEvidenceConfiguration(),
+      ]);
+      if (!active) return;
+      if (operationResult.status === "fulfilled") {
+        setCapturePolicyOperation(operationResult.value);
         setCapturePolicyOperationUnavailable(false);
-        setCapturePolicy(configuration);
-        terminal = isSettledCapturePolicy(configuration, operation);
-        if (terminal) setPollingOperationId(undefined);
-      } catch {
-        if (active) setCapturePolicyOperationUnavailable(true);
-      } finally {
-        if (active && !terminal) timer = window.setTimeout(() => void poll(), 2000);
+      } else {
+        setCapturePolicyOperation(undefined);
+        setCapturePolicyOperationUnavailable(true);
       }
+      if (configurationResult.status === "fulfilled") {
+        setCapturePolicy(configurationResult.value);
+        setCapturePolicyUnavailable(false);
+        terminal =
+          operationResult.status === "fulfilled"
+            ? isSettledCapturePolicy(configurationResult.value, operationResult.value)
+            : !configurationResult.value.activeOperationId;
+      } else {
+        setCapturePolicyUnavailable(true);
+      }
+      consecutiveFailures =
+        operationResult.status === "rejected" || configurationResult.status === "rejected"
+          ? consecutiveFailures + 1
+          : 0;
+      if (terminal || consecutiveFailures >= 5) setPollingOperationId(undefined);
+      else timer = window.setTimeout(() => void poll(), 2000);
     };
     timer = window.setTimeout(() => void poll(), 2000);
     return () => {
@@ -742,6 +755,15 @@ function CapturePolicySection({
                 `bknTrace.settings.capturePolicy.${nextState === "enabled" ? "enable" : "disable"}`,
               )}
             </Button>
+          ) : null}
+          {!stable &&
+          !configuration.activeOperationId &&
+          (operation?.phase === "failed" || operation?.phase === "rollback_failed") ? (
+            <Alert
+              message={t("bknTrace.settings.capturePolicy.reconcileRequired")}
+              showIcon
+              type="warning"
+            />
           ) : null}
           <Modal
             cancelText={t("common.cancel")}

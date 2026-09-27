@@ -907,6 +907,66 @@ describe("observability workspace scenes", () => {
     expect(screen.queryByText("bknTrace.settings.capturePolicy.phases.succeeded")).toBeNull();
   });
 
+  it("failed operation with divergent policy states remains locked and explains reconciliation", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(getTraceEvidenceConfiguration)
+      .mockResolvedValueOnce({
+        desiredState: "enabled",
+        effectiveState: "enabled",
+        policyRevision: 9,
+        lastStableRevision: 9,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValue({
+        desiredState: "disabled",
+        effectiveState: "enabled",
+        policyRevision: 10,
+        lastStableRevision: 9,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      });
+    vi.mocked(changeTraceEvidenceConfiguration).mockResolvedValue({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockResolvedValue({
+      id: "op-10",
+      phase: "failed",
+      requestedState: "disabled",
+      expectedRevision: 9,
+    });
+
+    render(<ObservabilitySettingsScene />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.confirmAction" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "bknTrace.settings.capturePolicy.reconcileRequired",
+        {},
+        { timeout: 4000 },
+      ),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
   it("keeps polling after terminal operation until a fresh configuration clears the active ID", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue({
       ...profile,
@@ -992,6 +1052,66 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).not.toBeNull();
     expect(screen.queryByText("无活动操作")).toBeNull();
   });
+
+  it("操作详情不可用时仍刷新权威配置，并在活动 ID 清除后停止轮询", async () => {
+    vi.mocked(getAccessProfile).mockResolvedValue({
+      ...profile,
+      traceEvidenceConfigurationWrite: true,
+    });
+    vi.mocked(getTraceEvidenceConfiguration)
+      .mockResolvedValueOnce({
+        desiredState: "disabled",
+        effectiveState: "enabled",
+        policyRevision: 10,
+        lastStableRevision: 9,
+        activeOperationId: "op-10",
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      })
+      .mockResolvedValue({
+        desiredState: "disabled",
+        effectiveState: "disabled",
+        policyRevision: 10,
+        lastStableRevision: 10,
+        heartbeatIntervalSeconds: 10,
+        leaseTtlSeconds: 30,
+      });
+    vi.mocked(getTraceEvidenceOperation).mockRejectedValue(new Error("operation unavailable"));
+
+    render(<ObservabilitySettingsScene />);
+    await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(2), {
+      timeout: 5000,
+    });
+    expect(screen.getAllByText("bknTrace.settings.capturePolicy.states.disabled")).toHaveLength(2);
+    expect(
+      screen
+        .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
+        .hasAttribute("disabled"),
+    ).toBe(false);
+    await new Promise((resolve) => window.setTimeout(resolve, 2200));
+    expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(2);
+  });
+
+  it("持续故障最多重试五轮，不会永久每两秒请求服务端", async () => {
+    vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
+      desiredState: "disabled",
+      effectiveState: "enabled",
+      policyRevision: 10,
+      lastStableRevision: 9,
+      activeOperationId: "op-10",
+      heartbeatIntervalSeconds: 10,
+      leaseTtlSeconds: 30,
+    });
+    vi.mocked(getTraceEvidenceOperation).mockRejectedValue(new Error("operation unavailable"));
+
+    render(<ObservabilitySettingsScene />);
+    await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(6), {
+      timeout: 13000,
+    });
+    await new Promise((resolve) => window.setTimeout(resolve, 2200));
+    expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(6);
+    expect(screen.getByText("当前没有可读取的活动操作；操作详情不在配置快照中。")).not.toBeNull();
+  }, 18000);
 
   it("稳定配置没有活动操作时显示中性阶段并不显示操作不可用告警", async () => {
     render(<ObservabilitySettingsScene />);

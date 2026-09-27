@@ -1093,6 +1093,8 @@ export const bknTraceEnUS = {
         noActiveOperation: "No active operation",
         operationUnavailable:
           "No active operation is readable; operation details are not part of the configuration snapshot.",
+        reconcileRequired:
+          "Capture policy has not converged. Ask an administrator to inspect and reconcile the control plane before changing it again.",
         revision: "Policy revision",
         states: {
           enabled: "Enabled",

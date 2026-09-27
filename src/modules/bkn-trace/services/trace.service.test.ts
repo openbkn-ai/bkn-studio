@@ -99,6 +99,30 @@ describe("BKN Trace access profile service", () => {
     });
   });
 
+  it("accepts revision zero when the frozen PUT snapshot includes its operation", async () => {
+    putMock.mockResolvedValue({
+      data: {
+        desired_state: "disabled",
+        effective_state: "enabled",
+        revision: 0,
+        last_stable_revision: 0,
+        operation: {
+          id: "op-zero",
+          phase: "disabling",
+          requested_state: "disabled",
+          expected_revision: 0,
+        },
+      },
+    });
+    const { changeTraceEvidenceConfiguration } =
+      await import("@/modules/bkn-trace/services/trace.service");
+
+    await expect(changeTraceEvidenceConfiguration("disabled", 0)).resolves.toMatchObject({
+      policyRevision: 0,
+      activeOperationId: "op-zero",
+    });
+  });
+
   it("reads the frozen configuration_get contract without inventing operation or queue fields", async () => {
     getMock.mockResolvedValue({
       data: {
