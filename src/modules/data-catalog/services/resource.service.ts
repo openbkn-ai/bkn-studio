@@ -244,6 +244,11 @@ type BackendResourceDetailFields = {
     original_description?: string;
     original_name?: string;
     primary_keys?: string[];
+    source_resource?: {
+      category?: string;
+      original_name?: string;
+      table_type?: string;
+    };
     table_type?: string;
   } | null;
 };
@@ -323,12 +328,17 @@ function mapSourceMetadata(
     return undefined;
   }
 
+  const source = metadata.source_resource;
+  const sourceCategory =
+    source?.category === "table" || source?.category === "index" ? source.category : undefined;
+
   return {
     foreignKeyCount: metadata.foreign_keys?.length,
     indexCount: metadata.indices?.length,
-    objectType: metadata.table_type?.trim() || undefined,
+    objectType:
+      source?.table_type?.trim() || sourceCategory || metadata.table_type?.trim() || undefined,
     originalDescription: metadata.original_description?.trim() || undefined,
-    originalName: metadata.original_name?.trim() || undefined,
+    originalName: source?.original_name?.trim() || metadata.original_name?.trim() || undefined,
     primaryKeys: metadata.primary_keys?.map((key) => key.trim()).filter(Boolean),
   };
 }

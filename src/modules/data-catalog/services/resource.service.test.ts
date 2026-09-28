@@ -398,6 +398,69 @@ describe("resource.service · getCatalogResources", () => {
     ]);
   });
 
+  it("maps a derived logic view's nested source resource metadata", async () => {
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-1",
+            name: "orders_view",
+            source_metadata: {
+              properties: {},
+              source_resource: {
+                catalog_id: "cat-1",
+                category: "table",
+                original_name: "public.orders",
+                table_type: "row",
+              },
+            },
+          },
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-2",
+            name: "search_view",
+            source_metadata: {
+              properties: {},
+              source_resource: {
+                catalog_id: "cat-1",
+                category: "index",
+                original_name: "orders_index",
+              },
+            },
+          },
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-3",
+            name: "unsupported_view",
+            source_metadata: {
+              source_resource: { category: "logicview", original_name: "other_view" },
+            },
+          },
+        ],
+      },
+    });
+    const { getCatalogResources } =
+      await import("@/modules/data-catalog/services/resource.service");
+
+    const resources = await getCatalogResources(["view-1", "view-2", "view-3"]);
+
+    expect(resources[0]?.sourceMetadata).toEqual({
+      foreignKeyCount: undefined,
+      indexCount: undefined,
+      objectType: "row",
+      originalDescription: undefined,
+      originalName: "public.orders",
+      primaryKeys: undefined,
+    });
+    expect(resources[1]?.sourceMetadata?.objectType).toBe("index");
+    expect(resources[1]?.sourceMetadata?.originalName).toBe("orders_index");
+    expect(resources[2]?.sourceMetadata?.objectType).toBeUndefined();
+  });
+
   it("preserves an unsafe int64 row count from detail responses", async () => {
     const rowCount = "9007199254740993";
     getMock.mockImplementation(

@@ -406,6 +406,7 @@ export const dataCatalogZhCN = {
       sourceIndexCount: "源端索引数",
       sourceObjectType: "源端对象类型",
       sourceObjectTypes: {
+        index: "索引",
         materialized_view: "物化视图",
         table: "表",
         view: "视图",
@@ -430,6 +431,7 @@ export const dataCatalogZhCN = {
       fieldOriginalType: "原始类型",
       fieldOriginalDescription: "原始描述",
       editFields: "编辑描述与字段",
+      logicViewReadOnly: "Studio 暂不支持编辑逻辑视图，可继续查看详情。",
       editHint: "可在此处编辑资源描述、字段业务名称和字段描述，保存后立即生效。",
       copyValue: "复制{{label}}",
       copyValueSuccess: "{{label}}已复制",
