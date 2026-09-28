@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   searchParams: {
     current: "",
   },
+  setSearchParams: vi.fn(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -41,11 +42,42 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useLocation: () => ({ state: null }),
   useNavigate: () => mocks.navigate,
   useParams: () => mocks.routeParams.current,
-  useSearchParams: () => [new URLSearchParams(mocks.searchParams.current), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(mocks.searchParams.current), mocks.setSearchParams],
+}));
+
+vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction", () => ({
+  ResourcePermissionRequestAction: ({
+    initialProposalKind,
+    onOpenChange,
+    open,
+  }: {
+    initialProposalKind?: string;
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+  }) => (
+    <button
+      data-open={String(open)}
+      data-proposal-kind={initialProposalKind}
+      data-testid="permission-request-action"
+      onClick={() => onOpenChange?.(false)}
+    >
+      permission-request-action
+    </button>
+  ),
 }));
 
 vi.mock("@/framework/context/use-runtime-config", () => ({
   useRuntimeConfig: () => ({ currentUser: { permissions: [] } }),
+}));
+
+vi.mock("@/framework/runtime/config", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/framework/runtime/config")>()),
+  getRuntimeConfig: () => ({ currentUser: { isSuperAdmin: false } }),
+}));
+
+vi.mock("@/framework/entitlement/use-entitlement", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/framework/entitlement/use-entitlement")>()),
+  useEntitlement: () => ({ extensions: ["permobject"] }),
 }));
 
 vi.mock("@/framework/context/use-app-services", () => ({
@@ -137,6 +169,7 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
   mocks.searchParams.current = "";
+  mocks.setSearchParams.mockReset();
 });
 
 describe("knowledge network detail scene headers", () => {
@@ -220,6 +253,77 @@ describe("knowledge network detail scene headers", () => {
 
     fireEvent.click(screen.getByText("common.delete"));
     expect(mocks.modalConfirm).toHaveBeenCalledOnce();
+  });
+
+  it("opens the permission request dialog from the requestPermission query and clears it on close", async () => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current = "requestPermission=1";
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "Object description",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: [],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    const action = await screen.findByTestId("permission-request-action");
+    await vi.waitFor(() => expect(action.dataset.open).toBe("true"));
+    expect(action.dataset.proposalKind).toBe("grant");
+
+    fireEvent.click(action);
+    const [update, options] = mocks.setSearchParams.mock.calls.at(-1) ?? [];
+    expect(options).toEqual({ replace: true });
+    expect(update).toBeTypeOf("function");
+    expect(
+      (update as (current: URLSearchParams) => URLSearchParams)(
+        new URLSearchParams("requestPermission=1"),
+      ).has("requestPermission"),
+    ).toBe(false);
+  });
+
+  it.each([
+    ["2", "row_filter"],
+    ["3", "property_grants"],
+  ])("selects %s from the requestPermission query", async (target, proposalKind) => {
+    mocks.routeParams.current = { networkId: "network-1", objectTypeId: "object-1" };
+    mocks.searchParams.current = `requestPermission=${target}`;
+    mocks.getKnowledgeNetworkObjectTypeDetail.mockResolvedValue({
+      color: "#126ee3",
+      conceptGroupIds: [],
+      conceptGroupNames: [],
+      dataProperties: [],
+      description: "Object description",
+      displayKey: "",
+      hasIndex: false,
+      id: "object-1",
+      incrementalKey: "",
+      logicProperties: [],
+      name: "Order",
+      operations: [],
+      primaryKeys: [],
+      tags: [],
+      updateTime: "2026-08-20 16:09:36",
+      updaterName: "admin",
+    });
+
+    render(<ObjectTypeDetailScene />);
+
+    const action = await screen.findByTestId("permission-request-action");
+    await vi.waitFor(() => expect(action.dataset.open).toBe("true"));
+    expect(action.dataset.proposalKind).toBe(proposalKind);
   });
 
   it("shows a fail-closed proxy dependency error and retries the sample request", async () => {

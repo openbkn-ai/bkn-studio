@@ -180,6 +180,14 @@ export function ObjectTypeDetailScene() {
     objectTypeId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const requestPermissionTarget = searchParams.get("requestPermission");
+  const requestPermissionFromURL = ["1", "2", "3"].includes(requestPermissionTarget ?? "");
+  const initialPermissionRequestKind =
+    requestPermissionTarget === "2"
+      ? "row_filter"
+      : requestPermissionTarget === "3"
+        ? "property_grants"
+        : "grant";
   const activeTab = parseObjectTypeDetailTab(searchParams.get("tab"));
   const selectedTrialMetricId = searchParams.get("metricId");
   const selectedLogicPropertyName = searchParams.get("logicProperty");
@@ -197,6 +205,7 @@ export function ObjectTypeDetailScene() {
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
+  const [permissionRequestOpen, setPermissionRequestOpen] = useState(false);
   const [policyScopeRequestable, setPolicyScopeRequestable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -429,6 +438,29 @@ export function ObjectTypeDetailScene() {
     Boolean(detail) &&
     canRequestResourcePermission("object_type", detail?.operations, permissionRequestsEnabled) &&
     (missingRequestableOperations.length > 0 || policyScopeRequestable);
+
+  useEffect(() => {
+    if (requestPermissionFromURL && canRequestPermission) {
+      setPermissionRequestOpen(true);
+    }
+  }, [canRequestPermission, requestPermissionFromURL]);
+
+  const handlePermissionRequestOpenChange = useCallback(
+    (open: boolean) => {
+      setPermissionRequestOpen(open);
+      if (!open && requestPermissionFromURL) {
+        setSearchParams(
+          (current) => {
+            const next = new URLSearchParams(current);
+            next.delete("requestPermission");
+            return next;
+          },
+          { replace: true },
+        );
+      }
+    },
+    [requestPermissionFromURL, setSearchParams],
+  );
 
   const canQueryData = hasKnowledgeNetworkRecordOperation(detail, "query_data");
   const shouldLoadPreview =
@@ -2043,6 +2075,9 @@ export function ObjectTypeDetailScene() {
           <>
             {canRequestPermission ? (
               <ResourcePermissionRequestAction
+                initialProposalKind={initialPermissionRequestKind}
+                onOpenChange={handlePermissionRequestOpenChange}
+                open={permissionRequestOpen}
                 operations={detail.operations}
                 resourceID={`${networkId}/${detail.id}`}
                 resourceName={detail.name}
