@@ -19,6 +19,7 @@ import {
   getArchiveOverview,
   listArchiveJobs,
   listLogPolicies,
+  listLogSourceInventory,
   listLogSources,
   retryArchiveCleanup,
   type ArchiveJob,
@@ -26,7 +27,9 @@ import {
   type ArchiveOverview,
   type BusinessModule,
   type LogPolicy,
+  type LogSourceInventory,
   type LogSourceStatus,
+  type RegisteredLogSource,
 } from "@/modules/bkn-trace/services/observability.service";
 import {
   changeTraceEvidenceConfiguration,
@@ -49,12 +52,14 @@ type ModuleSourceRow = {
   module: BusinessModule;
   reason?: string;
   sourceIds: string[];
-  status: "healthy" | "not_integrated" | "unavailable" | "unknown";
+  status: "healthy" | "not_integrated" | "not_listed" | "unavailable" | "unknown";
 };
 
 export function ObservabilitySettingsScene() {
   const { t } = useTranslation();
   const [sources, setSources] = useState<LogSourceStatus[]>([]);
+  const [inventory, setInventory] = useState<LogSourceInventory>();
+  const [inventoryUnavailable, setInventoryUnavailable] = useState(false);
   const [sourceLoadState, setSourceLoadState] = useState<SourceLoadState>("not_requested");
   const [policies, setPolicies] = useState<LogPolicy[]>([]);
   const [archives, setArchives] = useState<ArchiveOverview[]>([]);
@@ -89,6 +94,7 @@ export function ObservabilitySettingsScene() {
         setCapturePolicyWrite(profile.traceEvidenceConfigurationWrite);
         const [
           sourceResult,
+          inventoryResult,
           policyResult,
           logArchiveResult,
           traceArchiveResult,
@@ -97,6 +103,9 @@ export function ObservabilitySettingsScene() {
           capturePolicyResult,
         ] = await Promise.allSettled([
           profile.globalLogSearch ? listLogSources() : Promise.resolve([]),
+          profile.globalLogSearch
+            ? listLogSourceInventory()
+            : Promise.resolve<LogSourceInventory | undefined>(undefined),
           profile.logPolicyRead ? listLogPolicies() : Promise.resolve([]),
           profile.observabilityArchiveManage
             ? getArchiveOverview("log")
@@ -120,6 +129,12 @@ export function ObservabilitySettingsScene() {
           setSourceLoadState(profile.globalLogSearch ? "loaded" : "not_requested");
         } else {
           setSourceLoadState("unavailable");
+        }
+        if (inventoryResult.status === "fulfilled" && inventoryResult.value) {
+          setInventory(inventoryResult.value);
+          setInventoryUnavailable(false);
+        } else if (profile.globalLogSearch) {
+          setInventoryUnavailable(true);
         }
         if (policyResult.status === "fulfilled") setPolicies(policyResult.value);
         const archiveData = [logArchiveResult, traceArchiveResult].flatMap((result) =>
@@ -224,7 +239,8 @@ export function ObservabilitySettingsScene() {
         if (sourceLoadState === "unavailable")
           return { module, reason: "source_query_failed", sourceIds: [], status: "unavailable" };
         const matching = sources.filter((source) => source.coveredModules.includes(module));
-        if (!matching.length) return { module, sourceIds: [], status: "not_integrated" };
+        if (!matching.length)
+          return { module, reason: "source_not_listed", sourceIds: [], status: "not_listed" };
         const unavailable = matching.find(
           (source) => !["available", "healthy", "not_integrated"].includes(source.status),
         );
@@ -246,7 +262,7 @@ export function ObservabilitySettingsScene() {
         }
         return {
           module,
-          reason: matching.map((source) => source.reason).find(Boolean),
+          reason: matching.map((source) => source.reason).find(Boolean) ?? "source_not_integrated",
           sourceIds: matching.map((source) => source.sourceId),
           status: "not_integrated",
         };
@@ -272,7 +288,7 @@ export function ObservabilitySettingsScene() {
       healthy,
       registered: moduleSources.length,
       unavailable,
-      unconfigured: moduleSources.filter((source) => source.status === "not_integrated").length,
+      unconfigured: moduleSources.filter((source) => ["not_integrated", "not_listed"].includes(source.status)).length,
     };
   }, [moduleSources]);
 
@@ -286,7 +302,7 @@ export function ObservabilitySettingsScene() {
     {
       dataIndex: "sourceIds",
       key: "sourceIds",
-      title: t("bknTrace.settings.columns.source"),
+      title: t("bknTrace.settings.independentQuerySource"),
       render: (sourceIds: string[], row) =>
         sourceIds.length
           ? sourceIds
@@ -295,15 +311,17 @@ export function ObservabilitySettingsScene() {
               )
               .join("、")
           : t(
-              row.status === "not_integrated"
-                ? "bknTrace.settings.sourceNotIntegrated"
-                : "bknTrace.settings.sourceNotReturned",
+              row.status === "not_listed"
+                ? "bknTrace.settings.sourceNotListed"
+                : row.status === "not_integrated"
+                  ? "bknTrace.settings.sourceNotIntegrated"
+                  : "bknTrace.settings.sourceNotReturned",
             ),
     },
     {
       dataIndex: "status",
       key: "status",
-      title: t("bknTrace.settings.columns.status"),
+      title: t("bknTrace.settings.querySourceStatus"),
       render: (value: ModuleSourceRow["status"]) => (
         <Tag color={value === "healthy" ? "green" : value === "unavailable" ? "orange" : "default"}>
           {t(`bknTrace.settings.status.${value}`)}
@@ -315,6 +333,30 @@ export function ObservabilitySettingsScene() {
       key: "reason",
       title: t("bknTrace.settings.columns.dataState"),
       render: (value?: string) => sourceStateLabel(value, t),
+    },
+  ];
+
+  const inventoryColumns: ColumnsType<RegisteredLogSource> = [
+    { dataIndex: "sourceId", key: "sourceId", title: t("bknTrace.settings.inventory.sourceId") },
+    {
+      dataIndex: "modules", key: "modules", title: t("bknTrace.settings.inventory.owner"),
+      render: (modules: string[], row) => modules.length ? modules.join("、") : row.owner,
+    },
+    {
+      dataIndex: "declaredCollectionMethod", key: "declaredCollectionMethod",
+      title: t("bknTrace.settings.inventory.declaredMethod"),
+      render: (method: string) => t(`bknTrace.settings.inventory.methods.${method}`, { defaultValue: method }),
+    },
+    {
+      dataIndex: "queryStatus", key: "queryStatus", title: t("bknTrace.settings.inventory.queryStatus"),
+      render: (status: string) => t(`bknTrace.settings.inventory.query.${status}`, { defaultValue: status }),
+    },
+    {
+      dataIndex: "coverageStatus", key: "coverageStatus",
+      title: t("bknTrace.settings.inventory.coverageStatus"),
+      render: (status: RegisteredLogSource["coverageStatus"]) => (
+        <Tag>{t(`bknTrace.settings.inventory.coverage.${status}`)}</Tag>
+      ),
     },
   ];
 
@@ -430,6 +472,34 @@ export function ObservabilitySettingsScene() {
             })}
           </Typography.Paragraph>
         ) : null}
+      </SettingsSection>
+
+      <SettingsSection title={t("bknTrace.settings.inventory.title")}>
+        <Typography.Paragraph type="secondary">
+          {t("bknTrace.settings.inventory.explanation")}
+        </Typography.Paragraph>
+        {inventory ? (
+          <>
+            <Typography.Text type="secondary">
+              {t("bknTrace.settings.inventory.version", { version: inventory.registryVersion })}
+            </Typography.Text>
+            <Table
+              columns={inventoryColumns}
+              dataSource={inventory.data}
+              pagination={{ pageSize: 20 }}
+              rowKey="sourceId"
+              tableLayout="fixed"
+            />
+          </>
+        ) : (
+          <Alert
+            message={t(inventoryUnavailable
+              ? "bknTrace.settings.inventory.unavailable"
+              : "bknTrace.settings.inventory.notRequested")}
+            showIcon
+            type="warning"
+          />
+        )}
       </SettingsSection>
 
       <SettingsSection title={t("bknTrace.settings.storageRetention")}>

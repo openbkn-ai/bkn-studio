@@ -20,7 +20,7 @@ export type LogCategory =
 type BackendLogRecord = {
   actor_id: string;
   actor_name_snapshot: string;
-  actor_type?: "service_account" | "user";
+  actor_type?: "anonymous" | "service_account" | "user";
   auth_method: "api_key" | "oauth" | "password" | "session" | "unknown";
   credential_id?: string;
   credential_name?: string;
@@ -78,7 +78,7 @@ export const BUSINESS_MODULES: BusinessModule[] = [
   "observability",
 ];
 
-export type SourceChannel = "api" | "cli" | "mcp" | "sdk" | "studio";
+export type SourceChannel = "api" | "cli" | "mcp" | "sdk" | "studio" | "unknown";
 
 export type LogFacts = {
   action: string;
@@ -96,7 +96,7 @@ export type LogFacts = {
 
 export type LogRecord = {
   action: string;
-  actor: { id: string; name: string; type: "service_account" | "user" };
+  actor: { id: string; name: string; type: "anonymous" | "service_account" | "user" };
   authMethod: BackendLogRecord["auth_method"];
   conversationId?: string;
   credential?: { id: string; name?: string };
@@ -128,6 +128,22 @@ export type LogSourceStatus = {
   reliability: string;
   sourceId: string;
   status: string;
+};
+
+export type RegisteredLogSource = {
+  sourceId: string;
+  owner: string;
+  modules: string[];
+  declaredCollectionMethod: string;
+  declaredReliability: string;
+  queryStatus: string;
+  queryReason?: string;
+  coverageStatus: "unverified";
+};
+
+export type LogSourceInventory = {
+  registryVersion: string;
+  data: RegisteredLogSource[];
 };
 
 export type LogPolicy = {
@@ -166,6 +182,7 @@ export type LogListQuery = {
   categories?: LogCategory[];
   conversationId?: string;
   cursor?: string;
+  failedOnly?: boolean;
   limit?: number;
   businessModule?: BusinessModule;
   outcomes?: AuditOutcome[];
@@ -173,6 +190,7 @@ export type LogListQuery = {
   pageSize?: number;
   query?: string;
   requestId?: string;
+  sourceId?: string;
   targetId?: string;
   targetType?: string;
   timeFrom?: string;
@@ -272,6 +290,35 @@ export async function listLogSources(): Promise<LogSourceStatus[]> {
     },
   );
   return response.data.data.map(mapSourceStatus);
+}
+
+export async function listLogSourceInventory(): Promise<LogSourceInventory> {
+  const response = await http.get<{
+    registry_version: string;
+    data: Array<{
+      source_id: string;
+      owner: string;
+      modules: string[];
+      declared_collection_method: string;
+      declared_reliability: string;
+      query_status: string;
+      query_reason?: string;
+      coverage_status: "unverified";
+    }>;
+  }>(`${OBSERVABILITY_API_PREFIX}/log-source-inventory`, { skipErrorToast: true });
+  return {
+    registryVersion: response.data.registry_version,
+    data: response.data.data.map((source) => ({
+      sourceId: source.source_id,
+      owner: source.owner,
+      modules: source.modules,
+      declaredCollectionMethod: source.declared_collection_method,
+      declaredReliability: source.declared_reliability,
+      queryStatus: source.query_status,
+      ...(source.query_reason ? { queryReason: source.query_reason } : {}),
+      coverageStatus: source.coverage_status,
+    })),
+  };
 }
 
 export async function listLogPolicies(): Promise<LogPolicy[]> {
@@ -464,6 +511,7 @@ function logQueryParams(query: LogListQuery) {
   if (query.categories?.length) params.categories = query.categories;
   if (query.conversationId) params.conversation_id = query.conversationId;
   if (query.cursor) params.cursor = query.cursor;
+  if (query.failedOnly) params.failed_only = true;
   if (query.limit !== undefined) params.limit = query.limit;
   if (query.businessModule) params.business_module = query.businessModule;
   if (query.outcomes?.length) params.outcomes = query.outcomes;
@@ -471,6 +519,7 @@ function logQueryParams(query: LogListQuery) {
   if (query.pageSize !== undefined) params.page_size = query.pageSize;
   if (query.query) params.q = query.query;
   if (query.requestId) params.request_id = query.requestId;
+  if (query.sourceId) params.source_id = query.sourceId;
   if (query.targetId) params.target_id = query.targetId;
   if (query.targetType) params.target_type = query.targetType;
   if (query.timeFrom) params.time_from = query.timeFrom;
