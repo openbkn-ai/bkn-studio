@@ -49,10 +49,37 @@ export const networkPart = {
   permissionRequestSuccess: "权限申请已提交。",
   permissionRequestViewMine: "查看我的申请",
   permissionRequestAlreadyGranted: "所选权限已拥有，申请窗口已关闭。请刷新当前页面以更新权限状态。",
+  permissionRequestNothingAvailable: "当前资源没有可申请的权限。",
   permissionRequestResourceDeleted: "该资源已删除，无法申请权限。",
   permissionRequestResourceID: "资源 ID：{{id}}",
   permissionRequestNoOperations: "您已拥有该知识网络的全部可申请业务权限。",
   permissionRequestPending: "以下权限已有待审核申请：{{operations}}",
+  permissionRequestPolicyPending: "该类权限已有待审核申请，重复提交不会产生新的待办。",
+  permissionRequestPolicyIncomplete: "请先完整填写要申请的权限内容。",
+  permissionRequestBasePermissions: "基础权限",
+  permissionRequestRowFilter: "行过滤",
+  permissionRequestPropertyPermissions: "属性权限",
+  permissionRequestRowScope: "申请行访问范围",
+  permissionRequestPropertyScope: "申请字段原始值",
+  permissionRequestRowScopeHint:
+    "以下为您当前可查询的过滤条件。请在申请原因中说明所需数据范围；审核同意后由管理员配置最终规则。",
+  permissionRequestRowScopeCurrentValues: "当前允许值",
+  permissionRequestRowScopeAddValues: "申请新增允许值",
+  permissionRequestRowScopeAddValuesPlaceholder: "多个值请用英文逗号分隔",
+  permissionRequestRowScopeBoundaryPlaceholder: "填写申请后的边界值；下限应更小，上限应更大",
+  permissionRequestPropertyScopeHint:
+    "请选择需要查看原始值的字段。审核人确认后，所选字段将直接生效为原始值可见。",
+  permissionRequestPropertyScopeCurrent: "当前：{{level}}",
+  permissionRequestPropertyScopeBase: "基础权限：{{level}}",
+  permissionRequestPropertyScopeExplicit: "显式配置：{{level}}",
+  permissionRequestPropertyScopeOriginalValue: "申请查看原始值",
+  permissionRequestRowFilterHint:
+    "行过滤会在已有查询权限的基础上，仅允许符合以下条件的数据行返回。",
+  permissionRequestRowFilterField: "过滤属性",
+  permissionRequestRowFilterValues: "允许的值",
+  permissionRequestRowFilterValuesPlaceholder: "多个值请用英文逗号分隔",
+  permissionRequestPropertyPermissionsHint:
+    "属性权限只能收窄基础权限，不能单独授予对象类访问能力。",
   permissionRequestCommunity:
     "社区版审批通过后将授予该知识网络的全部业务权限，不包含授权管理权限。",
   permissionOperation: {

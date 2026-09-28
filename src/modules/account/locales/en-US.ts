@@ -154,7 +154,14 @@ export const accountEnUS = {
       reviewForbidden: "You no longer have permission to process this request.",
       requestNotFound: "This request no longer exists.",
       approveConfirmTitle: "Approve this permission request?",
-      approveConfirmDescription: "The requested permissions will be granted immediately.",
+      approveConfirmDescription: "Approval takes effect according to the request type.",
+      rowFilterApprovalConfirmDescription:
+        "Approval completes the review workflow. An administrator may configure row access separately based on the request reason.",
+      rowFilterConfigurationTitle: "Row access can be configured",
+      rowFilterConfigurationNotice:
+        "This request is approved and its review workflow is complete. You may configure the requester's row access based on the request reason.",
+      propertyApprovalConfirmDescription:
+        "Confirming immediately exposes original values for these fields: {{fields}}.",
       rejectConfirmTitle: "Reject this permission request?",
       rejectConfirmDescription:
         "Another eligible reviewer can still process this request after your rejection.",
@@ -166,6 +173,13 @@ export const accountEnUS = {
       auditStatus: "Review status",
       resource: "Resource",
       operations: "Requested permissions",
+      rowFilter: "Row filter",
+      rowPermissions: "Requested row access",
+      expandRowAccess: "Request expanded row access",
+      propertyPermissions: "Requested property access",
+      propertyAccessLevels: {
+        full: "Original values",
+      },
       filterResourceType: "Resource type",
       filterStatus: "Review status",
       searchPlaceholder: "Search requests or requesters",
@@ -200,6 +214,7 @@ export const accountEnUS = {
       resourceChecking: "Checking resource availability…",
       resourceDetailsForbidden: "You do not have permission to view this resource.",
       resourceCheckFailed: "The resource status could not be verified. Please try again later.",
+      configureRowFilter: "Configure row access",
       resourceDetailsUnavailable: "Details are not available for this resource.",
       decisions: {
         approve: "Approved",

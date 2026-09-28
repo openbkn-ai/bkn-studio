@@ -7,7 +7,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { togglePermissionRequestOperation } from "./resource-permission-request";
+import {
+  canRequestResourcePermission,
+  hasRequestableObjectTypePermission,
+  hasRequestableObjectTypePolicyScope,
+  togglePermissionRequestOperation,
+} from "./resource-permission-request";
 
 describe("togglePermissionRequestOperation", () => {
   it("does not resubmit an already effective prerequisite", () => {
@@ -25,5 +30,59 @@ describe("togglePermissionRequestOperation", () => {
     ]);
 
     expect(selected).toEqual(["view_detail", "modify"]);
+  });
+});
+
+describe("hasRequestableObjectTypePolicyScope", () => {
+  it("only exposes the entry for an actual row or property restriction", () => {
+    expect(hasRequestableObjectTypePolicyScope({})).toBe(false);
+    expect(
+      hasRequestableObjectTypePolicyScope({
+        row_filter: { policy: { conditions: [{ property_name: "region" }] } },
+      }),
+    ).toBe(true);
+    expect(
+      hasRequestableObjectTypePolicyScope({
+        property_grants: { entries: [{ level: "masked" }] },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("hasRequestableObjectTypePermission", () => {
+  it("does not offer an empty object-type request form", () => {
+    expect(
+      hasRequestableObjectTypePermission({
+        hasPendingRequest: false,
+        hasRowFilter: false,
+        missingOperationCount: 0,
+        restrictedPropertyCount: 0,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps row and property scope requests available when base operations are complete", () => {
+    expect(
+      hasRequestableObjectTypePermission({
+        hasPendingRequest: false,
+        hasRowFilter: true,
+        missingOperationCount: 0,
+        restrictedPropertyCount: 0,
+      }),
+    ).toBe(true);
+    expect(
+      hasRequestableObjectTypePermission({
+        hasPendingRequest: false,
+        hasRowFilter: false,
+        missingOperationCount: 0,
+        restrictedPropertyCount: 1,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("canRequestResourcePermission", () => {
+  it("does not expose a request entry when the edition disables permission requests", () => {
+    expect(canRequestResourcePermission("object_type", [], false)).toBe(false);
   });
 });

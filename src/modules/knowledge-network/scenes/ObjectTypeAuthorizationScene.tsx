@@ -169,6 +169,8 @@ export function ObjectTypeAuthorizationScene() {
   const networkAuthorized = useKnowledgeNetworkCanOperate(networkId, "authorize");
   const objectTypeRef = `${networkId}/${objectTypeId}`;
   const detailPath = `/knowledge-network/workspace/${networkId}/object-types/${objectTypeId}/detail`;
+  const configurationSearch = useMemo(() => new URLSearchParams(window.location.search), []);
+  const configurationRequesterID = configurationSearch.get("requester_id") ?? undefined;
 
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,7 +184,9 @@ export function ObjectTypeAuthorizationScene() {
   const [candidateUserId, setCandidateUserId] = useState<string>();
   const [candidateOperations, setCandidateOperations] = useState<string[]>([]);
   const [sourceAccessorId, setSourceAccessorId] = useState<string>();
-  const [activeTab, setActiveTab] = useState<AuthorizationTab>("base");
+  const [activeTab, setActiveTab] = useState<AuthorizationTab>(
+    configurationRequesterID ? "row-filter" : "base",
+  );
   const [subjectType, setSubjectType] = useState<PropertyGrantSubjectType>("user");
   const [subjectId, setSubjectId] = useState<string>();
   const [subjectKeyword, setSubjectKeyword] = useState("");
@@ -1776,6 +1780,7 @@ export function ObjectTypeAuthorizationScene() {
                 <RequireEdition capability={CAPABILITIES.PERM_OBJECT_LEVEL} minEdition="enterprise">
                   <RowFilterAuthorizationPanel
                     discardNonce={rowFilterDiscardNonce}
+                    initialSubjectId={configurationRequesterID}
                     objectTypeRef={objectTypeRef}
                     onBeforeSubjectChange={confirmDiscard}
                     onDirtyChange={setRowFilterDirty}
