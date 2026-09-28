@@ -9,6 +9,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+type SetSearchParams = (
+  next: URLSearchParams | ((current: URLSearchParams) => URLSearchParams),
+  options?: { replace?: boolean },
+) => void;
+
 const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkActionTypeDetail: vi.fn(),
   getKnowledgeNetworkMetric: vi.fn(),
@@ -29,7 +34,7 @@ const mocks = vi.hoisted(() => ({
   searchParams: {
     current: "",
   },
-  setSearchParams: vi.fn(),
+  setSearchParams: vi.fn<SetSearchParams>(),
 }));
 
 vi.mock("react-i18next", async (importOriginal) => ({

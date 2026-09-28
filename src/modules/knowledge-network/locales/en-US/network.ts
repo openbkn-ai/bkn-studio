@@ -61,6 +61,8 @@ export const networkPart = {
   permissionRequestPolicyPending:
     "A request for this policy is already pending; submitting again will not create another task.",
   permissionRequestPolicyIncomplete: "Complete the requested permission settings first.",
+  permissionRequestPolicyPreviewPending:
+    "Loading the current permission scope. Please submit the request shortly.",
   permissionRequestBasePermissions: "Base permissions",
   permissionRequestRowFilter: "Row filter",
   permissionRequestPropertyPermissions: "Property access",

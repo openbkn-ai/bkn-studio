@@ -35,6 +35,23 @@ export type RequestablePermissionOperation = {
   requires: readonly string[];
 };
 
+export type PermissionRequestProposalKind = "grant" | "row_filter" | "property_grants";
+
+// Row and property proposals depend on the policy preview to carry the
+// current policy/revision. Do not let a deep link submit either proposal while
+// that preview is still resolving.
+export function isPermissionRequestProposalReady({
+  proposalKind,
+  resourceType,
+  previewResolved,
+}: {
+  proposalKind: PermissionRequestProposalKind;
+  resourceType: string;
+  previewResolved: boolean;
+}) {
+  return resourceType !== "object_type" || proposalKind === "grant" || previewResolved;
+}
+
 // Expands a selection only with prerequisites that are still missing. A
 // prerequisite absent from requestableOperations is already effective for the
 // user, so sending it again would make the whole request conflict at the

@@ -11,6 +11,7 @@ import {
   canRequestResourcePermission,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
+  isPermissionRequestProposalReady,
   togglePermissionRequestOperation,
 } from "./resource-permission-request";
 
@@ -44,6 +45,35 @@ describe("hasRequestableObjectTypePolicyScope", () => {
     expect(
       hasRequestableObjectTypePolicyScope({
         property_grants: { entries: [{ level: "masked" }] },
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("isPermissionRequestProposalReady", () => {
+  it("waits for the object-type policy preview before allowing a policy proposal", () => {
+    expect(
+      isPermissionRequestProposalReady({
+        proposalKind: "row_filter",
+        resourceType: "object_type",
+        previewResolved: false,
+      }),
+    ).toBe(false);
+    expect(
+      isPermissionRequestProposalReady({
+        proposalKind: "property_grants",
+        resourceType: "object_type",
+        previewResolved: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps base permission requests available while policy preview loads", () => {
+    expect(
+      isPermissionRequestProposalReady({
+        proposalKind: "grant",
+        resourceType: "object_type",
+        previewResolved: false,
       }),
     ).toBe(true);
   });
