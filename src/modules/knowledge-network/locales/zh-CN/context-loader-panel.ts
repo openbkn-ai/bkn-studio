@@ -180,9 +180,8 @@ export const contextLoaderPanelPart = {
       label: "接入入口",
       full: "完整版",
       compact: "精简版",
-      fullHint: "公布全部工具，适合按需加载工具定义的宿主（如 Claude Code）。",
-      compactHint:
-        "只公布常用工具，其余能力经按需网关调用；工具定义约为完整版的三分之一，适合每轮都携带全部工具定义的宿主。",
+      fullHint: "公布全部工具，适合能按需加载工具的客户端（如 Claude Code）。",
+      compactHint: "只公布常用工具，其余按需调用，适合每轮都加载全部工具的客户端。",
     },
     mcpConnect: {
       title: "让智能体调用 OpenBKN 能力",

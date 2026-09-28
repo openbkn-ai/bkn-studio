@@ -218,9 +218,9 @@ export const contextLoaderPanelPart = {
       full: "Full",
       compact: "Compact",
       fullHint:
-        "Publishes every tool. Suits hosts that load tool definitions on demand, such as Claude Code.",
+        "Publishes every tool. Suits clients that load tools on demand, such as Claude Code.",
       compactHint:
-        "Publishes the common tools and reaches the rest through an on-demand gateway. Its tool definitions are about a third of the full endpoint's, which suits hosts that send every tool definition on each turn.",
+        "Publishes the common tools and calls the rest on demand. Suits clients that load every tool on each turn.",
     },
     mcpConnect: {
       title: "Let Agents Call OpenBKN Capabilities",
