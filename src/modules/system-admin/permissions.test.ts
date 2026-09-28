@@ -72,6 +72,11 @@ describe("授权面权限点", () => {
     expect(systemAdminModuleManifest.permissions).toContain("admin-client:manage");
   });
 
+  it("系统操作日志 manifest 指向正在使用的统一审计页面", () => {
+    const scene = systemAdminModuleManifest.scenes.find((item) => item.id === "system-admin.audit");
+    expect(scene?.exportName).toBe("AuditLogPage");
+  });
+
   it("每个动作点位都在 manifest 里声明，否则永远推导不出来", () => {
     for (const point of Object.values(authzPoints)) {
       expect(systemAdminModuleManifest.permissions).toContain(point);

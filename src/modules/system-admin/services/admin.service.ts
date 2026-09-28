@@ -15,8 +15,6 @@ import type {
   AdminDepartment,
   AdminRole,
   AdminUser,
-  AuditLog,
-  AuditLogQuery,
   CreateUserInput,
   DepartmentInput,
   ResourceGrant,
@@ -121,64 +119,6 @@ let users: AdminUser[] = [
     roleIds: [],
     departmentIds: ["dep-cs"],
     updatedAt: daysAgo(15),
-  },
-];
-
-const auditLog: AuditLog[] = [
-  {
-    id: "al-1",
-    actorId: "u-admin",
-    method: "POST",
-    resource: "users",
-    action: "users",
-    targetId: "u-chen",
-    status: 201,
-    clientIp: "127.0.0.1",
-    createdAt: new Date(daysAgo(4)).toISOString(),
-  },
-  {
-    id: "al-2",
-    actorId: "u-admin",
-    method: "POST",
-    resource: "roles",
-    action: "roles.permissions",
-    targetId: "role-network-builder",
-    status: 204,
-    clientIp: "127.0.0.1",
-    createdAt: new Date(daysAgo(3)).toISOString(),
-  },
-  {
-    id: "al-3",
-    actorId: "u-admin",
-    method: "DELETE",
-    resource: "users",
-    action: "users",
-    targetId: "u-ghost",
-    status: 404,
-    clientIp: "127.0.0.1",
-    createdAt: new Date(daysAgo(2)).toISOString(),
-  },
-  {
-    id: "al-4",
-    actorId: "u-li",
-    method: "POST",
-    resource: "departments",
-    action: "departments.members",
-    targetId: "dep-gov",
-    status: 204,
-    clientIp: "127.0.0.2",
-    createdAt: new Date(daysAgo(1)).toISOString(),
-  },
-  {
-    id: "al-5",
-    actorId: "u-admin",
-    method: "POST",
-    resource: "role-bindings",
-    action: "role-bindings",
-    targetId: "",
-    status: 204,
-    clientIp: "127.0.0.1",
-    createdAt: new Date(daysAgo(1)).toISOString(),
   },
 ];
 
@@ -611,57 +551,6 @@ export async function setDepartmentMembers(
     data: { user_ids: userIds },
     skipErrorToast: options?.skipErrorToast,
   });
-}
-
-export async function listAuditLogs(
-  query: AuditLogQuery,
-): Promise<{ logs: AuditLog[]; total: number }> {
-  if (useMock) {
-    let logs = [...auditLog].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    if (query.resource) {
-      logs = logs.filter((log) => log.resource === query.resource);
-    }
-    if (query.action) {
-      logs = logs.filter((log) => log.action === query.action);
-    }
-    if (query.actorId) {
-      logs = logs.filter((log) => log.actorId === query.actorId);
-    }
-    if (query.targetId) {
-      logs = logs.filter((log) => log.targetId === query.targetId);
-    }
-    if (query.from) {
-      logs = logs.filter((log) => log.createdAt >= query.from!);
-    }
-    if (query.to) {
-      logs = logs.filter((log) => log.createdAt <= query.to!);
-    }
-    if (query.failedOnly) {
-      logs = logs.filter((log) => log.status >= 400);
-    }
-    const total = logs.length;
-    const offset = query.offset ?? 0;
-    return wait({ logs: logs.slice(offset, offset + (query.limit ?? 50)), total });
-  }
-  const response = await http.get<{ logs?: BackendAudit[]; total?: number }>(
-    `${ADMIN}/audit-logs`,
-    {
-      params: {
-        actor_id: query.actorId || undefined,
-        resource: query.resource || undefined,
-        action: query.action || undefined,
-        target_id: query.targetId || undefined,
-        from: query.from || undefined,
-        to: query.to || undefined,
-        offset: query.offset ?? 0,
-        limit: query.limit ?? 50,
-      },
-    },
-  );
-  const all = (response.data.logs ?? []).map(mapAudit);
-  // The backend has no status filter, so filter the current page on the frontend.
-  const logs = query.failedOnly ? all.filter((log) => log.status >= 400) : all;
-  return { logs, total: response.data.total ?? logs.length };
 }
 
 // ---- user writes ------------------------------------------------------------
@@ -1106,20 +995,6 @@ type BackendUser = {
   updated_at?: string;
 };
 
-type BackendAudit = {
-  action?: string;
-  actor_id?: string;
-  client_ip?: string;
-  created_at?: string;
-  detail?: string;
-  id: string;
-  method?: string;
-  resource?: string;
-  status?: number;
-  target_id?: string;
-  target_name?: string;
-};
-
 // Department endpoints return PascalCase, unlike the lowercase users/roles payloads,
 // so both naming styles are supported.
 type BackendDept = {
@@ -1228,22 +1103,6 @@ function mapUser(item: BackendUser, detail = false): AdminUser {
     departmentIds,
     departmentNames: item.department_names,
     updatedAt: parseUpdatedAt(item),
-  };
-}
-
-function mapAudit(item: BackendAudit): AuditLog {
-  return {
-    id: item.id,
-    actorId: item.actor_id ?? "",
-    method: item.method ?? "",
-    resource: item.resource ?? "",
-    action: item.action ?? "",
-    targetId: item.target_id ?? "",
-    status: item.status ?? 0,
-    clientIp: item.client_ip ?? "",
-    createdAt: item.created_at ?? "",
-    detail: item.detail ?? "",
-    targetName: item.target_name || undefined,
   };
 }
 

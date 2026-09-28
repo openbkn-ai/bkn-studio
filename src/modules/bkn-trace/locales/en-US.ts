@@ -1111,20 +1111,51 @@ export const bknTraceEnUS = {
       description:
         "Inspect collection sources, storage retention, and archive state for routine maintenance.",
       metrics: {
-        healthy: "Integrated",
-        registered: "Registered business modules",
+        healthy: "Queryable",
+        registered: "Business-module view rows",
         unavailable: "Unavailable",
-        unconfigured: "Not integrated",
+        unconfigured: "No query source",
         updatedAt: "Last updated",
       },
-      noIssueReturned: "No collection issue is currently reported",
+      noIssueReturned: "This query source reports no issue; end-to-end coverage is not implied.",
       notReturned: "Not returned by API",
       overview: "Runtime overview",
       policies: "Retention and storage policies",
       readOnlyNotice:
-        "Collection sources, storage and archive information reflect the actual state returned by the server.",
+        "This page shows maintenance facts returned by the server. Trace, logs, Audit, and Evidence coverage require separate verification.",
       recentArchives: "Recent archives",
-      sources: "Collection sources",
+      sources: "Business-module query sources (not full collection coverage)",
+      inventory: {
+        title: "Registered source inventory",
+        explanation:
+          "These are declared contract targets, not proof that their producers are connected. Query availability and end-to-end coverage are separate; Trace, runtime logs, Audit, and Evidence have distinct acceptance paths.",
+        version: "Registry version {{version}}",
+        unavailable:
+          "The registered source inventory could not be loaded; full coverage cannot be determined.",
+        notRequested: "The current account did not request the registered source inventory.",
+        sourceId: "Source ID",
+        owner: "Component",
+        modules: "Business modules",
+        declaredMethod: "Declared collection method",
+        queryStatus: "Query-source status",
+        coverageStatus: "End-to-end coverage",
+        methods: {
+          kafka_audit: "Kafka Audit",
+          direct_otlp: "Direct OTLP",
+          source_adapter: "Source adapter",
+          projection_outbox: "Central projection",
+          not_integrated: "No method declared",
+        },
+        query: {
+          not_listed: "Not in query sources",
+          query_unavailable: "Query status unavailable",
+          healthy: "Queryable",
+          available: "Queryable",
+          degraded: "Query degraded",
+          not_integrated: "No query source",
+        },
+        coverage: { unverified: "Coverage unverified" },
+      },
       sourceLabels: {
         "bkn-backend": "Domain knowledge network service",
         "bkn-safe-admin": "System management service",
@@ -1135,29 +1166,37 @@ export const bknTraceEnUS = {
         vega: "Data resource service",
       },
       sourceNotIntegrated: "No collection source integrated",
+      sourceNotListed: "No independent query source",
       sourceNotReturned: "Source status not returned",
+      independentQuerySource: "Independent query source",
+      querySourceStatus: "Query status",
       excludedOperationAuditSources:
-        "{{count}} non-operation log sources are excluded from these business-module states and remain available in Trace.",
+        "{{count}} sources are not mapped to the six business-module rows above; review their semantics in the registered inventory rather than treating them as out of scope.",
       excludedOperationAuditSources_one:
-        "{{count}} non-operation log source is excluded from these business-module states and remains available in Trace.",
+        "{{count}} source is not mapped to the six business-module rows above; review its semantics in the registered inventory rather than treating it as out of scope.",
       excludedOperationAuditSources_other:
-        "{{count}} non-operation log sources are excluded from these business-module states and remain available in Trace.",
+        "{{count}} sources are not mapped to the six business-module rows above; review their semantics in the registered inventory rather than treating them as out of scope.",
       sourceState: {
         partial_management_audit_coverage:
           "Some management operations are integrated; remaining operations are not yet audited.",
         source_health_check_failed:
           "Source health check failed. Verify service connectivity and the endpoint response.",
         source_not_configured: "Collection source is not configured.",
+        source_not_integrated:
+          "No verifiable collection source is integrated; collection health cannot be determined.",
+        source_not_listed:
+          "Not listed as an independent query source. Check the registry below; this does not prove that the module has no collection.",
         source_not_requested: "The current account did not query source status.",
         source_query_failed: "Source status query failed.",
         source_timeout: "Source health check timed out.",
       },
       status: {
-        available: "Integrated",
+        available: "Queryable",
         error: "Error",
-        healthy: "Integrated",
+        healthy: "Queryable",
         known: "Returned",
         not_integrated: "Not integrated",
+        not_listed: "Not an independent query source",
         unavailable: "Unavailable",
         unconfigured: "Not integrated",
         unknown: "Not returned",

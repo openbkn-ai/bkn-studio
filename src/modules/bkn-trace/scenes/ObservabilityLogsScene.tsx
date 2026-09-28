@@ -96,7 +96,11 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
           timeFrom: nextFilters.timeRange[0].toISOString(),
           timeTo: nextFilters.timeRange[1].toISOString(),
           ...(mode === "audit" ? { categories: SYSTEM_AUDIT_CATEGORIES } : {}),
-          ...(nextFilters.businessModule ? { businessModule: nextFilters.businessModule } : {}),
+          ...(mode === "audit"
+            ? { businessModule: "system_management" as const, sourceId: "bkn-safe-admin" }
+            : nextFilters.businessModule
+              ? { businessModule: nextFilters.businessModule }
+              : {}),
           ...(nextFilters.actorId.trim() ? { actorQuery: nextFilters.actorId.trim() } : {}),
           ...(nextFilters.outcome ? { outcomes: [nextFilters.outcome] } : {}),
           ...(associatedScope.actorId ? { actorId: associatedScope.actorId } : {}),
@@ -289,16 +293,18 @@ export function ObservabilityLogsScene({ mode = "logs" }: ObservabilityLogsScene
               showTime
               value={filters.timeRange}
             />
-            <Select
-              allowClear
-              onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))}
-              options={BUSINESS_MODULES.map((module) => ({
-                label: moduleLabel(module, t),
-                value: module,
-              }))}
-              placeholder={t("bknTrace.logs.modulePlaceholder")}
-              value={filters.businessModule}
-            />
+            {mode !== "audit" ? (
+              <Select
+                allowClear
+                onChange={(businessModule) => setFilters((value) => ({ ...value, businessModule }))}
+                options={BUSINESS_MODULES.map((module) => ({
+                  label: moduleLabel(module, t),
+                  value: module,
+                }))}
+                placeholder={t("bknTrace.logs.modulePlaceholder")}
+                value={filters.businessModule}
+              />
+            ) : null}
             <Select
               allowClear
               onChange={(outcome) => setFilters((value) => ({ ...value, outcome }))}
