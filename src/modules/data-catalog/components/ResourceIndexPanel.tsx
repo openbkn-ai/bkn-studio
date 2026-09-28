@@ -594,7 +594,7 @@ export function ResourceIndexPanel({
             onSaved={() => {
               void onRefresh();
             }}
-            readOnly={readOnly}
+            readOnly={readOnly || resource.category === "logicview"}
             resource={resource}
           />
         </div>

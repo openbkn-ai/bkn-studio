@@ -272,6 +272,22 @@ describe("ResourceDetailPanel", () => {
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
   });
 
+  it("shows logic view details without the unsupported generic edit action", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{ ...resource, category: "logicview" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.categories.logicview")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+  });
+
   it("refreshes the resource version after an update conflict", async () => {
     const latestResource = {
       ...resource,

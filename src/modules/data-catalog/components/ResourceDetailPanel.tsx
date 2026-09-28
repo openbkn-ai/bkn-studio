@@ -68,7 +68,8 @@ export function ResourceDetailPanel({
   resourceIdentityRef.current = resourceIdentityKey;
 
   const gate = resourceGateOf(catalog);
-  const readOnly = isResourceIndexReadOnly(catalog) || !canEdit;
+  const readOnly =
+    isResourceIndexReadOnly(catalog) || !canEdit || resource.category === "logicview";
   const schemaOffset = (schemaPage - 1) * schemaPageSize;
   const rowCount = resource.rowCount ?? resource.estimatedRowCount;
   const rowCountDisplay =
