@@ -121,27 +121,50 @@ describe("observability service", () => {
   });
 
   it("preserves anonymous actors and unknown source channels from denied Audit", async () => {
-    getMock.mockResolvedValue({ data: {
-      data: [{
-        event_id: "safe-denied-1", event_name: "safe.admin.operation.observed",
-        event_time: "2026-09-29T00:00:00Z", recorded_at: "2026-09-29T00:00:01Z",
-        actor_id: "anonymous", actor_name_snapshot: "", actor_type: "anonymous",
-        auth_method: "unknown", source_channel: "unknown", source_id: "bkn-safe-admin",
-        business_module: "system_management", log_category: "audit.admin", outcome: "denied",
-        facts: { action: "create", target_type: "user", target_id: "user:req-denied", target_name_snapshot: "" },
-        correlation: { request_id: "req-denied" }, attributes: {},
-      }],
-      count: { accuracy: "partial", value: 1 }, next_cursor: null, partial: true,
-      source_status: [], pagination: { page: 1, page_size: 20 },
-    }});
+    getMock.mockResolvedValue({
+      data: {
+        data: [
+          {
+            event_id: "safe-denied-1",
+            event_name: "safe.admin.operation.observed",
+            event_time: "2026-09-29T00:00:00Z",
+            recorded_at: "2026-09-29T00:00:01Z",
+            actor_id: "anonymous",
+            actor_name_snapshot: "",
+            actor_type: "anonymous",
+            auth_method: "unknown",
+            source_channel: "unknown",
+            source_id: "bkn-safe-admin",
+            business_module: "system_management",
+            log_category: "audit.admin",
+            outcome: "denied",
+            facts: {
+              action: "create",
+              target_type: "user",
+              target_id: "user:req-denied",
+              target_name_snapshot: "",
+            },
+            correlation: { request_id: "req-denied" },
+            attributes: {},
+          },
+        ],
+        count: { accuracy: "partial", value: 1 },
+        next_cursor: null,
+        partial: true,
+        source_status: [],
+        pagination: { page: 1, page_size: 20 },
+      },
+    });
     const { listLogs } = await import("@/modules/bkn-trace/services/observability.service");
     const result = await listLogs({ sourceId: "bkn-safe-admin" });
-    const acceptedActorType: typeof result.data[number]["actor"]["type"] = "anonymous";
-    const acceptedSourceChannel: typeof result.data[number]["sourceChannel"] = "unknown";
+    const acceptedActorType: (typeof result.data)[number]["actor"]["type"] = "anonymous";
+    const acceptedSourceChannel: (typeof result.data)[number]["sourceChannel"] = "unknown";
     expect(acceptedActorType).toBe("anonymous");
     expect(acceptedSourceChannel).toBe("unknown");
     expect(result.data[0]).toMatchObject({
-      actor: { id: "anonymous", type: "anonymous" }, sourceChannel: "unknown", outcome: "denied",
+      actor: { id: "anonymous", type: "anonymous" },
+      sourceChannel: "unknown",
+      outcome: "denied",
     });
   });
 
@@ -184,14 +207,22 @@ describe("observability service", () => {
   });
 
   it("lists the complete declared source inventory without treating it as producer coverage", async () => {
-    getMock.mockResolvedValueOnce({ data: {
-      registry_version: "0.3.15",
-      data: [{
-        source_id: "model-manager", owner: "Model Platform", modules: ["Model Manager"],
-        declared_collection_method: "kafka_audit", declared_reliability: "best_effort",
-        query_status: "not_listed", coverage_status: "unverified",
-      }],
-    } });
+    getMock.mockResolvedValueOnce({
+      data: {
+        registry_version: "0.3.15",
+        data: [
+          {
+            source_id: "model-manager",
+            owner: "Model Platform",
+            modules: ["Model Manager"],
+            declared_collection_method: "kafka_audit",
+            declared_reliability: "best_effort",
+            query_status: "not_listed",
+            coverage_status: "unverified",
+          },
+        ],
+      },
+    });
     const { listLogSourceInventory } =
       await import("@/modules/bkn-trace/services/observability.service");
 
@@ -202,8 +233,10 @@ describe("observability service", () => {
     });
     expect(inventory.registryVersion).toBe("0.3.15");
     expect(inventory.data[0]).toMatchObject({
-      sourceId: "model-manager", declaredCollectionMethod: "kafka_audit",
-      queryStatus: "not_listed", coverageStatus: "unverified",
+      sourceId: "model-manager",
+      declaredCollectionMethod: "kafka_audit",
+      queryStatus: "not_listed",
+      coverageStatus: "unverified",
     });
   });
 

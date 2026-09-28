@@ -288,7 +288,9 @@ export function ObservabilitySettingsScene() {
       healthy,
       registered: moduleSources.length,
       unavailable,
-      unconfigured: moduleSources.filter((source) => ["not_integrated", "not_listed"].includes(source.status)).length,
+      unconfigured: moduleSources.filter((source) =>
+        ["not_integrated", "not_listed"].includes(source.status),
+      ).length,
     };
   }, [moduleSources]);
 
@@ -339,20 +341,28 @@ export function ObservabilitySettingsScene() {
   const inventoryColumns: ColumnsType<RegisteredLogSource> = [
     { dataIndex: "sourceId", key: "sourceId", title: t("bknTrace.settings.inventory.sourceId") },
     {
-      dataIndex: "modules", key: "modules", title: t("bknTrace.settings.inventory.owner"),
-      render: (modules: string[], row) => modules.length ? modules.join("、") : row.owner,
+      dataIndex: "modules",
+      key: "modules",
+      title: t("bknTrace.settings.inventory.owner"),
+      render: (modules: string[], row) => (modules.length ? modules.join("、") : row.owner),
     },
     {
-      dataIndex: "declaredCollectionMethod", key: "declaredCollectionMethod",
+      dataIndex: "declaredCollectionMethod",
+      key: "declaredCollectionMethod",
       title: t("bknTrace.settings.inventory.declaredMethod"),
-      render: (method: string) => t(`bknTrace.settings.inventory.methods.${method}`, { defaultValue: method }),
+      render: (method: string) =>
+        t(`bknTrace.settings.inventory.methods.${method}`, { defaultValue: method }),
     },
     {
-      dataIndex: "queryStatus", key: "queryStatus", title: t("bknTrace.settings.inventory.queryStatus"),
-      render: (status: string) => t(`bknTrace.settings.inventory.query.${status}`, { defaultValue: status }),
+      dataIndex: "queryStatus",
+      key: "queryStatus",
+      title: t("bknTrace.settings.inventory.queryStatus"),
+      render: (status: string) =>
+        t(`bknTrace.settings.inventory.query.${status}`, { defaultValue: status }),
     },
     {
-      dataIndex: "coverageStatus", key: "coverageStatus",
+      dataIndex: "coverageStatus",
+      key: "coverageStatus",
       title: t("bknTrace.settings.inventory.coverageStatus"),
       render: (status: RegisteredLogSource["coverageStatus"]) => (
         <Tag>{t(`bknTrace.settings.inventory.coverage.${status}`)}</Tag>
@@ -493,9 +503,11 @@ export function ObservabilitySettingsScene() {
           </>
         ) : (
           <Alert
-            message={t(inventoryUnavailable
-              ? "bknTrace.settings.inventory.unavailable"
-              : "bknTrace.settings.inventory.notRequested")}
+            message={t(
+              inventoryUnavailable
+                ? "bknTrace.settings.inventory.unavailable"
+                : "bknTrace.settings.inventory.notRequested",
+            )}
             showIcon
             type="warning"
           />

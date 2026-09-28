@@ -85,8 +85,7 @@ export const systemAdminModuleManifest = {
     {
       id: "system-admin.audit",
       exportName: "AuditLogPage",
-      description:
-        "Browse BKN Safe administration Audit through the unified Observability Query.",
+      description: "Browse BKN Safe administration Audit through the unified Observability Query.",
       inputs: [],
     },
   ],

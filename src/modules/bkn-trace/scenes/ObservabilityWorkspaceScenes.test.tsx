@@ -730,7 +730,9 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("bknTrace.settings.status.not_listed")).not.toBeNull();
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
-    expect(within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_listed")).not.toBeNull();
+    expect(
+      within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_listed"),
+    ).not.toBeNull();
     expect(within(observabilityRow!).getByText("bknTrace.settings.sourceNotListed")).not.toBeNull();
     expect(within(observabilityRow!).queryByText("bknTrace.settings.noIssueReturned")).toBeNull();
     expect(screen.getByText("7 bknTrace.settings.days")).not.toBeNull();
@@ -1136,18 +1138,29 @@ describe("observability workspace scenes", () => {
   });
 
   it("设置页区分完整注册来源、查询可用性和未验证的端到端覆盖", async () => {
-    vi.mocked(listLogSourceInventory).mockResolvedValue({ registryVersion: "0.3.15", data: [
-      {
-        sourceId: "model-manager", owner: "Model Platform", modules: ["Model Manager"],
-        declaredCollectionMethod: "kafka_audit", declaredReliability: "best_effort",
-        queryStatus: "not_listed", coverageStatus: "unverified",
-      },
-      {
-        sourceId: "agent-retrieval", owner: "BKN Agent", modules: ["Agent Retrieval"],
-        declaredCollectionMethod: "not_integrated", declaredReliability: "best_effort",
-        queryStatus: "not_listed", coverageStatus: "unverified",
-      },
-    ] });
+    vi.mocked(listLogSourceInventory).mockResolvedValue({
+      registryVersion: "0.3.15",
+      data: [
+        {
+          sourceId: "model-manager",
+          owner: "Model Platform",
+          modules: ["Model Manager"],
+          declaredCollectionMethod: "kafka_audit",
+          declaredReliability: "best_effort",
+          queryStatus: "not_listed",
+          coverageStatus: "unverified",
+        },
+        {
+          sourceId: "agent-retrieval",
+          owner: "BKN Agent",
+          modules: ["Agent Retrieval"],
+          declaredCollectionMethod: "not_integrated",
+          declaredReliability: "best_effort",
+          queryStatus: "not_listed",
+          coverageStatus: "unverified",
+        },
+      ],
+    });
     render(<ObservabilitySettingsScene />);
 
     expect(await screen.findByText("bknTrace.settings.inventory.title")).not.toBeNull();
@@ -1155,8 +1168,12 @@ describe("observability workspace scenes", () => {
     expect(screen.getByText("agent-retrieval")).not.toBeNull();
     const modelRow = screen.getByText("model-manager").closest("tr");
     expect(modelRow).not.toBeNull();
-    expect(within(modelRow!).getByText("bknTrace.settings.inventory.coverage.unverified")).not.toBeNull();
-    expect(within(modelRow!).getByText("bknTrace.settings.inventory.query.not_listed")).not.toBeNull();
+    expect(
+      within(modelRow!).getByText("bknTrace.settings.inventory.coverage.unverified"),
+    ).not.toBeNull();
+    expect(
+      within(modelRow!).getByText("bknTrace.settings.inventory.query.not_listed"),
+    ).not.toBeNull();
   });
 
   it("已返回但未接入的来源不会显示为采集正常", async () => {
@@ -1173,7 +1190,9 @@ describe("observability workspace scenes", () => {
     await waitFor(() => expect(listLogSources).toHaveBeenCalled());
     const observabilityRow = screen.getByText("bknTrace.logs.modules.observability").closest("tr");
     expect(observabilityRow).not.toBeNull();
-    expect(within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_integrated")).not.toBeNull();
+    expect(
+      within(observabilityRow!).getByText("bknTrace.settings.sourceState.source_not_integrated"),
+    ).not.toBeNull();
     expect(within(observabilityRow!).queryByText("bknTrace.settings.noIssueReturned")).toBeNull();
   });
 

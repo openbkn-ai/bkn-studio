@@ -1127,17 +1127,32 @@ export const bknTraceEnUS = {
       sources: "Business-module query sources (not full collection coverage)",
       inventory: {
         title: "Registered source inventory",
-        explanation: "These are declared contract targets, not proof that their producers are connected. Query availability and end-to-end coverage are separate; Trace, runtime logs, Audit, and Evidence have distinct acceptance paths.",
+        explanation:
+          "These are declared contract targets, not proof that their producers are connected. Query availability and end-to-end coverage are separate; Trace, runtime logs, Audit, and Evidence have distinct acceptance paths.",
         version: "Registry version {{version}}",
-        unavailable: "The registered source inventory could not be loaded; full coverage cannot be determined.",
+        unavailable:
+          "The registered source inventory could not be loaded; full coverage cannot be determined.",
         notRequested: "The current account did not request the registered source inventory.",
         sourceId: "Source ID",
         owner: "Component",
         declaredMethod: "Declared collection method",
         queryStatus: "Query-source status",
         coverageStatus: "End-to-end coverage",
-        methods: { kafka_audit: "Kafka Audit", direct_otlp: "Direct OTLP", source_adapter: "Source adapter", projection_outbox: "Central projection", not_integrated: "No method declared" },
-        query: { not_listed: "Not in query sources", query_unavailable: "Query status unavailable", healthy: "Queryable", available: "Queryable", degraded: "Query degraded", not_integrated: "No query source" },
+        methods: {
+          kafka_audit: "Kafka Audit",
+          direct_otlp: "Direct OTLP",
+          source_adapter: "Source adapter",
+          projection_outbox: "Central projection",
+          not_integrated: "No method declared",
+        },
+        query: {
+          not_listed: "Not in query sources",
+          query_unavailable: "Query status unavailable",
+          healthy: "Queryable",
+          available: "Queryable",
+          degraded: "Query degraded",
+          not_integrated: "No query source",
+        },
         coverage: { unverified: "Coverage unverified" },
       },
       sourceLabels: {
@@ -1166,8 +1181,10 @@ export const bknTraceEnUS = {
         source_health_check_failed:
           "Source health check failed. Verify service connectivity and the endpoint response.",
         source_not_configured: "Collection source is not configured.",
-        source_not_integrated: "No verifiable collection source is integrated; collection health cannot be determined.",
-        source_not_listed: "Not listed as an independent query source. Check the registry below; this does not prove that the module has no collection.",
+        source_not_integrated:
+          "No verifiable collection source is integrated; collection health cannot be determined.",
+        source_not_listed:
+          "Not listed as an independent query source. Check the registry below; this does not prove that the module has no collection.",
         source_not_requested: "The current account did not query source status.",
         source_query_failed: "Source status query failed.",
         source_timeout: "Source health check timed out.",

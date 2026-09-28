@@ -1056,12 +1056,14 @@ export const bknTraceZhCN = {
       notReturned: "接口未返回",
       overview: "运行概览",
       policies: "保留与存储策略",
-      readOnlyNotice: "本页只展示服务端已返回的维护事实；各来源覆盖须按 Trace、日志、Audit 和 Evidence 分别验收。",
+      readOnlyNotice:
+        "本页只展示服务端已返回的维护事实；各来源覆盖须按 Trace、日志、Audit 和 Evidence 分别验收。",
       recentArchives: "最近归档",
       sources: "业务模块查询来源（不代表完整采集覆盖）",
       inventory: {
         title: "注册来源清单",
-        explanation: "以下为合同中定义的来源目标，不等于实际 Producer 已接通。查询状态与端到端覆盖分别列示；Trace、普通日志、Audit、Evidence 按各自语义验收。",
+        explanation:
+          "以下为合同中定义的来源目标，不等于实际 Producer 已接通。查询状态与端到端覆盖分别列示；Trace、普通日志、Audit、Evidence 按各自语义验收。",
         version: "注册表版本 {{version}}",
         unavailable: "注册来源清单查询失败，不能判断完整覆盖。",
         notRequested: "当前账号未请求注册来源清单。",
@@ -1070,8 +1072,21 @@ export const bknTraceZhCN = {
         declaredMethod: "声明采集方式",
         queryStatus: "查询来源状态",
         coverageStatus: "端到端覆盖",
-        methods: { kafka_audit: "Kafka Audit", direct_otlp: "直连 OTLP", source_adapter: "来源适配器", projection_outbox: "中心投影", not_integrated: "尚未定义接入方式" },
-        query: { not_listed: "未列入查询来源", query_unavailable: "查询状态不可用", healthy: "查询可用", available: "查询可用", degraded: "查询降级", not_integrated: "尚无查询来源" },
+        methods: {
+          kafka_audit: "Kafka Audit",
+          direct_otlp: "直连 OTLP",
+          source_adapter: "来源适配器",
+          projection_outbox: "中心投影",
+          not_integrated: "尚未定义接入方式",
+        },
+        query: {
+          not_listed: "未列入查询来源",
+          query_unavailable: "查询状态不可用",
+          healthy: "查询可用",
+          available: "查询可用",
+          degraded: "查询降级",
+          not_integrated: "尚无查询来源",
+        },
         coverage: { unverified: "未完成覆盖验收" },
       },
       sourceLabels: {
