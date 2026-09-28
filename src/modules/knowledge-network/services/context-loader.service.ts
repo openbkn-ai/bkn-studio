@@ -426,7 +426,27 @@ export type TestDataFill = { body: string; query?: Record<string, string>; note:
  * according to operation needs: query_object_instance needs both; run_sql only needs a
  * resource-bound ot; schema and KN detail requests need neither.
  */
+/**
+ * Builds a directly sendable request body. For MCP, pass the reported tool's inputSchema so the
+ * body keeps only declared arguments; `/mcp-compact/` rejects the rest.
+ */
 export function buildTestData(
+  op: ContextLoaderOp,
+  mode: ContextLoaderMode,
+  knId: string,
+  detail: KnDetail,
+  ot: KnObjectType | null,
+  sampleRow: Record<string, unknown> | null,
+  inputSchema?: unknown,
+): TestDataFill {
+  const fill = buildTestDataBody(op, mode, knId, detail, ot, sampleRow);
+  if (mode !== "mcp" || inputSchema === undefined || !fill.body) return fill;
+  const args = parseBodyObject(fill.body);
+  const narrowed = declaredArgs(args, inputSchema);
+  return narrowed === args ? fill : { ...fill, body: JSON.stringify(narrowed, null, 2) };
+}
+
+function buildTestDataBody(
   op: ContextLoaderOp,
   mode: ContextLoaderMode,
   knId: string,
@@ -739,20 +759,30 @@ export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
  * so an unedited example would fail there. A schema without properties leaves the example as is.
  */
 function withDeclaredExample(op: ContextLoaderOp, inputSchema: unknown): ContextLoaderOp {
+  const source = op.mcpArgs ?? op.body;
+  if (source === null) return op;
+  const narrowed = declaredArgs(source, inputSchema);
+  return narrowed === source ? op : { ...op, mcpArgs: narrowed };
+}
+
+/**
+ * Keeps the arguments a tool's inputSchema declares. Returns `args` itself when nothing is
+ * dropped, or when the schema declares no properties and so says nothing about what is allowed.
+ */
+function declaredArgs(
+  args: Record<string, unknown>,
+  inputSchema: unknown,
+): Record<string, unknown> {
   const properties =
     inputSchema && typeof inputSchema === "object"
       ? (inputSchema as { properties?: unknown }).properties
       : undefined;
-  const source = op.mcpArgs ?? op.body;
-  if (!properties || typeof properties !== "object" || source === null) return op;
+  if (!properties || typeof properties !== "object") return args;
   const declared = new Set(Object.keys(properties));
-  if (declared.size === 0) return op;
-  const keys = Object.keys(source);
-  if (keys.every((key) => declared.has(key))) return op;
-  return {
-    ...op,
-    mcpArgs: Object.fromEntries(keys.filter((key) => declared.has(key)).map((k) => [k, source[k]])),
-  };
+  if (declared.size === 0) return args;
+  const keys = Object.keys(args);
+  if (keys.every((key) => declared.has(key))) return args;
+  return Object.fromEntries(keys.filter((key) => declared.has(key)).map((k) => [k, args[k]]));
 }
 
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {

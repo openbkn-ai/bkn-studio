@@ -642,7 +642,7 @@ export function ExperienceScene({
           if (fillSequence !== fillSequenceRef.current) return null;
           sampleRow = rows[0] ?? null;
         }
-        return buildTestData(op, mode, knId, detail, ot, sampleRow);
+        return buildTestData(op, mode, knId, detail, ot, sampleRow, currentTool?.inputSchema);
       })();
       if (!fill || fillSequence !== fillSequenceRef.current) return;
       setBodyText(fill.body);
@@ -668,7 +668,7 @@ export function ExperienceScene({
         setFillingTest(false);
       }
     }
-  }, [env, op, mode, knId, message, tokenProvider, t]);
+  }, [env, op, mode, knId, message, tokenProvider, t, currentTool]);
 
   // Whether the current op fetches by object type, controlling data-browser fill action visibility.
   const opFillsFromObjectType = op?.id === "query_object_instance" || op?.id === "run_sql";
@@ -693,7 +693,7 @@ export function ExperienceScene({
           concept_groups: [],
           relation_types: [],
         };
-        const fill = buildTestData(op, mode, knId, detail, ot, sampleRow);
+        const fill = buildTestData(op, mode, knId, detail, ot, sampleRow, currentTool?.inputSchema);
         setBodyText(fill.body);
         setBodyError(null);
         if (fill.query) setQueryVals((prev) => ({ ...prev, ...fill.query }));
@@ -711,7 +711,7 @@ export function ExperienceScene({
         );
       }
     },
-    [env, op, mode, knId, message, tokenProvider, t],
+    [env, op, mode, knId, message, tokenProvider, t, currentTool],
   );
 
   // Data-browser relation card fills relation_type_paths for query_instance_subgraph.
