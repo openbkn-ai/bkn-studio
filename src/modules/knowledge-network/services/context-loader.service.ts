@@ -46,6 +46,19 @@ export const REST_PREFIX = "/api/agent-retrieval/v1";
  */
 export const MCP_PATH = "/api/agent-retrieval/v1/mcp/";
 
+/**
+ * Compact MCP endpoint: the same tools behind a short published list, with the long tail reached
+ * through an on-demand gateway. It publishes no response_format and rejects undeclared arguments.
+ */
+export const MCP_COMPACT_PATH = "/api/agent-retrieval/v1/mcp-compact/";
+
+/** Which of Context Loader's two MCP endpoints a call goes to. */
+export type McpProfile = "full" | "compact";
+
+export function mcpPathFor(profile: McpProfile = "full"): string {
+  return profile === "compact" ? MCP_COMPACT_PATH : MCP_PATH;
+}
+
 function languageHeaders(): Record<"Accept-Language", string> {
   return { "Accept-Language": getRuntimeConfig().locale };
 }
@@ -319,6 +332,8 @@ export type ContextLoaderEnv = {
   token: string;
   /** Locked knowledge-network slug (kn_id). */
   knId: string;
+  /** MCP endpoint for tools/list and tools/call; defaults to the full `/mcp/`. */
+  mcpProfile?: McpProfile;
 };
 
 export function authHeaders(env: ContextLoaderEnv): Record<string, string> {
@@ -411,7 +426,27 @@ export type TestDataFill = { body: string; query?: Record<string, string>; note:
  * according to operation needs: query_object_instance needs both; run_sql only needs a
  * resource-bound ot; schema and KN detail requests need neither.
  */
+/**
+ * Builds a directly sendable request body. For MCP, pass the reported tool's inputSchema so the
+ * body keeps only declared arguments; `/mcp-compact/` rejects the rest.
+ */
 export function buildTestData(
+  op: ContextLoaderOp,
+  mode: ContextLoaderMode,
+  knId: string,
+  detail: KnDetail,
+  ot: KnObjectType | null,
+  sampleRow: Record<string, unknown> | null,
+  inputSchema?: unknown,
+): TestDataFill {
+  const fill = buildTestDataBody(op, mode, knId, detail, ot, sampleRow);
+  if (mode !== "mcp" || inputSchema === undefined || !fill.body) return fill;
+  const args = parseBodyObject(fill.body);
+  const narrowed = declaredArgs(args, inputSchema);
+  return narrowed === args ? fill : { ...fill, body: JSON.stringify(narrowed, null, 2) };
+}
+
+function buildTestDataBody(
   op: ContextLoaderOp,
   mode: ContextLoaderMode,
   knId: string,
@@ -584,7 +619,7 @@ export function buildRestUrl(
 }
 
 function mcpBase(env: ContextLoaderEnv): string {
-  return `${env.base.replace(/\/+$/, "")}${MCP_PATH}`;
+  return `${env.base.replace(/\/+$/, "")}${mcpPathFor(env.mcpProfile)}`;
 }
 
 /**
@@ -712,9 +747,42 @@ export function exampleBodyFromSchema(schema: unknown): Record<string, unknown> 
  */
 export function mcpOpsFrom(toolDefs: McpToolDef[] | null): ContextLoaderOp[] {
   if (!toolDefs) return [];
-  return toolDefs.map(
-    (tool) => CONTEXT_LOADER_OPS.find((op) => op.id === tool.name) ?? synthesizeOp(tool),
-  );
+  return toolDefs.map((tool) => {
+    const curated = CONTEXT_LOADER_OPS.find((op) => op.id === tool.name);
+    return curated ? withDeclaredExample(curated, tool.inputSchema) : synthesizeOp(tool);
+  });
+}
+
+/**
+ * Narrows a curated example to the arguments the reported tool declares. The curated examples
+ * carry REST-only fields that `/mcp/` silently ignores but `/mcp-compact/` rejects as undeclared,
+ * so an unedited example would fail there. A schema without properties leaves the example as is.
+ */
+function withDeclaredExample(op: ContextLoaderOp, inputSchema: unknown): ContextLoaderOp {
+  const source = op.mcpArgs ?? op.body;
+  if (source === null) return op;
+  const narrowed = declaredArgs(source, inputSchema);
+  return narrowed === source ? op : { ...op, mcpArgs: narrowed };
+}
+
+/**
+ * Keeps the arguments a tool's inputSchema declares. Returns `args` itself when nothing is
+ * dropped, or when the schema declares no properties and so says nothing about what is allowed.
+ */
+function declaredArgs(
+  args: Record<string, unknown>,
+  inputSchema: unknown,
+): Record<string, unknown> {
+  const properties =
+    inputSchema && typeof inputSchema === "object"
+      ? (inputSchema as { properties?: unknown }).properties
+      : undefined;
+  if (!properties || typeof properties !== "object") return args;
+  const declared = new Set(Object.keys(properties));
+  if (declared.size === 0) return args;
+  const keys = Object.keys(args);
+  if (keys.every((key) => declared.has(key))) return args;
+  return Object.fromEntries(keys.filter((key) => declared.has(key)).map((k) => [k, args[k]]));
 }
 
 export function synthesizeOp(tool: McpToolDef): ContextLoaderOp {
@@ -789,9 +857,11 @@ function strictBodyObject(bodyText: string): Record<string, unknown> {
 
 /**
  * Builds MCP tools/call arguments from request-body JSON and injects the
- * response_format selector because MCP has no query string.
+ * response_format selector because MCP has no query string. The compact
+ * endpoint does not publish response_format and rejects it as undeclared.
  */
 function mcpCallArgs(
+  env: ContextLoaderEnv,
   op: ContextLoaderOp,
   bodyText: string,
   queryValues: Record<string, string>,
@@ -799,7 +869,7 @@ function mcpCallArgs(
 ): Record<string, unknown> {
   const args = parseBodyObject(bodyText);
   const responseFormat = queryValues.response_format;
-  if (responseFormat && !("response_format" in args)) {
+  if (env.mcpProfile !== "compact" && responseFormat && !("response_format" in args)) {
     args.response_format = responseFormat;
   }
   return withOperationContext(op, args, bknContext);
@@ -826,7 +896,7 @@ export function buildCurl(
       ...languageHeaders(),
       ...displayAuthHeaders(env),
     };
-    const args = mcpCallArgs(op, bodyText, queryValues, bknContext);
+    const args = mcpCallArgs(env, op, bodyText, queryValues, bknContext);
     const payload = {
       jsonrpc: "2.0",
       id: 1,
@@ -943,7 +1013,10 @@ export async function sendRequest(
           jsonrpc: "2.0",
           id: 2,
           method: "tools/call",
-          params: { name: op.id, arguments: mcpCallArgs(op, bodyText, queryValues, bknContext) },
+          params: {
+            name: op.id,
+            arguments: mcpCallArgs(env, op, bodyText, queryValues, bknContext),
+          },
         }),
       });
       const text = await response.text();

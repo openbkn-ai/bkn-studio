@@ -117,4 +117,20 @@ describe("MCP client configuration", () => {
       "Unsupported MCP URL protocol",
     );
   });
+
+  // The compact endpoint gets its own server name, so a client can register both side by side.
+  it("names the compact endpoint apart from the full one", () => {
+    const mcpUrl = "https://platform.example.com/api/agent-retrieval/v1/mcp-compact/";
+
+    expect(createClaudeCodeMcpCommand(mcpUrl, apiKey))
+      .toBe(`claude mcp add bkn-agent-retrieval-compact \\
+  --scope user \\
+  -- npx -y mcp-remote https://platform.example.com/api/agent-retrieval/v1/mcp-compact/ \\
+  --transport http-only \\
+  --header "Authorization: Bearer bak_test"`);
+    const config = JSON.parse(createMcpRemoteJsonConfig(mcpUrl, apiKey)) as {
+      mcpServers: Record<string, unknown>;
+    };
+    expect(Object.keys(config.mcpServers)).toEqual(["bkn-agent-retrieval-compact"]);
+  });
 });
