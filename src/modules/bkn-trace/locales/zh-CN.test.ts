@@ -25,8 +25,8 @@ describe("BKN Trace Chinese business hierarchy", () => {
     expect(bknTraceZhCN.bknTrace.settings.status.not_integrated).toBe("未接入");
   });
 
-  it("describes source integration without treating runtime telemetry as a business module", () => {
-    expect(bknTraceZhCN.bknTrace.settings.status.healthy).toBe("已接入");
+  it("describes query availability without treating runtime telemetry as a business module", () => {
+    expect(bknTraceZhCN.bknTrace.settings.status.healthy).toBe("查询可用");
     expect(bknTraceZhCN.bknTrace.logs.modules.openbkn).toBe("技术运行日志（非操作日志）");
   });
 });
