@@ -296,8 +296,9 @@ describe("ResourceIndexPanel", () => {
     );
 
     expect(indexConfigFormPanelMock).toHaveBeenCalledWith(
-      expect.objectContaining({ readOnly: true }),
+      expect.objectContaining({ hideBuildControls: true, readOnly: true }),
     );
+    expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
   });
 
   it("keeps configuration editable without task_manage while withholding task access", () => {

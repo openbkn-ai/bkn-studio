@@ -286,6 +286,7 @@ describe("ResourceDetailPanel", () => {
 
     expect(screen.getByText("dataCatalog.categories.logicview")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
+    expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
   });
 
   it("refreshes the resource version after an update conflict", async () => {

@@ -6,7 +6,7 @@
  */
 
 import { CopyOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
-import { Input, Space, Tag } from "antd";
+import { Alert, Input, Space, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -349,6 +349,10 @@ export function ResourceDetailPanel({
             </button>
           </span>
         </div>
+      ) : null}
+
+      {resource.category === "logicview" ? (
+        <Alert message={t("dataCatalog.resource.logicViewReadOnly")} showIcon type="info" />
       ) : null}
 
       <div className={styles.sectionCard}>

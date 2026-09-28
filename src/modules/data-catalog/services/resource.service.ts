@@ -329,15 +329,14 @@ function mapSourceMetadata(
   }
 
   const source = metadata.source_resource;
+  const sourceCategory =
+    source?.category === "table" || source?.category === "index" ? source.category : undefined;
 
   return {
     foreignKeyCount: metadata.foreign_keys?.length,
     indexCount: metadata.indices?.length,
     objectType:
-      source?.table_type?.trim() ||
-      source?.category?.trim() ||
-      metadata.table_type?.trim() ||
-      undefined,
+      source?.table_type?.trim() || sourceCategory || metadata.table_type?.trim() || undefined,
     originalDescription: metadata.original_description?.trim() || undefined,
     originalName: source?.original_name?.trim() || metadata.original_name?.trim() || undefined,
     primaryKeys: metadata.primary_keys?.map((key) => key.trim()).filter(Boolean),

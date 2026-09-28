@@ -431,13 +431,22 @@ describe("resource.service · getCatalogResources", () => {
               },
             },
           },
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-3",
+            name: "unsupported_view",
+            source_metadata: {
+              source_resource: { category: "logicview", original_name: "other_view" },
+            },
+          },
         ],
       },
     });
     const { getCatalogResources } =
       await import("@/modules/data-catalog/services/resource.service");
 
-    const resources = await getCatalogResources(["view-1", "view-2"]);
+    const resources = await getCatalogResources(["view-1", "view-2", "view-3"]);
 
     expect(resources[0]?.sourceMetadata).toEqual({
       foreignKeyCount: undefined,
@@ -449,6 +458,7 @@ describe("resource.service · getCatalogResources", () => {
     });
     expect(resources[1]?.sourceMetadata?.objectType).toBe("index");
     expect(resources[1]?.sourceMetadata?.originalName).toBe("orders_index");
+    expect(resources[2]?.sourceMetadata?.objectType).toBeUndefined();
   });
 
   it("preserves an unsafe int64 row count from detail responses", async () => {

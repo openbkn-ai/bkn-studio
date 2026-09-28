@@ -421,6 +421,7 @@ export const dataCatalogEnUS = {
       sourceIndexCount: "Source Indexes",
       sourceObjectType: "Source Object Type",
       sourceObjectTypes: {
+        index: "Index",
         materialized_view: "Materialized View",
         table: "Table",
         view: "View",
@@ -446,6 +447,8 @@ export const dataCatalogEnUS = {
       fieldOriginalType: "Original Type",
       fieldOriginalDescription: "Original Description",
       editFields: "Edit description and fields",
+      logicViewReadOnly:
+        "Logic View editing is not yet available in Studio. You can still view its details.",
       editHint:
         "You can edit the resource description, field business names, and field descriptions here.",
       copyValue: "Copy {{label}}",
