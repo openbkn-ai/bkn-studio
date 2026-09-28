@@ -165,17 +165,10 @@
   background: var(--color-primary-100);
 }
 
-.resourceReference {
-  display: grid;
-  flex: 1 1 auto;
-  gap: 4px;
+.resourceReferenceInline {
+  display: inline-flex;
+  max-width: min(100%, 240px);
   min-width: 0;
-}
-
-.resourceDeletedHint {
-  color: var(--color-error-text);
-  font-size: 13px;
-  line-height: 20px;
 }
 
 .sectionTitle {

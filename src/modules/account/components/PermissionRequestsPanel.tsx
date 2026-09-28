@@ -326,14 +326,7 @@ export function PermissionRequestsPanel({ hideMine = false }: { hideMine?: boole
           <span className={styles.requestContentLabel}>
             {t("account.permissionRequests.resource")}：
           </span>
-          <div className={styles.resourceReference}>
-            {resourceLink}
-            {linkResource && result === "not_found" ? (
-              <span className={styles.resourceDeletedHint}>
-                {t("account.permissionRequests.resourceDeletedNotice")}
-              </span>
-            ) : null}
-          </div>
+          <div className={styles.resourceReferenceInline}>{resourceLink}</div>
         </div>
         {(!request.proposal_kind || request.proposal_kind === "grant") && (
           <div className={styles.requestContentRow}>
