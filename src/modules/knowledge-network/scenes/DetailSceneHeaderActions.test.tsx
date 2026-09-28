@@ -16,6 +16,7 @@ type SetSearchParams = (
 
 const mocks = vi.hoisted(() => ({
   getKnowledgeNetworkActionTypeDetail: vi.fn(),
+  getKnowledgeNetwork: vi.fn(),
   getKnowledgeNetworkMetric: vi.fn(),
   getKnowledgeNetworkObjectTypeDetail: vi.fn(),
   getKnowledgeNetworkRelationTypeDetail: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequest
     initialReason,
     onOpenChange,
     open,
+    resourceName,
   }: {
     initialOperations?: string[];
     initialProposalKind?: string;
@@ -65,6 +67,7 @@ vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequest
     initialReason?: string;
     onOpenChange?: (open: boolean) => void;
     open?: boolean;
+    resourceName: string;
   }) => (
     <button
       data-open={String(open)}
@@ -72,6 +75,7 @@ vi.mock("@/modules/knowledge-network/components/shared/ResourcePermissionRequest
       data-proposal-kind={initialProposalKind}
       data-properties={initialPropertyNames?.join(",")}
       data-reason={initialReason}
+      data-resource-name={resourceName}
       data-testid="permission-request-action"
       onClick={() => onOpenChange?.(false)}
     >
@@ -129,6 +133,7 @@ vi.mock("@/modules/knowledge-network/services/knowledge-network.service", () => 
   deleteKnowledgeNetworkObjectType: vi.fn(),
   deleteKnowledgeNetworkRelationType: vi.fn(),
   getKnowledgeNetworkActionTypeDetail: mocks.getKnowledgeNetworkActionTypeDetail,
+  getKnowledgeNetwork: mocks.getKnowledgeNetwork,
   getKnowledgeNetworkMetric: mocks.getKnowledgeNetworkMetric,
   getKnowledgeNetworkObjectTypeDetail: mocks.getKnowledgeNetworkObjectTypeDetail,
   getKnowledgeNetworkRelationTypeDetail: mocks.getKnowledgeNetworkRelationTypeDetail,
@@ -182,6 +187,7 @@ beforeEach(() => {
   mocks.listKnowledgeNetworkRelationTypePage.mockResolvedValue({ entries: [], totalCount: 0 });
   mocks.listKnowledgeNetworkRelationTypes.mockResolvedValue([]);
   mocks.getObjectTypeSampleData.mockResolvedValue({ columns: [], rows: [] });
+  mocks.getKnowledgeNetwork.mockResolvedValue({ id: "network-1", name: "Customer network" });
   mocks.searchParams.current = "";
   mocks.setSearchParams.mockReset();
 });
@@ -371,6 +377,7 @@ describe("knowledge network detail scene headers", () => {
     expect(action.dataset.operations).toBe("query_data,view_detail");
     expect(action.dataset.properties).toBe("phone,id_card");
     expect(action.dataset.reason).toBe("Need identity verification");
+    expect(action.dataset.resourceName).toBe("Customer network / Order");
   });
 
   it("shows a fail-closed proxy dependency error and retries the sample request", async () => {

@@ -48,6 +48,7 @@ import { isMetricLogicProperty } from "@/modules/knowledge-network/lib/object-ty
 import { buildActionTypeKindSelectOptions } from "@/modules/knowledge-network/constants/action-type-kinds";
 import {
   deleteKnowledgeNetworkObjectType,
+  getKnowledgeNetwork,
   getKnowledgeNetworkObjectTypeDetail,
   getObjectTypeSampleData,
   listKnowledgeNetworkActionTypePage,
@@ -225,6 +226,7 @@ export function ObjectTypeDetailScene() {
       ? parseObjectTypeRelatedSection(searchParams.get("relatedSection"))
       : "relations";
   const [detail, setDetail] = useState<ObjectTypeDetail | null>(null);
+  const [knowledgeNetworkName, setKnowledgeNetworkName] = useState(networkId);
   const [permissionRequestOpen, setPermissionRequestOpen] = useState(false);
   const [policyScopeRequestable, setPolicyScopeRequestable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -419,8 +421,12 @@ export function ObjectTypeDetailScene() {
     setError(null);
 
     try {
-      const result = await getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId);
+      const [result, network] = await Promise.all([
+        getKnowledgeNetworkObjectTypeDetail(networkId, objectTypeId),
+        getKnowledgeNetwork(networkId).catch(() => null),
+      ]);
       setDetail(result);
+      setKnowledgeNetworkName(network?.name || networkId);
     } catch (nextError) {
       setError(extractRequestErrorMessage(nextError));
     } finally {
@@ -2105,7 +2111,7 @@ export function ObjectTypeDetailScene() {
                 open={permissionRequestOpen}
                 operations={detail.operations}
                 resourceID={`${networkId}/${detail.id}`}
-                resourceName={detail.name}
+                resourceName={`${knowledgeNetworkName} / ${detail.name}`}
                 resourceType="object_type"
                 trigger="button"
               />

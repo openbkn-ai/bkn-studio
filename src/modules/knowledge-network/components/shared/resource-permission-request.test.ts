@@ -11,6 +11,7 @@ import {
   canRequestResourcePermission,
   hasRequestableObjectTypePermission,
   hasRequestableObjectTypePolicyScope,
+  isPermissionRequestPrefillReady,
   isPermissionRequestProposalReady,
   togglePermissionRequestOperation,
 } from "./resource-permission-request";
@@ -76,6 +77,44 @@ describe("isPermissionRequestProposalReady", () => {
         previewResolved: false,
       }),
     ).toBe(true);
+  });
+});
+
+describe("isPermissionRequestPrefillReady", () => {
+  it("waits for pending requests for the current resource before preselecting operations", () => {
+    expect(
+      isPermissionRequestPrefillReady({
+        initialProposalKind: "grant",
+        pendingRequestsResourceID: null,
+        proposalPreviewResourceID: null,
+        requestOpen: true,
+        resourceID: "network-1/object-1",
+        target: "operations",
+      }),
+    ).toBe(false);
+    expect(
+      isPermissionRequestPrefillReady({
+        initialProposalKind: "grant",
+        pendingRequestsResourceID: "network-1/object-1",
+        proposalPreviewResourceID: null,
+        requestOpen: true,
+        resourceID: "network-1/object-1",
+        target: "operations",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not use a previous resource preview to preselect fields", () => {
+    expect(
+      isPermissionRequestPrefillReady({
+        initialProposalKind: "property_grants",
+        pendingRequestsResourceID: "network-1/object-2",
+        proposalPreviewResourceID: "network-1/object-1",
+        requestOpen: true,
+        resourceID: "network-1/object-2",
+        target: "properties",
+      }),
+    ).toBe(false);
   });
 });
 
