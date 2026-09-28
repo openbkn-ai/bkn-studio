@@ -6,19 +6,15 @@
  */
 
 /**
- * Agent chat single-session pane extracted from AgentChat, supporting compare-mode instances.
- * Each pane owns its own message history, model selection, prompt, config, tool selection,
- * stats, and AbortController. The parent drives it through ref { send, stop }.
+ * Agent chat single-session pane extracted from AgentChat. It owns its message history, model
+ * selection, prompt, config, stats, and AbortController. The parent drives it through
+ * ref { send, stop }.
  */
 
-/* eslint-disable react-refresh/only-export-components */
-
 import {
-  ClearOutlined,
   DownOutlined,
   QuestionCircleOutlined,
   RightOutlined,
-  SettingOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
 import { App, Drawer, Select, Tooltip } from "antd";
@@ -70,10 +66,6 @@ import {
   type ContextLoaderEnv,
   type McpToolDef,
 } from "@/modules/knowledge-network/services/context-loader.service";
-import {
-  buildMcpToolGroups,
-  toolDisplayOf,
-} from "@/modules/knowledge-network/services/mcp-tool-display";
 
 import styles from "./AgentChat.module.css";
 import { closeOpenMarkdown, splitMarkdownBlocks } from "./markdown-blocks";
@@ -88,19 +80,9 @@ export const DEFAULT_PROMPT =
   "kn_id is locked to the current network; do not modify it.\n" +
   "Query efficiently: push aggregation, sorting, and counting to SQL where possible, use LIMIT and precise filters, select only needed fields, avoid whole-table scans or huge result sets, and do not repeat already retrieved information.";
 
-/** Default prompt for the base-data pane: table/SQL only, without KN semantics. */
-export const DEFAULT_BASE_PROMPT =
-  "You are a data query assistant. You can answer only by querying underlying tables with three tools:\n" +
-  "list_resources, describe_resource, and run_sql.\n" +
-  "Flow: use list_resources to find relevant tables, describe_resource to confirm columns, then write SQL.\n" +
-  "SQL table names must use {{.<resource_id>}} placeholders from list_resources entries[].resource_id; do not use raw table names, and do not join across catalogs.\n" +
-  "Query efficiently: push aggregation, sorting, and counting into SQL, use LIMIT and precise filters, and select only necessary fields.";
-
 /** Evidence wording for the knowledge-network profile. */
 export const KN_EVIDENCE_HINT =
   "which tool was called, what filter conditions were used, or the key SQL points";
-/** Evidence wording for the base-data profile. */
-export const BASE_EVIDENCE_HINT = "which tables were used and the key SQL points";
 
 const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.relations",
@@ -108,50 +90,16 @@ const FALLBACK_SUGGESTION_KEYS = [
   "knowledgeNetwork.agentChat.chatPane.fallbackSuggestions.links",
 ];
 
-export type PaneKey = "solo" | "base" | "kn";
+const AGENT_NAME = "bkn-agent-smart-qa";
 
-const AGENT_NAME_BY_PANE: Record<PaneKey, string> = {
-  solo: "bkn-agent-smart-qa",
-  base: "bkn-agent-base-data-chat",
-  kn: "bkn-agent-knowledge-network-chat",
-};
-
-/** Pane profile controlling defaults, context injection, tool selection, and storage keys. */
+/** Pane profile controlling defaults, context injection, and output-contract wording. */
 export type PaneProfile = {
-  paneKey: PaneKey;
-  /** Identity label shown in split view; hidden for solo. */
-  title?: string;
   emptyTitle?: string;
   defaultPrompt: string;
   /** Whether to append KN summary to the system prompt. */
   injectKnContext: boolean;
-  /** Default selected tool names; null means all tools, including future backend tools. */
-  defaultToolNames: string[] | null;
   /** Evidence wording for the output contract. */
   evidenceHint: string;
-  /** Visual highlight for the primary compare pane. */
-  highlight?: boolean;
-};
-
-/** Turn result status; empty/stopped/error are negative outcomes. */
-export type RoundOutcome = "answered" | "empty" | "stopped" | "error";
-
-/** Compare-report turn data with metrics and outcome. */
-export type PaneRound = {
-  question: string;
-  answer: string | null;
-  tokens: number | null;
-  ms: number | null;
-  toolCalls: { name: string; status: string }[];
-  /** Result status; empty/stopped/error mean this side did not complete effectively. */
-  outcome: RoundOutcome;
-};
-
-/** Compare-report pane snapshot with all rounds and cumulative stats. */
-export type PaneSnapshot = {
-  model: string;
-  stats: { tokens: number; ms: number };
-  rounds: PaneRound[];
 };
 
 export type ChatPaneHandle = {
@@ -159,7 +107,6 @@ export type ChatPaneHandle = {
   stop: () => void;
   openSettings: () => void;
   clear: () => void;
-  getSnapshot: () => PaneSnapshot;
 };
 
 type ToolCallView = {
@@ -186,7 +133,7 @@ type ChatMessage = {
   content: string;
   reasoning?: string;
   toolCalls?: ToolCallView[];
-  /** Render order only; content and toolCalls stay flat for history, export, and snapshots. */
+  /** Render order only; content and toolCalls stay flat for history. */
   parts?: MessagePart[];
   /** Actual token count for this turn, available from usage at finish. */
   tokens?: number;
@@ -238,32 +185,32 @@ function estimateTokens(chars: number): number {
   return Math.round(chars / 2.5);
 }
 
-export function fmtTokens(n: number): string {
+function fmtTokens(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 }
 
-export function fmtDuration(ms: number): string {
+function fmtDuration(ms: number): string {
   const s = ms / 1000;
   return s >= 60 ? `${Math.floor(s / 60)}m${Math.round(s % 60)}s` : `${s.toFixed(1)}s`;
 }
 
-/** Message-history key; solo keeps the legacy key, compare panes use suffixes. */
-function msgsLsKey(knId: string, paneKey: PaneKey): string {
-  return paneKey === "solo"
-    ? `bkn-studio:agentchat:${knId}`
-    : `bkn-studio:agentchat:${knId}:cmp-${paneKey}`;
+/**
+ * Message-history key. The value keeps the legacy format so existing chat history stays readable.
+ */
+function msgsLsKey(knId: string): string {
+  return `bkn-studio:agentchat:${knId}`;
 }
 
 /**
- * Managed conversation identity key. Each pane gets an independent conversation
- * so compare-mode agents are traced and counted separately.
+ * Managed conversation identity key. The ":solo" suffix is kept from the former per-pane format
+ * so existing conversation IDs are reused.
  */
-function conversationLsKey(knId: string, paneKey: PaneKey): string {
-  return `bkn-studio:agentchat:conv:v2:${knId}:${paneKey}`;
+function conversationLsKey(knId: string): string {
+  return `bkn-studio:agentchat:conv:v2:${knId}:solo`;
 }
 
-function legacyConversationLsKey(knId: string, paneKey: PaneKey): string {
-  return `bkn-studio:agentchat:conv:${knId}:${paneKey}`;
+function legacyConversationLsKey(knId: string): string {
+  return `bkn-studio:agentchat:conv:${knId}:solo`;
 }
 
 function loadPersisted(key: string): Partial<Persisted> {
@@ -275,38 +222,17 @@ function loadPersisted(key: string): Partial<Persisted> {
   }
 }
 
-/** Agent config cache; solo keeps the legacy key and compare panes are isolated. */
-const CONFIG_LS_BASE = "bkn-studio:agentconfig";
+/** Agent config cache. */
+const CONFIG_LS_KEY = "bkn-studio:agentconfig";
 
-function configLsKey(paneKey: PaneKey): string {
-  return paneKey === "solo" ? CONFIG_LS_BASE : `${CONFIG_LS_BASE}:cmp-${paneKey}`;
-}
-
-function loadConfig(paneKey: PaneKey): AgentConfig {
+function loadConfig(): AgentConfig {
   try {
-    const raw = localStorage.getItem(configLsKey(paneKey));
+    const raw = localStorage.getItem(CONFIG_LS_KEY);
     return raw
       ? { ...DEFAULT_AGENT_CONFIG, ...(JSON.parse(raw) as Partial<AgentConfig>) }
       : { ...DEFAULT_AGENT_CONFIG };
   } catch {
     return { ...DEFAULT_AGENT_CONFIG };
-  }
-}
-
-/** Tool-selection cache. Solo is always all tools and is not persisted. */
-function toolsLsKey(paneKey: PaneKey): string {
-  return `bkn-studio:agenttools:cmp-${paneKey}`;
-}
-
-function loadToolSelection(profile: PaneProfile): string[] | null {
-  if (profile.paneKey === "solo") return null;
-  try {
-    const raw = localStorage.getItem(toolsLsKey(profile.paneKey));
-    if (raw === null) return profile.defaultToolNames ? [...profile.defaultToolNames] : null;
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : null;
-  } catch {
-    return profile.defaultToolNames ? [...profile.defaultToolNames] : null;
   }
 }
 
@@ -584,13 +510,12 @@ export type ChatPaneProps = {
   /** KN summary fetched by the parent; injection depends on profile.injectKnContext. */
   knContext: string;
   knSummary: { objectTypes: number; relations: number } | null;
-  /** Empty-state suggestions generated by the parent and shared by both sides. */
+  /** Empty-state suggestions generated by the parent. */
   suggestions: string[];
-  /** Suggestion click callback; parent dispatches by target in compare mode. */
+  /** Suggestion click callback; the parent routes it through its send guard. */
   onPick?: (question: string) => void;
   /** Live tools/list shared from parent cache; send lazily fetches when needed. */
   getTools: () => Promise<McpToolDef[]>;
-  toolDefs: McpToolDef[] | null;
   /** resource_id set bound to the current KN, used to scope list_resources. */
   resourceScope?: readonly string[] | null;
   /**
@@ -598,7 +523,6 @@ export type ChatPaneProps = {
    * inside the pane; this container owns reading and stick-to-bottom behavior.
    */
   pageScrollRef: RefObject<HTMLDivElement | null>;
-  showToolbar?: boolean;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -616,10 +540,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     suggestions,
     onPick,
     getTools,
-    toolDefs,
     resourceScope,
     pageScrollRef,
-    showToolbar = true,
     onBusyChange,
   },
   ref,
@@ -635,17 +557,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   const [systemPrompt, setSystemPrompt] = useState(profile.defaultPrompt);
   // QA config: model, tools, system prompt, and parameters are managed together.
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [config, setConfigState] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
+  const [config, setConfigState] = useState<AgentConfig>(loadConfig);
   const [draftModel, setDraftModel] = useState("");
   const [draftSystemPrompt, setDraftSystemPrompt] = useState(profile.defaultPrompt);
-  const [draftConfig, setDraftConfig] = useState<AgentConfig>(() => loadConfig(profile.paneKey));
-  // Tool selection is a hard allowlist; null means all tools.
-  const [toolSelection, setToolSelection] = useState<string[] | null>(() =>
-    loadToolSelection(profile),
-  );
-  const [draftToolSelection, setDraftToolSelection] = useState<string[] | null>(() =>
-    loadToolSelection(profile),
-  );
+  const [draftConfig, setDraftConfig] = useState<AgentConfig>(loadConfig);
   // Cumulative session tokens and elapsed time.
   const [stats, setStats] = useState<SessionStats>({ tokens: 0, ms: 0 });
 
@@ -660,7 +575,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     onBusyChange?.(busy);
   }, [busy, onBusyChange]);
 
-  // Abort in-flight streaming when unmounted, such as compare-mode switches.
+  // Abort in-flight streaming when unmounted.
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
@@ -674,7 +589,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     abortRef.current?.abort();
     abortRef.current = null;
     setBusy(false);
-  }, [knId, profile.paneKey]);
+  }, [knId]);
 
   const setDraftConfigField = useCallback((key: keyof AgentConfig, value: number) => {
     setDraftConfig((prev) => ({
@@ -686,28 +601,22 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     setDraftModel(model);
     setDraftSystemPrompt(systemPrompt);
     setDraftConfig(config);
-    setDraftToolSelection(toolSelection);
     setSettingsOpen(true);
-  }, [config, model, systemPrompt, toolSelection]);
+  }, [config, model, systemPrompt]);
   const cancelSettings = useCallback(() => {
     setDraftModel(model);
     setDraftSystemPrompt(systemPrompt);
     setDraftConfig(config);
-    setDraftToolSelection(toolSelection);
     setSettingsOpen(false);
-  }, [config, model, systemPrompt, toolSelection]);
+  }, [config, model, systemPrompt]);
   const saveSettings = useCallback(() => {
     setModel(draftModel);
     setSystemPrompt(draftSystemPrompt);
     setConfigState(draftConfig);
-    if (profile.paneKey !== "solo") setToolSelection(draftToolSelection);
     try {
-      localStorage.setItem(configLsKey(profile.paneKey), JSON.stringify(draftConfig));
-      if (profile.paneKey !== "solo") {
-        localStorage.setItem(toolsLsKey(profile.paneKey), JSON.stringify(draftToolSelection));
-      }
+      localStorage.setItem(CONFIG_LS_KEY, JSON.stringify(draftConfig));
       localStorage.setItem(
-        msgsLsKey(knId, profile.paneKey),
+        msgsLsKey(knId),
         JSON.stringify({
           messages,
           model: draftModel,
@@ -724,12 +633,10 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     draftConfig,
     draftModel,
     draftSystemPrompt,
-    draftToolSelection,
     knId,
     message,
     messages,
     profile.defaultPrompt,
-    profile.paneKey,
     stats,
     t,
   ]);
@@ -756,14 +663,14 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     return () => el.removeEventListener("scroll", updateStickiness);
   }, [pageScrollRef, updateStickiness]);
 
-  // Load persisted chat history, isolated by KN and pane.
+  // Load persisted chat history, isolated by KN.
   useEffect(() => {
-    const saved = loadPersisted(msgsLsKey(knId, profile.paneKey));
+    const saved = loadPersisted(msgsLsKey(knId));
     setMessages(Array.isArray(saved.messages) ? saved.messages : []);
     if (saved.model) setModel(saved.model);
     setSystemPrompt(promptFromPersisted(saved.systemPrompt, profile.defaultPrompt));
     setStats(saved.stats ?? { tokens: 0, ms: 0 });
-  }, [knId, profile.paneKey, profile.defaultPrompt]);
+  }, [knId, profile.defaultPrompt]);
 
   // Select the default model after model list is ready; persisted choice wins.
   useEffect(() => {
@@ -777,7 +684,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     (msgs: ChatMessage[], statsSnapshot: SessionStats) => {
       try {
         localStorage.setItem(
-          msgsLsKey(knId, profile.paneKey),
+          msgsLsKey(knId),
           JSON.stringify({
             messages: msgs,
             model,
@@ -789,7 +696,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
         /* Ignore unavailable localStorage. */
       }
     },
-    [knId, profile.defaultPrompt, profile.paneKey, model, systemPrompt],
+    [knId, profile.defaultPrompt, model, systemPrompt],
   );
 
   useEffect(() => {
@@ -909,19 +816,19 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
   );
 
   /**
-   * Managed lifecycle client for this pane. Conversation identity follows KN + pane
+   * Managed lifecycle client for this pane. Conversation identity follows the KN
    * and only changes on clear; page refresh reuses the server-issued conversation ID.
    */
   const lifecycle = useMemo(
     () =>
       createBknLifecycle(lifecycleEnv(env.base, knId), tokenProvider, {
-        agentName: AGENT_NAME_BY_PANE[profile.paneKey],
+        agentName: AGENT_NAME,
         conversationStore: localConversationStore(
-          conversationLsKey(knId, profile.paneKey),
-          legacyConversationLsKey(knId, profile.paneKey),
+          conversationLsKey(knId),
+          legacyConversationLsKey(knId),
         ),
       }),
-    [env.base, knId, tokenProvider, profile.paneKey],
+    [env.base, knId, tokenProvider],
   );
 
   // Full system prompt = editable prompt + optional KN summary + caps + output contract.
@@ -990,19 +897,9 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       try {
         turn = await lifecycle.beginTurn(question);
         turnContextRef.current = turn?.nextContext() ?? null;
-        const allTools = await getTools();
         // Lifecycle tools stay visible here; buildAgentTools handles takeover.
-        const modelVisibleTools = allTools.filter(
-          (toolDef) =>
-            profile.paneKey !== "base" ||
-            !profile.defaultToolNames ||
-            profile.defaultToolNames.includes(toolDef.name),
-        );
-        // Hard allowlist: only selected tools are sent to the model; null means all.
-        const activeTools = toolSelection
-          ? modelVisibleTools.filter((t) => toolSelection.includes(t.name))
-          : modelVisibleTools;
-        const tools = buildAgentTools(activeTools, env, knId, config, tokenProvider, {
+        const allTools = await getTools();
+        const tools = buildAgentTools(allTools, env, knId, config, tokenProvider, {
           resourceScope,
           session: lifecycle.session,
           turn: turn && {
@@ -1033,7 +930,7 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       } catch (error) {
         if (requestSequence !== requestSequenceRef.current) return;
         if (controller.signal.aborted) {
-          // User stopped mid-turn; keep partial content and mark negative for compare reports.
+          // User stopped mid-turn; keep partial content and mark the turn stopped.
           outcome = "canceled";
           updateAssistant((m) => ({ ...m, stopped: true }));
         } else {
@@ -1081,7 +978,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       knId,
       composedSystem,
       config,
-      toolSelection,
       getTools,
       tokenProvider,
       modelTokenProvider,
@@ -1090,7 +986,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       handleChunk,
       updateAssistant,
       message,
-      profile,
       t,
     ],
   );
@@ -1099,52 +994,17 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
     abortRef.current?.abort();
   }, []);
 
-  // Compare-report snapshot: user turns paired with following assistant turns plus totals.
-  const getSnapshot = useCallback((): PaneSnapshot => {
-    const rounds: PaneRound[] = [];
-    let current: PaneRound | null = null;
-    for (const m of messages) {
-      if (m.role === "user") {
-        // Default empty covers a user turn without a corresponding assistant answer.
-        current = {
-          question: m.content,
-          answer: null,
-          tokens: null,
-          ms: null,
-          toolCalls: [],
-          outcome: "empty",
-        };
-        rounds.push(current);
-      } else if (m.role === "assistant" && current) {
-        current.answer = m.content || null;
-        current.tokens = m.tokens ?? null;
-        current.ms = m.ms ?? null;
-        current.toolCalls = (m.toolCalls ?? []).map((tc) => ({ name: tc.name, status: tc.status }));
-        const hasAnswer = !!m.content && m.content.trim().length > 0;
-        current.outcome = m.stopped
-          ? "stopped"
-          : m.errored
-            ? "error"
-            : hasAnswer
-              ? "answered"
-              : "empty";
-        current = null;
-      }
-    }
-    return { model, stats, rounds };
-  }, [messages, model, stats]);
-
   const clearChat = useCallback(() => {
     setMessages([]);
     setStats({ tokens: 0, ms: 0 });
     // Clearing chat starts a new managed conversation; refresh reuses the saved server ID.
     lifecycle.reset();
     try {
-      localStorage.removeItem(msgsLsKey(knId, profile.paneKey));
+      localStorage.removeItem(msgsLsKey(knId));
     } catch {
       /* ignore */
     }
-  }, [knId, profile.paneKey, lifecycle]);
+  }, [knId, lifecycle]);
 
   useImperativeHandle(
     ref,
@@ -1153,9 +1013,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       stop,
       openSettings,
       clear: clearChat,
-      getSnapshot,
     }),
-    [send, stop, openSettings, clearChat, getSnapshot],
+    [send, stop, openSettings, clearChat],
   );
 
   const modelOptions = useMemo(
@@ -1168,47 +1027,11 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       })),
     [models, t],
   );
-  // Tool set visible to the model. Lifecycle tools remain visible and are taken over later.
-  const agentToolDefs = useMemo(() => {
-    if (!toolDefs || profile.paneKey !== "base" || !profile.defaultToolNames)
-      return toolDefs ?? null;
-    const baseToolNames = new Set(profile.defaultToolNames);
-    return toolDefs.filter((toolDef) => baseToolNames.has(toolDef.name));
-  }, [profile.defaultToolNames, profile.paneKey, toolDefs]);
-  // Same grouping as the MCP sidebar: server title/_meta first, local fallback for old servers.
-  const toolOptions = useMemo(() => {
-    if (!agentToolDefs) return [];
-    return buildMcpToolGroups(agentToolDefs, (tool) => toolDisplayOf(tool.name, tool)).map(
-      (group) => ({
-        label: group.label,
-        title: group.label,
-        options: group.items.map(({ item, display }) => ({
-          value: item.name,
-          title: `${display.name} - ${item.name}`,
-          searchText: `${display.name} ${item.name}`,
-          label: (
-            <span className={styles.toolOption}>
-              <span className={styles.toolOptionName}>{display.name}</span>
-              <span className={styles.toolOptionId}>{item.name}</span>
-            </span>
-          ),
-        })),
-      }),
-    );
-  }, [agentToolDefs]);
-  // Selector value: null (all) shows all currently known tool names.
-  const draftToolValue = useMemo(
-    () => draftToolSelection ?? (agentToolDefs ? agentToolDefs.map((t) => t.name) : []),
-    [draftToolSelection, agentToolDefs],
-  );
-
   const empty = messages.length === 0;
   const lastIdx = messages.length - 1;
   const noLlm = modelsLoaded && models.length === 0;
   const fallbackSuggestionList = useMemo(() => FALLBACK_SUGGESTION_KEYS.map((key) => t(key)), [t]);
   const sugList = suggestions.length > 0 ? suggestions : fallbackSuggestionList;
-  // Compare panes are half-width, so compact the header.
-  const compact = profile.paneKey !== "solo";
 
   const promptEditor = (
     <textarea
@@ -1241,114 +1064,8 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
       ))}
     </div>
   );
-  const toolPicker =
-    profile.paneKey !== "solo" ? (
-      <section className={styles.configSection}>
-        <div className={styles.configSectionHead}>
-          <div>
-            <h3>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeTitle")}</h3>
-            <p>{t("knowledgeNetwork.agentChat.chatPane.settings.toolScopeDescription")}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.linkBtn}
-            onClick={() =>
-              setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)
-            }
-          >
-            {t("knowledgeNetwork.agentChat.chatPane.settings.resetDefault")}
-          </button>
-        </div>
-        <div className={styles.configCard}>
-          <div className={styles.configFieldLabel}>
-            {t("knowledgeNetwork.agentChat.chatPane.settings.availableTools")}
-          </div>
-          <Select
-            size="small"
-            mode="multiple"
-            className={styles.toolSelect}
-            popupClassName={styles.paneMenu}
-            value={draftToolValue}
-            onChange={(next: string[]) => setDraftToolSelection(next)}
-            options={toolOptions}
-            showSearch
-            filterOption={(input, option) => {
-              const searchText = (option as { searchText?: unknown } | undefined)?.searchText;
-              return (
-                typeof searchText === "string" &&
-                searchText.toLowerCase().includes(input.trim().toLowerCase())
-              );
-            }}
-            placeholder={
-              toolDefs
-                ? t("knowledgeNetwork.agentChat.chatPane.settings.selectTool")
-                : t("knowledgeNetwork.agentChat.chatPane.settings.loadingTools")
-            }
-            loading={!toolDefs}
-            disabled={busy}
-            maxTagCount={0}
-            maxTagPlaceholder={() =>
-              draftToolSelection === null
-                ? t("knowledgeNetwork.agentChat.chatPane.settings.allTools", {
-                    count: draftToolValue.length,
-                  })
-                : t("knowledgeNetwork.agentChat.chatPane.settings.selectedTools", {
-                    count: draftToolValue.length,
-                    total: agentToolDefs ? ` / ${agentToolDefs.length}` : "",
-                  })
-            }
-            allowClear
-            onClear={() =>
-              setDraftToolSelection(profile.defaultToolNames ? [...profile.defaultToolNames] : null)
-            }
-            popupMatchSelectWidth={false}
-          />
-        </div>
-      </section>
-    ) : null;
-
   return (
     <div className={styles.paneRoot}>
-      {showToolbar ? (
-        <div className={`${styles.bar} ${compact ? styles.barCompact : ""}`}>
-          <div className={styles.barLeft}>
-            {profile.title ? (
-              <span
-                className={`${styles.paneTitle} ${profile.highlight ? styles.paneTitleHl : ""}`}
-                title={
-                  profile.injectKnContext && knSummary
-                    ? t("knowledgeNetwork.agentChat.chatPane.settings.loadedSummary", {
-                        objectTypes: knSummary.objectTypes,
-                        relations: knSummary.relations,
-                      })
-                    : undefined
-                }
-              >
-                {profile.title}
-              </span>
-            ) : null}
-          </div>
-          <div className={styles.barActions}>
-            <button
-              type="button"
-              className={styles.barBtn}
-              onClick={settingsOpen ? cancelSettings : openSettings}
-            >
-              <SettingOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}{" "}
-              {settingsOpen ? <DownOutlined /> : <RightOutlined />}
-            </button>
-            <button
-              type="button"
-              className={styles.barBtn}
-              onClick={clearChat}
-              disabled={busy || empty}
-              title={t("knowledgeNetwork.agentChat.chatPane.settings.clearTitle")}
-            >
-              <ClearOutlined /> {t("knowledgeNetwork.agentChat.chatPane.settings.clear")}
-            </button>
-          </div>
-        </div>
-      ) : null}
       <Drawer
         title={t("knowledgeNetwork.agentChat.chatPane.settings.configTitle")}
         placement="right"
@@ -1392,7 +1109,6 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             />
           </div>
         </section>
-        {toolPicker}
         <section className={styles.configSection}>
           <div className={styles.configSectionHead}>
             <div>
@@ -1450,20 +1166,18 @@ export const ChatPane = forwardRef<ChatPaneHandle, ChatPaneProps>(function ChatP
             </div>
             <h3>{profile.emptyTitle ?? t("knowledgeNetwork.agentChat.chatPane.empty.start")}</h3>
             <p>
-              {profile.paneKey === "base"
-                ? t("knowledgeNetwork.agentChat.chatPane.empty.baseIntro")
-                : t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
-                    knId,
-                    networkName: networkName
-                      ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
-                      : "",
-                    summary: knSummary
-                      ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
-                          objectTypes: knSummary.objectTypes,
-                          relations: knSummary.relations,
-                        })
-                      : "",
-                  })}
+              {t("knowledgeNetwork.agentChat.chatPane.empty.knIntro", {
+                knId,
+                networkName: networkName
+                  ? t("knowledgeNetwork.agentChat.chatPane.empty.networkName", { networkName })
+                  : "",
+                summary: knSummary
+                  ? t("knowledgeNetwork.agentChat.chatPane.empty.summary", {
+                      objectTypes: knSummary.objectTypes,
+                      relations: knSummary.relations,
+                    })
+                  : "",
+              })}
             </p>
             <div className={styles.sugs}>
               {sugList.map((s) => (

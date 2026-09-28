@@ -39,33 +39,7 @@ export const agentChatPart = {
       'Only output a JSON array, for example ["question1","question2","question3"]. Do not output any other text or code fences.',
     profiles: {
       soloEmptyTitle: "Start Validation",
-      baseTitle: "Base Data",
-      baseEmptyTitle: "Query Data Directly",
       knTitle: "Business Knowledge Network",
-      knEmptyTitle: "Answer with the Knowledge Network",
-    },
-    judgePrompt:
-      "You are a comparison reviewer. The same question is answered by two agents, possibly across multiple rounds: A, Base Data, can only query the database directly with SQL/table tools; B, Business Knowledge Network, can use all knowledge-network retrieval tools, including semantic schema, instances, subgraphs, and logical attributes.\n" +
-      "Compare the answers and metrics from these dimensions: 1. correctness and completeness, 2. whether the evidence is sufficient and reliable, 3. efficiency, including tool calls, tokens, and latency, and 4. which side is more useful for business users and why.\n" +
-      "Pay special attention to the result status of each round. If a side is marked no valid answer, stopped by user, or execution error, treat that round as a negative result because the task was not completed. It should be judged worse than a side with an effective answer. The more negative rounds a side has, the more the overall review should reflect unreliability.\n" +
-      "Output Markdown in the current language: start with one overall verdict, then compare each round briefly in 2-3 sentences and call out negative results, then summarize in bullets. Be concise and do not restate the full answers.",
-    outcome: {
-      answered: "Answered",
-      stopped: "Stopped by user (negative)",
-      error: "Execution error (negative)",
-      empty: "No valid answer (negative)",
-    },
-    answer: {
-      notParticipated: "(Not included in this round)",
-      empty: "(No answer)",
-    },
-    calls: {
-      zero: "0 calls",
-      errorName: "{{name}}(failed)",
-      summary: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
-      summary_one: "{{count}} call ({{ok}} succeeded{{errorPart}}): {{names}}",
-      summary_other: "{{count}} calls ({{ok}} succeeded{{errorPart}}): {{names}}",
-      errorPart: " / {{err}} failed",
     },
     errors: {
       modelBusy: "The model service is busy. Try again later.",
@@ -85,73 +59,16 @@ export const agentChatPart = {
       connectionInterrupted: "The connection to the model service was interrupted. Try again.",
       chatFailed: "Chat execution failed",
     },
-    report: {
-      title: "Agent Chat Comparison Report · {{knLabel}}",
-      generatedAt: "Generated at: {{generatedAt}}",
-      modelLine:
-        "Left Base Data model: {{baseModel}}; right Business Knowledge Network model: {{knModel}}",
-      overview: "Session Overview",
-      metricHeader: "Metric",
-      baseHeader: "Base Data",
-      knHeader: "Business Knowledge Network",
-      totalTokens: "Total tokens",
-      totalDuration: "Total duration",
-      rounds: "Rounds",
-      totalToolCalls: "Total tool calls",
-      invalidRounds: "Invalid rounds (empty/stopped/error)",
-      roundTitle: "Round {{round}}",
-      questionBoth: "Left: {{baseQuestion}} / Right: {{knQuestion}}",
-      duration: "Duration",
-      toolCalls: "Tool calls",
-      result: "Result",
-      baseAnswerTitle: "Base Data · Answer",
-      knAnswerTitle: "Business Knowledge Network · Answer",
-      aiSummary: "AI Summary",
-      paneBriefTitle: "{{label}} (model {{model}}; session total {{tokens}} tokens · {{duration}})",
-      paneBriefRound:
-        "Round {{round}} question: {{question}}\nResult status: {{outcome}}\nMetrics: token {{tokens}}, duration {{duration}}, tools {{toolCount}} calls ({{tools}})\nAnswer: {{answer}}",
-      truncated: "{{answer}}...[truncated]",
-      none: "none",
-      copyMarkdown: "Copy Markdown",
-      exportMarkdown: "Export .md",
-      copySuccess: "Report Markdown copied",
-      copyFailed: "Copy failed",
-      downloadName: "comparison-report-{{knId}}-{{stamp}}.md",
-      emptyDialog:
-        "Neither side has a conversation yet. Send a question with Both Sides first, then view the report.",
-      overviewRounds: "Session overview ({{rounds}} rounds)",
-      model: "Model",
-      averagePerRound: "Average per round",
-      success: "succeeded",
-      failed: "failed",
-      answerToggle: "Answer (click to expand/collapse)",
-      generateSummary: "Generate Summary",
-      regenerateSummary: "Regenerate",
-      generating: "Generating...",
-      thinking: "Reviewer model is thinking...",
-      summaryHint:
-        "Use the right-side model to review correctness, evidence, and efficiency across all rounds.",
-    },
     managedTurns: {
       loadSummary: "Load knowledge network summary",
     },
     placeholders: {
       noLlm: "Connect an LLM in Model Factory before chatting.",
       askAgent: "Ask Agent, for example: {{suggestion}}",
-      both: "Ask both sides the same question and compare the answers.",
-      base: "Send to Base Data",
-      kn: "Send to Business Knowledge Network",
     },
     composer: {
-      sendTo: "Send to",
-      both: "Both Sides",
-      base: "Base Data",
-      kn: "Business Knowledge Network",
-      reportTitle: "Compare the latest answers and metrics from both sides, with an AI summary.",
-      report: "Comparison Report",
       stop: "Stop",
       send: "Send",
-      compareMode: "Compare Mode",
       settings: "Chat Settings",
       clear: "Clear",
     },
@@ -165,15 +82,8 @@ export const agentChatPart = {
         "run_code for a Python script that calls the tools above by name, suited to chaining several tools, branching on an intermediate result, or keeping bulk data in the sandbox when you only need a conclusion; " +
         "and run_shell for a shell command to inspect files in the sandbox. All three share one workspace scoped to the conversation, and files written there survive between executions, so a later script can pick up where an earlier one left off.\n" +
         "Query efficiently: use LIMIT and precise filters, return only needed fields, avoid loading entire tables or oversized results, and do not repeat queries for information already obtained.",
-      basePrompt:
-        "You are a data query assistant. You can only answer user questions by directly querying underlying data tables with three tools:\n" +
-        "list_resources lists accessible data tables, describe_resource inspects table columns, and run_sql executes SQL.\n" +
-        "Workflow: first use list_resources to find relevant tables, then use describe_resource to confirm columns, then write SQL queries.\n" +
-        "Table names in SQL must use template placeholders like {{.<resource_id>}}, where resource_id comes from list_resources entries[].resource_id. Do not write raw table names and do not join across catalogs.\n" +
-        "Query efficiently: push aggregation, sorting, and counting to SQL, use LIMIT and precise filters, and return only needed fields.",
       evidenceHint: {
         kn: "which tool was called, what filter conditions were used, or the key SQL points",
-        base: "which tables were used and the key SQL points",
       },
       fallbackSuggestions: {
         relations: "What object types and relations are in this knowledge network?",
@@ -252,20 +162,8 @@ export const agentChatPart = {
       },
       settings: {
         promptPlaceholder: "System prompt. After saving, it will be sent with the conversation.",
-        toolScopeTitle: "Tool Scope",
-        toolScopeDescription:
-          "Limit which tools this Agent side can call. Unselected tools are not sent to the model.",
         resetDefault: "Reset Default",
-        availableTools: "Available Tools",
-        selectTool: "Select tools",
-        loadingTools: "Loading tools",
-        allTools: "All · {{count}}",
-        selectedTools: "Selected {{count}}{{total}}",
-        loadedSummary:
-          "Network summary loaded · {{objectTypes}} object types / {{relations}} relation types",
         configTitle: "Chat Settings",
-        clearTitle: "Clear conversation",
-        clear: "Clear",
         cancel: "Cancel",
         confirm: "Confirm",
         modelConfigTitle: "Model Settings",
@@ -284,8 +182,6 @@ export const agentChatPart = {
           "Agent chat needs an LLM. Connect one in Model Factory, set it as default, and come back.",
         goModelFactory: "Connect an LLM in Model Factory",
         start: "Start Validation",
-        baseIntro:
-          "Ask in natural language. The Agent can only answer by directly querying tables with base data tools: list_resources, describe_resource, and run_sql. It does not use knowledge-network semantics.",
         knIntro:
           "Ask the Agent in natural language. It will use retrieval tools and answer based on knowledge network {{knId}}{{networkName}}. {{summary}}",
         networkName: " ({{networkName}})",

@@ -61,9 +61,6 @@ export type AgentConfig = {
   maxOutputTokens: number;
 };
 
-/** Default tool set for the base-data pane: table/SQL capabilities only. */
-export const BASE_DATA_TOOL_NAMES = ["list_resources", "describe_resource", "run_sql"];
-
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   maxSteps: 40,
   keepToolResults: 3,

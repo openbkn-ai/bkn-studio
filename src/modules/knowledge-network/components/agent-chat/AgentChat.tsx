@@ -6,32 +6,20 @@
  */
 
 /**
- * Try-now Agent chat container for single-conversation and split comparison modes. ChatPane owns
- * messages, model, prompt, tuning, and tool selection; this container owns shared resources such
- * as the model list, knowledge-network summary, tools/list cache, comparison state, and shared input.
- * Comparison asks the same question of base data on the left and the business knowledge network on
- * the right to demonstrate the value of the semantic layer.
+ * Try-now Agent chat container. ChatPane owns messages, model, prompt, and tuning; this container
+ * owns shared resources such as the model list, knowledge-network summary, tools/list cache, and
+ * the input composer.
  */
 
-import {
-  ClearOutlined,
-  CopyOutlined,
-  DownloadOutlined,
-  FileTextOutlined,
-  RightOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
-import { App, Modal, Segmented, Switch } from "antd";
+import { ClearOutlined, RightOutlined, SettingOutlined } from "@ant-design/icons";
 import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { normalizeSupportedLocale } from "@/framework/i18n/locale";
 import { listLlmModels } from "@/modules/model-resources/services/llm.service";
 import type { LlmModel } from "@/modules/model-resources/types/llm";
 import {
-  BASE_DATA_TOOL_NAMES,
   DEFAULT_AGENT_CONFIG,
   runAgentChat,
   type AgentTokenProvider,
@@ -51,61 +39,18 @@ import {
 } from "@/modules/knowledge-network/services/bkn-lifecycle.service";
 import { recommendationFingerprint } from "@/modules/knowledge-network/utils/agent-chat-cache";
 
-import {
-  ChatPane,
-  MarkdownView,
-  fmtDuration,
-  fmtTokens,
-  type ChatPaneHandle,
-  type PaneKey,
-  type PaneProfile,
-  type PaneRound,
-  type PaneSnapshot,
-  type RoundOutcome,
-} from "./ChatPane";
+import { ChatPane, type ChatPaneHandle, type PaneProfile } from "./ChatPane";
 import styles from "./AgentChat.module.css";
 
 /**
- * Both sides share recommendations phrased as business questions without ontology terms. The base
- * side has only SQL/table tools, so questions about object-type relationships ask concepts it does
- * not define and make an unconvincing comparison. Business questions let SQL struggle on the left
- * while the semantic layer answers directly on the right. These are the fallback when network structure is unavailable.
+ * Recommendations are phrased as business questions without ontology terms. These are the
+ * fallback when network structure is unavailable.
  */
 const FALLBACK_SUGGESTIONS = [
   "knowledgeNetwork.agentChat.fallbackSuggestions.overview",
   "knowledgeNetwork.agentChat.fallbackSuggestions.changes",
   "knowledgeNetwork.agentChat.fallbackSuggestions.priorityRecords",
 ];
-
-/** Comparison-mode toggle and send target, cached globally rather than per knowledge network. */
-const COMPARE_LS_KEY = "bkn-studio:agentchat:compare";
-
-type CompareTarget = "both" | "base" | "kn";
-
-type CompareState = { on: boolean; target: CompareTarget };
-
-function loadCompareState(): CompareState {
-  let state: CompareState = { on: false, target: "both" };
-  try {
-    const raw = localStorage.getItem(COMPARE_LS_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Partial<CompareState>) : {};
-    state = {
-      on: parsed.on === true,
-      target: parsed.target === "base" || parsed.target === "kn" ? parsed.target : "both",
-    };
-  } catch {
-    /* Use defaults. */
-  }
-  try {
-    // Deep-link override through ?compare=on / ?compare=off for shareable demos and automated smoke tests.
-    const qp = new URLSearchParams(window.location.search).get("compare");
-    if (qp === "on" || qp === "1") state = { ...state, on: true };
-    else if (qp === "off" || qp === "0") state = { ...state, on: false };
-  } catch {
-    /* Ignore SSR and other errors. */
-  }
-  return state;
-}
 
 /**
  * Summary of the knowledge network injected into the system prompt, not its full structure: name,
@@ -244,217 +189,13 @@ function saveCachedSuggestions(knId: string, locale: string, fp: string, list: s
   }
 }
 
-function buildProfiles(t: TFunction) {
-  const soloProfile: PaneProfile = {
-    paneKey: "solo",
+function buildProfile(t: TFunction): PaneProfile {
+  return {
     emptyTitle: t("knowledgeNetwork.agentChat.profiles.soloEmptyTitle"),
     defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
     injectKnContext: true,
-    defaultToolNames: null,
     evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
   };
-  const baseProfile: PaneProfile = {
-    paneKey: "base",
-    title: t("knowledgeNetwork.agentChat.profiles.baseTitle"),
-    emptyTitle: t("knowledgeNetwork.agentChat.profiles.baseEmptyTitle"),
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.basePrompt"),
-    injectKnContext: false,
-    defaultToolNames: BASE_DATA_TOOL_NAMES,
-    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.base"),
-  };
-  const knProfile: PaneProfile = {
-    paneKey: "kn",
-    title: t("knowledgeNetwork.agentChat.profiles.knTitle"),
-    emptyTitle: t("knowledgeNetwork.agentChat.profiles.knEmptyTitle"),
-    defaultPrompt: t("knowledgeNetwork.agentChat.chatPane.defaultPrompt"),
-    injectKnContext: true,
-    defaultToolNames: null,
-    evidenceHint: t("knowledgeNetwork.agentChat.chatPane.evidenceHint.kn"),
-  };
-  return { soloProfile, baseProfile, knProfile };
-}
-
-/** Evaluation prompt for the AI summary in a comparison report. */
-function judgePrompt(t: TFunction): string {
-  return t("knowledgeNetwork.agentChat.judgePrompt");
-}
-
-/** Outcome label; empty, stopped, and error are explicitly negative. */
-function outcomeLabel(o: RoundOutcome, t: TFunction): string {
-  switch (o) {
-    case "answered":
-      return t("knowledgeNetwork.agentChat.outcome.answered");
-    case "stopped":
-      return t("knowledgeNetwork.agentChat.outcome.stopped");
-    case "error":
-      return t("knowledgeNetwork.agentChat.outcome.error");
-    case "empty":
-    default:
-      return t("knowledgeNetwork.agentChat.outcome.empty");
-  }
-}
-
-/** Answer block for one round: return the answer for success, otherwise a negative status with any partial content. */
-function answerBlock(r: PaneRound | undefined, t: TFunction): string {
-  if (!r) return t("knowledgeNetwork.agentChat.answer.notParticipated");
-  if (r.outcome === "answered") return r.answer ?? t("knowledgeNetwork.agentChat.answer.empty");
-  const note = `**${outcomeLabel(r.outcome, t)}**`;
-  return r.answer && r.answer.trim() ? `${note}\n\n${r.answer}` : note;
-}
-
-/** Number of rounds on one side that did not complete successfully, used as the negative count in reports. */
-function negativeRounds(s: PaneSnapshot): number {
-  return s.rounds.filter((r) => r.outcome !== "answered").length;
-}
-
-/** Markdown export summary of one round's tool calls. */
-function mdCalls(r: PaneRound | undefined, t: TFunction): string {
-  if (!r || r.toolCalls.length === 0) return t("knowledgeNetwork.agentChat.calls.zero");
-  const ok = r.toolCalls.filter((t) => t.status === "done").length;
-  const err = r.toolCalls.filter((t) => t.status === "error").length;
-  const names = r.toolCalls
-    .map((toolCall) =>
-      toolCall.status === "error"
-        ? t("knowledgeNetwork.agentChat.calls.errorName", { name: toolCall.name })
-        : toolCall.name,
-    )
-    .join(", ");
-  return t("knowledgeNetwork.agentChat.calls.summary", {
-    count: r.toolCalls.length,
-    ok,
-    errorPart: err > 0 ? t("knowledgeNetwork.agentChat.calls.errorPart", { err }) : "",
-    names,
-  });
-}
-
-/** Exports a comparison report as Markdown with overview, per-round metrics, both answers, and AI summary. */
-function reportToMarkdown(
-  base: PaneSnapshot,
-  kn: PaneSnapshot,
-  summary: string,
-  knLabel: string,
-  generatedAt: string,
-  t: TFunction,
-): string {
-  const L: string[] = [];
-  L.push(`# ${t("knowledgeNetwork.agentChat.report.title", { knLabel })}`, "");
-  L.push(`- ${t("knowledgeNetwork.agentChat.report.generatedAt", { generatedAt })}`);
-  L.push(
-    `- ${t("knowledgeNetwork.agentChat.report.modelLine", { baseModel: base.model || "—", knModel: kn.model || "—" })}`,
-    "",
-  );
-  L.push(`## ${t("knowledgeNetwork.agentChat.report.overview")}`, "");
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.metricHeader")} | ${t("knowledgeNetwork.agentChat.report.baseHeader")} | ${t("knowledgeNetwork.agentChat.report.knHeader")} |`,
-  );
-  L.push("| --- | --- | --- |");
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.totalTokens")} | ${fmtTokens(base.stats.tokens)} | ${fmtTokens(kn.stats.tokens)} |`,
-  );
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.totalDuration")} | ${fmtDuration(base.stats.ms)} | ${fmtDuration(kn.stats.ms)} |`,
-  );
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.rounds")} | ${base.rounds.length} | ${kn.rounds.length} |`,
-  );
-  const totalCalls = (s: PaneSnapshot) => s.rounds.reduce((n, r) => n + r.toolCalls.length, 0);
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.totalToolCalls")} | ${totalCalls(base)} | ${totalCalls(kn)} |`,
-  );
-  L.push(
-    `| ${t("knowledgeNetwork.agentChat.report.invalidRounds")} | ${negativeRounds(base)} | ${negativeRounds(kn)} |`,
-    "",
-  );
-  const roundCount = Math.max(base.rounds.length, kn.rounds.length);
-  for (let i = 0; i < roundCount; i++) {
-    const b = base.rounds[i];
-    const k = kn.rounds[i];
-    const sameQ = !b || !k || b.question === k.question;
-    L.push(`## ${t("knowledgeNetwork.agentChat.report.roundTitle", { round: i + 1 })}`, "");
-    L.push(
-      `> ${
-        sameQ
-          ? (k?.question ?? b?.question ?? "—")
-          : t("knowledgeNetwork.agentChat.report.questionBoth", {
-              baseQuestion: b?.question ?? "—",
-              knQuestion: k?.question ?? "—",
-            })
-      }`,
-      "",
-    );
-    L.push(
-      `| ${t("knowledgeNetwork.agentChat.report.metricHeader")} | ${t("knowledgeNetwork.agentChat.report.baseHeader")} | ${t("knowledgeNetwork.agentChat.report.knHeader")} |`,
-    );
-    L.push("| --- | --- | --- |");
-    L.push(
-      `| token | ${b?.tokens != null ? fmtTokens(b.tokens) : "—"} | ${k?.tokens != null ? fmtTokens(k.tokens) : "—"} |`,
-    );
-    L.push(
-      `| ${t("knowledgeNetwork.agentChat.report.duration")} | ${b?.ms != null ? fmtDuration(b.ms) : "—"} | ${k?.ms != null ? fmtDuration(k.ms) : "—"} |`,
-    );
-    L.push(
-      `| ${t("knowledgeNetwork.agentChat.report.toolCalls")} | ${mdCalls(b, t)} | ${mdCalls(k, t)} |`,
-    );
-    L.push(
-      `| ${t("knowledgeNetwork.agentChat.report.result")} | ${b ? outcomeLabel(b.outcome, t) : "—"} | ${k ? outcomeLabel(k.outcome, t) : "—"} |`,
-      "",
-    );
-    L.push(
-      `### ${t("knowledgeNetwork.agentChat.report.baseAnswerTitle")}`,
-      "",
-      answerBlock(b, t),
-      "",
-    );
-    L.push(
-      `### ${t("knowledgeNetwork.agentChat.report.knAnswerTitle")}`,
-      "",
-      answerBlock(k, t),
-      "",
-    );
-  }
-  if (summary.trim())
-    L.push(`## ${t("knowledgeNetwork.agentChat.report.aiSummary")}`, "", summary.trim(), "");
-  return L.join("\n");
-}
-
-/** Evaluation corpus for all rounds on one side of a report; truncate long answers to prevent prompt explosion. */
-function paneBrief(label: string, s: PaneSnapshot, t: TFunction): string {
-  const parts = [
-    `### ${t("knowledgeNetwork.agentChat.report.paneBriefTitle", {
-      label,
-      model: s.model || "—",
-      tokens: fmtTokens(s.stats.tokens),
-      duration: fmtDuration(s.stats.ms),
-    })}`,
-  ];
-  s.rounds.forEach((r, i) => {
-    const tools =
-      r.toolCalls
-        .map((toolCall) =>
-          toolCall.status === "error"
-            ? t("knowledgeNetwork.agentChat.calls.errorName", { name: toolCall.name })
-            : toolCall.name,
-        )
-        .join(", ") || t("knowledgeNetwork.agentChat.report.none");
-    const answer = r.answer
-      ? r.answer.length > 1500
-        ? t("knowledgeNetwork.agentChat.report.truncated", { answer: r.answer.slice(0, 1500) })
-        : r.answer
-      : t("knowledgeNetwork.agentChat.answer.empty");
-    parts.push(
-      t("knowledgeNetwork.agentChat.report.paneBriefRound", {
-        round: i + 1,
-        question: r.question,
-        outcome: outcomeLabel(r.outcome, t),
-        tokens: r.tokens ?? "—",
-        duration: r.ms != null ? fmtDuration(r.ms) : "—",
-        toolCount: r.toolCalls.length,
-        tools,
-        answer,
-      }),
-    );
-  });
-  return parts.join("\n\n");
 }
 
 export function AgentChat({
@@ -471,10 +212,9 @@ export function AgentChat({
   modelTokenProvider?: AgentTokenProvider;
 }) {
   const knId = env.knId;
-  const { message } = App.useApp();
   const { t, i18n } = useTranslation();
   const activeLocale = normalizeSupportedLocale(i18n.resolvedLanguage ?? i18n.language) ?? "en-US";
-  const profiles = useMemo(() => buildProfiles(t), [t]);
+  const profile = useMemo(() => buildProfile(t), [t]);
   const defaultSuggestions = useMemo(() => fallbackSuggestions(t), [t]);
   const llmTokenProvider = useMemo(
     () => modelTokenProvider ?? tokenProvider,
@@ -491,36 +231,13 @@ export function AgentChat({
   );
   // resource_id set bound to the current network (object_type.data_source.id), used to limit list_resources to this network's tables by default.
   const [knResourceIds, setKnResourceIds] = useState<string[] | null>(null);
-  // Both sides share suggestions. Render templates immediately and replace them with generated results when the model is ready.
+  // Render templates immediately and replace them with generated results when the model is ready.
   const [suggestions, setSuggestions] = useState<string[]>(defaultSuggestions);
   // Loaded network structure both derives the system-prompt summary and supplies business descriptions for suggestions.
   const [knDetail, setKnDetail] = useState<KnDetail | null>(null);
 
-  const [compare, setCompare] = useState<CompareState>(loadCompareState);
-  const setCompareState = useCallback((updater: (prev: CompareState) => CompareState) => {
-    setCompare((prev) => {
-      const next = updater(prev);
-      try {
-        localStorage.setItem(COMPARE_LS_KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-
-  // Busy state reported per panel for send-disable and stop behavior.
-  const [busyMap, setBusyMap] = useState<Record<PaneKey, boolean>>({
-    solo: false,
-    base: false,
-    kn: false,
-  });
-  const setPaneBusy = useCallback((key: PaneKey, busy: boolean) => {
-    setBusyMap((prev) => (prev[key] === busy ? prev : { ...prev, [key]: busy }));
-  }, []);
-  const onSoloBusy = useCallback((b: boolean) => setPaneBusy("solo", b), [setPaneBusy]);
-  const onBaseBusy = useCallback((b: boolean) => setPaneBusy("base", b), [setPaneBusy]);
-  const onKnBusy = useCallback((b: boolean) => setPaneBusy("kn", b), [setPaneBusy]);
+  // Busy state reported by the pane for send-disable and stop behavior.
+  const [busy, setBusy] = useState(false);
 
   /** One-time managed session for platform prefetching, not either conversation. */
   const summaryLifecycle = useMemo(
@@ -532,16 +249,14 @@ export function AgentChat({
     [env.base, knId, tokenProvider],
   );
 
-  const soloRef = useRef<ChatPaneHandle>(null);
-  const baseRef = useRef<ChatPaneHandle>(null);
-  const knRef = useRef<ChatPaneHandle>(null);
+  const paneRef = useRef<ChatPaneHandle>(null);
   const pageScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSuggestions((prev) => (prev === defaultSuggestions ? prev : defaultSuggestions));
   }, [defaultSuggestions]);
 
-  // Load the model-factory list once for both sides; ChatPane selects the default model.
+  // Load the model-factory list once; ChatPane selects the default model.
   useEffect(() => {
     let cancelled = false;
     listLlmModels({ page: 1, size: 100 })
@@ -637,8 +352,7 @@ export function AgentChat({
     };
   }, [knDetail, modelsLoaded, models, env, llmTokenProvider, knId, activeLocale, t]);
 
-  // tools/list cache loads once per knId and is shared across panels; send lazily awaits its promise while picker uses resolved toolDefs.
-  const [toolDefs, setToolDefs] = useState<McpToolDef[] | null>(null);
+  // tools/list cache loads once per knId; send lazily awaits its promise.
   const toolsCacheRef = useRef<{ knId: string; promise: Promise<McpToolDef[]> } | null>(null);
   const toolsRequestRef = useRef<{ sequence: number; controller: AbortController | null }>({
     sequence: 0,
@@ -652,17 +366,7 @@ export function AgentChat({
       toolsRequestRef.current.controller?.abort();
       const controller = new AbortController();
       toolsRequestRef.current.controller = controller;
-      const requestKnId = knId;
       const promise = listMcpTools(envRef.current, tokenProvider, controller.signal)
-        .then((list) => {
-          if (
-            sequence === toolsRequestRef.current.sequence &&
-            requestKnId === envRef.current.knId
-          ) {
-            setToolDefs(list);
-          }
-          return list;
-        })
         .catch((error: unknown) => {
           // Do not cache failures so the next attempt retries.
           if (sequence === toolsRequestRef.current.sequence) {
@@ -683,7 +387,6 @@ export function AgentChat({
     toolsRequestRef.current.sequence += 1;
     toolsRequestRef.current.controller?.abort();
     toolsRequestRef.current.controller = null;
-    setToolDefs(null);
     toolsCacheRef.current = null;
   }, [knId]);
   useEffect(
@@ -692,666 +395,125 @@ export function AgentChat({
     },
     [],
   );
-  // Comparison-mode tool picker needs options, so prefetch once when opened.
-  useEffect(() => {
-    if (compare.on && !toolDefs) {
-      getTools().catch(() => {
-        /* Keep the picker loading state on failure; send retries and writes the error into the message. */
-      });
-    }
-  }, [compare.on, toolDefs, getTools]);
 
-  const targets = useMemo<PaneKey[]>(() => {
-    if (!compare.on) return ["solo"];
-    return compare.target === "both" ? ["base", "kn"] : [compare.target];
-  }, [compare]);
-
-  const refOf = useCallback(
-    (key: PaneKey) => (key === "solo" ? soloRef : key === "base" ? baseRef : knRef),
-    [],
-  );
-
-  const anyTargetBusy = targets.some((k) => busyMap[k]);
-  const anyBusy = busyMap.solo || busyMap.base || busyMap.kn;
   const noLlm = modelsLoaded && models.length === 0;
 
-  const sendShared = useCallback(() => {
+  const sendInput = useCallback(() => {
     const text = input.trim();
-    if (!text || anyTargetBusy) return;
-    targets.forEach((key) => refOf(key).current?.send(text));
+    if (!text || busy) return;
+    paneRef.current?.send(text);
     setInput("");
-  }, [input, targets, anyTargetBusy, refOf]);
+  }, [input, busy]);
 
-  /**
-   * Suggested questions clicked in the empty state use the same send targets as shared input. The
-   * previous direct ChatPane path bypassed targets, sending to only one side in comparison mode and
-   * preventing reports from ever receiving two answers to the same question.
-   */
+  /** Suggested questions clicked in the empty state go through the same busy guard as the input. */
   const sendQuestion = useCallback(
     (text: string) => {
-      if (!text.trim() || anyTargetBusy) return;
-      targets.forEach((key) => refOf(key).current?.send(text));
+      if (!text.trim() || busy) return;
+      paneRef.current?.send(text);
     },
-    [targets, anyTargetBusy, refOf],
+    [busy],
   );
 
-  const stopAll = useCallback(() => {
-    (Object.keys(busyMap) as PaneKey[]).forEach((key) => {
-      if (busyMap[key]) refOf(key).current?.stop();
-    });
-  }, [busyMap, refOf]);
-
-  // Comparison report: both snapshots, metric table, and streaming AI summary evaluated by the right-side model.
-  const [report, setReport] = useState<{ base: PaneSnapshot; kn: PaneSnapshot } | null>(null);
-  const [summary, setSummary] = useState("");
-  const [summarizing, setSummarizing] = useState(false);
-  const summaryAbortRef = useRef<AbortController | null>(null);
-
-  const openReport = useCallback(() => {
-    const base = baseRef.current?.getSnapshot();
-    const kn = knRef.current?.getSnapshot();
-    if (base && kn) {
-      setReport({ base, kn });
-      setSummary("");
-    }
+  const stop = useCallback(() => {
+    paneRef.current?.stop();
   }, []);
-
-  const closeReport = useCallback(() => {
-    summaryAbortRef.current?.abort();
-    setReport(null);
-  }, []);
-
-  const buildMarkdown = useCallback(() => {
-    if (!report) return null;
-    const stamp = new Date().toLocaleString(i18n.language, { hour12: false });
-    return reportToMarkdown(
-      report.base,
-      report.kn,
-      summary,
-      networkName ? `${networkName} (${knId})` : knId,
-      stamp,
-      t,
-    );
-  }, [report, summary, networkName, knId, t, i18n.language]);
-
-  const copyReportMd = useCallback(() => {
-    const md = buildMarkdown();
-    if (!md) return;
-    void writeTextToClipboard(md)
-      .then(() => message.success(t("knowledgeNetwork.agentChat.report.copySuccess")))
-      .catch(() => message.error(t("knowledgeNetwork.agentChat.report.copyFailed")));
-  }, [buildMarkdown, message, t]);
-
-  const exportReportMd = useCallback(() => {
-    const md = buildMarkdown();
-    if (!md) return;
-    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = t("knowledgeNetwork.agentChat.report.downloadName", {
-      knId,
-      stamp: new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-"),
-    });
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [buildMarkdown, knId, t]);
-
-  const generateSummary = useCallback(async () => {
-    if (!report || summarizing) return;
-    const modelName = report.kn.model || report.base.model;
-    if (!modelName) return;
-    const content = [
-      paneBrief(`A · ${t("knowledgeNetwork.agentChat.profiles.baseTitle")}`, report.base, t),
-      "",
-      paneBrief(`B · ${t("knowledgeNetwork.agentChat.profiles.knTitle")}`, report.kn, t),
-    ].join("\n");
-    setSummarizing(true);
-    setSummary("");
-    const controller = new AbortController();
-    summaryAbortRef.current = controller;
-    try {
-      await runAgentChat({
-        env,
-        modelName,
-        system: judgePrompt(t),
-        history: [{ role: "user", content }],
-        tools: {},
-        config: DEFAULT_AGENT_CONFIG,
-        tokenProvider: llmTokenProvider,
-        signal: controller.signal,
-        onChunk: (chunk) => {
-          if (chunk.type === "text") setSummary((s) => s + chunk.delta);
-          else if (chunk.type === "error") setSummary((s) => s + (s ? "\n\n" : "") + chunk.error);
-        },
-      });
-    } finally {
-      summaryAbortRef.current = null;
-      setSummarizing(false);
-    }
-  }, [env, llmTokenProvider, report, summarizing, t]);
 
   const placeholder = useMemo(() => {
     if (noLlm) return t("knowledgeNetwork.agentChat.placeholders.noLlm");
-    if (!compare.on) {
-      return t("knowledgeNetwork.agentChat.placeholders.askAgent", {
-        suggestion: suggestions[0] ?? defaultSuggestions[0],
-      });
-    }
-    if (compare.target === "both") return t("knowledgeNetwork.agentChat.placeholders.both");
-    return compare.target === "base"
-      ? t("knowledgeNetwork.agentChat.placeholders.base")
-      : t("knowledgeNetwork.agentChat.placeholders.kn");
-  }, [noLlm, compare, suggestions, defaultSuggestions, t]);
-
-  const paneShared = {
-    env,
-    tokenProvider,
-    modelTokenProvider: llmTokenProvider,
-    networkName,
-    models,
-    modelsLoaded,
-    knContext,
-    knSummary,
-    getTools,
-    toolDefs,
-    resourceScope: knResourceIds,
-    pageScrollRef,
-  };
-
-  const composer = (
-    <div className={styles.composer}>
-      {compare.on ? (
-        <div className={styles.targetBar}>
-          <div className={styles.targetLeft}>
-            <span className={styles.targetLabel}>
-              {t("knowledgeNetwork.agentChat.composer.sendTo")}
-            </span>
-            <Segmented
-              className={styles.targetSeg}
-              value={compare.target}
-              onChange={(value) =>
-                setCompareState((prev) => ({ ...prev, target: value as CompareTarget }))
-              }
-              options={[
-                { label: t("knowledgeNetwork.agentChat.composer.both"), value: "both" },
-                { label: t("knowledgeNetwork.agentChat.composer.base"), value: "base" },
-                { label: t("knowledgeNetwork.agentChat.composer.kn"), value: "kn" },
-              ]}
-            />
-          </div>
-          {compare.target === "both" ? (
-            <button
-              type="button"
-              className={styles.cmpReport}
-              onClick={openReport}
-              disabled={anyBusy}
-              title={t("knowledgeNetwork.agentChat.composer.reportTitle")}
-            >
-              <FileTextOutlined /> {t("knowledgeNetwork.agentChat.composer.report")}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-      <div className={styles.cwrap}>
-        <textarea
-          className={styles.cInput}
-          value={input}
-          rows={1}
-          disabled={noLlm}
-          placeholder={placeholder}
-          spellCheck={false}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            // Ignore Enter used to confirm a candidate during Chinese IME composition to avoid accidental sends.
-            if (
-              e.key === "Enter" &&
-              !e.shiftKey &&
-              !e.nativeEvent.isComposing &&
-              e.keyCode !== 229
-            ) {
-              e.preventDefault();
-              sendShared();
-            }
-          }}
-        />
-        {anyTargetBusy ? (
-          <button type="button" className={styles.stopBtn} onClick={stopAll}>
-            {t("knowledgeNetwork.agentChat.composer.stop")}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={styles.sendBtn}
-            onClick={sendShared}
-            disabled={!input.trim() || noLlm}
-          >
-            {t("knowledgeNetwork.agentChat.composer.send")}
-          </button>
-        )}
-      </div>
-    </div>
-  );
+    return t("knowledgeNetwork.agentChat.placeholders.askAgent", {
+      suggestion: suggestions[0] ?? defaultSuggestions[0],
+    });
+  }, [noLlm, suggestions, defaultSuggestions, t]);
 
   return (
     <div ref={pageScrollRef} className={styles.root}>
       <header className={styles.agentHeader}>
         <div className={styles.headerLeft}>
-          <div className={styles.modeToggle}>
-            <Switch
-              checked={compare.on}
-              disabled={anyBusy}
-              onChange={(checked) => setCompareState((prev) => ({ ...prev, on: checked }))}
-            />
-            <span>{t("knowledgeNetwork.agentChat.composer.compareMode")}</span>
-          </div>
-          {!compare.on ? (
-            <span className={styles.paneTitle}>
-              {t("knowledgeNetwork.agentChat.profiles.knTitle")}
-            </span>
-          ) : null}
+          <span className={styles.paneTitle}>
+            {t("knowledgeNetwork.agentChat.profiles.knTitle")}
+          </span>
         </div>
-        {!compare.on ? (
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.barBtn}
-              onClick={() => soloRef.current?.openSettings()}
-            >
-              <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}{" "}
-              <RightOutlined />
-            </button>
-            <button
-              type="button"
-              className={styles.barBtn}
-              onClick={() => soloRef.current?.clear()}
-              disabled={anyBusy}
-            >
-              <ClearOutlined /> {t("knowledgeNetwork.agentChat.composer.clear")}
-            </button>
-          </div>
-        ) : null}
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.barBtn}
+            onClick={() => paneRef.current?.openSettings()}
+          >
+            <SettingOutlined /> {t("knowledgeNetwork.agentChat.composer.settings")}{" "}
+            <RightOutlined />
+          </button>
+          <button
+            type="button"
+            className={styles.barBtn}
+            onClick={() => paneRef.current?.clear()}
+            disabled={busy}
+          >
+            <ClearOutlined /> {t("knowledgeNetwork.agentChat.composer.clear")}
+          </button>
+        </div>
       </header>
 
-      <div className={compare.on ? styles.compareStage : styles.soloStage}>
-        {compare.on ? (
-          <div className={styles.comparePanel}>
-            <div
-              className={`${styles.panes} ${compare.target !== "both" ? styles.panesSingle : ""}`}
-            >
-              {compare.target === "both" || compare.target === "base" ? (
-                <div className={styles.pane}>
-                  <ChatPane
-                    ref={baseRef}
-                    {...paneShared}
-                    profile={profiles.baseProfile}
-                    suggestions={suggestions}
-                    onPick={sendQuestion}
-                    onBusyChange={onBaseBusy}
-                  />
-                </div>
-              ) : null}
-              {compare.target === "both" || compare.target === "kn" ? (
-                <div className={styles.pane}>
-                  <ChatPane
-                    ref={knRef}
-                    {...paneShared}
-                    profile={profiles.knProfile}
-                    suggestions={suggestions}
-                    onPick={sendQuestion}
-                    onBusyChange={onKnBusy}
-                  />
-                </div>
-              ) : null}
+      <div className={styles.soloStage}>
+        <div className={styles.soloPanel}>
+          <ChatPane
+            ref={paneRef}
+            env={env}
+            tokenProvider={tokenProvider}
+            modelTokenProvider={llmTokenProvider}
+            networkName={networkName}
+            models={models}
+            modelsLoaded={modelsLoaded}
+            knContext={knContext}
+            knSummary={knSummary}
+            getTools={getTools}
+            resourceScope={knResourceIds}
+            pageScrollRef={pageScrollRef}
+            profile={profile}
+            suggestions={suggestions}
+            onPick={sendQuestion}
+            onBusyChange={setBusy}
+          />
+          <div className={styles.composer}>
+            <div className={styles.cwrap}>
+              <textarea
+                className={styles.cInput}
+                value={input}
+                rows={1}
+                disabled={noLlm}
+                placeholder={placeholder}
+                spellCheck={false}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  // Ignore Enter used to confirm a candidate during Chinese IME composition to avoid accidental sends.
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing &&
+                    e.keyCode !== 229
+                  ) {
+                    e.preventDefault();
+                    sendInput();
+                  }
+                }}
+              />
+              {busy ? (
+                <button type="button" className={styles.stopBtn} onClick={stop}>
+                  {t("knowledgeNetwork.agentChat.composer.stop")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.sendBtn}
+                  onClick={sendInput}
+                  disabled={!input.trim() || noLlm}
+                >
+                  {t("knowledgeNetwork.agentChat.composer.send")}
+                </button>
+              )}
             </div>
-            {composer}
           </div>
-        ) : (
-          <div className={styles.soloPanel}>
-            <ChatPane
-              ref={soloRef}
-              {...paneShared}
-              profile={profiles.soloProfile}
-              suggestions={suggestions}
-              showToolbar={false}
-              onPick={sendQuestion}
-              onBusyChange={onSoloBusy}
-            />
-            {composer}
-          </div>
-        )}
+        </div>
       </div>
-
-      <Modal
-        open={report !== null}
-        onCancel={closeReport}
-        footer={null}
-        width="min(1120px, 94vw)"
-        title={t("knowledgeNetwork.agentChat.composer.report")}
-      >
-        {report ? (
-          <div className={styles.rptRoot}>
-            {report.base.rounds.length === 0 && report.kn.rounds.length === 0 ? (
-              <p className={styles.rptHint}>{t("knowledgeNetwork.agentChat.report.emptyDialog")}</p>
-            ) : (
-              <>
-                <div className={styles.rptActions}>
-                  <button type="button" className={styles.rptActBtn} onClick={copyReportMd}>
-                    <CopyOutlined /> {t("knowledgeNetwork.agentChat.report.copyMarkdown")}
-                  </button>
-                  <button type="button" className={styles.rptActBtn} onClick={exportReportMd}>
-                    <DownloadOutlined /> {t("knowledgeNetwork.agentChat.report.exportMarkdown")}
-                  </button>
-                </div>
-                {/* 会话总览（汇总对比） */}
-                {(() => {
-                  const agg = (s: PaneSnapshot) => {
-                    const calls = s.rounds.flatMap((r) => r.toolCalls);
-                    return {
-                      rounds: s.rounds.length,
-                      calls: calls.length,
-                      ok: calls.filter((t) => t.status === "done").length,
-                      err: calls.filter((t) => t.status === "error").length,
-                      avgTokens:
-                        s.rounds.length > 0 ? Math.round(s.stats.tokens / s.rounds.length) : 0,
-                      avgMs: s.rounds.length > 0 ? s.stats.ms / s.rounds.length : 0,
-                      neg: s.rounds.filter((r) => r.outcome !== "answered").length,
-                    };
-                  };
-                  const b = report.base;
-                  const k = report.kn;
-                  const ba = agg(b);
-                  const ka = agg(k);
-                  const both = ba.rounds > 0 && ka.rounds > 0;
-                  const bBestTok = both && b.stats.tokens < k.stats.tokens;
-                  const kBestTok = both && k.stats.tokens < b.stats.tokens;
-                  const bBestMs = both && b.stats.ms < k.stats.ms;
-                  const kBestMs = both && k.stats.ms < b.stats.ms;
-                  const callsCell = (a: ReturnType<typeof agg>) => (
-                    <>
-                      {a.calls}
-                      {a.calls > 0 ? (
-                        <>
-                          {" · "}
-                          <span className={styles.rptOkTxt}>
-                            {a.ok} {t("knowledgeNetwork.agentChat.report.success")}
-                          </span>
-                          {a.err > 0 ? (
-                            <>
-                              {" / "}
-                              <span className={styles.rptErrTxt}>
-                                {a.err} {t("knowledgeNetwork.agentChat.report.failed")}
-                              </span>
-                            </>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </>
-                  );
-                  return (
-                    <table className={styles.rptTable}>
-                      <thead>
-                        <tr>
-                          <th>
-                            {t("knowledgeNetwork.agentChat.report.overviewRounds", {
-                              rounds: Math.max(ba.rounds, ka.rounds),
-                            })}
-                          </th>
-                          <th>
-                            <span className={styles.paneTitle}>
-                              {t("knowledgeNetwork.agentChat.profiles.baseTitle")}
-                            </span>
-                          </th>
-                          <th>
-                            <span className={`${styles.paneTitle} ${styles.paneTitleHl}`}>
-                              {t("knowledgeNetwork.agentChat.profiles.knTitle")}
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.model")}</td>
-                          <td>{b.model || "—"}</td>
-                          <td>{k.model || "—"}</td>
-                        </tr>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.totalTokens")}</td>
-                          <td className={bBestTok ? styles.rptBest : ""}>
-                            {fmtTokens(b.stats.tokens)}
-                          </td>
-                          <td className={kBestTok ? styles.rptBest : ""}>
-                            {fmtTokens(k.stats.tokens)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.totalDuration")}</td>
-                          <td className={bBestMs ? styles.rptBest : ""}>
-                            {fmtDuration(b.stats.ms)}
-                          </td>
-                          <td className={kBestMs ? styles.rptBest : ""}>
-                            {fmtDuration(k.stats.ms)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.averagePerRound")}</td>
-                          <td>
-                            {ba.rounds > 0
-                              ? `${fmtTokens(ba.avgTokens)} tokens · ${fmtDuration(ba.avgMs)}`
-                              : "—"}
-                          </td>
-                          <td>
-                            {ka.rounds > 0
-                              ? `${fmtTokens(ka.avgTokens)} tokens · ${fmtDuration(ka.avgMs)}`
-                              : "—"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.totalToolCalls")}</td>
-                          <td>{callsCell(ba)}</td>
-                          <td>{callsCell(ka)}</td>
-                        </tr>
-                        <tr>
-                          <td>{t("knowledgeNetwork.agentChat.report.invalidRounds")}</td>
-                          <td className={ba.neg > 0 ? styles.rptErrTxt : ""}>{ba.neg}</td>
-                          <td className={ka.neg > 0 ? styles.rptErrTxt : ""}>{ka.neg}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  );
-                })()}
-
-                {/* 逐轮对比 */}
-                {Array.from(
-                  { length: Math.max(report.base.rounds.length, report.kn.rounds.length) },
-                  (_, i) => {
-                    const b = report.base.rounds[i];
-                    const k = report.kn.rounds[i];
-                    const sameQ = !b || !k || b.question === k.question;
-                    const bBestTokens =
-                      b?.tokens != null && k?.tokens != null && b.tokens < k.tokens;
-                    const kBestTokens =
-                      b?.tokens != null && k?.tokens != null && k.tokens < b.tokens;
-                    const bBestMs = b?.ms != null && k?.ms != null && b.ms < k.ms;
-                    const kBestMs = b?.ms != null && k?.ms != null && k.ms < b.ms;
-                    const toolCell = (r?: (typeof report.base.rounds)[number]) => {
-                      if (!r) return "—";
-                      const ok = r.toolCalls.filter((t) => t.status === "done").length;
-                      const err = r.toolCalls.filter((t) => t.status === "error").length;
-                      return (
-                        <>
-                          {r.toolCalls.length}
-                          {r.toolCalls.length > 0 ? (
-                            <>
-                              {" · "}
-                              <span className={styles.rptOkTxt}>
-                                {ok} {t("knowledgeNetwork.agentChat.report.success")}
-                              </span>
-                              {err > 0 ? (
-                                <>
-                                  {" / "}
-                                  <span className={styles.rptErrTxt}>
-                                    {err} {t("knowledgeNetwork.agentChat.report.failed")}
-                                  </span>
-                                </>
-                              ) : null}
-                              <div className={styles.rptToolTags}>
-                                {r.toolCalls.map((t, j) => (
-                                  <span
-                                    key={`${t.name}-${j}`}
-                                    className={`${styles.rptTool} ${t.status === "error" ? styles.rptToolErr : ""}`}
-                                  >
-                                    {t.name}
-                                  </span>
-                                ))}
-                              </div>
-                            </>
-                          ) : null}
-                        </>
-                      );
-                    };
-                    return (
-                      <div key={i} className={styles.rptRound}>
-                        <div className={styles.rptQ}>
-                          <span className={styles.rptRoundNo}>
-                            {t("knowledgeNetwork.agentChat.report.roundTitle", { round: i + 1 })}
-                          </span>
-                          <span className={styles.rptQMark}>“</span>
-                          <span>
-                            {sameQ
-                              ? (k?.question ?? b?.question ?? "—")
-                              : t("knowledgeNetwork.agentChat.report.questionBoth", {
-                                  baseQuestion: b?.question ?? "—",
-                                  knQuestion: k?.question ?? "—",
-                                })}
-                          </span>
-                        </div>
-                        <table className={styles.rptTable}>
-                          <tbody>
-                            <tr>
-                              <td>token</td>
-                              <td className={bBestTokens ? styles.rptBest : ""}>
-                                {b?.tokens != null ? fmtTokens(b.tokens) : "—"}
-                              </td>
-                              <td className={kBestTokens ? styles.rptBest : ""}>
-                                {k?.tokens != null ? fmtTokens(k.tokens) : "—"}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>{t("knowledgeNetwork.agentChat.report.duration")}</td>
-                              <td className={bBestMs ? styles.rptBest : ""}>
-                                {b?.ms != null ? fmtDuration(b.ms) : "—"}
-                              </td>
-                              <td className={kBestMs ? styles.rptBest : ""}>
-                                {k?.ms != null ? fmtDuration(k.ms) : "—"}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td>{t("knowledgeNetwork.agentChat.report.toolCalls")}</td>
-                              <td>{toolCell(b)}</td>
-                              <td>{toolCell(k)}</td>
-                            </tr>
-                            <tr>
-                              <td>{t("knowledgeNetwork.agentChat.report.result")}</td>
-                              <td className={b && b.outcome !== "answered" ? styles.rptErrTxt : ""}>
-                                {b ? outcomeLabel(b.outcome, t) : "—"}
-                              </td>
-                              <td className={k && k.outcome !== "answered" ? styles.rptErrTxt : ""}>
-                                {k ? outcomeLabel(k.outcome, t) : "—"}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <div className={styles.rptAnsGrid}>
-                          {(
-                            [
-                              {
-                                key: "base",
-                                title: t("knowledgeNetwork.agentChat.profiles.baseTitle"),
-                                hl: false,
-                                round: b,
-                              },
-                              {
-                                key: "kn",
-                                title: t("knowledgeNetwork.agentChat.profiles.knTitle"),
-                                hl: true,
-                                round: k,
-                              },
-                            ] as const
-                          ).map(({ key, title, hl, round }) => {
-                            const negative = !!round && round.outcome !== "answered";
-                            return (
-                              <details key={key} className={styles.rptAnsBox}>
-                                <summary className={styles.rptAnsHead}>
-                                  <span
-                                    className={`${styles.paneTitle} ${hl ? styles.paneTitleHl : ""}`}
-                                  >
-                                    {title}
-                                  </span>
-                                  {negative ? (
-                                    <span className={styles.rptErrTxt}>
-                                      {outcomeLabel(round.outcome, t)}
-                                    </span>
-                                  ) : (
-                                    <span className={styles.rptAnsLbl}>
-                                      {t("knowledgeNetwork.agentChat.report.answerToggle")}
-                                    </span>
-                                  )}
-                                </summary>
-                                <div className={styles.rptAnsBody}>
-                                  {negative ? (
-                                    <div className={styles.rptErrTxt}>
-                                      {outcomeLabel(round.outcome, t)}
-                                    </div>
-                                  ) : null}
-                                  {round?.answer ? (
-                                    <MarkdownView text={round.answer} />
-                                  ) : negative ? null : (
-                                    <span className={styles.rptHint}>
-                                      {t("knowledgeNetwork.agentChat.answer.empty")}
-                                    </span>
-                                  )}
-                                </div>
-                              </details>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  },
-                )}
-
-                <div className={styles.rptSumHead}>
-                  <span>{t("knowledgeNetwork.agentChat.report.aiSummary")}</span>
-                  <button
-                    type="button"
-                    className={styles.rptGenBtn}
-                    onClick={() => void generateSummary()}
-                    disabled={summarizing}
-                  >
-                    {summarizing
-                      ? t("knowledgeNetwork.agentChat.report.generating")
-                      : summary
-                        ? t("knowledgeNetwork.agentChat.report.regenerateSummary")
-                        : t("knowledgeNetwork.agentChat.report.generateSummary")}
-                  </button>
-                </div>
-                {summary ? (
-                  <div className={styles.rptSummary}>
-                    <MarkdownView text={summary} />
-                  </div>
-                ) : (
-                  <p className={styles.rptHint}>
-                    {summarizing
-                      ? t("knowledgeNetwork.agentChat.report.thinking")
-                      : t("knowledgeNetwork.agentChat.report.summaryHint")}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        ) : null}
-      </Modal>
     </div>
   );
 }
