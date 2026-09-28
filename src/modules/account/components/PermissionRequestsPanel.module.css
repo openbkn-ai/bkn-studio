@@ -143,13 +143,7 @@
   border-radius: 4px;
   border-color: var(--color-primary-border);
   color: var(--color-text-link);
-.resourcePill {
-  background: var(--color-primary-50);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  border-color: var(--color-primary-border);
-  color: var(--color-text-link);
-  display: inline-block;
+  display: inline-flex;
   height: auto;
   line-height: 22px;
   max-width: 100%;
@@ -159,7 +153,6 @@
   text-overflow: ellipsis;
   vertical-align: baseline;
   white-space: nowrap;
-}
 }
 
 .resourcePillAction {
