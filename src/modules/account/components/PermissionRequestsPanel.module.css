@@ -146,8 +146,36 @@
   display: inline-flex;
   height: auto;
   line-height: 22px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   padding: 0 8px;
+  text-overflow: ellipsis;
   vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.resourcePillAction {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.resourcePillAction:hover {
+  background: var(--color-primary-100);
+}
+
+.resourceReference {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.resourceDeletedHint {
+  color: var(--color-error-text);
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .sectionTitle {
