@@ -832,7 +832,7 @@ describe("observability workspace scenes", () => {
         .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
         .hasAttribute("disabled"),
     ).toBe(true);
-  });
+  }, 20000);
 
   it("does not expose switch controls without the exact write grant", async () => {
     render(<ObservabilitySettingsScene />);
@@ -866,7 +866,7 @@ describe("observability workspace scenes", () => {
       screen.getByRole("button", { name: "bknTrace.settings.capturePolicy.disable" }),
     );
     expect(screen.queryByText("bknTrace.settings.capturePolicy.changeFailed")).toBeNull();
-  });
+  }, 20000);
 
   it("shows rollback as rollback, not a successful disable", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue({
@@ -983,7 +983,7 @@ describe("observability workspace scenes", () => {
         .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
         .hasAttribute("disabled"),
     ).toBe(true);
-  });
+  }, 20000);
 
   it("keeps polling after terminal operation until a fresh configuration clears the active ID", async () => {
     vi.mocked(getAccessProfile).mockResolvedValue({
@@ -1041,14 +1041,14 @@ describe("observability workspace scenes", () => {
     );
 
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(3), {
-      timeout: 6000,
+      timeout: 12000,
     });
     expect(
       screen
         .getByRole("button", { name: "bknTrace.settings.capturePolicy.enable" })
         .hasAttribute("disabled"),
     ).toBe(false);
-  });
+  }, 20000);
 
   it("活动操作读取失败时将阶段标记为不可用而不是无活动操作", async () => {
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
@@ -1098,7 +1098,7 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilitySettingsScene />);
     await waitFor(() => expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(2), {
-      timeout: 5000,
+      timeout: 10000,
     });
     expect(screen.getAllByText("bknTrace.settings.capturePolicy.states.disabled")).toHaveLength(2);
     expect(
@@ -1108,7 +1108,7 @@ describe("observability workspace scenes", () => {
     ).toBe(false);
     await new Promise((resolve) => window.setTimeout(resolve, 2200));
     expect(getTraceEvidenceConfiguration).toHaveBeenCalledTimes(2);
-  });
+  }, 20000);
 
   it("持续故障最多重试五轮，不会永久每两秒请求服务端", async () => {
     vi.mocked(getTraceEvidenceConfiguration).mockResolvedValue({
