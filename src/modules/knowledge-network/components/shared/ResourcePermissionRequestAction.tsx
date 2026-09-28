@@ -32,6 +32,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type KeyboardEvent,
   type MouseEvent,
@@ -88,7 +89,10 @@ type ProposalPreview = {
 };
 
 type ResourcePermissionRequestActionProps = {
+  initialOperations?: string[];
   initialProposalKind?: ProposalKind;
+  initialPropertyNames?: string[];
+  initialReason?: string;
   operations?: string[];
   resourceType: string;
   resourceID: string;
@@ -108,7 +112,10 @@ function requestResourceIcon(resourceType: string) {
 }
 
 export function ResourcePermissionRequestAction({
+  initialOperations = [],
   initialProposalKind = "grant",
+  initialPropertyNames = [],
+  initialReason = "",
   operations,
   resourceType,
   resourceID,
@@ -138,6 +145,8 @@ export function ResourcePermissionRequestAction({
   const [objectProperties, setObjectProperties] = useState<
     Array<{ displayName?: string; name: string }>
   >([]);
+  const initialOperationsApplied = useRef(false);
+  const initialPropertiesApplied = useRef(false);
   const [form] = Form.useForm<RequestForm>();
   const requestOpen = open ?? internalOpen;
   const hasRowFilter = Boolean(proposalPreview?.row_filter?.policy?.conditions.length);
@@ -184,11 +193,14 @@ export function ResourcePermissionRequestAction({
     [selectableOperations, selectedOperations],
   );
 
-  const setOperations = (next: string[]) => {
-    const normalized = [...new Set(next)];
-    setSelectedOperations(normalized);
-    form.setFieldValue("operations", normalized);
-  };
+  const setOperations = useCallback(
+    (next: string[]) => {
+      const normalized = [...new Set(next)];
+      setSelectedOperations(normalized);
+      form.setFieldValue("operations", normalized);
+    },
+    [form],
+  );
   const toggleOperation = (operationKey: string) => {
     setSelectedOperations((current) => {
       const next = togglePermissionRequestOperation(current, operationKey, selectableOperations);
@@ -215,14 +227,17 @@ export function ResourcePermissionRequestAction({
     let active = true;
     setLoading(true);
     form.resetFields();
+    form.setFieldValue("reason", initialReason);
     setPending(false);
     setPendingOperations([]);
     setPendingProposalKinds([]);
     setSelectedOperations([]);
+    initialOperationsApplied.current = false;
     setProposalKind(initialProposalKind);
     setProposalPreview(undefined);
     setProposalPreviewResolved(resourceType !== "object_type");
     setSelectedPropertyNames([]);
+    initialPropertiesApplied.current = false;
     setObjectProperties([]);
     void listPermissionRequests("mine", 20, 0, {
       resourceID,
@@ -264,7 +279,23 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [form, initialProposalKind, message, requestOpen, resourceID, resourceType]);
+  }, [form, initialProposalKind, initialReason, message, requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (!requestOpen || loading || initialOperationsApplied.current) return;
+    initialOperationsApplied.current = true;
+    if (proposalKind !== "grant") return;
+    setOperations(
+      initialOperations.filter((operation) => selectableOperationKeys.includes(operation)),
+    );
+  }, [
+    initialOperations,
+    loading,
+    proposalKind,
+    requestOpen,
+    selectableOperationKeys,
+    setOperations,
+  ]);
 
   useEffect(() => {
     if (!requestOpen || resourceType !== "object_type") return;
@@ -301,6 +332,29 @@ export function ResourcePermissionRequestAction({
       active = false;
     };
   }, [requestOpen, resourceID, resourceType]);
+
+  useEffect(() => {
+    if (
+      !requestOpen ||
+      !proposalPreviewResolved ||
+      proposalKind !== "property_grants" ||
+      initialPropertiesApplied.current
+    )
+      return;
+    initialPropertiesApplied.current = true;
+    const requestableProperties = new Set(
+      restrictedProperties.map((property) => property.property_name),
+    );
+    setSelectedPropertyNames(
+      initialPropertyNames.filter((property) => requestableProperties.has(property)),
+    );
+  }, [
+    initialPropertyNames,
+    proposalKind,
+    proposalPreviewResolved,
+    requestOpen,
+    restrictedProperties,
+  ]);
 
   useEffect(() => {
     if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved) return;

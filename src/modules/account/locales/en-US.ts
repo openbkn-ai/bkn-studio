@@ -27,8 +27,8 @@ export const accountEnUS = {
         description: "Issue and manage API keys for external systems and agent access.",
       },
       permissionRequests: {
-        title: "Permission review",
-        description: "View and process resource permission reviews.",
+        title: "Permission tickets",
+        description: "View and process resource permission tickets.",
       },
     },
     profileSoon: "Profile editing is coming soon.",
