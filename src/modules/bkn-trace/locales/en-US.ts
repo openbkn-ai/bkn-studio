@@ -1135,6 +1135,7 @@ export const bknTraceEnUS = {
         notRequested: "The current account did not request the registered source inventory.",
         sourceId: "Source ID",
         owner: "Component",
+        modules: "Business modules",
         declaredMethod: "Declared collection method",
         queryStatus: "Query-source status",
         coverageStatus: "End-to-end coverage",

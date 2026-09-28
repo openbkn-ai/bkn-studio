@@ -30,6 +30,9 @@ import {
 import { AuditLogPage } from "@/modules/system-admin/pages/AuditLogPage";
 
 const translate = (key: string, options?: Record<string, unknown>) => {
+  if (key === "bknTrace.settings.inventory.coverage.verified") {
+    return typeof options?.defaultValue === "string" ? options.defaultValue : key;
+  }
   const value =
     {
       "bknTrace.logs.authenticatedUser": "已认证用户",
@@ -1174,6 +1177,30 @@ describe("observability workspace scenes", () => {
     expect(
       within(modelRow!).getByText("bknTrace.settings.inventory.query.not_listed"),
     ).not.toBeNull();
+    expect(within(modelRow!).getByText("Model Platform")).not.toBeNull();
+    expect(within(modelRow!).getByText("Model Manager")).not.toBeNull();
+  });
+
+  it("注册来源缺少模块映射且出现新覆盖状态时仍可显示", async () => {
+    vi.mocked(listLogSourceInventory).mockResolvedValue({
+      registryVersion: "0.3.19",
+      data: [
+        {
+          sourceId: "future-source",
+          owner: "Future Component",
+          declaredCollectionMethod: "kafka_audit",
+          declaredReliability: "best_effort",
+          queryStatus: "not_listed",
+          coverageStatus: "verified",
+        },
+      ],
+    });
+    render(<ObservabilitySettingsScene />);
+
+    const row = (await screen.findByText("future-source")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row!).getByText("Future Component")).not.toBeNull();
+    expect(within(row!).getByText("verified")).not.toBeNull();
   });
 
   it("已返回但未接入的来源不会显示为采集正常", async () => {

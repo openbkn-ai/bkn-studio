@@ -341,10 +341,15 @@ export function ObservabilitySettingsScene() {
   const inventoryColumns: ColumnsType<RegisteredLogSource> = [
     { dataIndex: "sourceId", key: "sourceId", title: t("bknTrace.settings.inventory.sourceId") },
     {
+      dataIndex: "owner",
+      key: "owner",
+      title: t("bknTrace.settings.inventory.owner"),
+    },
+    {
       dataIndex: "modules",
       key: "modules",
-      title: t("bknTrace.settings.inventory.owner"),
-      render: (modules: string[], row) => (modules.length ? modules.join("、") : row.owner),
+      title: t("bknTrace.settings.inventory.modules"),
+      render: (modules?: string[]) => (modules?.length ? modules.join("、") : "—"),
     },
     {
       dataIndex: "declaredCollectionMethod",
@@ -365,7 +370,7 @@ export function ObservabilitySettingsScene() {
       key: "coverageStatus",
       title: t("bknTrace.settings.inventory.coverageStatus"),
       render: (status: RegisteredLogSource["coverageStatus"]) => (
-        <Tag>{t(`bknTrace.settings.inventory.coverage.${status}`)}</Tag>
+        <Tag>{t(`bknTrace.settings.inventory.coverage.${status}`, { defaultValue: status })}</Tag>
       ),
     },
   ];

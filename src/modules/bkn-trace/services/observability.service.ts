@@ -133,12 +133,12 @@ export type LogSourceStatus = {
 export type RegisteredLogSource = {
   sourceId: string;
   owner: string;
-  modules: string[];
+  modules?: string[];
   declaredCollectionMethod: string;
   declaredReliability: string;
   queryStatus: string;
   queryReason?: string;
-  coverageStatus: "unverified";
+  coverageStatus: string;
 };
 
 export type LogSourceInventory = {
@@ -298,12 +298,12 @@ export async function listLogSourceInventory(): Promise<LogSourceInventory> {
     data: Array<{
       source_id: string;
       owner: string;
-      modules: string[];
+      modules?: string[];
       declared_collection_method: string;
       declared_reliability: string;
       query_status: string;
       query_reason?: string;
-      coverage_status: "unverified";
+      coverage_status: string;
     }>;
   }>(`${OBSERVABILITY_API_PREFIX}/log-source-inventory`, { skipErrorToast: true });
   return {

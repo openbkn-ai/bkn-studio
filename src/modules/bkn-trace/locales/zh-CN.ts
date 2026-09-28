@@ -1069,6 +1069,7 @@ export const bknTraceZhCN = {
         notRequested: "当前账号未请求注册来源清单。",
         sourceId: "来源 ID",
         owner: "所属组件",
+        modules: "业务模块",
         declaredMethod: "声明采集方式",
         queryStatus: "查询来源状态",
         coverageStatus: "端到端覆盖",
