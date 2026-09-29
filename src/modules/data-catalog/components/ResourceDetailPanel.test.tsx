@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -279,14 +279,109 @@ describe("ResourceDetailPanel", () => {
           active
           canEdit
           catalog={null}
-          resource={{ ...resource, category: "logicview" }}
+          resource={{ ...resource, category: "logicview", lastDiscoverStatus: "updated" }}
         />
       </MemoryRouter>,
     );
 
     expect(screen.getByText("dataCatalog.categories.logicview")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.categories.logicview").parentElement?.className).toContain(
+      "basicInfoHalf",
+    );
+    expect(
+      screen.getByText("dataCatalog.resource.enabledStatus").parentElement?.className,
+    ).toContain("basicInfoHalf");
+    expect(screen.queryByText("dataCatalog.resource.resourceStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.statusMessage")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexState")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexName")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.discoverStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.discoverStatuses.updated")).toBeNull();
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
     expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.originalName")).toBeTruthy();
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.sourceObjectType")).toBeTruthy();
+    for (const label of [
+      "originalDescription",
+      "schemaName",
+      "sourcePrimaryKeys",
+      "fieldCount",
+      "rowCount",
+      "sourceIndexCount",
+      "sourceForeignKeyCount",
+    ]) {
+      expect(within(sourceMetadata).queryByText(`dataCatalog.resource.${label}`)).toBeNull();
+    }
+  });
+
+  it("places a derived view source in source metadata and its filter after fields", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logicview",
+            logicType: "derived",
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [
+                  { field: "amount", operation: ">", value: 1000 },
+                  {
+                    operation: "or",
+                    sub_conditions: [
+                      { field: "id", operation: "==", value: 1 },
+                      { field: "id", operation: "==", value: 2 },
+                    ],
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dataCatalog.resource.viewDefinition")).toBeNull();
+    expect(screen.getByRole("button", { name: "dataCatalog.viewEditor.edit" })).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.viewSource")).toBeTruthy();
+    expect(within(sourceMetadata).getByRole("button", { name: "source-orders" })).toBeTruthy();
+    const filterHeading = screen.getByText("dataCatalog.resource.viewFixedFilter");
+    const fieldsHeading = screen.getByText("dataCatalog.resource.schemaSection");
+    expect(filterHeading.parentElement).not.toBe(fieldsHeading.parentElement);
+    expect(
+      fieldsHeading.compareDocumentPosition(filterHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const filterCard = within(filterHeading.parentElement!);
+    expect(filterCard.getByText("dataCatalog.filter.and")).toBeTruthy();
+    expect(filterCard.getByText("dataCatalog.filter.or")).toBeTruthy();
+    expect(filterCard.getAllByText("amount")).toHaveLength(2);
+    expect(filterCard.getByText(">")).toBeTruthy();
+    expect(filterCard.getByText("1000")).toBeTruthy();
+    expect(filterCard.queryByRole("textbox")).toBeNull();
+    expect(filterCard.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps discovery status visible for a table", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, lastDiscoverStatus: "updated" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.resource.discoverStatus")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.discoverStatuses.updated")).toBeTruthy();
   });
 
   it("refreshes the resource version after an update conflict", async () => {

@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog";
@@ -40,6 +40,23 @@ vi.mock("@/framework/ui/common/TablePaginationBar", () => ({
   ),
 }));
 
+vi.mock("@/modules/data-catalog/components/FilterTreeEditor", () => ({
+  FilterTreeEditor: ({ onChange }: { onChange: (value: unknown) => void }) => (
+    <button
+      onClick={() =>
+        onChange({
+          kind: "group",
+          operation: "and",
+          children: [{ kind: "rule", field: "id", operation: ">", value: "10" }],
+        })
+      }
+      type="button"
+    >
+      set-test-filter
+    </button>
+  ),
+}));
+
 import { ResourcePreviewPanel } from "./ResourcePreviewPanel";
 
 const resource: CatalogResource = {
@@ -61,6 +78,78 @@ const resource: CatalogResource = {
 describe("ResourcePreviewPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("shows type, display name, and field name together in Table and View headers", () => {
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    for (const category of ["table", "logicview"] as const) {
+      const { unmount } = render(
+        <ResourcePreviewPanel
+          active
+          resource={{
+            ...resource,
+            category,
+            schema: [
+              { name: "amount", displayName: "订单金额", type: "decimal(18,2)" },
+              { name: "status", type: "string" },
+            ],
+          }}
+        />,
+      );
+
+      const amount = screen.getByRole("columnheader", { name: /订单金额/ });
+      expect(within(amount).getByText("dec").closest("[title]")).toHaveAttribute(
+        "title",
+        "decimal(18,2)",
+      );
+      expect(within(amount).getByText("amount").parentElement?.className).not.toContain(
+        "namesInline",
+      );
+      const status = screen.getByRole("columnheader", { name: /status/ });
+      expect(within(status).getByText("[Str]")).toBeTruthy();
+      expect(within(status).getAllByText("status")).toHaveLength(1);
+      unmount();
+    }
+  });
+
+  it("applies and clears a temporary filter for both Table and View previews", async () => {
+    previewCatalogResourceMock.mockResolvedValue({ rows: [], total: 0 });
+    for (const category of ["table", "logicview"] as const) {
+      const { unmount } = render(
+        <ResourcePreviewPanel
+          active
+          resource={{ ...resource, category, schema: [{ name: "id", type: "integer" }] }}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "set-test-filter" }));
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.applyFilter" }));
+      await waitFor(() =>
+        expect(previewCatalogResourceMock).toHaveBeenCalledWith(
+          "resource-1",
+          expect.objectContaining({
+            filterCondition: {
+              operation: "and",
+              sub_conditions: [{ field: "id", operation: ">", value: 10 }],
+            },
+            offset: 0,
+          }),
+        ),
+      );
+      previewCatalogResourceMock.mockClear();
+      fireEvent.click(screen.getByRole("button", { name: "dataCatalog.preview.clearFilter" }));
+      await waitFor(() => {
+        expect(previewCatalogResourceMock).toHaveBeenCalledWith(
+          "resource-1",
+          expect.objectContaining({ offset: 0 }),
+        );
+        const latestQuery = previewCatalogResourceMock.mock.lastCall?.[1] as
+          Record<string, unknown> | undefined;
+        expect(latestQuery).not.toHaveProperty("filterCondition");
+      });
+      unmount();
+      previewCatalogResourceMock.mockClear();
+    }
   });
 
   it("uses the shared warning alert for a permission-disabled preview", () => {

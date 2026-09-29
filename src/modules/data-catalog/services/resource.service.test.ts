@@ -54,6 +54,15 @@ describe("resource.service · previewCatalogResource", () => {
     expect(result).toEqual({ querySource: "local_index", rows: [{ id: "r-1" }], total: 42 });
   });
 
+  it("sends a preview filter with the query without persisting it", async () => {
+    postMock.mockResolvedValue({ data: { entries: [], total_count: 0 } });
+    const { previewCatalogResource } =
+      await import("@/modules/data-catalog/services/resource.service");
+    const filterCondition = { field: "id", operation: ">", value: 10 };
+    await previewCatalogResource("r-1", { filterCondition, limit: 10, offset: 0 });
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({ filter_condition: filterCondition });
+  });
+
   it("preserves an unsafe int64 preview total", async () => {
     postMock.mockImplementation(
       (_url: string, _body: unknown, config: { transformResponse?: (data: unknown) => unknown }) =>
@@ -180,6 +189,134 @@ describe("resource.service · previewCatalogResource", () => {
     } finally {
       customer.localIndexName = localIndexName;
     }
+  });
+});
+
+describe("resource.service · derived view contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("VITE_USE_MOCK", "false");
+    getMock.mockReset();
+    postMock.mockReset();
+    putMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("creates a view with source bindings, a custom display name, and tags", async () => {
+    postMock.mockResolvedValue({ data: { id: "view-1" } });
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-1",
+            name: "orders_view",
+            logic_type: "derived",
+            logic_definition: { source_resource_id: "source-1" },
+            schema_definition: [
+              { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
+            ],
+            tags: ["orders"],
+          },
+        ],
+      },
+    });
+    const { createDerivedView } = await import("@/modules/data-catalog/services/resource.service");
+
+    const created = await createDerivedView({
+      catalogId: "cat-1",
+      description: "",
+      enabled: false,
+      name: "orders_view",
+      sourceResourceId: "source-1",
+      tags: ["orders"],
+      schema: [{ name: "order_id", originalName: "id", type: "integer", displayName: "Order ID" }],
+    });
+
+    expect(postMock.mock.calls[0]?.[1]).toMatchObject({
+      catalog_id: "cat-1",
+      category: "logicview",
+      enabled: false,
+      logic_type: "derived",
+      logic_definition: { source_resource_id: "source-1" },
+      tags: ["orders"],
+      schema_definition: [
+        { name: "order_id", original_name: "id", type: "integer", display_name: "Order ID" },
+      ],
+    });
+    expect(postMock.mock.calls[0]?.[1]).not.toHaveProperty("source_identifier");
+    const createPayload = postMock.mock.calls[0]?.[1] as {
+      schema_definition: Array<Record<string, unknown>>;
+    };
+    expect(createPayload.schema_definition[0]).not.toHaveProperty("features");
+    expect(created.logicDefinition?.sourceResourceId).toBe("source-1");
+    expect(created.schema[0]?.displayName).toBe("Order ID");
+  });
+
+  it("preserves a nested fixed filter in a complete PUT", async () => {
+    putMock.mockResolvedValue({ data: {} });
+    getMock.mockResolvedValue({
+      data: {
+        entries: [
+          {
+            catalog_id: "cat-1",
+            category: "logicview",
+            id: "view-1",
+            name: "orders_view",
+            logic_type: "derived",
+            logic_definition: { source_resource_id: "source-1" },
+          },
+        ],
+      },
+    });
+    const { updateDerivedView } = await import("@/modules/data-catalog/services/resource.service");
+    const filter = {
+      operation: "or",
+      sub_conditions: [
+        { field: "status", operation: "==", value: "active" },
+        { field: "status", operation: "==", value: "pending" },
+      ],
+    };
+
+    await updateDerivedView("view-1", {
+      catalogId: "cat-1",
+      description: "",
+      enabled: true,
+      expectedUpdateTime: 123,
+      filterCondition: filter,
+      name: "orders_view",
+      sourceResourceId: "source-1",
+      tags: [],
+      schema: [
+        {
+          name: "order_id",
+          originalName: "id",
+          type: "integer",
+          displayName: "Order ID",
+          features: [],
+        },
+      ],
+    });
+
+    expect(putMock.mock.calls[0]?.[1]).toMatchObject({
+      expected_update_time: 123,
+      logic_definition: { source_resource_id: "source-1", filter_condition: filter },
+      schema_definition: [
+        { name: "order_id", original_name: "id", display_name: "Order ID", features: [] },
+      ],
+    });
+  });
+
+  it("keeps Index as a real source category", async () => {
+    getMock.mockResolvedValue({
+      data: { entries: [{ catalog_id: "cat-1", category: "index", id: "index-1", name: "idx" }] },
+    });
+    const { getCatalogResource } = await import("@/modules/data-catalog/services/resource.service");
+    expect((await getCatalogResource("index-1"))?.category).toBe("index");
   });
 });
 

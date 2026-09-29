@@ -27,6 +27,9 @@ import {
 import type {
   CatalogResource,
   CatalogDiscoverRecord,
+  DerivedLogicDefinition,
+  DerivedViewInput,
+  DerivedViewUpdateInput,
   ResourceCategory,
   ResourceCreateInput,
   ResourceDiscoverStatus,
@@ -238,6 +241,10 @@ type BackendResourceDetailFields = {
   row_count?: number | string;
   estimated_row_count?: number | string;
   schema_definition?: BackendSchemaField[] | null;
+  logic_definition?: {
+    source_resource_id?: string;
+    filter_condition?: Record<string, unknown> | null;
+  } | null;
   source_metadata?: {
     foreign_keys?: unknown[];
     indices?: unknown[];
@@ -276,7 +283,7 @@ function formatTimestamp(value?: number) {
 }
 
 function normalizeCategory(value?: string, logicType?: string): ResourceCategory {
-  if (value === "logicview" || value === "dataset") {
+  if (value === "logicview" || value === "dataset" || value === "index") {
     return value;
   }
   if (logicType) {
@@ -361,6 +368,16 @@ function mapResource(
     lastDiscoverStatus: normalizeDiscoverStatus(item.last_discover_status),
     localIndexName: item.index_name?.trim() || undefined,
     localIndexStatus: normalizeLocalIndexStatus(item.local_status),
+    logicType:
+      item.logic_type === "derived" || item.logic_type === "composite"
+        ? item.logic_type
+        : undefined,
+    logicDefinition: item.logic_definition?.source_resource_id
+      ? {
+          sourceResourceId: item.logic_definition.source_resource_id,
+          filterCondition: item.logic_definition.filter_condition,
+        }
+      : undefined,
     sourceMetadata: mapSourceMetadata(item.source_metadata),
     // Scale fields and schema_definition are detail-only; list resources map them to null and an empty schema.
     columnCount: item.column_count ?? item.schema_definition?.length ?? null,
@@ -374,6 +391,32 @@ function mapResource(
     creatorName: item.creator?.name ?? item.creator?.id,
     updateTime: formatTimestamp(item.update_time),
     updaterName: item.updater?.name ?? item.updater?.id,
+  };
+}
+
+function mapDerivedViewSchema(field: ResourceSchemaField): BackendSchemaField {
+  return {
+    name: field.name,
+    original_name: field.originalName,
+    type: field.type,
+    display_name: field.displayName?.trim(),
+    ...(field.features === undefined
+      ? {}
+      : {
+          features: field.features.map((feature) =>
+            mapFeatureToBackend(feature, field.originalName ?? field.name),
+          ),
+        }),
+  };
+}
+
+function mapDerivedDefinition(
+  sourceResourceId: string,
+  filterCondition?: DerivedLogicDefinition["filterCondition"],
+) {
+  return {
+    source_resource_id: sourceResourceId,
+    ...(filterCondition == null ? {} : { filter_condition: filterCondition }),
   };
 }
 
@@ -632,6 +675,111 @@ export async function updateCatalogResource(id: string, input: ResourceUpdateInp
   return getCatalogResource(id);
 }
 
+/** Derived views use a dedicated write path so generic resource field mapping cannot lose source bindings. */
+export async function createDerivedView(input: DerivedViewInput): Promise<CatalogResource> {
+  if (useMock) {
+    const source = mockResources.find((item) => item.id === input.sourceResourceId);
+    if (!source || (source.category !== "table" && source.category !== "index")) {
+      throwMockRequestError(400, "VegaBackend.LogicView.InvalidSource", "Invalid source resource.");
+    }
+    const timestamp = Date.now();
+    const resource: CatalogResource = {
+      catalogId: input.catalogId,
+      category: "logicview",
+      columnCount: input.schema.length,
+      description: input.description,
+      enabled: input.enabled,
+      expectedUpdateTime: timestamp,
+      id: `res-${mockSlug(10)}`,
+      localIndexStatus: "unavailable",
+      logicDefinition: {
+        sourceResourceId: input.sourceResourceId,
+        filterCondition: input.filterCondition,
+      },
+      logicType: "derived",
+      name: input.name,
+      operations: ["view_detail", "query_data"],
+      rowCount: null,
+      schema: input.schema,
+      sourceIdentifier: "",
+      tags: input.tags,
+      updateTime: formatMockTimestamp(timestamp),
+    };
+    mockResources.unshift(resource);
+    emitMockChange();
+    return wait(resource);
+  }
+
+  const response = await http.post<{ id?: string } & BackendResource>(
+    "/vega-backend/v1/resources",
+    {
+      catalog_id: input.catalogId,
+      category: "logicview",
+      description: input.description,
+      enabled: input.enabled,
+      logic_type: "derived",
+      logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+      name: input.name,
+      schema_definition: input.schema.map(mapDerivedViewSchema),
+      tags: input.tags,
+    },
+  );
+  const created = response.data.id ? await getCatalogResource(response.data.id) : null;
+  if (!created) {
+    throw new Error("Created view detail is unavailable.");
+  }
+  return created;
+}
+
+export async function updateDerivedView(
+  id: string,
+  input: DerivedViewUpdateInput,
+): Promise<CatalogResource | null> {
+  if (useMock) {
+    const index = mockResources.findIndex((item) => item.id === id);
+    const current = mockResources[index];
+    if (!current || current.category !== "logicview" || current.logicType !== "derived") {
+      throwMockRequestError(404, "VegaBackend.Resource.NotFound", "View not found.");
+    }
+    validateMockExpectedUpdateTime(input.expectedUpdateTime);
+    if (current.expectedUpdateTime !== input.expectedUpdateTime) {
+      throwMockRequestError(409, "VegaBackend.Resource.UpdateConflict", "View has changed.");
+    }
+    const timestamp = Date.now();
+    const next: CatalogResource = {
+      ...current,
+      description: input.description,
+      enabled: input.enabled,
+      expectedUpdateTime: timestamp,
+      logicDefinition: {
+        sourceResourceId: input.sourceResourceId,
+        filterCondition: input.filterCondition,
+      },
+      name: input.name,
+      schema: input.schema,
+      tags: input.tags,
+      updateTime: formatMockTimestamp(timestamp),
+    };
+    mockResources[index] = next;
+    emitMockChange();
+    return wait(next);
+  }
+
+  await http.put(`/vega-backend/v1/resources/${id}`, {
+    catalog_id: input.catalogId,
+    category: "logicview",
+    description: input.description,
+    enabled: input.enabled,
+    expected_update_time: input.expectedUpdateTime,
+    logic_type: "derived",
+    logic_definition: mapDerivedDefinition(input.sourceResourceId, input.filterCondition),
+    name: input.name,
+    schema_definition: input.schema.map(mapDerivedViewSchema),
+    tags: input.tags,
+  });
+  return getCatalogResource(id);
+}
+
 export async function deleteCatalogResource(id: string) {
   if (useMock) {
     const index = mockResources.findIndex((item) => item.id === id);
@@ -811,6 +959,7 @@ export async function previewCatalogResource(
     {
       ...(query.ignoreLocalIndex ? { ignore_local_index: true } : {}),
       ...(query.binaryMode ? { binary_mode: query.binaryMode } : {}),
+      ...(query.filterCondition ? { filter_condition: query.filterCondition } : {}),
       need_total: true,
       paging: {
         limit: query.limit,

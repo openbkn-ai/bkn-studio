@@ -69,6 +69,7 @@ export const dataConnectEnUS = {
       confirm: "Save Anyway",
     },
     tagsPlaceholder: "Press Enter to add tags",
+    tagsHint: "Up to 5 tags, with at most 40 characters each",
     connectorTypeStep: "Connector Type",
     configStep: "Configuration",
     connectorTypeStepTitle: "Select connector type",

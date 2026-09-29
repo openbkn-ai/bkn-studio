@@ -124,7 +124,7 @@ export function ResourceWorkspaceScene({
       );
       let latestTasks: BuildTask[] = [];
       let taskLoadFailed = false;
-      if (hasCatalogOperation(catalogRecord, "task_manage")) {
+      if (detail.category !== "logicview" && hasCatalogOperation(catalogRecord, "task_manage")) {
         try {
           const latestTaskPage = await listBuildTaskPage(
             {
@@ -212,6 +212,7 @@ export function ResourceWorkspaceScene({
   }, [message, resourceId]);
 
   const refreshIndexContext = useCallback(async () => {
+    if (resource?.category === "logicview") return;
     if (!(await refreshResource()) || !hasCatalogOperation(catalog, "task_manage")) return;
     const resourceVersion = resourceVersionRef.current;
     try {
@@ -232,7 +233,7 @@ export function ResourceWorkspaceScene({
         setTaskStatusUnavailable(true);
       }
     }
-  }, [catalog, refreshResource, resourceId]);
+  }, [catalog, refreshResource, resource?.category, resourceId]);
 
   useEffect(() => {
     const previousTab = previousTabRef.current;
@@ -241,6 +242,10 @@ export function ResourceWorkspaceScene({
       void refreshResource();
     }
   }, [refreshResource, tab]);
+
+  useEffect(() => {
+    if (resource?.category === "logicview" && tab === "index") onTabChange("detail");
+  }, [onTabChange, resource?.category, tab]);
 
   useEffect(() => {
     return subscribeMockDb(() => {
@@ -264,7 +269,8 @@ export function ResourceWorkspaceScene({
   // Internal catalogs do not support semantic-understanding tasks. Missing task permission is
   // handled inside the tab panel so the navigation remains discoverable and deep links stay valid.
   const hideSemanticUnderstanding = Boolean(catalog?.builtin);
-  const discoveryFailed = resource?.lastDiscoverStatus === "error";
+  const discoveryFailed =
+    resource?.category !== "logicview" && resource?.lastDiscoverStatus === "error";
   const queryBlockReason = resource ? resourceQueryBlockReason(resource) : null;
   const resourceDisabled = queryBlockReason === "disabled";
   const resourceMissing = queryBlockReason === "missing";
@@ -290,6 +296,7 @@ export function ResourceWorkspaceScene({
   }, []);
 
   const triggerResourceDiscovery = useCallback(async () => {
+    if (resource?.category === "logicview") return;
     setResourceAction("discover");
     try {
       await discoverCatalogResource(resourceId);
@@ -299,7 +306,7 @@ export function ResourceWorkspaceScene({
     } finally {
       setResourceAction(null);
     }
-  }, [message, resourceId, t]);
+  }, [message, resource?.category, resourceId, t]);
 
   const updateResourceEnabled = useCallback(
     async (enabled: boolean) => {
@@ -326,6 +333,7 @@ export function ResourceWorkspaceScene({
   );
 
   const confirmResourceDiscovery = useCallback(() => {
+    if (resource?.category === "logicview") return;
     void modal.confirm({
       cancelText: t("common.cancel"),
       content: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmDescription"),
@@ -333,7 +341,7 @@ export function ResourceWorkspaceScene({
       onOk: triggerResourceDiscovery,
       title: t("dataCatalog.resourceWorkspace.refreshMetadataConfirmTitle"),
     });
-  }, [modal, t, triggerResourceDiscovery]);
+  }, [modal, resource?.category, t, triggerResourceDiscovery]);
 
   const confirmResourceEnabled = useCallback(
     (enabled: boolean) => {
@@ -359,6 +367,7 @@ export function ResourceWorkspaceScene({
 
   const handleTabChange = (key: string) => {
     const nextTab = key as ResourceWorkspaceTab;
+    if (resource?.category === "logicview" && nextTab === "index") return;
     if (tab === "detail" && nextTab !== "detail" && detailEditing) {
       void modal.confirm({
         cancelText: t("common.cancel"),
@@ -487,7 +496,7 @@ export function ResourceWorkspaceScene({
                   </span>
                 </>
               ) : null}
-              {!catalog?.builtin ? (
+              {!catalog?.builtin && resource.category !== "logicview" ? (
                 <>
                   <span className={styles.contextDivider}>·</span>
                   <span className={styles.contextMeta}>
@@ -501,7 +510,7 @@ export function ResourceWorkspaceScene({
             </div>
           </div>
           <Space>
-            {canManageCatalogTasks ? (
+            {canManageCatalogTasks && resource.category !== "logicview" ? (
               <AppButton
                 disabled={detailEditing}
                 icon={<ReloadOutlined />}
@@ -558,6 +567,7 @@ export function ResourceWorkspaceScene({
           <Alert
             action={
               canManageCatalogTasks &&
+              resource.category !== "logicview" &&
               !resourceDisabled &&
               !resourceStale &&
               (discoveryFailed || resourceMissing) ? (
@@ -657,26 +667,30 @@ export function ResourceWorkspaceScene({
                 </div>
               ),
             },
-            {
-              key: "index",
-              label: t("dataCatalog.resourceWorkspace.tabIndex"),
-              children: (
-                <div className={styles.tabPanel}>
-                  <ResourceIndexPanel
-                    active={tab === "index"}
-                    catalog={catalog}
-                    indexView={indexView}
-                    indexViewExplicit={indexViewExplicit}
-                    onIndexViewChange={onIndexViewChange}
-                    onLatestTaskLoaded={handleLatestTaskLoaded}
-                    onRefresh={refreshIndexContext}
-                    resource={resource}
-                    taskStatusUnavailable={taskStatusUnavailable}
-                    tasks={sortedTasks}
-                  />
-                </div>
-              ),
-            },
+            ...(resource.category === "logicview"
+              ? []
+              : [
+                  {
+                    key: "index",
+                    label: t("dataCatalog.resourceWorkspace.tabIndex"),
+                    children: (
+                      <div className={styles.tabPanel}>
+                        <ResourceIndexPanel
+                          active={tab === "index"}
+                          catalog={catalog}
+                          indexView={indexView}
+                          indexViewExplicit={indexViewExplicit}
+                          onIndexViewChange={onIndexViewChange}
+                          onLatestTaskLoaded={handleLatestTaskLoaded}
+                          onRefresh={refreshIndexContext}
+                          resource={resource}
+                          taskStatusUnavailable={taskStatusUnavailable}
+                          tasks={sortedTasks}
+                        />
+                      </div>
+                    ),
+                  },
+                ]),
             ...(hideSemanticUnderstanding
               ? []
               : [

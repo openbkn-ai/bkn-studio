@@ -156,6 +156,8 @@ export function ResourceListPanel({
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
+  const canCreateView =
+    !catalog.builtin && catalog.enabled && catalog.status === "enabled" && canManageResources;
   const activeFilterCount = [
     categoryFilter,
     statusFilter,
@@ -182,6 +184,7 @@ export function ResourceListPanel({
     hasResourceQuery ||
     canAuthorizeCatalog ||
     canRequestCatalogPermission ||
+    canCreateView ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -380,19 +383,22 @@ export function ResourceListPanel({
       ellipsis: true,
       title: t("dataCatalog.resource.indexState"),
       width: 112,
-      render: (value: CatalogResource["localIndexStatus"]) => (
-        <Tag
-          className={
-            value === "available"
-              ? styles.statusTagSuccess
-              : value === "stale"
-                ? styles.statusTagWarning
-                : styles.statusTagNeutral
-          }
-        >
-          {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
-        </Tag>
-      ),
+      render: (value: CatalogResource["localIndexStatus"], record) =>
+        record.category === "logicview" ? (
+          "—"
+        ) : (
+          <Tag
+            className={
+              value === "available"
+                ? styles.statusTagSuccess
+                : value === "stale"
+                  ? styles.statusTagWarning
+                  : styles.statusTagNeutral
+            }
+          >
+            {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
+          </Tag>
+        ),
     },
     {
       key: "actions",
@@ -441,10 +447,12 @@ export function ResourceListPanel({
             ),
           });
         }
-        moreItems.push({
-          key: "index",
-          label: indexLabel,
-        });
+        if (record.category !== "logicview") {
+          moreItems.push({
+            key: "index",
+            label: indexLabel,
+          });
+        }
         if (!catalog.builtin && canAuthorizeGrants) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({
@@ -571,6 +579,16 @@ export function ResourceListPanel({
               {canAuthorizeCatalog ? (
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("dataCatalog.catalog.authorize")}
+                </AppButton>
+              ) : null}
+              {canCreateView ? (
+                <AppButton
+                  onClick={() => {
+                    void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
+                  }}
+                  type="primary"
+                >
+                  {t("dataCatalog.viewEditor.create")}
                 </AppButton>
               ) : null}
               {canRequestCatalogPermission ? (
@@ -711,6 +729,15 @@ export function ResourceListPanel({
                 dataCatalogCreationAvailable && canManageResources ? (
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
+                  </AppButton>
+                ) : canCreateView ? (
+                  <AppButton
+                    onClick={() => {
+                      void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
+                    }}
+                    type="primary"
+                  >
+                    {t("dataCatalog.viewEditor.create")}
                   </AppButton>
                 ) : null
               ) : null

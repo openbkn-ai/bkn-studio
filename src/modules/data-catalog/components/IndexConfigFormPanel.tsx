@@ -17,6 +17,7 @@ import {
 } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
+import { FieldIdentity } from "@/modules/data-catalog/components/FieldIdentity";
 import { listBuildTaskPage } from "@/modules/data-catalog/services/build-task.service";
 import {
   loadAnalyzerCapabilities,
@@ -83,14 +84,6 @@ const isFeatureConfigField = (type: string) =>
   ["string", "text"].includes(normalizeFieldType(type));
 const isTextField = isFeatureConfigField;
 const isTextType = (type: string) => normalizeFieldType(type) === "text";
-
-function keyFieldOptionLabel(field: ResourceSchemaField): string {
-  const displayName = field.displayName?.trim();
-  if (displayName && displayName !== field.name) {
-    return `${displayName}（${field.name} · ${field.type}）`;
-  }
-  return `${field.name}（${field.type}）`;
-}
 
 const defaultFeatureNameOf = (kind: FeatureKind, index: number) => {
   const base = kind === "embedding" ? "vector" : kind;
@@ -764,7 +757,8 @@ export function IndexConfigFormPanel({
   const primaryKeyOptions = useMemo(
     () =>
       schema.filter(isPrimaryKeyField).map((field) => ({
-        label: keyFieldOptionLabel(field),
+        label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
+        searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
         value: field.name,
       })),
     [schema],
@@ -772,7 +766,8 @@ export function IndexConfigFormPanel({
   const incrementalFieldOptions = useMemo(
     () =>
       schema.filter(isIncrementalField).map((field) => ({
-        label: keyFieldOptionLabel(field),
+        label: <FieldIdentity field={field} layout="inline" name={field.name} showNameWhenSame />,
+        searchText: `${field.displayName ?? ""} ${field.name} ${field.type}`,
         value: field.name,
       })),
     [schema],
@@ -842,17 +837,29 @@ export function IndexConfigFormPanel({
     const displayName = field?.displayName?.trim();
     return displayName && displayName !== fieldName ? `${displayName}（${fieldName}）` : fieldName;
   };
-  const summarizeFields = (fields: string[]) => {
-    if (fields.length === 0) {
-      return t("dataCatalog.build.notConfigured");
-    }
-    const labels = fields.map(summaryFieldLabel);
-    if (fields.length <= 2) {
-      return labels.join(", ");
-    }
-    return `${labels.slice(0, 2).join(", ")} +${fields.length - 2}`;
-  };
   const fullFieldSummary = (fields: string[]) => fields.map(summaryFieldLabel).join(", ");
+  const renderKeyFieldSummary = (fieldNames: string[]) => {
+    if (fieldNames.length === 0) return <b>{t("dataCatalog.build.notConfigured")}</b>;
+    return (
+      <div className={formStyles.configMetricFields} title={fullFieldSummary(fieldNames)}>
+        {fieldNames.slice(0, 2).map((name) => {
+          const field = schema.find((item) => item.name === name);
+          return (
+            <span className={formStyles.configMetricField} key={name}>
+              {field ? (
+                <FieldIdentity field={field} layout="inline" name={name} showNameWhenSame />
+              ) : (
+                name
+              )}
+            </span>
+          );
+        })}
+        {fieldNames.length > 2 ? (
+          <span className={formStyles.configMetricMore}>+{fieldNames.length - 2}</span>
+        ) : null}
+      </div>
+    );
+  };
   const selectedEmbeddingGroups = featureField
     ? (eligibleEmbeddingModelGroups[featureField.name] ?? [])
     : [];
@@ -1206,15 +1213,11 @@ export function IndexConfigFormPanel({
           >
             <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.rolePrimaryKey")}</span>
-              <b title={fullFieldSummary(primaryKeyFields) || undefined}>
-                {summarizeFields(primaryKeyFields)}
-              </b>
+              {renderKeyFieldSummary(primaryKeyFields)}
             </div>
             <div className={formStyles.configMetric}>
               <span>{t("dataCatalog.build.roleIncrementalKey")}</span>
-              <b title={fullFieldSummary(incrementalFields) || undefined}>
-                {summarizeFields(incrementalFields)}
-              </b>
+              {renderKeyFieldSummary(incrementalFields)}
             </div>
             {!hideBuildControls ? (
               <div className={formStyles.configMetric}>
@@ -1415,6 +1418,7 @@ export function IndexConfigFormPanel({
                     markDirty();
                   }}
                   options={primaryKeyOptions}
+                  optionFilterProp="searchText"
                   placeholder={t("dataCatalog.build.primaryKeyFieldsPlaceholder")}
                   style={{ width: "100%" }}
                   value={primaryKeyFields}
@@ -1435,6 +1439,7 @@ export function IndexConfigFormPanel({
                     markDirty();
                   }}
                   options={incrementalFieldOptions}
+                  optionFilterProp="searchText"
                   placeholder={t("dataCatalog.build.incrementalFieldsPlaceholder")}
                   style={{ width: "100%" }}
                   value={incrementalFields}

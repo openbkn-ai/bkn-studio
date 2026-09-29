@@ -563,6 +563,52 @@ describe("ResourceWorkspaceScene", () => {
     expect(screen.queryByText("common.disable")).toBeNull();
   });
 
+  it("does not offer metadata discovery for a view", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...staleResource,
+      category: "logicview",
+      lastDiscoverStatus: "error",
+    });
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={vi.fn()}
+        resourceId={staleResource.id}
+        tab="detail"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("detail-schema-name")).toBeTruthy());
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.refreshMetadata")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resourceWorkspace.openDiscovery")).toBeNull();
+    expect(discoverCatalogResourceMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps a view out of index tasks, including a direct index tab link", async () => {
+    getCatalogResourceMock.mockResolvedValue({ ...staleResource, category: "logicview" });
+    const onTabChange = vi.fn();
+
+    render(
+      <ResourceWorkspaceScene
+        indexView="config"
+        onIndexViewChange={vi.fn()}
+        onTabChange={onTabChange}
+        resourceId={staleResource.id}
+        tab="index"
+      />,
+    );
+
+    await waitFor(() => expect(onTabChange).toHaveBeenCalledWith("detail"));
+    expect(screen.getByTestId("workspace-tabs")).not.toHaveAttribute(
+      "data-tab-keys",
+      expect.stringContaining("index"),
+    );
+    expect(screen.queryByTestId("index-task-status-unavailable")).toBeNull();
+    expect(listBuildTaskPageMock).not.toHaveBeenCalled();
+  });
+
   it("opens the shared authorization drawer from the resource workspace", async () => {
     currentPermissions.value = ["admin-authz:grant"];
     getCatalogResourceMock.mockResolvedValue(staleResource);
