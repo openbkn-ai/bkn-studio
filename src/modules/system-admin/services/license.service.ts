@@ -8,7 +8,11 @@
 import axios from "axios";
 
 import { http } from "@/framework/request/http";
-import type { LicenseDetail, LicenseState } from "@/modules/system-admin/types/license";
+import type {
+  LicenseBinding,
+  LicenseDetail,
+  LicenseState,
+} from "@/modules/system-admin/types/license";
 
 const useMock = import.meta.env.VITE_USE_MOCK !== "false";
 
@@ -16,6 +20,7 @@ const ADMIN_LICENSE = "/safe/v1/admin/license";
 
 type BackendLicenseDetail = {
   activated?: boolean;
+  binding?: string;
   contract_expires_at?: number;
   customer?: {
     email?: string;
@@ -63,6 +68,9 @@ let mockLicense: LicenseDetail = {
     project: "BKN Studio",
   },
   edition: "enterprise",
+  // Earlier than the contract end, as on a real certificate renewed in place,
+  // so the mock page shows the two dates apart.
+  expiresAt: Math.floor(Date.now() / 1000) + 60 * 86_400,
   features: ["rbac_basic", "source_sync", "execution_factory"],
   instanceFp: "fp_35dc9c8c95a091cc",
   issuedAt: Math.floor(Date.now() / 1000) - 30 * 86_400,
@@ -76,9 +84,16 @@ let mockLicense: LicenseDetail = {
 
 const mockInstanceFingerprint = "fp_35dc9c8c95a091cc";
 
+// Unknown values are dropped rather than passed through: the scene builds i18n
+// keys from this field, and a value it has no copy for would render a raw key.
+function toLicenseBinding(value?: string): LicenseBinding | undefined {
+  return value === "unbound" || value === "revoked" ? value : undefined;
+}
+
 export function mapLicenseDetail(item: BackendLicenseDetail): LicenseDetail {
   return {
     activated: item.activated ?? false,
+    binding: toLicenseBinding(item.binding),
     contractExpiresAt: item.contract_expires_at,
     customer: item.customer,
     edition: item.edition ?? "community",

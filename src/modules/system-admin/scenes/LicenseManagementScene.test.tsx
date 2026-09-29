@@ -111,6 +111,54 @@ describe("LicenseManagementScene", () => {
     },
   );
 
+  // #1782: the metric strip used to label the contract end as the licence's
+  // validity, so a certificate lapsing within months looked good for years.
+  it("shows the certificate expiry and the contract end as separate dates", async () => {
+    getLicenseDetailMock.mockResolvedValue({
+      ...licenseDetail("valid"),
+      activated: true,
+      contractExpiresAt: Date.UTC(2028, 7, 5) / 1000,
+      edition: "professional",
+      expiresAt: Date.UTC(2026, 10, 4) / 1000,
+    });
+    getLicenseFingerprintMock.mockResolvedValue("fp_001");
+    render(
+      <MemoryRouter>
+        <LicenseManagementScene />
+      </MemoryRouter>,
+    );
+
+    const certificate = await screen.findByText("systemAdmin.license.metrics.certificateExpiresAt");
+    const contract = screen.getByText("systemAdmin.license.metrics.contractExpiresAt");
+    expect(certificate.nextElementSibling?.textContent).toContain("2026");
+    expect(contract.nextElementSibling?.textContent).toContain("2028");
+  });
+
+  // #1782: after an issuer-side unbind the cluster reads unlicensed, but the
+  // certificate is still installed; the page must say why, not "no license".
+  it.each(["unbound", "revoked"] as const)(
+    "explains an issuer-side %s and keeps removal available",
+    async (binding) => {
+      getLicenseDetailMock.mockResolvedValue({
+        ...licenseDetail("unlicensed"),
+        binding,
+        edition: "professional",
+        licId: "lic-1",
+      });
+      getLicenseFingerprintMock.mockResolvedValue("fp_001");
+      render(
+        <MemoryRouter>
+          <LicenseManagementScene />
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText(`systemAdmin.license.statusDesc.${binding}`)).toBeTruthy();
+      expect(screen.queryByText("systemAdmin.license.statusDesc.unlicensed")).toBeNull();
+      expect(screen.getByText(`systemAdmin.license.metrics.activation_${binding}`)).toBeTruthy();
+      expect(screen.getByRole("button", { name: removeButtonName })).toBeTruthy();
+    },
+  );
+
   it("removes an invalid installed license and reports success", async () => {
     renderScene("invalid");
 
