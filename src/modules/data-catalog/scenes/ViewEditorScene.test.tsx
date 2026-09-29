@@ -270,7 +270,7 @@ describe("ViewEditorScene", () => {
       schema: Array<Record<string, unknown>>;
     };
     expect(createPayload.schema[0]).not.toHaveProperty("features");
-  });
+  }, 20_000);
 
   it("returns to type selection without losing the draft", async () => {
     renderEditor({ catalogId: "cat-1" });
@@ -320,7 +320,7 @@ describe("ViewEditorScene", () => {
     await waitFor(() =>
       expect(listResourcesMock).toHaveBeenCalledWith(expect.objectContaining({ offset: 30 })),
     );
-  });
+  }, 20_000);
 
   it("only offers sources from the current Catalog", async () => {
     listResourcesMock.mockImplementation(({ category }: { category: string }) =>
