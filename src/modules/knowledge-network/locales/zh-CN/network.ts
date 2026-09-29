@@ -56,6 +56,7 @@ export const networkPart = {
   permissionRequestPending: "以下权限已有待审核申请：{{operations}}",
   permissionRequestPolicyPending: "该类权限已有待审核申请，重复提交不会产生新的待办。",
   permissionRequestPolicyIncomplete: "请先完整填写要申请的权限内容。",
+  permissionRequestPolicyPreviewPending: "正在加载当前权限范围，请稍后再提交申请。",
   permissionRequestBasePermissions: "基础权限",
   permissionRequestRowFilter: "行过滤",
   permissionRequestPropertyPermissions: "属性权限",

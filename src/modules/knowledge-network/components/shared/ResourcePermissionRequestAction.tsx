@@ -57,6 +57,7 @@ import { basePropertyAccessLevel } from "@/modules/knowledge-network/utils/prope
 import {
   getMissingResourcePermissionOperations,
   hasRequestableObjectTypePermission,
+  isPermissionRequestProposalReady,
   togglePermissionRequestOperation,
 } from "@/modules/knowledge-network/components/shared/resource-permission-request";
 import { AuthorizationRegistryFailureAlert } from "@/modules/system-admin/components/AuthorizationRegistryFailureAlert";
@@ -87,6 +88,7 @@ type ProposalPreview = {
 };
 
 type ResourcePermissionRequestActionProps = {
+  initialProposalKind?: ProposalKind;
   operations?: string[];
   resourceType: string;
   resourceID: string;
@@ -106,6 +108,7 @@ function requestResourceIcon(resourceType: string) {
 }
 
 export function ResourcePermissionRequestAction({
+  initialProposalKind = "grant",
   operations,
   resourceType,
   resourceID,
@@ -216,7 +219,7 @@ export function ResourcePermissionRequestAction({
     setPendingOperations([]);
     setPendingProposalKinds([]);
     setSelectedOperations([]);
-    setProposalKind("grant");
+    setProposalKind(initialProposalKind);
     setProposalPreview(undefined);
     setProposalPreviewResolved(resourceType !== "object_type");
     setSelectedPropertyNames([]);
@@ -261,7 +264,7 @@ export function ResourcePermissionRequestAction({
     return () => {
       active = false;
     };
-  }, [form, message, requestOpen, resourceID, resourceType]);
+  }, [form, initialProposalKind, message, requestOpen, resourceID, resourceType]);
 
   useEffect(() => {
     if (!requestOpen || resourceType !== "object_type") return;
@@ -300,6 +303,24 @@ export function ResourcePermissionRequestAction({
   }, [requestOpen, resourceID, resourceType]);
 
   useEffect(() => {
+    if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved) return;
+    if (proposalKind === "row_filter" && !hasRowFilter) {
+      setProposalKind("grant");
+      return;
+    }
+    if (proposalKind === "property_grants" && !restrictedProperties.length) {
+      setProposalKind("grant");
+    }
+  }, [
+    hasRowFilter,
+    proposalKind,
+    proposalPreviewResolved,
+    requestOpen,
+    resourceType,
+    restrictedProperties.length,
+  ]);
+
+  useEffect(() => {
     if (!requestOpen || resourceType !== "object_type" || !proposalPreviewResolved || loading)
       return;
     const hasPendingRequest = pendingOperations.length > 0 || pendingProposalKinds.length > 0;
@@ -334,6 +355,20 @@ export function ResourcePermissionRequestAction({
       property_name,
       level: "full",
     }));
+    if (
+      !isPermissionRequestProposalReady({
+        proposalKind,
+        resourceType,
+        previewResolved: proposalPreviewResolved,
+      })
+    ) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyPreviewPending"));
+      return;
+    }
+    if (proposalKind === "row_filter" && !hasRowFilter) {
+      void message.warning(t("knowledgeNetwork.permissionRequestPolicyIncomplete"));
+      return;
+    }
     if (proposalKind === "property_grants" && !propertyChanges.length) {
       void message.warning(t("knowledgeNetwork.permissionRequestPolicyIncomplete"));
       return;
@@ -423,6 +458,11 @@ export function ResourcePermissionRequestAction({
           disabled:
             loading ||
             catalogLoading ||
+            !isPermissionRequestProposalReady({
+              proposalKind,
+              resourceType,
+              previewResolved: proposalPreviewResolved,
+            }) ||
             (proposalKind !== "grant" && pendingProposalKinds.includes(proposalKind)) ||
             (proposalKind === "grant" && selectedOperations.length === 0) ||
             (proposalKind === "property_grants" && selectedPropertyNames.length === 0),
