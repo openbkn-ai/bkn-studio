@@ -106,7 +106,7 @@ vi.mock("@/framework/context/use-app-services", () => ({
 
 const profile = {
   accessScopeFingerprint: "sha256:test",
-  allowedLogCategories: ["runtime.system" as const, "runtime.business" as const],
+  allowedLogCategories: ["runtime.business" as const],
   businessProvenanceManagedNetworks: false,
   businessProvenanceOwn: true,
   globalLogSearch: true,
@@ -218,7 +218,7 @@ describe("observability workspace scenes", () => {
     ]);
     vi.mocked(listLogPolicies).mockResolvedValue([
       {
-        category: "runtime.system",
+        category: "runtime.business",
         legalHold: false,
         policyKind: "runtime",
         policyRevision: "r6.2-default",

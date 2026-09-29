@@ -177,7 +177,7 @@ describe("observability service", () => {
         data: {
           data: [
             {
-              category: "runtime.system",
+              category: "runtime.business",
               retention_days: 7,
               policy_kind: "runtime",
               policy_revision: "r1",
@@ -200,7 +200,7 @@ describe("observability service", () => {
     });
     expect(sources[0]).toMatchObject({ sourceId: "otel", status: "available" });
     expect(policies[0]).toMatchObject({
-      category: "runtime.system",
+      category: "runtime.business",
       retentionDays: 7,
       readOnly: true,
     });

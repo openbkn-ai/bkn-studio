@@ -383,8 +383,8 @@ export function ObservabilitySettingsScene() {
         dataKind: t("bknTrace.settings.storage.runtimeLogs"),
         description: t("bknTrace.settings.storage.defaultValue"),
         key: "runtime",
-        retention: retention("runtime.system"),
-        status: retention("runtime.system") === undefined ? "unknown" : "known",
+        retention: retention("runtime.business"),
+        status: retention("runtime.business") === undefined ? "unknown" : "known",
       },
       {
         dataKind: t("bknTrace.settings.storage.auditLogs"),
