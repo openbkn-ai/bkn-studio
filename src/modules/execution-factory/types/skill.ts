@@ -18,7 +18,11 @@ export type SkillRecord = {
   categoryName?: string;
   createTime?: number;
   createUser?: string;
+  createUserName?: string;
+  updateUser?: string;
+  updateUserName?: string;
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
   updateTime?: number;
 };
@@ -94,5 +98,6 @@ export type SkillHistoryRecord = {
   version: string;
   status: SkillStatus | "editing";
   releaseUser?: string;
+  releaseUserName?: string;
   releaseTime?: number;
 };

@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { SkillDetailSceneProps } from "@/modules/execution-factory/contracts/scenes";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { PermissionGate } from "@/framework/permission/PermissionGate";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -50,10 +51,8 @@ import {
   formatOptionalTimestamp,
   resolveSkillCategoryLabel,
 } from "@/modules/execution-factory/utils/detail-display";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { readReturnTo } from "@/modules/execution-factory/utils/back-navigation";
 import { formatExecutionUnitTime } from "@/modules/execution-factory/utils/format-timestamp";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 import styles from "./toolbox-detail.module.css";
 
@@ -82,7 +81,6 @@ function buildFileEntries(content: SkillContentResult | null): SkillFileSummary[
 
 export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
   const { t } = useTranslation();
-  const auditUserDirectory = useAuditUserDirectory();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -248,7 +246,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
       {
         key: "createUser",
         label: t("executionFactory.createUser"),
-        value: formatAuditUserDisplay({ directory: auditUserDirectory, id: record.createUser }),
+        value: formatAuditUserDisplay({ id: record.createUser, name: record.createUserName }),
         icon: <UserOutlined />,
       },
       {
@@ -264,7 +262,7 @@ export function SkillDetailScene({ skillId, onBack }: SkillDetailSceneProps) {
         icon: <ClockCircleOutlined />,
       },
     ];
-  }, [auditUserDirectory, record, t]);
+  }, [record, t]);
 
   const handleDownload = async () => {
     if (!record) {

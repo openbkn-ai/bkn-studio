@@ -136,10 +136,6 @@ vi.mock("@/modules/execution-factory/components/DetailMetaPanel", () => ({
   DetailMetaPanel: () => null,
 }));
 
-vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
-  useAuditUserDirectory: () => new Map(),
-}));
-
 vi.mock("@/modules/execution-factory/utils/use-impex-export", () => ({
   useImpexExport: () => ({ exportComponentById: vi.fn(), isExporting: () => false }),
 }));

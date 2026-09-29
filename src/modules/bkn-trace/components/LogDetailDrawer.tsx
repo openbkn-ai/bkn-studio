@@ -25,7 +25,6 @@ import {
   getLogDetail,
   type LogDetailResult,
 } from "@/modules/bkn-trace/services/observability.service";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 
 type Props = {
   logId?: string;
@@ -34,8 +33,7 @@ type Props = {
 
 export function LogDetailDrawer({ logId, onClose }: Props) {
   const { t } = useTranslation();
-  const { message } = useAppServices();
-  const userDirectory = useAuditUserDirectory();
+  const { message, runtimeConfig } = useAppServices();
   const [detail, setDetail] = useState<LogDetailResult>();
   const [error, setError] = useState<string>();
 
@@ -62,7 +60,7 @@ export function LogDetailDrawer({ logId, onClose }: Props) {
 
   const record = detail?.data;
   const target = record ? presentLogTarget(record, t) : undefined;
-  const actor = record ? presentLogActor(record, t, userDirectory) : undefined;
+  const actor = record ? presentLogActor(record, t, runtimeConfig.currentUser) : undefined;
   const copyRawFacts = () => {
     if (!record) return;
     void writeTextToClipboard(JSON.stringify(record, null, 2))

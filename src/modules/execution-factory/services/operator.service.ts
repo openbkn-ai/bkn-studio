@@ -45,6 +45,7 @@ type BackendOperatorExecuteControl = {
 type BackendOperatorDataInfo = {
   create_time?: number;
   create_user?: string;
+  create_user_name?: string;
   description?: string;
   is_internal?: boolean;
   metadata?: {
@@ -68,9 +69,11 @@ type BackendOperatorDataInfo = {
   operations?: string[];
   release_time?: number;
   release_user?: string;
+  release_user_name?: string;
   status?: string;
   update_time?: number;
   update_user?: string;
+  update_user_name?: string;
   version: string;
 };
 
@@ -78,6 +81,7 @@ type BackendOperatorHistoryItem = {
   operator_id?: string;
   release_time?: number;
   release_user?: string;
+  release_user_name?: string;
   status?: string;
   update_time?: number;
   version?: string;
@@ -258,8 +262,11 @@ function mapOperator(item: BackendOperatorDataInfo): OperatorRecord {
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
     createUser: item.create_user,
+    createUserName: item.create_user_name,
     updateUser: item.update_user,
+    updateUserName: item.update_user_name,
     releaseUser: item.release_user,
+    releaseUserName: item.release_user_name,
     releaseTime: normalizeTimestamp(item.release_time),
     isInternal: item.is_internal,
   };
@@ -392,6 +399,7 @@ export async function getOperatorDetail(operatorId: string): Promise<OperatorDet
 
     if (currentRelease) {
       enriched.releaseUser = enriched.releaseUser ?? currentRelease.releaseUser;
+      enriched.releaseUserName = enriched.releaseUserName ?? currentRelease.releaseUserName;
       enriched.releaseTime = enriched.releaseTime ?? currentRelease.releaseTime;
     }
   }
@@ -573,6 +581,7 @@ export async function listOperatorHistory(operatorId: string): Promise<OperatorH
         version: record.version,
         status: record.status,
         releaseUser: record.releaseUser,
+        releaseUserName: record.releaseUserName,
         releaseTime: record.releaseTime,
         updateTime: record.updateTime,
       },
@@ -593,6 +602,7 @@ export async function listOperatorHistory(operatorId: string): Promise<OperatorH
       version: item.version ?? "",
       status: (item.status ?? "published") as OperatorStatus,
       releaseUser: item.release_user,
+      releaseUserName: item.release_user_name,
       releaseTime: normalizeTimestamp(item.release_time),
       updateTime: normalizeTimestamp(item.update_time),
     }));

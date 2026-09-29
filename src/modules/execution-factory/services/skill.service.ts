@@ -36,12 +36,17 @@ type BackendSkillSummary = {
   category_name?: string;
   create_time?: number;
   create_user?: string;
+  create_user_name?: string;
   description?: string;
   name: string;
   operations?: string[];
   skill_id: string;
   status?: string;
+  release_user?: string;
+  release_user_name?: string;
   update_time?: number;
+  update_user?: string;
+  update_user_name?: string;
   version?: string;
 };
 
@@ -113,6 +118,7 @@ type BackendSkillHistoryInfo = {
   name: string;
   release_time?: number;
   release_user?: string;
+  release_user_name?: string;
   skill_id: string;
   status?: string;
   version: string;
@@ -181,6 +187,11 @@ function mapSkill(item: BackendSkillSummary): SkillRecord {
     category: item.category,
     categoryName: item.category_name,
     createUser: item.create_user,
+    createUserName: item.create_user_name,
+    updateUser: item.update_user,
+    updateUserName: item.update_user_name,
+    releaseUser: item.release_user,
+    releaseUserName: item.release_user_name,
     createTime: normalizeTimestamp(item.create_time),
     updateTime: normalizeTimestamp(item.update_time),
   };
@@ -577,6 +588,7 @@ function mapSkillHistory(item: BackendSkillHistoryInfo): SkillHistoryRecord {
     version: item.version,
     status: (item.status ?? "published") as SkillHistoryRecord["status"],
     releaseUser: item.release_user,
+    releaseUserName: item.release_user_name,
     releaseTime: normalizeTimestamp(item.release_time),
   };
 }

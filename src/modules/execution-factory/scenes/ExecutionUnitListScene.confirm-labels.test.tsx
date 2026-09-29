@@ -53,13 +53,6 @@ vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => services,
 }));
 
-// A fresh directory per render would re-create the page loader on every render and refetch forever.
-const auditUserDirectory = vi.hoisted(() => new Map<string, string>());
-
-vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
-  useAuditUserDirectory: () => auditUserDirectory,
-}));
-
 // Only the card grid and the confirmation it opens are under test.
 vi.mock("@/modules/execution-factory/components/create-menu/CreateMenu", () => ({
   CreateMenu: ({

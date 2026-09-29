@@ -14,6 +14,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { buildAppPath } from "@/app/router/app-paths";
 import { refreshCurrentUser } from "@/framework/auth/current-user";
+import { formatAuditUserDisplay } from "@/framework/audit/audit-user-display";
 import { useAppServices } from "@/framework/context/use-app-services";
 import { usePageState } from "@/framework/hooks/use-page-state";
 import {
@@ -87,9 +88,7 @@ import {
   resolveVisibleManagementTabs,
 } from "@/modules/execution-factory/utils/capability-ux";
 import { supportsCategoryFilter } from "@/modules/execution-factory/utils/capability-parity";
-import { formatAuditUserDisplay } from "@/modules/execution-factory/utils/audit-user-display";
 import { hasExecutionUnitRecordOperation } from "@/modules/execution-factory/utils/record-operations";
-import { useAuditUserDirectory } from "@/modules/execution-factory/utils/use-audit-user-directory";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 
 import styles from "./execution-unit-list.module.css";
@@ -225,11 +224,11 @@ function PublishIssueList({ issues }: { issues: ToolboxPublishIssue[] }) {
   );
 }
 
-function mapAuditUser(userId: string | undefined, directory: Map<string, string>) {
-  return formatAuditUserDisplay({ directory, id: userId });
+function mapAuditUser(userId: string | undefined, userName?: string) {
+  return formatAuditUserDisplay({ id: userId, name: userName });
 }
 
-function mapOperator(item: OperatorRecord, directory: Map<string, string>): ExecutionUnitCardItem {
+function mapOperator(item: OperatorRecord): ExecutionUnitCardItem {
   return {
     operations: item.operations,
     id: item.operatorId,
@@ -239,8 +238,11 @@ function mapOperator(item: OperatorRecord, directory: Map<string, string>): Exec
     category: item.category,
     categoryName: item.categoryName,
     isInternal: item.isInternal,
-    releaseUser: mapAuditUser(item.releaseUser, directory),
-    updateUser: mapAuditUser(item.createUser, directory),
+    releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
+    updateUser: mapAuditUser(
+      item.updateUser ?? item.createUser,
+      item.updateUserName ?? item.createUserName,
+    ),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -248,7 +250,7 @@ function mapOperator(item: OperatorRecord, directory: Map<string, string>): Exec
   };
 }
 
-function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): ExecutionUnitCardItem {
+function mapToolbox(item: ToolboxRecord): ExecutionUnitCardItem {
   return {
     operations: item.operations,
     id: item.boxId,
@@ -259,15 +261,18 @@ function mapToolbox(item: ToolboxRecord, directory: Map<string, string>): Execut
     categoryName: item.categoryName,
     isInternal: item.isInternal,
     toolCount: item.toolCount ?? item.tools?.length ?? 0,
-    releaseUser: mapAuditUser(item.releaseUser, directory),
-    updateUser: mapAuditUser(item.updateUser ?? item.createUser, directory),
+    releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
+    updateUser: mapAuditUser(
+      item.updateUser ?? item.createUser,
+      item.updateUserName ?? item.createUserName,
+    ),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
   };
 }
 
-function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitCardItem {
+function mapMcp(item: McpRecord): ExecutionUnitCardItem {
   return {
     operations: item.operations,
     id: item.mcpId,
@@ -276,15 +281,18 @@ function mapMcp(item: McpRecord, directory: Map<string, string>): ExecutionUnitC
     category: item.category,
     mode: item.mode,
     isInternal: item.isInternal,
-    releaseUser: mapAuditUser(item.releaseUser, directory),
-    updateUser: mapAuditUser(item.createUser, directory),
+    releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
+    updateUser: mapAuditUser(
+      item.updateUser ?? item.createUser,
+      item.updateUserName ?? item.createUserName,
+    ),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
   };
 }
 
-function mapSkill(item: SkillRecord, directory: Map<string, string>): ExecutionUnitCardItem {
+function mapSkill(item: SkillRecord): ExecutionUnitCardItem {
   return {
     operations: item.operations,
     id: item.skillId,
@@ -292,8 +300,11 @@ function mapSkill(item: SkillRecord, directory: Map<string, string>): ExecutionU
     description: item.description,
     category: item.category,
     categoryName: item.categoryName,
-    releaseUser: mapAuditUser(item.releaseUser, directory),
-    updateUser: mapAuditUser(item.createUser, directory),
+    releaseUser: mapAuditUser(item.releaseUser, item.releaseUserName),
+    updateUser: mapAuditUser(
+      item.updateUser ?? item.createUser,
+      item.updateUserName ?? item.createUserName,
+    ),
     releaseTime: item.releaseTime,
     updateTime: item.updateTime,
     status: item.status,
@@ -355,7 +366,6 @@ export function ExecutionUnitListScene({
   const openapiTabKey = "toolbox:openapi";
   const [status, setStatus] = useState<string>("");
   const [items, setItems] = useState<ExecutionUnitCardItem[]>([]);
-  const auditUserDirectory = useAuditUserDirectory();
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -679,7 +689,7 @@ export function ExecutionUnitListScene({
           ? await listOperatorMarket(tabQuery)
           : await listOperators(tabQuery);
         return {
-          items: result.items.map((item) => mapOperator(item, auditUserDirectory)),
+          items: result.items.map(mapOperator),
           total: result.total,
         };
       }
@@ -690,7 +700,7 @@ export function ExecutionUnitListScene({
           ? await listToolboxMarket(tabQuery)
           : await listToolboxes(tabQuery);
         return {
-          items: result.items.map((item) => mapToolbox(item, auditUserDirectory)),
+          items: result.items.map(mapToolbox),
           total: result.total,
         };
       }
@@ -699,7 +709,7 @@ export function ExecutionUnitListScene({
         const tabQuery = query as Parameters<typeof listMcps>[0];
         const result = marketMode ? await listMcpMarket(tabQuery) : await listMcps(tabQuery);
         return {
-          items: result.items.map((item) => mapMcp(item, auditUserDirectory)),
+          items: result.items.map(mapMcp),
           total: result.total,
         };
       }
@@ -707,11 +717,11 @@ export function ExecutionUnitListScene({
       const tabQuery = query as Parameters<typeof listSkills>[0];
       const result = marketMode ? await listSkillMarket(tabQuery) : await listSkills(tabQuery);
       return {
-        items: result.items.map((item) => mapSkill(item, auditUserDirectory)),
+        items: result.items.map(mapSkill),
         total: result.total,
       };
     },
-    [activeTab, auditUserDirectory, marketMode],
+    [activeTab, marketMode],
   );
 
   const loadItems = useCallback(async () => {

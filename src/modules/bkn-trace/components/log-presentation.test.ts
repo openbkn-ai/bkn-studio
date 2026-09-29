@@ -77,7 +77,7 @@ describe("log presentation", () => {
       authMethod: "unknown",
     } as LogRecord;
 
-    expect(presentLogActor(record, translate, new Map()).primary).toBe("Administrator");
+    expect(presentLogActor(record, translate).primary).toBe("Administrator");
   });
 
   it.each([
