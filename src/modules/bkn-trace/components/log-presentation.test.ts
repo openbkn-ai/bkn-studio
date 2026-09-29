@@ -67,6 +67,87 @@ describe("log presentation", () => {
     expect(presentLogAction(record, translateZhCN)).toBe("用户登录");
   });
 
+  it("presents an authorization decision with a business-readable action and target", () => {
+    const record = {
+      action: "check",
+      actor: { id: "anonymous", name: "anonymous", type: "anonymous" },
+      authMethod: "unknown",
+      businessModule: "system_management",
+      eventName: "authorization.decided",
+      logCategory: "audit.security",
+      target: {
+        id: "decision:decision-1",
+        name: "decision:decision-1",
+        type: "authorization_decision",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("鉴权判定");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision:decision-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("未识别调用方");
+  });
+
+  it("presents a permission request without exposing its technical identifier as the name", () => {
+    const record = {
+      action: "get",
+      actor: { id: "system:access", name: "system:access", type: "service_account" },
+      authMethod: "oauth",
+      businessModule: "system_management",
+      eventName: "resource.read",
+      logCategory: "audit.admin",
+      target: {
+        id: "permission_request:request-1",
+        name: "permission_request:request-1",
+        type: "permission_request",
+      },
+    } as LogRecord;
+
+    expect(presentLogAction(record, translateZhCN)).toBe("查询权限请求");
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "权限请求",
+      secondary: "permission_request:request-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("系统服务");
+  });
+
+  it("uses the semantic target label when an authorization decision has no name snapshot", () => {
+    const record = {
+      target: { id: "decision-1", name: "", type: "authorization_decision" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "授权决策",
+      secondary: "decision-1",
+    });
+  });
+
+  it("keeps the target id as the fallback for ordinary records without a name snapshot", () => {
+    const record = {
+      target: { id: "user-1", name: "", type: "user" },
+    } as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+  });
+
+  it("degrades safely when a producer omits nullable target or actor snapshots", () => {
+    const record = {
+      actor: { id: null, name: null, type: "user" },
+      target: { id: "user-1", name: null, type: "user" },
+    } as unknown as LogRecord;
+
+    expect(presentLogTarget(record, translateZhCN)).toEqual({
+      primary: "user-1",
+      secondary: "user-1",
+    });
+    expect(presentLogActor(record, translateZhCN).primary).toBe("-");
+  });
+
   it("uses the current authenticated username when an old event only contains its user id", () => {
     const record = {
       actor: {

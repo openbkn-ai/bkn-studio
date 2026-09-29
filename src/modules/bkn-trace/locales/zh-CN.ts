@@ -828,6 +828,10 @@ export const bknTraceZhCN = {
         startAgentConversation: "发起 Agent 业务会话",
       },
       accessActions: { login: "用户登录", logout: "用户退出" },
+      semanticActions: {
+        authorization_decided: "鉴权判定",
+        permission_request_read: "查询权限请求",
+      },
       systemManagementActions: {
         createUser: "新建用户",
         updateUser: "更新用户",
@@ -839,6 +843,7 @@ export const bknTraceZhCN = {
         deleteApiKey: "删除 API Key",
       },
       authenticatedUser: "已认证用户",
+      actorTypes: { anonymous: "未识别调用方", service: "系统服务" },
       authMethods: {
         api_key: "通过 API Key",
         oauth: "通过 OAuth",
@@ -952,7 +957,10 @@ export const bknTraceZhCN = {
         object_type: "对象类",
         relation_type: "关系类",
         risk_type: "风险类型",
+        authorization_decision: "授权决策",
+        permission_request: "权限请求",
       },
+      unnamedTarget: "未命名对象",
       title: "日志检索",
       unnamedAgent: "未命名 Agent",
     },

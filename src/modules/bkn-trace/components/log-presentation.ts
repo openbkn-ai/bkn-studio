@@ -22,6 +22,11 @@ export function isAgentConversationCreated(record: LogRecord) {
 export function presentLogAction(record: LogRecord, t: Translate) {
   if (isAgentConversationCreated(record))
     return t("bknTrace.logs.auditActions.startAgentConversation");
+  const semanticAction = semanticActionKey(record);
+  if (semanticAction) {
+    const label = t(`bknTrace.logs.semanticActions.${semanticAction}`, { defaultValue: "" });
+    if (label && label !== `bknTrace.logs.semanticActions.${semanticAction}`) return label;
+  }
   if (record.logCategory === "access.user") {
     const key = `bknTrace.logs.accessActions.${record.action}`;
     const label = t(key, { defaultValue: "" });
@@ -67,7 +72,18 @@ function normalizedSystemTargetType(value: string) {
 
 export function presentLogTarget(record: LogRecord, t: Translate): LogText {
   if (!isAgentConversationCreated(record)) {
-    return { primary: record.target.name || record.target.id, secondary: record.target.id };
+    const targetName = normalizedText(record.target.name);
+    const targetID = normalizedText(record.target.id);
+    if (
+      isSemanticTechnicalTarget(record) &&
+      (!targetName || isTechnicalTargetName(targetName, targetID, record.target.type))
+    ) {
+      const label = t(`bknTrace.logs.targetTypes.${record.target.type}`, {
+        defaultValue: record.target.type || t("bknTrace.logs.unnamedTarget"),
+      });
+      return { primary: label, secondary: targetID || undefined };
+    }
+    return { primary: targetName || targetID, secondary: targetID };
   }
   const agentName = conversationAgentName(record) || t("bknTrace.logs.unnamedAgent");
   return {
@@ -81,10 +97,53 @@ export function presentLogActor(
   t: Translate,
   currentUser?: AuditUserDisplayInput["currentUser"],
 ): LogText {
+  const actorID = normalizedText(record.actor.id);
+  if (record.actor.type === "anonymous" || actorID === "anonymous") {
+    return {
+      primary: t("bknTrace.logs.actorTypes.anonymous"),
+      secondary: presentAuthMethod(record.authMethod, t),
+    };
+  }
+  if (record.actor.type === "service_account" || actorID.startsWith("system:")) {
+    const actorName = normalizedText(record.actor.name);
+    return {
+      primary:
+        actorName && actorName !== actorID ? actorName : t("bknTrace.logs.actorTypes.service"),
+      secondary: presentAuthMethod(record.authMethod, t),
+    };
+  }
   return {
     primary: formatAuditUserDisplay({ currentUser, id: record.actor.id, name: record.actor.name }),
     secondary: presentAuthMethod(record.authMethod, t),
   };
+}
+
+function semanticActionKey(record: LogRecord) {
+  if (
+    record.eventName === "authorization.decided" ||
+    record.target.type === "authorization_decision"
+  ) {
+    return "authorization_decided";
+  }
+  if (record.target.type === "permission_request" && record.action === "get") {
+    return "permission_request_read";
+  }
+  return "";
+}
+
+function isTechnicalTargetName(name: string, id: string, targetType: string) {
+  if (name === id) return true;
+  return (
+    name.startsWith(`${targetType}:`) ||
+    name.startsWith("decision:") ||
+    name.startsWith("permission_request:")
+  );
+}
+
+function isSemanticTechnicalTarget(record: LogRecord) {
+  return (
+    record.target.type === "authorization_decision" || record.target.type === "permission_request"
+  );
 }
 
 export function presentAuthMethod(value: string, t: Translate) {
@@ -100,7 +159,7 @@ function conversationAgentName(record: LogRecord) {
   const attributeName =
     typeof record.attributes.agent_name === "string" ? record.attributes.agent_name.trim() : "";
   if (attributeName) return attributeName;
-  const projectedName = record.target.name.trim();
+  const projectedName = normalizedText(record.target.name);
   if (
     !projectedName ||
     projectedName === record.target.id ||
@@ -111,7 +170,11 @@ function conversationAgentName(record: LogRecord) {
   return projectedName;
 }
 
-function shortIdentifier(value: string) {
-  const normalized = value.trim();
+function shortIdentifier(value: unknown) {
+  const normalized = normalizedText(value);
   return normalized.length > 8 ? `${normalized.slice(0, 8)}…` : normalized || "-";
+}
+
+function normalizedText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }
