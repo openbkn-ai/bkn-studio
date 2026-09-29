@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AxiosError, AxiosHeaders } from "axios";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -208,6 +208,66 @@ describe("IndexConfigFormPanel", () => {
     expect(
       screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }),
     ).toBeDisabled();
+  });
+
+  it("shows type, source display name, and field name for primary and incremental keys", async () => {
+    const keyResource: CatalogResource = {
+      ...resource,
+      schema: [
+        { name: "id", displayName: "订单ID", type: "integer" },
+        { name: "updated_at", displayName: "updated_at", type: "datetime" },
+      ],
+      indexConfig: { primaryKeyFields: ["id"], incrementalFields: ["updated_at"] },
+    };
+    getCatalogResourceMock.mockResolvedValue(keyResource);
+
+    render(
+      <MemoryRouter>
+        <IndexConfigFormPanel active resource={keyResource} />
+      </MemoryRouter>,
+    );
+
+    const primarySummary = screen
+      .getAllByText("dataCatalog.build.rolePrimaryKey")
+      .find((node) => !node.closest("label"))
+      ?.closest('[class*="configMetric"]') as HTMLElement;
+    const incrementalSummary = screen
+      .getAllByText("dataCatalog.build.roleIncrementalKey")
+      .find((node) => !node.closest("label"))
+      ?.closest('[class*="configMetric"]') as HTMLElement;
+    expect(within(primarySummary).getByText("int")).toBeTruthy();
+    expect(within(primarySummary).getByText("订单ID")).toBeTruthy();
+    expect(within(primarySummary).getByText("id")).toBeTruthy();
+    expect(within(incrementalSummary).getByText("datetime")).toBeTruthy();
+    expect(within(incrementalSummary).getAllByText("updated_at")).toHaveLength(2);
+
+    const primary = screen
+      .getAllByText("dataCatalog.build.rolePrimaryKey")
+      .find((node) => node.closest("label"))
+      ?.closest("label") as HTMLElement;
+    const incremental = screen
+      .getAllByText("dataCatalog.build.roleIncrementalKey")
+      .find((node) => node.closest("label"))
+      ?.closest("label") as HTMLElement;
+    await waitFor(() => {
+      expect(within(primary).getByText("int")).toBeTruthy();
+      expect(within(primary).getByText("订单ID")).toBeTruthy();
+      expect(within(primary).getByText("id")).toBeTruthy();
+      expect(within(incremental).getByText("datetime")).toBeTruthy();
+      expect(within(incremental).getAllByText("updated_at")).toHaveLength(2);
+    });
+
+    fireEvent.mouseDown(within(primary).getByRole("combobox"));
+    const dropdown = document.querySelector(
+      ".ant-select-dropdown:not(.ant-select-dropdown-hidden)",
+    ) as HTMLElement;
+    expect(within(dropdown).getByText("int")).toBeTruthy();
+    expect(within(dropdown).getByText("订单ID")).toBeTruthy();
+    expect(
+      within(dropdown)
+        .getAllByText("id")
+        .some((node) => node.tagName === "SMALL"),
+    ).toBe(true);
   });
 
   it("checks task status before editing when task access becomes available", async () => {
@@ -775,8 +835,13 @@ describe("IndexConfigFormPanel", () => {
       </MemoryRouter>,
     );
 
-    await screen.findAllByText("Pass ID（title）");
-    expect(screen.getAllByTitle("Pass ID（title）")).toHaveLength(2);
+    const keySummaries = await screen.findAllByTitle("Pass ID（title）");
+    expect(keySummaries).toHaveLength(2);
+    for (const summary of keySummaries) {
+      expect(within(summary).getByTitle("string")).toBeTruthy();
+      expect(within(summary).getByText("Pass ID")).toBeTruthy();
+      expect(within(summary).getByText("title")).toBeTruthy();
+    }
     fireEvent.click(screen.getByRole("button", { name: "dataCatalog.build.saveIndexConfig" }));
 
     await waitFor(() => {

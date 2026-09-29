@@ -10,10 +10,16 @@ import { describe, expect, it } from "vitest";
 import {
   formatPrecisionSafeJSON,
   parsePrecisionSafeJSON,
+  transformPrecisionSafeJSONRequest,
   transformPrecisionSafeJSONResponse,
 } from "@/framework/request/precision-safe-json";
 
 describe("precision-safe JSON", () => {
+  it("keeps an already serialized request body unchanged on retry", () => {
+    const first = transformPrecisionSafeJSONRequest({ need_total: true });
+    expect(transformPrecisionSafeJSONRequest(first)).toBe(first);
+  });
+
   it("preserves an unsafe BIGINT as a decimal string", () => {
     expect(
       transformPrecisionSafeJSONResponse(

@@ -57,7 +57,11 @@ const translate = (key: string, options?: Record<string, unknown>) => {
   );
 };
 
-const mockCurrentUser = vi.hoisted(() => ({ isSuperAdmin: true }));
+const mockCurrentUser = vi.hoisted(() => ({
+  id: "user-a",
+  isSuperAdmin: true,
+  name: "Current Administrator",
+}));
 
 vi.mock("react-i18next", async (importOriginal) => {
   const original = await importOriginal<typeof import("react-i18next")>();
@@ -91,14 +95,6 @@ vi.mock("@/modules/bkn-trace/services/observability.service", async (importOrigi
     listLogSources: vi.fn(),
   };
 });
-
-vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
-  useAuditUserDirectory: () =>
-    new Map([
-      ["user-a", "Current Administrator"],
-      ["266c6a42-6131-4d62-8f39-853e7093701c", "Administrator"],
-    ]),
-}));
 
 vi.mock("@/framework/context/use-app-services", () => ({
   useAppServices: () => ({ runtimeConfig: { currentUser: mockCurrentUser } }),
@@ -632,7 +628,7 @@ describe("observability workspace scenes", () => {
     ).toBe("/studio/observability/traces?trace_id=4b3d59daeff5bfbb23d46c47a5051ec9");
   });
 
-  it("旧会话日志用用户目录把操作者 UUID 解析为用户名", async () => {
+  it("旧会话日志在缺少用户名快照时稳定展示原始操作者 ID", async () => {
     vi.mocked(listLogs).mockResolvedValueOnce({
       count: { accuracy: "exact", value: 1 },
       data: [
@@ -674,7 +670,7 @@ describe("observability workspace scenes", () => {
 
     render(<ObservabilityLogsScene />);
     expect(await screen.findByText("未命名 Agent 的业务会话")).not.toBeNull();
-    expect(screen.getByText("Administrator")).not.toBeNull();
+    expect(screen.getByText("266c6a42-6131-4d62-8f39-853e7093701c")).not.toBeNull();
     expect(screen.queryByText("已认证用户 · 266c6a42…")).toBeNull();
     expect(screen.queryByText("mcp:933eef3eea1fde73392031e1a7aa74e7")).toBeNull();
   });

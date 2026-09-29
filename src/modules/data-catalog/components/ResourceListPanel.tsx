@@ -23,6 +23,7 @@ import { CAPABILITIES } from "@/framework/entitlement/capabilities";
 import { EditionBadge } from "@/framework/entitlement/EditionBadge";
 import { isCommunityBuild } from "@/framework/entitlement/types";
 import { useEntitlement } from "@/framework/entitlement/use-entitlement";
+import { useEntitlementContext } from "@/framework/entitlement/use-entitlement";
 import { hasPermissions } from "@/framework/permission/has-permissions";
 import { extractRequestErrorMessage } from "@/framework/request/error-message";
 import { AppButton } from "@/framework/ui/common/AppButton";
@@ -31,6 +32,7 @@ import { EmptyStatePanel } from "@/framework/ui/common/EmptyStatePanel";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import { TableSurface } from "@/framework/ui/common/TableSurface";
 import { dataCatalogCreationAvailable } from "@/modules/data-catalog/lib/creation-availability";
+import { canManageDerivedViews } from "@/modules/data-catalog/lib/view-access";
 import { ObjectAuthorizeDrawer } from "@/modules/system-admin/components/ObjectAuthorizeDrawer";
 import { ResourcePermissionRequestAction } from "@/modules/knowledge-network/components/shared/ResourcePermissionRequestAction";
 import { canRequestResourcePermission } from "@/modules/knowledge-network/components/shared/resource-permission-request";
@@ -47,7 +49,7 @@ import { hasCatalogOperation, type CatalogRecord } from "@/shared/catalog";
 
 import styles from "./ResourceListPanel.module.css";
 
-const CATEGORY_FILTERS = ["table", "logicview", "dataset"] as const;
+const CATEGORY_FILTERS = ["table", "index", "logicview", "dataset"] as const;
 const RESOURCE_STATUS_FILTERS = ["active", "deprecated", "stale"] as const;
 const DISCOVER_STATUS_FILTERS = [
   "error",
@@ -133,6 +135,7 @@ export function ResourceListPanel({
   const { t } = useTranslation();
   const { runtimeConfig } = useAppServices();
   const permissionRequestsEnabled = !isCommunityBuild(useEntitlement());
+  const { snapshot } = useEntitlementContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const activeSchema = searchParams.get("schema")?.trim() || "";
@@ -156,6 +159,12 @@ export function ResourceListPanel({
   const physical = isCatalogPhysical(catalog);
   const canManageResourceTasks = hasCatalogOperation(catalog, "task_manage");
   const canManageResources = hasCatalogOperation(catalog, "resource_manage");
+  const canCreateView =
+    canManageDerivedViews(snapshot) &&
+    !catalog.builtin &&
+    catalog.enabled &&
+    catalog.status === "enabled" &&
+    canManageResources;
   const activeFilterCount = [
     categoryFilter,
     statusFilter,
@@ -182,6 +191,7 @@ export function ResourceListPanel({
     hasResourceQuery ||
     canAuthorizeCatalog ||
     canRequestCatalogPermission ||
+    canCreateView ||
     (dataCatalogCreationAvailable && !physical && !catalog.builtin);
 
   const displayResources = resources;
@@ -380,19 +390,22 @@ export function ResourceListPanel({
       ellipsis: true,
       title: t("dataCatalog.resource.indexState"),
       width: 112,
-      render: (value: CatalogResource["localIndexStatus"]) => (
-        <Tag
-          className={
-            value === "available"
-              ? styles.statusTagSuccess
-              : value === "stale"
-                ? styles.statusTagWarning
-                : styles.statusTagNeutral
-          }
-        >
-          {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
-        </Tag>
-      ),
+      render: (value: CatalogResource["localIndexStatus"], record) =>
+        record.category === "logicview" ? (
+          "—"
+        ) : (
+          <Tag
+            className={
+              value === "available"
+                ? styles.statusTagSuccess
+                : value === "stale"
+                  ? styles.statusTagWarning
+                  : styles.statusTagNeutral
+            }
+          >
+            {t(`dataCatalog.resource.localIndexStatuses.${value}`)}
+          </Tag>
+        ),
     },
     {
       key: "actions",
@@ -441,10 +454,12 @@ export function ResourceListPanel({
             ),
           });
         }
-        moreItems.push({
-          key: "index",
-          label: indexLabel,
-        });
+        if (record.category !== "logicview") {
+          moreItems.push({
+            key: "index",
+            label: indexLabel,
+          });
+        }
         if (!catalog.builtin && canAuthorizeGrants) {
           // 读这张表的数据是表一级的授权,和目录一级的管理动词分开(bkn-foundry#986)。
           moreItems.push({
@@ -571,6 +586,16 @@ export function ResourceListPanel({
               {canAuthorizeCatalog ? (
                 <AppButton icon={<KeyOutlined />} onClick={() => setAuthorizeOpen(true)}>
                   {t("dataCatalog.catalog.authorize")}
+                </AppButton>
+              ) : null}
+              {canCreateView ? (
+                <AppButton
+                  onClick={() => {
+                    void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
+                  }}
+                  type="primary"
+                >
+                  {t("dataCatalog.viewEditor.create")}
                 </AppButton>
               ) : null}
               {canRequestCatalogPermission ? (
@@ -711,6 +736,15 @@ export function ResourceListPanel({
                 dataCatalogCreationAvailable && canManageResources ? (
                   <AppButton onClick={() => onCreateResource(catalog.id)} type="primary">
                     {t("dataCatalog.resource.create")}
+                  </AppButton>
+                ) : canCreateView ? (
+                  <AppButton
+                    onClick={() => {
+                      void navigate(`/data-catalog/catalog/${catalog.id}/views/new`);
+                    }}
+                    type="primary"
+                  >
+                    {t("dataCatalog.viewEditor.create")}
                   </AppButton>
                 ) : null
               ) : null

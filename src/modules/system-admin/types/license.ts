@@ -22,8 +22,16 @@ export type LicenseCustomer = {
   project?: string;
 };
 
+/**
+ * Set when the license issuer has unbound or revoked the installed certificate.
+ * The signature still verifies, so `state` alone reads `unlicensed` without
+ * saying why; this field is the why.
+ */
+export type LicenseBinding = "unbound" | "revoked";
+
 export type LicenseDetail = {
   activated: boolean;
+  binding?: LicenseBinding;
   contractExpiresAt?: number;
   customer?: LicenseCustomer;
   edition: string;

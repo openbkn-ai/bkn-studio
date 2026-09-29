@@ -6,7 +6,10 @@
  */
 
 import type { LogRecord } from "@/modules/bkn-trace/services/observability.service";
-import { getRuntimeConfig } from "@/framework/runtime/config";
+import {
+  formatAuditUserDisplay,
+  type AuditUserDisplayInput,
+} from "@/framework/audit/audit-user-display";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -89,27 +92,27 @@ export function presentLogTarget(record: LogRecord, t: Translate): LogText {
 export function presentLogActor(
   record: LogRecord,
   t: Translate,
-  userDirectory?: Map<string, string>,
+  currentUser?: AuditUserDisplayInput["currentUser"],
 ): LogText {
-  const name = record.actor.name.trim();
-  const id = record.actor.id.trim();
-  const directoryName = userDirectory?.get(id)?.trim();
-  const currentUser = getRuntimeConfig().currentUser;
-  const currentUserName = currentUser.id === id ? currentUser.name?.trim() : "";
-  if (record.actor.type === "anonymous" || id === "anonymous") {
+  const actorID = record.actor.id.trim();
+  if (record.actor.type === "anonymous" || actorID === "anonymous") {
     return {
       primary: t("bknTrace.logs.actorTypes.anonymous"),
       secondary: presentAuthMethod(record.authMethod, t),
     };
   }
-  if (record.actor.type === "service_account" || id.startsWith("system:")) {
+  if (record.actor.type === "service_account" || actorID.startsWith("system:")) {
+    const actorName = record.actor.name.trim();
     return {
-      primary: name && name !== id ? name : t("bknTrace.logs.actorTypes.service"),
+      primary:
+        actorName && actorName !== actorID ? actorName : t("bknTrace.logs.actorTypes.service"),
       secondary: presentAuthMethod(record.authMethod, t),
     };
   }
-  const primary = name && name !== id ? name : directoryName || currentUserName || id || "-";
-  return { primary, secondary: presentAuthMethod(record.authMethod, t) };
+  return {
+    primary: formatAuditUserDisplay({ currentUser, id: record.actor.id, name: record.actor.name }),
+    secondary: presentAuthMethod(record.authMethod, t),
+  };
 }
 
 function semanticActionKey(record: LogRecord) {

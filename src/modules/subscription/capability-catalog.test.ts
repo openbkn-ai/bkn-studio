@@ -42,7 +42,7 @@ describe("capability catalog", () => {
     expect(new Set(keys).size).toBe(keys.length);
     expect(capabilitiesIntroducedBy("industry")).toEqual([]);
     expect(capabilitiesIntroducedBy("community")).toHaveLength(2);
-    expect(capabilitiesIntroducedBy("professional")).toHaveLength(4);
+    expect(capabilitiesIntroducedBy("professional")).toHaveLength(5);
     expect(capabilitiesIntroducedBy("enterprise")).toHaveLength(2);
   });
 
@@ -76,6 +76,17 @@ describe("capability catalog", () => {
     for (const key of Object.values(CAPABILITIES)) {
       expect(keys).toContain(key);
     }
+  });
+
+  it("将 Vega 逻辑视图列为专业版能力，并通过档位判断可用性", () => {
+    expect(CAPABILITY_CATALOG).toContainEqual(
+      expect.objectContaining({
+        category: "dataConnect",
+        key: CAPABILITIES.VEGA_LOGIC_VIEW,
+        minEdition: "professional",
+        reportedByEndpoint: false,
+      }),
+    );
   });
 });
 

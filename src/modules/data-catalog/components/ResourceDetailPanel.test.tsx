@@ -5,7 +5,7 @@
  * Conditions. See LICENSE for the full text.
  */
 
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,20 @@ import type { CatalogResource } from "@/modules/data-catalog/types/data-catalog"
 const getCatalogResourceMock = vi.hoisted(() => vi.fn());
 const updateCatalogResourceMock = vi.hoisted(() => vi.fn());
 const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: [],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -73,6 +87,8 @@ const resource: CatalogResource = {
 describe("ResourceDetailPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
+    getCatalogResourceMock.mockResolvedValue(null);
     updateCatalogResourceMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
@@ -279,14 +295,140 @@ describe("ResourceDetailPanel", () => {
           active
           canEdit
           catalog={null}
-          resource={{ ...resource, category: "logicview" }}
+          resource={{ ...resource, category: "logicview", lastDiscoverStatus: "updated" }}
         />
       </MemoryRouter>,
     );
 
     expect(screen.getByText("dataCatalog.categories.logicview")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.categories.logicview").parentElement?.className).toContain(
+      "basicInfoHalf",
+    );
+    expect(
+      screen.getByText("dataCatalog.resource.enabledStatus").parentElement?.className,
+    ).toContain("basicInfoHalf");
+    expect(screen.queryByText("dataCatalog.resource.resourceStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.statusMessage")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexState")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.indexName")).toBeNull();
+    expect(screen.queryByText("dataCatalog.resource.discoverStatus")).toBeNull();
+    expect(screen.queryByText("dataCatalog.discoverStatuses.updated")).toBeNull();
     expect(screen.queryByRole("button", { name: "dataCatalog.resource.editFields" })).toBeNull();
     expect(screen.getByText("dataCatalog.resource.logicViewReadOnly")).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.originalName")).toBeTruthy();
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.sourceObjectType")).toBeTruthy();
+    for (const label of [
+      "originalDescription",
+      "schemaName",
+      "sourcePrimaryKeys",
+      "fieldCount",
+      "rowCount",
+      "sourceIndexCount",
+      "sourceForeignKeyCount",
+    ]) {
+      expect(within(sourceMetadata).queryByText(`dataCatalog.resource.${label}`)).toBeNull();
+    }
+  });
+
+  it("places a derived view source in source metadata and its filter after fields", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logicview",
+            logicType: "derived",
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: {
+                operation: "and",
+                sub_conditions: [
+                  { field: "amount", operation: ">", value: 1000 },
+                  {
+                    operation: "or",
+                    sub_conditions: [
+                      { field: "id", operation: "==", value: 1 },
+                      { field: "id", operation: "==", value: 2 },
+                    ],
+                  },
+                ],
+              },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("dataCatalog.resource.viewDefinition")).toBeNull();
+    expect(screen.getByRole("button", { name: "dataCatalog.viewEditor.edit" })).toBeTruthy();
+    const sourceMetadata = screen.getByText("dataCatalog.resource.sourceMetadata").parentElement!;
+    expect(within(sourceMetadata).getByText("dataCatalog.resource.viewSource")).toBeTruthy();
+    expect(within(sourceMetadata).getByRole("button", { name: "source-orders" })).toBeTruthy();
+    const filterHeading = screen.getByText("dataCatalog.resource.viewFixedFilter");
+    const fieldsHeading = screen.getByText("dataCatalog.resource.schemaSection");
+    expect(filterHeading.parentElement).not.toBe(fieldsHeading.parentElement);
+    expect(
+      fieldsHeading.compareDocumentPosition(filterHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    const filterCard = within(filterHeading.parentElement!);
+    expect(filterCard.getByText("dataCatalog.filter.and")).toBeTruthy();
+    expect(filterCard.getByText("dataCatalog.filter.or")).toBeTruthy();
+    expect(filterCard.getAllByText("amount")).toHaveLength(2);
+    expect(filterCard.getByText(">")).toBeTruthy();
+    expect(filterCard.getByText("1000")).toBeTruthy();
+    expect(filterCard.queryByRole("textbox")).toBeNull();
+    expect(filterCard.queryByRole("button")).toBeNull();
+  });
+
+  it("uses source schema labels for fixed filters on hidden source fields", async () => {
+    getCatalogResourceMock.mockResolvedValue({
+      ...resource,
+      id: "source-orders",
+      schema: [{ name: "internal_score", displayName: "Source Score", type: "integer" }],
+    });
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{
+            ...resource,
+            category: "logicview",
+            logicType: "derived",
+            schema: [{ name: "score_alias", displayName: "Output Score", type: "string" }],
+            logicDefinition: {
+              sourceResourceId: "source-orders",
+              filterCondition: { field: "internal_score", operation: ">", value: 10 },
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const filterCard = screen.getByText("dataCatalog.resource.viewFixedFilter").parentElement!;
+    expect(await within(filterCard).findByText("Source Score")).toBeTruthy();
+    expect(within(filterCard).getByText("internal_score")).toBeTruthy();
+    expect(within(filterCard).queryByText("Output Score")).toBeNull();
+  });
+
+  it("keeps discovery status visible for a table", () => {
+    render(
+      <MemoryRouter>
+        <ResourceDetailPanel
+          active
+          canEdit={false}
+          catalog={null}
+          resource={{ ...resource, lastDiscoverStatus: "updated" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("dataCatalog.resource.discoverStatus")).toBeTruthy();
+    expect(screen.getByText("dataCatalog.discoverStatuses.updated")).toBeTruthy();
   });
 
   it("refreshes the resource version after an update conflict", async () => {

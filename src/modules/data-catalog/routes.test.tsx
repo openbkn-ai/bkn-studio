@@ -31,4 +31,10 @@ describe("data-catalog routes", () => {
       expect(paths).not.toContain(retired);
     }
   });
+
+  it("registers separate creation and editing pages for views", () => {
+    const paths = dataCatalogRoutes.map((route) => route.path);
+    expect(paths).toContain("data-catalog/catalog/:catalogId/views/new");
+    expect(paths).toContain("data-catalog/resource/:resourceId/edit");
+  });
 });

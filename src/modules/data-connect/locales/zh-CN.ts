@@ -62,6 +62,7 @@ export const dataConnectZhCN = {
       confirm: "仍然保存",
     },
     tagsPlaceholder: "输入后回车添加标签",
+    tagsHint: "最多 5 个标签，每个不超过 40 个字符",
     connectorTypeStep: "连接器类型",
     configStep: "连接配置",
     connectorTypeStepTitle: "选择连接器类型",

@@ -1083,10 +1083,13 @@ export const systemAdminEnUS = {
       },
       metrics: {
         edition: "Edition",
-        licensedUntil: "Licensed Until",
+        certificateExpiresAt: "Certificate Expires",
+        contractExpiresAt: "Contract Ends",
         activation: "Activation",
         activationBound: "Bound",
         activationPending: "Pending",
+        activation_unbound: "Unbound by Issuer",
+        activation_revoked: "Revoked",
         scope: "Licensed Scope",
         scopeValue: "Features: {{features}} / limits: {{limits}}",
       },
@@ -1094,7 +1097,7 @@ export const systemAdminEnUS = {
         state: "State",
         edition: "Edition",
         licId: "License ID",
-        contractExpiresAt: "Licensed Until",
+        contractExpiresAt: "Contract Ends",
         customer: "Customer",
         project: "Project",
         email: "Email",
@@ -1128,6 +1131,8 @@ export const systemAdminEnUS = {
         unlicensed: "No licence imported",
         valid: "License Valid",
         validUnbound: "Activation Pending",
+        unbound: "License Unbound",
+        revoked: "License Revoked",
         grace: "Grace Period",
         fallback_community: "Commercial License Fallback",
         invalid: "Unactivated or Invalid",
@@ -1148,6 +1153,10 @@ export const systemAdminEnUS = {
           "No valid license is available. Apply for a .lic license file in the license portal, or copy the device fingerprint to exchange for an offline activation certificate.",
         renewError:
           "Automatic renewal failed: {{reason}}. The system will keep retrying; the current license is not downgraded.",
+        unbound:
+          "The license issuer has unbound this license from this cluster. The cluster is running the community capability set; data is preserved. If this was a mistake, click Import and Activate Online to bind it again; if the license moved to a new cluster, you can remove it here.",
+        revoked:
+          "The license issuer has revoked this license. The cluster is running the community capability set; data is preserved. Contact sales for a new license.",
       },
       placeholders: {
         license: "Paste the full license text, e.g. v1.xxx.yyy",

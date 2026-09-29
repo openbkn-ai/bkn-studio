@@ -15,6 +15,28 @@ import type { CatalogRecord } from "@/shared/catalog";
 const listCatalogResourcePageMock = vi.hoisted(() => vi.fn());
 const currentPermissions = vi.hoisted(() => ({ value: [] as string[] }));
 const drawerProps = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
+const editionMock = vi.hoisted(() => ({ value: "professional" }));
+
+vi.mock("@/framework/entitlement/use-entitlement", () => ({
+  useEntitlement: () => ({
+    edition: editionMock.value,
+    licensed: editionMock.value !== "community",
+    capabilities: [],
+    extensions: ["enterprise"],
+    limits: {},
+    state: "valid",
+  }),
+  useEntitlementContext: () => ({
+    snapshot: {
+      edition: editionMock.value,
+      licensed: editionMock.value !== "community",
+      capabilities: [],
+      extensions: ["enterprise"],
+      limits: {},
+      state: "valid",
+    },
+  }),
+}));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
@@ -87,6 +109,7 @@ function renderPanel(record: CatalogRecord, onOpenResource = vi.fn(), initialEnt
 describe("ResourceListPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    editionMock.value = "professional";
     currentPermissions.value = [];
     drawerProps.value = null;
     listCatalogResourcePageMock.mockResolvedValue({ items: [], total: 0 });
@@ -120,6 +143,35 @@ describe("ResourceListPanel", () => {
           catalogId: "catalog-1",
           schema: "analytics",
         }),
+      ),
+    );
+  });
+
+  it("offers Index as a resource category filter", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "index",
+          id: "index-1",
+          name: "orders_index",
+          sourceIdentifier: "orders_index",
+          operations: ["view_detail"],
+          schema: [],
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+    fireEvent.click(
+      (await screen.findByText("dataCatalog.resource.moreFilters")).closest("button")!,
+    );
+    fireEvent.mouseDown(screen.getAllByText("common.all")[0]);
+    fireEvent.click(screen.getAllByText("dataCatalog.categories.index").at(-1)!);
+
+    await waitFor(() =>
+      expect(listCatalogResourcePageMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ category: "index" }),
       ),
     );
   });
@@ -211,6 +263,36 @@ describe("ResourceListPanel", () => {
     await act(async () => {});
 
     expect(screen.queryByText("dataCatalog.resource.create")).toBeNull();
+    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
+  });
+
+  it("offers View creation on a manageable physical Catalog, next to authorization", async () => {
+    renderPanel({ ...catalog, operations: ["resource_manage", "authorize"] });
+    await act(async () => {});
+
+    const authorization = screen.getByText("dataCatalog.catalog.authorize");
+    const create = screen.getByText("dataCatalog.viewEditor.create");
+    expect(
+      authorization.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("hides View creation without a professional license", async () => {
+    editionMock.value = "community";
+    renderPanel({ ...catalog, operations: ["resource_manage"] });
+    await act(async () => {});
+    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
+  });
+
+  it("does not offer View creation on built-in or disabled Catalogs", async () => {
+    const first = renderPanel({ ...catalog, builtin: true, operations: ["resource_manage"] });
+    await act(async () => {});
+    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
+    first.unmount();
+
+    renderPanel({ ...catalog, enabled: false, operations: ["resource_manage"] });
+    await act(async () => {});
+    expect(screen.queryByText("dataCatalog.viewEditor.create")).toBeNull();
   });
 
   // Built-in catalogs stay read-only in Studio, owner row or not.
@@ -357,6 +439,33 @@ describe("ResourceListPanel", () => {
     );
 
     expect(onOpenResource).toHaveBeenCalledWith("dataset-1", "index");
+  });
+
+  it("does not offer the data-index entry for a view", async () => {
+    listCatalogResourcePageMock.mockResolvedValue({
+      items: [
+        {
+          catalogId: "catalog-1",
+          category: "logicview",
+          columnCount: 1,
+          description: "",
+          expectedUpdateTime: 0,
+          id: "view-1",
+          localIndexStatus: "unavailable",
+          name: "orders_view",
+          operations: ["view_detail", "query_data"],
+          rowCount: 0,
+          schema: [],
+          sourceIdentifier: "view-1",
+          updateTime: "",
+        },
+      ],
+      total: 1,
+    });
+    renderPanel(catalog);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dataCatalog.actions.more" }));
+    expect(screen.queryByRole("menuitem", { name: "dataCatalog.actions.dataIndex" })).toBeNull();
   });
 
   it.each([

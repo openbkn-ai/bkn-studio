@@ -71,9 +71,6 @@ vi.mock("@/modules/execution-factory/components/ToolFormDrawer", () => ({
 vi.mock("@/modules/execution-factory/components/create-menu/AddCapabilityWizard", () => ({
   AddCapabilityWizard: () => null,
 }));
-vi.mock("@/modules/execution-factory/utils/use-audit-user-directory", () => ({
-  useAuditUserDirectory: () => new Map<string, string>(),
-}));
 vi.mock("@/modules/execution-factory/utils/use-impex-export", () => ({
   useImpexExport: () => ({ exportComponentById: vi.fn(), isExporting: () => false }),
 }));

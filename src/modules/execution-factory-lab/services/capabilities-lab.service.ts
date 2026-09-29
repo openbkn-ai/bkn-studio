@@ -322,7 +322,11 @@ export async function enableOrchestration(
   capabilityId: string,
   config?: OrchestrationRuntimeConfig,
 ): Promise<OrchestrationDetail> {
-  const response = await http.post<{ operator_id?: string; audit?: BackendAudit }>(
+  const response = await http.post<{
+    operator_id?: string;
+    operator_name?: string;
+    audit?: BackendAudit;
+  }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/enable`,
     serializeOrchestrationRuntimeConfig(config),
     { skipErrorToast: true },
@@ -331,6 +335,7 @@ export async function enableOrchestration(
   return {
     enabled: true,
     operatorId: response.data.operator_id,
+    operatorName: response.data.operator_name,
     audit: mapAudit(response.data.audit),
   };
 }
@@ -342,6 +347,7 @@ export async function updateOrchestrationConfig(
   const response = await http.post<{
     enabled?: boolean;
     operator_id?: string;
+    operator_name?: string;
     tool_id?: string;
     box_id?: string;
     audit?: BackendAudit;
@@ -354,6 +360,7 @@ export async function updateOrchestrationConfig(
   return {
     enabled: Boolean(response.data.enabled),
     operatorId: response.data.operator_id,
+    operatorName: response.data.operator_name,
     toolId: response.data.tool_id,
     boxId: response.data.box_id,
     audit: mapAudit(response.data.audit),
@@ -361,19 +368,28 @@ export async function updateOrchestrationConfig(
 }
 
 export async function disableOrchestration(capabilityId: string): Promise<OrchestrationDetail> {
-  const response = await http.post<{ enabled?: boolean; operator_id?: string }>(
+  const response = await http.post<{
+    enabled?: boolean;
+    operator_id?: string;
+    operator_name?: string;
+  }>(
     `${API_PREFIX}/capabilities/${encodeURIComponent(capabilityId)}/orchestration/disable`,
     {},
     { skipErrorToast: true },
   );
 
-  return { enabled: Boolean(response.data.enabled), operatorId: response.data.operator_id };
+  return {
+    enabled: Boolean(response.data.enabled),
+    operatorId: response.data.operator_id,
+    operatorName: response.data.operator_name,
+  };
 }
 
 export async function getOrchestrationDetail(capabilityId: string): Promise<OrchestrationDetail> {
   const response = await http.get<{
     enabled?: boolean;
     operator_id?: string;
+    operator_name?: string;
     tool_id?: string;
     box_id?: string;
     audit?: BackendAudit;
@@ -382,6 +398,7 @@ export async function getOrchestrationDetail(capabilityId: string): Promise<Orch
   return {
     enabled: Boolean(response.data.enabled),
     operatorId: response.data.operator_id,
+    operatorName: response.data.operator_name,
     toolId: response.data.tool_id,
     boxId: response.data.box_id,
     audit: mapAudit(response.data.audit),
