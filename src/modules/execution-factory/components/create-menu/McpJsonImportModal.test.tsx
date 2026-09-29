@@ -197,6 +197,33 @@ describe("McpJsonImportModal", () => {
     expect(onClose).toHaveBeenCalledWith(["mcp-alpha", "mcp-beta"]);
   }, 15_000);
 
+  it("still reports servers registered before the config was parsed again", async () => {
+    parseMcpSse.mockResolvedValue({ tools: [] });
+    registerMcp.mockResolvedValue("mcp-alpha");
+
+    const { onClose } = renderModal();
+    pasteAndParse(
+      JSON.stringify({ mcpServers: { alpha: { type: "sse", url: "https://alpha.test/sse" } } }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: 'executionFactory.mcpJsonImport.registerSelected {"total":1}',
+      }),
+    );
+    await screen.findByText("executionFactory.mcpJsonImport.statuses.registered");
+
+    pasteAndParse(
+      JSON.stringify({
+        mcpServers: { gamma: { type: "websocket", url: "https://gamma.test/ws" } },
+      }),
+    );
+    // The unsupported transport must not be shown as the Stream fallback.
+    expect(rowFor("https://gamma.test/ws").querySelectorAll("td")[2]?.textContent).toBe("-");
+
+    fireEvent.click(screen.getByRole("button", { name: "executionFactory.mcpJsonImport.done" }));
+    expect(onClose).toHaveBeenCalledWith(["mcp-alpha"]);
+  }, 15_000);
+
   it("scrubs header values that the backend echoes back", async () => {
     parseMcpSse.mockRejectedValue(new Error("401: Bearer alpha-secret rejected"));
 

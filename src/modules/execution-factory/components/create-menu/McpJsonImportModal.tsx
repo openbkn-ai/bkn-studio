@@ -20,6 +20,7 @@ import {
   parseMcpServersConfig,
   redactHeaderValues,
   type McpServerConfigEntry,
+  type McpServerEntryError,
   type McpServersConfigError,
 } from "@/modules/execution-factory/utils/mcp-servers-config";
 
@@ -47,8 +48,13 @@ type Row = {
   name: string;
   status: RowStatus;
   message?: string;
-  mcpId?: string;
 };
+
+const NO_TRANSPORT_ERRORS = new Set<McpServerEntryError>([
+  "not_object",
+  "stdio_unsupported",
+  "unknown_type",
+]);
 
 function rowErrors(row: Row, rows: Row[]) {
   // The parser's duplicate check ran on default names; renames in the table supersede it.
@@ -71,8 +77,8 @@ export function McpJsonImportModal({ open, category, onClose, onFill }: McpJsonI
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [registering, setRegistering] = useState(false);
-
-  const registeredIds = rows.flatMap((row) => (row.mcpId ? [row.mcpId] : []));
+  // Kept outside `rows` so parsing another config does not forget servers already created.
+  const [registeredIds, setRegisteredIds] = useState<string[]>([]);
   const selectableKeys = new Set(
     rows
       .filter((row) => row.status !== "registered" && rowErrors(row, rows).length === 0)
@@ -140,7 +146,8 @@ export function McpJsonImportModal({ open, category, onClose, onFill }: McpJsonI
             description: tool.description,
           })),
         });
-        updateRow(entry.key, { status: "registered", mcpId });
+        updateRow(entry.key, { status: "registered" });
+        setRegisteredIds((current) => [...current, mcpId]);
         succeeded += 1;
       } catch (error) {
         updateRow(entry.key, {
@@ -297,10 +304,9 @@ export function McpJsonImportModal({ open, category, onClose, onFill }: McpJsonI
                 title: t("executionFactory.mcpJsonImport.columns.mode"),
                 width: 100,
                 render: (_, row) =>
-                  // Entries without a usable transport have no mode to show.
-                  row.entry.errors.some(
-                    (error) => error === "not_object" || error === "stdio_unsupported",
-                  )
+                  // Entries without a usable transport have no mode to show; the fallback
+                  // mode is not something the config asked for.
+                  row.entry.errors.some((error) => NO_TRANSPORT_ERRORS.has(error))
                     ? "-"
                     : t(`executionFactory.mcpModeShort.${row.entry.mode}`),
               },
