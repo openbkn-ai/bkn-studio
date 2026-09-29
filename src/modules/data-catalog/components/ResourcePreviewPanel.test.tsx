@@ -16,7 +16,10 @@ const messageMock = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string, options?: { source?: string }) =>
+      key === "dataCatalog.preview.sourceReadForbidden" ? `${key}:${options?.source}` : key,
+  }),
 }));
 
 vi.mock("@/modules/data-catalog/services/resource.service", () => ({
@@ -553,6 +556,82 @@ describe("ResourcePreviewPanel", () => {
         screen.getByText("dataCatalog.preview.noQueryPermission").closest(".ant-alert"),
       ).toHaveClass("ant-alert-warning");
     });
+  });
+
+  it("shows a source account grant hint for HANA error 258", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("forbidden"), {
+        isAxiosError: true,
+        response: {
+          status: 403,
+          data: {
+            error_code: "VegaBackend.Resource.SourceReadForbidden",
+            description: "The underlying view depends on APP.BASE_TABLE",
+            solution: "Grant SELECT on APP.BASE_TABLE",
+          },
+        },
+      }),
+    );
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          sourceIdentifier: "PAL_CONTENT.AUTOML_LOG",
+          columnCount: 1,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("dataCatalog.preview.sourceReadForbidden:PAL_CONTENT.AUTOML_LOG"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("dataCatalog.preview.sourceReadForbiddenDescription"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("The underlying view depends on APP.BASE_TABLE")).toBeInTheDocument();
+    expect(screen.getByText("Grant SELECT on APP.BASE_TABLE")).toBeInTheDocument();
+    expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).toBeNull();
+  });
+
+  it("does not identify a logic view ID as the denied source", async () => {
+    previewCatalogResourceMock.mockRejectedValue(
+      Object.assign(new Error("forbidden"), {
+        isAxiosError: true,
+        response: {
+          status: 403,
+          data: {
+            error_code: "VegaBackend.Resource.SourceReadForbidden",
+            description: "The data source account cannot read this resource",
+          },
+        },
+      }),
+    );
+
+    render(
+      <ResourcePreviewPanel
+        active
+        resource={{
+          ...resource,
+          category: "logicview",
+          name: "orders_view",
+          sourceIdentifier: "logic-view-id",
+          columnCount: 1,
+          schema: [{ name: "id", type: "integer" }],
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("dataCatalog.preview.sourceReadForbiddenGeneric"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("dataCatalog.preview.sourceReadForbiddenGenericDescription"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/logic-view-id/)).toBeNull();
+    expect(screen.queryByText("dataCatalog.preview.noQueryPermission")).toBeNull();
   });
 
   it("does not request rows when effective resource operations omit query_data", () => {

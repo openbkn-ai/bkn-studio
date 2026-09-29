@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { writeTextToClipboard } from "@/framework/compat/clipboard";
 import { useAppServices } from "@/framework/context/use-app-services";
-import { extractRequestErrorMessage, isRequestForbidden } from "@/framework/request/error-message";
+import { extractRequestErrorDetails, isRequestForbidden } from "@/framework/request/error-message";
 import { TablePaginationBar } from "@/framework/ui/common/TablePaginationBar";
 import {
   resourceCountAsBigInt,
@@ -171,6 +171,10 @@ export function ResourcePreviewPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const [sourceReadDetails, setSourceReadDetails] = useState<{
+    description: string;
+    solution?: string;
+  } | null>(null);
   const [ignoreLocalIndex, setIgnoreLocalIndex] = useState(false);
   const [binaryContent, setBinaryContent] = useState(false);
   const requestVersionRef = useRef(0);
@@ -195,6 +199,7 @@ export function ResourcePreviewPanel({
       setLoading(true);
       setError(null);
       setForbidden(false);
+      setSourceReadDetails(null);
       try {
         const data = await previewCatalogResource(resource.id, {
           ...(hasBinaryField && queriesSource
@@ -215,8 +220,11 @@ export function ResourcePreviewPanel({
         // Reading rows is granted separately from seeing the table's structure. The panel loads on
         // its own, so a bare 403 leaves the user guessing whether the table, the connection or
         // their own access is the problem — name it instead.
-        setForbidden(isRequestForbidden(loadError));
-        setError(extractRequestErrorMessage(loadError));
+        const details = extractRequestErrorDetails(loadError);
+        const sourceDenied = details.code === "VegaBackend.Resource.SourceReadForbidden";
+        setSourceReadDetails(sourceDenied ? details : null);
+        setForbidden(!sourceDenied && isRequestForbidden(loadError));
+        setError(details.description);
         setResult(null);
       } finally {
         if (requestVersion === requestVersionRef.current) {
@@ -359,7 +367,32 @@ export function ResourcePreviewPanel({
           ) : null}
         </div>
       </div>
-      {forbidden ? (
+      {sourceReadDetails ? (
+        <Alert
+          description={
+            <>
+              <div>
+                {t(
+                  resource.category === "table"
+                    ? "dataCatalog.preview.sourceReadForbiddenDescription"
+                    : "dataCatalog.preview.sourceReadForbiddenGenericDescription",
+                )}
+              </div>
+              <div>{sourceReadDetails.description}</div>
+              {sourceReadDetails.solution ? <div>{sourceReadDetails.solution}</div> : null}
+            </>
+          }
+          message={
+            resource.category === "table"
+              ? t("dataCatalog.preview.sourceReadForbidden", {
+                  source: resource.sourceIdentifier || resource.name,
+                })
+              : t("dataCatalog.preview.sourceReadForbiddenGeneric")
+          }
+          showIcon
+          type="warning"
+        />
+      ) : forbidden ? (
         <Alert
           description={t("dataCatalog.preview.noQueryPermissionDescription")}
           message={t("dataCatalog.preview.noQueryPermission")}

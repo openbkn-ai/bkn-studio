@@ -494,6 +494,10 @@ export const dataCatalogZhCN = {
       dataSourceIndex: "来源：本地索引",
       dataSourceOriginal: "来源：原始数据源",
       noQueryPermission: "没有查看数据的权限",
+      sourceReadForbidden: "数据源账号无法读取 {{source}} 的数据",
+      sourceReadForbiddenDescription: "请检查请求的对象及其底层依赖对象的 SELECT 权限。",
+      sourceReadForbiddenGeneric: "数据源账号无权读取底层数据源",
+      sourceReadForbiddenGenericDescription: "请检查连接账号对该资源所用数据源的读取权限。",
       noQueryPermissionDescription:
         "你可以查看这张表的结构，但读取数据需要单独授权。请联系管理员为这张表或它所在的目录授予「查询」权限。",
       empty: "没有数据",
