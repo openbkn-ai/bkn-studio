@@ -85,7 +85,10 @@ describe("exportKnowledgeNetwork", () => {
 
   it("downloads the export view as JSON by default", async () => {
     const downloads = captureDownloads();
-    getMock.mockResolvedValue({ data: { name: "orders-network" }, headers: {} });
+    getMock.mockResolvedValue({
+      data: new Blob(['{"name":"orders-network"}'], { type: "application/json" }),
+      headers: { "content-disposition": "attachment; filename=orders-network.json" },
+    });
     const { exportKnowledgeNetwork } =
       await import("@/modules/knowledge-network/services/network.service");
 
@@ -93,10 +96,26 @@ describe("exportKnowledgeNetwork", () => {
 
     expect(getMock).toHaveBeenCalledWith("/bkn-backend/v1/knowledge-networks/kn-1", {
       params: { mode: "export" },
+      responseType: "blob",
+      timeout: 60_000,
     });
     expect(downloads).toHaveLength(1);
     expect(downloads[0]?.name).toBe("orders-network.json");
     expect(await readBlob(downloads[0]?.blob)).toContain("orders-network");
+  });
+
+  it("falls back to the network ID when the JSON response has no filename", async () => {
+    const downloads = captureDownloads();
+    getMock.mockResolvedValue({
+      data: new Blob(["{}"], { type: "application/json" }),
+      headers: {},
+    });
+    const { exportKnowledgeNetwork } =
+      await import("@/modules/knowledge-network/services/network.service");
+
+    await exportKnowledgeNetwork("kn-1");
+
+    expect(downloads[0]?.name).toBe("kn-1.json");
   });
 
   it("downloads the BKN package from the tar endpoint and keeps the backend filename", async () => {
