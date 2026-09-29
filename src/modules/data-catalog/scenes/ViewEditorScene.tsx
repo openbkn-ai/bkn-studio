@@ -106,7 +106,7 @@ export function ViewEditorScene({
   const sourceIdentity = (resource: CatalogResource) => (
     <span className={styles.sourceIdentity}>
       <strong>{resource.name}</strong>
-      <small>{resource.sourceMetadata?.originalName || resource.sourceIdentifier}</small>
+      <small>{resource.sourceIdentifier}</small>
     </span>
   );
   const sourceSelectionLabel = (resource: CatalogResource) => (
@@ -121,9 +121,7 @@ export function ViewEditorScene({
       (candidate) =>
         candidate.catalogId === catalog?.id &&
         (candidate.name.toLocaleLowerCase().includes(normalized) ||
-          (candidate.sourceMetadata?.originalName || candidate.sourceIdentifier)
-            .toLocaleLowerCase()
-            .includes(normalized)),
+          candidate.sourceIdentifier.toLocaleLowerCase().includes(normalized)),
     );
   }, [candidates, catalog?.id, keyword]);
   const sourceByName = useMemo(
@@ -212,17 +210,8 @@ export function ViewEditorScene({
                 (item) =>
                   item.catalogId === currentCatalogId &&
                   (item.name.toLocaleLowerCase().includes(normalized) ||
-                    (item.sourceMetadata?.originalName || item.sourceIdentifier)
-                      .toLocaleLowerCase()
-                      .includes(normalized)),
-              )
-              .map((item) => ({
-                ...item,
-                sourceMetadata: {
-                  ...item.sourceMetadata,
-                  originalName: item.sourceMetadata?.originalName || item.sourceIdentifier,
-                },
-              }));
+                    item.sourceIdentifier.toLocaleLowerCase().includes(normalized)),
+              );
             setCandidates((current) => {
               const merged = sourcePage === 0 ? found : [...current, ...found];
               return [...new Map(merged.map((item) => [item.id, item])).values()];

@@ -61,7 +61,7 @@ const source = {
   enabled: true,
   name: "orders",
   sourceIdentifier: "public.orders",
-  sourceMetadata: { originalName: "public.orders" },
+  sourceMetadata: { originalName: "legacy_orders" },
   operations: ["query_data"],
   status: "active",
   schema: [
@@ -174,16 +174,18 @@ describe("ViewEditorScene", () => {
     await waitFor(() =>
       expect(listResourcesMock).toHaveBeenCalledWith(expect.objectContaining({ keyword: "ord" })),
     );
-    const originalName = await screen.findByText("public.orders");
-    const sourceIdentity = originalName.parentElement as HTMLElement;
+    const sourceIdentifier = await screen.findByText("public.orders");
+    const sourceIdentity = sourceIdentifier.parentElement as HTMLElement;
     expect(sourceIdentity.querySelector("strong")?.textContent).toBe("orders");
     expect(sourceIdentity.querySelector("small")?.textContent).toBe("public.orders");
-    fireEvent.click(originalName);
+    fireEvent.click(sourceIdentifier);
     const selectedSource = document.querySelector(".ant-select-selection-item") as HTMLElement;
     expect(within(selectedSource).getByText("orders")).toBeTruthy();
     expect(within(selectedSource).getByText("public.orders")).toBeTruthy();
     expect(within(selectedSource).getByText("dataCatalog.categories.table")).toBeTruthy();
     await screen.findByLabelText("dataCatalog.viewEditor.outputName 1");
+    expect(within(selectedSource).getByText("public.orders")).toBeTruthy();
+    expect(within(selectedSource).queryByText("legacy_orders")).toBeNull();
     const outputFieldsTable = screen
       .getByRole("columnheader", { name: "dataCatalog.viewEditor.sourceField" })
       .closest("table") as HTMLElement;
@@ -275,13 +277,16 @@ describe("ViewEditorScene", () => {
       name: "dataCatalog.viewEditor.sourceSearch",
     });
     fireEvent.mouseDown(sourcePicker);
-    const sourceNames = await screen.findAllByText("orders");
-    expect(sourceNames.some((node) => node.tagName === "STRONG")).toBe(true);
-    expect(sourceNames.some((node) => node.tagName === "SMALL")).toBe(true);
-    fireEvent.change(sourcePicker, { target: { value: "o" } });
+    const sourceName = await screen.findByText("orders");
+    expect(sourceName.tagName).toBe("STRONG");
+    expect(await screen.findByText("public.orders")).toBeTruthy();
+    fireEvent.change(sourcePicker, { target: { value: "public." } });
     await waitFor(() =>
-      expect(listResourcesMock).toHaveBeenCalledWith(expect.objectContaining({ keyword: "o" })),
+      expect(listResourcesMock).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: "public." }),
+      ),
     );
+    expect(await screen.findByText("public.orders")).toBeTruthy();
     fireEvent.click(
       await screen.findByRole("button", { name: "dataCatalog.viewEditor.sourceMore" }),
     );
