@@ -68,6 +68,9 @@ let mockLicense: LicenseDetail = {
     project: "BKN Studio",
   },
   edition: "enterprise",
+  // Earlier than the contract end, as on a real certificate renewed in place,
+  // so the mock page shows the two dates apart.
+  expiresAt: Math.floor(Date.now() / 1000) + 60 * 86_400,
   features: ["rbac_basic", "source_sync", "execution_factory"],
   instanceFp: "fp_35dc9c8c95a091cc",
   issuedAt: Math.floor(Date.now() / 1000) - 30 * 86_400,
